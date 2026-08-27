@@ -14,8 +14,17 @@ import "./styles/source-viewer.css";
 import "./styles/immersive-display.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js`);
+  window.addEventListener("load", async () => {
+    try {
+      await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js`);
+      await navigator.serviceWorker.ready;
+      if (navigator.serviceWorker.controller) return;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        window.location.reload();
+      }, { once: true });
+    } catch (error) {
+      console.warn("SimEx offline support could not be installed.", error);
+    }
   });
 }
 

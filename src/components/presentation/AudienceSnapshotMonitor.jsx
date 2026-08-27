@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 
+import { projectPresentationState } from "../../lib/audienceProjection.js";
 import AudienceDisplay from "./AudienceDisplay.jsx";
 
 const CAPTURE_SETTLE_MS = 200;
@@ -157,7 +158,7 @@ export default function AudienceSnapshotMonitor({
           <AudienceDisplay
             dashboard={captureSource.dashboard}
             connectionStatus="connected"
-            presentationState={captureSource.presentationState}
+            projection={projectPresentationState(captureSource.presentationState)}
             contentRenderContext={contentRenderContext}
           />
         </div>,

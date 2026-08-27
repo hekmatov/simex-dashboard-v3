@@ -161,6 +161,15 @@ test("runtime projection applies exact, carried, nearest, interpolation, and rev
       traceMode: "reveal",
     },
   });
+  const full = projectRuntimeArtifact({
+    artifact,
+    chart: input.chart,
+    timeContext: {
+      activeEpochMs: Date.UTC(2027, 4, 1),
+      matching: { policy: "exact" },
+      traceMode: "full",
+    },
+  });
 
   assert.equal(exact.marks[0].temporalProvenance.status, "observed");
   assert.equal(carried.marks[0].temporalProvenance.status, "carried");
@@ -169,5 +178,8 @@ test("runtime projection applies exact, carried, nearest, interpolation, and rev
   assert.equal(revealed.marks.length, 1);
   assert.equal(revealed.marks[0].active, true);
   assert.equal(revealed.marks[0].temporalProvenance.status, "nearest");
+  assert.equal(full.marks.length, 2);
+  assert.equal(full.marks[0].active, true);
+  assert.equal(full.marks[1].active, false);
   assert.equal(JSON.stringify(artifact), before);
 });

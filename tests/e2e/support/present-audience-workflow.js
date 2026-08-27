@@ -14,10 +14,21 @@ export async function installAudienceFaultInstrumentation(context) {
           channelName: name,
         };
         this.addEventListener("message", ({ data }) => {
+          if (data?.protocol_version === 3 && Number.isSafeInteger(data.sequence)) {
+            window.__audienceTestTransport.lastControllerSequence = Math.max(
+              window.__audienceTestTransport.lastControllerSequence ?? 0,
+              data.sequence,
+            );
+          }
           if (data?.protocol_version === 3 && ["state", "ended"].includes(data.type)) {
             window.__audienceTestTransport.lastControllerMessage = structuredClone(data);
             if (data.type === "state") {
               window.__audienceTestTransport.lastStateMessage = structuredClone(data);
+              if (data.payload === null) {
+                window.__audienceTestTransport.incompleteStateSequence = data.sequence;
+                window.__audienceTestTransport.incompleteStateCount =
+                  (window.__audienceTestTransport.incompleteStateCount ?? 0) + 1;
+              }
             }
           }
         });
@@ -27,15 +38,26 @@ export async function installAudienceFaultInstrumentation(context) {
   });
 }
 
-export async function createSavedPresentationScene(page) {
-  await page.goto(LIVE_APP_URL);
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
-  await page.locator('[data-dashboard-mode="build"]').click();
+export async function createSavedPresentationScene(page, {
+  chronoGroupId = null,
+  entry = "fresh",
+  url = LIVE_APP_URL,
+} = {}) {
+  if (entry === "fresh") {
+    await page.goto(url);
+    await page.locator('[data-dashboard-page-id="biomedical"]').click();
+    await page.locator('[data-dashboard-mode="build"]').click();
+  } else if (entry !== "build-biomedical") {
+    throw new Error(`Unknown presentation Scene workflow entry: ${entry}`);
+  }
   await page.locator('[data-context-shelf-entry="scene"]').click();
   const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await expect(studio).toBeVisible();
   const beforeIds = await readSceneIds(page);
   await studio.locator('[data-scene-workflow-id="create-scene"]').click();
+  if (chronoGroupId) {
+    await studio.locator('[data-scene-workflow-id="parent-chrono-group"]').selectOption(chronoGroupId);
+  }
   await studio.locator("#scene-name").fill(`Presentation fixture ${Date.now()}`);
   await studio.locator('[data-scene-workflow-id="save-scene"]').click();
 
@@ -122,6 +144,20 @@ export async function injectIncompleteNextAudienceState(popup) {
       type: "state",
       payload: null,
     });
+    channel.close();
+  });
+}
+
+export async function sendFreshAudienceSnapshot(popup) {
+  await popup.evaluate(() => {
+    const transport = window.__audienceTestTransport;
+    const message = structuredClone(transport.lastStateMessage);
+    message.sequence = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      (transport.lastControllerSequence ?? transport.lastControllerMessage.sequence) + 1_024,
+    );
+    const channel = new BroadcastChannel(transport.channelName);
+    channel.postMessage(message);
     channel.close();
   });
 }

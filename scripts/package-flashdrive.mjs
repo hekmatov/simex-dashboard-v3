@@ -12,7 +12,7 @@ export async function packageFlashDrive({
   const resolvedRoot = path.resolve(rootDir);
   const distDir = path.join(resolvedRoot, "dist");
   const releaseRootDir = path.join(resolvedRoot, "release");
-  const preferredReleaseDir = path.join(releaseRootDir, "SimEx Dashboard V2 Flashdrive");
+  const preferredReleaseDir = path.join(releaseRootDir, "SimEx Dashboard V3 Flashdrive");
   let releaseDir = requestedReleaseDir
     ? path.resolve(requestedReleaseDir)
     : preferredReleaseDir;
@@ -29,7 +29,7 @@ export async function packageFlashDrive({
     try {
       await fs.rm(preferredReleaseDir, { recursive: true, force: true });
     } catch (error) {
-      releaseDir = path.join(releaseRootDir, `SimEx Dashboard V2 Flashdrive ${timestampForFolder()}`);
+      releaseDir = path.join(releaseRootDir, `SimEx Dashboard V3 Flashdrive ${timestampForFolder()}`);
       console.warn(`Could not replace the existing flash-drive folder because it is locked. Writing a fresh package to ${path.relative(resolvedRoot, releaseDir)} instead.`);
     }
   }
@@ -83,7 +83,7 @@ $url = "http://127.0.0.1:$port/"
 if ($env:SIMEX_PORTABLE_NO_BROWSER -ne "1") {
   Start-Process $url
 }
-Write-Host "SimEx Dashboard V2 is running at $url"
+Write-Host "SimEx Dashboard V3 is running at $url"
 Write-Host "Close this window to stop the dashboard server."
 
 function Get-ContentType($path) {
@@ -138,23 +138,27 @@ try {
 
   await fs.writeFile(
   path.join(releaseDir, "START_HERE.md"),
-  `# SimEx Dashboard V2 Flash Drive Package
+  `# SimEx Dashboard V3 Flash Drive Package
 
 ## Open The Dashboard
 
-First try double-clicking:
-
-\`\`\`text
-index.html
-\`\`\`
-
-If your browser shows a blank page, double-click:
+Double-click the local-origin launcher:
 
 \`\`\`text
 START_DASHBOARD.bat
 \`\`\`
 
-That starts a tiny local web server using built-in Windows PowerShell and opens the dashboard in your browser. No Docker, Python, Node, pnpm, or installed web server is needed for viewers.
+Keep the PowerShell window open while using the dashboard. The launcher uses
+built-in Windows PowerShell to serve this folder at a local address and opens
+that address in your browser; no Docker, Python, Node, pnpm, or installed web
+server is needed.
+
+Directly opening the static entry file can work in browsers that permit local
+module loading, but it is the fallback rather than the primary launch path:
+
+\`\`\`text
+index.html
+\`\`\`
 
 ## Share Scenario Edits
 

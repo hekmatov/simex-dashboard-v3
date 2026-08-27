@@ -4,6 +4,7 @@ import {
   canReuseChartRendering,
   resolveChartRendering,
 } from "../../charting/rendering/resolveChartRendering.js";
+import { serializeCanonicalRuntimeLedger } from "../../charting/rendering/canonicalRuntimeLedger.js";
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import { resolveChartDataState } from "../../charting/data/chartDataState.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
@@ -106,6 +107,11 @@ export function renderChartContent(props, interactionMode) {
       ...presentationFrameProps(props.chart, props.canonicalPlotId),
       ...(activeDate ? { "data-chart-active-date": activeDate } : {}),
       "data-chart-interaction-mode": interactionMode,
+      "data-canonical-runtime-ledger": serializeCanonicalRuntimeLedger({
+        chart: props.chart,
+        resolution: resolved,
+        timeContext: props.timeContext,
+      }),
     }, view);
     return chartZoom && !typedStaticImage
       ? React.createElement(ZoomGuard, null, framedView)

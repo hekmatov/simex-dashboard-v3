@@ -1,44 +1,109 @@
-const CACHE_NAME = "simex-dashboard-v2-v2";
-const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest"];
+const CACHE_NAME = "simex-dashboard-v3-step8-v1";
+const CORE_ASSETS = [
+  "./",
+  "./index.html",
+  "./source-viewer.html",
+  "./manifest.webmanifest",
+  "./service-worker.js",
+  "./portable-dashboard-data.js",
+  "./assets/pdpc-mark.png",
+  "./assets/pwa-icon.svg",
+  "./config/dashboard.json",
+  "./config/dataset-profiles.json",
+  "./data/data-sources.generated.json",
+  "./integration/quorum-chart-catalogue.json",
+  "./vendor/three.min.js",
+  "./vendor/vanta.net.min.js",
+];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const builtAssets = new Set(CORE_ASSETS);
+    for (const entrypoint of ["./index.html", "./source-viewer.html"]) {
+      try {
+        const response = await fetch(entrypoint, { cache: "reload" });
+        if (!response.ok) continue;
+        const html = await response.text();
+        for (const url of htmlRuntimeUrls(html)) builtAssets.add(url);
+      } catch {
+        // cache.addAll below provides the authoritative install failure.
+      }
+    }
+    await cache.addAll([...builtAssets]);
+    self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
-    )),
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith("simex-dashboard-") && key !== CACHE_NAME)
+        .map((key) => caches.delete(key)),
+    );
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  const isAppShellNavigation = event.request.mode === "navigate" || new URL(event.request.url).pathname.endsWith("/index.html");
-  if (isAppShellNavigation) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", response.clone()));
-          }
-          return response;
-        })
-        .catch(() => caches.match("./index.html")),
-    );
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+  const navigation = event.request.mode === "navigate"
+    || requestUrl.pathname.endsWith("/index.html");
+  if (navigation) {
+    event.respondWith(networkFirstNavigation(event.request));
     return;
   }
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request)
-      .then((response) => {
-        if (new URL(event.request.url).origin !== self.location.origin || !response.ok) return response;
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      .catch(() => caches.match("./index.html"))),
-  );
+  event.respondWith(cacheFirstAsset(event.request));
 });
+
+async function networkFirstNavigation(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return (await caches.match(request))
+      ?? (await caches.match("./index.html"))
+      ?? offlineResponse("Offline application shell unavailable");
+  }
+}
+
+async function cacheFirstAsset(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return offlineResponse("Offline asset unavailable");
+  }
+}
+
+function offlineResponse(message) {
+  return new Response(message, {
+    status: 503,
+    headers: { "content-type": "text/plain; charset=utf-8" },
+  });
+}
+
+function htmlRuntimeUrls(html) {
+  const urls = [];
+  for (const match of html.matchAll(/\b(?:href|src)\s*=\s*["']([^"']+)["']/gi)) {
+    const url = match[1];
+    if (/^\.\//.test(url) && /\.(?:css|js)(?:[?#].*)?$/i.test(url)) {
+      urls.push(url.split(/[?#]/, 1)[0]);
+    }
+  }
+  return urls;
+}

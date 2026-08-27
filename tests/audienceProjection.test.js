@@ -1,7 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { projectAudienceSnapshot } from "../src/lib/audienceProjection.js";
+import {
+  projectAudienceSnapshot,
+  projectPresentationState,
+} from "../src/lib/audienceProjection.js";
+
+test("projects local presenter state through the same immutable Audience mapping", () => {
+  const state = presentationState({ traceMode: "full", frameIndex: 1 });
+  const direct = projectPresentationState(state);
+  const enveloped = projectAudienceSnapshot(stateMessage({ state }), null).projection;
+
+  assert.deepEqual(direct, enveloped);
+  state.composition.displayed_chart_ids.reverse();
+  state.timeline.frame_index = 0;
+  assert.deepEqual(direct.composition.displayed_chart_ids, ["chart-b", "chart-a"]);
+  assert.equal(direct.timeline.frame_index, 1);
+});
 
 test("projects an accepted state envelope without changing authored order, timeline, trace, or date position", () => {
   const message = stateMessage({

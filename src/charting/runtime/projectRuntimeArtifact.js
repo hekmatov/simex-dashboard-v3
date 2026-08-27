@@ -22,8 +22,10 @@ export function projectRuntimeArtifact({ artifact, chart, timeContext } = {}) {
     activeMarks.push(materializeMatch(match, artifact.prepared.marks, timeContext.activeEpochMs));
   }
   const marks = timeContext.traceMode === "reveal"
-    ? revealMarks(artifact, activeMarks, timeContext.activeEpochMs)
-    : activeMarks;
+    ? traceMarks(artifact, activeMarks, ({ epochMs }) => epochMs <= timeContext.activeEpochMs)
+    : timeContext.traceMode === "full"
+      ? traceMarks(artifact, activeMarks)
+      : activeMarks;
   const status = activeMarks.length === 0 ? "missing" : "available";
   return deepFreeze({
     ...artifact.prepared,
@@ -101,10 +103,10 @@ function materializeMatch(match, marks, activeEpochMs) {
   return result;
 }
 
-function revealMarks(artifact, activeMarks, activeEpochMs) {
+function traceMarks(artifact, activeMarks, include = () => true) {
   const activeByIdentity = new Map(activeMarks.map((mark) => [markIdentity(mark), mark]));
   const revealed = artifact.temporalIndex
-    .filter((entry) => entry.epochMs <= activeEpochMs)
+    .filter(include)
     .map((entry) => {
       const source = artifact.prepared.marks[entry.markIndex];
       return { ...source, active: false };

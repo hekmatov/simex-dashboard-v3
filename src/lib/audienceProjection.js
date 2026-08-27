@@ -36,24 +36,28 @@ export function projectAudienceSnapshot(message, lastValid = null) {
     });
   }
 
-  const state = clone(message.payload);
-  const projection = {
-    kind: "output",
-    mode: state.output_mode,
-    blackout: state.blackout,
-    dashboardRevision: state.dashboard_revision,
-    source: state.source,
-    composition: state.composition,
-    timeline: state.timeline,
-    matching: state.matching,
-    audience: state.audience,
-    payload: state.payload,
-  };
+  const projection = projectPresentationState(message.payload);
   return immutableResult({
     accepted: true,
     projection,
     lastValid: projection,
     reason: null,
+  });
+}
+
+export function projectPresentationState(state) {
+  const snapshot = clone(state);
+  return deepFreeze({
+    kind: "output",
+    mode: snapshot.output_mode,
+    blackout: snapshot.blackout,
+    dashboardRevision: snapshot.dashboard_revision,
+    source: snapshot.source,
+    composition: snapshot.composition,
+    timeline: snapshot.timeline,
+    matching: snapshot.matching,
+    audience: snapshot.audience,
+    payload: snapshot.payload,
   });
 }
 
