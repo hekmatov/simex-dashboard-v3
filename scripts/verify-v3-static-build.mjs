@@ -146,7 +146,10 @@ function extractBuiltRuntimeUrls(source, extension) {
     ? [/@import\s+(?:url\(\s*)?["']?([^\s"')]+)["']?\s*\)?/gi,
       /url\(\s*["']?([^\s"')]+)["']?\s*\)/gi]
     : [/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
-      /\b(?:import|export)\s+(?:[^"']*?\sfrom\s*)?["']([^"']+)["']/g,
+      /(?:^|[;\n])\s*(?:import|export)\s*\{[^}]*\}\s*from\s*["']([^"']+)["']/g,
+      /(?:^|[;\n])\s*(?:import|export)\s*\*\s*(?:as\s+[A-Za-z_$][\w$]*\s*)?from\s*["']([^"']+)["']/g,
+      /(?:^|[;\n])\s*import\s+[A-Za-z_$][\w$]*(?:\s*,\s*(?:\{[^}]*\}|\*\s*as\s+[A-Za-z_$][\w$]*))?\s*from\s*["']([^"']+)["']/g,
+      /(?:^|[;\n])\s*import\s*["']([^"']+)["']/g,
       /\bnew\s+URL\(\s*["']([^"']+)["']\s*,\s*import\.meta\.url\s*\)/g,
       /\b(?:fetch|importScripts)\(\s*["']([^"']+)["']/g,
       /\bnew\s+(?:Worker|SharedWorker|WebSocket|EventSource)\(\s*["']([^"']+)["']/g];

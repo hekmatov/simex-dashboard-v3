@@ -60,6 +60,10 @@ test("rejects remote dependencies in referenced built JavaScript and CSS", async
   );
   await writeFile(
     path.join(scriptFixture.distDir, "assets/chunk-Qq11ww22.js"),
+    'import{runtime}from"./remote-Rr22ee33.js";',
+  );
+  await writeFile(
+    path.join(scriptFixture.distDir, "assets/remote-Rr22ee33.js"),
     'fetch("https://cdn.example.invalid/runtime.json");',
   );
   await assert.rejects(
@@ -68,7 +72,7 @@ test("rejects remote dependencies in referenced built JavaScript and CSS", async
       distDir: scriptFixture.distDir,
       runtimeBoundaryInventory: frozenInventory(),
     }),
-    /assets\/chunk-Qq11ww22\.js: remote runtime URL https:\/\/cdn\.example\.invalid\/runtime\.json/,
+    /assets\/remote-Rr22ee33\.js: remote runtime URL https:\/\/cdn\.example\.invalid\/runtime\.json/,
   );
 
   const styleFixture = await staticFixture(t);
