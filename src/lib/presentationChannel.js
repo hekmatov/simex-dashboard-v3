@@ -259,7 +259,7 @@ export function createPresentationAudienceChannel({
     if (message.type !== "state" && message.type !== "ended") return;
 
     if (message.type === "ended") {
-      if (awaitingBaseline) {
+      if (awaitingBaseline && resyncFloor > lastControllerSequence) {
         rejectMessage(reason(
           "duplicate_or_out_of_order",
           "Audience is waiting for a fresh controller state baseline",
@@ -281,6 +281,8 @@ export function createPresentationAudienceChannel({
         return;
       }
       lastControllerSequence = message.sequence;
+      awaitingBaseline = false;
+      resyncFloor = 0;
       onMessageAccepted(snapshot(message));
       onEnded(snapshot(message));
       setStatus("ended");

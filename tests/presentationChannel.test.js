@@ -383,6 +383,29 @@ test("a delayed contiguous ended cannot bypass a higher resync floor", () => {
   audience.dispose();
 });
 
+test("a newly opened Audience accepts contiguous ended before any state baseline", () => {
+  const { audience, scheduler, states, ended, rejections, statuses } = setup();
+  audience.start();
+  const sender = createChannel("simex-presentation-session-001");
+  sender.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 1,
+    type: "ended",
+    payload: null,
+  });
+
+  assert.deepEqual(states, []);
+  assert.deepEqual(rejections, []);
+  assert.equal(ended.length, 1);
+  assert.equal(ended[0].type, "ended");
+  assert.ok(statuses.includes("audience:ended"));
+  assert.equal(audience.isResyncRequired(), false);
+  assert.equal(audience.getLastValidSnapshot(), null);
+  assert.equal(scheduler.activeTimerCount, 0);
+  sender.close();
+});
+
 test("ordered ended emits a clone-safe terminal signal without clearing last-valid state", () => {
   const { audience, controller, scheduler, states, ended, statuses } = setup();
   controller.start();
