@@ -271,6 +271,15 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - The governing full unit gate is red at **1,516/1,558 passing, 42 failing**. The full Playwright restart stopped at a repeated common stale `Program label` locator after **10 passed / 2 failed / 174 not run**.
 - No fidelity/security/ledger row is promoted. Integrated beta pre-release and master acceptance remain pending. No broad architecture fix, merge, push, deployment, main edit, worktree deletion, or Step 7S acceptance was performed.
 
+## 2026-08-27 focused pre-release continuation
+
+- The prior red/incomplete gate was continued by failed-owner cluster, preserving all passing results. The two `dashboard-edit-race.spec.js` cases are GREEN **2/2** against the live debounced Page-title owner.
+- All evidence-backed unit-failure clusters are GREEN in their smallest owning selections. Four exact historical titles could not be recovered from the truncated reporter and were not invented; no full unit aggregate was rerun.
+- The cumulative browser ledger is **186/186 passing, 0 failing, 0 not run**. Journeys A–K remain individually reportable and passed at their accepted viewports/states.
+- Final focused corrections: `305c1e3` restores the exact Content-command boundary; `2b0821d` preserves staged CSV/GeoJSON authority across chart-wizard suspension. Focused Journey D and I reruns are each **1/1 GREEN**.
+- Final build: **GREEN**, 925 modules, 9.73 s. Final current-generated-client PS-04: **1/1 GREEN**. Step 7S historical parser result remains **36/36 Passing** and was reused without a redundant rerun.
+- Final scoped branch review: **APPROVED**. Submission to the master is authorized; master acceptance, merge, push, deployment, main edits, and worktree deletion remain outside scope.
+
 ## Task 2
 
 - Task 2: BASE `f81239ba288816603f3c6db14fc6b4a00141d5b9`.

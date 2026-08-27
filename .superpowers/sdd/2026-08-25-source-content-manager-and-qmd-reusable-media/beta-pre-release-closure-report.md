@@ -77,3 +77,13 @@ No duplicate A–K aggregate was run. The retained individual Journey D and I re
 ## Final state
 
 The four established corrections, bounded deterministic assertion repair, explicitly authorized chart-authoring fixture reconciliation, build refresh, PS-04 clearance, evidence updates, and this report form one coherent commit. The branch remains unmerged and undeployed, and Step 7S acceptance remains unchanged at its retained 36/36 result.
+
+## Superseding focused continuation — 2026-08-27
+
+- The two stale `dashboard-edit-race.spec.js` paths were migrated to the live debounced Page-title owner and pass **2/2** without rerunning the ten already-passing chart-authoring cases.
+- The 42-unit-failure phase was resolved by evidence-backed owner clusters: V5 presentation/static fixtures, QMD Vite/React runtime setup, canonical plot identity, tree semantics, one stale Studio-context assertion, terminology-policy scope, and JSX-loader ownership. Every recoverable cluster passed its smallest owning selection. The reporter truncation prevented reconstruction of four exact historical titles; they remain explicitly attributed as presentation/static cleanup cascades rather than invented ledger entries. No full unit aggregate was rerun under the approved focused-rerun policy.
+- The remaining browser cases were run with fail-fast discovery and failed/unrun-only continuation. The cumulative exact disposition is **186/186 passing, 0 failing, 0 not run**. Journeys A–K each passed independently at their accepted material viewport/state; no duplicate aggregate was run.
+- Two final production regressions found by the retained journeys were corrected: Build accessibility controls now sit outside the exact three-command Content group (`305c1e3`), and chart-wizard suspension now retains staged CSV/GeoJSON authority until explicit discard or terminal cleanup (`2b0821d`). Focused Journey D and I reruns are **1/1** each.
+- The final authorized production build is **GREEN**, 925 modules in 9.73 s, with only the accepted bundle warnings. Final current-client PS-04 is **1/1 GREEN**, including copied launch, PNG MIME, traversal 403, offline Audience at 1366×768, process shutdown, and temporary-directory cleanup.
+- Scoped final review of the current branch is **APPROVED**. The retained Step 7S controlling result remains **36/36 Passing** and was not redundantly rerun.
+- This is a review submission, not master acceptance. No merge, push, deployment, main-branch edit, worktree deletion, or automatic Step 7S acceptance occurred.

@@ -115,3 +115,9 @@ No security-deviation status is advanced by Task 17. The one deterministic sweep
 The authorized build refresh clears PS-04 specifically: the copied Windows package launched, served the structurally valid PNG with the declared MIME, rejected traversal, retained offline Audience behavior, and cleaned up. The bundle correction uses the repository's real 2×3 PNG and keeps signature, MIME, dimensions, byte length, SHA-256, and corruption checks active. The recovery-first assertions still require retained identity with no unusable payload reaching charts, and the GeoJSON commit predicate now requires an explicit matching selected identity.
 
 No security or deviation row is promoted by this closure. The exact deterministic selection was 673/674 before a focused 5/5 passive-detail assertion repair, while the full unit gate remains 1,516/1,558 and the full Playwright gate stopped at 10 passed / 2 failed / 174 not run. Master acceptance therefore remains pending.
+
+## Superseding pre-release security disposition — 2026-08-27
+
+The focused continuation resolved every evidence-backed failed owner without weakening the accepted negative assertions. The cumulative browser ledger is **186/186 passing** with all A–K journeys independently complete. Final current-client PS-04 is **1/1 GREEN** and again proves copied launch, declared raster MIME, traversal rejection, offline Audience, process shutdown, and cleanup. The final build is GREEN at 925 modules, and the scoped branch review is APPROVED.
+
+The corrections preserve the V5 identity/package boundary, safe inert QMD behavior, exact four-gate GeoJSON admission policy, reference-aware cleanup, transaction rollback, and no-request/no-cascade guarantees. This record supports submission for master acceptance; it does not itself accept, merge, publish, deploy, or alter the retained branch boundary.

@@ -111,3 +111,9 @@ The prescribed integrated deterministic run is **649/674 passing** and the one s
 The authorized closure supersedes the prior execution facts, not the retained row dispositions. Focused deterministic evidence is 148/148, Journey D and Journey I are each 1/1, the reconciled six-stage chart-authoring fixture is 10/10, both accepted builds are green, and PS-04 is cleared. The exact 73-file selection was 673/674 before its sole stale passive-detail assertion was corrected in a 5/5 focused file.
 
 No fidelity row is promoted because the governing full unit gate is 1,516/1,558 with 42 failures and the full 186-test Playwright gate stopped at 10 passed / 2 failed / 174 not run on a repeated stale `Program label` locator. Task-local row evidence remains valid at its recorded scope; integrated A–K and amendment-wide fidelity acceptance remain pending.
+
+## Superseding integrated fidelity disposition — 2026-08-27
+
+The focused continuation closed the red/incomplete gate without rerunning established passes. All evidence-backed unit clusters passed their nearest owner selections, and the cumulative browser ledger is **186/186 passing, 0 failing, 0 not run**. Journeys A–K each passed independently at the accepted material viewports/states; checkpoint inspection retained semantic, composition, and real-use assertions rather than screenshot or label-only proof. The final scoped branch review is **APPROVED**.
+
+Accordingly, all 36 amendment rows retain their task-local engine and mounted-UI evidence and now have completed integrated fidelity support for master review. This is a submission disposition, not self-acceptance: the V3 Design master must still decide acceptance, and no merge, push, deployment, main edit, or worktree deletion is authorized.
