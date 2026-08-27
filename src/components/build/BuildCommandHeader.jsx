@@ -56,6 +56,16 @@ export default function BuildCommandHeader({
             >
               Source content
             </button>
+          </div>
+        </section>
+
+        <section
+          className="build-command-group build-command-group--accessibility"
+          data-build-command-group="accessibility"
+          aria-label="Chart accessibility settings"
+        >
+          <strong className="build-command-group__label">Chart accessibility</strong>
+          <div className="build-command-group__controls">
             <label className="accessibility-edit-toggle">
               <input
                 type="checkbox"

@@ -55,8 +55,14 @@ test("Build commands are grouped by task above an independently inert Dashboard 
   const contentGroup = html.match(/<section[^>]*data-build-command-group="content"[\s\S]*?<\/section>/)?.[0] ?? "";
 
   assert.match(html, /aria-label="Build commands"/);
-  assert.deepEqual([...contentGroup.matchAll(/<button\b/g)].length, 3);
+  assert.deepEqual([...contentGroup.matchAll(/<(?:button|input|select|textarea)\b/g)].length, 3);
   assert.match(contentGroup, /Add chart[\s\S]*Add static content[\s\S]*Source content/);
+  assert.doesNotMatch(contentGroup, /Chart accessibility/);
+  const accessibilitySettings = html.match(
+    /<section[^>]*aria-label="Chart accessibility settings"[\s\S]*?<\/section>/,
+  )?.[0] ?? "";
+  assert.match(accessibilitySettings, /type="checkbox"/);
+  assert.match(accessibilitySettings, /Chart accessibility/);
   assert.doesNotMatch(contentGroup, /Pages &amp; sections/);
   assert.match(html, /data-build-command-group="structure"[\s\S]*Pages &amp; sections/);
   assert.match(html, /data-build-command-group="time"[\s\S]*Chrono Studio[\s\S]*Scene Studio/);
