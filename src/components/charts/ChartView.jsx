@@ -107,10 +107,12 @@ export function renderChartContent(props, interactionMode) {
       ...presentationFrameProps(props.chart, props.canonicalPlotId),
       ...(activeDate ? { "data-chart-active-date": activeDate } : {}),
       "data-chart-interaction-mode": interactionMode,
-      "data-canonical-runtime-ledger": serializeCanonicalRuntimeLedger({
-        chart: props.chart,
-        resolution: resolved,
-        timeContext: props.timeContext,
+      ...(typeof window === "undefined" ? {} : {
+        "data-canonical-runtime-ledger": serializeCanonicalRuntimeLedger({
+          chart: props.chart,
+          resolution: resolved,
+          timeContext: props.timeContext,
+        }),
       }),
     }, view);
     return chartZoom && !typedStaticImage

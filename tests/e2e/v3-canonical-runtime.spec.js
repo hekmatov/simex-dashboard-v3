@@ -7,6 +7,11 @@ import {
 } from "./support/present-audience-workflow.js";
 
 const PANEL_ID = "bio_municipality_aggregate";
+const EXPECTED_PRESENT_TIME = Object.freeze({
+  activeEpochMs: Date.UTC(2020, 1, 27),
+  frameIndex: 0,
+  traceMode: "full",
+});
 
 test("canonical runtime ledger preserves tracked semantics across View, Build, Present, and Audience", async ({ page }) => {
   await page.goto("/");
@@ -48,8 +53,8 @@ test("canonical runtime ledger preserves tracked semantics across View, Build, P
   );
 
   expect(withoutTime(present)).toEqual(withoutTime(view));
+  expect(present.time).toEqual(EXPECTED_PRESENT_TIME);
   expect(audience).toEqual(present);
-  expect(present.time).toMatchObject({ traceMode: "full" });
   await audienceSession.popup.close();
 });
 

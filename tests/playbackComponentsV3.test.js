@@ -562,17 +562,19 @@ test("presentation can derive immutable member time contexts without mounting pl
         matching: { policy: "lastKnown", toleranceMs: 86_400_000 },
       },
     ],
-  }, MAY_2);
+  }, MAY_2, { frameIndex: 1 });
 
   assert.equal(Object.isFrozen(contexts), true);
   assert.deepEqual(contexts["primary-chart"], {
     groupId: "exercise",
     activeEpochMs: MAY_2,
+    frameIndex: 1,
     matching: { policy: "exact" },
   });
   assert.deepEqual(contexts["secondary-chart"], {
     groupId: "exercise",
     activeEpochMs: MAY_2,
+    frameIndex: 1,
     matching: { policy: "lastKnown", toleranceMs: 86_400_000 },
   });
 });

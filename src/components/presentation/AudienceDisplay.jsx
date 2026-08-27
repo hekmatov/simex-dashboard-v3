@@ -89,6 +89,7 @@ export function AudienceProjectionSurface({
     activeEpochMs,
     {
       scene,
+      frameIndex: projection.timeline?.frame_index,
       traceMode: projection.timeline?.trace_mode,
     },
   );

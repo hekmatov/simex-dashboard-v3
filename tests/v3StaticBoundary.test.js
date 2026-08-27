@@ -51,6 +51,41 @@ test("rejects remote runtime URLs with the exact built file", async (t) => {
   );
 });
 
+test("rejects remote dependencies in referenced built JavaScript and CSS", async (t) => {
+  assert.ok(verifierModule);
+  const scriptFixture = await staticFixture(t);
+  await writeFile(
+    path.join(scriptFixture.distDir, "assets/dashboard-Xy98za76.js"),
+    'import("./chunk-Qq11ww22.js");',
+  );
+  await writeFile(
+    path.join(scriptFixture.distDir, "assets/chunk-Qq11ww22.js"),
+    'fetch("https://cdn.example.invalid/runtime.json");',
+  );
+  await assert.rejects(
+    verifierModule.verifyV3StaticBuild({
+      rootDir: scriptFixture.rootDir,
+      distDir: scriptFixture.distDir,
+      runtimeBoundaryInventory: frozenInventory(),
+    }),
+    /assets\/chunk-Qq11ww22\.js: remote runtime URL https:\/\/cdn\.example\.invalid\/runtime\.json/,
+  );
+
+  const styleFixture = await staticFixture(t);
+  await writeFile(
+    path.join(styleFixture.distDir, "assets/dashboard-Ab12cd34.css"),
+    '@import url("https://cdn.example.invalid/runtime.css");',
+  );
+  await assert.rejects(
+    verifierModule.verifyV3StaticBuild({
+      rootDir: styleFixture.rootDir,
+      distDir: styleFixture.distDir,
+      runtimeBoundaryInventory: frozenInventory(),
+    }),
+    /assets\/dashboard-Ab12cd34\.css: remote runtime URL https:\/\/cdn\.example\.invalid\/runtime\.css/,
+  );
+});
+
 test("rejects root-absolute launch URLs and missing local targets", async (t) => {
   assert.ok(verifierModule);
   const absolute = await staticFixture(t, {

@@ -150,11 +150,12 @@ export function PlaybackProvider({
       activeEpochMs,
       {
         scene: activeScene,
+        frameIndex: activeIndex,
         sessionMatchingOverride: state.matchingOverride,
         traceMode: state.traceMode,
       },
     ),
-    [activeEpochMs, activeGroup, activeScene, participatingMembers, state.matchingOverride, state.traceMode],
+    [activeEpochMs, activeGroup, activeIndex, activeScene, participatingMembers, state.matchingOverride, state.traceMode],
   );
   const timeContextForChart = React.useCallback(
     (chartId) => state.playbackView === true
@@ -344,6 +345,7 @@ export function createPlaybackTimer({
 
 export function buildMemberTimeContexts(group, activeEpochMs, {
   scene = null,
+  frameIndex,
   sessionMatchingOverride = "authored",
   traceMode,
 } = {}) {
@@ -364,6 +366,7 @@ export function buildMemberTimeContexts(group, activeEpochMs, {
     contexts[member.chartId] = Object.freeze({
       groupId: group.id,
       activeEpochMs,
+      ...(Number.isSafeInteger(frameIndex) ? { frameIndex } : {}),
       matching,
       ...(traceMode === undefined ? {} : { traceMode }),
       ...(scene ? { sceneId: scene.id } : {}),

@@ -46,6 +46,7 @@ export async function verifyV3StaticBuild({
       validateLocalRuntimeUrl({ url, owner: entrypoint, files, runtimeAssets });
     }
   }
+  await validateBuiltRuntimeGraph({ distDir: resolvedDist, files, runtimeAssets });
 
   const manifest = JSON.parse(
     await readFile(path.join(resolvedDist, "manifest.webmanifest"), "utf8"),
@@ -109,6 +110,69 @@ function extractHtmlRuntimeUrls(source) {
   const attributePattern = /\b(?:href|src)\s*=\s*["']([^"']+)["']/gi;
   for (const match of source.matchAll(attributePattern)) urls.push(match[1]);
   return urls;
+}
+
+async function validateBuiltRuntimeGraph({ distDir, files, runtimeAssets }) {
+  const pending = [...runtimeAssets];
+  const inspected = new Set();
+  while (pending.length > 0) {
+    const owner = pending.shift();
+    if (inspected.has(owner)) continue;
+    inspected.add(owner);
+    const source = await readFile(path.join(distDir, owner), "utf8");
+    for (const url of extractBuiltRuntimeUrls(source, path.extname(owner))) {
+      if (isIgnoredRuntimeUrl(url)) continue;
+      if (isRemoteRuntimeUrl(url)) {
+        throw new Error(`${owner}: remote runtime URL ${url}`);
+      }
+      if (url.startsWith("/")) {
+        throw new Error(`${owner}: runtime URL must be relative: ${url}`);
+      }
+      const target = normalizeBuiltRuntimeUrl(url, owner);
+      if (!files.has(target)) {
+        throw new Error(`${owner}: local runtime target is missing: ${target}`);
+      }
+      if (/\.(?:css|js)$/i.test(target) && !runtimeAssets.has(target)) {
+        runtimeAssets.add(target);
+        pending.push(target);
+      }
+    }
+  }
+}
+
+function extractBuiltRuntimeUrls(source, extension) {
+  const urls = [];
+  const patterns = extension === ".css"
+    ? [/@import\s+(?:url\(\s*)?["']?([^\s"')]+)["']?\s*\)?/gi,
+      /url\(\s*["']?([^\s"')]+)["']?\s*\)/gi]
+    : [/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+      /\b(?:import|export)\s+(?:[^"']*?\sfrom\s*)?["']([^"']+)["']/g,
+      /\bnew\s+URL\(\s*["']([^"']+)["']\s*,\s*import\.meta\.url\s*\)/g,
+      /\b(?:fetch|importScripts)\(\s*["']([^"']+)["']/g,
+      /\bnew\s+(?:Worker|SharedWorker|WebSocket|EventSource)\(\s*["']([^"']+)["']/g];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) urls.push(match[1]);
+  }
+  return [...new Set(urls)];
+}
+
+function normalizeBuiltRuntimeUrl(value, owner) {
+  const withoutQuery = value.split(/[?#]/, 1)[0].replaceAll("\\", "/");
+  const normalized = path.posix.normalize(
+    path.posix.join(path.posix.dirname(owner), withoutQuery),
+  );
+  if (normalized === ".." || normalized.startsWith("../")) {
+    throw new Error(`${owner}: runtime URL escapes the package: ${value}`);
+  }
+  return normalized;
+}
+
+function isRemoteRuntimeUrl(value) {
+  return /^https?:\/\//i.test(value) || /^\/\//.test(value);
+}
+
+function isIgnoredRuntimeUrl(value) {
+  return /^(?:data:|blob:|mailto:|javascript:|#)/i.test(value);
 }
 
 function normalizeRelativeUrl(value) {
