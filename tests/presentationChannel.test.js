@@ -627,3 +627,58 @@ test("controller sends liveness heartbeats to Audience without changing the acce
   audience.dispose();
   controller.dispose();
 });
+
+test("a valid state arriving first after controller silence still traverses reconnecting", () => {
+  const { audience, controller, scheduler, states, statuses } = setup();
+  controller.start();
+  audience.start();
+  const first = presentationState();
+  controller.publish(first);
+  controller.dispose();
+  scheduler.advance(5_000);
+
+  const restoredController = createChannel("simex-presentation-session-001");
+  const restored = { ...first, output_mode: "blank" };
+  restoredController.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 2,
+    type: "state",
+    payload: restored,
+  });
+
+  assert.deepEqual(statuses.slice(-3), [
+    "audience:disconnected",
+    "audience:reconnecting",
+    "audience:connected",
+  ]);
+  assert.deepEqual(states, [first, restored]);
+  restoredController.close();
+  audience.dispose();
+});
+
+test("a malformed state arriving first after controller silence remains reconnecting with last-valid", () => {
+  const { audience, controller, scheduler, rejections, statuses } = setup();
+  controller.start();
+  audience.start();
+  const first = presentationState();
+  controller.publish(first);
+  controller.dispose();
+  scheduler.advance(5_000);
+
+  const restoredController = createChannel("simex-presentation-session-001");
+  restoredController.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 2,
+    type: "state",
+    payload: null,
+  });
+
+  assert.equal(statuses.at(-1), "audience:reconnecting");
+  assert.equal(rejections.at(-1).reason.code, "invalid_object");
+  assert.deepEqual(rejections.at(-1).lastValidSnapshot, first);
+  assert.deepEqual(audience.getLastValidSnapshot(), first);
+  restoredController.close();
+  audience.dispose();
+});

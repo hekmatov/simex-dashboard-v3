@@ -200,6 +200,7 @@ export function createPresentationAudienceChannel({
   let lastControllerAt = null;
   let reconnectStartedAt = null;
   let reconnectReadyPending = false;
+  let reconnectBaselineRequired = false;
 
   function setStatus(nextStatus) {
     if (status === nextStatus) return;
@@ -235,6 +236,15 @@ export function createPresentationAudienceChannel({
     }
   }
 
+  function beginReconnect(floor = lastControllerSequence) {
+    awaitingBaseline = true;
+    reconnectBaselineRequired = true;
+    resyncFloor = Math.max(resyncFloor, floor ?? 0);
+    reconnectStartedAt = scheduler.now();
+    reconnectReadyPending = true;
+    setStatus("reconnecting");
+  }
+
   function acceptState(message) {
     lastControllerSequence = message.sequence;
     lastControllerAt = scheduler.now();
@@ -243,6 +253,7 @@ export function createPresentationAudienceChannel({
     resyncFloor = 0;
     reconnectStartedAt = null;
     reconnectReadyPending = false;
+    reconnectBaselineRequired = false;
     onMessageAccepted(snapshot(message));
     onStateChange(snapshot(lastValidSnapshot));
     setStatus("connected");
@@ -258,6 +269,17 @@ export function createPresentationAudienceChannel({
     } catch (error) {
       const rejection = presentationRejectionReason(error);
       const candidateSequence = envelopeSequence(data);
+      if (
+        reconnectBaselineRequired
+        && status === "disconnected"
+        && error?.code !== "session_mismatch"
+        && isControllerEnvelope(data, sessionId)
+        && candidateSequence > lastControllerSequence
+      ) {
+        rejectMessage(rejection);
+        beginReconnect(candidateSequence);
+        return;
+      }
       if (
         error?.code !== "session_mismatch"
         && isControllerEnvelope(data, sessionId)
@@ -300,11 +322,7 @@ export function createPresentationAudienceChannel({
       }
       lastControllerAt = scheduler.now();
       if (status === "disconnected") {
-        awaitingBaseline = true;
-        resyncFloor = lastControllerSequence;
-        reconnectStartedAt = scheduler.now();
-        reconnectReadyPending = true;
-        setStatus("reconnecting");
+        beginReconnect();
       }
       return;
     }
@@ -350,6 +368,9 @@ export function createPresentationAudienceChannel({
           "Audience is waiting for a fresh controller state baseline",
         ));
         return;
+      }
+      if (reconnectBaselineRequired && status === "disconnected") {
+        setStatus("reconnecting");
       }
       acceptState(message);
       return;
@@ -397,7 +418,13 @@ export function createPresentationAudienceChannel({
         lastControllerAt !== null
         && scheduler.now() - lastControllerAt >= DISCONNECT_AFTER_MS
         && status !== "ended"
+        && status !== "disconnected"
       ) {
+        awaitingBaseline = true;
+        reconnectBaselineRequired = true;
+        resyncFloor = Math.max(resyncFloor, lastControllerSequence);
+        reconnectStartedAt = null;
+        reconnectReadyPending = false;
         setStatus("disconnected");
       }
     }, 500);
@@ -422,6 +449,7 @@ export function createPresentationAudienceChannel({
     lastControllerAt = null;
     reconnectStartedAt = null;
     reconnectReadyPending = false;
+    reconnectBaselineRequired = false;
   }
 
   function getLastValidSnapshot() {

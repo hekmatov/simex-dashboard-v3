@@ -122,17 +122,18 @@ test("1920 Audience progresses passively through output, liveness, blackout, and
   await page.locator('[data-presentation-control-id="restore"]').click();
   await expect(audience.locator(".audience-blackout")).toHaveCount(0);
 
-  const presenterBlock = page.evaluate(() => {
-    const releaseAt = performance.now() + 8_000;
-    while (performance.now() < releaseAt) {
-      // Exercise a real unresponsive controller event loop without a product hook.
-    }
+  await page.evaluate(() => {
+    setTimeout(() => {
+      const releaseAt = performance.now() + 8_000;
+      while (performance.now() < releaseAt) {
+        // Exercise a real unresponsive controller event loop without a product hook.
+      }
+    }, 0);
   });
   await expect(popup.locator(
     '.audience-display[data-connection-status="disconnected"] [data-connection-indicator="disconnected"] svg[aria-label="Audience display disconnected"]',
   )).toBeVisible({ timeout: 12_000 });
 
-  await presenterBlock;
   await expect(popup.locator(
     '.audience-display[data-connection-status="reconnecting"] [data-connection-indicator="reconnecting"] svg[aria-label="Audience display reconnecting"]',
   )).toBeVisible({ timeout: 6_000 });
