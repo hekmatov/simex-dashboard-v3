@@ -16,10 +16,21 @@ const presentableItemIndex = new Map([
 ]);
 
 function presentationState(item = { kind: "chart", chart_id: "chart-a" }) {
+  const itemId = item.kind === "chart" ? item.chart_id : item.panel_id;
   return {
     dashboard_revision: "dashboard-r17",
     source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
-    composition: { active_page_id: "biomedical", items: [item], layout: "solo" },
+    composition: { active_page_id: "biomedical", displayed_chart_ids: [itemId], layout: "solo" },
+    payload: {
+      items: [item],
+      audience_facts: {
+        dashboard_name: true,
+        page: true,
+        parent_chrono_group: true,
+        scene_name: true,
+        scene_date: true,
+      },
+    },
     timeline: {
       frame_epochs: [100, 200],
       frame_index: 0,
@@ -97,7 +108,10 @@ class FakeBroadcastChannel {
 
 function createChannel(name) { return new FakeBroadcastChannel(name); }
 
-function setup() {
+function setup({
+  getPresentableItemIndex = () => presentableItemIndex,
+  validateSourceSelection = () => ({ accepted: true }),
+} = {}) {
   FakeBroadcastChannel.reset();
   const scheduler = new FakeScheduler();
   const states = [];
@@ -107,14 +121,15 @@ function setup() {
     sessionId: "session-001",
     createChannel,
     scheduler,
-    getPresentableItemIndex: () => presentableItemIndex,
+    getPresentableItemIndex,
+    validateSourceSelection,
     onConnectionChange: (status) => statuses.push(status),
   });
   const audience = createPresentationAudienceChannel({
     sessionId: "session-001",
     createChannel,
     scheduler,
-    getPresentableItemIndex: () => presentableItemIndex,
+    getPresentableItemIndex,
     onStateChange: (next) => states.push(next),
     onConnectionChange: (status) => statuses.push(`audience:${status}`),
     onMessageRejected: (reason, lastValidSnapshot) => rejections.push({ reason, lastValidSnapshot }),
@@ -171,14 +186,147 @@ test("last-valid snapshots are clone-isolated across caller and callback mutatio
   audience.start();
   const input = presentationState();
   const outcome = controller.publish(input);
-  input.composition.items[0].chart_id = "chart-b";
-  outcome.lastValidSnapshot.composition.items[0].chart_id = "chart-b";
-  states[0].composition.items[0].chart_id = "chart-b";
+  input.payload.items[0].chart_id = "chart-b";
+  outcome.lastValidSnapshot.payload.items[0].chart_id = "chart-b";
+  states[0].payload.items[0].chart_id = "chart-b";
 
   const rejected = controller.publish(presentationState({ kind: "chart", chart_id: "missing" }));
-  assert.equal(rejected.lastValidSnapshot.composition.items[0].chart_id, "chart-a");
-  assert.equal(audience.getLastValidSnapshot().composition.items[0].chart_id, "chart-a");
+  assert.equal(rejected.lastValidSnapshot.payload.items[0].chart_id, "chart-a");
+  assert.equal(audience.getLastValidSnapshot().payload.items[0].chart_id, "chart-a");
   audience.dispose();
+  controller.dispose();
+});
+
+test("authored sources require explicit valid eligibility and a non-null timeline by default", () => {
+  FakeBroadcastChannel.reset();
+  const controller = createPresentationControllerChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler: new FakeScheduler(),
+    getPresentableItemIndex: () => presentableItemIndex,
+  });
+  const candidate = presentationState();
+  assert.equal(controller.publish(candidate).reason.code, "source_eligibility_required");
+  assert.equal(
+    controller.publish({ ...candidate, timeline: null }, { sourceStatus: "valid" }).reason.code,
+    "source_timeline_required",
+  );
+  assert.equal(controller.publish(candidate, { sourceStatus: "valid" }).accepted, true);
+
+  const manual = {
+    ...candidate,
+    source: { kind: "manual", scene_id: null, chrono_group_id: null },
+    timeline: null,
+  };
+  assert.equal(controller.publish(manual).accepted, true);
+});
+
+test("a same-session Audience reload restarts ready at sequence 1 and receives latest state", () => {
+  const { audience, controller, scheduler } = setup();
+  controller.start();
+  audience.start();
+  const latest = presentationState();
+  controller.publish(latest);
+  audience.dispose();
+
+  const replayed = [];
+  const reloaded = createPresentationAudienceChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => presentableItemIndex,
+    onStateChange: (next) => replayed.push(next),
+  });
+  reloaded.start();
+
+  assert.deepEqual(replayed, [latest]);
+  reloaded.dispose();
+  controller.dispose();
+});
+
+test("ordinary duplicate and out-of-order heartbeats remain rejected after a fresh ready baseline", () => {
+  const controllerRejections = [];
+  FakeBroadcastChannel.reset();
+  const scheduler = new FakeScheduler();
+  const controller = createPresentationControllerChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => presentableItemIndex,
+    validateSourceSelection: () => ({ accepted: true }),
+    onMessageRejected: (reason) => controllerRejections.push(reason),
+  });
+  controller.start();
+  const sender = createChannel("simex-presentation-session-001");
+  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 1, type: "ready", payload: null });
+  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 1, type: "heartbeat", payload: null });
+  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 0, type: "heartbeat", payload: null });
+  assert.ok(controllerRejections.some(({ code }) => code === "duplicate_or_out_of_order"));
+  assert.ok(controllerRejections.some(({ code }) => code === "invalid_sequence"));
+  sender.close();
+  controller.dispose();
+});
+
+test("a validated ended message is terminal even when its sequence follows a gap", () => {
+  const { audience, controller, scheduler, states, rejections, statuses } = setup();
+  controller.start();
+  audience.start();
+  const first = presentationState();
+  controller.publish(first);
+  audienceTransport().dropNext = 1;
+  controller.publish({ ...first, output_mode: "blank" });
+  controller.end();
+
+  assert.deepEqual(states, [first]);
+  assert.equal(rejections.some(({ reason }) => reason.code === "sequence_gap"), false);
+  assert.ok(statuses.includes("audience:waiting"));
+  assert.equal(scheduler.activeTimerCount, 0);
+});
+
+test("reload replays exact trusted Image identity and rejects a stale revision", () => {
+  let currentIndex = presentableItemIndex;
+  const { audience, controller, scheduler } = setup({
+    getPresentableItemIndex: () => currentIndex,
+  });
+  controller.start();
+  audience.start();
+  const imageState = presentationState({
+    kind: "image",
+    panel_id: "image-a",
+    media_id: "media-image-a",
+    revision: 7,
+  });
+  controller.publish(imageState);
+  audience.dispose();
+
+  const exact = [];
+  const firstReload = createPresentationAudienceChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => currentIndex,
+    onStateChange: (next) => exact.push(next),
+  });
+  firstReload.start();
+  assert.deepEqual(exact[0].payload.items[0], imageState.payload.items[0]);
+  firstReload.dispose();
+
+  currentIndex = new Map(currentIndex);
+  currentIndex.set("image-a", {
+    ...currentIndex.get("image-a"),
+    descriptor: { ...currentIndex.get("image-a").descriptor, revision: 8 },
+  });
+  const stale = [];
+  const secondReload = createPresentationAudienceChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => currentIndex,
+    onStateChange: (next) => stale.push(next),
+  });
+  secondReload.start();
+  assert.deepEqual(stale, []);
+  secondReload.dispose();
   controller.dispose();
 });
 

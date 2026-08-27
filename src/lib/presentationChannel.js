@@ -16,7 +16,7 @@ export function createPresentationControllerChannel({
   scheduler = defaultScheduler(),
   presentableItemIndex,
   getPresentableItemIndex = () => presentableItemIndex,
-  validateSourceSelection = () => ({ accepted: true }),
+  validateSourceSelection,
   onConnectionChange = () => {},
   onMessageRejected = () => {},
 } = {}) {
@@ -75,6 +75,13 @@ export function createPresentationControllerChannel({
       return;
     }
     if (message.type !== "ready" && message.type !== "heartbeat") return;
+    if (message.type === "ready" && message.sequence === 1) {
+      lastAudienceSequence = 1;
+      lastHeartbeatAt = scheduler.now();
+      setStatus("connected");
+      sendLatestState();
+      return;
+    }
     if (message.sequence <= lastAudienceSequence) {
       onMessageRejected(reason(
         "duplicate_or_out_of_order",
@@ -107,14 +114,10 @@ export function createPresentationControllerChannel({
   function publish(state, context = {}) {
     let candidate;
     try {
-      validateSourceStatus(context);
-      const eligibility = validateSourceSelection(state?.source, state, context);
-      if (eligibility === false || eligibility?.accepted === false) {
-        throw sourceRejection(eligibility?.reason);
-      }
       validatePresentationState(state, {
         presentableItemIndex: getPresentableItemIndex(),
       });
+      validateSourceEligibility(state, context, validateSourceSelection);
       candidate = snapshot(state);
     } catch (error) {
       return {
@@ -243,8 +246,22 @@ export function createPresentationAudienceChannel({
 
     if (message.type !== "state" && message.type !== "ended") return;
 
+    if (message.type === "ended") {
+      if (message.sequence <= lastControllerSequence) {
+        rejectMessage(reason(
+          "duplicate_or_out_of_order",
+          "controller message sequence is duplicate or out of order",
+        ));
+        return;
+      }
+      lastControllerSequence = message.sequence;
+      setStatus("waiting");
+      dispose();
+      return;
+    }
+
     if (awaitingBaseline) {
-      if (message.type !== "state" || message.sequence <= resyncFloor) {
+      if (message.sequence <= resyncFloor) {
         rejectMessage(reason(
           "duplicate_or_out_of_order",
           "Audience is waiting for a fresh controller state baseline",
@@ -269,14 +286,7 @@ export function createPresentationAudienceChannel({
       ), message.sequence);
       return;
     }
-    if (message.type === "state") {
-      acceptState(message);
-      return;
-    }
-
-    lastControllerSequence = message.sequence;
-    setStatus("waiting");
-    dispose();
+    acceptState(message);
   }
 
   function start() {
@@ -320,13 +330,35 @@ export function createPresentationAudienceChannel({
   return { start, dispose, getLastValidSnapshot, isResyncRequired };
 }
 
-function validateSourceStatus(context) {
-  const status = context?.sourceStatus ?? context?.sourceSelection?.status;
-  if (status === undefined || status === null || status === "valid") return;
-  const normalized = String(status).trim().toLowerCase().replaceAll("_", "-");
-  if (["invalid", "needs-attention", "needs attention"].includes(normalized)) {
+function validateSourceEligibility(state, context, validateSourceSelection) {
+  if (state.source.kind === "manual") return;
+  if (state.timeline === null) {
+    throw sourceRejection(reason(
+      "source_timeline_required",
+      "Scene and Chrono Group sources require a valid timeline",
+    ));
+  }
+
+  const rawStatus = context?.sourceStatus ?? context?.sourceSelection?.status;
+  const status = rawStatus == null
+    ? null
+    : String(rawStatus).trim().toLowerCase().replaceAll("_", "-");
+  if (["invalid", "needs-attention", "needs attention"].includes(status)) {
     throw sourceRejection();
   }
+  if (status === "valid") return;
+
+  if (typeof validateSourceSelection === "function") {
+    const eligibility = validateSourceSelection(state.source, state, context);
+    if (eligibility === true || eligibility?.accepted === true) return;
+    if (eligibility === false || eligibility?.accepted === false) {
+      throw sourceRejection(eligibility?.reason);
+    }
+  }
+  throw sourceRejection(reason(
+    "source_eligibility_required",
+    "Scene and Chrono Group publication requires explicit live eligibility evidence",
+  ));
 }
 
 function sourceRejection(customReason) {

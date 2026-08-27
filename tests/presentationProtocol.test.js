@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { buildContentDependencyGraph } from "../src/content-library/contentDependencyGraph.js";
 
 import {
   PRESENTATION_PROTOCOL_VERSION,
@@ -23,11 +24,21 @@ const state = {
   source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
   composition: {
     active_page_id: "biomedical",
+    displayed_chart_ids: ["chart-a", "image-a"],
+    layout: "sideBySide",
+  },
+  payload: {
     items: [
       { kind: "chart", chart_id: "chart-a" },
       { kind: "image", panel_id: "image-a", media_id: "media-image-a", revision: 7 },
     ],
-    layout: "sideBySide",
+    audience_facts: {
+      dashboard_name: true,
+      page: true,
+      parent_chrono_group: true,
+      scene_name: true,
+      scene_date: true,
+    },
   },
   timeline: {
     frame_epochs: [1_801_440_000_000, 1_801_526_400_000],
@@ -93,6 +104,27 @@ test("presentation state enforces every exact field and authored-only matching t
   }, { presentableItemIndex }), protocolError("unknown_field"));
 });
 
+test("presentation state requires the accepted payload shape and rejects the legacy composition-items shape", () => {
+  const missingPayload = { ...state };
+  delete missingPayload.payload;
+  assert.throws(
+    () => validatePresentationState(missingPayload, { presentableItemIndex }),
+    protocolError("missing_field"),
+  );
+  assert.throws(() => validatePresentationState({
+    ...state,
+    composition: {
+      active_page_id: "biomedical",
+      items: state.payload.items,
+      layout: "sideBySide",
+    },
+  }, { presentableItemIndex }), protocolError("unknown_field"));
+  assert.throws(() => validatePresentationState({
+    ...state,
+    payload: { ...state.payload, extra: true },
+  }, { presentableItemIndex }), protocolError("unknown_field"));
+});
+
 test("source identity is exact for Scene, Chrono Group, and manual state", () => {
   for (const source of [
     { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
@@ -112,8 +144,8 @@ test("source identity is exact for Scene, Chrono Group, and manual state", () =>
 
 test("composition preserves trusted mixed chart and Image identity without stale-ID reconciliation", () => {
   assert.deepEqual(
-    validatePresentationState(state, { presentableItemIndex }).composition.items,
-    state.composition.items,
+    validatePresentationState(state, { presentableItemIndex }).payload.items,
+    state.payload.items,
   );
   for (const item of [
     { kind: "chart", chart_id: "unknown-chart" },
@@ -121,8 +153,27 @@ test("composition preserves trusted mixed chart and Image identity without stale
     { kind: "image", panel_id: "image-a", media_id: "media-image-a", revision: 6 },
   ]) assert.throws(() => validatePresentationState({
     ...state,
-    composition: { ...state.composition, items: [item], layout: "solo" },
+    composition: {
+      ...state.composition,
+      displayed_chart_ids: [item.kind === "chart" ? item.chart_id : item.panel_id],
+      layout: "solo",
+    },
+    payload: { ...state.payload, items: [item] },
   }, { presentableItemIndex }), protocolError("untrusted_presentation_item"));
+});
+
+test("composition IDs exactly match mixed payload item identities and order", () => {
+  for (const [displayed_chart_ids, code] of [
+    [["image-a", "chart-a"], "composition_payload_mismatch"],
+    [["chart-a"], "composition_payload_mismatch"],
+    [["chart-a", "chart-a"], "duplicate_presentation_item"],
+  ]) assert.throws(
+    () => validatePresentationState({
+      ...state,
+      composition: { ...state.composition, displayed_chart_ids },
+    }, { presentableItemIndex }),
+    protocolError(code),
+  );
 });
 
 test("timeline validates ordered frames, direct frame bounds, period, modes, and speed", () => {
@@ -181,6 +232,106 @@ test("actions validate exact values and reject matching override actions", () =>
     () => validatePresentationAction({ type: "SET_MATCHING_OVERRIDE", value: "interpolate" }),
     protocolError("unsupported_action"),
   );
+});
+
+test("Image payload descriptors reject forbidden transport, asset, and temporal fields", () => {
+  const image = state.payload.items[1];
+  for (const [field, value] of [
+    ["url", "https://example.test/image.png"],
+    ["blob_url", "blob:https://example.test/secret"],
+    ["crop", { x: 0, y: 0, width: 1000, height: 1000 }],
+    ["fit", "cover"],
+    ["rotation", 90],
+    ["asset_bytes", "AAAA"],
+    ["chrono_group_id", "group-a"],
+    ["scene_id", "scene-a"],
+    ["frame_id", "frame-a"],
+    ["time", { active_epoch_ms: 1 }],
+  ]) assert.throws(() => validatePresentationState({
+    ...state,
+    composition: { ...state.composition, displayed_chart_ids: ["image-a"], layout: "solo" },
+    payload: { ...state.payload, items: [{ ...image, [field]: value }] },
+  }, { presentableItemIndex }), protocolError("unknown_field"), field);
+});
+
+test("identifiers, layouts, finite time, and independent Audience facts remain strict", () => {
+  assert.throws(
+    () => validatePresentationState({
+      ...state,
+      composition: { ...state.composition, active_page_id: "bad page" },
+    }, { presentableItemIndex }),
+    protocolError("invalid_identifier"),
+  );
+  assert.throws(
+    () => validatePresentationState({
+      ...state,
+      composition: { ...state.composition, layout: "grid2x2" },
+    }, { presentableItemIndex }),
+    protocolError("invalid_layout"),
+  );
+  assert.throws(
+    () => validatePresentationState({
+      ...state,
+      timeline: { ...state.timeline, seconds_per_frame: Number.NaN },
+    }, { presentableItemIndex }),
+    protocolError("invalid_seconds_per_frame"),
+  );
+  for (const key of Object.keys(state.payload.audience_facts)) {
+    const audience_facts = { ...state.payload.audience_facts };
+    delete audience_facts[key];
+    assert.throws(
+      () => validatePresentationState({
+        ...state,
+        payload: { ...state.payload, audience_facts },
+      }, { presentableItemIndex }),
+      protocolError("missing_field"),
+    );
+    assert.throws(
+      () => validatePresentationState({
+        ...state,
+        payload: {
+          ...state.payload,
+          audience_facts: { ...state.payload.audience_facts, [key]: "yes" },
+        },
+      }, { presentableItemIndex }),
+      protocolError("invalid_audience_facts"),
+    );
+  }
+  assert.throws(
+    () => validatePresentationState({
+      ...state,
+      payload: {
+        ...state.payload,
+        audience_facts: { ...state.payload.audience_facts, owner: true },
+      },
+    }, { presentableItemIndex }),
+    protocolError("unknown_field"),
+  );
+});
+
+test("Present and Audience runtime payloads do not become durable content dependencies", () => {
+  const dashboard = {
+    contentLibrary: { mediaItems: {}, sourceEntries: { cases: { sourceId: "cases", kind: "csv" } } },
+    dataSources: { cases: { kind: "csv" } },
+    pages: [{
+      id: "page-a",
+      sections: [{ id: "section-a", panels: [{ id: "chart-a", chart: { id: "chart-a", sourceId: "cases" } }] }],
+    }],
+  };
+  const baseline = buildContentDependencyGraph({ dashboard });
+  const withRuntime = buildContentDependencyGraph({
+    dashboard,
+    presentationState: state,
+    audienceMessages: [makePresentationMessage({
+      sessionId: "session-001",
+      sequence: 1,
+      type: "state",
+      payload: state,
+      presentableItemIndex,
+    })],
+    mediaLeases: [{ mediaId: "media-image-a", revision: 7 }],
+  });
+  assert.deepEqual(withRuntime.directUses, baseline.directUses);
 });
 
 test("message parsing rejects protocol/session/payload faults and non-monotonic sequences with reasons", () => {

@@ -15,10 +15,14 @@ const LAYOUTS_BY_COUNT = Object.freeze({
 const ENVELOPE_FIELDS = ["protocol_version", "session_id", "sequence", "type", "payload"];
 const STATE_FIELDS = [
   "dashboard_revision", "source", "composition", "timeline", "matching",
-  "output_mode", "blackout", "audience",
+  "output_mode", "blackout", "audience", "payload",
 ];
 const SOURCE_FIELDS = ["kind", "scene_id", "chrono_group_id"];
-const COMPOSITION_FIELDS = ["active_page_id", "items", "layout"];
+const COMPOSITION_FIELDS = ["active_page_id", "displayed_chart_ids", "layout"];
+const PAYLOAD_FIELDS = ["items", "audience_facts"];
+const AUDIENCE_FACT_FIELDS = [
+  "dashboard_name", "page", "parent_chrono_group", "scene_name", "scene_date",
+];
 const TIMELINE_FIELDS = [
   "frame_epochs", "frame_index", "period", "trace_mode", "seconds_per_frame",
 ];
@@ -95,7 +99,11 @@ export function validatePresentationState(state, { presentableItemIndex } = {}) 
   assertExactFields(state, STATE_FIELDS, "presentation state", "payload");
   assertRevision(state.dashboard_revision);
   validateSource(state.source);
-  validateComposition(state.composition, { presentableItemIndex });
+  validatePayload(state.payload, { presentableItemIndex });
+  validateComposition(state.composition, {
+    presentableItemIndex,
+    payloadItems: state.payload.items,
+  });
   validateTimeline(state.timeline);
   validateMatching(state.matching);
   if (!OUTPUT_MODES.has(state.output_mode)) {
@@ -224,16 +232,79 @@ function validateSource(source) {
   }
 }
 
-function validateComposition(composition, { presentableItemIndex }) {
+function validateComposition(composition, { presentableItemIndex, payloadItems } = {}) {
   assertPlainObject(composition, "presentation composition", "payload.composition");
   assertExactFields(composition, COMPOSITION_FIELDS, "presentation composition", "payload.composition");
   assertIdentifier(composition.active_page_id, "active page ID", "payload.composition.active_page_id");
-  assertPresentationItems(composition.items, presentableItemIndex);
-  if (!LAYOUTS_BY_COUNT[composition.items.length]?.has(composition.layout)) {
+  const ids = composition.displayed_chart_ids;
+  if (!Array.isArray(ids) || ids.length > 4) {
+    reject(
+      "invalid_item_count",
+      "displayed chart IDs must contain 0 to 4 identifiers",
+      "payload.composition.displayed_chart_ids",
+    );
+  }
+  const uniqueIds = new Set();
+  for (const id of ids) {
+    assertIdentifier(id, "displayed item ID", "payload.composition.displayed_chart_ids");
+    if (uniqueIds.has(id)) {
+      reject(
+        "duplicate_presentation_item",
+        "displayed chart IDs must be unique",
+        "payload.composition.displayed_chart_ids",
+      );
+    }
+    uniqueIds.add(id);
+    if (presentableItemIndex != null && !presentableItemIndex.has?.(id)) {
+      reject(
+        "untrusted_presentation_item",
+        "displayed item identity is not allowed",
+        "payload.composition.displayed_chart_ids",
+      );
+    }
+  }
+  if (payloadItems !== undefined) {
+    const payloadIds = payloadItems.map(presentationItemId);
+    if (
+      ids.length !== payloadIds.length
+      || ids.some((id, index) => id !== payloadIds[index])
+    ) {
+      reject(
+        "composition_payload_mismatch",
+        "displayed chart IDs must match payload item identities and order",
+        "payload.composition.displayed_chart_ids",
+      );
+    }
+  }
+  if (!LAYOUTS_BY_COUNT[ids.length]?.has(composition.layout)) {
     reject(
       "invalid_layout",
       "layout is not valid for presentation item count",
       "payload.composition.layout",
+    );
+  }
+}
+
+function validatePayload(payload, { presentableItemIndex }) {
+  assertPlainObject(payload, "presentation payload", "payload.payload");
+  assertExactFields(payload, PAYLOAD_FIELDS, "presentation payload", "payload.payload");
+  assertPresentationItems(payload.items, presentableItemIndex);
+  assertPlainObject(
+    payload.audience_facts,
+    "presentation Audience facts",
+    "payload.payload.audience_facts",
+  );
+  assertExactFields(
+    payload.audience_facts,
+    AUDIENCE_FACT_FIELDS,
+    "presentation Audience facts",
+    "payload.payload.audience_facts",
+  );
+  if (AUDIENCE_FACT_FIELDS.some((key) => typeof payload.audience_facts[key] !== "boolean")) {
+    reject(
+      "invalid_audience_facts",
+      "Audience fact flags must be booleans",
+      "payload.payload.audience_facts",
     );
   }
 }
@@ -315,14 +386,14 @@ function validateAudience(audience) {
 
 function assertPresentationItems(items, presentableItemIndex) {
   if (!Array.isArray(items) || items.length > 4) {
-    reject("invalid_item_count", "presentation items must contain 0 to 4 items", "payload.composition.items");
+    reject("invalid_item_count", "presentation items must contain 0 to 4 items", "payload.payload.items");
   }
   const uniqueIds = new Set();
   for (const item of items) {
-    assertPlainObject(item, "presentation item", "payload.composition.items");
+    assertPlainObject(item, "presentation item", "payload.payload.items");
     const itemId = validatePresentationItem(item);
     if (uniqueIds.has(itemId)) {
-      reject("duplicate_presentation_item", "presentation items must be unique", "payload.composition.items");
+      reject("duplicate_presentation_item", "presentation items must be unique", "payload.payload.items");
     }
     uniqueIds.add(itemId);
     if (presentableItemIndex != null) {
@@ -331,7 +402,7 @@ function assertPresentationItems(items, presentableItemIndex) {
         reject(
           "untrusted_presentation_item",
           "presentation item identity or revision is not allowed",
-          "payload.composition.items",
+          "payload.payload.items",
         );
       }
     }
@@ -340,20 +411,24 @@ function assertPresentationItems(items, presentableItemIndex) {
 
 function validatePresentationItem(item) {
   if (item.kind === "chart") {
-    assertExactFields(item, CHART_ITEM_FIELDS, "presentation item", "payload.composition.items");
-    assertIdentifier(item.chart_id, "chart ID", "payload.composition.items.chart_id");
+    assertExactFields(item, CHART_ITEM_FIELDS, "presentation item", "payload.payload.items");
+    assertIdentifier(item.chart_id, "chart ID", "payload.payload.items.chart_id");
     return item.chart_id;
   }
   if (item.kind === "image") {
-    assertExactFields(item, IMAGE_ITEM_FIELDS, "presentation item", "payload.composition.items");
-    assertIdentifier(item.panel_id, "Image panel ID", "payload.composition.items.panel_id");
-    assertIdentifier(item.media_id, "Image media ID", "payload.composition.items.media_id");
+    assertExactFields(item, IMAGE_ITEM_FIELDS, "presentation item", "payload.payload.items");
+    assertIdentifier(item.panel_id, "Image panel ID", "payload.payload.items.panel_id");
+    assertIdentifier(item.media_id, "Image media ID", "payload.payload.items.media_id");
     if (!Number.isSafeInteger(item.revision) || item.revision < 1) {
-      reject("invalid_image_revision", "Image revision must be a positive integer", "payload.composition.items.revision");
+      reject("invalid_image_revision", "Image revision must be a positive integer", "payload.payload.items.revision");
     }
     return item.panel_id;
   }
-  reject("unsupported_presentation_item", "presentation item kind is not allowed", "payload.composition.items.kind");
+  reject("unsupported_presentation_item", "presentation item kind is not allowed", "payload.payload.items.kind");
+}
+
+function presentationItemId(item) {
+  return item.kind === "chart" ? item.chart_id : item.panel_id;
 }
 
 function assertRevision(value) {
