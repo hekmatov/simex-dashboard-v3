@@ -46,10 +46,11 @@ export default function LandingPage({
     && secondaryAction?.anchorId === tourAnchorId
     ? tourAnchorId
     : null;
-  const statuses = recordsWithStrings(
-    landing.deliveryStatus,
-    ["label", "description"],
-  );
+  const faq = recordWithStrings(landing.faq, ["heading", "description"]);
+  const faqItems = recordsWithStrings(landing.faq?.items, ["question", "answer"]);
+  const resources = recordWithStrings(landing.resources, ["heading", "description"]);
+  const repository = recordWithStrings(resources?.repository, ["destination", "label"]);
+  const repositoryUrl = validExternalUrl(repository?.destination);
   const previewAsset = recordWithStrings(landing.previewAsset, ["src"]);
 
   return (
@@ -96,8 +97,8 @@ export default function LandingPage({
 
       {capabilities.length > 0 && (
         <section className="showcase-section" aria-labelledby="showcase-capabilities-title">
-          <p className="showcase-eyebrow">What the dashboard enables</p>
-          <h2 id="showcase-capabilities-title">Support the exercise information cycle</h2>
+          <p className="showcase-eyebrow">The basics</p>
+          <h2 id="showcase-capabilities-title">How SimEx works</h2>
           <div className="showcase-capability-grid">
             {capabilities.map((item, index) => (
               <article key={`${item.title}-${index}`}>
@@ -138,17 +139,32 @@ export default function LandingPage({
         </section>
       )}
 
-      {statuses.length > 0 && (
-        <section className="showcase-status" aria-labelledby="showcase-status-title">
-          <h2 id="showcase-status-title">First-deliverable status</h2>
-          <div>
-            {statuses.map((status, index) => (
-              <article className={`showcase-status-${statusState(status.state)}`} key={`${status.label}-${index}`}>
-                <strong><span aria-hidden="true">{status.state === "complete" ? "✓" : "→"}</span> {status.label}</strong>
-                <p>{status.description}</p>
-              </article>
+      {faq && faqItems.length > 0 && (
+        <section className="showcase-faq" aria-labelledby="showcase-faq-title">
+          <div className="showcase-faq-intro">
+            <p className="showcase-eyebrow">Builder FAQ</p>
+            <h2 id="showcase-faq-title">{faq.heading}</h2>
+            <p>{faq.description}</p>
+          </div>
+          <div className="showcase-faq-items">
+            {faqItems.map((item, index) => (
+              <details key={`${item.question}-${index}`}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
             ))}
           </div>
+        </section>
+      )}
+
+      {resources && repository && repositoryUrl && (
+        <section className="showcase-resources" aria-labelledby="showcase-resources-title">
+          <div>
+            <p className="showcase-eyebrow">More about SimEx</p>
+            <h2 id="showcase-resources-title">{resources.heading}</h2>
+            <p>{resources.description}</p>
+          </div>
+          <a href={repositoryUrl} target="_blank" rel="noreferrer">{repository.label}</a>
         </section>
       )}
     </article>
@@ -191,12 +207,18 @@ function validAnchorId(value) {
   return nonEmptyString(value) && /^[A-Za-z][\w:.-]*$/.test(value) ? value : null;
 }
 
-function routeTone(value) {
-  return ["biomedical", "socio"].includes(value) ? value : "default";
+function validExternalUrl(value) {
+  if (!nonEmptyString(value)) return null;
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
-function statusState(value) {
-  return value === "complete" ? "complete" : "ready";
+function routeTone(value) {
+  return ["biomedical", "socio"].includes(value) ? value : "default";
 }
 
 function assetUrl(path, baseUrl) {

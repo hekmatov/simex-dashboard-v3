@@ -39,7 +39,16 @@ const page = {
     }],
     tourAnchorId: "tour",
     tourItems: ["Use filters"],
-    deliveryStatus: [{ state: "ready", label: "Integration-ready", description: "Prepared." }],
+    faq: {
+      heading: "Getting started with building",
+      description: "Practical guidance for your first dashboard.",
+      items: [{ question: "How do I add a chart?", answer: "Open Build and choose Add chart." }],
+    },
+    resources: {
+      heading: "Project resources",
+      description: "Learn more about SimEx.",
+      repository: { label: "View the repository", destination: "https://github.com/hekmatov/simex-dashboard-v3" },
+    },
   },
 };
 const pages = [page, { id: "biomedical" }];
@@ -68,10 +77,15 @@ test("landing renders semantic, configured content and valid actions", () => {
   );
   assert.match(html, /<article[^>]+showcase-landing/);
   assert.match(html, /<h1[^>]*>Shared situational awareness<\/h1>/);
+  assert.match(html, /How SimEx works/);
   assert.match(html, /href="#tour"/);
   assert.match(html, /Open Biomedical/);
   assert.match(html, /src="\/demo\/assets\/preview.png"/);
   assert.match(html, /alt="Dashboard preview"/);
+  assert.match(html, /Getting started with building/);
+  assert.match(html, /<details>/);
+  assert.match(html, /View the repository/);
+  assert.doesNotMatch(html, /First-deliverable status/);
 });
 
 test("invalid page targets and absent optional sections are omitted", () => {
@@ -106,11 +120,7 @@ test("malformed optional collections are normalized without crashing", () => {
     malformed.landing.domainRoutes[0],
   ];
   malformed.landing.tourItems = [null, {}, "", "Use filters"];
-  malformed.landing.deliveryStatus = [
-    null,
-    { label: "Missing description" },
-    malformed.landing.deliveryStatus[0],
-  ];
+  malformed.landing.faq.items = [null, { question: "Missing answer" }, malformed.landing.faq.items[0]];
 
   const html = renderToStaticMarkup(
     React.createElement(landingModule.default, {
@@ -124,8 +134,17 @@ test("malformed optional collections are normalized without crashing", () => {
   assert.match(html, /Valid proof/);
   assert.match(html, /Open Biomedical/);
   assert.match(html, /Use filters/);
-  assert.match(html, /Integration-ready/);
-  assert.doesNotMatch(html, /Missing description/);
+  assert.match(html, /How do I add a chart\?/);
+  assert.doesNotMatch(html, /Missing answer/);
+});
+
+test("resources reject non-web repository URLs", () => {
+  const invalid = structuredClone(page);
+  invalid.landing.resources.repository.destination = "javascript:alert('not-a-link')";
+  const html = renderToStaticMarkup(React.createElement(landingModule.default, {
+    page: invalid, pages, onNavigate: () => {}, baseUrl: "/",
+  }));
+  assert.doesNotMatch(html, /showcase-resources/);
 });
 
 test("secondary anchor action is omitted unless its target section renders", () => {

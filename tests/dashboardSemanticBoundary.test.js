@@ -56,34 +56,22 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
   ],
   landing: [
     "capabilities",
-    "deliveryStatus",
-    "domainRoutes",
+    "faq",
     "hero",
-    "previewAsset",
-    "proofPoints",
-    "tourAnchorId",
-    "tourItems",
+    "resources",
   ],
   hero: [
     "deliveryLabel",
     "headline",
     "primaryAction",
-    "secondaryAction",
     "summary",
   ],
-  heroAction: ["anchorId", "label", "pageId"],
-  proofPoint: ["description", "title"],
+  heroAction: ["label", "pageId"],
   capability: ["description", "number", "title"],
-  domainRoute: [
-    "actionLabel",
-    "description",
-    "eyebrow",
-    "pageId",
-    "title",
-    "tone",
-  ],
-  deliveryStatus: ["description", "label", "state"],
-  previewAsset: ["alt", "src"],
+  faq: ["description", "heading", "items"],
+  faqItem: ["answer", "question"],
+  resources: ["description", "heading", "repository"],
+  repository: ["destination", "label"],
   globalStyles: [
     "accessibility",
     "chartColorMode",
@@ -158,9 +146,6 @@ test("every packaged dashboard structure family participates in the digest and s
     "page identity": (value) => {
       const page = pageById(value.dashboard, "socio_economic");
       page.id = "socio_economic_alternate";
-      landing(value.dashboard).domainRoutes
-        .find(({ pageId }) => pageId === "socio_economic")
-        .pageId = page.id;
     },
     "page labels": (value) => {
       pageById(value.dashboard, "biomedical").label = "Biomedical alternate";
@@ -210,28 +195,15 @@ test("every packaged dashboard structure family participates in the digest and s
     "landing primary action page": (value) => {
       landing(value.dashboard).hero.primaryAction.pageId = "socio_economic";
     },
-    "landing tour anchor": (value) => {
-      landing(value.dashboard).tourAnchorId = "alternate-tour";
-      landing(value.dashboard).hero.secondaryAction.anchorId =
-        "alternate-tour";
-    },
-    "landing proof point": (value) => {
-      landing(value.dashboard).proofPoints[0].description += " Alternate.";
-    },
     "landing capability": (value) => {
       landing(value.dashboard).capabilities[0].number = "99";
     },
-    "landing domain route": (value) => {
-      landing(value.dashboard).domainRoutes[0].tone = "socio";
+    "landing FAQ": (value) => {
+      landing(value.dashboard).faq.items[0].answer += " Alternate.";
     },
-    "landing delivery state": (value) => {
-      landing(value.dashboard).deliveryStatus[0].state = "ready";
-    },
-    "landing preview asset": (value) => {
-      landing(value.dashboard).previewAsset.alt += " alternate";
-    },
-    "landing tour item": (value) => {
-      landing(value.dashboard).tourItems[0] += " alternate";
+    "landing repository": (value) => {
+      landing(value.dashboard).resources.repository.destination =
+        "https://example.test/simex-dashboard-v3";
     },
     "data source descriptor": (value) => {
       value.dashboard.dataSources.bio_cases.path =
@@ -324,7 +296,7 @@ test("the producer rejects unknown structural fields, wrong types, cycles, and a
       value.pages[0].sections[0].layout = [];
     },
     "wrong landing field type": (value) => {
-      landing(value).tourItems = {};
+      landing(value).faq.items = {};
     },
     "cyclic landing data": (value) => {
       landing(value).hero = landing(value);
@@ -373,12 +345,6 @@ test("the producer rejects duplicate structural identities and broken landing re
     "broken primary page reference": (value) => {
       landing(value).hero.primaryAction.pageId = "missing-page";
     },
-    "broken domain page reference": (value) => {
-      landing(value).domainRoutes[0].pageId = "missing-page";
-    },
-    "broken tour anchor reference": (value) => {
-      landing(value).hero.secondaryAction.anchorId = "missing-anchor";
-    },
   };
 
   for (const [name, mutate] of Object.entries(cases)) {
@@ -409,11 +375,11 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       },
       error: /Duplicate dashboard page id "biomedical"\./,
     },
-    "broken landing reference": {
+    "broken landing primary action reference": {
       mutate(value) {
-        landing(value).domainRoutes[0].pageId = "missing-page";
+        landing(value).hero.primaryAction.pageId = "missing-page";
       },
-      error: /Landing domain route for page "home" references unknown page "missing-page"\./,
+      error: /Landing primary action for page "home" references unknown page "missing-page"\./,
     },
     "cyclic landing data": {
       mutate(value) {
@@ -443,8 +409,8 @@ test("bundle validation and runtime loading enforce the same dashboard structure
 
 test("structural cycle guards allow shared non-cyclic references", async () => {
   const { dashboard, profiles } = await trackedInputs();
-  const sharedProofPoint = landing(dashboard).proofPoints[0];
-  landing(dashboard).proofPoints[1] = sharedProofPoint;
+  const sharedFaqItem = landing(dashboard).faq.items[0];
+  landing(dashboard).faq.items[1] = sharedFaqItem;
   dashboard.datasetProfiles = profiles;
 
   assert.doesNotThrow(() => validateDashboardConfig(dashboard));
@@ -527,13 +493,12 @@ function structureInventory(dashboard) {
     hero: keysOf([landingPage.landing.hero]),
     heroAction: keysOf([
       landingPage.landing.hero.primaryAction,
-      landingPage.landing.hero.secondaryAction,
     ]),
-    proofPoint: keysOf(landingPage.landing.proofPoints),
     capability: keysOf(landingPage.landing.capabilities),
-    domainRoute: keysOf(landingPage.landing.domainRoutes),
-    deliveryStatus: keysOf(landingPage.landing.deliveryStatus),
-    previewAsset: keysOf([landingPage.landing.previewAsset]),
+    faq: keysOf([landingPage.landing.faq]),
+    faqItem: keysOf(landingPage.landing.faq.items),
+    resources: keysOf([landingPage.landing.resources]),
+    repository: keysOf([landingPage.landing.resources.repository]),
     globalStyles: keysOf([dashboard.globalStyles]),
     accessibility: keysOf([dashboard.globalStyles.accessibility]),
     panelColors: keysOf([dashboard.globalStyles.panelColors]),

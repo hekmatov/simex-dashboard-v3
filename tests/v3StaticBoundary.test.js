@@ -30,7 +30,11 @@ test("both Cloudflare production build paths finalize the verified runtime manif
   );
   assert.match(
     scripts["build:cloudflare:linux"],
-    /^SIMEX_EMBED_PORTABLE_DATA=0 VITE_SHOW_COMPATIBILITY_REPORTS=false /,
+    /SIMEX_EMBED_PORTABLE_DATA=0 node scripts\/build-portable-data\.mjs/,
+  );
+  assert.match(
+    scripts["build:cloudflare:linux"],
+    /VITE_SHOW_COMPATIBILITY_REPORTS=false vite build/,
   );
 });
 

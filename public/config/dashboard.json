@@ -716,95 +716,73 @@
       "description": "A reusable dashboard platform for simulation exercise decision support.",
       "landing": {
         "hero": {
-          "deliveryLabel": "First deliverable · Live HeV-A26 demonstration",
-          "headline": "From complex exercise data to shared situational awareness",
-          "summary": "A reusable dashboard platform that brings biomedical and socio-economic signals into one decision-support environment.",
+          "deliveryLabel": "Cloudflare beta",
+          "headline": "SimEx Dashboard",
+          "summary": "A practical workspace for exploring exercise data, shaping dashboard views, and presenting the situation clearly.",
           "primaryAction": {
-            "label": "Explore the live dashboard",
+            "label": "Open the dashboard",
             "pageId": "biomedical"
-          },
-          "secondaryAction": {
-            "label": "See what to try",
-            "anchorId": "showcase-tour"
           }
         },
-        "previewAsset": {
-          "src": "assets/showcase-dashboard-preview.png",
-          "alt": "SimEx biomedical dashboard showing epidemiological indicators, charts, and geographic analysis."
-        },
-        "proofPoints": [
-          {
-            "title": "Cross-domain overview",
-            "description": "Health and societal impacts in one environment."
-          },
-          {
-            "title": "Briefing-ready views",
-            "description": "Focused, responsive, and fullscreen presentation."
-          },
-          {
-            "title": "Configurable foundation",
-            "description": "Adaptable layouts, charts, and prepared data sources."
-          }
-        ],
         "capabilities": [
           {
             "number": "01",
-            "title": "See the evolving situation",
-            "description": "Track cases, mortality, healthcare pressure, testing, wastewater, and vaccination."
+            "title": "View",
+            "description": "Explore the prepared biomedical and socio-economic exercise views."
           },
           {
             "number": "02",
-            "title": "Understand wider impacts",
-            "description": "Connect behaviour, trust, wellbeing, economic disruption, and absenteeism."
+            "title": "Build",
+            "description": "Shape pages, sections, and charts around the story your exercise needs to tell."
           },
           {
             "number": "03",
-            "title": "Turn insight into a briefing",
-            "description": "Use focused charts, multi-view comparison, and responsive presentation layouts."
+            "title": "Present",
+            "description": "Move from analysis to a focused, briefing-ready view for your audience."
           }
         ],
-        "domainRoutes": [
-          {
-            "eyebrow": "Biomedical domain",
-            "title": "Follow epidemiological pressure",
-            "description": "Explore geographic spread, transmission, healthcare demand, surveillance, and vaccination.",
-            "actionLabel": "Explore Biomedical",
-            "pageId": "biomedical",
-            "tone": "biomedical"
-          },
-          {
-            "eyebrow": "Socio-economic domain",
-            "title": "See impacts beyond healthcare",
-            "description": "Explore behaviour, trust, wellbeing, business disruption, and workforce impacts.",
-            "actionLabel": "Explore Socio-economic",
-            "pageId": "socio_economic",
-            "tone": "socio"
+        "resources": {
+          "heading": "Project resources",
+          "description": "Find the source, follow progress, or contribute to the dashboard’s next steps.",
+          "repository": {
+            "label": "View the repository",
+            "destination": "https://github.com/hekmatov/simex-dashboard-v3"
           }
-        ],
-        "tourAnchorId": "showcase-tour",
-        "tourItems": [
-          "Filter indicators and time periods",
-          "Open one or several charts in fullscreen",
-          "Compare desktop, tablet, and phone layouts",
-          "Review configurable views without changing the public default"
-        ],
-        "deliveryStatus": [
-          {
-            "state": "complete",
-            "label": "Dashboard delivered",
-            "description": "Working multi-domain dashboard with prepared demonstration data."
-          },
-          {
-            "state": "complete",
-            "label": "Cloud-hosted showcase",
-            "description": "Browser-accessible demonstration for stakeholder review and orientation."
-          },
-          {
-            "state": "ready",
-            "label": "Quorum integration-ready",
-            "description": "Compatibility foundation prepared; the hosted demonstration operates independently."
-          }
-        ]
+        },
+        "faq": {
+          "heading": "Getting started with building",
+          "description": "A few practical answers for shaping your first SimEx dashboard.",
+          "items": [
+            {
+              "question": "How do I add a chart?",
+              "answer": "Switch to Build and choose Add chart. Select a chart type, choose the data source and fields, then save the chart draft when it is ready."
+            },
+            {
+              "question": "How do I organize pages and sections?",
+              "answer": "In Build, open Pages & sections to add, rename, reorder, or remove pages and sections. Use Save Layout Changes when you are happy with the structure."
+            },
+            {
+              "question": "How do I change the dashboard theme and colours?",
+              "answer": "Open Dashboard look from any workspace to choose the appearance, visual style, colour profile, and chart colours. Selections are saved automatically and applied immediately."
+            },
+            {
+              "question": "How do I add source material and supporting content?",
+              "answer": "In Build, use Source content to manage data and media, or Add static content for text and narrative panels. The QMD editor supports font choice, bold, underline, italics, lists, tables, and a live preview."
+            },
+            {
+              "question": "How do I show change over time?",
+              "answer": "Use Chrono Studio to connect compatible chart data to a shared timeline. Scene Studio lets you compose and review time-based scenes before presenting them."
+            },
+            {
+              "question": "How do I prepare a presentation?",
+              "answer": "Switch to Present, choose charts for the audience scene, select a layout, then open the Audience display to control the briefing."
+            },
+            {
+              "question": "How do I save or share my dashboard?",
+              "answer": "Use Download package in Build to save a portable dashboard package. Upload package restores a compatible package later."
+            }
+          ]
+        }
       },
       "sections": [
         {

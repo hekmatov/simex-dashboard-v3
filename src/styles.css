@@ -3790,6 +3790,74 @@ button.danger {
   color: #175b8c;
 }
 
+.showcase-faq,
+.showcase-resources {
+  border-top: 1px solid #dfe7ef;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  padding: clamp(34px, 5vw, 56px);
+}
+
+.showcase-faq h2,
+.showcase-resources h2 {
+  color: #102a43;
+  font-size: clamp(24px, 3vw, 34px);
+  margin: 0 0 12px;
+}
+
+.showcase-faq-intro > p:last-child,
+.showcase-resources p:last-child {
+  color: #60778c;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.showcase-faq-items {
+  display: grid;
+  gap: 10px;
+}
+
+.showcase-faq details {
+  background: white;
+  border: 1px solid #dde6ee;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.showcase-faq summary {
+  color: #123b62;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.showcase-faq details p {
+  color: #4e677d;
+  line-height: 1.55;
+  margin: 12px 0 0;
+}
+
+.showcase-resources {
+  align-items: center;
+  background: #edf4f8;
+}
+
+.showcase-resources a {
+  background: #0b5488;
+  border-radius: 10px;
+  color: white;
+  font-weight: 800;
+  justify-self: start;
+  padding: 12px 16px;
+  text-decoration: none;
+}
+
+.showcase-resources a:focus-visible,
+.showcase-faq summary:focus-visible {
+  outline: 3px solid #2d6fa4;
+  outline-offset: 3px;
+}
+
 .app-shell[data-page-type="landing"] .dashboard-header {
   padding: 18px 22px;
 }
@@ -3850,6 +3918,11 @@ button.danger {
 
   .showcase-landing-preview img {
     height: 210px;
+  }
+
+  .showcase-faq,
+  .showcase-resources {
+    grid-template-columns: 1fr;
   }
 
   .showcase-section {

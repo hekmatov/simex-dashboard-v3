@@ -49,23 +49,11 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
       ["description", "layout", "title"],
     ),
     panelWrapper: shape(["chart", "id"]),
-    landing: shape([
-      "capabilities",
-      "deliveryStatus",
-      "domainRoutes",
-      "hero",
-      "previewAsset",
-      "proofPoints",
-      "tourAnchorId",
-      "tourItems",
+    landing: shape(["capabilities", "hero"], [
+      "deliveryStatus", "domainRoutes", "faq", "previewAsset", "proofPoints",
+      "resources", "tourAnchorId", "tourItems",
     ]),
-    landingHero: shape([
-      "deliveryLabel",
-      "headline",
-      "primaryAction",
-      "secondaryAction",
-      "summary",
-    ]),
+    landingHero: shape(["headline", "primaryAction"], ["deliveryLabel", "secondaryAction", "summary"]),
     landingPrimaryAction: shape(["label", "pageId"]),
     landingSecondaryAction: shape(["anchorId", "label"]),
     landingProofPoint: shape(["description", "title"]),
@@ -80,6 +68,10 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
     ]),
     landingDeliveryStatus: shape(["description", "label", "state"]),
     landingPreviewAsset: shape(["alt", "src"]),
+    landingFaq: shape(["description", "heading", "items"]),
+    landingFaqItem: shape(["answer", "question"]),
+    landingResources: shape(["description", "heading", "repository"]),
+    landingRepository: shape(["destination", "label"]),
     globalStyles: shape(
       ["panelColors"],
       [
@@ -348,13 +340,9 @@ function validateLanding(value, pageId) {
     DASHBOARD_CONFIG_STRUCTURE.shapes.landingHero,
     `landing hero for page "${pageId}"`,
   );
-  for (const [key, label] of [
-    ["deliveryLabel", "delivery label"],
-    ["headline", "headline"],
-    ["summary", "summary"],
-  ]) {
-    requiredText(hero[key], `Landing ${label} for page "${pageId}"`);
-  }
+  requiredText(hero.headline, `Landing headline for page "${pageId}"`);
+  optionalText(hero.deliveryLabel, `Landing delivery label for page "${pageId}"`);
+  optionalText(hero.summary, `Landing summary for page "${pageId}"`);
   const primaryAction = strictShape(
     hero.primaryAction,
     DASHBOARD_CONFIG_STRUCTURE.shapes.landingPrimaryAction,
@@ -368,36 +356,20 @@ function validateLanding(value, pageId) {
     primaryAction.pageId,
     `Landing primary action pageId for page "${pageId}"`,
   );
-  const secondaryAction = strictShape(
-    hero.secondaryAction,
-    DASHBOARD_CONFIG_STRUCTURE.shapes.landingSecondaryAction,
-    `landing secondary action for page "${pageId}"`,
-  );
-  requiredText(
-    secondaryAction.label,
-    `Landing secondary action label for page "${pageId}"`,
-  );
-  requiredText(
-    secondaryAction.anchorId,
-    `Landing secondary action anchorId for page "${pageId}"`,
-  );
+  if (hero.secondaryAction !== undefined) {
+    const secondaryAction = strictShape(hero.secondaryAction, DASHBOARD_CONFIG_STRUCTURE.shapes.landingSecondaryAction, `landing secondary action for page "${pageId}"`);
+    requiredText(secondaryAction.label, `Landing secondary action label for page "${pageId}"`);
+    requiredText(secondaryAction.anchorId, `Landing secondary action anchorId for page "${pageId}"`);
+  }
 
-  validateTextRecords(
-    landing.proofPoints,
-    DASHBOARD_CONFIG_STRUCTURE.shapes.landingProofPoint,
-    ["description", "title"],
-    `Landing proof points for page "${pageId}"`,
-  );
+  if (landing.proofPoints !== undefined) validateTextRecords(landing.proofPoints, DASHBOARD_CONFIG_STRUCTURE.shapes.landingProofPoint, ["description", "title"], `Landing proof points for page "${pageId}"`);
   validateTextRecords(
     landing.capabilities,
     DASHBOARD_CONFIG_STRUCTURE.shapes.landingCapability,
     ["description", "number", "title"],
     `Landing capabilities for page "${pageId}"`,
   );
-  const domainRoutes = denseNonEmptyArray(
-    landing.domainRoutes,
-    `Landing domain routes for page "${pageId}"`,
-  );
+  const domainRoutes = landing.domainRoutes === undefined ? [] : denseNonEmptyArray(landing.domainRoutes, `Landing domain routes for page "${pageId}"`);
   for (const [index, rawRoute] of domainRoutes.entries()) {
     const route = strictShape(
       rawRoute,
@@ -422,24 +394,12 @@ function validateLanding(value, pageId) {
       );
     }
   }
-  requiredText(
-    landing.tourAnchorId,
-    `Landing tour anchor id for page "${pageId}"`,
-  );
-  const tourItems = denseNonEmptyArray(
-    landing.tourItems,
-    `Landing tour items for page "${pageId}"`,
-  );
-  tourItems.forEach((item, index) => (
-    requiredText(
-      item,
-      `Landing tour item ${index} for page "${pageId}"`,
-    )
-  ));
-  const deliveryStatuses = denseNonEmptyArray(
-    landing.deliveryStatus,
-    `Landing delivery status for page "${pageId}"`,
-  );
+  if (landing.tourItems !== undefined || landing.tourAnchorId !== undefined) {
+    requiredText(landing.tourAnchorId, `Landing tour anchor id for page "${pageId}"`);
+    const tourItems = denseNonEmptyArray(landing.tourItems, `Landing tour items for page "${pageId}"`);
+    tourItems.forEach((item, index) => requiredText(item, `Landing tour item ${index} for page "${pageId}"`));
+  }
+  const deliveryStatuses = landing.deliveryStatus === undefined ? [] : denseNonEmptyArray(landing.deliveryStatus, `Landing delivery status for page "${pageId}"`);
   for (const [index, rawStatus] of deliveryStatuses.entries()) {
     const status = strictShape(
       rawStatus,
@@ -460,25 +420,31 @@ function validateLanding(value, pageId) {
       );
     }
   }
-  const preview = strictShape(
-    landing.previewAsset,
-    DASHBOARD_CONFIG_STRUCTURE.shapes.landingPreviewAsset,
-    `landing preview asset for page "${pageId}"`,
-  );
-  requiredText(
-    preview.alt,
-    `Landing preview asset alt for page "${pageId}"`,
-  );
-  requiredText(
-    preview.src,
-    `Landing preview asset src for page "${pageId}"`,
-  );
+  if (landing.previewAsset !== undefined) {
+    const preview = strictShape(landing.previewAsset, DASHBOARD_CONFIG_STRUCTURE.shapes.landingPreviewAsset, `landing preview asset for page "${pageId}"`);
+    requiredText(preview.alt, `Landing preview asset alt for page "${pageId}"`);
+    requiredText(preview.src, `Landing preview asset src for page "${pageId}"`);
+  }
+  if (landing.faq !== undefined) {
+    const faq = strictShape(landing.faq, DASHBOARD_CONFIG_STRUCTURE.shapes.landingFaq, `landing FAQ for page "${pageId}"`);
+    requiredText(faq.heading, `Landing FAQ heading for page "${pageId}"`);
+    requiredText(faq.description, `Landing FAQ description for page "${pageId}"`);
+    validateTextRecords(faq.items, DASHBOARD_CONFIG_STRUCTURE.shapes.landingFaqItem, ["answer", "question"], `Landing FAQ items for page "${pageId}"`);
+  }
+  if (landing.resources !== undefined) {
+    const resources = strictShape(landing.resources, DASHBOARD_CONFIG_STRUCTURE.shapes.landingResources, `landing resources for page "${pageId}"`);
+    requiredText(resources.heading, `Landing resources heading for page "${pageId}"`);
+    requiredText(resources.description, `Landing resources description for page "${pageId}"`);
+    const repository = strictShape(resources.repository, DASHBOARD_CONFIG_STRUCTURE.shapes.landingRepository, `landing repository for page "${pageId}"`);
+    requiredText(repository.label, `Landing repository label for page "${pageId}"`);
+    requiredText(repository.destination, `Landing repository destination for page "${pageId}"`);
+  }
 }
 
 function validateLandingReferences(pages, pageIds) {
   for (const { page, pageId } of pages) {
     if (page.landing === undefined) continue;
-    const { hero, domainRoutes, tourAnchorId } = page.landing;
+    const { hero, domainRoutes = [], tourAnchorId } = page.landing;
     if (!pageIds.has(hero.primaryAction.pageId)) {
       throw new Error(
         `Landing primary action for page "${pageId}" references unknown page "${hero.primaryAction.pageId}".`,
@@ -491,7 +457,7 @@ function validateLandingReferences(pages, pageIds) {
         );
       }
     }
-    if (hero.secondaryAction.anchorId !== tourAnchorId) {
+    if (hero.secondaryAction && hero.secondaryAction.anchorId !== tourAnchorId) {
       throw new Error(
         `Landing secondary action for page "${pageId}" must reference tour anchor "${tourAnchorId}".`,
       );
