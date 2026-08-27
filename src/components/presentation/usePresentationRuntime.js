@@ -2,7 +2,11 @@ import React from "react";
 
 import { initialDisplayState, reduceDisplayState } from "../../lib/displayController.js";
 import { createPresentationControllerChannel } from "../../lib/presentationChannel.js";
-import { createInitialPresentationSession, reducePresentationSession } from "../../lib/presentationSession.js";
+import {
+  createInitialPresentationSession,
+  isPresentationPlaybackSafe,
+  reducePresentationSession,
+} from "../../lib/presentationSession.js";
 import { openAudienceWindow, requestAudienceWindowClose } from "../../lib/presentationWindow.js";
 import { executePresentationEndEffects } from "./PresentationController.jsx";
 
@@ -11,12 +15,22 @@ export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
 });
 const AUDIENCE_FACT_KEYS = new Set(Object.keys(DEFAULT_AUDIENCE_FACTS));
 
-export default function usePresentationRuntime(presentableItemIndex) {
+export default function usePresentationRuntime(presentableItemIndex, {
+  enabled: playbackSafetyEnabled = false,
+  playback = null,
+} = {}) {
+  const playbackSafetyOwner = `present-session:${React.useId()}`;
+  const playbackRef = React.useRef(playback);
+  playbackRef.current = playback;
+  const playbackSafetyEnabledRef = React.useRef(playbackSafetyEnabled);
+  playbackSafetyEnabledRef.current = playbackSafetyEnabled;
   const controllerRef = React.useRef(null);
   const audienceWindowRef = React.useRef(null);
   const presentableItemIndexRef = React.useRef(presentableItemIndex);
   presentableItemIndexRef.current = presentableItemIndex;
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
+  const displayStateRef = React.useRef(displayState);
+  displayStateRef.current = displayState;
   const [sessionState, setSessionState] = React.useState(createInitialPresentationSession);
   const sessionStateRef = React.useRef(sessionState);
   sessionStateRef.current = sessionState;
@@ -28,23 +42,49 @@ export default function usePresentationRuntime(presentableItemIndex) {
     action,
     { presentableItemIndex: presentableItemIndexRef.current },
   ), []);
+  const synchronizePlayback = React.useCallback((next) => {
+    if (!playbackSafetyEnabledRef.current) return;
+    const owner = playbackSafetyOwner;
+    const currentPlayback = playbackRef.current;
+    const safe = isPresentationPlaybackSafe(next);
+    currentPlayback?.setPlaybackSafety?.(owner, safe);
+    if (next.playback !== "playing") currentPlayback?.dispatch?.({ type: "pause" });
+  }, [playbackSafetyOwner]);
   const dispatch = React.useCallback((action) => {
-    setSessionState((current) => {
-      const next = reduceSession(current, action);
-      sessionStateRef.current = next;
-      return next;
-    });
-  }, [reduceSession]);
+    const next = reduceSession(sessionStateRef.current, action);
+    sessionStateRef.current = next;
+    setSessionState(next);
+    synchronizePlayback(next);
+    return next;
+  }, [reduceSession, synchronizePlayback]);
 
   const onDisplayAction = React.useCallback((action) => {
-    setDisplayState((current) => reduceDisplayState(current, action, presentableItemIndexRef.current?.keys?.()));
-  }, []);
+    const next = reduceDisplayState(
+      displayStateRef.current,
+      action,
+      presentableItemIndexRef.current?.keys?.(),
+    );
+    displayStateRef.current = next;
+    setDisplayState(next);
+    dispatch({
+      type: "SET_COMPOSITION",
+      composition: {
+        displayed_chart_ids: [...next.displayed_chart_ids],
+        layout: next.layout,
+      },
+    });
+  }, [dispatch]);
   React.useEffect(() => {
     setDisplayState((current) => reduceDisplayState(current, {
       type: "companion_reconcile",
       chart_ids: current.displayed_chart_ids.filter((id) => presentableItemIndex.has(id)),
     }, presentableItemIndex.keys()));
   }, [presentableItemIndex]);
+  React.useEffect(() => {
+    if (playbackSafetyEnabled) synchronizePlayback(sessionStateRef.current);
+    else playbackRef.current?.releasePlaybackSafety?.(playbackSafetyOwner);
+    return () => playbackRef.current?.releasePlaybackSafety?.(playbackSafetyOwner);
+  }, [playbackSafetyEnabled, playbackSafetyOwner, synchronizePlayback]);
 
   const setAudienceFactVisible = React.useCallback((key, visible) => {
     if (!AUDIENCE_FACT_KEYS.has(key)) return;
@@ -72,6 +112,26 @@ export default function usePresentationRuntime(presentableItemIndex) {
     if (type) dispatch({ type, ...guard });
   }, [dispatch]);
 
+  const finishFailedStartup = React.useCallback((opened, controller, audienceWindow = null) => {
+    let failed = reduceSession(opened, { type: "END" });
+    sessionStateRef.current = failed;
+    setSessionState(failed);
+    synchronizePlayback(failed);
+    const actions = executePresentationEndEffects(failed, {
+      publishEnded: () => controller?.publishEnded?.(),
+      requestClose: () => audienceWindow
+        ? requestAudienceWindowClose(audienceWindow)
+        : { outcome: "succeeded" },
+      terminateChannel: () => controller?.dispose?.(),
+    });
+    for (const action of actions) failed = reduceSession(failed, action);
+    controllerRef.current = null;
+    audienceWindowRef.current = null;
+    sessionStateRef.current = failed;
+    setSessionState(failed);
+    return failed;
+  }, [reduceSession, synchronizePlayback]);
+
   const openNewSession = React.useCallback((presentationState, context = {}) => {
     const current = sessionStateRef.current;
     if (current.lifecycle !== "ended" || current.effects.length > 0) return null;
@@ -92,6 +152,7 @@ export default function usePresentationRuntime(presentableItemIndex) {
     setSessionState(opened);
     const guard = { sessionId, channelGeneration: opened.channelGeneration };
     let controller;
+    let outcome;
     try {
       controller = createPresentationControllerChannel({
         sessionId,
@@ -100,14 +161,21 @@ export default function usePresentationRuntime(presentableItemIndex) {
       });
       controller.start();
       controllerRef.current = controller;
+      outcome = controller.publish(presentationState, context);
+      publishOutcome(outcome, opened);
     } catch {
-      controller?.dispose();
+      finishFailedStartup(opened, controller);
       setConnectionError("Audience display is unavailable in this browser.");
       return null;
     }
-    const outcome = controller.publish(presentationState, context);
-    publishOutcome(outcome, opened);
-    const result = openAudienceWindow({ channelId: sessionId, windowName: requestedWindowName });
+    let result;
+    try {
+      result = openAudienceWindow({ channelId: sessionId, windowName: requestedWindowName });
+    } catch {
+      finishFailedStartup(sessionStateRef.current, controller);
+      setConnectionError("Audience display is unavailable in this browser.");
+      return null;
+    }
     if (result.status !== "opened") {
       setConnectionError("The audience display window was blocked.");
       return outcome;
@@ -116,7 +184,7 @@ export default function usePresentationRuntime(presentableItemIndex) {
     setConnectionError("");
     dispatch({ type: "WINDOW_OPENED", ...guard });
     return outcome;
-  }, [connectionAction, dispatch, publishOutcome, reduceSession]);
+  }, [connectionAction, dispatch, finishFailedStartup, publishOutcome, reduceSession]);
 
   const reopenAudience = React.useCallback(() => {
     const session = sessionStateRef.current;
@@ -136,6 +204,9 @@ export default function usePresentationRuntime(presentableItemIndex) {
     const current = sessionStateRef.current;
     if (current.lifecycle === "ended") return;
     let next = reduceSession(current, { type: "END" });
+    sessionStateRef.current = next;
+    setSessionState(next);
+    synchronizePlayback(next);
     const controller = controllerRef.current;
     const audienceWindow = audienceWindowRef.current;
     const actions = executePresentationEndEffects(next, {
@@ -149,7 +220,7 @@ export default function usePresentationRuntime(presentableItemIndex) {
     sessionStateRef.current = next;
     setSessionState(next);
     setConnectionError("");
-  }, [reduceSession]);
+  }, [reduceSession, synchronizePlayback]);
 
   React.useEffect(() => () => {
     controllerRef.current?.publishEnded?.();

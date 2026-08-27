@@ -128,20 +128,40 @@ function authoredPeriodBoundary(value, edge) {
 
 export function executePresentationEndEffects(session, adapters) {
   const actions = [];
-  for (const effect of session.effects) {
-    if (effect === "PUBLISH_ENDED") adapters.publishEnded();
-    if (effect === "REQUEST_AUDIENCE_CLOSE") {
-      const result = adapters.requestClose();
-      actions.push(result?.outcome === "succeeded"
-        ? guarded(session, { type: "AUDIENCE_CLOSE_SUCCEEDED" })
-        : guarded(session, { type: "AUDIENCE_CLOSE_DENIED", surfaceRemains: true }));
+  try {
+    for (const effect of session.effects) {
+      if (effect === "PUBLISH_ENDED") {
+        try {
+          adapters.publishEnded();
+        } catch {
+          // Terminal state is already committed; later cleanup must still run.
+        }
+      }
+      if (effect === "REQUEST_AUDIENCE_CLOSE") {
+        let result;
+        try {
+          result = adapters.requestClose();
+        } catch {
+          result = { outcome: "denied-surface-remains" };
+        }
+        actions.push(result?.outcome === "succeeded"
+          ? guarded(session, { type: "AUDIENCE_CLOSE_SUCCEEDED" })
+          : guarded(session, { type: "AUDIENCE_CLOSE_DENIED", surfaceRemains: true }));
+      }
     }
-    if (effect === "TERMINATE_CHANNEL") adapters.terminateChannel();
+  } finally {
+    if (session.effects.includes("TERMINATE_CHANNEL")) {
+      try {
+        adapters.terminateChannel();
+      } catch {
+        // Disposing a partially started channel is best-effort and terminal.
+      }
+    }
+    actions.push(guarded(session, {
+      type: "EFFECTS_CONSUMED",
+      effectsVersion: session.effectsVersion,
+    }));
   }
-  actions.push(guarded(session, {
-    type: "EFFECTS_CONSUMED",
-    effectsVersion: session.effectsVersion,
-  }));
   return actions;
 }
 
@@ -171,7 +191,11 @@ export default function PresentationController({
     playback.dispatch({ type: "setGroup", groupId });
   };
   const playbackAction = (sessionAction, playbackActionValue) => {
-    runtime.dispatch(sessionAction);
+    const nextSession = runtime.dispatch(sessionAction);
+    if (sessionAction.type === "PLAY" && nextSession?.playback !== "playing") {
+      playback.dispatch({ type: "pause" });
+      return;
+    }
     playback.dispatch(playbackActionValue);
   };
   const output = (mode) => runtime.dispatch({ type: "SET_OUTPUT_MODE", mode });
@@ -226,7 +250,7 @@ export default function PresentationController({
           <span>Seconds per frame</span>
           <input type="number" min="0.1" step="0.1" value={playback.speed} data-presentation-control-id="cadence" onChange={(event) => playback.dispatch({ type: "setSpeed", speed: Number(event.target.value) })} />
         </label>
-        <button type="button" data-presentation-control-id="play" disabled={!hasClock || playback.playing} onClick={() => playbackAction({ type: "PLAY" }, { type: "play" })}>Play</button>
+        <button type="button" data-presentation-control-id="play" disabled={!hasClock || playback.playing} onClick={() => playbackAction({ type: "PLAY" }, { type: "play", clockLength: playback.clock.length })}>Play</button>
         <button type="button" className="secondary" data-presentation-control-id="pause" disabled={!playback.playing} onClick={() => playbackAction({ type: "PAUSE" }, { type: "pause" })}>Pause</button>
       </div>
 

@@ -31,6 +31,7 @@ export function PlaybackProvider({
   timezone = "UTC",
   children,
 }) {
+  const playbackSafetyGatesRef = React.useRef(new Map());
   const activePageCharts = pageCharts ?? charts;
   const temporalContext = React.useMemo(() => ({
     charts,
@@ -70,13 +71,34 @@ export function PlaybackProvider({
     return groups;
   }, [activeScene, groups, state.activeGroupId, state.playbackView, state.source?.kind, temporalContext]);
   const dispatch = React.useCallback(
-    (action) => dispatchPlaybackAction(baseDispatch, action, {
-      groups: validatedGroups,
-      scenes,
-      activeGroupId: state.activeGroupId,
-    }),
+    (action) => {
+      if (
+        ["play", "tick"].includes(action?.type)
+        && [...playbackSafetyGatesRef.current.values()].some((allowed) => allowed !== true)
+      ) {
+        baseDispatch({ type: "pause" });
+        return false;
+      }
+      dispatchPlaybackAction(baseDispatch, action, {
+        groups: validatedGroups,
+        scenes,
+        activeGroupId: state.activeGroupId,
+      });
+      return true;
+    },
     [baseDispatch, scenes, state.activeGroupId, validatedGroups],
   );
+  const setPlaybackSafety = React.useCallback((owner, allowed) => {
+    if (typeof owner !== "string" || owner.trim() === "") {
+      throw new TypeError("Playback safety owner must be a non-empty string.");
+    }
+    if (allowed === true) playbackSafetyGatesRef.current.delete(owner);
+    else playbackSafetyGatesRef.current.set(owner, false);
+    if (allowed !== true) baseDispatch({ type: "pause" });
+  }, [baseDispatch]);
+  const releasePlaybackSafety = React.useCallback((owner) => {
+    playbackSafetyGatesRef.current.delete(owner);
+  }, []);
   React.useEffect(() => {
     if (activeScene || groups.length === 0) return;
     if (groups.some(({ id }) => id === state.activeGroupId)) return;
@@ -229,11 +251,13 @@ export function PlaybackProvider({
     playing,
     profiles,
     scenes,
+    setPlaybackSafety,
     scope: state.scope,
     source: state.source,
     speed: state.speed,
     traceMode: state.traceMode,
     status: playbackStatus(activeGroup, clock, activeEpochMs),
+    releasePlaybackSafety,
     timeContext: state.playbackView === true
       && activeGroup
       && activeEpochMs !== null
@@ -252,7 +276,9 @@ export function PlaybackProvider({
     loadedData,
     participatingChartIds,
     profiles,
+    releasePlaybackSafety,
     scenes,
+    setPlaybackSafety,
     state.availabilityVisible,
     state.connection,
     state.matchingOverride,

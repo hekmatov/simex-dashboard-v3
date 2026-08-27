@@ -276,7 +276,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     () => buildPresentableItemIndex(dashboard),
     [dashboard],
   );
-  const presentationRuntime = usePresentationRuntime(presentableItemIndex);
+  const presentationRuntime = usePresentationRuntime(presentableItemIndex, {
+    enabled: mode === "present",
+    playback,
+  });
   const presentationCompositionReady = presentationSceneTransitionReady(
     appliedScenePresentSignature,
     playback.activeScene,

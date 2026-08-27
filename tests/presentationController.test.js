@@ -198,6 +198,45 @@ test("END effects execute once in order and report truthful close outcomes", () 
   ]);
 });
 
+test("END effects guard each adapter and always consume effects after disposal", () => {
+  const calls = [];
+  const actions = controllerModule.executePresentationEndEffects({
+    effects: ["PUBLISH_ENDED", "REQUEST_AUDIENCE_CLOSE", "TERMINATE_CHANNEL"],
+    sessionId: "session-throwing",
+    channelGeneration: 7,
+    effectsVersion: 3,
+  }, {
+    publishEnded() {
+      calls.push("publish");
+      throw new Error("publish failed");
+    },
+    requestClose() {
+      calls.push("close");
+      throw new Error("close failed");
+    },
+    terminateChannel() {
+      calls.push("terminate");
+      throw new Error("terminate failed");
+    },
+  });
+
+  assert.deepEqual(calls, ["publish", "close", "terminate"]);
+  assert.deepEqual(actions, [
+    {
+      type: "AUDIENCE_CLOSE_DENIED",
+      sessionId: "session-throwing",
+      channelGeneration: 7,
+      surfaceRemains: true,
+    },
+    {
+      type: "EFFECTS_CONSUMED",
+      sessionId: "session-throwing",
+      channelGeneration: 7,
+      effectsVersion: 3,
+    },
+  ]);
+});
+
 test("controller exposes source, playback, output, session, and terminal controls without matching override", () => {
   assert.equal(typeof controllerModule?.default, "function");
   const html = renderToStaticMarkup(React.createElement(controllerModule.default, {

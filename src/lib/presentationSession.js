@@ -205,6 +205,16 @@ export function reducePresentationSession(state, action, context = {}) {
   }
 }
 
+export function isPresentationPlaybackSafe(state) {
+  const frameCount = timelineFrameCount(state);
+  return state?.lifecycle === "live"
+    && state.connection === "connected"
+    && state.blackout !== true
+    && state.output === "active"
+    && frameCount > 1
+    && state.frameIndex < frameCount - 1;
+}
+
 function openNewSession(state, action) {
   assertNonEmptyString(action.sessionId, "sessionId");
   presentationChannelName(action.sessionId);
@@ -275,7 +285,7 @@ function acceptSnapshot(state, message, context) {
       return pause(state, { rejectionReason: "snapshot-must-be-state" });
     }
     const snapshot = deepFreeze(accepted.payload);
-    return sessionState({
+    const acceptedState = {
       ...state,
       lifecycle: "live",
       output: snapshot.output_mode,
@@ -293,7 +303,12 @@ function acceptSnapshot(state, message, context) {
         snapshot.source,
         snapshot.timeline?.frame_index,
       ),
-    });
+    };
+    acceptedState.playback = state.playback === "playing"
+      && isPresentationPlaybackSafe(acceptedState)
+      ? "playing"
+      : "paused";
+    return sessionState(acceptedState);
   } catch (error) {
     return pause(state, {
       pendingRequest: null,
