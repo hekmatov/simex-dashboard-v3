@@ -2,6 +2,7 @@ import React from "react";
 
 import DisplayedChartGrid from "../display/DisplayedChartGrid.jsx";
 import { buildMemberTimeContexts } from "../playback/PlaybackProvider.jsx";
+import ConnectionIndicator from "./ConnectionIndicator.jsx";
 import useAudienceStaticAssetReadiness from "./useAudienceStaticAssetReadiness.js";
 
 export default function AudienceDisplay(props) {
@@ -148,6 +149,7 @@ export function AudienceProjectionSurface({
         </time>
       )}
       {projection.blackout && <div className="audience-blackout" aria-hidden="true" />}
+      <ConnectionIndicator connection={connectionStatus} />
     </main>
   );
 }

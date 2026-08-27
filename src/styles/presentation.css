@@ -270,6 +270,21 @@
   z-index: 1;
 }
 
+.audience-display > .presentation-connection-indicator {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-component-control-radius);
+  box-sizing: border-box;
+  color: var(--simex-text-strong);
+  height: 44px;
+  inset-block-start: 24px;
+  inset-inline-end: 24px;
+  place-items: center;
+  position: absolute;
+  width: 44px;
+  z-index: 2;
+}
+
 .present-workspace {
   box-sizing: border-box;
   color: #08224a;
@@ -525,6 +540,7 @@
   align-items: center;
   display: flex;
   gap: 8px;
+  min-height: 44px;
 }
 
 .present-chart-choice.is-unavailable {
@@ -775,6 +791,40 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .present-workspace {
+    display: grid;
+    max-width: 100%;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .present-status-strip {
+    order: 1;
+    padding: 12px;
+  }
+
+  .present-action-dock {
+    border: 1px solid var(--simex-border-subtle);
+    border-radius: var(--simex-component-surface-radius);
+    bottom: auto;
+    margin-top: 12px;
+    order: 2;
+    padding: 12px;
+    position: static;
+  }
+
+  .present-workspace-body {
+    min-width: 0;
+    order: 3;
+    padding-block: 12px 24px;
+  }
+
+  .present-context-panel,
+  .present-scene-panel {
+    min-width: 0;
+    padding: 16px;
+  }
+
   .present-chart-actions,
   .present-session-actions,
   .present-time-controls {
@@ -792,7 +842,26 @@
   .presentation-controller__output {
     align-items: stretch;
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .presentation-controller__source > :is(.present-source-picker, button),
+  .presentation-controller__timeline > :is(.present-time-slider, .present-cadence-field) {
+    grid-column: 1 / -1;
+  }
+
+  .presentation-controller :is(button, select, input),
+  .present-workspace :is(button, select, input) {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .present-selected-chart > strong,
+  .present-source-picker,
+  .present-status-strip,
+  .present-chart-choice > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .present-cadence-field {

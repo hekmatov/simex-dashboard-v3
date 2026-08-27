@@ -1514,11 +1514,11 @@
 }
 
 @media (max-width: 767px) {
-  .app-frame:is([data-dashboard-mode="build"], [data-dashboard-mode="present"]) > :not(.phone-mode-banner) {
+  .app-frame[data-dashboard-mode="build"] > :not(.phone-mode-banner) {
     display: none !important;
   }
 
-  body:has(.app-frame:is([data-dashboard-mode="build"], [data-dashboard-mode="present"])) > :is(
+  body:has(.app-frame[data-dashboard-mode="build"]) > :is(
     .unit-orbit,
     .build-authoring-auxiliary,
     .simex-tooltip-layer,

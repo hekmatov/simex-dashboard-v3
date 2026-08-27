@@ -23,6 +23,7 @@ export function createPresentationControllerChannel({
   let active = false;
   let channel = null;
   let connectionTimer = null;
+  let heartbeatTimer = null;
   let lastValidSnapshot = null;
   let lastHeartbeatAt = null;
   let lastAudienceSequence = 0;
@@ -109,6 +110,10 @@ export function createPresentationControllerChannel({
         lastHeartbeatAt = null;
       }
     }, 500);
+    heartbeatTimer = scheduler.setInterval(
+      () => post("heartbeat", null),
+      HEARTBEAT_INTERVAL_MS,
+    );
   }
 
   function publish(state, context = {}) {
@@ -140,7 +145,9 @@ export function createPresentationControllerChannel({
     if (!active) return;
     active = false;
     if (connectionTimer !== null) scheduler.clearInterval(connectionTimer);
+    if (heartbeatTimer !== null) scheduler.clearInterval(heartbeatTimer);
     connectionTimer = null;
+    heartbeatTimer = null;
     lastHeartbeatAt = null;
     if (channel) {
       channel.onmessage = null;
@@ -183,12 +190,16 @@ export function createPresentationAudienceChannel({
   let active = false;
   let channel = null;
   let heartbeatTimer = null;
+  let livenessTimer = null;
   let sequence = 0;
   let status = "waiting";
   let lastControllerSequence = 0;
   let lastValidSnapshot = null;
   let awaitingBaseline = true;
   let resyncFloor = 0;
+  let lastControllerAt = null;
+  let reconnectStartedAt = null;
+  let reconnectReadyPending = false;
 
   function setStatus(nextStatus) {
     if (status === nextStatus) return;
@@ -226,9 +237,12 @@ export function createPresentationAudienceChannel({
 
   function acceptState(message) {
     lastControllerSequence = message.sequence;
+    lastControllerAt = scheduler.now();
     lastValidSnapshot = snapshot(message.payload);
     awaitingBaseline = false;
     resyncFloor = 0;
+    reconnectStartedAt = null;
+    reconnectReadyPending = false;
     onMessageAccepted(snapshot(message));
     onStateChange(snapshot(lastValidSnapshot));
     setStatus("connected");
@@ -252,6 +266,45 @@ export function createPresentationAudienceChannel({
         requestResync(rejection, candidateSequence);
       } else {
         rejectMessage(rejection);
+      }
+      return;
+    }
+
+    if (message.type === "heartbeat") {
+      if (awaitingBaseline) {
+        if (message.sequence <= resyncFloor) {
+          rejectMessage(reason(
+            "duplicate_or_out_of_order",
+            "Audience is waiting for a fresh controller state baseline",
+          ));
+          return;
+        }
+        lastControllerSequence = message.sequence;
+        resyncFloor = message.sequence;
+      } else {
+        if (message.sequence <= lastControllerSequence) {
+          rejectMessage(reason(
+            "duplicate_or_out_of_order",
+            "controller message sequence is duplicate or out of order",
+          ));
+          return;
+        }
+        if (message.sequence !== lastControllerSequence + 1) {
+          requestResync(reason(
+            "sequence_gap",
+            "controller message sequence is incomplete",
+          ), message.sequence);
+          return;
+        }
+        lastControllerSequence = message.sequence;
+      }
+      lastControllerAt = scheduler.now();
+      if (status === "disconnected") {
+        awaitingBaseline = true;
+        resyncFloor = lastControllerSequence;
+        reconnectStartedAt = scheduler.now();
+        reconnectReadyPending = true;
+        setStatus("reconnecting");
       }
       return;
     }
@@ -331,11 +384,30 @@ export function createPresentationAudienceChannel({
       () => post("heartbeat"),
       HEARTBEAT_INTERVAL_MS,
     );
+    livenessTimer = scheduler.setInterval(() => {
+      if (
+        reconnectReadyPending
+        && reconnectStartedAt !== null
+        && scheduler.now() - reconnectStartedAt >= 500
+      ) {
+        reconnectReadyPending = false;
+        post("ready");
+      }
+      if (
+        lastControllerAt !== null
+        && scheduler.now() - lastControllerAt >= DISCONNECT_AFTER_MS
+        && status !== "ended"
+      ) {
+        setStatus("disconnected");
+      }
+    }, 500);
   }
 
   function stopHeartbeat() {
     if (heartbeatTimer !== null) scheduler.clearInterval(heartbeatTimer);
+    if (livenessTimer !== null) scheduler.clearInterval(livenessTimer);
     heartbeatTimer = null;
+    livenessTimer = null;
   }
 
   function dispose() {
@@ -347,6 +419,9 @@ export function createPresentationAudienceChannel({
       channel.close();
     }
     channel = null;
+    lastControllerAt = null;
+    reconnectStartedAt = null;
+    reconnectReadyPending = false;
   }
 
   function getLastValidSnapshot() {

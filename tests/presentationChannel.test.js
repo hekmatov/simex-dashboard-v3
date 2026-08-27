@@ -551,7 +551,11 @@ test("heartbeat, disconnect, ended, and cleanup retain the v3 lifecycle", () => 
   audience.start();
   controller.publish(presentationState());
   scheduler.advance(3_000);
-  assert.equal(observed.filter(({ type }) => type === "heartbeat").length, 2);
+  assert.equal(
+    observed.filter(({ type }) => type === "heartbeat").length,
+    4,
+    "controller and Audience both provide liveness heartbeats",
+  );
 
   audience.dispose();
   scheduler.advance(5_000);
@@ -560,4 +564,66 @@ test("heartbeat, disconnect, ended, and cleanup retain the v3 lifecycle", () => 
   assert.equal(scheduler.activeTimerCount, 0);
   assert.deepEqual(states, [presentationState()]);
   observer.close();
+});
+
+test("Audience detects controller silence and exposes reconnecting until a fresh valid snapshot arrives", () => {
+  const { audience, controller, scheduler, states, statuses } = setup();
+  controller.start();
+  audience.start();
+  const first = presentationState();
+  controller.publish(first);
+
+  controller.dispose();
+  scheduler.advance(5_000);
+  assert.equal(statuses.at(-1), "audience:disconnected");
+  assert.deepEqual(audience.getLastValidSnapshot(), first);
+
+  const restoredController = createChannel("simex-presentation-session-001");
+  restoredController.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 2,
+    type: "heartbeat",
+    payload: null,
+  });
+  assert.equal(statuses.at(-1), "audience:reconnecting");
+  assert.deepEqual(audience.getLastValidSnapshot(), first);
+
+  const restored = { ...first, output_mode: "holding" };
+  restoredController.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 3,
+    type: "state",
+    payload: restored,
+  });
+  assert.equal(statuses.at(-1), "audience:connected");
+  assert.deepEqual(states, [first, restored]);
+  restoredController.close();
+  audience.dispose();
+  assert.equal(scheduler.activeTimerCount, 0);
+});
+
+test("controller sends liveness heartbeats to Audience without changing the accepted output", () => {
+  const { audience, controller, scheduler, states, statuses } = setup();
+  const observed = [];
+  const observer = createChannel("simex-presentation-session-001");
+  observer.onmessage = ({ data }) => observed.push(data);
+  controller.start();
+  audience.start();
+  const first = presentationState();
+  controller.publish(first);
+
+  scheduler.advance(3_000);
+
+  assert.equal(
+    observed.filter(({ type }) => type === "heartbeat").length,
+    4,
+    "controller and Audience each emit two liveness heartbeats",
+  );
+  assert.deepEqual(states, [first]);
+  assert.equal(statuses.at(-1), "audience:connected");
+  observer.close();
+  audience.dispose();
+  controller.dispose();
 });

@@ -261,6 +261,27 @@ test("Audience accepts a trusted Image descriptor passively and rejects Free tex
   assert.doesNotMatch(imageHtml, /<button|Image viewer actions|Moderator only/);
 });
 
+test("Audience overlays approved passive connection glyphs without visible status copy or dimming", () => {
+  for (const [connectionStatus, accessibleName] of [
+    ["disconnected", "Audience display disconnected"],
+    ["reconnecting", "Audience display reconnecting"],
+  ]) {
+    const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
+      dashboard,
+      connectionStatus,
+      projection: audienceProjection({ blackout: connectionStatus === "reconnecting" }),
+    }));
+
+    assert.match(html, new RegExp(`data-connection-indicator="${connectionStatus}"`));
+    assert.match(html, new RegExp(`aria-label="${accessibleName}"`));
+    assert.match(html, /data-displayed-chart-id="chart-a"/);
+    assert.match(html, /data-displayed-chart-id="chart-b"/);
+    assert.doesNotMatch(html, new RegExp(`>${accessibleName}<`));
+    assert.doesNotMatch(html, /opacity:/);
+    if (connectionStatus === "reconnecting") assert.match(html, /audience-blackout/);
+  }
+});
+
 test("Audience retains its accepted last-valid output when a recovery-only Image is rejected upstream", () => {
   const recoveryDashboard = {
     ...dashboard,
