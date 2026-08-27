@@ -1,5 +1,11 @@
-const CACHE_NAME = "simex-dashboard-v3-step8-v1";
-const CORE_ASSETS = [
+try {
+  importScripts("./runtime-precache-manifest.js");
+} catch {
+  // Development output has no final static-build manifest.
+}
+
+const FALLBACK_CACHE_NAME = "simex-dashboard-v3-step8-v1";
+const FALLBACK_CORE_ASSETS = [
   "./",
   "./index.html",
   "./source-viewer.html",
@@ -15,23 +21,27 @@ const CORE_ASSETS = [
   "./vendor/three.min.js",
   "./vendor/vanta.net.min.js",
 ];
+const generatedManifest = self.__SIMEX_RUNTIME_PRECACHE_MANIFEST__;
+const CACHE_NAME = generatedManifest?.cacheName ?? FALLBACK_CACHE_NAME;
+const CORE_ASSETS = generatedManifest?.assets ?? FALLBACK_CORE_ASSETS;
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
     const builtAssets = new Set(CORE_ASSETS);
-    for (const entrypoint of ["./index.html", "./source-viewer.html"]) {
-      try {
-        const response = await fetch(entrypoint, { cache: "reload" });
-        if (!response.ok) continue;
-        const html = await response.text();
-        for (const url of htmlRuntimeUrls(html)) builtAssets.add(url);
-      } catch {
-        // cache.addAll below provides the authoritative install failure.
+    if (!generatedManifest) {
+      for (const entrypoint of ["./index.html", "./source-viewer.html"]) {
+        try {
+          const response = await fetch(entrypoint, { cache: "reload" });
+          if (!response.ok) continue;
+          const html = await response.text();
+          for (const url of htmlRuntimeUrls(html)) builtAssets.add(url);
+        } catch {
+          // cache.addAll below provides the authoritative install failure.
+        }
       }
     }
     await cache.addAll([...builtAssets]);
-    self.skipWaiting();
   })());
 });
 
@@ -43,7 +53,6 @@ self.addEventListener("activate", (event) => {
         .filter((key) => key.startsWith("simex-dashboard-") && key !== CACHE_NAME)
         .map((key) => caches.delete(key)),
     );
-    await self.clients.claim();
   })());
 });
 
@@ -76,12 +85,12 @@ async function networkFirstNavigation(request) {
 }
 
 async function cacheFirstAsset(request) {
-  const cached = await caches.match(request);
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request, { ignoreVary: true });
   if (cached) return cached;
   try {
     const response = await fetch(request);
     if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
       await cache.put(request, response.clone());
     }
     return response;

@@ -35,6 +35,55 @@ test("accepts a relative, fully local V3 build with hashed runtime assets", asyn
   assert.equal(result.quorumContractHash, EXPECTED_QUORUM_CONTRACT_HASH);
 });
 
+test("finalizes a transitive runtime precache manifest from the verified build graph", async (t) => {
+  assert.ok(verifierModule);
+  const fixture = await staticFixture(t);
+  await writeFile(
+    path.join(fixture.distDir, "assets/dashboard-Xy98za76.js"),
+    'import("./lazy-html2canvas-Qq11ww22.js");',
+  );
+  await writeFile(
+    path.join(fixture.distDir, "assets/lazy-html2canvas-Qq11ww22.js"),
+    'import "./lazy-leaf-Rr22ee33.js";',
+  );
+  await writeFile(
+    path.join(fixture.distDir, "assets/lazy-leaf-Rr22ee33.js"),
+    'export const coldUseReady = true;',
+  );
+
+  const finalized = await verifierModule.finalizeV3StaticBuild({
+    rootDir: fixture.rootDir,
+    distDir: fixture.distDir,
+    runtimeBoundaryInventory: frozenInventory(),
+  });
+
+  assert.deepEqual(finalized.runtimePrecacheAssets, [
+    "./",
+    "./assets/dashboard-Ab12cd34.css",
+    "./assets/dashboard-Xy98za76.js",
+    "./assets/lazy-html2canvas-Qq11ww22.js",
+    "./assets/lazy-leaf-Rr22ee33.js",
+    "./assets/pdpc-mark.png",
+    "./assets/pwa-icon.svg",
+    "./config/dashboard.json",
+    "./config/dataset-profiles.json",
+    "./data/data-sources.generated.json",
+    "./index.html",
+    "./integration/quorum-chart-catalogue.json",
+    "./manifest.webmanifest",
+    "./portable-dashboard-data.js",
+    "./runtime-precache-manifest.js",
+    "./service-worker.js",
+    "./source-viewer.html",
+    "./vendor/three.min.js",
+    "./vendor/vanta.net.min.js",
+  ]);
+  const generated = await readFile(path.join(fixture.distDir, "runtime-precache-manifest.js"), "utf8");
+  assert.match(generated, /lazy-html2canvas-Qq11ww22\.js/);
+  assert.match(generated, /lazy-leaf-Rr22ee33\.js/);
+  assert.match(generated, /cacheName/);
+});
+
 test("rejects remote runtime URLs with the exact built file", async (t) => {
   assert.ok(verifierModule);
   const fixture = await staticFixture(t, {
@@ -175,6 +224,80 @@ test("service worker precaches the V3 shell and built hashed assets", async () =
   ]);
 });
 
+test("service worker precaches every generated runtime leaf, including lazy html2canvas", async () => {
+  const manifest = {
+    cacheName: "simex-dashboard-v3-test-runtime-v1",
+    assets: [
+      "./",
+      "./index.html",
+      "./assets/dashboard-Xy98za76.js",
+      "./assets/lazy-html2canvas-Qq11ww22.js",
+      "./assets/lazy-leaf-Rr22ee33.js",
+    ],
+  };
+  const harness = await serviceWorkerHarness({ runtimePrecacheManifest: manifest });
+
+  await harness.dispatchInstall();
+
+  assert.deepEqual(harness.precached.toSorted(), manifest.assets.toSorted());
+});
+
+test("a waiting update preserves the prior lazy runtime cache until activation", async () => {
+  const store = createServiceWorkerStore();
+  const v1 = await serviceWorkerHarness({
+    store,
+    offline: true,
+    runtimePrecacheManifest: {
+      cacheName: "simex-dashboard-v3-test-v1",
+      assets: ["./index.html", "./assets/lazy-html2canvas-v1.js"],
+    },
+  });
+  await v1.dispatchInstall();
+
+  const v2 = await serviceWorkerHarness({
+    store,
+    runtimePrecacheManifest: {
+      cacheName: "simex-dashboard-v3-test-v2",
+      assets: ["./index.html", "./assets/lazy-html2canvas-v2.js"],
+    },
+  });
+  await v2.dispatchInstall();
+
+  assert.equal(v2.skipWaitingCalls, 0, "new worker must remain waiting while old clients drain");
+  assert.equal(await v1.hasCached("./assets/lazy-html2canvas-v1.js"), true);
+  assert.equal((await v1.dispatchFetch(new Request("http://127.0.0.1:4180/assets/lazy-html2canvas-v1.js"))).status, 200);
+  assert.deepEqual((await store.keys()).toSorted(), [
+    "simex-dashboard-v3-test-v1",
+    "simex-dashboard-v3-test-v2",
+  ]);
+
+  await v2.dispatchActivate();
+  assert.deepEqual(await store.keys(), ["simex-dashboard-v3-test-v2"]);
+});
+
+test("service worker reads a precached lazy asset from its active generation cache", async () => {
+  const store = createServiceWorkerStore({ globalMatch: false });
+  const harness = await serviceWorkerHarness({
+    store,
+    offline: true,
+    runtimePrecacheManifest: {
+      cacheName: "simex-dashboard-v3-test-active-generation",
+      assets: ["./assets/lazy-html2canvas.js"],
+    },
+  });
+  await harness.dispatchInstall();
+
+  const response = await harness.dispatchFetch(
+    new Request("http://127.0.0.1:4180/assets/lazy-html2canvas.js"),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    harness.cacheMatchOptions.map(({ ignoreVary }) => ({ ignoreVary })),
+    [{ ignoreVary: true }],
+  );
+});
+
 test("service worker never substitutes index HTML for a failed non-navigation request", async () => {
   const harness = await serviceWorkerHarness({ offline: true });
   const request = new Request("http://127.0.0.1:4180/data/missing.csv");
@@ -264,37 +387,27 @@ function frozenInventory() {
   };
 }
 
-async function serviceWorkerHarness({ indexHtml = "", offline = false } = {}) {
+async function serviceWorkerHarness({
+  indexHtml = "",
+  offline = false,
+  runtimePrecacheManifest = null,
+  store = createServiceWorkerStore(),
+} = {}) {
   const source = await readFile("public/service-worker.js", "utf8");
   const listeners = new Map();
   const precached = [];
   const cachedWrites = [];
+  const cacheMatchOptions = [];
   const indexResponse = new Response(indexHtml, {
     status: 200,
     headers: { "content-type": "text/html" },
   });
-  const cache = {
-    async addAll(urls) {
-      precached.push(...urls);
-    },
-    async match(value) {
-      const url = typeof value === "string" ? value : value.url;
-      return /(?:^|\/)index\.html$/.test(url) ? indexResponse.clone() : undefined;
-    },
-    async put(value) {
-      cachedWrites.push(typeof value === "string" ? value : value.url);
-    },
-  };
-  const caches = {
-    async open() { return cache; },
-    async keys() { return []; },
-    async delete() { return true; },
-    async match(value) { return cache.match(value); },
-  };
+  const caches = store.createCaches({ precached, cachedWrites, cacheMatchOptions, indexResponse });
+  let skipWaitingCalls = 0;
   const self = {
     location: new URL("http://127.0.0.1:4180/service-worker.js"),
     clients: { async claim() {} },
-    skipWaiting() {},
+    skipWaiting() { skipWaitingCalls += 1; },
     addEventListener(type, listener) { listeners.set(type, listener); },
   };
   const fetch = async (value) => {
@@ -312,10 +425,16 @@ async function serviceWorkerHarness({ indexHtml = "", offline = false } = {}) {
     Request,
     Promise,
     console,
+    importScripts() {
+      if (runtimePrecacheManifest) self.__SIMEX_RUNTIME_PRECACHE_MANIFEST__ = runtimePrecacheManifest;
+    },
   }, { filename: "public/service-worker.js" });
   return {
     precached,
     cachedWrites,
+    cacheMatchOptions,
+    get skipWaitingCalls() { return skipWaitingCalls; },
+    hasCached: (url) => store.has(url),
     async dispatchInstall() {
       let pending;
       listeners.get("install")({ waitUntil(value) { pending = value; } });
@@ -326,5 +445,61 @@ async function serviceWorkerHarness({ indexHtml = "", offline = false } = {}) {
       listeners.get("fetch")({ request, respondWith(value) { pending = value; } });
       return pending;
     },
+    async dispatchActivate() {
+      let pending;
+      listeners.get("activate")({ waitUntil(value) { pending = value; } });
+      await pending;
+    },
   };
+}
+
+function createServiceWorkerStore({ globalMatch = true } = {}) {
+  const cachesByName = new Map();
+  return {
+    async keys() { return [...cachesByName.keys()]; },
+    async has(url) {
+      return [...cachesByName.values()].some((entries) => entries.has(normalizeCacheKey(url)));
+    },
+    createCaches({ precached, cachedWrites, cacheMatchOptions, indexResponse }) {
+      const open = async (name) => {
+        const entries = cachesByName.get(name) ?? new Map();
+        cachesByName.set(name, entries);
+        return {
+          async addAll(urls) {
+            precached.push(...urls);
+            for (const url of urls) entries.set(normalizeCacheKey(url), new Response("cached", { status: 200 }));
+          },
+          async match(value, options) {
+            cacheMatchOptions.push(options);
+            const key = normalizeCacheKey(value);
+            if (entries.has(key)) return entries.get(key).clone();
+            return /(?:^|\/)index\.html$/.test(key) ? indexResponse.clone() : undefined;
+          },
+          async put(value, response = new Response("cached", { status: 200 })) {
+            const key = normalizeCacheKey(value);
+            cachedWrites.push(typeof value === "string" ? value : value.url);
+            entries.set(key, response.clone());
+          },
+        };
+      };
+      return {
+        open,
+        async keys() { return [...cachesByName.keys()]; },
+        async delete(name) { return cachesByName.delete(name); },
+        async match(value) {
+          if (!globalMatch) return undefined;
+          const key = normalizeCacheKey(value);
+          for (const entries of cachesByName.values()) {
+            if (entries.has(key)) return entries.get(key).clone();
+          }
+          return /(?:^|\/)index\.html$/.test(key) ? indexResponse.clone() : undefined;
+        },
+      };
+    },
+  };
+}
+
+function normalizeCacheKey(value) {
+  const url = typeof value === "string" ? value : value.url;
+  return url.startsWith("http") ? new URL(url).pathname.replace(/^\//, "./") : url;
 }

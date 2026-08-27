@@ -1,4 +1,5 @@
-import { readFile, readdir } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -23,6 +24,7 @@ const REQUIRED_PACKAGE_ASSETS = Object.freeze([
   "vendor/three.min.js",
   "vendor/vanta.net.min.js",
 ]);
+const RUNTIME_PRECACHE_MANIFEST = "runtime-precache-manifest.js";
 
 export async function verifyV3StaticBuild({
   rootDir = DEFAULT_ROOT,
@@ -80,12 +82,37 @@ export async function verifyV3StaticBuild({
     throw new Error("source runtime boundary contains remote dependencies");
   }
 
+  const runtimePrecacheAssets = createRuntimePrecacheAssets(runtimeAssets);
+  await assertGeneratedRuntimeManifest({
+    distDir: resolvedDist,
+    files,
+    runtimePrecacheAssets,
+  });
+
   return Object.freeze({
     entrypoints: [...ENTRYPOINTS],
     hashedRuntimeAssets,
     quorumContractHash: inventory.quorumContractHash,
     packageAssetCount: files.size,
+    runtimePrecacheAssets,
   });
+}
+
+export async function finalizeV3StaticBuild(options = {}) {
+  const result = await verifyV3StaticBuild(options);
+  const resolvedDist = path.resolve(options.distDir ?? path.join(options.rootDir ?? DEFAULT_ROOT, "dist"));
+  const manifest = {
+    cacheName: `simex-dashboard-v3-${await runtimePrecacheDigest({
+      distDir: resolvedDist,
+      assets: result.runtimePrecacheAssets,
+    })}`,
+    assets: result.runtimePrecacheAssets,
+  };
+  await writeFile(
+    path.join(resolvedDist, RUNTIME_PRECACHE_MANIFEST),
+    `self.__SIMEX_RUNTIME_PRECACHE_MANIFEST__ = ${JSON.stringify(manifest, null, 2)};\n`,
+  );
+  return Object.freeze({ ...result, runtimePrecacheManifest: manifest });
 }
 
 function validateLocalRuntimeUrl({ url, owner, files, runtimeAssets }) {
@@ -102,7 +129,7 @@ function validateLocalRuntimeUrl({ url, owner, files, runtimeAssets }) {
   if (!files.has(target)) {
     throw new Error(`${owner}: local runtime target is missing: ${target}`);
   }
-  if (/\.(?:css|js)$/i.test(target)) runtimeAssets.add(target);
+  runtimeAssets.add(target);
 }
 
 function extractHtmlRuntimeUrls(source) {
@@ -113,7 +140,7 @@ function extractHtmlRuntimeUrls(source) {
 }
 
 async function validateBuiltRuntimeGraph({ distDir, files, runtimeAssets }) {
-  const pending = [...runtimeAssets];
+  const pending = [...runtimeAssets].filter((asset) => /\.(?:css|js)$/i.test(asset));
   const inspected = new Set();
   while (pending.length > 0) {
     const owner = pending.shift();
@@ -132,11 +159,62 @@ async function validateBuiltRuntimeGraph({ distDir, files, runtimeAssets }) {
       if (!files.has(target)) {
         throw new Error(`${owner}: local runtime target is missing: ${target}`);
       }
-      if (/\.(?:css|js)$/i.test(target) && !runtimeAssets.has(target)) {
+      if (!runtimeAssets.has(target)) {
         runtimeAssets.add(target);
+      }
+      if (/\.(?:css|js)$/i.test(target) && !inspected.has(target)) {
         pending.push(target);
       }
     }
+  }
+}
+
+function createRuntimePrecacheAssets(runtimeAssets) {
+  return Object.freeze([...new Set([
+    "./",
+    ...ENTRYPOINTS.map((entrypoint) => `./${entrypoint}`),
+    ...REQUIRED_PACKAGE_ASSETS.map((asset) => `./${asset}`),
+    ...[...runtimeAssets].map((asset) => `./${asset}`),
+    `./${RUNTIME_PRECACHE_MANIFEST}`,
+  ])].toSorted());
+}
+
+async function runtimePrecacheDigest({ distDir, assets }) {
+  const hash = createHash("sha256");
+  for (const asset of assets) {
+    if (asset === "./" || asset === `./${RUNTIME_PRECACHE_MANIFEST}`) continue;
+    const filePath = asset.slice(2);
+    hash.update(filePath);
+    hash.update("\0");
+    hash.update(await readFile(path.join(distDir, filePath)));
+    hash.update("\0");
+  }
+  return hash.digest("hex").slice(0, 16);
+}
+
+async function assertGeneratedRuntimeManifest({ distDir, files, runtimePrecacheAssets }) {
+  if (!files.has(RUNTIME_PRECACHE_MANIFEST)) return;
+  const source = await readFile(path.join(distDir, RUNTIME_PRECACHE_MANIFEST), "utf8");
+  const match = source.match(/__SIMEX_RUNTIME_PRECACHE_MANIFEST__\s*=\s*([\s\S]+?);\s*$/);
+  if (!match) throw new Error("runtime precache manifest has an invalid format");
+  let manifest;
+  try {
+    manifest = JSON.parse(match[1]);
+  } catch {
+    throw new Error("runtime precache manifest has invalid JSON");
+  }
+  if (!Array.isArray(manifest.assets)) {
+    throw new Error("runtime precache manifest must include an assets array");
+  }
+  if (JSON.stringify(manifest.assets) !== JSON.stringify(runtimePrecacheAssets)) {
+    throw new Error("runtime precache manifest does not match the verified runtime graph");
+  }
+  const expectedName = `simex-dashboard-v3-${await runtimePrecacheDigest({
+    distDir,
+    assets: runtimePrecacheAssets,
+  })}`;
+  if (manifest.cacheName !== expectedName) {
+    throw new Error("runtime precache manifest cache generation does not match build content");
   }
 }
 
@@ -251,7 +329,9 @@ async function readTextTree(root, prefix, extensions) {
 
 async function run() {
   try {
-    const result = await verifyV3StaticBuild();
+    const result = process.argv.includes("--finalize")
+      ? await finalizeV3StaticBuild()
+      : await verifyV3StaticBuild();
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
