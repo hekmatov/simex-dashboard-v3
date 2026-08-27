@@ -76,7 +76,7 @@ This V2 dashboard now uses a page/section/panel structure instead of one flat li
 From the V2 repository root:
 
 ```powershell
-uv run --project "C:\Users\hekma\Documents\SimEx Dashboard\pdpcDashApp" python scripts\export_old_dashboard_data.py
+uv run --project "C:\Users\hekma\Documents\Projects\SimEx\pdpcDashApp" python scripts\export_old_dashboard_data.py
 ```
 
 That command reuses the old dashboard loaders and writes static files under `public/data`. The V2 app does not run that exporter in the browser.

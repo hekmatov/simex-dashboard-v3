@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Coordinator handoff warning:** Every Step 6–9 executor handoff inherits the global proportional workflow budget and the SimEx Feature Execution Adapter in `AGENTS.md`. Naming Superpowers, GSD, TDD, subagents, review, verification, or browser-control skills selects useful techniques; it does not make every optional ceremony mandatory. Require only the checks, reviews, artifacts, and reruns that can change the current implementation or acceptance decision. Preserve every explicit product invariant and accepted fidelity journey, but do not turn ordinary task completion, a reviewer return, a bounded correction, or a time checkpoint into a new broad audit. Full suites, complete builds, generated-output refreshes, and release evidence remain Step 9/pre-merge work unless a concrete earlier failure makes one decision-relevant.
+
 **Goal:** Reconcile the assembled V3 dashboard with the four normative contracts and all 20 accepted Step 4 sketches, preserving valid implementation while making Steps 6–8 independently executable and testable.
 
 **Architecture:** Keep one authoritative V3 dashboard content model, one canonical View/Build renderer and saved layout model, explicit Build draft slots, derived temporal ledgers, and one versioned passive presentation projection. Step 6 establishes shared shell, tokens, and mode boundary; Step 7 owns the shared canvas contract plus View/Build authoring; Step 8 consumes the saved Scene contract for Present/Audience.
