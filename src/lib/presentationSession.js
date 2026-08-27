@@ -19,6 +19,8 @@ const GUARDED_SESSION_EVENTS = new Set([
   "RECONNECTING",
   "SNAPSHOT_ACCEPTED",
   "SNAPSHOT_REJECTED",
+  "TICK",
+  "EFFECTS_CONSUMED",
   "AUDIENCE_CLOSE_SUCCEEDED",
   "AUDIENCE_CLOSE_DENIED",
 ]);
@@ -41,20 +43,23 @@ export function createInitialPresentationSession() {
     channelGeneration: 0,
     acceptsSessionEvents: false,
     effects: [],
+    effectsVersion: 0,
+    effectsConsumedVersion: 0,
     pendingRequest: null,
     rejectionReason: null,
     preBlackoutOutput: "holding",
     allocatedSessionIds: [],
     allocatedWindowNames: [],
+    sourcePositions: {},
   });
 }
 
-export function reducePresentationSession(state, action) {
+export function reducePresentationSession(state, action, context = {}) {
   assertRecord(state, "Presentation session state");
   assertRecord(action, "Presentation session action");
 
   if (action.type === "OPEN_NEW_SESSION") {
-    return openNewSession(state, action);
+    return state.lifecycle === "ended" ? openNewSession(state, action) : state;
   }
 
   if (GUARDED_SESSION_EVENTS.has(action.type) && !matchesActiveGeneration(state, action)) {
@@ -72,6 +77,17 @@ export function reducePresentationSession(state, action) {
         closeOutcome: "denied-surface-remains",
       });
     }
+    if (
+      action.type === "EFFECTS_CONSUMED"
+      && action.effectsVersion === state.effectsVersion
+      && state.effectsConsumedVersion < state.effectsVersion
+    ) {
+      return sessionState({
+        ...state,
+        effects: [],
+        effectsConsumedVersion: state.effectsVersion,
+      });
+    }
     return state;
   }
 
@@ -86,21 +102,17 @@ export function reducePresentationSession(state, action) {
       return pause(state, {
         window: "open",
         connection: "connected",
-        pendingRequest: state.connection === "reconnecting" && state.lastValidSnapshot
-          ? { type: "RESEND_ACCEPTED_SNAPSHOT" }
-          : state.pendingRequest,
       });
     case "CONNECTION_LOST":
       return pause(state, { connection: "disconnected" });
     case "RECONNECTING":
       return pause(state, { window: "open", connection: "reconnecting" });
     case "SNAPSHOT_ACCEPTED":
-      return acceptSnapshot(state, action.message);
+      return acceptSnapshot(state, action.message, context);
     case "SNAPSHOT_REJECTED":
       return pause(state, {
-        rejectionReason: typeof action.reason === "string"
-          ? action.reason
-          : "snapshot-rejected",
+        pendingRequest: null,
+        rejectionReason: normalizeRejectionReason(action.reason),
       });
     case "PLAY":
       return play(state);
@@ -117,13 +129,21 @@ export function reducePresentationSession(state, action) {
     case "SELECT_SCENE":
       assertNonEmptyString(action.sceneId, "sceneId");
       return pause(state, {
-        pendingRequest: { type: action.type, sceneId: action.sceneId },
+        pendingRequest: requestWithRememberedFrame(
+          state,
+          { type: action.type, sceneId: action.sceneId },
+          `scene:${action.sceneId}`,
+        ),
         rejectionReason: null,
       });
     case "SELECT_CHRONO_GROUP":
       assertNonEmptyString(action.groupId, "groupId");
       return pause(state, {
-        pendingRequest: { type: action.type, groupId: action.groupId },
+        pendingRequest: requestWithRememberedFrame(
+          state,
+          { type: action.type, groupId: action.groupId },
+          `group:${action.groupId}`,
+        ),
         rejectionReason: null,
       });
     case "SET_TRACE_MODE":
@@ -137,6 +157,15 @@ export function reducePresentationSession(state, action) {
     case "SET_OUTPUT_MODE":
       if (!new Set(["holding", "blank", "active"]).has(action.mode)) {
         throw new TypeError("mode must be holding, blank, or active");
+      }
+      if (action.mode === "active" && !state.lastValidSnapshot) {
+        return pause(state, {
+          pendingRequest: null,
+          rejectionReason: {
+            code: "no_valid_snapshot",
+            message: "Active output requires an accepted presentation snapshot.",
+          },
+        });
       }
       return pause(state, {
         output: action.mode,
@@ -171,6 +200,7 @@ export function reducePresentationSession(state, action) {
         blackout: false,
         acceptsSessionEvents: false,
         effects: END_EFFECTS,
+        effectsVersion: state.effectsVersion + 1,
         pendingRequest: null,
       });
     default:
@@ -215,6 +245,8 @@ function openNewSession(state, action) {
     channelGeneration,
     acceptsSessionEvents: true,
     effects: [],
+    effectsVersion: state.effectsVersion,
+    effectsConsumedVersion: state.effectsConsumedVersion,
     pendingRequest: null,
     rejectionReason: null,
     preBlackoutOutput: "holding",
@@ -223,13 +255,24 @@ function openNewSession(state, action) {
       ...state.allocatedWindowNames,
       action.requestedWindowName,
     ],
+    sourcePositions: {},
   });
 }
 
-function acceptSnapshot(state, message) {
+function acceptSnapshot(state, message, context) {
   try {
+    if (!context.presentableItemIndex?.get) {
+      return pause(state, {
+        pendingRequest: null,
+        rejectionReason: {
+          code: "presentable_item_index_required",
+          message: "Accepted snapshots require the trusted presentable item index.",
+        },
+      });
+    }
     const accepted = parsePresentationMessage(message, {
       sessionId: state.sessionId,
+      presentableItemIndex: context.presentableItemIndex,
     });
     if (accepted.type !== "state") {
       return pause(state, { rejectionReason: "snapshot-must-be-state" });
@@ -248,9 +291,15 @@ function acceptSnapshot(state, message) {
       pendingRequest: null,
       rejectionReason: null,
       preBlackoutOutput: snapshot.output_mode,
+      sourcePositions: rememberSourcePosition(
+        state.sourcePositions,
+        snapshot.source,
+        snapshot.timeline?.frame_index,
+      ),
     });
   } catch (error) {
     return pause(state, {
+      pendingRequest: null,
       rejectionReason: presentationRejectionReason(error),
     });
   }
@@ -266,7 +315,7 @@ function play(state) {
     return pause(state);
   }
   const frameCount = timelineFrameCount(state);
-  if (frameCount < 2) return pause(state);
+  if (frameCount === 0) return pause(state);
   if (state.frameIndex >= frameCount - 1) {
     return sessionState({ ...state, playback: "at-end" });
   }
@@ -285,6 +334,11 @@ function tick(state) {
     frameIndex,
     playback: frameIndex === frameCount - 1 ? "at-end" : "playing",
     pendingRequest: { type: "TICK", frameIndex },
+    sourcePositions: rememberSourcePosition(
+      state.sourcePositions,
+      state.source,
+      frameIndex,
+    ),
   });
 }
 
@@ -297,6 +351,11 @@ function seek(state, frameIndex) {
     frameIndex,
     pendingRequest: { type: "SEEK", frameIndex },
     rejectionReason: null,
+    sourcePositions: rememberSourcePosition(
+      state.sourcePositions,
+      state.source,
+      frameIndex,
+    ),
   });
 }
 
@@ -307,6 +366,11 @@ function moveFrame(state, offset, type) {
   return pause(state, {
     frameIndex,
     pendingRequest: { type, frameIndex },
+    sourcePositions: rememberSourcePosition(
+      state.sourcePositions,
+      state.source,
+      frameIndex,
+    ),
   });
 }
 
@@ -340,6 +404,41 @@ function matchesActiveGeneration(state, action) {
   );
 }
 
+function requestWithRememberedFrame(state, request, sourceKey) {
+  const frameIndex = state.sourcePositions[sourceKey];
+  return Number.isSafeInteger(frameIndex) ? { ...request, frameIndex } : request;
+}
+
+function rememberSourcePosition(sourcePositions, source, frameIndex) {
+  const key = presentationSourceKey(source);
+  if (!key || !Number.isSafeInteger(frameIndex) || frameIndex < 0) {
+    return sourcePositions;
+  }
+  return { ...sourcePositions, [key]: frameIndex };
+}
+
+function presentationSourceKey(source) {
+  if (source?.kind === "scene") return `scene:${source.scene_id}`;
+  if (source?.kind === "Chrono Group") return `group:${source.chrono_group_id}`;
+  return null;
+}
+
+function normalizeRejectionReason(reason) {
+  if (
+    reason
+    && typeof reason === "object"
+    && !Array.isArray(reason)
+    && typeof reason.code === "string"
+    && typeof reason.message === "string"
+  ) {
+    return structuredClone(reason);
+  }
+  return {
+    code: "snapshot_rejected",
+    message: typeof reason === "string" ? reason : "Presentation snapshot was rejected.",
+  };
+}
+
 function sessionState(value) {
   return Object.freeze({
     ...value,
@@ -349,6 +448,10 @@ function sessionState(value) {
       : deepFreeze(structuredClone(value.pendingRequest)),
     allocatedSessionIds: Object.freeze([...value.allocatedSessionIds]),
     allocatedWindowNames: Object.freeze([...value.allocatedWindowNames]),
+    sourcePositions: Object.freeze({ ...value.sourcePositions }),
+    rejectionReason: value.rejectionReason == null
+      ? null
+      : deepFreeze(structuredClone(value.rejectionReason)),
   });
 }
 

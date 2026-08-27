@@ -31,9 +31,13 @@ export function requestAudienceWindowClose(windowRef) {
   } catch {
     // Browser policy may deny script-initiated closure.
   }
-  return {
-    outcome: windowRef?.closed === true
-      ? "succeeded"
-      : "denied-surface-remains",
-  };
+  try {
+    return {
+      outcome: windowRef?.closed === true
+        ? "succeeded"
+        : "denied-surface-remains",
+    };
+  } catch {
+    return { outcome: "denied-surface-remains" };
+  }
 }

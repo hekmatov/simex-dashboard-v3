@@ -6,6 +6,14 @@ import {
   reducePresentationSession,
 } from "../src/lib/presentationSession.js";
 
+const presentableItemIndex = new Map([
+  ["chart-001", {
+    id: "chart-001",
+    descriptor: { kind: "chart", chart_id: "chart-001" },
+  }],
+]);
+const validationContext = { presentableItemIndex };
+
 function openSession(state = createInitialPresentationSession(), overrides = {}) {
   return reducePresentationSession(state, {
     type: "OPEN_NEW_SESSION",
@@ -85,7 +93,7 @@ function liveSession() {
   );
   return reducePresentationSession(connected, event(connected, "SNAPSHOT_ACCEPTED", {
     message: acceptedMessage(connected),
-  }));
+  }), validationContext);
 }
 
 test("OPEN_NEW_SESSION is the allocation transition and requires runtime identity", () => {
@@ -131,6 +139,18 @@ test("OPEN_NEW_SESSION is the allocation transition and requires runtime identit
       acceptsSessionEvents: true,
     },
   );
+});
+
+test("OPEN_NEW_SESSION cannot replace a waiting or live session", () => {
+  const replacement = {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-002",
+    requestedWindowName: "simex-audience-session-002",
+  };
+  const waiting = openSession();
+  assert.equal(reducePresentationSession(waiting, replacement), waiting);
+  const live = liveSession();
+  assert.equal(reducePresentationSession(live, replacement), live);
 });
 
 test("a new session must use distinct runtime identity and a newer generation", () => {
@@ -229,7 +249,7 @@ test("source selection is a paused request and only a valid accepted snapshot en
   const payload = presentationState();
   const live = reducePresentationSession(invalid, event(invalid, "SNAPSHOT_ACCEPTED", {
     message: acceptedMessage(invalid, payload),
-  }));
+  }), validationContext);
   payload.source.scene_id = "mutated-after-dispatch";
   assert.equal(live.lifecycle, "live");
   assert.equal(live.output, "active");
@@ -238,14 +258,56 @@ test("source selection is a paused request and only a valid accepted snapshot en
   assert.equal(live.lastValidSnapshot.source.scene_id, "scene-001");
 });
 
+test("accepted snapshots require the trusted descriptor context", () => {
+  const waiting = openSession();
+  const message = acceptedMessage(waiting);
+  const missingContext = reducePresentationSession(
+    waiting,
+    event(waiting, "SNAPSHOT_ACCEPTED", { message }),
+  );
+  assert.equal(missingContext.lifecycle, "waiting");
+  assert.equal(missingContext.rejectionReason.code, "presentable_item_index_required");
+
+  const unknownDescriptor = new Map([
+    ["chart-other", {
+      id: "chart-other",
+      descriptor: { kind: "chart", chart_id: "chart-other" },
+    }],
+  ]);
+  const untrusted = reducePresentationSession(
+    waiting,
+    event(waiting, "SNAPSHOT_ACCEPTED", { message }),
+    { presentableItemIndex: unknownDescriptor },
+  );
+  assert.equal(untrusted.lifecycle, "waiting");
+  assert.equal(untrusted.lastValidSnapshot, null);
+  assert.equal(untrusted.rejectionReason.code, "untrusted_presentation_item");
+});
+
 test("rejected snapshots and invalid selections pause while retaining visible output", () => {
   const playing = reducePresentationSession(liveSession(), { type: "PLAY" });
-  const rejected = reducePresentationSession(playing, event(playing, "SNAPSHOT_REJECTED", {
-    reason: "scene-needs-attention",
+  const pending = reducePresentationSession(playing, {
+    type: "SELECT_SCENE",
+    sceneId: "scene-002",
+  });
+  const reason = {
+    code: "scene_needs_attention",
+    message: "Scene needs attention before presenting.",
+    sourceId: "scene-002",
+  };
+  const rejected = reducePresentationSession(pending, event(pending, "SNAPSHOT_REJECTED", {
+    reason,
   }));
+  reason.sourceId = "mutated";
   assert.equal(rejected.output, "active");
   assert.equal(rejected.playback, "paused");
-  assert.equal(rejected.rejectionReason, "scene-needs-attention");
+  assert.deepEqual(rejected.rejectionReason, {
+    code: "scene_needs_attention",
+    message: "Scene needs attention before presenting.",
+    sourceId: "scene-002",
+  });
+  assert.equal(Object.isFrozen(rejected.rejectionReason), true);
+  assert.equal(rejected.pendingRequest, null);
   assert.deepEqual(rejected.lastValidSnapshot, playing.lastValidSnapshot);
 });
 
@@ -253,13 +315,24 @@ test("playback actions pause for safety and TICK stops at the endpoint without l
   let state = liveSession();
   state = reducePresentationSession(state, { type: "PLAY" });
   assert.equal(state.playback, "playing");
-  state = reducePresentationSession(state, { type: "TICK" });
+  const beforeOldTick = state;
+  state = reducePresentationSession(state, event(state, "TICK", {
+    sessionId: "session-old",
+  }));
+  assert.equal(state, beforeOldTick);
+  state = reducePresentationSession(state, event(state, "TICK", {
+    channelGeneration: state.channelGeneration + 1,
+  }));
+  assert.equal(state, beforeOldTick);
+  state = reducePresentationSession(state, event(state, "TICK"));
   assert.equal(state.frameIndex, 1);
   assert.equal(state.playback, "playing");
-  state = reducePresentationSession(state, { type: "TICK" });
+  assert.equal(state.sourcePositions["scene:scene-001"], 1);
+  state = reducePresentationSession(state, event(state, "TICK"));
   assert.equal(state.frameIndex, 2);
   assert.equal(state.playback, "at-end");
-  state = reducePresentationSession(state, { type: "TICK" });
+  assert.equal(state.sourcePositions["scene:scene-001"], 2);
+  state = reducePresentationSession(state, event(state, "TICK"));
   assert.equal(state.frameIndex, 2);
   assert.equal(state.playback, "at-end");
 
@@ -276,6 +349,79 @@ test("playback actions pause for safety and TICK stops at the endpoint without l
     const playing = reducePresentationSession(liveSession(), { type: "PLAY" });
     assert.equal(reducePresentationSession(playing, action).playback, "paused", action.type);
   }
+});
+
+test("PLAY on a one-frame ledger is immediately at-end", () => {
+  const opened = openSession();
+  const waiting = reducePresentationSession(opened, event(opened, "CONNECTED"));
+  const payload = presentationState({
+    timeline: {
+      ...presentationState().timeline,
+      frame_epochs: [1_000],
+      frame_index: 0,
+      period: { start: 1_000, end: 1_000 },
+    },
+  });
+  const live = reducePresentationSession(
+    waiting,
+    event(waiting, "SNAPSHOT_ACCEPTED", {
+      message: acceptedMessage(waiting, payload),
+    }),
+    validationContext,
+  );
+  assert.equal(reducePresentationSession(live, { type: "PLAY" }).playback, "at-end");
+});
+
+test("source cursor memory is frozen and included when returning to a source", () => {
+  let state = liveSession();
+  state = reducePresentationSession(state, { type: "SEEK", frameIndex: 2 });
+  assert.equal(state.sourcePositions["scene:scene-001"], 2);
+  assert.equal(Object.isFrozen(state.sourcePositions), true);
+
+  state = reducePresentationSession(state, {
+    type: "SELECT_CHRONO_GROUP",
+    groupId: "group-002",
+  });
+  const groupPayload = presentationState({
+    source: {
+      kind: "Chrono Group",
+      scene_id: null,
+      chrono_group_id: "group-002",
+    },
+    timeline: { ...presentationState().timeline, frame_index: 1 },
+  });
+  state = reducePresentationSession(
+    state,
+    event(state, "SNAPSHOT_ACCEPTED", {
+      message: acceptedMessage(state, groupPayload),
+    }),
+    validationContext,
+  );
+  assert.equal(state.sourcePositions["group:group-002"], 1);
+  state = reducePresentationSession(state, { type: "PREVIOUS" });
+  assert.equal(state.sourcePositions["group:group-002"], 0);
+  state = reducePresentationSession(state, { type: "NEXT" });
+  assert.equal(state.sourcePositions["group:group-002"], 1);
+  state = reducePresentationSession(state, { type: "PREVIOUS" });
+
+  const returnToScene = reducePresentationSession(state, {
+    type: "SELECT_SCENE",
+    sceneId: "scene-001",
+  });
+  assert.deepEqual(returnToScene.pendingRequest, {
+    type: "SELECT_SCENE",
+    sceneId: "scene-001",
+    frameIndex: 2,
+  });
+  const returnToGroup = reducePresentationSession(returnToScene, {
+    type: "SELECT_CHRONO_GROUP",
+    groupId: "group-002",
+  });
+  assert.deepEqual(returnToGroup.pendingRequest, {
+    type: "SELECT_CHRONO_GROUP",
+    groupId: "group-002",
+    frameIndex: 0,
+  });
 });
 
 test("blackout restores the prior deliberate output and never autoplays", () => {
@@ -323,12 +469,33 @@ test("connection and window safety transitions retain output and require both se
   const reconnected = reducePresentationSession(reconnecting, event(reconnecting, "CONNECTED"));
   assert.equal(reconnected.connection, "connected");
   assert.equal(reconnected.playback, "paused");
-  assert.equal(reconnected.pendingRequest.type, "RESEND_ACCEPTED_SNAPSHOT");
+  assert.equal(reconnected.pendingRequest, null);
 
   const closed = reducePresentationSession(reconnected, event(reconnected, "WINDOW_CLOSED"));
   assert.equal(closed.window, "closed");
   assert.equal(closed.connection, "disconnected");
   assert.equal(closed.output, "active");
+});
+
+test("active output is rejected until a last-valid snapshot exists", () => {
+  const waiting = openSession();
+  const rejected = reducePresentationSession(waiting, {
+    type: "SET_OUTPUT_MODE",
+    mode: "active",
+  });
+  assert.equal(rejected.output, "holding");
+  assert.equal(rejected.lifecycle, "waiting");
+  assert.equal(rejected.rejectionReason.code, "no_valid_snapshot");
+
+  const live = liveSession();
+  const holding = reducePresentationSession(live, {
+    type: "SET_OUTPUT_MODE",
+    mode: "holding",
+  });
+  assert.equal(
+    reducePresentationSession(holding, { type: "SET_OUTPUT_MODE", mode: "active" }).output,
+    "active",
+  );
 });
 
 test("END makes the generation terminal before ordered effects and close outcomes cannot revive it", () => {
@@ -345,6 +512,8 @@ test("END makes the generation terminal before ordered effects and close outcome
       blackout: ended.blackout,
       acceptsSessionEvents: ended.acceptsSessionEvents,
       effects: ended.effects,
+      effectsVersion: ended.effectsVersion,
+      effectsConsumedVersion: ended.effectsConsumedVersion,
     },
     {
       lifecycle: "ended",
@@ -356,6 +525,8 @@ test("END makes the generation terminal before ordered effects and close outcome
       blackout: false,
       acceptsSessionEvents: false,
       effects: ["PUBLISH_ENDED", "REQUEST_AUDIENCE_CLOSE", "TERMINATE_CHANNEL"],
+      effectsVersion: 1,
+      effectsConsumedVersion: 0,
     },
   );
 
@@ -365,6 +536,8 @@ test("END makes the generation terminal before ordered effects and close outcome
   assert.equal(succeeded.lifecycle, "ended");
   assert.equal(succeeded.connection, "terminated");
   assert.equal(succeeded.acceptsSessionEvents, false);
+  assert.equal(succeeded.effectsVersion, ended.effectsVersion);
+  assert.deepEqual(succeeded.effects, ended.effects);
 
   const denied = reducePresentationSession(ended, event(ended, "AUDIENCE_CLOSE_DENIED", {
     surfaceRemains: true,
@@ -375,6 +548,48 @@ test("END makes the generation terminal before ordered effects and close outcome
   assert.equal(denied.connection, "terminated");
   assert.equal(denied.output, "ended");
   assert.equal(denied.blackout, false);
+});
+
+test("END effects are one-shot, guarded, and close outcomes do not create a new batch", () => {
+  const ended = reducePresentationSession(liveSession(), { type: "END" });
+  const staleAcknowledgement = reducePresentationSession(ended, event(
+    ended,
+    "EFFECTS_CONSUMED",
+    { channelGeneration: ended.channelGeneration + 1, effectsVersion: 1 },
+  ));
+  assert.equal(staleAcknowledgement, ended);
+
+  const consumed = reducePresentationSession(ended, event(ended, "EFFECTS_CONSUMED", {
+    effectsVersion: ended.effectsVersion,
+  }));
+  assert.deepEqual(consumed.effects, []);
+  assert.equal(consumed.effectsVersion, 1);
+  assert.equal(consumed.effectsConsumedVersion, 1);
+  assert.equal(
+    reducePresentationSession(consumed, event(consumed, "EFFECTS_CONSUMED", {
+      effectsVersion: consumed.effectsVersion,
+    })),
+    consumed,
+  );
+
+  for (const outcome of [
+    event(consumed, "AUDIENCE_CLOSE_SUCCEEDED"),
+    event(consumed, "AUDIENCE_CLOSE_DENIED", { surfaceRemains: true }),
+  ]) {
+    const closed = reducePresentationSession(consumed, outcome);
+    assert.deepEqual(closed.effects, []);
+    assert.equal(closed.effectsVersion, consumed.effectsVersion);
+    assert.equal(closed.effectsConsumedVersion, consumed.effectsConsumedVersion);
+  }
+
+  const nextSession = reducePresentationSession(consumed, {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-002",
+    requestedWindowName: "simex-audience-session-002",
+  });
+  const nextEnded = reducePresentationSession(nextSession, { type: "END" });
+  assert.equal(nextEnded.effectsVersion, 2);
+  assert.equal(nextEnded.effectsConsumedVersion, 1);
 });
 
 test("every old-session event is ignored after either END close outcome", () => {

@@ -104,3 +104,20 @@ test("no-op, throwing, and missing close adapters deny closure without throwing"
     });
   }
 });
+
+test("a revoked or throwing closed getter is treated as denied without escaping", () => {
+  let closeCalls = 0;
+  const revoked = {
+    close() {
+      closeCalls += 1;
+    },
+    get closed() {
+      throw new Error("window proxy revoked");
+    },
+  };
+  assert.doesNotThrow(() => windowModule.requestAudienceWindowClose(revoked));
+  assert.deepEqual(windowModule.requestAudienceWindowClose(revoked), {
+    outcome: "denied-surface-remains",
+  });
+  assert.equal(closeCalls, 2);
+});
