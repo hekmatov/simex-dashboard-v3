@@ -68,6 +68,15 @@ During active SimEx feature work:
 - At an approximately 60-minute checkpoint, narrow to a coherent commit and defer unrelated polish or later-task behavior. Do not weaken acceptance criteria or commit broken work.
 - Plans and handoffs must apply the inherited proportional workflow budget. Requiring a named skill does not by itself make all optional workflow ceremony mandatory.
 
+## Approval Delegation Policy
+
+When the user has approved an architecture, feature design, or other governing product decisions, that approval authorizes the downstream specifications, plans, implementation, review, and verification that faithfully apply those decisions.
+
+- Do not add separate approval gates for documents, specifications, plans, implementation slices, or review handoffs that introduce no new product choice.
+- Documentation and plans are durable execution records, not user-approval barriers by default.
+- Ask for direction only when work exposes a genuinely new product decision, an accepted-contract contradiction, an irreversible or destructive action, an external side effect, or a scope expansion that materially changes the approved outcome.
+- Follow an explicit user request for visual or final acceptance, including any required exact-head preview URL, without inventing additional intermediate approval layers.
+
 ## Rapid Visual Prototyping Mode
 
 ### Activation and Scope
