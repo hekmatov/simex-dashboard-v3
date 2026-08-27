@@ -259,6 +259,13 @@ export function createPresentationAudienceChannel({
     if (message.type !== "state" && message.type !== "ended") return;
 
     if (message.type === "ended") {
+      if (awaitingBaseline) {
+        rejectMessage(reason(
+          "duplicate_or_out_of_order",
+          "Audience is waiting for a fresh controller state baseline",
+        ));
+        return;
+      }
       if (message.sequence <= lastControllerSequence) {
         rejectMessage(reason(
           "duplicate_or_out_of_order",

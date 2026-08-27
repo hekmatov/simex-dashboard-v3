@@ -342,6 +342,47 @@ test("a gapped ended message is rejected and cannot replace last-valid before a 
   assert.equal(scheduler.activeTimerCount, 0);
 });
 
+test("a delayed contiguous ended cannot bypass a higher resync floor", () => {
+  const { audience, states, ended, rejections, statuses } = setup();
+  audience.start();
+  const sender = createChannel("simex-presentation-session-001");
+  const first = presentationState();
+  const unseenHigher = { ...first, output_mode: "blank" };
+  sender.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 1,
+    type: "state",
+    payload: first,
+  });
+  sender.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 3,
+    type: "state",
+    payload: unseenHigher,
+  });
+  sender.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 2,
+    type: "ended",
+    payload: null,
+  });
+
+  assert.deepEqual(states, [first]);
+  assert.equal(ended.length, 0);
+  assert.equal(rejections[0].reason.code, "sequence_gap");
+  assert.equal(rejections.at(-1).reason.code, "duplicate_or_out_of_order");
+  assert.deepEqual(rejections.at(-1).lastValidSnapshot, first);
+  assert.ok(statuses.includes("audience:resync-required"));
+  assert.equal(statuses.includes("audience:ended"), false);
+  assert.equal(audience.isResyncRequired(), true);
+  assert.deepEqual(audience.getLastValidSnapshot(), first);
+  sender.close();
+  audience.dispose();
+});
+
 test("ordered ended emits a clone-safe terminal signal without clearing last-valid state", () => {
   const { audience, controller, scheduler, states, ended, statuses } = setup();
   controller.start();
