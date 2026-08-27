@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { reduceDisplayState } from "../src/lib/displayController.js";
+
 const transitionModule = await import(
   "../src/components/time/scenePresentTransition.js"
 ).catch(() => null);
@@ -40,6 +42,42 @@ test("publication becomes eligible only after DashboardRenderer records the Scen
   assert.equal(
     transitionModule.presentationSceneTransitionReady(transition.signature, otherScene),
     false,
+  );
+});
+
+test("an identical-composition Scene switch still records observable readiness", () => {
+  const displayState = Object.freeze({
+    display_revision: 4,
+    displayed_chart_ids: Object.freeze(["chart-b", "chart-a"]),
+    layout: "sideBySide",
+  });
+  const nextScene = { ...scene, id: "scene-b" };
+  const priorSignature = transitionModule.resolveScenePresentTransition(null, scene).signature;
+  const appliedSignatures = [];
+  const callbackOrder = [];
+  let reducedDisplayState = null;
+
+  const transition = transitionModule.applyScenePresentTransition(
+    priorSignature,
+    nextScene,
+    {
+      onDisplayAction(action) {
+        callbackOrder.push("display");
+        reducedDisplayState = reduceDisplayState(displayState, action);
+      },
+      onTransitionApplied(signature) {
+        callbackOrder.push("applied-signature");
+        appliedSignatures.push(signature);
+      },
+    },
+  );
+
+  assert.equal(reducedDisplayState, displayState, "the display reducer preserves identity");
+  assert.deepEqual(callbackOrder, ["display", "applied-signature"]);
+  assert.deepEqual(appliedSignatures, [transition.signature]);
+  assert.equal(
+    transitionModule.presentationSceneTransitionReady(appliedSignatures[0], nextScene),
+    true,
   );
 });
 

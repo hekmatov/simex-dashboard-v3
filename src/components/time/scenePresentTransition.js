@@ -8,6 +8,20 @@ export function presentationSceneTransitionReady(previousSignature, scene, {
   return transition.error === null && transition.signature === previousSignature;
 }
 
+export function applyScenePresentTransition(previousSignature, scene, {
+  enabled = true,
+  onDisplayAction,
+  onTransitionApplied,
+} = {}) {
+  const transition = resolveScenePresentTransition(previousSignature, scene, { enabled });
+  if (transition.error !== null) return transition;
+  if (transition.action) onDisplayAction?.(transition.action);
+  if (transition.signature !== previousSignature) {
+    onTransitionApplied?.(transition.signature);
+  }
+  return transition;
+}
+
 export function resolveScenePresentTransition(
   previousSignature,
   scene,

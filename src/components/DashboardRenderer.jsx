@@ -48,8 +48,8 @@ import { usePlayback } from "./playback/PlaybackProvider.jsx";
 import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
 import usePresentationRuntime from "./presentation/usePresentationRuntime.js";
 import {
+  applyScenePresentTransition,
   presentationSceneTransitionReady,
-  resolveScenePresentTransition,
 } from "./time/scenePresentTransition.js";
 import DashboardModeWorkspace from "./dashboard/DashboardModeWorkspace.jsx";
 import {
@@ -260,7 +260,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const buildWorkspaceSelectionRef = React.useRef(null);
   const buildWorkspaceExportResolutionRef = React.useRef(null);
   const requestBuildSelectionRef = React.useRef(null);
-  const appliedScenePresentSignatureRef = React.useRef(null);
+  const [appliedScenePresentSignature, setAppliedScenePresentSignature] = React.useState(null);
 
   const workingDashboard = editMode && buildLayoutDraft?.value
     ? buildLayoutDraft.value
@@ -277,20 +277,26 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
   const presentationRuntime = usePresentationRuntime(presentableItemIndex);
   const presentationCompositionReady = presentationSceneTransitionReady(
-    appliedScenePresentSignatureRef.current,
+    appliedScenePresentSignature,
     playback.activeScene,
     { enabled: mode === "present" },
   );
   React.useEffect(() => {
-    const transition = resolveScenePresentTransition(
-      appliedScenePresentSignatureRef.current,
+    applyScenePresentTransition(
+      appliedScenePresentSignature,
       playback.activeScene,
-      { enabled: mode === "present" },
+      {
+        enabled: mode === "present",
+        onDisplayAction: presentationRuntime.onDisplayAction,
+        onTransitionApplied: setAppliedScenePresentSignature,
+      },
     );
-    if (transition.error) return;
-    appliedScenePresentSignatureRef.current = transition.signature;
-    if (transition.action) presentationRuntime.onDisplayAction(transition.action);
-  }, [mode, playback.activeScene, presentationRuntime.onDisplayAction]);
+  }, [
+    appliedScenePresentSignature,
+    mode,
+    playback.activeScene,
+    presentationRuntime.onDisplayAction,
+  ]);
   const landingActive = hasLandingPresentation(activePage);
   const selectedPlacement = findPanelPlacement(workingDashboard, chartEditorPlacementId);
   const selectedPanel = selectedPlacement?.chart ?? null;
