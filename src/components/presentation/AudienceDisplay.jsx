@@ -27,7 +27,7 @@ export default function AudienceDisplay({
   }, [dashboard, presentableItemIndex, presentationState]);
   const staticAssetReadiness = useAudienceStaticAssetReadiness({
     dashboard,
-    items: trustedState?.items ?? [],
+    items: trustedState?.payload?.items ?? [],
     resolveAsset: contentRenderContext?.resolveAsset,
   });
 
@@ -35,21 +35,26 @@ export default function AudienceDisplay({
     return <AudienceWaiting />;
   }
 
-  const chronoGroup = trustedState.time
-    ? (dashboard.chronoGroups ?? []).find(
-      ({ id }) => id === trustedState.time.group_id,
-    )
+  const chronoGroup = (dashboard.chronoGroups ?? []).find(
+    ({ id }) => id === trustedState.source.chrono_group_id,
+  ) ?? null;
+  const scene = trustedState.source.scene_id
+    ? (dashboard.scenes ?? []).find(({ id }) => id === trustedState.source.scene_id) ?? null
     : null;
+  const activeEpochMs = trustedState.timeline?.frame_epochs[
+    trustedState.timeline.frame_index
+  ] ?? null;
   const memberTimeContexts = buildMemberTimeContexts(
     chronoGroup,
-    trustedState.time?.active_epoch_ms,
+    activeEpochMs,
+    { scene, traceMode: trustedState.timeline?.trace_mode },
   );
-  const facts = trustedState.audience_facts;
+  const facts = trustedState.payload.audience_facts;
   const dashboardName = facts.dashboard_name ? dashboard.title : null;
   const parentName = facts.parent_chrono_group ? chronoGroup?.name ?? null : null;
-  const sceneName = null;
+  const sceneName = facts.scene_name ? scene?.name ?? scene?.title ?? null : null;
   const sceneDate = facts.scene_date
-    ? canonicalTime(trustedState.time?.active_epoch_ms)
+    ? canonicalTime(activeEpochMs)
     : null;
   const sharedHeaderVisible = Boolean(
     dashboardName || parentName || sceneName,
@@ -75,8 +80,8 @@ export default function AudienceDisplay({
       )}
       <DisplayedChartGrid
         dashboard={dashboard}
-        items={trustedState.items}
-        layout={trustedState.layout}
+        items={trustedState.payload.items}
+        layout={trustedState.composition.layout}
         staticAssetReadiness={staticAssetReadiness}
         contentRenderContext={contentRenderContext ?? {
           mediaItems: dashboard.contentLibrary?.mediaItems ?? {},
@@ -88,7 +93,7 @@ export default function AudienceDisplay({
       {sceneDate && (
         <time
           className="audience-scene-date"
-          dateTime={new Date(trustedState.time.active_epoch_ms).toISOString()}
+          dateTime={new Date(activeEpochMs).toISOString()}
         >
           {sceneDate}
         </time>

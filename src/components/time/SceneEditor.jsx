@@ -76,7 +76,7 @@ function SceneDetailsStage({ draft, charts, chronoGroups, pages, busy, onAction 
 }
 
 function SceneTransactionFooter({ readiness, draft, busy, dirty, onAction }) {
-  return <footer className="scene-transaction-footer"><section className="scene-save-readiness" aria-labelledby="scene-save-readiness-title"><h4 id="scene-save-readiness-title">Save readiness</h4><p role="status">{readiness}</p></section><div className="build-surface-actions"><button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scene</button><button type="button" className="secondary" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Scene</button></div></footer>;
+  return <footer className="scene-transaction-footer"><section className="scene-save-readiness" aria-labelledby="scene-save-readiness-title"><h4 id="scene-save-readiness-title">Save readiness</h4><p role="status">{readiness}</p></section><div className="build-surface-actions"><button type="button" data-scene-workflow-id="save-scene" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scene</button><button type="button" className="secondary" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Scene</button></div></footer>;
 }
 
 function SelectStage({ value, charts, selectedIds, busy, onAction }) {

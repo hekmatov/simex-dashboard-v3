@@ -455,6 +455,7 @@ export default function App() {
         sessionId: dashboardEntry.channelId,
         presentableItemIndex,
         onStateChange: setAudiencePresentationState,
+        onEnded: () => setAudienceConnectionStatus("ended"),
         onConnectionChange: setAudienceConnectionStatus,
       });
       channel.start();

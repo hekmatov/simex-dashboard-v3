@@ -128,8 +128,12 @@ export function createPresentationControllerChannel({
     }
 
     lastValidSnapshot = candidate;
-    if (active) sendLatestState();
-    return { accepted: true, lastValidSnapshot: snapshot(lastValidSnapshot) };
+    const message = active ? sendLatestState() : null;
+    return {
+      accepted: true,
+      lastValidSnapshot: snapshot(lastValidSnapshot),
+      message: snapshot(message),
+    };
   }
 
   function dispose() {
@@ -145,8 +149,13 @@ export function createPresentationControllerChannel({
     channel = null;
   }
 
+  function publishEnded() {
+    if (!active) return null;
+    return post("ended", null);
+  }
+
   function end() {
-    if (active) post("ended", null);
+    publishEnded();
     setStatus("ended");
     dispose();
   }
@@ -155,7 +164,7 @@ export function createPresentationControllerChannel({
     return snapshot(lastValidSnapshot);
   }
 
-  return { start, publish, end, dispose, getLastValidSnapshot };
+  return { start, publish, publishEnded, end, dispose, getLastValidSnapshot };
 }
 
 export function createPresentationAudienceChannel({
@@ -346,7 +355,7 @@ function validateSourceEligibility(state, context, validateSourceSelection) {
     ? null
     : String(rawStatus).trim().toLowerCase().replaceAll("_", "-");
   if (["invalid", "needs-attention", "needs attention"].includes(status)) {
-    throw sourceRejection();
+    throw sourceRejection(context?.sourceSelection?.reason);
   }
   if (status === "valid") return;
 

@@ -4,6 +4,10 @@ import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import { MAX_DISPLAYED_CHARTS, reduceDisplayState } from "../../lib/displayController.js";
 import { buildPresentableItemIndex } from "../../static-content/staticPanelCapabilities.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
+import PresentationController, {
+  buildPresentationState,
+  presentationSourceEligibility,
+} from "./PresentationController.jsx";
 
 export default function PresentWorkspace({
   dashboard,
@@ -32,11 +36,15 @@ export default function PresentWorkspace({
     hasSession,
     audienceFacts,
     setAudienceFactVisible,
-    blackout,
-    setBlackout,
     publish,
-    open,
-    end,
+    sessionState = {
+      lifecycle: "ended",
+      connection: "terminated",
+      output: "ended",
+      playback: "paused",
+      blackout: false,
+      rejectionReason: null,
+    },
   } = runtime;
 
   const presentableItemIndex = React.useMemo(
@@ -65,48 +73,47 @@ export default function PresentWorkspace({
     .filter(Boolean);
   const atChartCapacity = displayedChartIds.length >= MAX_DISPLAYED_CHARTS;
   const layoutOptions = layoutChoices(displayedChartIds.length);
-  const hasClock = playback.activeGroupId !== null && playback.clock.length > 0;
-  const atFirstTime = !hasClock || playback.activeIndex <= 0;
-  const atLastTime = !hasClock || playback.activeIndex >= playback.clock.length - 1;
   const audienceInformation = audienceInformationRows({
     dashboard,
     activeGroup: playback.activeGroup,
+    activeScene: playback.activeScene,
     activeEpochMs: playback.activeEpochMs,
   });
   const activeSceneTemporalReview = playback.activeScene?.present?.temporalReview?.status === "degraded"
     ? playback.activeScene.present.temporalReview
     : null;
 
-  const presentationState = React.useMemo(() => ({
-    active_page_id: activePage?.id ?? "dashboard",
-    items: projectPresentableItems(displayedChartIds, presentableItemIndex),
+  const sourceEligibility = React.useMemo(
+    () => presentationSourceEligibility(playback.activeScene),
+    [playback.activeScene],
+  );
+  const presentationState = React.useMemo(() => buildPresentationState({
+    dashboard,
+    activePageId: activePage?.id,
+    displayedChartIds,
     layout,
-    time: playback.activeGroupId !== null && Number.isFinite(playback.activeEpochMs)
-      ? {
-          group_id: playback.activeGroupId,
-          active_epoch_ms: playback.activeEpochMs,
-        }
-      : null,
-    audience_facts: { ...audienceFacts },
-    blackout,
+    playback,
+    presentableItemIndex,
+    audienceFacts,
+    outputMode: ["active", "holding", "blank"].includes(sessionState.output)
+      ? sessionState.output
+      : "active",
+    blackout: sessionState.blackout,
   }), [
     activePage?.id,
-    blackout,
-    displayedChartIds,
-    presentableItemIndex,
-    playback.activeEpochMs,
-    playback.activeGroupId,
-    layout,
     audienceFacts,
+    dashboard,
+    displayedChartIds,
+    layout,
+    playback,
+    presentableItemIndex,
+    sessionState.blackout,
+    sessionState.output,
   ]);
 
   React.useEffect(() => {
-    publish(presentationState);
-  }, [presentationState, publish]);
-
-  function openDisplay() {
-    open(presentationState);
-  }
+    publish(presentationState, { sourceSelection: sourceEligibility });
+  }, [presentationState, publish, sourceEligibility.status]);
 
   function toggleChart(chartId) {
     if (displayedChartIds.includes(chartId)) {
@@ -141,9 +148,6 @@ export default function PresentWorkspace({
         </div>
         <div className="present-status-actions">
           <button type="button" className="secondary dashboard-look-trigger" onClick={onOpenDashboardLook}>Dashboard look</button>
-          <button type="button" onClick={openDisplay}>
-            {hasSession ? "Reopen audience display" : "Open audience display"}
-          </button>
         </div>
         {connectionError && <p className="present-connection-error" role="status">{connectionError}</p>}
         {activeSceneTemporalReview && (
@@ -316,86 +320,12 @@ export default function PresentWorkspace({
       </div>
 
       <section className="present-action-dock" aria-label="Presentation controls">
-        <div className="present-time-controls">
-          <label className="present-field">
-            <span>Synchronized time</span>
-            <select
-              aria-label="Synchronized time"
-              value={playback.activeGroupId ?? ""}
-              disabled={playback.groups.length === 0}
-              onChange={(event) => playback.dispatch({
-                type: "setGroup",
-                groupId: event.target.value || null,
-              })}
-            >
-              {playback.groups.length === 0 ? (
-                <option value="">No synchronized time available</option>
-              ) : playback.groups.map((group) => (
-                <option key={group.id} value={group.id}>{group.name}</option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="secondary"
-            disabled={atFirstTime}
-            onClick={() => playback.dispatch({
-              type: "previous",
-              clockLength: playback.clock.length,
-            })}
-          >
-            Previous time
-          </button>
-          <label className="present-field present-time-slider">
-            <span>Presentation time</span>
-            <input
-              type="range"
-              aria-label="Presentation time"
-              min="0"
-              max={Math.max(0, playback.clock.length - 1)}
-              step="1"
-              value={playback.activeIndex}
-              disabled={!hasClock}
-              onChange={(event) => playback.dispatch({
-                type: "seek",
-                index: Number(event.target.value),
-                clockLength: playback.clock.length,
-              })}
-            />
-          </label>
-          <button
-            type="button"
-            className="secondary"
-            disabled={atLastTime}
-            onClick={() => playback.dispatch({
-              type: "next",
-              clockLength: playback.clock.length,
-            })}
-          >
-            Next time
-          </button>
-        </div>
-        <div className="present-session-actions">
-          <button
-            type="button"
-            className="secondary"
-            disabled={blackout}
-            onClick={() => setBlackout(true)}
-          >
-            Blackout
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            disabled={!blackout}
-            onClick={() => setBlackout(false)}
-          >
-            Restore
-          </button>
-          <button type="button" className="secondary" onClick={end}>
-            End presentation
-          </button>
-        </div>
+        <PresentationController
+          runtime={{ ...runtime, sessionState }}
+          playback={playback}
+          presentationState={presentationState}
+          sourceEligibility={sourceEligibility}
+        />
       </section>
     </main>
   );
@@ -404,6 +334,7 @@ export default function PresentWorkspace({
 function audienceInformationRows({
   dashboard,
   activeGroup,
+  activeScene,
   activeEpochMs,
 }) {
   return [
@@ -422,7 +353,7 @@ function audienceInformationRows({
     {
       key: "scene_name",
       label: "Scene name",
-      value: null,
+      value: optionalText(activeScene?.name ?? activeScene?.title),
       unavailableReason: "No Scene is loaded.",
     },
     {

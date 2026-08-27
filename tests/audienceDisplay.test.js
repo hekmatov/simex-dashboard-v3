@@ -109,23 +109,18 @@ const dashboard = {
   }],
 };
 
-const twoChartScene = {
-  active_page_id: "biomedical",
-  items: [
+const defaultItems = [
     { kind: "chart", chart_id: "chart-b" },
     { kind: "chart", chart_id: "chart-a" },
-  ],
-  layout: "sideBySide",
-  time: null,
-  audience_facts: {
+];
+const defaultFacts = {
     dashboard_name: true,
     page: true,
     parent_chrono_group: true,
     scene_name: true,
     scene_date: true,
-  },
-  blackout: false,
 };
+const twoChartScene = presentationState();
 
 test("audience display shows the neutral waiting state before a scene arrives", () => {
   assert.equal(typeof audienceModule?.default, "function", "AudienceDisplay must be implemented");
@@ -165,32 +160,30 @@ test("Audience facts hide independently, collapse the shared header, and never r
   const selective = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
     connectionStatus: "connected",
-    presentationState: {
-      ...twoChartScene,
-      time: { group_id: "epidemic-time", active_epoch_ms: dateEpoch },
-      audience_facts: {
+    presentationState: presentationState({
+      epoch: dateEpoch,
+      facts: {
         dashboard_name: true,
         page: false,
         parent_chrono_group: true,
         scene_name: true,
         scene_date: true,
       },
-    },
+    }),
   }));
   const dateOnly = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
     connectionStatus: "connected",
-    presentationState: {
-      ...twoChartScene,
-      time: { group_id: "epidemic-time", active_epoch_ms: dateEpoch },
-      audience_facts: {
+    presentationState: presentationState({
+      epoch: dateEpoch,
+      facts: {
         dashboard_name: false,
         page: false,
         parent_chrono_group: false,
         scene_name: false,
         scene_date: true,
       },
-    },
+    }),
   }));
 
   assert.match(selective, /Response overview/);
@@ -208,16 +201,15 @@ test("audience display never renders the page name from legacy audience facts", 
   const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
     connectionStatus: "connected",
-    presentationState: {
-      ...twoChartScene,
-      audience_facts: {
+    presentationState: presentationState({
+      facts: {
         dashboard_name: false,
         page: true,
         parent_chrono_group: false,
         scene_name: false,
         scene_date: false,
       },
-    },
+    }),
   }));
 
   assert.doesNotMatch(html, />Biomedical response</);
@@ -234,7 +226,7 @@ test("audience retains a disconnected scene and blackouts it without unmounting 
   const blackedOut = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
     connectionStatus: "connected",
-    presentationState: { ...twoChartScene, blackout: true },
+    presentationState: presentationState({ blackout: true }),
   }));
 
   assert.match(disconnected, /data-displayed-chart-id="chart-b"/);
@@ -252,13 +244,11 @@ test("audience retains a disconnected scene and blackouts it without unmounting 
 });
 
 test("Audience accepts a trusted Image descriptor passively and rejects Free text or stale Image injection", () => {
-  const imageScene = {
-    ...twoChartScene,
-    items: [
+  const imageItems = [
       { kind: "chart", chart_id: "chart-a" },
       { kind: "image", panel_id: "image-a", media_id: "media-image-source", revision: 3 },
-    ],
-  };
+  ];
+  const imageScene = presentationState({ items: imageItems });
   const imageHtml = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
     connectionStatus: "connected",
@@ -267,20 +257,18 @@ test("Audience accepts a trusted Image descriptor passively and rejects Free tex
   const staleHtml = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
     connectionStatus: "connected",
-    presentationState: {
-      ...imageScene,
+    presentationState: presentationState({
       items: [{ kind: "image", panel_id: "image-a", media_id: "media-image-source", revision: 2 }],
       layout: "solo",
-    },
+    }),
   }));
   const freeTextHtml = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
     connectionStatus: "connected",
-    presentationState: {
-      ...imageScene,
+    presentationState: presentationState({
       items: [{ kind: "freeText", panel_id: "free-text-a" }],
       layout: "solo",
-    },
+    }),
   }));
 
   assert.match(imageHtml, /data-presentation-item-kind="image"/);
@@ -337,8 +325,7 @@ test("Audience rejects an injected recovery-only Image descriptor", () => {
   const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard: recoveryDashboard,
     connectionStatus: "connected",
-    presentationState: {
-      ...twoChartScene,
+    presentationState: presentationState({
       items: [{
         kind: "image",
         panel_id: "recovery-image",
@@ -346,7 +333,7 @@ test("Audience rejects an injected recovery-only Image descriptor", () => {
         revision: 3,
       }],
       layout: "solo",
-    },
+    }),
   }));
 
   assert.match(html, /Audience display ready/);
@@ -418,3 +405,36 @@ test("presentation CSS reserves passive Image loading/error geometry in 1/2/4-ce
   assert.match(css, /\.audience-static-image-cell :is\([\s\S]*\.chart-image-pending,[\s\S]*\.static-content-state/);
   assert.match(css, /\.chart-image-actions,[\s\S]*\.static-content-state__actions[\s\S]*display: none/);
 });
+
+function presentationState({
+  items = defaultItems,
+  layout = items.length === 1 ? "solo" : "sideBySide",
+  facts = defaultFacts,
+  epoch = Date.UTC(2027, 0, 1),
+  blackout = false,
+} = {}) {
+  const itemIds = items.map((item) => item.kind === "chart" ? item.chart_id : item.panel_id);
+  return {
+    dashboard_revision: "dashboard-r1",
+    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "epidemic-time" },
+    composition: {
+      active_page_id: "biomedical",
+      displayed_chart_ids: itemIds,
+      layout,
+    },
+    timeline: {
+      frame_epochs: [epoch],
+      frame_index: 0,
+      period: { start: epoch, end: epoch },
+      trace_mode: "reveal",
+      seconds_per_frame: 1,
+    },
+    matching: { use_authored_settings: true },
+    output_mode: "active",
+    blackout,
+    audience: {
+      date_position: { x_permille: 680, y_permille: 40, width_permille: 280 },
+    },
+    payload: { items, audience_facts: facts },
+  };
+}

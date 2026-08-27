@@ -43,6 +43,7 @@ export default function DashboardIdentityRow({
             <button
               key={page.id}
               type="button"
+              data-dashboard-page-id={page.id}
               className={active ? "active" : "secondary"}
               aria-current={active ? "page" : undefined}
               onClick={() => onPageRequest?.(page.id)}

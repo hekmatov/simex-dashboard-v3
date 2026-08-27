@@ -12,7 +12,7 @@ export default function SceneLibrary({ state, sections = [], onAction = () => {}
         React.createElement("h2", { id: "scene-library-title" }, "Scene Studio"),
         React.createElement("p", null, "Browse saved Scenes by dashboard page before opening their content."),
       ),
-      React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_CREATE_SCENE" }) }, "Create Scene"),
+      React.createElement("button", { type: "button", "data-scene-workflow-id": "create-scene", onClick: () => onAction({ type: "START_CREATE_SCENE" }) }, "Create Scene"),
     ),
     React.createElement("div", { className: "temporal-studio__filters", role: "search" },
       React.createElement("label", null, "Search", React.createElement("input", { type: "search", value: state?.query ?? "", onChange: (event) => onAction({ type: "SET_QUERY", query: event.target.value }) })),

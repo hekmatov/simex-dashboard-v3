@@ -13,6 +13,7 @@ export default function ModeSwitcher({ mode, onModeRequest, disabled = false, di
         <button
           key={value}
           type="button"
+          data-dashboard-mode={value}
           aria-pressed={mode === value}
           aria-describedby={disabled && disabledReason ? "mode-switch-disabled-reason" : undefined}
           disabled={disabled}

@@ -553,6 +553,43 @@
   position: sticky;
 }
 
+.presentation-controller {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.presentation-controller__source,
+.presentation-controller__timeline,
+.presentation-controller__output {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.presentation-controller button,
+.presentation-controller select,
+.presentation-controller input:not([type="range"]) {
+  min-height: 44px;
+}
+
+.presentation-controller :is(button, select, input):focus-visible {
+  outline: 3px solid var(--accent, #155eef);
+  outline-offset: 2px;
+}
+
+.present-source-picker {
+  flex: 1 1 280px;
+  min-width: min(280px, 100%);
+}
+
+.present-cadence-field {
+  max-width: 150px;
+}
+
 .present-time-slider {
   min-width: min(280px, 45vw);
 }
@@ -636,6 +673,18 @@
 
   .present-time-slider {
     min-width: 0;
+  }
+
+  .presentation-controller__source,
+  .presentation-controller__timeline,
+  .presentation-controller__output {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .present-cadence-field {
+    max-width: none;
   }
 }
 

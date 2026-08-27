@@ -177,6 +177,25 @@ test("invalid and Needs-attention source selections retain last-valid output", (
     assert.equal(outcome.reason.code, "source_not_presentable");
     assert.deepEqual(outcome.lastValidSnapshot, first);
   }
+  const namedReason = controller.publish({
+    ...first,
+    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+  }, {
+    sourceSelection: {
+      status: "needs-attention",
+      reason: {
+        code: "scene_needs_attention",
+        message: "Scene needs attention before it can replace the Audience output.",
+        sourceId: "scene-b",
+      },
+    },
+  });
+  assert.deepEqual(namedReason.reason, {
+    code: "scene_needs_attention",
+    message: "Scene needs attention before it can replace the Audience output.",
+    sourceId: "scene-b",
+  });
+  assert.deepEqual(namedReason.lastValidSnapshot, first);
   assert.deepEqual(states, [first]);
   audience.dispose();
   controller.dispose();

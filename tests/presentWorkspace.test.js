@@ -155,7 +155,7 @@ test("Present workspace exposes the moderator scene controls without permission 
 
   const html = renderPresent(presentModule.default);
 
-  assert.match(html, />Open audience display<\/button>/);
+  assert.match(html, />Open new audience session<\/button>/);
   assert.match(html, /Audience display not open/);
   assert.match(html, /Biomedical \/ Overview/);
   assert.match(html, />Cases</);
@@ -163,7 +163,7 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /aria-label="Move Capacity up"/);
   assert.match(html, /aria-label="Move Cases down"/);
   assert.match(html, /aria-label="Scene layout"/);
-  assert.match(html, /aria-label="Synchronized time"/);
+  assert.match(html, /aria-label="Presentation source"/);
   assert.match(html, /aria-label="Presentation time"/);
   assert.match(html, /Display on audience/);
   for (const label of [
@@ -251,10 +251,7 @@ test("an empty Present catalogue routes recovery to Build without adding an Audi
     onModeRequest: () => {},
   });
 
-  assert.match(
-    html,
-    /No charts are available to present from this dashboard\./,
-  );
+  assert.match(html, /No charts are available to present from this dashboard\./);
   assert.equal((html.match(/>Open Build to Add Charts<\/button>/g) ?? []).length, 1);
   assert.match(html, /Audience display not open/);
   assert.doesNotMatch(html, /Choose up to 4 charts/);
