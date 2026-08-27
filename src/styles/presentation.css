@@ -664,6 +664,14 @@
   width: 100%;
 }
 
+.presentation-connection-indicator {
+  align-items: center;
+  color: var(--simex-text-strong, currentColor);
+  display: inline-flex;
+  justify-self: start;
+  line-height: 0;
+}
+
 .presentation-controller__source,
 .presentation-controller__timeline,
 .presentation-controller__output {

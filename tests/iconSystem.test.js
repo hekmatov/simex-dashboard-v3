@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
 import { validateDashboardStructure } from "../src/charting/config/dashboardConfigStructure.js";
+import { makeDashboardV5 } from "./helpers/contentLibraryFixtures.js";
 import {
   IconControl,
   SimExIcon,
@@ -32,7 +33,7 @@ test("the icon catalogue resolves every approved interaction and surface referen
     false,
     "Atlas entries must describe approved interactions, not generated glyph filler",
   );
-  assert.equal(ATLAS_SURFACES.length, 13);
+  assert.equal(ATLAS_SURFACES.length, 14);
   assert.deepEqual(
     ATLAS_SURFACES.map(({ id }) => id),
     [
@@ -49,6 +50,7 @@ test("the icon catalogue resolves every approved interaction and surface referen
       "collection-modes",
       "collection-controls",
       "chart-types",
+      "presentation",
     ],
   );
   assert.equal(
@@ -58,7 +60,7 @@ test("the icon catalogue resolves every approved interaction and surface referen
         + (surface.chartTypeIds?.length ?? 0),
       0,
     ),
-    165,
+    167,
   );
   for (const duplicateId of [
     "shell.open-editable-tab.1",
@@ -120,6 +122,40 @@ test("interaction metadata preserves the approved accessibility and state semant
   assert.equal(getInteraction("chart.remove").tone, "danger");
   assert.equal(getInteraction("transport.fast-forward").status, "planned");
   assert.equal(getInteraction("playback.current-time").renderMode, "text");
+});
+
+test("presentation connection interactions resolve through the canonical catalogue", () => {
+  const expected = {
+    "presentation.connection-disconnected": {
+      glyphId: "connectionDisconnected",
+      label: "Audience display disconnected",
+      tooltip: "Audience display disconnected",
+      renderMode: "icon",
+      tone: "standard",
+      status: "live",
+    },
+    "presentation.connection-reconnecting": {
+      glyphId: "connectionReconnecting",
+      label: "Audience display reconnecting",
+      tooltip: "Audience display reconnecting",
+      renderMode: "icon",
+      tone: "standard",
+      status: "live",
+    },
+  };
+
+  for (const [interactionId, contract] of Object.entries(expected)) {
+    const interaction = getInteraction(interactionId);
+    assert.ok(interaction, `Missing canonical interaction ${interactionId}`);
+    assert.deepEqual(
+      pick(interaction, Object.keys(contract)),
+      contract,
+    );
+    assert.ok(
+      ICON_GLYPHS[interaction.glyphId],
+      `Missing canonical glyph ${interaction.glyphId}`,
+    );
+  }
 });
 
 test("chart pictograms cover the chart schema authority exactly", () => {
@@ -322,10 +358,12 @@ test("SimExIcon uses the deterministic unknown glyph for dynamic misses", () => 
 });
 
 test("version 3 global styles accept one icon accent and reject malformed values", async () => {
-  const dashboard = JSON.parse(await readFile(
+  // Use the current dashboard contract so this test isolates icon accent validation.
+  const { globalStyles } = JSON.parse(await readFile(
     new URL("../public/config/dashboard.json", import.meta.url),
     "utf8",
   ));
+  const dashboard = makeDashboardV5({ globalStyles });
   dashboard.globalStyles.iconAccent = "#19D3C5";
   assert.doesNotThrow(() => validateDashboardStructure(dashboard));
 

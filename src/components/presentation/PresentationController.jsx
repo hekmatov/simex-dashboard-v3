@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 
 import { adaptSceneAudienceToPresentation } from "../../lib/presentationProtocol.js";
 import CompositionControls from "./CompositionControls.jsx";
+import ConnectionIndicator from "./ConnectionIndicator.jsx";
 import PresentationSourcePicker from "./PresentationSourcePicker.jsx";
 
 const DEFAULT_AUDIENCE = Object.freeze({
@@ -187,6 +188,7 @@ export default function PresentationController({
         compositionHost,
       )}
       <section className="presentation-controller" aria-label="Presenter controller">
+      <ConnectionIndicator connection={session.connection} />
       <div className="presentation-controller__source">
         <PresentationSourcePicker
           scenes={playback.scenes}

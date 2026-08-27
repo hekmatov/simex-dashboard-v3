@@ -123,6 +123,8 @@ export const LIVE_INTERACTION_IDS = Object.freeze([
   "shell.remove-title",
   "shell.start-section",
   "shell.install",
+  "presentation.connection-disconnected",
+  "presentation.connection-reconnecting",
   "playback.open-synchronized-playback",
   "playback.previous-time-point",
   "playback.play",
@@ -232,10 +234,32 @@ records["chart.remove"] = Object.freeze({
   ...records["chart.remove"],
   note: "Destructive chart action; confirmation required",
 });
+records["presentation.connection-disconnected"] = Object.freeze({
+  id: "presentation.connection-disconnected",
+  glyphId: "connectionDisconnected",
+  label: "Audience display disconnected",
+  tooltip: "Audience display disconnected",
+  renderMode: "icon",
+  tone: "standard",
+  status: "live",
+  confirmation: "none",
+  note: "Approved D2 display-offline glyph",
+});
+records["presentation.connection-reconnecting"] = Object.freeze({
+  id: "presentation.connection-reconnecting",
+  glyphId: "connectionReconnecting",
+  label: "Audience display reconnecting",
+  tooltip: "Audience display reconnecting",
+  renderMode: "icon",
+  tone: "standard",
+  status: "live",
+  confirmation: "none",
+  note: "Approved R2 display-recovery glyph",
+});
 
 export const INTERACTIONS = Object.freeze(records);
 
-export const ATLAS_SURFACES = Object.freeze(inventory.map(({ entries, ...surface }) => (
+export const ATLAS_SURFACES = Object.freeze([...inventory.map(({ entries, ...surface }) => (
   Object.freeze({
     ...surface,
     id: CANONICAL_SURFACE_IDS[surface.id] ?? surface.id,
@@ -249,7 +273,14 @@ export const ATLAS_SURFACES = Object.freeze(inventory.map(({ entries, ...surface
       ]),
     } : {}),
   })
-)));
+)), Object.freeze({
+  id: "presentation",
+  title: "Present and Audience",
+  interactionIds: Object.freeze([
+    "presentation.connection-disconnected",
+    "presentation.connection-reconnecting",
+  ]),
+})]);
 
 export const CHART_TYPE_GLYPHS = Object.freeze({
   bar: "chartBar",

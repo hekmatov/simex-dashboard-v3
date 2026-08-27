@@ -40,10 +40,10 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 
 | Measure | Count |
 | --- | ---: |
-| Approved glyphs | 112 |
-| Unique interaction records | 127 |
-| Surface interaction references | 138 |
-| Surfaces | 13 |
+| Approved glyphs | 114 |
+| Unique interaction records | 129 |
+| Surface interaction references | 140 |
+| Surfaces | 14 |
 | Chart pictograms | 27 |
 | Visual states | 7 |
 
@@ -317,6 +317,15 @@ Surface ID: `collection-controls` · 16 references
 | collection.rows | fixedGrid | Rows · 3 | Rows · 3 | text | standard | reference | none | — |
 | collection.columns | fixedGrid | Columns · 3 | Columns · 3 | text | standard | reference | none | — |
 | collection.ranking-method | priority | Ranking method | Ranking method | text | standard | reference | none | — |
+
+## Present and Audience
+
+Surface ID: `presentation` · 2 references
+
+| Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| presentation.connection-disconnected | connectionDisconnected | Audience display disconnected | Audience display disconnected | icon | standard | live | none | Approved D2 display-offline glyph |
+| presentation.connection-reconnecting | connectionReconnecting | Audience display reconnecting | Audience display reconnecting | icon | standard | live | none | Approved R2 display-recovery glyph |
 
 ## Chart-type pictograms
 

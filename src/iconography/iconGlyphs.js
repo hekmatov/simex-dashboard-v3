@@ -7,6 +7,8 @@ const glyphs = {
     install: `<rect x="4" y="4" width="16" height="15" rx="2"></rect><path d="M4 14h16"></path><path class="accent-stroke" d="M12 3v8m0 0-3-3m3 3 3-3"></path>`,
     reportIssue: `<path d="M4 5h16v12H9l-4 3v-3H4z"></path><path class="accent-stroke" d="M12 8v4M12 15h.01"></path>`,
     auto: `<rect x="3.5" y="5" width="17" height="12" rx="2"></rect><path d="M9 20h6M12 17v3"></path><path class="accent-stroke" d="M7 9h10M7 12h7"></path>`,
+    connectionDisconnected: `<rect x="3.5" y="4.5" width="17" height="12" rx="2"></rect><path d="M9 20h6M12 16.5V20"></path><path class="accent-stroke" d="m5 3.5 14 15"></path>`,
+    connectionReconnecting: `<rect x="3.5" y="5" width="13" height="10" rx="2"></rect><path d="M7.5 19h5M10 15v4"></path><path class="accent-stroke" d="M14.5 8.2A5 5 0 1 1 15 16.5M14.5 4.5v3.7h3.7"></path>`,
     tablet: `<rect x="5" y="3" width="14" height="18" rx="2.5"></rect><circle class="accent-fill" cx="12" cy="18" r="1"></circle>`,
     phone: `<rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M10 5h4"></path><circle class="accent-fill" cx="12" cy="18.5" r="1"></circle>`,
     background: `<rect x="3.5" y="4" width="17" height="16" rx="3"></rect><circle class="accent-fill" cx="8" cy="8" r="1.5"></circle><path d="m5.5 17 4.5-5 3 3 2-2 3.5 4"></path>`,
