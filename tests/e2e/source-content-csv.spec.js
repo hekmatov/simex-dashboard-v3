@@ -204,19 +204,8 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await page.getByRole("button", { name: "Resume chart draft" }).click();
   wizard = page.getByRole("dialog", { name: "Add new chart" });
   await expect(wizard.getByLabel("CSV file")).toBeVisible();
-  await expect(wizard.getByRole("region", { name: "Selected source profile" })).toHaveCount(0);
-  await wizard.getByRole("button", { name: "Discard chart draft" }).click();
-  await page.getByRole("dialog", { name: /Discard chart/ }).getByRole("button", { name: "Discard" }).click();
-  await expect(wizard).toHaveCount(0);
-  expect(await csvInventory(page)).toEqual(afterManagerAdd);
-
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  wizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expectExactSixStages(wizard);
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await wizard.getByLabel("CSV file").setInputFiles(CHART_CSV);
   await expect(wizard.getByRole("region", { name: "Selected source profile" })).toContainText("cases");
+  expect(await csvInventory(page)).toEqual(afterManagerAdd);
   await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
   await wizard.getByRole("button", { name: "Add measurement" }).click();
   await wizard.getByLabel("Observation / X-axis").selectOption("date");

@@ -95,9 +95,11 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await expect(wizard).toHaveCount(0);
   await page.getByRole("button", { name: "Resume chart draft", exact: true }).click();
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(0);
+  await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(1);
+  await expect(wizard.getByLabel("GeoJSON source")).toHaveValue(stagedGeoSourceId);
   await wizard.getByLabel("Managed data source").selectOption("bio_wastewater_latest");
   await wizard.getByLabel("GeoJSON source").selectOption({ label: SOURCE_NAME });
+  await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(0);
   await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Map and prepare data\./ }).click();
   await wizard.locator('[data-field-id="geography"] select').selectOption("province");
   await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles");

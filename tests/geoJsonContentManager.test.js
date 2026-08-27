@@ -148,8 +148,8 @@ test("managed tracked, packaged, and uploaded GeoJSON are selectable and upload 
   assert.equal((html.match(/chart-wizard-step/g) ?? []).length, 1);
 });
 
-test("chart GeoJSON close and Escape cleanup discard staged authority while preserving suspension state", async () => {
-  for (const reason of ["chart-geojson-close", "chart-geojson-escape"]) {
+test("chart GeoJSON explicit replacement and unmount cleanup discard staged authority", async () => {
+  for (const reason of ["chart-geojson-selection-changed", "chart-geojson-unmount"]) {
     const draftRef = { current: { draftId: `draft:${reason}`, candidate: { sourceId: "staged-boundaries" } } };
     const discarded = [];
     const wizard = {
@@ -160,16 +160,21 @@ test("chart GeoJSON close and Escape cleanup discard staged authority while pres
         presentation: { map: { geoSource: "staged-boundaries", scale: "sequential" } },
       },
     };
-    const cleared = clearStagedGeoJsonSelection(wizard, "staged-boundaries");
+    const nextWizard = reason === "chart-geojson-selection-changed"
+      ? clearStagedGeoJsonSelection(wizard, "staged-boundaries")
+      : wizard;
     await discardStagedGeoJsonDraft(draftRef, (draftId, discardReason) => {
       discarded.push([draftId, discardReason]);
     }, reason);
 
     assert.equal(draftRef.current, null);
     assert.deepEqual(discarded, [[`draft:${reason}`, reason]]);
-    assert.equal(cleared.stage, "data-source");
-    assert.equal(cleared.draft.title, "Preserved title");
-    assert.equal(cleared.draft.presentation?.map?.geoSource, undefined);
+    assert.equal(nextWizard.stage, "data-source");
+    assert.equal(nextWizard.draft.title, "Preserved title");
+    assert.equal(
+      nextWizard.draft.presentation?.map?.geoSource,
+      reason === "chart-geojson-selection-changed" ? undefined : "staged-boundaries",
+    );
   }
 });
 

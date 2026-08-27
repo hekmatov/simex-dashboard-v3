@@ -396,19 +396,7 @@ export default function ChartWizardV3({
 
   function requestClose() {
     if (operationLocked()) return false;
-    void csvDraftLifecycle.discardAll("chart-csv-close");
-    const stagedGeoSourceId = geoDraftRef.current?.candidate?.sourceId;
-    void discardStagedGeoJsonDraft(geoDraftRef, onContentDraftDiscard, "chart-geojson-close");
-    clearUploadedGeoJsonUi(stagedGeoSourceId);
-    let closingWizard = sourceKind === "upload"
-      ? clearSelectedSource(wizard)
-      : wizard.confirmation === "changeSource"
-        ? reduceWizardState(wizard, { type: "cancelConfirmation" })
-        : wizard;
-    closingWizard = clearStagedGeoJsonSelection(closingWizard, stagedGeoSourceId);
-    if (sourceKind === "upload") clearUploadedCsvUi(wizard.draft?.sourceId);
-    else setPendingSourceUi(null);
-    const suspended = reduceWizardState(closingWizard, {
+    const suspended = reduceWizardState(wizard, {
       type: "suspend",
       restoration: {
         stage: wizard.stage,
@@ -475,15 +463,6 @@ export default function ChartWizardV3({
   React.useEffect(() => () => {
     void discardStagedGeoJsonDraft(geoDraftRef, onContentDraftDiscard, "chart-geojson-unmount");
   }, [onContentDraftDiscard]);
-
-  React.useEffect(() => {
-    if (open) return;
-    const stagedGeoSourceId = geoDraftRef.current?.candidate?.sourceId;
-    if (!stagedGeoSourceId) return;
-    void discardStagedGeoJsonDraft(geoDraftRef, onContentDraftDiscard, "chart-geojson-closed");
-    clearUploadedGeoJsonUi(stagedGeoSourceId);
-    setWizard((current) => clearStagedGeoJsonSelection(current, stagedGeoSourceId));
-  }, [open, onContentDraftDiscard]);
 
   function clearUploadedCsvUi(sourceId) {
     setSourceKind("");

@@ -30,7 +30,7 @@ Focused RED was **3/5 passing**: the current selector excluded an uploaded-datas
 ## T13-R01–R03 correction
 
 - Focused correction RED was **3/6 passing**: `activate` was absent, a dashboard-owned generated source remained eligible, and staged GeoJSON close cleanup was absent. Focused GREEN is **6/6 passing**.
-- Close, Escape, and `open=false` now dispose the staged GeoJSON draft/retainer without discarding the suspended six-stage authoring state; the mounted journey proved Resume does not restore the discarded staged option.
+- Pre-release review supersedes the earlier chart-close cleanup ruling: Close/Escape now suspends the complete six-stage state with the staged GeoJSON authority, option, and selection intact. Explicit source supersession discards that staged option; confirmed discard, validation failure, and true unmount retain cleanup ownership. Manager Close/Escape cleanup is unchanged.
 - The single common-ancestor registry now exposes explicit bounded activation, visible degraded status for allocations 3–4, dashboard-map priority and release, and fifth-plus deferral without rejecting a source.
 - Chart geography selection now consumes the dashboard's builder-managed `sourceEntries` classification: tracked, packaged, and uploaded GeoJSON remain eligible while generated/intermediate dashboard-owned GeoJSON is absent.
 - A concrete mounted stale-authority failure found during the correction was resolved inside the existing upload path: the just-validated GeoJSON candidate is passed directly into the same state transition, rather than relying on the previous render's source map.
