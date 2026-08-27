@@ -4,7 +4,6 @@ import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import { MAX_DISPLAYED_CHARTS, reduceDisplayState } from "../../lib/displayController.js";
 import { buildPresentableItemIndex } from "../../static-content/staticPanelCapabilities.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
-import CompositionControls from "./CompositionControls.jsx";
 import PresentationController, {
   buildPresentationState,
   presentationSourceEligibility,
@@ -24,6 +23,7 @@ export default function PresentWorkspace({
   onSaveSceneDatePosition,
 }) {
   const playback = usePlayback();
+  const [compositionHost, setCompositionHost] = React.useState(null);
   const playbackDispatchRef = React.useRef(playback.dispatch);
   playbackDispatchRef.current = playback.dispatch;
   const playbackViewOwner = `present:${React.useId()}`;
@@ -171,10 +171,7 @@ export default function PresentWorkspace({
               themeProjection={themeProjection}
               contentRenderContext={contentRenderContext}
             />
-            <CompositionControls
-              scene={playback.activeScene}
-              onSaveSceneDatePosition={onSaveSceneDatePosition}
-            />
+            <div className="presentation-composition-host" ref={setCompositionHost} />
           </div>
           <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">
             <div className="present-panel-heading">
@@ -339,6 +336,8 @@ export default function PresentWorkspace({
           playback={playback}
           presentationState={presentationState}
           sourceEligibility={sourceEligibility}
+          compositionHost={compositionHost}
+          onSaveSceneDatePosition={onSaveSceneDatePosition}
         />
       </section>
     </main>

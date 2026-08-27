@@ -117,6 +117,23 @@ export function createDurableContentDraftCommit(persist) {
   return (candidate) => persist(candidate, { requireDurableStorage: true });
 }
 
+export function saveSceneDatePositionDurably({
+  controller,
+  persist,
+  sceneId,
+  datePosition,
+}) {
+  if (typeof controller?.mutateWithCommit !== "function") {
+    return Promise.reject(new TypeError("A dashboard commit controller is required."));
+  }
+  return controller.mutateWithCommit(
+    (next) => {
+      mutateSceneDatePosition(next, sceneId, datePosition);
+    },
+    createDurableContentDraftCommit(persist),
+  );
+}
+
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
 const SESSION_ONLY_MESSAGES = Object.freeze({
   dashboard: "Dashboard changes are applied for this session but cannot be retained after reload.",
@@ -1437,9 +1454,16 @@ export default function App() {
         if (Array.isArray(structure.chronoGroups)) next.chronoGroups = structure.chronoGroups;
         if (Array.isArray(structure.scenes)) next.scenes = structure.scenes;
       })}
-      onSaveSceneDatePosition={(sceneId, datePosition) => mutateDashboard((next) => {
-        mutateSceneDatePosition(next, sceneId, datePosition);
-      })}
+      onSaveSceneDatePosition={(sceneId, datePosition) => {
+        const transaction = saveSceneDatePositionDurably({
+          controller: ensureDashboardCommitController(),
+          persist: persistConfiguration,
+          sceneId,
+          datePosition,
+        });
+        reportBackgroundPersistence(transaction);
+        return transaction;
+      }}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
       onBackgroundPersistenceError={reportBackgroundPersistenceError}
       onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(

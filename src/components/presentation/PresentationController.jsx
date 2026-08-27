@@ -1,6 +1,8 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 import { adaptSceneAudienceToPresentation } from "../../lib/presentationProtocol.js";
+import CompositionControls from "./CompositionControls.jsx";
 import PresentationSourcePicker from "./PresentationSourcePicker.jsx";
 
 const DEFAULT_AUDIENCE = Object.freeze({
@@ -147,7 +149,10 @@ export default function PresentationController({
   playback,
   presentationState,
   sourceEligibility = { status: "valid", reason: null },
+  compositionHost = null,
+  onSaveSceneDatePosition,
 }) {
+  const [compositionSaving, setCompositionSaving] = React.useState(false);
   const session = runtime.sessionState;
   const hasActiveSession = session.lifecycle !== "ended";
   const hasClock = playback.clock.length > 0;
@@ -155,10 +160,12 @@ export default function PresentationController({
   const atLast = !hasClock || playback.activeIndex >= playback.clock.length - 1;
 
   const selectScene = (sceneId) => {
+    if (compositionSaving) return;
     runtime.dispatch({ type: "SELECT_SCENE", sceneId });
     playback.dispatch({ type: "setScene", sceneId });
   };
   const selectGroup = (groupId) => {
+    if (compositionSaving) return;
     runtime.dispatch({ type: "SELECT_CHRONO_GROUP", groupId });
     playback.dispatch({ type: "setGroup", groupId });
   };
@@ -170,13 +177,23 @@ export default function PresentationController({
   const blackout = (active) => runtime.dispatch({ type: "SET_BLACKOUT", active });
 
   return (
-    <section className="presentation-controller" aria-label="Presenter controller">
+    <>
+      {compositionHost && createPortal(
+        <CompositionControls
+          scene={playback.activeScene}
+          onSaveSceneDatePosition={onSaveSceneDatePosition}
+          onSavingChange={setCompositionSaving}
+        />,
+        compositionHost,
+      )}
+      <section className="presentation-controller" aria-label="Presenter controller">
       <div className="presentation-controller__source">
         <PresentationSourcePicker
           scenes={playback.scenes}
           groups={playback.groups}
           activeSceneId={playback.activeSceneId}
           activeGroupId={playback.activeGroupId}
+          disabled={compositionSaving}
           onSelectScene={selectScene}
           onSelectGroup={selectGroup}
         />
@@ -224,7 +241,8 @@ export default function PresentationController({
           {session.rejectionReason.message}
         </p>
       )}
-    </section>
+      </section>
+    </>
   );
 }
 

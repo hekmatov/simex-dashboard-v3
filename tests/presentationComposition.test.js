@@ -4,6 +4,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { createSerializedDashboardCommitController } from "../src/lib/dashboardCommitController.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -17,6 +18,7 @@ const compositionModule = await vite.ssrLoadModule(
 const controllerModule = await vite.ssrLoadModule(
   "/src/components/presentation/PresentationController.jsx",
 ).catch(() => null);
+const appModule = await vite.ssrLoadModule("/src/App.jsx").catch(() => null);
 await vite.close();
 
 const mutationModule = await import(
@@ -100,6 +102,134 @@ test("successful save accepts only the persisted position as the next clean base
     yPermille: 250,
     widthPermille: 375,
   });
+});
+
+test("Scene switch ignores the old request completion and resets to the new saved Scene", () => {
+  let draft = compositionModule.createCompositionDraft(savedPosition, "scene-a");
+  draft = compositionModule.reduceCompositionDraft(draft, {
+    type: "SET_DATE_POSITION",
+    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
+  });
+  draft = compositionModule.reduceCompositionDraft(draft, {
+    type: "SAVE_REQUESTED",
+    requestToken: 1,
+    sceneId: "scene-a",
+  });
+  draft = compositionModule.reduceCompositionDraft(draft, {
+    type: "RESET_BASELINE",
+    sceneId: "scene-b",
+    value: { xPermille: 300, yPermille: 60, widthPermille: 240 },
+  });
+  const afterLateSuccess = compositionModule.reduceCompositionDraft(draft, {
+    type: "SAVE_SUCCEEDED",
+    requestToken: 1,
+    sceneId: "scene-a",
+    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
+  });
+
+  assert.deepEqual(afterLateSuccess, draft);
+  assert.equal(afterLateSuccess.sceneId, "scene-b");
+  assert.deepEqual(afterLateSuccess.value, {
+    xPermille: 300,
+    yPermille: 60,
+    widthPermille: 240,
+  });
+});
+
+test("date edits are disabled during a save and failure restores retryable submitted state", () => {
+  let draft = compositionModule.createCompositionDraft(savedPosition, "scene-a");
+  draft = compositionModule.reduceCompositionDraft(draft, {
+    type: "SET_DATE_POSITION",
+    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
+  });
+  draft = compositionModule.reduceCompositionDraft(draft, {
+    type: "SAVE_REQUESTED",
+    requestToken: 7,
+    sceneId: "scene-a",
+  });
+  const duringSave = compositionModule.reduceCompositionDraft(draft, {
+    type: "SET_DATE_POSITION",
+    value: { xPermille: 400, yPermille: 300, widthPermille: 200 },
+  });
+  assert.deepEqual(duringSave, draft);
+
+  const failed = compositionModule.reduceCompositionDraft(duringSave, {
+    type: "SAVE_FAILED",
+    requestToken: 7,
+    sceneId: "scene-a",
+    error: new Error("durable storage failed"),
+  });
+  assert.equal(failed.status, "error");
+  assert.equal(failed.dirty, true);
+  assert.deepEqual(failed.value, {
+    xPermille: 125,
+    yPermille: 250,
+    widthPermille: 375,
+  });
+});
+
+test("targeted date persistence rejects non-durable storage and preserves the accepted dashboard", async () => {
+  assert.equal(typeof appModule?.saveSceneDatePositionDurably, "function");
+  const dashboard = dashboardFixture();
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: dashboard,
+    commit: async (candidate) => candidate,
+  });
+  let durableRequested = false;
+
+  await assert.rejects(appModule.saveSceneDatePositionDurably({
+    controller,
+    persist: async (_candidate, options) => {
+      durableRequested = options?.requireDurableStorage === true;
+      throw new Error("Browser dashboard storage is unavailable.");
+    },
+    sceneId: "scene-a",
+    datePosition: { xPermille: 125, yPermille: 250, widthPermille: 375 },
+  }), /storage is unavailable/i);
+
+  assert.equal(durableRequested, true);
+  assert.deepEqual(controller.getCurrent(), dashboard);
+});
+
+test("targeted durable persistence commits the complete dashboard instead of the mutation result", async () => {
+  const dashboard = dashboardFixture();
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: dashboard,
+    commit: async (candidate) => candidate,
+  });
+  let persistedCandidate = null;
+
+  await appModule.saveSceneDatePositionDurably({
+    controller,
+    persist: async (candidate, options) => {
+      assert.equal(options?.requireDurableStorage, true);
+      persistedCandidate = structuredClone(candidate);
+      return candidate;
+    },
+    sceneId: "scene-a",
+    datePosition: { xPermille: 125, yPermille: 250, widthPermille: 375 },
+  });
+
+  assert.equal(persistedCandidate.id, dashboard.id);
+  assert.equal(persistedCandidate.configVersion, dashboard.configVersion);
+  assert.equal(persistedCandidate.scenes.length, dashboard.scenes.length);
+  assert.deepEqual(persistedCandidate.scenes[0].audience.datePosition, {
+    xPermille: 125,
+    yPermille: 250,
+    widthPermille: 375,
+  });
+  assert.deepEqual(persistedCandidate.scenes[1], dashboard.scenes[1]);
+});
+
+test("PresentationController owns the narrow date save route and disables source switching while saving", async () => {
+  const source = await import("node:fs/promises").then(({ readFile }) => readFile(
+    new URL("../src/components/presentation/PresentationController.jsx", import.meta.url),
+    "utf8",
+  ));
+  assert.match(source, /onSaveSceneDatePosition/);
+  assert.match(source, /<CompositionControls/);
+  assert.match(source, /onSavingChange=\{setCompositionSaving\}/);
+  assert.match(source, /<PresentationSourcePicker[\s\S]*disabled=\{compositionSaving\}/);
 });
 
 test("the Scene mutation changes one camelCase datePosition and preserves every unrelated field", () => {
