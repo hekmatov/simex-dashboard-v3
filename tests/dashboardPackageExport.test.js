@@ -259,7 +259,7 @@ test("package preparation preflights local authored bytes and discloses linked n
     now: null,
     assetPayloads: prepared.assetPayloads,
   });
-  assert.equal(bundle.version, 5);
+  assert.equal(bundle.version, 6);
 });
 
 test("package preparation rejects missing or corrupt local authored bytes before export", async () => {

@@ -19,6 +19,7 @@ import {
 } from "./dashboardConfigStructure.js";
 import { migrateDashboardV3ToV4 } from "./migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../../content-library/migrateDashboardV4ToV5.js";
+import { migrateDashboardV5ToV6 } from "./migrateDashboardV5ToV6.js";
 import { validateContentLibrary } from "../../content-library/contentLibrarySchema.js";
 import { validateContentPackage } from "../../content-library/contentPackageValidation.js";
 import {
@@ -40,7 +41,7 @@ import {
 } from "../../static-content/assets/assetPayloadEnvelope.js";
 
 export const DASHBOARD_SCHEMA_VERSION = DASHBOARD_CONFIG_STRUCTURE.version;
-export const DASHBOARD_BUNDLE_VERSION = 5;
+export const DASHBOARD_BUNDLE_VERSION = 6;
 export const DASHBOARD_CONFIG_VERSION = DASHBOARD_SCHEMA_VERSION;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
 
@@ -439,9 +440,10 @@ function normalizeDashboardChartInstances(config) {
 }
 
 export function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
-  const v4 = config?.configVersion === 5 ? structuredClone(config) : migrateDashboardV3ToV4(config);
-  const migrated = migrateDashboardV4ToV5(v4);
-  const chartNormalized = normalizeDashboardChartInstances(migrated);
+  const v4 = config.configVersion === 3 ? migrateDashboardV3ToV4(config) : config;
+  const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
+  const v6 = migrateDashboardV5ToV6(v5);
+  const chartNormalized = normalizeDashboardChartInstances(v6);
   const presentationNormalized = stripLegacyVantaBackground(chartNormalized);
   return normalizeDashboardTemporalConfig(presentationNormalized, {
     profiles: temporalMigrationProfiles(presentationNormalized, profiles),
@@ -465,13 +467,14 @@ export function validateDashboardConfig(
 ) {
   const input = config;
   assertStructuralData(config);
-  const v4 = config?.configVersion === 5 ? structuredClone(config) : migrateDashboardV3ToV4(config);
-  config = migrateDashboardV4ToV5(v4);
+  const v4 = config.configVersion === 3 ? migrateDashboardV3ToV4(config) : config;
+  const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
+  config = migrateDashboardV5ToV6(v5);
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
   });
   validateCanonicalDashboardTemporalConfig(config);
-  if (config.configVersion !== DASHBOARD_SCHEMA_VERSION) throw new Error("Dashboard configuration version 5 is required.");
+  if (config.configVersion !== DASHBOARD_SCHEMA_VERSION) throw new Error(`Dashboard configuration version ${DASHBOARD_SCHEMA_VERSION} is required.`);
   requiredString(config.id, "Dashboard id"); requiredString(config.title, "Dashboard title");
   const sourceEntries = plainDataEntries(config.dataSources, "Dashboard dataSources");
   const profiles = config.datasetProfiles ?? {};
@@ -655,7 +658,7 @@ export function integrateSavedChart(dashboard, payload) {
   return next;
 }
 
-/** Validates the complete DashboardV5 session candidate, including assets. */
+/** Validates the complete DashboardV6 session candidate, including assets. */
 export function validateDashboardSessionCandidate(candidate) {
   validateDashboardConfig(candidate, {
     allowBrowserAssetIds: true,
@@ -688,7 +691,7 @@ export function serializeDashboardBundle(config, { now = null, assetPayloads = {
 export function parseDashboardBundle(text, { includeEnvelope = false } = {}) {
   let bundle;
   try { bundle = JSON.parse(text); } catch { throw new Error("Dashboard bundle must be valid JSON."); }
-  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || ![4, DASHBOARD_BUNDLE_VERSION].includes(bundle.version)) throw new Error("This dashboard supports version 4 or version 5 bundles only.");
+  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || ![4, 5, DASHBOARD_BUNDLE_VERSION].includes(bundle.version)) throw new Error("This dashboard supports version 4, version 5, or version 6 bundles only.");
   if (!isRecord(bundle.config)) throw new Error("Bundle config must be a dashboard configuration object.");
   const bundleEntries = plainDataEntries(bundle, "Dashboard bundle");
   rejectUnknownEntries(bundleEntries, BUNDLE_KEYS, "dashboard bundle");

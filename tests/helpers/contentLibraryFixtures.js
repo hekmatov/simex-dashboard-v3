@@ -93,6 +93,13 @@ export function makeDashboardV5(overrides = {}) {
   return mergeDashboard(dashboard, overrides);
 }
 
+export function makeDashboardV6(overrides = {}) {
+  const dashboard = makeDashboardV5();
+  dashboard.configVersion = 6;
+  dashboard.home = { enabled: true };
+  return mergeDashboard(dashboard, overrides);
+}
+
 function imagePanel() {
   return {
     configVersion: 3,

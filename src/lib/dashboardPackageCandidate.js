@@ -11,7 +11,7 @@ export function parseDashboardPackageCandidate(text) {
     throw new Error("Dashboard bundle must be valid JSON.");
   }
 
-  const rawConfig = [3, 4, 5].includes(parsed?.configVersion) && parsed?.bundleType === undefined;
+  const rawConfig = [3, 4, 5, 6].includes(parsed?.configVersion) && parsed?.bundleType === undefined;
   const authoritativeText = rawConfig
     ? JSON.stringify(serializeDashboardBundle(parsed, { now: null }))
     : text;

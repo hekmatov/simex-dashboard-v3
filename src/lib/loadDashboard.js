@@ -3,6 +3,7 @@ import { profileDataset } from "../charting/data/profileDataset.js";
 import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
+import { migrateDashboardV5ToV6 } from "../charting/config/migrateDashboardV5ToV6.js";
 import { deriveContentHealth } from "../content-library/contentHealth.js";
 import { stripLegacyVantaBackground } from "../charting/config/dashboardPresentationV3.js";
 import {
@@ -123,11 +124,10 @@ export const DASHBOARD_PROFILE_VERSION_MISMATCH = "DASHBOARD_PROFILE_VERSION_MIS
 
 export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
   preflightDashboardInput(dashboard);
-  const v4 = dashboard?.configVersion === 5
-    ? structuredClone(dashboard)
-    : migrateDashboardV3ToV4(dashboard);
-  const migrated = migrateDashboardV4ToV5(v4);
-  const presentationNormalized = stripLegacyVantaBackground(migrated);
+  const v4 = dashboard.configVersion === 3 ? migrateDashboardV3ToV4(dashboard) : dashboard;
+  const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
+  const v6 = migrateDashboardV5ToV6(v5);
+  const presentationNormalized = stripLegacyVantaBackground(v6);
   const normalized = normalizeDashboardTemporalConfig(presentationNormalized, {
     profiles: temporalMigrationProfiles(presentationNormalized, suppliedProfiles),
   });

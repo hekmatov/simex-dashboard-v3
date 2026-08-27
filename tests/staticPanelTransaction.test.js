@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { commitStaticPanelTransaction, prepareStaticPanelTransaction, removeDashboardPanel } from "../src/static-content/staticPanelTransaction.js";
-import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
+import { makeDashboardV6, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
 
 test("prepared Image transaction owns one complete panel, placement, library, assets candidate", () => {
   const dashboard = emptyDashboard();
@@ -20,7 +20,7 @@ test("prepared Image transaction owns one complete panel, placement, library, as
 });
 
 test("existing edit preserves media identity and expected current revision", () => {
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
   const placement = { ...dashboard.dataSources["image-source"], fit: "cover", rotation: 90 };
   const mediaItem = dashboard.contentLibrary.mediaItems["media-image-source"];
   const prepared = prepareStaticPanelTransaction({
@@ -38,7 +38,7 @@ test("existing edit preserves media identity and expected current revision", () 
 
 test("Free-text transaction increments revision only when saved content changes", () => {
   const panel = {
-    ...makeDashboardV5().pages[0].sections[0].panels[0].chart,
+    ...makeDashboardV6().pages[0].sections[0].panels[0].chart,
     id: "text-panel",
     typeId: "freeText",
     title: "Brief",
@@ -72,7 +72,7 @@ test("Free-text transaction increments revision only when saved content changes"
   assert.equal(unchanged.candidateDashboard.dataSources["text-source"].revision, 2);
 });
 
-test("validation failure leaves the previous V5 dashboard and staged input exact", () => {
+test("validation failure leaves the previous V6 dashboard and staged input exact", () => {
   const dashboard = emptyDashboard();
   const prior = structuredClone(dashboard);
   const payload = imagePayload();
@@ -98,7 +98,7 @@ test("persistence failure returns the previous dashboard through rollback", asyn
 });
 
 test("panel deletion removes only placement/source ownership and retains reusable media", () => {
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
   removeDashboardPanel(dashboard, "image-panel");
   assert.equal(Object.hasOwn(dashboard.dataSources, "image-source"), false);
   assert.equal(Object.hasOwn(dashboard.contentLibrary.mediaItems, "media-image-source"), true);
@@ -176,7 +176,7 @@ test("a staged Image declaration rejects every non-exact asset set without mutat
 });
 
 test("same-MediaItem replacement prunes the previous asset before exact budget validation", () => {
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
   dashboard.assets["asset-map"].byteLength = 10 * 1024 * 1024;
   dashboard.contentLibrary.mediaItems["media-image-source"].byteLength = 10 * 1024 * 1024;
   const nextBytes = 200 * 1024 * 1024;
@@ -207,7 +207,7 @@ test("same-MediaItem replacement prunes the previous asset before exact budget v
 });
 
 test("same-MediaItem asset-to-URL replacement prunes its unreferenced previous asset", () => {
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
 
   const prepared = prepareStaticPanelTransaction({
     dashboard,
@@ -223,7 +223,7 @@ test("same-MediaItem asset-to-URL replacement prunes its unreferenced previous a
 });
 
 test("same-MediaItem replacement preserves a previous asset shared by another logical media item", () => {
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
   dashboard.contentLibrary.mediaItems["media-shared"] = makeMediaItem({ mediaId: "media-shared" });
   const payload = urlReplacementPayload(dashboard);
 
@@ -234,7 +234,7 @@ test("same-MediaItem replacement preserves a previous asset shared by another lo
 });
 
 test("same-MediaItem replacement still rejects a genuinely over-budget next asset", () => {
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
   const payload = replacementPayload(dashboard, {
     assetId: "asset-over-budget",
     byteLength: (200 * 1024 * 1024) + 1,
@@ -246,7 +246,7 @@ test("same-MediaItem replacement still rejects a genuinely over-budget next asse
 });
 
 function emptyDashboard() {
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
   dashboard.pages[0].sections[0].panels = [];
   dashboard.dataSources = {};
   dashboard.assets = {};
@@ -258,8 +258,8 @@ function imagePayload() {
   const asset = { mediaType: "image/png", byteLength: 20, width: 4, height: 5, sha256: "a".repeat(64), storageState: "staged" };
   return {
     destination: { pageId: "overview", sectionId: "response" },
-    panel: { ...makeDashboardV5().pages[0].sections[0].panels[0].chart, sourceId: "image-source" },
-    placement: { ...makeDashboardV5().dataSources["image-source"], mediaId: "media-map" },
+    panel: { ...makeDashboardV6().pages[0].sections[0].panels[0].chart, sourceId: "image-source" },
+    placement: { ...makeDashboardV6().dataSources["image-source"], mediaId: "media-map" },
     mediaItem: makeMediaItem({ mediaId: "media-map", revision: 1, current: { kind: "asset", assetId: "asset-map" }, dimensions: { width: 4, height: 5 }, byteLength: 20 }),
     assets: { "asset-map": asset },
     stagedAssetIds: ["asset-map"],

@@ -1,5 +1,6 @@
 import { decodeAssetBase64 } from "../static-content/assets/assetPayloadEnvelope.js";
 import { validateContentPackage } from "../content-library/contentPackageValidation.js";
+import { DASHBOARD_CONFIG_STRUCTURE } from "../charting/config/dashboardConfigStructure.js";
 
 export async function commitDashboardPackageImport({
   candidate,
@@ -18,7 +19,7 @@ export async function commitDashboardPackageImport({
   rebase,
   transactionId = createImportTransactionId(),
 }) {
-  if (candidate?.config?.configVersion === 5) {
+  if (candidate?.config?.configVersion === DASHBOARD_CONFIG_STRUCTURE.version) {
     validateContentPackage(candidate);
   }
   await prepare();

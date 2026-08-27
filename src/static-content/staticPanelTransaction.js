@@ -1,6 +1,7 @@
 import { validateChartInstance } from "../charting/config/chartConfigV3.js";
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
+import { migrateDashboardV5ToV6 } from "../charting/config/migrateDashboardV5ToV6.js";
 import { validateDashboardChartReferences } from "../charting/config/dashboardSemanticReferences.js";
 import { validateStaticDestination } from "./staticPanelCapabilities.js";
 import {
@@ -42,11 +43,11 @@ export function prepareStaticPanelTransaction({
   stagedAssetIds = [],
 } = {}) {
   const suppliedDashboard = cloneRecord(dashboard, "Static panel transaction dashboard");
-  const previousDashboard = migrateDashboardV4ToV5(
-    suppliedDashboard.configVersion === 5
-      ? suppliedDashboard
-      : migrateDashboardV3ToV4(suppliedDashboard),
-  );
+  const v4 = suppliedDashboard.configVersion === 3
+    ? migrateDashboardV3ToV4(suppliedDashboard)
+    : suppliedDashboard;
+  const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
+  const previousDashboard = migrateDashboardV5ToV6(v5);
   if (!isRecord(panel)) throw new TypeError("Static panel transaction panel is required.");
   validateChartInstance(panel);
 

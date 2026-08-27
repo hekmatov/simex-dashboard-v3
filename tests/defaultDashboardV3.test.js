@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
@@ -22,7 +21,6 @@ const ROOT = process.cwd();
 const DASHBOARD_PATH = path.join(ROOT, "public", "config", "dashboard.json");
 const ALIASES_PATH = path.join(ROOT, "public", "config", "chart-aliases.json");
 const PROFILES_PATH = path.join(ROOT, "public", "config", "dataset-profiles.json");
-const SHOWCASE_LANDING_SHA256 = "53ded06b41be418f55b68a927faa924a1b6ae030b1a6cc5f8ef39fe90e3486d4";
 
 const EXPECTED_SECTIONS = {
   home_overview: [
@@ -220,9 +218,9 @@ function createSourceLoader(dashboard) {
   };
 }
 
-test("the curated dashboard is a clean version 3 configuration with exact analytical coverage", async () => {
+test("the curated dashboard is a clean version 6 configuration with exact analytical coverage", async () => {
   const { dashboard } = await loadTrackedInputs();
-  assert.equal(dashboard.configVersion, 3);
+  assert.equal(dashboard.configVersion, 6);
   assert.equal(Object.hasOwn(dashboard, "schemaVersion"), false);
   assert.equal(dashboard.id, "simex-dashboard");
 
@@ -581,26 +579,23 @@ test("all configured geography joins resolve and the choropleth is genuinely tim
   );
 });
 
-test("showcase landing metadata is retained byte-for-byte at the semantic JSON level", async () => {
+test("default authored homepage content is preserved as an ordinary V6 page", async () => {
   const { dashboard } = await loadTrackedInputs();
-  const home = dashboard.pages.find(({ id }) => id === "home");
+  const home = dashboard.pages.find(({ id }) => id === "old-homepage-content");
   assert.deepEqual({
     id: home.id,
     label: home.label,
-    pageType: home.pageType,
     title: home.title,
     description: home.description,
   }, {
-    id: "home",
-    label: "Home",
-    pageType: "landing",
-    title: "SimEx Dashboard",
-    description: "A reusable dashboard platform for simulation exercise decision support.",
+    id: "old-homepage-content",
+    label: "Old Homepage Content",
+    title: "Old Homepage Content",
+    description: "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
   });
-  assert.equal(
-    createHash("sha256").update(JSON.stringify(home.landing)).digest("hex"),
-    SHOWCASE_LANDING_SHA256,
-  );
+  assert.equal(home.landing, undefined);
+  assert.deepEqual(dashboard.home, { enabled: true });
+  assert.equal(dashboard.pages.some(({ id }) => id === "home"), false);
   assert.deepEqual(
     {
       id: home.sections[0].id,

@@ -13,6 +13,7 @@ import {
   inspectRasterMetadata,
 } from "../static-content/image/imageAssetValidation.js";
 import { parsePortableQmdWithMedia } from "../static-content/qmd/portableQmdMedia.js";
+import { DASHBOARD_CONFIG_STRUCTURE } from "../charting/config/dashboardConfigStructure.js";
 
 const GEOJSON_SUMMARY_KEYS = Object.freeze([
   "featureCount",
@@ -28,8 +29,8 @@ export function validateContentPackage(input) {
   record(input, "Content package");
   const config = record(input.config, "Content package config");
   const assetPayloads = record(input.assetPayloads ?? {}, "Content package assetPayloads");
-  if (config.configVersion !== 5) {
-    throw new Error("Content package validation requires a migrated DashboardV5 config.");
+  if (config.configVersion !== DASHBOARD_CONFIG_STRUCTURE.version) {
+    throw new Error(`Content package validation requires a migrated DashboardV${DASHBOARD_CONFIG_STRUCTURE.version} config.`);
   }
 
   const assets = config.assets ?? {};

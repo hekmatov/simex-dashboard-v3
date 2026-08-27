@@ -12,10 +12,10 @@ import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { migrateDashboardV4ToV5 } from "../src/content-library/migrateDashboardV4ToV5.js";
 import { encodeAssetBase64, sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
-import { makeDashboardV4, makeDashboardV5 } from "./helpers/contentLibraryFixtures.js";
+import { makeDashboardV4, makeDashboardV5, makeDashboardV6 } from "./helpers/contentLibraryFixtures.js";
 
-test("dashboard and bundle boundaries emit V5 while retaining chart configuration V3", () => {
-  const dashboard = makeDashboardV5();
+test("dashboard and bundle boundaries emit V6 while retaining chart configuration V3", () => {
+  const dashboard = makeDashboardV6();
   const bytes = imageFixtureBytes("image/png");
   dashboard.assets["asset-map"] = {
     ...dashboard.assets["asset-map"],
@@ -39,15 +39,15 @@ test("dashboard and bundle boundaries emit V5 while retaining chart configuratio
       },
     },
   });
-  assert.equal(DASHBOARD_SCHEMA_VERSION, 5);
-  assert.equal(DASHBOARD_BUNDLE_VERSION, 5);
-  assert.equal(bundle.version, 5);
-  assert.equal(bundle.config.configVersion, 5);
+  assert.equal(DASHBOARD_SCHEMA_VERSION, 6);
+  assert.equal(DASHBOARD_BUNDLE_VERSION, 6);
+  assert.equal(bundle.version, 6);
+  assert.equal(bundle.config.configVersion, 6);
   assert.equal(bundle.config.pages[0].sections[0].panels[0].chart.configVersion, 3);
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
 
-test("V5 bundle parser accepts a version-4 bundle by migrating before validation", () => {
+test("V6 bundle parser accepts a version-4 bundle by migrating before validation", () => {
   const legacyBundle = {
     bundleType: "simex-dashboard-bundle",
     version: 4,
@@ -64,7 +64,7 @@ test("V5 bundle parser accepts a version-4 bundle by migrating before validation
   };
   delete legacyBundle.config.assets;
   const parsed = parseDashboardBundle(JSON.stringify(legacyBundle));
-  assert.equal(parsed.configVersion, 5);
+  assert.equal(parsed.configVersion, 6);
   assert.equal(parsed.dataSources["image-source"].sourceVersion, 2);
   assert.equal(parsed.contentLibrary.mediaItems[parsed.dataSources["image-source"].mediaId].revision, 3);
 });

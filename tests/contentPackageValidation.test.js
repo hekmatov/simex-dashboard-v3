@@ -7,9 +7,9 @@ import {
   sha256HexSync,
 } from "../src/static-content/assets/assetPayloadEnvelope.js";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
-import { makeDashboardV5, makeMediaItem, makeSourceEntry } from "./helpers/contentLibraryFixtures.js";
+import { makeDashboardV6, makeMediaItem, makeSourceEntry } from "./helpers/contentLibraryFixtures.js";
 
-test("a complete V5 package retains used and unused logical content over deduped physical bytes", () => {
+test("a complete V6 package retains used and unused logical content over deduped physical bytes", () => {
   const input = completePackage();
   const before = structuredClone(input);
 
@@ -109,7 +109,7 @@ const ASSET_ID = `asset-${sha256HexSync(PNG)}`;
 function completePackage(bytes = PNG) {
   const sha256 = sha256HexSync(bytes);
   const assetId = `asset-${sha256}`;
-  const dashboard = makeDashboardV5();
+  const dashboard = makeDashboardV6();
   dashboard.assets = {
     [assetId]: {
       mediaType: "image/png",

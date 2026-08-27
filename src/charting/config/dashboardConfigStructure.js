@@ -20,14 +20,14 @@ function shape(required, optional = []) {
  * this contract owns their placement and every dashboard presentation field.
  */
 export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
-  version: 5,
+  version: 6,
   runtimeNonSemanticFields: RUNTIME_NON_SEMANTIC_FIELDS,
   pageTypes: PAGE_TYPES,
   domainRouteTones: DOMAIN_ROUTE_TONES,
   deliveryStates: DELIVERY_STATES,
   shapes: {
     dashboard: shape(
-      ["configVersion", "contentLibrary", "dataSources", "id", "pages", "timezone", "title"],
+      ["configVersion", "contentLibrary", "dataSources", "home", "id", "pages", "timezone", "title"],
       [
         "description",
         "globalStyles",
@@ -40,6 +40,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
         "assets",
       ],
     ),
+    home: shape(["enabled"]),
     page: shape(
       ["id", "sections"],
       ["description", "label", "landing", "pageType", "title"],
@@ -164,6 +165,14 @@ export function validateDashboardStructure(
   ordinaryRecord(config.contentLibrary, "Dashboard contentLibrary");
   if (config.globalStyles !== undefined) {
     validateGlobalStyles(config.globalStyles);
+  }
+  const home = strictShape(
+    config.home,
+    DASHBOARD_CONFIG_STRUCTURE.shapes.home,
+    "dashboard home preference",
+  );
+  if (typeof home.enabled !== "boolean") {
+    throw new TypeError("Dashboard home preference enabled must be boolean.");
   }
 
   if (config.pages === undefined) {
