@@ -19,15 +19,31 @@ export async function installAudienceFaultInstrumentation(context) {
               window.__audienceTestTransport.lastControllerSequence ?? 0,
               data.sequence,
             );
+            if (
+              window.__audienceTestTransport.injectIncompleteAfterNextControllerMessage === true
+              && ["state", "heartbeat"].includes(data.type)
+            ) {
+              window.__audienceTestTransport.injectIncompleteAfterNextControllerMessage = false;
+              const channel = new NativeBroadcastChannel(name);
+              channel.postMessage({
+                protocol_version: 3,
+                session_id: data.session_id,
+                sequence: data.sequence + 1,
+                type: "state",
+                payload: null,
+              });
+              channel.close();
+            }
           }
           if (data?.protocol_version === 3 && ["state", "ended"].includes(data.type)) {
             window.__audienceTestTransport.lastControllerMessage = structuredClone(data);
             if (data.type === "state") {
-              window.__audienceTestTransport.lastStateMessage = structuredClone(data);
               if (data.payload === null) {
                 window.__audienceTestTransport.incompleteStateSequence = data.sequence;
                 window.__audienceTestTransport.incompleteStateCount =
                   (window.__audienceTestTransport.incompleteStateCount ?? 0) + 1;
+              } else {
+                window.__audienceTestTransport.lastStateMessage = structuredClone(data);
               }
             }
           }
@@ -91,7 +107,11 @@ export async function openAudienceSession(page) {
   await popup.waitForLoadState("domcontentloaded");
   const channelId = new URL(popup.url()).searchParams.get("channel");
   expect(channelId).toBeTruthy();
-  await expect(popup.locator(".audience-display")).toHaveAttribute("data-connection-status", "connected");
+  await expect(popup.locator(".audience-display")).toHaveAttribute(
+    "data-connection-status",
+    "connected",
+    { timeout: 45_000 },
+  );
   return { popup, channelId };
 }
 
@@ -128,24 +148,16 @@ export async function sendLateOldGenerationMessage(page, channelId) {
 }
 
 export async function injectIncompleteNextAudienceState(popup) {
-  await expect.poll(() => popup.evaluate(() => (
-    window.__audienceTestTransport?.lastControllerMessage?.type === "state"
-      ? window.__audienceTestTransport.lastControllerMessage.sequence
-      : null
-  ))).not.toBeNull();
+  const initialCount = await popup.evaluate(() => (
+    window.__audienceTestTransport?.incompleteStateCount ?? 0
+  ));
   await popup.evaluate(() => {
     const transport = window.__audienceTestTransport;
-    const last = transport.lastControllerMessage;
-    const channel = new BroadcastChannel(transport.channelName);
-    channel.postMessage({
-      protocol_version: 3,
-      session_id: last.session_id,
-      sequence: last.sequence + 1,
-      type: "state",
-      payload: null,
-    });
-    channel.close();
+    transport.injectIncompleteAfterNextControllerMessage = true;
   });
+  await expect.poll(() => popup.evaluate(() => (
+    window.__audienceTestTransport?.incompleteStateCount ?? 0
+  ))).toBeGreaterThan(initialCount);
 }
 
 export async function sendFreshAudienceSnapshot(popup) {

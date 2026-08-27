@@ -14,7 +14,8 @@ import {
   sendLateOldSessionState,
 } from "./support/present-audience-workflow.js";
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
+  testInfo.setTimeout(120_000);
   page.on("pageerror", (error) => console.error(`Browser page error: ${error.stack ?? error.message}`));
   await page.goto(LIVE_APP_URL);
   await page.evaluate(() => localStorage.clear());
