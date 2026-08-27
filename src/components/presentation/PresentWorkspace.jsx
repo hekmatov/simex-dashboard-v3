@@ -4,6 +4,7 @@ import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import { MAX_DISPLAYED_CHARTS, reduceDisplayState } from "../../lib/displayController.js";
 import { buildPresentableItemIndex } from "../../static-content/staticPanelCapabilities.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
+import CompositionControls from "./CompositionControls.jsx";
 import PresentationController, {
   buildPresentationState,
   presentationSourceEligibility,
@@ -20,6 +21,7 @@ export default function PresentWorkspace({
   accessibilityEnabled,
   themeProjection,
   contentRenderContext,
+  onSaveSceneDatePosition,
 }) {
   const playback = usePlayback();
   const playbackDispatchRef = React.useRef(playback.dispatch);
@@ -169,6 +171,10 @@ export default function PresentWorkspace({
               themeProjection={themeProjection}
               contentRenderContext={contentRenderContext}
             />
+            <CompositionControls
+              scene={playback.activeScene}
+              onSaveSceneDatePosition={onSaveSceneDatePosition}
+            />
           </div>
           <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">
             <div className="present-panel-heading">
@@ -180,6 +186,7 @@ export default function PresentWorkspace({
                 <span>Scene layout</span>
                 <select
                   aria-label="Scene layout"
+                  data-presentation-control-id="composition-layout"
                   value={layout}
                   onChange={(event) => onDisplayAction?.({
                     type: "layout_changed",
@@ -209,6 +216,8 @@ export default function PresentWorkspace({
                       type="button"
                       className="secondary"
                       aria-label={`Move ${chart.title ?? chart.id} up`}
+                      data-presentation-item-action="move-up"
+                      data-presentation-item-id={chart.id}
                       disabled={index === 0}
                       onClick={() => reorderChart(index, -1)}
                     >
@@ -218,6 +227,8 @@ export default function PresentWorkspace({
                       type="button"
                       className="secondary"
                       aria-label={`Move ${chart.title ?? chart.id} down`}
+                      data-presentation-item-action="move-down"
+                      data-presentation-item-id={chart.id}
                       disabled={index === selectedCharts.length - 1}
                       onClick={() => reorderChart(index, 1)}
                     >
@@ -226,6 +237,8 @@ export default function PresentWorkspace({
                     <button
                       type="button"
                       className="secondary"
+                      data-presentation-item-action="remove"
+                      data-presentation-item-id={chart.id}
                       onClick={() => toggleChart(chart.id)}
                     >
                       Remove

@@ -7,6 +7,9 @@ import {
   installAudienceFaultInstrumentation,
   LIVE_APP_URL,
   openAudienceSession,
+  readLastAcceptedAudienceState,
+  readStoredDashboard,
+  readStoredScene,
   sendLateOldGenerationMessage,
   sendLateOldSessionState,
 } from "./support/present-audience-workflow.js";
@@ -94,6 +97,94 @@ test("Audience surface remaining after denied close shows neutral Ended projecti
   expect(second.channelId).not.toBe(first.channelId);
   await first.popup.close({ runBeforeUnload: false });
   await second.popup.close({ runBeforeUnload: false });
+});
+
+test("Present composes output and saves Scene date position through its owner", async ({ context, page }) => {
+  test.setTimeout(120_000);
+  await installAudienceFaultInstrumentation(context);
+  const scene = await createSavedPresentationScene(page);
+  await enterPresentWithScene(page, scene);
+  const storedBefore = await readStoredDashboard(page);
+  const savedBefore = (storedBefore.scenes ?? []).find(({ id }) => id === scene.id);
+  const session = await openAudienceSession(page);
+  const date = session.popup.locator(".audience-scene-date");
+
+  expect(await date.evaluate((element) => ({
+    left: element.style.left,
+    top: element.style.top,
+    width: element.style.width,
+  }))).toEqual({
+    left: `${savedBefore.audience.datePosition.xPermille / 10}%`,
+    top: `${savedBefore.audience.datePosition.yPermille / 10}%`,
+    width: `${savedBefore.audience.datePosition.widthPermille / 10}%`,
+  });
+  let accepted = await readLastAcceptedAudienceState(session.popup);
+  expect(accepted.audience.date_position).toEqual({
+    x_permille: savedBefore.audience.datePosition.xPermille,
+    y_permille: savedBefore.audience.datePosition.yPermille,
+    width_permille: savedBefore.audience.datePosition.widthPermille,
+  });
+
+  const displayedIds = [...scene.present.chartIds];
+  if (displayedIds.length > 1) {
+    const removedId = displayedIds.at(-1);
+    const remove = page.locator(`[data-presentation-item-action="remove"][data-presentation-item-id="${cssEscape(removedId)}"]`);
+    await remove.focus();
+    await remove.press("Enter");
+    await expect(session.popup.locator(`[data-displayed-chart-id="${cssEscape(removedId)}"]`)).toHaveCount(0);
+    const layout = page.locator('[data-presentation-control-id="composition-layout"]');
+    const choices = await layout.locator("option").evaluateAll((options) => options.map(({ value }) => value));
+    if (choices.length > 1) await layout.selectOption(choices.at(-1));
+  }
+  expect(await readStoredScene(page, scene.id)).toEqual(savedBefore);
+
+  await page.locator('[data-presentation-control-id="date-position-x"]').fill("125");
+  await page.locator('[data-presentation-control-id="date-position-y"]').fill("250");
+  await page.locator('[data-presentation-control-id="date-position-width"]').fill("375");
+  await expect(page.getByText("Unsaved position", { exact: true })).toBeVisible();
+
+  expect(await readStoredScene(page, scene.id)).toEqual(savedBefore);
+  accepted = await readLastAcceptedAudienceState(session.popup);
+  expect(accepted.audience.date_position).toEqual({
+    x_permille: savedBefore.audience.datePosition.xPermille,
+    y_permille: savedBefore.audience.datePosition.yPermille,
+    width_permille: savedBefore.audience.datePosition.widthPermille,
+  });
+
+  await page.locator('[data-presentation-control-id="date-position-save"]').click();
+  await expect(page.getByText("Unsaved position", { exact: true })).toHaveCount(0);
+  const storedAfter = await expect.poll(() => readStoredDashboard(page)).toMatchObject({
+    scenes: expect.arrayContaining([
+      expect.objectContaining({
+        id: scene.id,
+        audience: {
+          ...savedBefore.audience,
+          datePosition: { xPermille: 125, yPermille: 250, widthPermille: 375 },
+        },
+      }),
+    ]),
+  }).then(() => readStoredDashboard(page));
+  const expectedStored = structuredClone(storedBefore);
+  expectedStored.scenes.find(({ id }) => id === scene.id).audience.datePosition = {
+    xPermille: 125,
+    yPermille: 250,
+    widthPermille: 375,
+  };
+  expect(storedAfter).toEqual(expectedStored);
+
+  await expect.poll(async () => (
+    await readLastAcceptedAudienceState(session.popup)
+  ).audience.date_position).toEqual({
+    x_permille: 125,
+    y_permille: 250,
+    width_permille: 375,
+  });
+  expect(await date.evaluate((element) => ({
+    left: element.style.left,
+    top: element.style.top,
+    width: element.style.width,
+  }))).toEqual({ left: "12.5%", top: "25%", width: "37.5%" });
+  await session.popup.close();
 });
 
 function cssEscape(value) {

@@ -73,6 +73,24 @@ export async function openAudienceSession(page) {
   return { popup, channelId };
 }
 
+export async function readStoredDashboard(page) {
+  return page.evaluate((key) => JSON.parse(localStorage.getItem(key)), DASHBOARD_STORAGE_KEY);
+}
+
+export async function readStoredScene(page, sceneId) {
+  const dashboard = await readStoredDashboard(page);
+  return (dashboard.scenes ?? []).find(({ id }) => id === sceneId) ?? null;
+}
+
+export async function readLastAcceptedAudienceState(popup) {
+  await expect.poll(() => popup.evaluate(() => (
+    window.__audienceTestTransport?.lastStateMessage?.payload ?? null
+  ))).not.toBeNull();
+  return popup.evaluate(() => structuredClone(
+    window.__audienceTestTransport.lastStateMessage.payload,
+  ));
+}
+
 export async function sendLateOldGenerationMessage(page, channelId) {
   await page.evaluate((sessionId) => {
     const channel = new BroadcastChannel(`simex-presentation-${sessionId}`);

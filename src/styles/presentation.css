@@ -459,6 +459,67 @@
   min-width: 176px;
 }
 
+.presentation-composition {
+  border-block: 1px solid #d8e2ec;
+  display: grid;
+  gap: 12px;
+  padding-block: 16px;
+}
+
+.presentation-composition h2,
+.presentation-composition p {
+  margin: 0;
+}
+
+.presentation-composition__heading {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.presentation-composition__dirty {
+  color: #8a4d00;
+  font-size: 12px;
+}
+
+.presentation-date-position-stage {
+  aspect-ratio: 16 / 9;
+  background: #eaf1f6;
+  border: 1px solid #c8d6e3;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.presentation-date-position-handle {
+  cursor: grab;
+  min-height: 44px;
+  min-width: 44px;
+  position: absolute;
+  touch-action: none;
+}
+
+.presentation-date-position-handle:active {
+  cursor: grabbing;
+}
+
+.presentation-date-position-fields {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.presentation-composition__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.presentation-composition__actions button {
+  min-height: 44px;
+}
+
 .present-audience-fact,
 .present-chart-choice {
   align-items: center;

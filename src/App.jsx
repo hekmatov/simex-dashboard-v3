@@ -71,6 +71,7 @@ import {
   applyDashboardEdits,
   createSerializedDashboardCommitController,
 } from "./lib/dashboardCommitController.js";
+import { mutateSceneDatePosition } from "./lib/sceneDatePositionMutation.js";
 import {
   DASHBOARD_STORAGE_KEY,
   densityForDashboardMode,
@@ -1435,6 +1436,9 @@ export default function App() {
         next.pages = structure.pages;
         if (Array.isArray(structure.chronoGroups)) next.chronoGroups = structure.chronoGroups;
         if (Array.isArray(structure.scenes)) next.scenes = structure.scenes;
+      })}
+      onSaveSceneDatePosition={(sceneId, datePosition) => mutateDashboard((next) => {
+        mutateSceneDatePosition(next, sceneId, datePosition);
       })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
       onBackgroundPersistenceError={reportBackgroundPersistenceError}

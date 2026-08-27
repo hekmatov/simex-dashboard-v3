@@ -105,6 +105,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onPageChange,
   onPageReorder,
   onStructureChange,
+  onSaveSceneDatePosition,
   onDashboardChange,
   onBackgroundPersistenceError,
   onApplyPendingEdits,
@@ -1021,6 +1022,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
+  function saveSceneDatePosition(sceneId, datePosition) {
+    if (moderatorOperationGateRef.current.isActive()) {
+      return Promise.reject(new Error("Wait for the current dashboard operation to finish."));
+    }
+    return runModeratorTransaction({
+      flush: () => pendingEdits.flush(),
+      commit: () => onSaveSceneDatePosition?.(sceneId, datePosition),
+    });
+  }
+
   function changeSectionByIds(pageId, sectionId, updates) {
     if (moderatorOperationGateRef.current.isActive()) return;
     const page = dashboard.pages.find((candidate) => candidate.id === pageId);
@@ -1534,6 +1545,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         presentableItemIndex={presentableItemIndex}
         accessibilityEnabled={accessibilityEnabled}
         themeProjection={themeProjection}
+        onSaveSceneDatePosition={saveSceneDatePosition}
       />
     );
   }
