@@ -81,9 +81,32 @@ That finalized build retained the frozen Quorum/schema hash `a876d0b83c9f40ea517
 
 Dedicated runnable approval preview remains available at [http://127.0.0.1:4188/](http://127.0.0.1:4188/). Direct browser evidence: HTTP 200; title `SimEx Dashboard V3`; active metadata `evidence-ledger` / `evidence-ledger/brighter-vellum` / `light`; landing surface equaled its live `--simex-surface-canvas` probe (`rgb(247, 242, 232)`); and the visible footer link had the exact Issues href, `_blank` target, and `noreferrer` relationship.
 
+### Accessibility correction verification
+
+Accessibility correction commit: `befbbb929ef06a5c352419a9ae10114442e2fa8c`.
+
+The hero action focus contract was observed RED before the fix: both the default hero surface and computed focus paint were `rgb(44, 56, 61)`. The live owner was a later shared `.view-shell button:focus-visible` rule overriding the Showcase rule. The correction uses the existing `--simex-on-accent` semantic token only for hero actions with selector specificity sufficient to preserve the intended scope; non-hero route actions retain `--simex-focus`.
+
+Focused browser gates: **2 passing**
+
+```text
+playwright test tests/e2e/showcase-home.spec.js --grep "hero action focus remains visible|Home inherits Dashboard Look" --max-failures=1
+```
+
+The new default-profile contract computes the focused hero action outline against the immediate hero surface and requires at least 3:1 contrast. The retained materially different Signal + Instrument / Calibrated Steel journey remains green.
+
+Exact-head production checks: **passing** at `befbbb929ef06a5c352419a9ae10114442e2fa8c`
+
+```text
+pnpm build:cloudflare
+pnpm verify:v3-static
+```
+
+Refreshed preview evidence at [http://127.0.0.1:4188/?approval=befbbb9](http://127.0.0.1:4188/?approval=befbbb9): HTTP 200; title `SimEx Dashboard V3`; Evidence Ledger / Brighter Vellum / Light metadata; hero surface `rgb(44, 56, 61)`; solid focus outline `rgb(255, 253, 248)`; computed contrast `11.87:1`; and the visible feedback link retained the exact Issues destination, `_blank`, and `noreferrer`.
+
 ## Scoped review verdict
 
-PASS — reviewed the source/config/schema, generated catalogue digest, landing driver and journeys, service-worker registration behavior, Cloudflare headers, and build-script scoping. The bounded correction re-review covered the real footer owner, semantic-token-only Showcase block, direct browser contract, and exact-head build. `git diff --check` passed. The production build emitted only existing Vite bundle-size and non-module vendor-script warnings; it completed and finalized successfully.
+PASS — reviewed the source/config/schema, generated catalogue digest, landing driver and journeys, service-worker registration behavior, Cloudflare headers, and build-script scoping. The bounded correction re-review covered the real footer owner, semantic-token-only Showcase block, direct browser contract, and exact-head build. The accessibility finding re-review covered the shared-rule cascade, hero-only semantic focus treatment, 3:1 contract, retained varied-theme journey, and production preview. `git diff --check` passed. The production build emitted only existing Vite bundle-size and non-module vendor-script warnings; it completed and finalized successfully.
 
 ## Review focus
 
