@@ -81,7 +81,7 @@ import {
   isAvailableDashboardMode,
   persistDashboardModePreference,
   readDashboardModePreference,
-  reconcileDashboardMode,
+  reconcileLoadedDashboardMode,
   resolveInitialDashboardMode,
 } from "./lib/dashboardMode.js";
 import {
@@ -600,7 +600,7 @@ export default function App() {
       }));
       return;
     }
-    const nextMode = reconcileDashboardMode(mode, dashboard);
+    const nextMode = reconcileLoadedDashboardMode(mode, dashboard);
     if (nextMode === mode) return;
     setMode(nextMode);
     setSurfaceFocusRequest((current) => ({

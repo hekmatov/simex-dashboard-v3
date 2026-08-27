@@ -39,6 +39,11 @@ export function reconcileDashboardMode(mode, dashboard = {}) {
     : isHomeEnabled(dashboard) ? "home" : "view";
 }
 
+export function reconcileLoadedDashboardMode(mode, dashboard = {}) {
+  if (mode === null || mode === undefined) return mode;
+  return reconcileDashboardMode(mode, dashboard);
+}
+
 export function readDashboardModePreference() {
   try {
     const storage = globalThis.localStorage;

@@ -36,6 +36,12 @@ test("mode reconciliation cannot strand an unavailable Home surface", () => {
   assert.equal(dashboardMode.reconcileDashboardMode?.("build", homeOff), "build");
 });
 
+test("post-initialization reconciliation waits for the queued mode render", () => {
+  assert.equal(dashboardMode.reconcileLoadedDashboardMode?.(null, homeOn), null);
+  assert.equal(dashboardMode.reconcileLoadedDashboardMode?.("present", homeOn), "present");
+  assert.equal(dashboardMode.reconcileLoadedDashboardMode?.("home", homeOff), "view");
+});
+
 test("preference helpers acquire browser storage inside their guarded path", () => {
   const values = new Map([[DASHBOARD_MODE_STORAGE_KEY, "build"]]);
   withGlobalLocalStorage({
