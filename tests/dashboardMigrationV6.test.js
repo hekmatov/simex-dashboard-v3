@@ -104,6 +104,13 @@ test("V6 rejects malformed explicit Home and repairs only false plus zero pages"
   assert.throws(() => normalizeDashboardHomePreference({ enabled: false, copy: {} }, { ordinaryPageCount: 0 }));
 });
 
+test("V6 rejects the reserved canonical Home page identity", () => {
+  const dashboard = makeDashboardV6();
+  dashboard.pages[0].id = "home";
+
+  assert.throws(() => validateDashboardConfig(dashboard), /reserved.*home|home.*reserved/i);
+});
+
 test("V6 normalization is idempotent", () => {
   const source = makeDashboardV6();
   assert.deepEqual(migrateDashboardV5ToV6(migrateDashboardV5ToV6(source)), source);

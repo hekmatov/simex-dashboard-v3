@@ -53,8 +53,8 @@ function dashboard() {
     chronoGroups: [],
     pages: [
       {
-        id: "home",
-        label: "Home",
+        id: "overview",
+        label: "Overview",
         sections: [{
           id: "overview",
           title: "Overview",
@@ -79,8 +79,8 @@ test("a V6 bundle candidate retains its creation time and complete nested manife
   assert.equal(candidate.exportedAt, "2026-08-21T09:10:11.000Z");
   assert.deepEqual(candidate.summary.pages, [
     {
-      id: "home",
-      name: "Home",
+      id: "overview",
+      name: "Overview",
       sections: [{
         id: "overview",
         name: "Overview",
@@ -104,7 +104,7 @@ test("a raw valid V3 configuration is reviewable without a creation timestamp", 
   const candidate = parseDashboardPackageCandidate(JSON.stringify(dashboard()));
   assert.equal(candidate.exportedAt, null);
   assert.equal(candidate.config.configVersion, 6);
-  assert.equal(candidate.summary.pages[0].name, "Home");
+  assert.equal(candidate.summary.pages[0].name, "Overview");
 });
 
 test("an invalid package preserves the authoritative V3 validation error", () => {

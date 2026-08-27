@@ -69,6 +69,46 @@ test("V6 bundle parser accepts a version-4 bundle by migrating before validation
   assert.equal(parsed.contentLibrary.mediaItems[parsed.dataSources["image-source"].mediaId].revision, 3);
 });
 
+test("V6 bundle parser accepts a version-5 envelope and normalizes its V5 config", () => {
+  const config = makeDashboardV5();
+  const bytes = imageFixtureBytes("image/png");
+  config.assets["asset-map"] = {
+    ...config.assets["asset-map"],
+    byteLength: bytes.byteLength,
+    width: 2,
+    height: 3,
+    sha256: sha256HexSync(bytes),
+  };
+  config.contentLibrary.mediaItems["media-image-source"] = {
+    ...config.contentLibrary.mediaItems["media-image-source"],
+    byteLength: bytes.byteLength,
+    dimensions: { width: 2, height: 3 },
+  };
+  const legacyBundle = {
+    bundleType: "simex-dashboard-bundle",
+    version: 5,
+    metadata: {
+      exportedAt: null,
+      sourceFingerprints: { "image-source": null },
+      networkDependencies: [],
+    },
+    config,
+    assetPayloads: {
+      "asset-map": {
+        base64: encodeAssetBase64(bytes),
+        byteLength: bytes.byteLength,
+        mediaType: "image/png",
+        sha256: config.assets["asset-map"].sha256,
+      },
+    },
+  };
+
+  const parsed = parseDashboardBundle(JSON.stringify(legacyBundle));
+
+  assert.equal(parsed.configVersion, 6);
+  assert.deepEqual(parsed.home, { enabled: true });
+});
+
 test("V5 bundle round-trips exact Chrono, Scene, and Scene Present temporal review metadata", () => {
   const rows = [{ date: "2027-05-01", cases: 4 }];
   const profile = profileDataset(rows, { date: { interpretation: "temporal", format: "YYYY-MM-DD", timezone: "date-only" } });

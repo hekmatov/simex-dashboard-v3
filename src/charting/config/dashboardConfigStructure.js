@@ -211,6 +211,9 @@ export function validateDashboardStructure(
       page.id,
       "Dashboard page id",
     );
+    if (pageId === "home") {
+      throw new Error('Dashboard page id "home" is reserved for canonical Home.');
+    }
     optionalText(page.label, `Dashboard page "${pageId}" label`);
     optionalText(page.title, `Dashboard page "${pageId}" title`);
     optionalText(page.description, `Dashboard page "${pageId}" description`);
