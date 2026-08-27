@@ -9,6 +9,7 @@ import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
 import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
 import BuildPageNavigation from "./components/build/BuildPageNavigation.jsx";
@@ -75,9 +76,12 @@ import {
 import { mutateSceneDatePosition } from "./lib/sceneDatePositionMutation.js";
 import {
   DASHBOARD_STORAGE_KEY,
+  availableDashboardModes,
   densityForDashboardMode,
+  isAvailableDashboardMode,
   persistDashboardModePreference,
   readDashboardModePreference,
+  reconcileDashboardMode,
   resolveInitialDashboardMode,
 } from "./lib/dashboardMode.js";
 import {
@@ -175,12 +179,21 @@ export default function App() {
   const [packageImportCandidate, setPackageImportCandidate] = React.useState(null);
   const [packageImportBusy, setPackageImportBusy] = React.useState(false);
   const [packageImportError, setPackageImportError] = React.useState("");
-  const [mode, setMode] = React.useState(() => resolveInitialDashboardMode({
-    storedMode: dashboardEntry.surface === "workspace"
-      ? readDashboardModePreference()
-      : null,
-    requestedMode: dashboardEntry.requestedMode,
-  }));
+  const initialModeInputsRef = React.useRef(null);
+  if (initialModeInputsRef.current === null) {
+    initialModeInputsRef.current = {
+      storedMode: dashboardEntry.surface === "workspace"
+        ? readDashboardModePreference()
+        : null,
+      requestedMode: dashboardEntry.requestedMode,
+    };
+  }
+  const initialModeResolvedRef = React.useRef(false);
+  const [mode, setMode] = React.useState(null);
+  const [surfaceFocusRequest, setSurfaceFocusRequest] = React.useState({
+    key: 0,
+    mode: null,
+  });
   const [modeDisabled, setModeDisabled] = React.useState(false);
   const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
   const [buildPanelOpen, setBuildPanelOpen] = React.useState(false);
@@ -350,7 +363,11 @@ export default function App() {
     }
   }
 
-  const commandCrownPageActions = mode === "view" ? (
+  const commandCrownPageActions = mode === "home" ? (
+    <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
+      Dashboard look
+    </button>
+  ) : mode === "view" ? (
     <>
       <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
         Dashboard look
@@ -575,7 +592,28 @@ export default function App() {
   React.useEffect(() => {
     if (!dashboard) return;
     setActivePageId((current) => reconcileActivePageId(dashboard.pages, current));
-  }, [dashboard]);
+    if (!initialModeResolvedRef.current) {
+      initialModeResolvedRef.current = true;
+      setMode(resolveInitialDashboardMode({
+        ...initialModeInputsRef.current,
+        dashboard,
+      }));
+      return;
+    }
+    const nextMode = reconcileDashboardMode(mode, dashboard);
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    setSurfaceFocusRequest((current) => ({
+      key: current.key + 1,
+      mode: nextMode,
+    }));
+  }, [dashboard, mode]);
+
+  React.useEffect(() => {
+    if (!surfaceFocusRequest.key || surfaceFocusRequest.mode !== mode) return;
+    const destination = document.querySelector(`[data-canonical-mode="${mode}"]`);
+    destination?.focus({ preventScroll: true });
+  }, [mode, surfaceFocusRequest]);
 
   function ensureDashboardCommitController(initialDashboard = dashboardRef.current) {
     if (dashboardCommitControllerRef.current === null) {
@@ -955,7 +993,11 @@ export default function App() {
   }
 
   async function requestMode(nextMode) {
-    if (nextMode === mode || dashboardEntry.surface !== "workspace") return;
+    if (
+      nextMode === mode
+      || dashboardEntry.surface !== "workspace"
+      || !isAvailableDashboardMode(nextMode, dashboardRef.current ?? dashboard)
+    ) return;
     setModeDisabled(true);
     setBlockedReason("");
     try {
@@ -977,6 +1019,10 @@ export default function App() {
         ));
       }
       setMode(nextMode);
+      setSurfaceFocusRequest((current) => ({
+        key: current.key + 1,
+        mode: nextMode,
+      }));
       persistDashboardModePreference(nextMode);
     } catch (modeError) {
       setBlockedReason(boundedBackgroundPersistenceError(modeError).message);
@@ -1288,7 +1334,7 @@ export default function App() {
       />
     );
   }
-  if (!dashboard) {
+  if (!dashboard || mode === null) {
     return (
       <main className="app-shell">
         <section className="status-panel">
@@ -1299,21 +1345,11 @@ export default function App() {
     );
   }
 
-  return (
-    <DashboardChartThemeProvider projection={dashboardThemeProjection}>
-    <PlaybackProvider
-      groups={playbackGroups}
-      scenes={dashboard.scenes ?? []}
-      charts={playbackChartCollections.charts}
-      pageCharts={playbackChartCollections.pageCharts}
-      loadedData={dashboard.loadedData ?? {}}
-      profiles={dashboard.datasetProfiles ?? {}}
-      preferredGroupId={dashboard.chronoGroups?.[0]?.id ?? null}
-      timezone={dashboard.timezone}
-      initialPosition="latest"
-    >
+  const appFrame = (
     <AppFrame
       mode={mode}
+      availableModes={availableDashboardModes(dashboard)}
+      showPageNavigation={mode !== "home"}
       onModeRequest={requestMode}
       modeDisabled={modeDisabled || buildDraftLocked}
       blockedReason={blockedReason}
@@ -1359,7 +1395,14 @@ export default function App() {
       theme={dashboardTheme}
       lookDrawerOpen={lookDrawerOpen}
     >
-    <DashboardRenderer
+    {mode === "home" ? (
+      <CanonicalHomeWorkspace
+        dashboard={dashboard}
+        onModeRequest={requestMode}
+        focusRequestKey={surfaceFocusRequest.key}
+      />
+    ) : (
+      <DashboardRenderer
       ref={dashboardRendererRef}
       dashboard={dashboard}
       contentDraftCoordinator={contentDraftCoordinator}
@@ -1498,6 +1541,7 @@ export default function App() {
       themeProjection={dashboardThemeProjection}
       operationError={operationError}
     />
+    )}
     <DashboardLookDrawer
       open={lookDrawerOpen}
       saved={createDashboardLookPreview(savedDashboardTheme)}
@@ -1521,7 +1565,25 @@ export default function App() {
       }}
     />
     </AppFrame>
-    </PlaybackProvider>
+  );
+
+  return (
+    <DashboardChartThemeProvider projection={dashboardThemeProjection}>
+      {mode === "home" ? appFrame : (
+        <PlaybackProvider
+          groups={playbackGroups}
+          scenes={dashboard.scenes ?? []}
+          charts={playbackChartCollections.charts}
+          pageCharts={playbackChartCollections.pageCharts}
+          loadedData={dashboard.loadedData ?? {}}
+          profiles={dashboard.datasetProfiles ?? {}}
+          preferredGroupId={dashboard.chronoGroups?.[0]?.id ?? null}
+          timezone={dashboard.timezone}
+          initialPosition="latest"
+        >
+          {appFrame}
+        </PlaybackProvider>
+      )}
     </DashboardChartThemeProvider>
   );
 }

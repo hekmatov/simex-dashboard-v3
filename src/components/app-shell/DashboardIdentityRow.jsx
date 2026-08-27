@@ -11,6 +11,7 @@ export default function DashboardIdentityRow({
   scenarioNode,
   pageActions,
   pageNavigationNode,
+  showPageNavigation = true,
 }) {
   const scenarioLabel = dashboardIdentity.scenarioLabel || "Scenario unavailable";
   const title = dashboardIdentity.title || dashboardIdentity.programLabel || "SimEx Dashboard";
@@ -36,7 +37,7 @@ export default function DashboardIdentityRow({
         )}
         {scenarioNode}
       </div>
-      {pageNavigationNode ?? <nav className="dashboard-command-page-scroller" aria-label="Dashboard pages">
+      {showPageNavigation ? (pageNavigationNode ?? <nav className="dashboard-command-page-scroller" aria-label="Dashboard pages">
         {pages.map((page) => {
           const active = page.id === activePage?.id;
           return (
@@ -52,7 +53,7 @@ export default function DashboardIdentityRow({
             </button>
           );
         })}
-      </nav>}
+      </nav>) : null}
       <div className="dashboard-command-pinned-actions" data-command-crown-pinned-actions="true">
         {pageActions}
       </div>

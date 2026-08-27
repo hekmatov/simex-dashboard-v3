@@ -245,6 +245,16 @@ test("same-MediaItem replacement still rejects a genuinely over-budget next asse
   }), /200 MiB authored-asset budget/i);
 });
 
+test("canonical Home cannot receive static content because it is not a Page", () => {
+  const dashboard = emptyDashboard();
+  assert.throws(() => prepareStaticPanelTransaction({
+    dashboard,
+    operation: "create",
+    ...imagePayload(),
+    destination: { pageId: "home", sectionId: "response" },
+  }), /destination page|page.*not found|invalid destination/i);
+});
+
 function emptyDashboard() {
   const dashboard = makeDashboardV6();
   dashboard.pages[0].sections[0].panels = [];

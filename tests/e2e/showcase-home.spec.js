@@ -19,7 +19,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("standalone Home orients visitors and routes into both domains", async ({ page }) => {
+test("application-owned Home is passive and enters the first ordinary Page through View", async ({ page }) => {
   const bootstrapResponse = page.waitForResponse((response) => (
     response.url().endsWith("/companion/bootstrap")
   ));
@@ -27,15 +27,23 @@ test("standalone Home orients visitors and routes into both domains", async ({ p
   await expectLandingReady(page);
   expect((await bootstrapResponse).status()).toBe(404);
   await expect(page.locator("h1")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toHaveCount(0);
+  await expect(page.locator('[data-canonical-mode="home"]')).toHaveAttribute("tabindex", "-1");
+  await expect(page.locator(".playback-surface, .present-workspace, .dashboard-canvas")).toHaveCount(0);
 
   await openDashboardFromLanding(page);
   await expect(
-    page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" }),
+    page.getByRole("heading", { name: "Old Homepage Content" }),
   ).toBeVisible();
+  await expect(page.locator('[data-canonical-mode="view"]')).toBeFocused();
+  await expect(page.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toBeVisible();
   await expect(page.locator("h1")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await expectLandingReady(page);
+  await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
 });
 
 test("Home exposes the exact public beta orientation contract", async ({ page }) => {
@@ -132,36 +140,37 @@ test("Home inherits Dashboard Look semantic tokens and exposes repository Issues
   expect(after.cta).not.toEqual(before.cta);
   expect(after.faq).not.toEqual(before.faq);
   await expect(page.getByRole("link", { name: "Report a bug / request a feature" }))
-    .toHaveAttribute("href", "https://github.com/hekmatov/simex-dashboard-v3/issues");
+    .toHaveAttribute("href", LANDING_CONTRACT.issuesLink);
   await expect(page.getByRole("link", { name: "Report a bug / request a feature" }))
     .toHaveAttribute("target", "_blank");
   await expect(page.getByRole("link", { name: "Report a bug / request a feature" }))
     .toHaveAttribute("rel", "noreferrer");
 });
 
-test("saved v3 configuration preserves Home and authored dashboard changes", async ({ page, request }) => {
+test("saved V6 configuration preserves canonical Home availability and authored dashboard changes", async ({ page, request }) => {
   const response = await request.get("http://127.0.0.1:4173/config/dashboard.json");
-  const savedV3 = await response.json();
-  const biomedical = savedV3.pages.find(({ id }) => id === "biomedical");
+  const savedV6 = await response.json();
+  const biomedical = savedV6.pages.find(({ id }) => id === "biomedical");
   biomedical.title = "Saved biomedical briefing";
   biomedical.sections[0].panels[0].title = "Saved cumulative case view";
   biomedical.sections[0].panels[0].layout.size = "wide";
 
   await page.addInitScript(({ key, config }) => {
     localStorage.setItem(key, JSON.stringify(config));
-  }, { key: STORAGE_KEY, config: savedV3 });
+  }, { key: STORAGE_KEY, config: savedV6 });
   await openLanding(page);
 
   await expectLandingReady(page);
   const persisted = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY);
-  expect(persisted.configVersion).toBe(3);
-  expect(persisted.pages[0].pageType).toBe("landing");
-  expect(persisted.pages[0].landing.hero.primaryAction.pageId).toBe("biomedical");
+  expect(persisted.configVersion).toBe(6);
+  expect(persisted.home).toEqual({ enabled: true });
+  expect(persisted.pages.some(({ id }) => id === "home")).toBe(false);
   const persistedBiomedical = persisted.pages.find(({ id }) => id === "biomedical");
   expect(persistedBiomedical.title).toBe("Saved biomedical briefing");
   expect(persistedBiomedical.sections[0].panels[0].title).toBe("Saved cumulative case view");
   expect(persistedBiomedical.sections[0].panels[0].layout.size).toBe("wide");
 
+  await openDashboardFromLanding(page);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Saved biomedical briefing" })).toBeVisible();
 });

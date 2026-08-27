@@ -13,6 +13,12 @@ const vite = await createServer({
 const landingModule = await vite
   .ssrLoadModule("/src/components/LandingPage.jsx")
   .catch(() => null);
+const canonicalContentModule = await vite
+  .ssrLoadModule("/src/home/canonicalHomeContent.js")
+  .catch(() => null);
+const canonicalWorkspaceModule = await vite
+  .ssrLoadModule("/src/components/home/CanonicalHomeWorkspace.jsx")
+  .catch(() => null);
 await vite.close();
 
 const page = {
@@ -162,4 +168,44 @@ test("secondary anchor action is omitted unless its target section renders", () 
 
   assert.doesNotMatch(html, /href="#tour"/);
   assert.doesNotMatch(html, /showcase-tour/);
+});
+
+test("canonical Home renders immutable source content without consuming a package Page", () => {
+  assert.equal(typeof canonicalWorkspaceModule?.default, "function");
+  assert.equal(canonicalContentModule?.CANONICAL_HOME_CONTENT?.faq?.items?.length, 7);
+  assert.equal(
+    canonicalContentModule?.CANONICAL_HOME_CONTENT?.resources?.repository?.destination,
+    "https://github.com/hekmatov/simex-dashboard-v3",
+  );
+  assert.deepEqual(
+    canonicalContentModule?.CANONICAL_HOME_CONTENT?.capabilities?.map(({ title }) => title),
+    ["View", "Build", "Present"],
+  );
+  assert.equal(Object.isFrozen(canonicalContentModule?.CANONICAL_HOME_CONTENT), true);
+
+  const html = canonicalWorkspaceModule?.default
+    ? renderToStaticMarkup(React.createElement(canonicalWorkspaceModule.default, {
+      dashboard: { pages: [{ id: "ordinary-page", title: "Ordinary Page" }] },
+      onModeRequest() {},
+      focusRequestKey: 0,
+      baseUrl: "/",
+    }))
+    : "";
+  assert.match(html, /data-canonical-mode="home"/);
+  assert.match(html, /tabindex="-1"/);
+  assert.match(html, /Open the dashboard/);
+  assert.match(html, /How do I add a chart\?/);
+  assert.doesNotMatch(html, /data-canonical-page-id=/);
+  assert.doesNotMatch(html, /ordinary-page|Ordinary Page/);
+});
+
+test("canonical Home primary action dispatches View instead of a package Page id", () => {
+  const requests = [];
+  const action = landingModule?.resolveLandingPrimaryAction({
+    landing: canonicalContentModule?.CANONICAL_HOME_CONTENT,
+    onModeRequest: (mode) => requests.push(mode),
+  });
+  assert.equal(action?.label, "Open the dashboard");
+  action?.activate();
+  assert.deepEqual(requests, ["view"]);
 });

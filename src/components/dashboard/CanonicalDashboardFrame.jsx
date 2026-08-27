@@ -1,4 +1,5 @@
 import React from "react";
+import { CANONICAL_HOME_REPOSITORY_URL } from "../../home/canonicalHomeContent.js";
 
 export default function CanonicalDashboardFrame({
   mode,
@@ -11,15 +12,21 @@ export default function CanonicalDashboardFrame({
   pageContent,
   overlayLayer,
   footer,
+  landmarkRef,
+  landmarkTabIndex,
+  landmarkLabelledBy,
 }) {
   return (
     <main
+      ref={landmarkRef}
       className={`app-shell canonical-dashboard-frame ${mode}-shell${mode === "build" ? " build-workspace" : ""}`}
       data-canonical-page-id={pageId}
       data-canonical-mode={mode}
       data-page-type={pageType}
       data-dashboard-map-open={mode === "build" ? String(buildPanelOpen) : undefined}
       data-build-static-authoring-open={mode === "build" ? String(buildStaticAuthoringOpen) : undefined}
+      tabIndex={landmarkTabIndex ?? (["home", "view"].includes(mode) ? -1 : undefined)}
+      aria-labelledby={landmarkLabelledBy}
     >
       <div className="canonical-dashboard-header">{dashboardHeader}</div>
       {workspaceControls ? (
@@ -48,11 +55,8 @@ export function CanonicalDashboardFooter({ dashboard }) {
 }
 
 export function feedbackUrlForDashboard(dashboard) {
-  const destination = dashboard?.pages
-    ?.find((page) => page?.landing?.resources?.repository?.destination)
-    ?.landing?.resources?.repository?.destination;
   try {
-    const repository = new URL(destination);
+    const repository = new URL(CANONICAL_HOME_REPOSITORY_URL);
     if (!["http:", "https:"].includes(repository.protocol)) throw new TypeError();
     repository.pathname = `${repository.pathname.replace(/\/+$/, "")}/issues`;
     repository.search = "";

@@ -15,17 +15,40 @@ export default function LandingPage({
   onNavigate,
   baseUrl = import.meta.env.BASE_URL,
 }) {
-  const [previewVisible, setPreviewVisible] = React.useState(
-    Boolean(page?.landing?.previewAsset?.src),
-  );
   if (!hasLandingPresentation(page)) {
     return null;
   }
+  return (
+    <LandingPresentation
+      landing={page.landing}
+      pages={pages}
+      onNavigate={onNavigate}
+      baseUrl={baseUrl}
+    />
+  );
+}
 
-  const landing = page.landing;
+export function LandingPresentation({
+  landing,
+  pages,
+  onNavigate,
+  onModeRequest,
+  baseUrl = import.meta.env.BASE_URL,
+}) {
+  const [previewVisible, setPreviewVisible] = React.useState(
+    Boolean(landing?.previewAsset?.src),
+  );
+  if (!isRecord(landing) || !isRecord(landing.hero) || !nonEmptyString(landing.hero.headline)) {
+    return null;
+  }
+
   const hero = landing.hero;
-  const primaryAction = recordWithStrings(hero.primaryAction, ["label", "pageId"]);
-  const primaryTarget = validPageTarget(primaryAction?.pageId, pages);
+  const primaryAction = resolveLandingPrimaryAction({
+    landing,
+    pages,
+    onNavigate,
+    onModeRequest,
+  });
   const proofPoints = recordsWithStrings(landing.proofPoints, ["title", "description"]);
   const capabilities = recordsWithStrings(
     landing.capabilities,
@@ -61,8 +84,8 @@ export default function LandingPage({
           <h1 id="showcase-landing-title">{hero.headline}</h1>
           {nonEmptyString(hero.summary) && <p className="showcase-hero-summary">{hero.summary}</p>}
           <div className="showcase-actions">
-            {primaryTarget && (
-              <button type="button" onClick={() => onNavigate(primaryTarget)}>
+            {primaryAction && (
+              <button type="button" onClick={primaryAction.activate}>
                 {primaryAction.label}
               </button>
             )}
@@ -169,6 +192,28 @@ export default function LandingPage({
       )}
     </article>
   );
+}
+
+export function resolveLandingPrimaryAction({
+  landing,
+  pages,
+  onNavigate,
+  onModeRequest,
+} = {}) {
+  const configured = landing?.hero?.primaryAction;
+  if (!isRecord(configured) || !nonEmptyString(configured.label)) return null;
+  if (nonEmptyString(configured.mode) && typeof onModeRequest === "function") {
+    return Object.freeze({
+      label: configured.label,
+      activate: () => onModeRequest(configured.mode),
+    });
+  }
+  const pageId = validPageTarget(configured.pageId, pages);
+  if (!pageId || typeof onNavigate !== "function") return null;
+  return Object.freeze({
+    label: configured.label,
+    activate: () => onNavigate(pageId),
+  });
 }
 
 function validPageTarget(pageId, pages) {

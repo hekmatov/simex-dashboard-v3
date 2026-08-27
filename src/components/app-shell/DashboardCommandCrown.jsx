@@ -6,6 +6,8 @@ import ModeSwitcher from "./ModeSwitcher.jsx";
 
 export default function DashboardCommandCrown({
   mode,
+  availableModes,
+  showPageNavigation = true,
   dashboardIdentity,
   activePage,
   pages,
@@ -28,12 +30,14 @@ export default function DashboardCommandCrown({
         <span className="app-frame-identity">SimEx</span>
         <ModeSwitcher
           mode={mode}
+          availableModes={availableModes}
           onModeRequest={onModeRequest}
           disabled={disabled}
           disabledReason={disabledReason}
         />
       </header>
       <DashboardIdentityRow
+        showPageNavigation={showPageNavigation}
         dashboardIdentity={dashboardIdentity}
         activePage={activePage}
         pages={pages}

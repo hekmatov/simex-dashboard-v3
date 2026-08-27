@@ -93,12 +93,10 @@ test("missing, deleted, and unsupported destinations retain their exact invalid 
   assert.equal(missingSection.destination.sectionId, "deleted-section");
   assert.equal(missingSection.errors[0].code, "DESTINATION_SECTION_MISSING");
 
-  const unsupported = resolveDestination({ pageId: "home", sectionId: "home-section" }, dashboard);
-  assert.equal(unsupported.status, "invalid");
-  assert.equal(unsupported.destination.pageLabel, "Home");
-  assert.equal(unsupported.destination.sectionLabel, "Welcome");
-  assert.equal(unsupported.errors[0].code, "DESTINATION_UNSUPPORTED");
-  assert.equal(unsupported.errors[0].retryable, true);
+  const canonicalHome = resolveDestination({ pageId: "home", sectionId: "home-section" }, dashboard);
+  assert.equal(canonicalHome.status, "invalid");
+  assert.equal(canonicalHome.destination.pageId, "home");
+  assert.equal(canonicalHome.errors[0].code, "DESTINATION_PAGE_MISSING");
 });
 
 test("a destination that becomes unsupported produces a new invalid revision and zero dashboard writes", () => {
@@ -139,12 +137,6 @@ function dashboardFixture() {
             panels: [{ id: "panel-gamma", chart: { id: "chart-gamma", title: "Teams" } }],
           },
         ],
-      },
-      {
-        id: "home",
-        label: "Home",
-        pageType: "landing",
-        sections: [{ id: "home-section", title: "Welcome", panels: [] }],
       },
     ],
   };

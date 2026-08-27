@@ -5,6 +5,8 @@ import PhoneModeNotice from "./PhoneModeNotice.jsx";
 
 export default function AppFrame({
   mode,
+  availableModes,
+  showPageNavigation = true,
   onModeRequest,
   modeDisabled = false,
   blockedReason = "",
@@ -99,6 +101,8 @@ export default function AppFrame({
       />}
       <DashboardCommandCrown
         mode={mode}
+        availableModes={availableModes}
+        showPageNavigation={showPageNavigation}
         dashboardIdentity={dashboardIdentity}
         activePage={activePage}
         pages={pages}

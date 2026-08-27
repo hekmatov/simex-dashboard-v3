@@ -1,5 +1,6 @@
-export const DASHBOARD_MODES = Object.freeze(["view", "build", "present"]);
-export const DEFAULT_DASHBOARD_MODE = "view";
+export const DASHBOARD_MODES = Object.freeze(["home", "view", "build", "present"]);
+export const DEFAULT_DASHBOARD_MODE = "home";
+const DASHBOARD_MODES_WITHOUT_HOME = Object.freeze(["view", "build", "present"]);
 export const DASHBOARD_STORAGE_KEY =
   "simex-dashboard-config-v3-three-mode-v1";
 export const DASHBOARD_MODE_STORAGE_KEY = "simex-dashboard-ui-mode-v1";
@@ -14,10 +15,28 @@ export function isDashboardMode(mode) {
   return DASHBOARD_MODES.includes(mode);
 }
 
-export function resolveInitialDashboardMode({ storedMode, requestedMode } = {}) {
-  if (isDashboardMode(requestedMode)) return requestedMode;
-  if (isDashboardMode(storedMode)) return storedMode;
-  return DEFAULT_DASHBOARD_MODE;
+export function isHomeEnabled(dashboard = {}) {
+  return dashboard?.home?.enabled !== false;
+}
+
+export function availableDashboardModes(dashboard = {}) {
+  return isHomeEnabled(dashboard) ? DASHBOARD_MODES : DASHBOARD_MODES_WITHOUT_HOME;
+}
+
+export function isAvailableDashboardMode(mode, dashboard = {}) {
+  return availableDashboardModes(dashboard).includes(mode);
+}
+
+export function resolveInitialDashboardMode({ storedMode, requestedMode, dashboard } = {}) {
+  if (isAvailableDashboardMode(requestedMode, dashboard)) return requestedMode;
+  if (isAvailableDashboardMode(storedMode, dashboard)) return storedMode;
+  return isHomeEnabled(dashboard) ? "home" : "view";
+}
+
+export function reconcileDashboardMode(mode, dashboard = {}) {
+  return isAvailableDashboardMode(mode, dashboard)
+    ? mode
+    : isHomeEnabled(dashboard) ? "home" : "view";
 }
 
 export function readDashboardModePreference() {

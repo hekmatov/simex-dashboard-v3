@@ -1,15 +1,22 @@
 import React from "react";
 
 const MODE_LABELS = {
+  home: "Home",
   view: "View",
   build: "Build",
   present: "Present",
 };
 
-export default function ModeSwitcher({ mode, onModeRequest, disabled = false, disabledReason = "" }) {
+export default function ModeSwitcher({
+  mode,
+  availableModes = Object.keys(MODE_LABELS),
+  onModeRequest,
+  disabled = false,
+  disabledReason = "",
+}) {
   return (
     <div className="mode-switcher" aria-label="Dashboard mode">
-      {Object.entries(MODE_LABELS).map(([value, label]) => (
+      {availableModes.map((value) => (
         <button
           key={value}
           type="button"
@@ -19,7 +26,7 @@ export default function ModeSwitcher({ mode, onModeRequest, disabled = false, di
           disabled={disabled}
           onClick={() => onModeRequest(value)}
         >
-          {label}
+          {MODE_LABELS[value] ?? value}
         </button>
       ))}
       {disabled && disabledReason && (

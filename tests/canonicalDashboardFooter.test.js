@@ -10,25 +10,18 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const { CanonicalDashboardFooter } = await vite.ssrLoadModule(
+const { CanonicalDashboardFooter, feedbackUrlForDashboard } = await vite.ssrLoadModule(
   "/src/components/dashboard/CanonicalDashboardFrame.jsx",
 );
 await vite.close();
 
-test("live footer derives the public repository Issues destination", () => {
+test("live footer derives the public repository Issues destination without package Pages", () => {
+  assert.equal(
+    feedbackUrlForDashboard({ pages: [] }),
+    "https://github.com/hekmatov/simex-dashboard-v3/issues",
+  );
   const html = renderToStaticMarkup(React.createElement(CanonicalDashboardFooter, {
-    dashboard: {
-      pages: [{
-        id: "home",
-        landing: {
-          resources: {
-            repository: {
-              destination: "https://github.com/hekmatov/simex-dashboard-v3",
-            },
-          },
-        },
-      }],
-    },
+    dashboard: { pages: [] },
   }));
 
   assert.match(

@@ -1,15 +1,39 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
+import * as dashboardMode from "../src/lib/dashboardMode.js";
+
+const {
   DASHBOARD_MODE_STORAGE_KEY,
   persistDashboardModePreference,
   readDashboardModePreference,
   resolveInitialDashboardMode,
-} from "../src/lib/dashboardMode.js";
+} = dashboardMode;
 
-test("invalid preference falls back to View", () => {
-  assert.equal(resolveInitialDashboardMode({ storedMode: "owner" }), "view");
+const homeOn = { home: { enabled: true } };
+const homeOff = { home: { enabled: false } };
+
+test("mode availability keeps canonical Home first and removes it when disabled", () => {
+  assert.deepEqual(dashboardMode.DASHBOARD_MODES, ["home", "view", "build", "present"]);
+  assert.deepEqual(dashboardMode.availableDashboardModes?.(homeOn), dashboardMode.DASHBOARD_MODES);
+  assert.deepEqual(dashboardMode.availableDashboardModes?.(homeOff), ["view", "build", "present"]);
+  assert.equal(Object.isFrozen(dashboardMode.availableDashboardModes?.(homeOn)), true);
+  assert.equal(Object.isFrozen(dashboardMode.availableDashboardModes?.(homeOff)), true);
+  assert.equal(dashboardMode.isAvailableDashboardMode?.("home", homeOn), true);
+  assert.equal(dashboardMode.isAvailableDashboardMode?.("home", homeOff), false);
+});
+
+test("startup resolution honors available requests, memory, and Home availability", () => {
+  assert.equal(resolveInitialDashboardMode({ requestedMode: "home", dashboard: homeOff }), "view");
+  assert.equal(resolveInitialDashboardMode({ storedMode: "build", dashboard: homeOn }), "build");
+  assert.equal(resolveInitialDashboardMode({ dashboard: homeOn }), "home");
+  assert.equal(resolveInitialDashboardMode({ dashboard: homeOff }), "view");
+  assert.equal(resolveInitialDashboardMode({ storedMode: "owner", dashboard: homeOn }), "home");
+});
+
+test("mode reconciliation cannot strand an unavailable Home surface", () => {
+  assert.equal(dashboardMode.reconcileDashboardMode?.("home", homeOff), "view");
+  assert.equal(dashboardMode.reconcileDashboardMode?.("build", homeOff), "build");
 });
 
 test("preference helpers acquire browser storage inside their guarded path", () => {

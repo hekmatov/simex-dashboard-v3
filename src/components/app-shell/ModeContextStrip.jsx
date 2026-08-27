@@ -1,6 +1,7 @@
 import React from "react";
 
 const MODE_CONTEXT_LABELS = {
+  home: "Home context",
   view: "View context",
   build: "Build context",
   present: "Present context",
