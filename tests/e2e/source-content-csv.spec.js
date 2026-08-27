@@ -57,21 +57,25 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   await intake.getByRole("button", { name: "Add to dashboard" }).click();
   await closeManager(page);
   await seedJourneyFTemporalUse(page);
+  await page.route("**/data/journey-f-temporal.csv", (route) => route.fulfill({
+    contentType: "text/csv",
+    body: CHART_CSV.buffer.toString("utf8"),
+  }));
   await page.reload();
   await expect(page.getByLabel("Dashboard mode")).toBeVisible({ timeout: 15_000 });
   await openBiomedicalBuild(page, { width: 1440, height: 900 });
   const target = await temporalReplacementTarget(page);
+  expect(target.origin).toBe("linked-project");
   const replacement = changedTemporalCsv();
   const before = await temporalReviewSnapshot(page, target);
 
   manager = await openDataSourceManager(page);
   await selectSourceRow(manager, target.displayName);
   let detail = manager.getByRole("region", { name: "Content detail" });
-  const triggerName = target.origin === "linked-project" ? "Relink" : "Replace file";
-  let trigger = detail.getByRole("button", { name: triggerName, exact: true });
+  let trigger = detail.getByRole("button", { name: "Relink", exact: true });
   await trigger.click();
-  let dialog = page.getByRole("dialog", { name: new RegExp(`Replace ${escapeRegExp(target.displayName)} file`) });
-  await dialog.getByLabel("Replacement CSV").setInputFiles(replacement);
+  let dialog = page.getByRole("dialog", { name: `Relink ${target.displayName}?` });
+  await dialog.getByLabel("Relink CSV").setInputFiles(replacement);
   await expect(dialog.getByRole("alert")).toHaveAttribute("data-replacement-reason", "requires-temporal-review");
   const impacts = dialog.getByRole("region", { name: "Affected temporal content" });
   await expect(impacts).toContainText(`Chrono Group: ${target.groupName}`);
@@ -83,15 +87,25 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   expect(await temporalReviewSnapshot(page, target)).toEqual(before);
 
   await trigger.click();
-  dialog = page.getByRole("dialog", { name: new RegExp(`Replace ${escapeRegExp(target.displayName)} file`) });
-  await dialog.getByLabel("Replacement CSV").setInputFiles(replacement);
-  await dialog.getByRole("button", { name: "Confirm replacement and mark affected temporal content" }).click();
+  dialog = page.getByRole("dialog", { name: `Relink ${target.displayName}?` });
+  await dialog.getByLabel("Relink CSV").setInputFiles(replacement);
+  await dialog.getByRole("button", { name: "Confirm relink and mark affected temporal content" }).click();
   await expect(dialog).toHaveCount(0);
   detail = manager.getByRole("region", { name: "Content detail" });
   await expect(detail).toContainText("needs-review");
   const marked = await temporalReviewSnapshot(page, target);
   expect(marked.sourceId).toBe(before.sourceId);
-  expect(marked.rows).not.toEqual(before.rows);
+  expect(before.source).toEqual({
+    kind: "csv",
+    path: "data/journey-f-temporal.csv",
+    provenance: { label: "Journey F linked project" },
+  });
+  expect(marked.source).toMatchObject({
+    kind: "dataset",
+    type: "uploadedCsv",
+    fileName: changedTemporalCsv().name,
+  });
+  expect(marked.entryOrigin).toBe("linked-project");
   expect(marked.groupReview).toEqual({ status: "needs-review", sourceIds: [target.sourceId] });
   expect(marked.sceneReview).toEqual({ status: "needs-review", sourceIds: [target.sourceId] });
   expect(marked.presentReview).toEqual({ status: "degraded", sourceIds: [target.sourceId] });
@@ -406,12 +420,18 @@ async function seedJourneyFTemporalUse(page) {
     const sourceId = Object.keys(dashboard.contentLibrary.sourceEntries)
       .find((id) => dashboard.contentLibrary.sourceEntries[id].displayName === "Journey F temporal CSV");
     if (!sourceId) throw new Error("Journey F manager source was not committed.");
-    dashboard.dataSources[sourceId].csvText = [
-      "date,cases,region",
-      "2026-01-01,4,North",
-      "2026-01-02,7,South",
-      "2026-01-03,9,North",
-    ].join("\n");
+    const path = "data/journey-f-temporal.csv";
+    const provenance = { label: "Journey F linked project" };
+    dashboard.contentLibrary.sourceEntries[sourceId].origin = "linked-project";
+    dashboard.contentLibrary.sourceEntries[sourceId].provenance = { path };
+    dashboard.dataSources[sourceId] = { kind: "csv", path, provenance };
+    dashboard.datasetProfiles[sourceId] = {
+      ...dashboard.datasetProfiles[sourceId],
+      sourceId,
+      kind: "csv",
+      path,
+      provenance,
+    };
     const page = dashboard.pages.find(({ id }) => id === "biomedical") ?? dashboard.pages[0];
     const chart = page.sections.flatMap(({ panels }) => panels).map((placement) => placement.chart ?? placement)
       .find(({ configVersion, typeId }) => configVersion === 3 && typeId === "line");
@@ -478,13 +498,12 @@ async function temporalReplacementTarget(page) {
         const group = (dashboard.chronoGroups ?? []).find(({ id, members }) => (
           id === scene.chronoGroupId && members?.some((member) => member.chartId === chartId)
         ));
-        if (field && entry && source?.type === "uploadedCsv" && typeof source.csvText === "string" && group) {
+        if (field && entry && (source?.kind === "csv" || source?.type === "uploadedCsv") && group) {
           return {
             sourceId: chart.sourceId,
             displayName: entry.displayName,
             origin: entry.origin,
             temporalField: field,
-            sourceText: source.csvText,
             groupId: group.id,
             groupName: group.name,
             sceneId: scene.id,
@@ -514,16 +533,13 @@ async function temporalReviewSnapshot(page, target) {
     const scene = dashboard.scenes.find(({ id }) => id === targetValue.sceneId);
     return {
       sourceId: targetValue.sourceId,
-      rows: dashboard.dataSources[targetValue.sourceId].csvText,
+      source: dashboard.dataSources[targetValue.sourceId],
+      entryOrigin: dashboard.contentLibrary.sourceEntries[targetValue.sourceId].origin,
       groupReview: group.temporalReview ?? null,
       sceneReview: scene.temporalReview ?? null,
       presentReview: scene.present?.temporalReview ?? null,
     };
   }, { key: STORAGE_KEY, targetValue: target });
-}
-
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function seedUploadedMapSource(page) {

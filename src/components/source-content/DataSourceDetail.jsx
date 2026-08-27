@@ -29,7 +29,8 @@ export default function DataSourceDetail({
   const [importedRemapTargets, setImportedRemapTargets] = React.useState([]);
   const isGeoJson = item.kind === "geojson";
   const requiresRepair = ["missing", "corrupt", "needs-relink", "needs-review"].includes(item.record.health);
-  const repairLabel = item.record.origin === "linked-project" || item.record.health === "needs-relink"
+  const relinkSource = item.record.origin === "linked-project" || item.record.health === "needs-relink";
+  const repairLabel = relinkSource
     ? "Relink"
     : requiresRepair ? "Repair source" : "Replace file";
   const replacementPlanRef = React.useRef(null);
@@ -147,7 +148,7 @@ export default function DataSourceDetail({
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
       <ContentActionDialog
         open={replaceOpen}
-        action={isGeoJson ? "replace-geojson" : "replace-csv"}
+        action={isGeoJson ? "replace-geojson" : relinkSource ? "relink-csv" : "replace-csv"}
         itemLabel={item.record.displayName}
         busy={replacementBusy}
         error={replacementError}

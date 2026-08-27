@@ -437,3 +437,10 @@ This is an evidence-recording task only. It added no production or test changes,
 - Final owner command: `node --test tests/structureCommandModel.test.js` — **4/4 passing**, zero fail/skip/todo. No mounted journey was necessary because the changed behavior is wholly represented by the pure saved-draft result; no build or broad gate was rerun.
 - The affected-boundary review range is `d825e504034e64c3b4083a63ad0e56f4fd474833..HEAD`, recorded in `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/beta-pre-release-closure-report.md`.
 - Fidelity status is corrected to **35/36 Passing** with SCM-C08 Partial for missing independent mounted linked-CSV Relink evidence. The four-title historical unit uncertainty remains unchanged and explicitly unreconstructed.
+
+## Final SCM-C08 linked-project CSV Relink evidence — 2026-08-27
+
+- RED: `tests/contentActionDialog.test.js` was **9/10 passing** because `action="relink-csv"` rendered no dialog. GREEN: **10/10 passing** after adding the explicit presentation mode while retaining `replace-csv` wording and the shared validated CSV transaction.
+- Journey F fixture now uses a canonical linked `kind:"csv"` path with matching dataset profile/provenance and a controlled viable response. The final exact title is **1/1 passing** in Chromium (45.0 s / 47.0 s total).
+- Inspected facts: exact Relink trigger/title/input/temporal-confirmation wording; Cancel closes the dialog and restores trigger focus; confirmation retains sourceId and linked logical origin while publishing the validated candidate; Chrono Group and Scene remain `needs-review`, Scene-present remains `degraded`, and presentation protocol remains status-free.
+- SCM-C08 is promoted to Passing at engine, UI/composition, and real-use layers. All 36 amendment rows are now Passing for master review. Existing beta build/unit/browser/PS-04 evidence was not rerun.

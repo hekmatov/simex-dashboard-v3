@@ -96,3 +96,11 @@ The four established corrections, bounded deterministic assertion repair, explic
 - Final exact verification is **4/4 passing** for `node --test tests/structureCommandModel.test.js`. The pure draft owner establishes the changed boundary completely, so no browser, build, broad unit, or pre-release rerun was added.
 - Fidelity reconciliation is truthful at **35/36 Passing**: SCM-S06, SCM-S13, and SCM-C04 are fully Passing; SCM-C08 remains Partial because no independent mounted linked-CSV Relink checkpoint was retained. The prior amendment-wide completion claim is retracted.
 - The historical reporter still lacks four exact unit titles. They remain disclosed and unreconstructed; no ledger was invented.
+
+## Final SCM-C08 closure — 2026-08-27
+
+- `DataSourceDetail` selects explicit `relink-csv` presentation for linked-project/needs-relink CSV while preserving the existing validated transaction and stable source identity; stored/uploaded CSV remains `replace-csv`.
+- Deterministic RED **9/10** → GREEN **10/10** in `tests/contentActionDialog.test.js` proves the complete Replace/Relink wording split.
+- Exact Journey F is **1/1 GREEN** with a viable linked-project CSV and verifies Cancel/focus return, confirm, stable sourceId, linked logical origin, and retained temporal-review semantics.
+- Affected-boundary review of `97e9e57edc628def4a156938f952a9134b055968..HEAD`: **APPROVED**. `relink-csv` changes only truthful dialog presentation; it reuses the existing validated CSV transaction and leaves cancellation, focus restoration, temporal review, and error/success handling intact.
+- SCM-C08 is Passing; the amendment matrix is **36/36 Passing** for engine, mounted UI/composition, and inspected fidelity. Four unreconstructed historical unit titles remain disclosed, and master acceptance remains pending.

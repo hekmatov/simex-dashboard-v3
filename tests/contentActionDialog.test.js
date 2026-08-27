@@ -78,6 +78,30 @@ test("blocked CSV replacement exposes a typed reason, import-as-new, and guided 
   assert.doesNotMatch(html, />Delete</);
 });
 
+test("CSV action dialog distinguishes stored replacement from linked-project relink wording", () => {
+  const stored = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "replace-csv",
+    itemLabel: "Stored cases",
+    replacementReady: true,
+  }));
+  assert.match(stored, /Replace Stored cases file\?/u);
+  assert.match(stored, />Replacement CSV</u);
+  assert.match(stored, />Replace file<\/button>/u);
+  assert.doesNotMatch(stored, /Relink/u);
+
+  const linked = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "relink-csv",
+    itemLabel: "Linked cases",
+    replacementReady: true,
+  }));
+  assert.match(linked, /Relink Linked cases\?/u);
+  assert.match(linked, />Relink CSV</u);
+  assert.match(linked, />Relink<\/button>/u);
+  assert.doesNotMatch(linked, /Replace Linked cases|Replacement CSV|>Replace file</u);
+});
+
 test("temporal CSV replacement exposes an explicit warning confirmation without import-as-new", () => {
   const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
     open: true,

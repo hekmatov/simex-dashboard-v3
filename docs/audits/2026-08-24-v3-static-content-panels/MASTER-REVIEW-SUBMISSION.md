@@ -122,3 +122,11 @@ The structure-command owner now preserves landings without hero/primaryAction, r
 The controlling package no longer claims amendment-wide fidelity completion. SCM-S06, SCM-S13, and SCM-C04 are reconciled to Passing from their retained implementation/browser evidence. SCM-C08 remains Partial because the implemented linked-CSV Relink branch lacks an independently retained mounted checkpoint. Current disposition is therefore **35/36 amendment rows Passing, 1/36 Partial**. Engine and UI implementation are present for the partial branch, but its real-use fidelity is not promoted.
 
 The cumulative browser result remains 186/186 and the final build/PS-04 results remain green; those established facts were not redundantly rerun. The four exact unit titles lost to the earlier truncated reporter remain disclosed rather than reconstructed. This is a revised submission for master review, not acceptance.
+
+## Final SCM-C08 closure submission — 2026-08-27
+
+The accepted linked-project CSV Relink gap is closed through the existing `DataSourceDetail` → `ContentActionDialog` carrier and unchanged validated CSV transaction. Stored/uploaded CSV retains **Replace file**; linked-project/needs-relink CSV uses **Relink** for the trigger, dialog title, file input, confirmation, and temporal-review confirmation.
+
+Focused deterministic evidence is **10/10 passing** in `tests/contentActionDialog.test.js`. The exact Journey F Chromium title is **1/1 passing** and verifies a genuine linked-project descriptor, Cancel/focus return, confirm, stable sourceId, linked logical origin, and persisted Chrono Group/Scene/Scene-present review metadata. The prior beta build/unit/186-browser/PS-04 evidence is reused without redundant reruns.
+
+SCM-C08 is promoted to Passing. The amendment disposition is now **36/36 fidelity rows Passing**, with engine implementation, mounted UI/composition, and inspected real-use evidence distinguished in the matrix. The four-title historical unit uncertainty remains disclosed. This is submitted for V3 Design master acceptance and is not self-accepted.

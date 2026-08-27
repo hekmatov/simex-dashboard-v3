@@ -23,10 +23,11 @@ export default function ContentActionDialog({
   onConfirm,
   onCancel,
 } = {}) {
-  if (action === "replace-csv" || action === "replace-geojson") {
+  if (action === "replace-csv" || action === "relink-csv" || action === "replace-geojson") {
     if (!open) return null;
     const geoJson = action === "replace-geojson";
-    const id = `${geoJson ? "replace-geojson" : "replace-csv"}-${safeId(itemLabel)}`;
+    const relinkCsv = action === "relink-csv";
+    const id = `${geoJson ? "replace-geojson" : relinkCsv ? "relink-csv" : "replace-csv"}-${safeId(itemLabel)}`;
     const blocked = replacementStatus === "blocked";
     const requiresTemporalReview = replacementStatus === "requires-temporal-review";
     const requiresGeoJsonConfirmation = replacementStatus === "requires-confirmation";
@@ -45,9 +46,9 @@ export default function ContentActionDialog({
         tabIndex={-1}
       >
         <section className="confirm-dialog">
-          <h2 id={`${id}-title`}>Replace {itemLabel} file?</h2>
+          <h2 id={`${id}-title`}>{relinkCsv ? `Relink ${itemLabel}?` : `Replace ${itemLabel} file?`}</h2>
           <p id={`${id}-message`}>Choose a {geoJson ? "GeoJSON" : "CSV"} file. The current source identity is retained only when every directly dependent {geoJson ? "map" : "chart"} remains structurally valid.</p>
-          <label><span>Replacement {geoJson ? "GeoJSON" : "CSV"}</span><input data-modal-initial-focus="true" type="file" accept={geoJson ? ".geojson,.json,application/geo+json,application/json" : ".csv,text/csv"} disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
+          <label><span>{relinkCsv ? "Relink CSV" : `Replacement ${geoJson ? "GeoJSON" : "CSV"}`}</span><input data-modal-initial-focus="true" type="file" accept={geoJson ? ".geojson,.json,application/geo+json,application/json" : ".csv,text/csv"} disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
           {replacementLabel && <p role="status">Prepared: {replacementLabel}</p>}
           {(blocked || requiresTemporalReview) && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
           {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
@@ -78,7 +79,7 @@ export default function ContentActionDialog({
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             {canImportAsNew && <button type="button" className="secondary" disabled={busy} onClick={onImportAsNew}>Import as new source</button>}
             <button type="button" disabled={busy || !replacementReady || nonCommittable} onClick={onConfirm}>
-              {busy ? "Replacing…" : requiresTemporalReview ? "Confirm replacement and mark affected temporal content" : requiresGeoJsonConfirmation ? "Confirm GeoJSON replacement" : geoJson ? "Replace GeoJSON" : "Replace file"}
+              {busy ? relinkCsv ? "Relinking…" : "Replacing…" : requiresTemporalReview ? relinkCsv ? "Confirm relink and mark affected temporal content" : "Confirm replacement and mark affected temporal content" : requiresGeoJsonConfirmation ? "Confirm GeoJSON replacement" : geoJson ? "Replace GeoJSON" : relinkCsv ? "Relink" : "Replace file"}
             </button>
           </div>
         </section>

@@ -287,6 +287,13 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - Final review record: `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/beta-pre-release-closure-report.md`.
 - Package reconciliation retracts amendment-wide completion: **35/36 Passing**, SCM-C08 Partial for missing retained mounted linked-CSV Relink evidence. Four unrecoverable historical unit titles remain disclosed and unreconstructed.
 
+## 2026-08-27 final SCM-C08 closure
+
+- Explicit linked-project/needs-relink CSV `relink-csv` presentation now travels through the existing manager detail/dialog carrier; stored/uploaded CSV remains `replace-csv`, and both retain the same validated transaction.
+- Focused dialog owner: **9/10 RED → 10/10 GREEN**. Exact Journey F: **1/1 GREEN** with linked identity, Relink wording, Cancel/focus return, stable sourceId, and temporal-review persistence.
+- Affected-boundary review of `97e9e57edc628def4a156938f952a9134b055968..HEAD`: **APPROVED** with no decision-changing finding.
+- SCM-C08 is promoted to Passing; amendment fidelity is **36/36 Passing**. Beta release evidence is reused, four historical unit titles remain unreconstructed, and master acceptance remains pending.
+
 ## Task 2
 
 - Task 2: BASE `f81239ba288816603f3c6db14fc6b4a00141d5b9`.
