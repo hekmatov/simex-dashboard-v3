@@ -3602,8 +3602,12 @@ button.danger {
   text-decoration: none;
 }
 
-.showcase-actions button:focus-visible,
-.showcase-secondary-action:focus-visible,
+.view-shell .showcase-actions button:focus-visible,
+.view-shell .showcase-secondary-action:focus-visible {
+  outline: var(--simex-component-focus-width) solid var(--simex-on-accent);
+  outline-offset: 3px;
+}
+
 .showcase-route button:focus-visible {
   outline: var(--simex-component-focus-width) solid var(--simex-focus);
   outline-offset: 3px;

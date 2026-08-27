@@ -48,6 +48,39 @@ test("Home exposes the exact public beta orientation contract", async ({ page })
   await expect(page.getByRole("link", { name: LANDING_CONTRACT.repositoryLink })).toHaveAttribute("href", "https://github.com/hekmatov/simex-dashboard-v3");
 });
 
+test("hero action focus remains visible against the default hero surface", async ({ page }) => {
+  await openLanding(page);
+  const action = page.locator(".showcase-actions button").first();
+  await action.focus();
+  const focus = await action.evaluate((button) => {
+    const hero = button.closest(".showcase-hero");
+    const toRgb = (value) => value.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number);
+    const luminance = (color) => {
+      const channels = toRgb(color).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+    };
+    const actionStyle = getComputedStyle(button);
+    const heroSurface = getComputedStyle(hero).backgroundColor;
+    const focusPaint = actionStyle.outlineColor;
+    const [lighter, darker] = [luminance(heroSurface), luminance(focusPaint)].sort((left, right) => right - left);
+    return {
+      heroSurface,
+      focusPaint,
+      outlineStyle: actionStyle.outlineStyle,
+      contrastRatio: (lighter + 0.05) / (darker + 0.05),
+    };
+  });
+
+  expect(focus.outlineStyle).toBe("solid");
+  expect(focus.focusPaint).not.toBe(focus.heroSurface);
+  expect(focus.contrastRatio).toBeGreaterThanOrEqual(3);
+});
+
 test("Home inherits Dashboard Look semantic tokens and exposes repository Issues feedback", async ({ page }) => {
   await openLanding(page);
   const before = await readLandingTheme(page);
