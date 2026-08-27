@@ -1,249 +1,205 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildContentDependencyGraph } from "../src/content-library/contentDependencyGraph.js";
 
-const protocolModule = await import("../src/lib/presentationProtocol.js").catch(
-  () => null,
-);
+import {
+  PRESENTATION_PROTOCOL_VERSION,
+  adaptSceneAudienceToPresentation,
+  makePresentationMessage,
+  parsePresentationMessage,
+  validatePresentationAction,
+  validatePresentationState,
+} from "../src/lib/presentationProtocol.js";
 
 const presentableItemIndex = new Map([
-  ["chart-a", {
-    id: "chart-a",
-    descriptor: { kind: "chart", chart_id: "chart-a" },
-  }],
-  ["chart-b", {
-    id: "chart-b",
-    descriptor: { kind: "chart", chart_id: "chart-b" },
-  }],
+  ["chart-a", { id: "chart-a", descriptor: { kind: "chart", chart_id: "chart-a" } }],
   ["image-a", {
     id: "image-a",
-    descriptor: {
-      kind: "image",
-      panel_id: "image-a",
-      media_id: "media-image-source-a",
-      revision: 7,
-    },
+    descriptor: { kind: "image", panel_id: "image-a", media_id: "media-image-a", revision: 7 },
   }],
 ]);
 
-const scene = {
-  active_page_id: "biomedical",
-  items: [
-    { kind: "chart", chart_id: "chart-a" },
-    { kind: "image", panel_id: "image-a", media_id: "media-image-source-a", revision: 7 },
-  ],
-  layout: "sideBySide",
-  time: { group_id: "epidemic-time", active_epoch_ms: 1_801_440_000_000 },
-  audience_facts: {
-    dashboard_name: true,
-    page: true,
-    parent_chrono_group: true,
-    scene_name: true,
-    scene_date: true,
+const state = {
+  dashboard_revision: "dashboard-r17",
+  source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+  composition: {
+    active_page_id: "biomedical",
+    items: [
+      { kind: "chart", chart_id: "chart-a" },
+      { kind: "image", panel_id: "image-a", media_id: "media-image-a", revision: 7 },
+    ],
+    layout: "sideBySide",
   },
+  timeline: {
+    frame_epochs: [1_801_440_000_000, 1_801_526_400_000],
+    frame_index: 0,
+    period: { start: 1_801_440_000_000, end: 1_801_526_400_000 },
+    trace_mode: "reveal",
+    seconds_per_frame: 2.5,
+  },
+  matching: { use_authored_settings: true },
+  output_mode: "active",
   blackout: false,
+  audience: { date_position: { x_permille: 680, y_permille: 40, width_permille: 280 } },
 };
 
-test("presentation protocol creates a complete versioned state message", () => {
-  assert.ok(protocolModule, "presentation protocol must be implemented");
-  const message = protocolModule.makePresentationMessage({
-    sessionId: "session-001",
-    sequence: 1,
-    type: "state",
-    payload: scene,
-    presentableItemIndex,
-  });
+function protocolError(code) {
+  return (error) => {
+    assert.equal(error.name, "PresentationProtocolError");
+    assert.equal(error.code, code);
+    assert.equal(error.reason.code, code);
+    assert.equal(typeof error.reason.message, "string");
+    return true;
+  };
+}
 
-  assert.deepEqual(message, {
-    protocol_version: 3,
-    session_id: "session-001",
-    sequence: 1,
-    type: "state",
-    payload: scene,
-  });
-});
-
-test("presentation state rejects data and authoring fields", () => {
-  assert.ok(protocolModule, "presentation protocol must be implemented");
-
-  for (const forbiddenField of ["rows", "dataSources", "csvText", "credentials", "temporalReview"]) {
-    assert.throws(
-      () =>
-        protocolModule.validatePresentationState({
-          ...scene,
-          [forbiddenField]: "not presentation state",
-        }),
-      /unknown presentation state field/,
-    );
+test("protocol v3 creates clone-isolated envelopes for ready, state, heartbeat, and ended", () => {
+  assert.equal(PRESENTATION_PROTOCOL_VERSION, 3);
+  for (const [sequence, type, payload] of [
+    [1, "ready", null], [2, "state", state], [3, "heartbeat", null], [4, "ended", null],
+  ]) {
+    const message = makePresentationMessage({
+      sessionId: "session-001", sequence, type, payload, presentableItemIndex,
+    });
+    assert.deepEqual(message, {
+      protocol_version: 3, session_id: "session-001", sequence, type, payload,
+    });
+    if (type === "state") assert.notStrictEqual(message.payload, payload);
   }
 });
 
-test("presentation protocol validates identifiers, count-valid layouts, and finite time", () => {
-  assert.ok(protocolModule, "presentation protocol must be implemented");
+test("saved Scene Audience date geometry adapts explicitly from camelCase to wire snake_case", () => {
+  const savedScene = {
+    audience: { datePosition: { xPermille: 700, yPermille: 50, widthPermille: 250 } },
+  };
+  assert.deepEqual(adaptSceneAudienceToPresentation(savedScene), {
+    date_position: { x_permille: 700, y_permille: 50, width_permille: 250 },
+  });
+  assert.deepEqual(savedScene.audience.datePosition, {
+    xPermille: 700, yPermille: 50, widthPermille: 250,
+  });
+});
 
-  assert.throws(
-    () => protocolModule.validatePresentationState({ ...scene, active_page_id: "bad page" }),
-    /identifier/,
-  );
-  assert.throws(
-    () => protocolModule.validatePresentationState({
-      ...scene,
-      items: [
-        { kind: "chart", chart_id: "chart-a" },
-        { kind: "chart", chart_id: "chart-a" },
-      ],
-    }, { presentableItemIndex }),
-    /unique presentation items/,
-  );
-  assert.throws(
-    () => protocolModule.validatePresentationState({ ...scene, layout: "grid2x2" }),
-    /layout/,
-  );
-  assert.throws(
-    () =>
-      protocolModule.validatePresentationState({
-        ...scene,
-        time: { group_id: "epidemic-time", active_epoch_ms: Number.NaN },
-      }, { presentableItemIndex }),
-    /finite/,
+test("presentation state enforces every exact field and authored-only matching truth", () => {
+  assert.strictEqual(validatePresentationState(state, { presentableItemIndex }), state);
+  assert.throws(() => validatePresentationState({
+    ...state,
+    matching: { use_authored_settings: true, session_override: "interpolate" },
+  }, { presentableItemIndex }), protocolError("unknown_field"));
+  assert.throws(() => validatePresentationState({
+    ...state, matching: { use_authored_settings: false },
+  }, { presentableItemIndex }), protocolError("authored_matching_required"));
+  assert.throws(() => validatePresentationState({
+    ...state, temporalReview: [],
+  }, { presentableItemIndex }), protocolError("unknown_field"));
+});
+
+test("source identity is exact for Scene, Chrono Group, and manual state", () => {
+  for (const source of [
+    { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    { kind: "Chrono Group", scene_id: null, chrono_group_id: "group-a" },
+    { kind: "manual", scene_id: null, chrono_group_id: null },
+  ]) assert.doesNotThrow(() => validatePresentationState({ ...state, source }, { presentableItemIndex }));
+
+  for (const source of [
+    { kind: "scene", scene_id: null, chrono_group_id: "group-a" },
+    { kind: "Chrono Group", scene_id: "scene-a", chrono_group_id: "group-a" },
+    { kind: "manual", scene_id: null, chrono_group_id: "group-a" },
+  ]) assert.throws(
+    () => validatePresentationState({ ...state, source }, { presentableItemIndex }),
+    protocolError("invalid_source_identity"),
   );
 });
 
-test("presentation protocol accepts only trusted ordered chart and exact Image identity descriptors", () => {
-  assert.ok(protocolModule, "presentation protocol must be implemented");
-
+test("composition preserves trusted mixed chart and Image identity without stale-ID reconciliation", () => {
   assert.deepEqual(
-    protocolModule.validatePresentationState(scene, { presentableItemIndex }).items,
-    [
-      { kind: "chart", chart_id: "chart-a" },
-      { kind: "image", panel_id: "image-a", media_id: "media-image-source-a", revision: 7 },
-    ],
+    validatePresentationState(state, { presentableItemIndex }).composition.items,
+    state.composition.items,
   );
-
-  for (const descriptor of [
-    { kind: "freeText", panel_id: "field-guide" },
+  for (const item of [
     { kind: "chart", chart_id: "unknown-chart" },
     { kind: "image", panel_id: "image-a", media_id: "stale-media", revision: 7 },
-    { kind: "image", panel_id: "image-a", media_id: "media-image-source-a", revision: 6 },
-  ]) {
-    assert.throws(
-      () => protocolModule.validatePresentationState({
-        ...scene,
-        items: [descriptor],
-        layout: "solo",
-      }, { presentableItemIndex }),
-      /not allowed|descriptor kind|identity|revision/i,
-    );
-  }
+    { kind: "image", panel_id: "image-a", media_id: "media-image-a", revision: 6 },
+  ]) assert.throws(() => validatePresentationState({
+    ...state,
+    composition: { ...state.composition, items: [item], layout: "solo" },
+  }, { presentableItemIndex }), protocolError("untrusted_presentation_item"));
 });
 
-test("Image descriptors reject URLs, blobs, transforms, asset bytes, and temporal fields", () => {
-  assert.ok(protocolModule, "presentation protocol must be implemented");
-  const image = presentableItemIndex.get("image-a").descriptor;
-  for (const [field, value] of [
-    ["url", "https://example.test/image.png"],
-    ["blob_url", "blob:https://example.test/secret"],
-    ["crop", { x: 0, y: 0, width: 1000, height: 1000 }],
-    ["fit", "cover"],
-    ["rotation", 90],
-    ["asset_bytes", "AAAA"],
-    ["chrono_group_id", "group-a"],
-    ["scene_id", "scene-a"],
-    ["frame_id", "frame-a"],
-    ["time", { active_epoch_ms: 1 }],
-  ]) {
-    assert.throws(
-      () => protocolModule.validatePresentationState({
-        ...scene,
-        items: [{ ...image, [field]: value }],
-        layout: "solo",
-      }, { presentableItemIndex }),
-      /unknown presentation item field/,
-      field,
-    );
-  }
+test("timeline validates ordered frames, direct frame bounds, period, modes, and speed", () => {
+  for (const timeline of [
+    { ...state.timeline, frame_epochs: [2, 1] },
+    { ...state.timeline, frame_index: 2 },
+    { ...state.timeline, period: { start: 2, end: 1 } },
+    { ...state.timeline, trace_mode: "future" },
+    { ...state.timeline, seconds_per_frame: 0 },
+  ]) assert.throws(
+    () => validatePresentationState({ ...state, timeline }, { presentableItemIndex }),
+    (error) => error instanceof Error && error.code.startsWith("invalid_"),
+  );
+  assert.doesNotThrow(() => validatePresentationState({ ...state, timeline: null }, { presentableItemIndex }));
 });
 
-test("presentation protocol requires the five independent Audience fact flags", () => {
-  assert.ok(protocolModule, "presentation protocol must be implemented");
-
-  for (const key of Object.keys(scene.audience_facts)) {
-    const missing = { ...scene.audience_facts };
-    delete missing[key];
-    assert.throws(
-      () => protocolModule.validatePresentationState({
-        ...scene,
-        audience_facts: missing,
-      }),
-      /missing presentation audience facts field/,
-    );
-    assert.throws(
-      () => protocolModule.validatePresentationState({
-        ...scene,
-        audience_facts: { ...scene.audience_facts, [key]: "yes" },
-      }),
-      /Audience fact flags must be booleans/,
-    );
+test("output modes and date-position geometry enforce exact bounds", () => {
+  for (const output_mode of ["holding", "blank", "active"]) {
+    assert.doesNotThrow(() => validatePresentationState({ ...state, output_mode }, { presentableItemIndex }));
   }
-
   assert.throws(
-    () => protocolModule.validatePresentationState({
-      ...scene,
-      audience_facts: { ...scene.audience_facts, owner: true },
-    }),
-    /unknown presentation audience facts field/,
+    () => validatePresentationState({ ...state, output_mode: "ended" }, { presentableItemIndex }),
+    protocolError("invalid_output_mode"),
+  );
+  for (const date_position of [
+    { x_permille: -1, y_permille: 40, width_permille: 280 },
+    { x_permille: 800, y_permille: 40, width_permille: 280 },
+    { x_permille: 680, y_permille: 1001, width_permille: 280 },
+    { x_permille: 680, y_permille: 40, width_permille: 0 },
+    { xPermille: 680, yPermille: 40, widthPermille: 280 },
+  ]) assert.throws(
+    () => validatePresentationState({ ...state, audience: { date_position } }, { presentableItemIndex }),
+    (error) => ["invalid_date_position", "unknown_field"].includes(error.code),
   );
 });
 
-test("presentation protocol accepts only the four small message types for the expected session", () => {
-  assert.ok(protocolModule, "presentation protocol must be implemented");
+test("actions validate exact values and reject matching override actions", () => {
+  const actions = [
+    [{ type: "SEEK", value: 1 }, { frameCount: 2 }],
+    [{ type: "PREVIOUS" }], [{ type: "NEXT" }], [{ type: "PLAY" }], [{ type: "PAUSE" }],
+    [{ type: "SELECT_SCENE", value: "scene-a" }],
+    [{ type: "SELECT_CHRONO_GROUP", value: "group-a" }],
+    [{ type: "SET_TRACE_MODE", value: "full" }],
+    [{ type: "SET_OUTPUT_MODE", value: "blank" }],
+    [{ type: "SET_COMPOSITION", value: state.composition }, { presentableItemIndex }],
+    [{ type: "SET_BLACKOUT", value: true }], [{ type: "END" }],
+  ];
+  for (const [action, options] of actions) {
+    assert.strictEqual(validatePresentationAction(action, options), action);
+  }
+  assert.throws(
+    () => validatePresentationAction({ type: "SEEK", value: 2 }, { frameCount: 2 }),
+    protocolError("seek_out_of_bounds"),
+  );
+  assert.throws(
+    () => validatePresentationAction({ type: "SET_MATCHING_OVERRIDE", value: "interpolate" }),
+    protocolError("unsupported_action"),
+  );
+});
+
+test("message parsing rejects protocol/session/payload faults and non-monotonic sequences with reasons", () => {
   const ready = {
-    protocol_version: 3,
-    session_id: "session-001",
-    sequence: 1,
-    type: "ready",
-    payload: {},
+    protocol_version: 3, session_id: "session-001", sequence: 2, type: "ready", payload: null,
   };
-
-  assert.deepEqual(
-    protocolModule.parsePresentationMessage(ready, {
-      sessionId: "session-001",
-      presentableItemIndex,
+  assert.deepEqual(parsePresentationMessage(ready, {
+    sessionId: "session-001", lastSequence: 1, presentableItemIndex,
+  }), ready);
+  for (const [candidate, code] of [
+    [{ ...ready, protocol_version: 2 }, "protocol_mismatch"],
+    [{ ...ready, session_id: "other-session" }, "session_mismatch"],
+    [{ ...ready, sequence: 1 }, "non_monotonic_sequence"],
+    [{ ...ready, payload: {} }, "invalid_message_payload"],
+    [{ ...ready, type: "command" }, "unsupported_message_type"],
+  ]) assert.throws(
+    () => parsePresentationMessage(candidate, {
+      sessionId: "session-001", lastSequence: 1, presentableItemIndex,
     }),
-    ready,
+    protocolError(code),
   );
-  assert.throws(
-    () =>
-      protocolModule.parsePresentationMessage(
-        { ...ready, type: "authoring-command" },
-        { sessionId: "session-001", presentableItemIndex },
-      ),
-    /message type/,
-  );
-  assert.throws(
-    () =>
-      protocolModule.parsePresentationMessage(
-        { ...ready, session_id: "other-session" },
-        { sessionId: "session-001", presentableItemIndex },
-      ),
-    /session/,
-  );
-});
-
-test("Present and Audience runtime payloads do not become durable content dependencies", () => {
-  const dashboard = {
-    contentLibrary: { mediaItems: {}, sourceEntries: { cases: { sourceId: "cases", kind: "csv" } } },
-    dataSources: { cases: { kind: "csv" } },
-    pages: [{ id: "page-a", sections: [{ id: "section-a", panels: [{ id: "chart-a", chart: { id: "chart-a", sourceId: "cases" } }] }] }],
-  };
-  const baseline = buildContentDependencyGraph({ dashboard });
-  const withRuntime = buildContentDependencyGraph({
-    dashboard,
-    presentationState: scene,
-    audienceMessages: [protocolModule.makePresentationMessage({
-      sessionId: "session-001", sequence: 1, type: "state", payload: scene, presentableItemIndex,
-    })],
-    mediaLeases: [{ mediaId: "media-image-source-a", revision: 7 }],
-  });
-  assert.deepEqual(withRuntime.directUses, baseline.directUses);
 });

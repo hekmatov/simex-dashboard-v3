@@ -2,6 +2,8 @@ export const PRESENTATION_PROTOCOL_VERSION = 3;
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const MESSAGE_TYPES = new Set(["ready", "state", "heartbeat", "ended"]);
+const OUTPUT_MODES = new Set(["holding", "blank", "active"]);
+const TRACE_MODES = new Set(["reveal", "full"]);
 const LAYOUTS_BY_COUNT = Object.freeze({
   0: new Set(["solo"]),
   1: new Set(["solo"]),
@@ -9,35 +11,56 @@ const LAYOUTS_BY_COUNT = Object.freeze({
   3: new Set(["topFocus", "bottomFocus", "leftFocus", "rightFocus"]),
   4: new Set(["grid2x2"]),
 });
-const ENVELOPE_FIELDS = [
-  "protocol_version",
-  "session_id",
-  "sequence",
-  "type",
-  "payload",
-];
+
+const ENVELOPE_FIELDS = ["protocol_version", "session_id", "sequence", "type", "payload"];
 const STATE_FIELDS = [
-  "active_page_id",
-  "items",
-  "layout",
-  "time",
-  "audience_facts",
-  "blackout",
+  "dashboard_revision", "source", "composition", "timeline", "matching",
+  "output_mode", "blackout", "audience",
 ];
-const AUDIENCE_FACT_FIELDS = [
-  "dashboard_name",
-  "page",
-  "parent_chrono_group",
-  "scene_name",
-  "scene_date",
+const SOURCE_FIELDS = ["kind", "scene_id", "chrono_group_id"];
+const COMPOSITION_FIELDS = ["active_page_id", "items", "layout"];
+const TIMELINE_FIELDS = [
+  "frame_epochs", "frame_index", "period", "trace_mode", "seconds_per_frame",
 ];
-const TIME_FIELDS = ["group_id", "active_epoch_ms"];
+const PERIOD_FIELDS = ["start", "end"];
+const MATCHING_FIELDS = ["use_authored_settings"];
+const AUDIENCE_FIELDS = ["date_position"];
+const DATE_POSITION_FIELDS = ["x_permille", "y_permille", "width_permille"];
 const CHART_ITEM_FIELDS = ["kind", "chart_id"];
 const IMAGE_ITEM_FIELDS = ["kind", "panel_id", "media_id", "revision"];
 
+const VALUELESS_ACTIONS = new Set(["PREVIOUS", "NEXT", "PLAY", "PAUSE", "END"]);
+const IDENTIFIER_ACTIONS = new Set(["SELECT_SCENE", "SELECT_CHRONO_GROUP"]);
+
+export class PresentationProtocolError extends Error {
+  constructor(code, message, path = null) {
+    super(message);
+    this.name = "PresentationProtocolError";
+    this.code = code;
+    this.path = path;
+    this.reason = Object.freeze({ code, message, ...(path ? { path } : {}) });
+  }
+}
+
 export function presentationChannelName(sessionId) {
-  assertIdentifier(sessionId, "session ID");
+  assertIdentifier(sessionId, "session ID", "session_id");
   return `simex-presentation-${sessionId}`;
+}
+
+export function adaptSceneAudienceToPresentation(scene) {
+  assertPlainObject(scene, "saved Scene", "scene");
+  assertPlainObject(scene.audience, "saved Scene Audience settings", "scene.audience");
+  const position = scene.audience.datePosition;
+  assertPlainObject(position, "saved Scene Audience datePosition", "scene.audience.datePosition");
+  const audience = {
+    date_position: {
+      x_permille: position.xPermille,
+      y_permille: position.yPermille,
+      width_permille: position.widthPermille,
+    },
+  };
+  validateAudience(audience);
+  return audience;
 }
 
 export function makePresentationMessage({
@@ -52,121 +75,264 @@ export function makePresentationMessage({
     session_id: sessionId,
     sequence,
     type,
-    payload: structuredClone(payload),
+    payload: clone(payload),
   };
   validateMessage(message, { presentableItemIndex });
   return message;
 }
 
-export function parsePresentationMessage(value, { sessionId, presentableItemIndex } = {}) {
-  const message = structuredClone(value);
-  validateMessage(message, { sessionId, presentableItemIndex });
+export function parsePresentationMessage(
+  value,
+  { sessionId, lastSequence, presentableItemIndex } = {},
+) {
+  const message = clone(value);
+  validateMessage(message, { sessionId, lastSequence, presentableItemIndex });
   return message;
 }
 
 export function validatePresentationState(state, { presentableItemIndex } = {}) {
-  assertPlainObject(state, "presentation state");
-  assertExactFields(state, STATE_FIELDS, "presentation state");
-  assertIdentifier(state.active_page_id, "active page ID");
-  assertPresentationItems(state.items, presentableItemIndex);
-
-  if (!LAYOUTS_BY_COUNT[state.items.length].has(state.layout)) {
-    throw new Error("layout is not valid for presentation item count");
+  assertPlainObject(state, "presentation state", "payload");
+  assertExactFields(state, STATE_FIELDS, "presentation state", "payload");
+  assertRevision(state.dashboard_revision);
+  validateSource(state.source);
+  validateComposition(state.composition, { presentableItemIndex });
+  validateTimeline(state.timeline);
+  validateMatching(state.matching);
+  if (!OUTPUT_MODES.has(state.output_mode)) {
+    reject("invalid_output_mode", "presentation output mode is not supported", "payload.output_mode");
   }
-  validateAudienceFacts(state.audience_facts);
   if (typeof state.blackout !== "boolean") {
-    throw new Error("presentation state flags must be booleans");
+    reject("invalid_blackout", "presentation blackout must be a boolean", "payload.blackout");
   }
-  validateTime(state.time);
+  validateAudience(state.audience);
   return state;
 }
 
-export function reconcilePresentationState(state, { presentableItemIndex } = {}) {
-  assertPlainObject(state, "presentation state");
-  if (!Array.isArray(state.items)) {
-    return validatePresentationState(state, { presentableItemIndex });
+export function validatePresentationAction(
+  action,
+  { frameCount, presentableItemIndex } = {},
+) {
+  assertPlainObject(action, "presentation action", "action");
+  if (typeof action.type !== "string") {
+    reject("unsupported_action", "presentation action type is not supported", "action.type");
   }
-  const items = state.items.filter((item) => {
-    assertPlainObject(item, "presentation item");
-    const itemId = validatePresentationItem(item);
-    const trusted = presentableItemIndex?.get?.(itemId)?.descriptor;
-    return trusted && descriptorsEqual(item, trusted);
-  });
-  const allowedLayouts = LAYOUTS_BY_COUNT[items.length];
-  const reconciled = {
-    ...state,
-    items: structuredClone(items),
-    layout: allowedLayouts.has(state.layout)
-      ? state.layout
-      : allowedLayouts.values().next().value,
-  };
-  return validatePresentationState(reconciled, { presentableItemIndex });
+  if (VALUELESS_ACTIONS.has(action.type)) {
+    assertExactFields(action, ["type"], "presentation action", "action");
+    return action;
+  }
+  if (action.type === "SEEK") {
+    assertExactFields(action, ["type", "value"], "presentation action", "action");
+    if (!Number.isSafeInteger(action.value) || action.value < 0) {
+      reject("invalid_seek", "presentation seek must use a non-negative frame index", "action.value");
+    }
+    if (frameCount !== undefined) {
+      if (!Number.isSafeInteger(frameCount) || frameCount < 0) {
+        reject("invalid_frame_count", "frame count must be a non-negative integer", "frameCount");
+      }
+      if (action.value >= frameCount) {
+        reject("seek_out_of_bounds", "presentation seek is outside the frame ledger", "action.value");
+      }
+    }
+    return action;
+  }
+  if (IDENTIFIER_ACTIONS.has(action.type)) {
+    assertExactFields(action, ["type", "value"], "presentation action", "action");
+    assertIdentifier(action.value, "presentation source ID", "action.value");
+    return action;
+  }
+  if (action.type === "SET_TRACE_MODE") {
+    assertExactFields(action, ["type", "value"], "presentation action", "action");
+    if (!TRACE_MODES.has(action.value)) {
+      reject("invalid_trace_mode", "presentation trace mode is not supported", "action.value");
+    }
+    return action;
+  }
+  if (action.type === "SET_OUTPUT_MODE") {
+    assertExactFields(action, ["type", "value"], "presentation action", "action");
+    if (!OUTPUT_MODES.has(action.value)) {
+      reject("invalid_output_mode", "presentation output mode is not supported", "action.value");
+    }
+    return action;
+  }
+  if (action.type === "SET_COMPOSITION") {
+    assertExactFields(action, ["type", "value"], "presentation action", "action");
+    validateComposition(action.value, { presentableItemIndex });
+    return action;
+  }
+  if (action.type === "SET_BLACKOUT") {
+    assertExactFields(action, ["type", "value"], "presentation action", "action");
+    if (typeof action.value !== "boolean") {
+      reject("invalid_blackout", "presentation blackout must be a boolean", "action.value");
+    }
+    return action;
+  }
+  reject("unsupported_action", "presentation action type is not supported", "action.type");
 }
 
-function validateMessage(message, { sessionId, presentableItemIndex }) {
-  assertPlainObject(message, "presentation message");
-  assertExactFields(message, ENVELOPE_FIELDS, "presentation message");
+export function presentationRejectionReason(error) {
+  if (error?.reason?.code && error?.reason?.message) return clone(error.reason);
+  return {
+    code: "presentation_rejected",
+    message: error instanceof Error ? error.message : "presentation value was rejected",
+  };
+}
+
+function validateMessage(message, { sessionId, lastSequence, presentableItemIndex }) {
+  assertPlainObject(message, "presentation message", "message");
+  assertExactFields(message, ENVELOPE_FIELDS, "presentation message", "message");
   if (message.protocol_version !== PRESENTATION_PROTOCOL_VERSION) {
-    throw new Error("unsupported presentation protocol version");
+    reject("protocol_mismatch", "unsupported presentation protocol version", "message.protocol_version");
   }
-  assertIdentifier(message.session_id, "session ID");
+  assertIdentifier(message.session_id, "session ID", "message.session_id");
   if (sessionId !== undefined && message.session_id !== sessionId) {
-    throw new Error("unexpected presentation session");
+    reject("session_mismatch", "unexpected presentation session", "message.session_id");
   }
   if (!Number.isSafeInteger(message.sequence) || message.sequence < 1) {
-    throw new Error("presentation sequence must be a positive integer");
+    reject("invalid_sequence", "presentation sequence must be a positive integer", "message.sequence");
+  }
+  if (lastSequence !== undefined && message.sequence <= lastSequence) {
+    reject("non_monotonic_sequence", "presentation sequence must increase", "message.sequence");
   }
   if (!MESSAGE_TYPES.has(message.type)) {
-    throw new Error("unsupported presentation message type");
+    reject("unsupported_message_type", "unsupported presentation message type", "message.type");
   }
-
   if (message.type === "state") {
     validatePresentationState(message.payload, { presentableItemIndex });
-  } else {
-    assertPlainObject(message.payload, "presentation payload");
-    assertExactFields(message.payload, [], "presentation payload");
+  } else if (message.payload !== null) {
+    reject("invalid_message_payload", `${message.type} presentation payload must be null`, "message.payload");
   }
 }
 
-function validateAudienceFacts(facts) {
-  assertPlainObject(facts, "presentation audience facts");
-  assertExactFields(
-    facts,
-    AUDIENCE_FACT_FIELDS,
-    "presentation audience facts",
+function validateSource(source) {
+  assertPlainObject(source, "presentation source", "payload.source");
+  assertExactFields(source, SOURCE_FIELDS, "presentation source", "payload.source");
+  const valid = (
+    source.kind === "scene"
+      && isIdentifier(source.scene_id)
+      && isIdentifier(source.chrono_group_id)
+  ) || (
+    source.kind === "Chrono Group"
+      && source.scene_id === null
+      && isIdentifier(source.chrono_group_id)
+  ) || (
+    source.kind === "manual"
+      && source.scene_id === null
+      && source.chrono_group_id === null
   );
-  if (AUDIENCE_FACT_FIELDS.some((key) => typeof facts[key] !== "boolean")) {
-    throw new Error("Audience fact flags must be booleans");
+  if (!valid) {
+    reject("invalid_source_identity", "presentation source identity does not match its kind", "payload.source");
   }
 }
 
-function validateTime(time) {
-  if (time === null) return;
-  assertPlainObject(time, "presentation time");
-  assertExactFields(time, TIME_FIELDS, "presentation time");
-  assertIdentifier(time.group_id, "chrono group ID");
-  if (!Number.isFinite(time.active_epoch_ms)) {
-    throw new Error("presentation time must use a finite epoch value");
+function validateComposition(composition, { presentableItemIndex }) {
+  assertPlainObject(composition, "presentation composition", "payload.composition");
+  assertExactFields(composition, COMPOSITION_FIELDS, "presentation composition", "payload.composition");
+  assertIdentifier(composition.active_page_id, "active page ID", "payload.composition.active_page_id");
+  assertPresentationItems(composition.items, presentableItemIndex);
+  if (!LAYOUTS_BY_COUNT[composition.items.length]?.has(composition.layout)) {
+    reject(
+      "invalid_layout",
+      "layout is not valid for presentation item count",
+      "payload.composition.layout",
+    );
+  }
+}
+
+function validateTimeline(timeline) {
+  if (timeline === null) return;
+  assertPlainObject(timeline, "presentation timeline", "payload.timeline");
+  assertExactFields(timeline, TIMELINE_FIELDS, "presentation timeline", "payload.timeline");
+  if (!Array.isArray(timeline.frame_epochs) || timeline.frame_epochs.length === 0) {
+    reject("invalid_frame_ledger", "presentation frame ledger must not be empty", "payload.timeline.frame_epochs");
+  }
+  let previous = -Infinity;
+  for (const epoch of timeline.frame_epochs) {
+    if (!Number.isSafeInteger(epoch) || epoch <= previous) {
+      reject(
+        "invalid_frame_ledger",
+        "presentation frame epochs must be ordered unique integers",
+        "payload.timeline.frame_epochs",
+      );
+    }
+    previous = epoch;
+  }
+  if (
+    !Number.isSafeInteger(timeline.frame_index)
+    || timeline.frame_index < 0
+    || timeline.frame_index >= timeline.frame_epochs.length
+  ) {
+    reject("invalid_frame_index", "presentation frame index is outside the frame ledger", "payload.timeline.frame_index");
+  }
+  assertPlainObject(timeline.period, "presentation period", "payload.timeline.period");
+  assertExactFields(timeline.period, PERIOD_FIELDS, "presentation period", "payload.timeline.period");
+  const { start, end } = timeline.period;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end) {
+    reject("invalid_period", "presentation period must be an ordered integer epoch range", "payload.timeline.period");
+  }
+  if (timeline.frame_epochs[0] < start || timeline.frame_epochs.at(-1) > end) {
+    reject("invalid_period", "presentation frames must remain inside the period", "payload.timeline.period");
+  }
+  if (!TRACE_MODES.has(timeline.trace_mode)) {
+    reject("invalid_trace_mode", "presentation trace mode is not supported", "payload.timeline.trace_mode");
+  }
+  if (!Number.isFinite(timeline.seconds_per_frame) || timeline.seconds_per_frame <= 0) {
+    reject("invalid_seconds_per_frame", "presentation seconds per frame must be positive", "payload.timeline.seconds_per_frame");
+  }
+}
+
+function validateMatching(matching) {
+  assertPlainObject(matching, "presentation matching", "payload.matching");
+  assertExactFields(matching, MATCHING_FIELDS, "presentation matching", "payload.matching");
+  if (matching.use_authored_settings !== true) {
+    reject(
+      "authored_matching_required",
+      "Present must use authored matching settings",
+      "payload.matching.use_authored_settings",
+    );
+  }
+}
+
+function validateAudience(audience) {
+  assertPlainObject(audience, "presentation Audience settings", "payload.audience");
+  assertExactFields(audience, AUDIENCE_FIELDS, "presentation Audience settings", "payload.audience");
+  const position = audience.date_position;
+  assertPlainObject(position, "presentation Audience date position", "payload.audience.date_position");
+  assertExactFields(
+    position,
+    DATE_POSITION_FIELDS,
+    "presentation Audience date position",
+    "payload.audience.date_position",
+  );
+  for (const key of DATE_POSITION_FIELDS) {
+    if (!Number.isInteger(position[key]) || position[key] < 0 || position[key] > 1000) {
+      reject("invalid_date_position", "Audience date position must use integer permille values", `payload.audience.date_position.${key}`);
+    }
+  }
+  if (position.width_permille < 1 || position.x_permille + position.width_permille > 1000) {
+    reject("invalid_date_position", "Audience date position must fit within the Audience canvas", "payload.audience.date_position");
   }
 }
 
 function assertPresentationItems(items, presentableItemIndex) {
   if (!Array.isArray(items) || items.length > 4) {
-    throw new Error("presentation items must contain 0 to 4 items");
+    reject("invalid_item_count", "presentation items must contain 0 to 4 items", "payload.composition.items");
   }
   const uniqueIds = new Set();
   for (const item of items) {
-    assertPlainObject(item, "presentation item");
+    assertPlainObject(item, "presentation item", "payload.composition.items");
     const itemId = validatePresentationItem(item);
     if (uniqueIds.has(itemId)) {
-      throw new Error("presentation state must contain unique presentation items");
+      reject("duplicate_presentation_item", "presentation items must be unique", "payload.composition.items");
     }
     uniqueIds.add(itemId);
-
     if (presentableItemIndex != null) {
       const trusted = presentableItemIndex.get?.(itemId)?.descriptor;
       if (!trusted || !descriptorsEqual(item, trusted)) {
-        throw new Error("presentation item identity or revision is not allowed");
+        reject(
+          "untrusted_presentation_item",
+          "presentation item identity or revision is not allowed",
+          "payload.composition.items",
+        );
       }
     }
   }
@@ -174,20 +340,26 @@ function assertPresentationItems(items, presentableItemIndex) {
 
 function validatePresentationItem(item) {
   if (item.kind === "chart") {
-    assertExactFields(item, CHART_ITEM_FIELDS, "presentation item");
-    assertIdentifier(item.chart_id, "chart ID");
+    assertExactFields(item, CHART_ITEM_FIELDS, "presentation item", "payload.composition.items");
+    assertIdentifier(item.chart_id, "chart ID", "payload.composition.items.chart_id");
     return item.chart_id;
   }
   if (item.kind === "image") {
-    assertExactFields(item, IMAGE_ITEM_FIELDS, "presentation item");
-    assertIdentifier(item.panel_id, "Image panel ID");
-    assertIdentifier(item.media_id, "Image media ID");
+    assertExactFields(item, IMAGE_ITEM_FIELDS, "presentation item", "payload.composition.items");
+    assertIdentifier(item.panel_id, "Image panel ID", "payload.composition.items.panel_id");
+    assertIdentifier(item.media_id, "Image media ID", "payload.composition.items.media_id");
     if (!Number.isSafeInteger(item.revision) || item.revision < 1) {
-      throw new Error("Image revision must be a positive integer");
+      reject("invalid_image_revision", "Image revision must be a positive integer", "payload.composition.items.revision");
     }
     return item.panel_id;
   }
-  throw new Error("presentation item descriptor kind is not allowed");
+  reject("unsupported_presentation_item", "presentation item kind is not allowed", "payload.composition.items.kind");
+}
+
+function assertRevision(value) {
+  if ((typeof value !== "string" || value.trim() === "") && !Number.isSafeInteger(value)) {
+    reject("invalid_dashboard_revision", "dashboard revision must be a non-empty string or integer", "payload.dashboard_revision");
+  }
 }
 
 function descriptorsEqual(left, right) {
@@ -198,24 +370,34 @@ function descriptorsEqual(left, right) {
   );
 }
 
-function assertIdentifier(value, label) {
-  if (typeof value !== "string" || !IDENTIFIER.test(value)) {
-    throw new Error(`${label} must be an allowed identifier`);
-  }
+function isIdentifier(value) {
+  return typeof value === "string" && IDENTIFIER.test(value);
 }
 
-function assertExactFields(value, fields, label) {
+function assertIdentifier(value, label, path) {
+  if (!isIdentifier(value)) reject("invalid_identifier", `${label} must be an allowed identifier`, path);
+}
+
+function assertExactFields(value, fields, label, path) {
   const expected = new Set(fields);
   for (const key of Object.keys(value)) {
-    if (!expected.has(key)) throw new Error(`unknown ${label} field: ${key}`);
+    if (!expected.has(key)) reject("unknown_field", `unknown ${label} field: ${key}`, `${path}.${key}`);
   }
   for (const key of fields) {
-    if (!Object.hasOwn(value, key)) throw new Error(`missing ${label} field: ${key}`);
+    if (!Object.hasOwn(value, key)) reject("missing_field", `missing ${label} field: ${key}`, `${path}.${key}`);
   }
 }
 
-function assertPlainObject(value, label) {
+function assertPlainObject(value, label, path) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label} must be an object`);
+    reject("invalid_object", `${label} must be an object`, path);
   }
+}
+
+function clone(value) {
+  return value === undefined ? undefined : structuredClone(value);
+}
+
+function reject(code, message, path) {
+  throw new PresentationProtocolError(code, message, path);
 }

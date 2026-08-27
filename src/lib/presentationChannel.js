@@ -2,7 +2,7 @@ import {
   makePresentationMessage,
   parsePresentationMessage,
   presentationChannelName,
-  reconcilePresentationState,
+  presentationRejectionReason,
   validatePresentationState,
 } from "./presentationProtocol.js";
 
@@ -16,13 +16,16 @@ export function createPresentationControllerChannel({
   scheduler = defaultScheduler(),
   presentableItemIndex,
   getPresentableItemIndex = () => presentableItemIndex,
+  validateSourceSelection = () => ({ accepted: true }),
   onConnectionChange = () => {},
+  onMessageRejected = () => {},
 } = {}) {
   let active = false;
   let channel = null;
   let connectionTimer = null;
-  let latestState = null;
+  let lastValidSnapshot = null;
   let lastHeartbeatAt = null;
+  let lastAudienceSequence = 0;
   let sequence = 0;
   let status = "disconnected";
 
@@ -33,27 +36,31 @@ export function createPresentationControllerChannel({
   }
 
   function post(type, payload) {
-    channel?.postMessage(
-      makePresentationMessage({
-        sessionId,
-        sequence: ++sequence,
-        type,
-        payload,
-        presentableItemIndex: getPresentableItemIndex(),
-      }),
-    );
+    const message = makePresentationMessage({
+      sessionId,
+      sequence: ++sequence,
+      type,
+      payload,
+      presentableItemIndex: getPresentableItemIndex(),
+    });
+    channel?.postMessage(message);
+    return message;
   }
 
   function sendLatestState() {
-    if (!latestState) return;
+    if (!lastValidSnapshot) return null;
     try {
-      validatePresentationState(latestState, {
+      validatePresentationState(lastValidSnapshot, {
         presentableItemIndex: getPresentableItemIndex(),
       });
-    } catch {
-      return;
+      return post("state", lastValidSnapshot);
+    } catch (error) {
+      onMessageRejected(
+        presentationRejectionReason(error),
+        snapshot(lastValidSnapshot),
+      );
+      return null;
     }
-    post("state", latestState);
   }
 
   function handleMessage({ data }) {
@@ -63,11 +70,19 @@ export function createPresentationControllerChannel({
         sessionId,
         presentableItemIndex: getPresentableItemIndex(),
       });
-    } catch {
+    } catch (error) {
+      onMessageRejected(presentationRejectionReason(error), snapshot(lastValidSnapshot));
       return;
     }
     if (message.type !== "ready" && message.type !== "heartbeat") return;
-
+    if (message.sequence <= lastAudienceSequence) {
+      onMessageRejected(reason(
+        "duplicate_or_out_of_order",
+        "Audience message sequence is duplicate or out of order",
+      ), snapshot(lastValidSnapshot));
+      return;
+    }
+    lastAudienceSequence = message.sequence;
     lastHeartbeatAt = scheduler.now();
     setStatus("connected");
     if (message.type === "ready") sendLatestState();
@@ -80,8 +95,8 @@ export function createPresentationControllerChannel({
     channel.onmessage = handleMessage;
     connectionTimer = scheduler.setInterval(() => {
       if (
-        lastHeartbeatAt !== null &&
-        scheduler.now() - lastHeartbeatAt >= DISCONNECT_AFTER_MS
+        lastHeartbeatAt !== null
+        && scheduler.now() - lastHeartbeatAt >= DISCONNECT_AFTER_MS
       ) {
         setStatus("disconnected");
         lastHeartbeatAt = null;
@@ -89,11 +104,29 @@ export function createPresentationControllerChannel({
     }, 500);
   }
 
-  function publish(state) {
-    latestState = structuredClone(reconcilePresentationState(state, {
-      presentableItemIndex: getPresentableItemIndex(),
-    }));
+  function publish(state, context = {}) {
+    let candidate;
+    try {
+      validateSourceStatus(context);
+      const eligibility = validateSourceSelection(state?.source, state, context);
+      if (eligibility === false || eligibility?.accepted === false) {
+        throw sourceRejection(eligibility?.reason);
+      }
+      validatePresentationState(state, {
+        presentableItemIndex: getPresentableItemIndex(),
+      });
+      candidate = snapshot(state);
+    } catch (error) {
+      return {
+        accepted: false,
+        reason: presentationRejectionReason(error),
+        lastValidSnapshot: snapshot(lastValidSnapshot),
+      };
+    }
+
+    lastValidSnapshot = candidate;
     if (active) sendLatestState();
+    return { accepted: true, lastValidSnapshot: snapshot(lastValidSnapshot) };
   }
 
   function dispose() {
@@ -110,12 +143,16 @@ export function createPresentationControllerChannel({
   }
 
   function end() {
-    if (active) post("ended", {});
+    if (active) post("ended", null);
     setStatus("ended");
     dispose();
   }
 
-  return { start, publish, end, dispose };
+  function getLastValidSnapshot() {
+    return snapshot(lastValidSnapshot);
+  }
+
+  return { start, publish, end, dispose, getLastValidSnapshot };
 }
 
 export function createPresentationAudienceChannel({
@@ -127,12 +164,17 @@ export function createPresentationAudienceChannel({
   getPresentableItemIndex = () => presentableItemIndex,
   onStateChange = () => {},
   onConnectionChange = () => {},
+  onMessageRejected = () => {},
 } = {}) {
   let active = false;
   let channel = null;
   let heartbeatTimer = null;
   let sequence = 0;
   let status = "waiting";
+  let lastControllerSequence = 0;
+  let lastValidSnapshot = null;
+  let awaitingBaseline = true;
+  let resyncFloor = 0;
 
   function setStatus(nextStatus) {
     if (status === nextStatus) return;
@@ -141,20 +183,40 @@ export function createPresentationAudienceChannel({
   }
 
   function post(type) {
-    channel?.postMessage(
-      makePresentationMessage({
-        sessionId,
-        sequence: ++sequence,
-        type,
-        payload: {},
-        presentableItemIndex: getPresentableItemIndex(),
-      }),
-    );
+    const message = makePresentationMessage({
+      sessionId,
+      sequence: ++sequence,
+      type,
+      payload: null,
+      presentableItemIndex: getPresentableItemIndex(),
+    });
+    channel?.postMessage(message);
+    return message;
   }
 
-  function stopHeartbeat() {
-    if (heartbeatTimer !== null) scheduler.clearInterval(heartbeatTimer);
-    heartbeatTimer = null;
+  function rejectMessage(rejection) {
+    onMessageRejected(snapshot(rejection), snapshot(lastValidSnapshot));
+  }
+
+  function requestResync(rejection, floor) {
+    rejectMessage(rejection);
+    if (!awaitingBaseline) {
+      awaitingBaseline = true;
+      resyncFloor = Math.max(lastControllerSequence, floor ?? 0);
+      setStatus("resync-required");
+      post("ready");
+    } else {
+      resyncFloor = Math.max(resyncFloor, floor ?? 0);
+    }
+  }
+
+  function acceptState(message) {
+    lastControllerSequence = message.sequence;
+    lastValidSnapshot = snapshot(message.payload);
+    awaitingBaseline = false;
+    resyncFloor = 0;
+    onStateChange(snapshot(lastValidSnapshot));
+    setStatus("connected");
   }
 
   function handleMessage({ data }) {
@@ -164,18 +226,57 @@ export function createPresentationAudienceChannel({
         sessionId,
         presentableItemIndex: getPresentableItemIndex(),
       });
-    } catch {
+    } catch (error) {
+      const rejection = presentationRejectionReason(error);
+      const candidateSequence = envelopeSequence(data);
+      if (
+        error?.code !== "session_mismatch"
+        && isControllerEnvelope(data, sessionId)
+        && candidateSequence > lastControllerSequence
+      ) {
+        requestResync(rejection, candidateSequence);
+      } else {
+        rejectMessage(rejection);
+      }
+      return;
+    }
+
+    if (message.type !== "state" && message.type !== "ended") return;
+
+    if (awaitingBaseline) {
+      if (message.type !== "state" || message.sequence <= resyncFloor) {
+        rejectMessage(reason(
+          "duplicate_or_out_of_order",
+          "Audience is waiting for a fresh controller state baseline",
+        ));
+        return;
+      }
+      acceptState(message);
+      return;
+    }
+
+    if (message.sequence <= lastControllerSequence) {
+      rejectMessage(reason(
+        "duplicate_or_out_of_order",
+        "controller message sequence is duplicate or out of order",
+      ));
+      return;
+    }
+    if (message.sequence !== lastControllerSequence + 1) {
+      requestResync(reason(
+        "sequence_gap",
+        "controller message sequence is incomplete",
+      ), message.sequence);
       return;
     }
     if (message.type === "state") {
-      onStateChange(message.payload);
-      setStatus("connected");
+      acceptState(message);
+      return;
     }
-    if (message.type === "ended") {
-      onStateChange(null);
-      setStatus("waiting");
-      dispose();
-    }
+
+    lastControllerSequence = message.sequence;
+    setStatus("waiting");
+    dispose();
   }
 
   function start() {
@@ -183,8 +284,18 @@ export function createPresentationAudienceChannel({
     active = true;
     channel = createChannel(channelName);
     channel.onmessage = handleMessage;
+    awaitingBaseline = true;
+    resyncFloor = lastControllerSequence;
     post("ready");
-    heartbeatTimer = scheduler.setInterval(() => post("heartbeat"), HEARTBEAT_INTERVAL_MS);
+    heartbeatTimer = scheduler.setInterval(
+      () => post("heartbeat"),
+      HEARTBEAT_INTERVAL_MS,
+    );
+  }
+
+  function stopHeartbeat() {
+    if (heartbeatTimer !== null) scheduler.clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
   }
 
   function dispose() {
@@ -198,7 +309,54 @@ export function createPresentationAudienceChannel({
     channel = null;
   }
 
-  return { start, dispose };
+  function getLastValidSnapshot() {
+    return snapshot(lastValidSnapshot);
+  }
+
+  function isResyncRequired() {
+    return awaitingBaseline && lastControllerSequence > 0;
+  }
+
+  return { start, dispose, getLastValidSnapshot, isResyncRequired };
+}
+
+function validateSourceStatus(context) {
+  const status = context?.sourceStatus ?? context?.sourceSelection?.status;
+  if (status === undefined || status === null || status === "valid") return;
+  const normalized = String(status).trim().toLowerCase().replaceAll("_", "-");
+  if (["invalid", "needs-attention", "needs attention"].includes(normalized)) {
+    throw sourceRejection();
+  }
+}
+
+function sourceRejection(customReason) {
+  const fallback = reason(
+    "source_not_presentable",
+    "invalid or Needs-attention sources cannot be sent to Audience",
+  );
+  const selected = customReason?.code && customReason?.message ? customReason : fallback;
+  const error = new Error(selected.message);
+  error.code = selected.code;
+  error.reason = selected;
+  return error;
+}
+
+function envelopeSequence(value) {
+  return Number.isSafeInteger(value?.sequence) && value.sequence > 0 ? value.sequence : 0;
+}
+
+function isControllerEnvelope(value, sessionId) {
+  return value?.protocol_version === 3
+    && value?.session_id === sessionId
+    && (value?.type === "state" || value?.type === "ended");
+}
+
+function reason(code, message) {
+  return Object.freeze({ code, message });
+}
+
+function snapshot(value) {
+  return value == null ? value : structuredClone(value);
 }
 
 function defaultScheduler() {
