@@ -17,6 +17,7 @@ const vite = await createServer({
   root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true },
 });
 const editorModule = await vite.ssrLoadModule("/src/components/static-content/StaticContentEditor.jsx");
+const freeTextEditorModule = await vite.ssrLoadModule("/src/components/static-content/FreeTextSourceEditor.jsx");
 await vite.close();
 
 test("StaticContentEditor mounts an existing V5 Image edit with media placement settings", () => {
@@ -34,6 +35,15 @@ test("StaticContentEditor mounts an existing V5 Image edit with media placement 
   assert.match(html, /Alternative text/);
   assert.match(html, /data-image-media-id="media-image-source"/);
   assert.match(html, /data-image-media-revision="3"/);
+});
+
+test("Free-text authoring exposes the basic portable-QMD toolbar", () => {
+  const html = renderToStaticMarkup(React.createElement(freeTextEditorModule.FreeTextSourceEditor, { value: "Brief" }));
+  assert.match(html, /role="toolbar"[^>]*aria-label="Format portable QMD"/);
+  assert.match(html, /aria-label="Font choice"/);
+  for (const label of ["Bold", "Underline", "Italics", "Bulleted list", "Insert table"]) {
+    assert.match(html, new RegExp(`aria-label="${label}"`));
+  }
 });
 
 test("existing Image edit finalizes and prepares the exact atomic V5 contract", () => {

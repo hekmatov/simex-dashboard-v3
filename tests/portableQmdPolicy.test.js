@@ -11,6 +11,7 @@ import { parsePortableQmd } from "../src/static-content/qmd/parsePortableQmd.js"
 const semanticFeatures = [
   ["headings", "# Situation\n\n###### Detail"],
   ["emphasis", "**bold** *italic* ~~removed~~"],
+  ["underline", "++underlined++"],
   ["lists", "- item\n- [x] completed\n\n1. first"],
   ["safe links", "[safe](https://example.test/path) [local](#detail)"],
   ["tables", "| Facility | Ready |\n| --- | --- |\n| North | Yes |"],

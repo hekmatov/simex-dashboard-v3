@@ -6,6 +6,7 @@ export const PORTABLE_QMD_POLICY = Object.freeze({
     arbitraryText: "allow-inert",
     headings: "semantic",
     emphasis: "semantic",
+    underline: "semantic",
     lists: "semantic",
     links: "safe-or-inert",
     tables: "semantic",

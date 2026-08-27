@@ -3,6 +3,7 @@ import React from "react";
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../../static-content/qmd/portableQmdMedia.js";
+import { applyQmdToolbarCommand } from "../../static-content/qmd/sourceToolbarCommands.js";
 import MediaPicker from "../source-content/MediaPicker.jsx";
 import QmdMediaInspector from "./QmdMediaInspector.jsx";
 
@@ -41,6 +42,7 @@ export function FreeTextSourceEditor({
   const previewPaneRef = React.useRef(null);
   const editorRef = React.useRef(null);
   const changeTriggerRef = React.useRef(null);
+  const sourceInputRef = React.useRef(null);
   const lastFocused = React.useRef({ source: null, preview: null });
   const previewRenderContext = React.useMemo(() => ({
     ...contentRenderContext,
@@ -205,6 +207,16 @@ export function FreeTextSourceEditor({
     onMediaSelect?.(item);
     setPickerOpen(false);
   };
+  const applyToolbarCommand = (command) => {
+    const input = sourceInputRef.current;
+    if (!input || disabled) return;
+    const result = applyQmdToolbarCommand(value, input.selectionStart, input.selectionEnd, command);
+    changeSource(result.source);
+    window.requestAnimationFrame(() => {
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(result.selectionStart, result.selectionEnd);
+    });
+  };
 
   return (
     <section
@@ -247,7 +259,23 @@ export function FreeTextSourceEditor({
           onFocusCapture={recordFocus("source")}
         >
           <label htmlFor={id}>QMD-style source</label>
+          <div role="toolbar" aria-label="Format portable QMD" className="free-text-source-editor__toolbar">
+            <label>
+              Font choice
+              <select aria-label="Font choice" defaultValue="body" disabled={disabled} onChange={(event) => applyToolbarCommand({ type: "font", value: event.target.value })}>
+                <option value="body">Body</option>
+                <option value="heading-2">Heading</option>
+                <option value="heading-3">Subheading</option>
+              </select>
+            </label>
+            <ToolbarButton label="Bold" command={{ type: "wrap", before: "**", after: "**", placeholder: "bold text" }} onCommand={applyToolbarCommand} disabled={disabled} />
+            <ToolbarButton label="Underline" command={{ type: "wrap", before: "++", after: "++", placeholder: "underlined text" }} onCommand={applyToolbarCommand} disabled={disabled} />
+            <ToolbarButton label="Italics" command={{ type: "wrap", before: "*", after: "*", placeholder: "italic text" }} onCommand={applyToolbarCommand} disabled={disabled} />
+            <ToolbarButton label="Bulleted list" command={{ type: "line-prefix", prefix: "- " }} onCommand={applyToolbarCommand} disabled={disabled} />
+            <ToolbarButton label="Insert table" command={{ type: "table" }} onCommand={applyToolbarCommand} disabled={disabled} />
+          </div>
           <textarea
+            ref={sourceInputRef}
             id={id}
             value={value}
             disabled={disabled}
@@ -360,6 +388,10 @@ function pendingValidation(source, sourceRevision, previewRevision) {
     sourceRevision,
     previewRevision,
   };
+}
+
+function ToolbarButton({ label, command, onCommand, disabled }) {
+  return <button type="button" aria-label={label} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => onCommand(command)}>{label}</button>;
 }
 
 function ChangeMediaPicker({ mediaItems, selectedMediaId, onSelect, onCancel }) {

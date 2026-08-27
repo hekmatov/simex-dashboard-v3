@@ -119,6 +119,25 @@
   width: 100%;
 }
 
+.free-text-source-editor__toolbar {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.free-text-source-editor__toolbar label {
+  display: grid;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  gap: 3px;
+}
+
+.free-text-source-editor__toolbar :is(button, select) {
+  min-height: 36px;
+}
+
 .free-text-source-editor__preview {
   background: var(--simex-surface-muted, #f7f9fb);
   overflow: hidden;

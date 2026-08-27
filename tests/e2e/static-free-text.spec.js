@@ -92,6 +92,33 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
+test("Free-text toolbar authors portable font, emphasis, lists, and tables", async ({ page }) => {
+  await openBiomedicalBuild(page);
+  await page.getByRole("button", { name: "Add static content", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  const source = wizard.getByLabel("QMD-style source");
+
+  await source.fill("Brief");
+  await source.evaluate((node) => node.setSelectionRange(0, 5));
+  await wizard.getByRole("button", { name: "Bold" }).click();
+  await expect(source).toHaveValue("**Brief**");
+  await wizard.getByLabel("Font choice").selectOption("heading-2");
+  await expect(source).toHaveValue("## **Brief**");
+
+  await source.fill("First\nSecond");
+  await source.evaluate((node) => node.setSelectionRange(0, node.value.length));
+  await wizard.getByRole("button", { name: "Bulleted list" }).click();
+  await expect(source).toHaveValue("- First\n- Second");
+
+  await source.fill("");
+  await wizard.getByRole("button", { name: "Insert table" }).click();
+  await expect(source).toHaveValue("| Column 1 | Column 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |");
+  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+});
+
 for (const viewport of VIEWPORTS) {
   test(`Free text completes its in-session production journey at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     test.setTimeout(180_000);

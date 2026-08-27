@@ -12,6 +12,7 @@ const parser = new MarkdownIt({
   breaks: false,
 });
 parser.use(portableImageSourceOffsetsPlugin);
+parser.use(portableUnderlinePlugin);
 parser.use(portableCalloutPlugin);
 parser.use(portableMathPlugin);
 parser.use(portableFootnotePlugin);
@@ -77,6 +78,21 @@ function portableImageSourceOffsetsPlugin(md) {
       };
     }
     return accepted;
+  });
+}
+
+function portableUnderlinePlugin(md) {
+  md.inline.ruler.before("emphasis", "portable_underline", (state, silent) => {
+    if (state.src.slice(state.pos, state.pos + 2) !== "++") return false;
+    const close = state.src.indexOf("++", state.pos + 2);
+    if (close < 0 || close === state.pos + 2) return false;
+    if (!silent) {
+      state.push("underline_open", "u", 1);
+      state.push("text", "", 0).content = state.src.slice(state.pos + 2, close);
+      state.push("underline_close", "u", -1);
+    }
+    state.pos = close + 2;
+    return true;
   });
 }
 

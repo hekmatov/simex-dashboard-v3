@@ -178,9 +178,9 @@ function renderInlineTokens(tokens, root, environment) {
       const code = createElement(environment.document, "code");
       code.textContent = token.content;
       current().append(code);
-    } else if (token.type === "strong_open" || token.type === "em_open" || token.type === "s_open") {
+    } else if (token.type === "strong_open" || token.type === "em_open" || token.type === "s_open" || token.type === "underline_open") {
       open(createElement(environment.document, token.type.replace("_open", "").replace("strong", "strong")));
-    } else if (token.type === "strong_close" || token.type === "em_close" || token.type === "s_close") {
+    } else if (token.type === "strong_close" || token.type === "em_close" || token.type === "s_close" || token.type === "underline_close") {
       close();
     } else if (token.type === "link_open") {
       const rawHref = String(token.attrGet?.("href") ?? "");
