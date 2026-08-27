@@ -3,6 +3,22 @@ import { expect } from "@playwright/test";
 export const LIVE_APP_URL = "http://127.0.0.1:4185/";
 export const DASHBOARD_STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
+export async function installAudienceFaultInstrumentation(context) {
+  await context.addInitScript(() => {
+    const NativeBroadcastChannel = window.BroadcastChannel;
+    window.BroadcastChannel = class ObservedBroadcastChannel extends NativeBroadcastChannel {
+      constructor(name) {
+        super(name);
+        this.addEventListener("message", ({ data }) => {
+          if (data?.protocol_version === 3 && ["state", "ended"].includes(data.type)) {
+            window.__audienceTestLastControllerMessage = structuredClone(data);
+          }
+        });
+      }
+    };
+  });
+}
+
 export async function createSavedPresentationScene(page) {
   await page.goto(LIVE_APP_URL);
   await page.locator('[data-dashboard-page-id="biomedical"]').click();
@@ -57,6 +73,26 @@ export async function sendLateOldGenerationMessage(page, channelId) {
       session_id: sessionId,
       sequence: Number.MAX_SAFE_INTEGER,
       type: "heartbeat",
+      payload: null,
+    });
+    channel.close();
+  }, channelId);
+}
+
+export async function injectIncompleteNextAudienceState(popup, channelId) {
+  await expect.poll(() => popup.evaluate(() => (
+    window.__audienceTestLastControllerMessage?.type === "state"
+      ? window.__audienceTestLastControllerMessage.sequence
+      : null
+  ))).not.toBeNull();
+  await popup.evaluate((sessionId) => {
+    const last = window.__audienceTestLastControllerMessage;
+    const channel = new BroadcastChannel(`simex-presentation-${sessionId}`);
+    channel.postMessage({
+      protocol_version: 3,
+      session_id: sessionId,
+      sequence: last.sequence + 1,
+      type: "state",
       payload: null,
     });
     channel.close();

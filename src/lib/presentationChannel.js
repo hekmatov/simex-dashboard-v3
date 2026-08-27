@@ -175,6 +175,7 @@ export function createPresentationAudienceChannel({
   presentableItemIndex,
   getPresentableItemIndex = () => presentableItemIndex,
   onStateChange = () => {},
+  onMessageAccepted = () => {},
   onEnded = () => {},
   onConnectionChange = () => {},
   onMessageRejected = () => {},
@@ -228,6 +229,7 @@ export function createPresentationAudienceChannel({
     lastValidSnapshot = snapshot(message.payload);
     awaitingBaseline = false;
     resyncFloor = 0;
+    onMessageAccepted(snapshot(message));
     onStateChange(snapshot(lastValidSnapshot));
     setStatus("connected");
   }
@@ -265,6 +267,7 @@ export function createPresentationAudienceChannel({
         return;
       }
       lastControllerSequence = message.sequence;
+      onMessageAccepted(snapshot(message));
       onEnded(snapshot(message));
       setStatus("ended");
       dispose();

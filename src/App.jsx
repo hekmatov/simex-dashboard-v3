@@ -90,6 +90,7 @@ import {
 } from "./lib/loadDashboard.js";
 import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
+import { projectAudienceSnapshot } from "./lib/audienceProjection.js";
 import { createPresentationAudienceChannel } from "./lib/presentationChannel.js";
 import {
   createDashboardThemeProjection,
@@ -174,7 +175,7 @@ export default function App() {
   const [deviceLayout, setDeviceLayout] = React.useState(() => loadDeviceLayout());
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
-  const [audiencePresentationState, setAudiencePresentationState] = React.useState(null);
+  const [audienceProjection, setAudienceProjection] = React.useState(null);
   const [audienceConnectionStatus, setAudienceConnectionStatus] = React.useState("waiting");
   const [appearancePreference, setAppearancePreference] = React.useState(() => readAppearancePreference());
   const [lookDrawerOpen, setLookDrawerOpen] = React.useState(false);
@@ -188,6 +189,7 @@ export default function App() {
       && window.matchMedia?.("(prefers-color-scheme: dark)").matches === true
   ));
   const displayStateRef = React.useRef(displayState);
+  const audienceLastValidProjectionRef = React.useRef(null);
   const dashboardRef = React.useRef(null);
   const trackedDatasetProfilesRef = React.useRef({});
   const dashboardCommitControllerRef = React.useRef(null);
@@ -454,8 +456,15 @@ export default function App() {
       channel = createPresentationAudienceChannel({
         sessionId: dashboardEntry.channelId,
         presentableItemIndex,
-        onStateChange: setAudiencePresentationState,
-        onEnded: () => setAudienceConnectionStatus("ended"),
+        onMessageAccepted: (message) => {
+          const result = projectAudienceSnapshot(
+            message,
+            audienceLastValidProjectionRef.current,
+          );
+          if (!result.accepted) return;
+          audienceLastValidProjectionRef.current = result.lastValid;
+          setAudienceProjection(result.projection);
+        },
         onConnectionChange: setAudienceConnectionStatus,
       });
       channel.start();
@@ -1239,8 +1248,7 @@ export default function App() {
             requestRepair() {},
           }}
           connectionStatus={audienceConnectionStatus}
-          presentationState={audiencePresentationState}
-          presentableItemIndex={presentableItemIndex}
+          projection={audienceProjection}
         />
       </div>
     );

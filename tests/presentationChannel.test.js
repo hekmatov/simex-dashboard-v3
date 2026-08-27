@@ -116,6 +116,7 @@ function setup({
   const scheduler = new FakeScheduler();
   const states = [];
   const ended = [];
+  const acceptedMessages = [];
   const rejections = [];
   const statuses = [];
   const controller = createPresentationControllerChannel({
@@ -132,11 +133,12 @@ function setup({
     scheduler,
     getPresentableItemIndex,
     onStateChange: (next) => states.push(next),
+    onMessageAccepted: (message) => acceptedMessages.push(message),
     onEnded: (terminalMessage) => ended.push(terminalMessage),
     onConnectionChange: (status) => statuses.push(`audience:${status}`),
     onMessageRejected: (reason, lastValidSnapshot) => rejections.push({ reason, lastValidSnapshot }),
   });
-  return { audience, controller, scheduler, states, ended, rejections, statuses };
+  return { audience, controller, scheduler, states, ended, acceptedMessages, rejections, statuses };
 }
 
 function audienceTransport() {
@@ -159,6 +161,35 @@ test("controller validates before publication and never reconciles an invalid se
   assert.deepEqual(states, [first]);
   audience.dispose();
   controller.dispose();
+});
+
+test("Audience exposes only clone-safe channel-accepted state and ended envelopes to projection owners", () => {
+  const { audience, controller, acceptedMessages, rejections } = setup();
+  controller.start();
+  audience.start();
+  const first = presentationState();
+  controller.publish(first);
+
+  assert.equal(acceptedMessages.length, 1);
+  assert.deepEqual(acceptedMessages[0], {
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 1,
+    type: "state",
+    payload: first,
+  });
+  acceptedMessages[0].payload.payload.items[0].chart_id = "chart-b";
+
+  audienceTransport().transformNext = (message) => ({ ...message, payload: null });
+  controller.publish({ ...first, blackout: true });
+  assert.equal(rejections.at(-1).reason.code, "invalid_object");
+  assert.equal(acceptedMessages.length, 2, "fresh resync state is the only accepted recovery callback");
+  assert.equal(acceptedMessages.at(-1).payload.blackout, true);
+
+  controller.end();
+  assert.equal(acceptedMessages.at(-1).type, "ended");
+  assert.equal(acceptedMessages.at(-1).payload, null);
+  audience.dispose();
 });
 
 test("invalid and Needs-attention source selections retain last-valid output", () => {
