@@ -447,6 +447,8 @@ function layoutChoices(count) {
 
 function connectionStatusLabel(status) {
   if (status === "connected") return "Audience display connected";
+  if (status === "connecting") return "Audience display connecting";
+  if (status === "reconnecting") return "Audience display reconnecting";
   if (status === "opening") return "Opening audience display";
   if (status === "disconnected") return "Audience display disconnected";
   if (status === "blocked") return "Audience display unavailable";

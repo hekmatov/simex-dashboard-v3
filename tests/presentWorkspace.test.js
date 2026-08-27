@@ -55,13 +55,14 @@ function renderPresent(Component, overrides = {}) {
   const {
     displayState: requestedDisplayState = displayState,
     runtime: runtimeOverrides = {},
+    connectionStatus: connectionStatusOverride = "not-open",
     playbackProps = {},
     ...componentOverrides
   } = overrides;
   const runtime = {
     displayState: requestedDisplayState,
     onDisplayAction: () => {},
-    connectionStatus: "not-open",
+    connectionStatus: connectionStatusOverride,
     connectionError: "",
     hasSession: false,
     audienceFacts: {
@@ -184,6 +185,17 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, />Restore<\/button>/);
   assert.match(html, />End presentation<\/button>/);
   assert.doesNotMatch(html, /permission|role|authoriz|access control/i);
+});
+
+test("Present exposes connecting and reconnecting moderator status copy", () => {
+  for (const [connectionStatus, label] of [
+    ["connecting", "Audience display connecting"],
+    ["reconnecting", "Audience display reconnecting"],
+  ]) {
+    const html = renderPresent(presentModule.default, { connectionStatus });
+    assert.match(html, new RegExp(`>${label}<`));
+    assert.match(html, /aria-label="Audience display connection"/);
+  }
 });
 
 test("DashboardRenderer composes Present without mounting the fullscreen display", () => {

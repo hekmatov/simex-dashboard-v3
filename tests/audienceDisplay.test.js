@@ -375,6 +375,20 @@ test("Audience uses saved permille date geometry and preserves direct-seek trace
   assert.match(html, /2027-03-15/);
 });
 
+test("Audience keeps the exact y=1000 date endpoint inside its surface with a proportional self-anchor", () => {
+  const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    projection: audienceProjection({
+      epoch: Date.UTC(2027, 2, 15),
+      datePosition: { x_permille: 125, y_permille: 1000, width_permille: 375 },
+    }),
+  }));
+
+  assert.match(html, /top:100%/);
+  assert.match(html, /transform:translateY\(-100%\)/);
+});
+
 test("Audience ended is exact, neutral, passive, and contains no retained output or technical recovery copy", () => {
   const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,

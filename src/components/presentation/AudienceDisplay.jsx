@@ -203,6 +203,7 @@ function datePositionStyle(position) {
   return {
     left: `${position.x_permille / 10}%`,
     top: `${position.y_permille / 10}%`,
+    transform: `translateY(-${position.y_permille / 10}%)`,
     width: `${position.width_permille / 10}%`,
   };
 }

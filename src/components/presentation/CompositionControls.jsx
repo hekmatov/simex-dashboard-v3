@@ -214,6 +214,7 @@ export default function CompositionControls({
           style={{
             left: `${draft.value.xPermille / 10}%`,
             top: `${draft.value.yPermille / 10}%`,
+            transform: `translateY(-${draft.value.yPermille / 10}%)`,
             width: `${draft.value.widthPermille / 10}%`,
           }}
           onKeyDown={onKeyDown}

@@ -566,6 +566,78 @@ test("heartbeat, disconnect, ended, and cleanup retain the v3 lifecycle", () => 
   observer.close();
 });
 
+test("a post-timeout controller heartbeat cannot reconnect without a ready-triggered baseline", () => {
+  FakeBroadcastChannel.reset();
+  const scheduler = new FakeScheduler();
+  const statuses = [];
+  const sent = [];
+  const controller = createPresentationControllerChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => presentableItemIndex,
+    validateSourceSelection: () => ({ accepted: true }),
+    onConnectionChange: (status) => statuses.push(status),
+  });
+  const observer = createChannel("simex-presentation-session-001");
+  observer.onmessage = ({ data }) => sent.push(data);
+  const audience = createChannel("simex-presentation-session-001");
+  controller.start();
+  controller.publish(presentationState());
+
+  audience.postMessage({
+    protocol_version: 3, session_id: "session-001", sequence: 1, type: "ready", payload: null,
+  });
+  assert.equal(statuses.at(-1), "connected");
+
+  scheduler.advance(5_000);
+  audience.postMessage({
+    protocol_version: 3, session_id: "session-001", sequence: 2, type: "heartbeat", payload: null,
+  });
+  assert.deepEqual(statuses.slice(-2), ["disconnected", "reconnecting"]);
+  assert.equal(sent.filter(({ type }) => type === "state").length, 2);
+
+  audience.postMessage({
+    protocol_version: 3, session_id: "session-001", sequence: 3, type: "ready", payload: null,
+  });
+  assert.equal(statuses.at(-1), "connected");
+  assert.equal(sent.filter(({ type }) => type === "state").length, 3);
+  assert.deepEqual(sent.at(-1).payload, presentationState());
+
+  audience.close();
+  observer.close();
+  controller.dispose();
+});
+
+test("a ready arriving first after controller timeout traverses reconnecting before its fresh baseline", () => {
+  FakeBroadcastChannel.reset();
+  const scheduler = new FakeScheduler();
+  const statuses = [];
+  const controller = createPresentationControllerChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => presentableItemIndex,
+    validateSourceSelection: () => ({ accepted: true }),
+    onConnectionChange: (status) => statuses.push(status),
+  });
+  const audience = createChannel("simex-presentation-session-001");
+  controller.start();
+  controller.publish(presentationState());
+  audience.postMessage({
+    protocol_version: 3, session_id: "session-001", sequence: 1, type: "ready", payload: null,
+  });
+
+  scheduler.advance(5_000);
+  audience.postMessage({
+    protocol_version: 3, session_id: "session-001", sequence: 2, type: "ready", payload: null,
+  });
+
+  assert.deepEqual(statuses.slice(-3), ["disconnected", "reconnecting", "connected"]);
+  audience.close();
+  controller.dispose();
+});
+
 test("Audience detects controller silence and exposes reconnecting until a fresh valid snapshot arrives", () => {
   const { audience, controller, scheduler, states, statuses } = setup();
   controller.start();

@@ -327,6 +327,18 @@ test("composition controls expose an explicit dirty Save/Cancel boundary for sav
   assert.doesNotMatch(html, /session_override|matching override/i);
 });
 
+test("date-position editor keeps the y=1000 endpoint visible with a proportional self-anchor", () => {
+  const scene = dashboardFixture().scenes[0];
+  scene.audience.datePosition = { xPermille: 125, yPermille: 1000, widthPermille: 375 };
+  const html = renderToStaticMarkup(React.createElement(compositionModule.default, {
+    scene,
+    onSaveSceneDatePosition() {},
+  }));
+
+  assert.match(html, /top:100%/);
+  assert.match(html, /transform:translateY\(-100%\)/);
+});
+
 function dashboardFixture() {
   const chart = { id: "chart-a", pageId: "page-a", title: "Cases" };
   const scene = {

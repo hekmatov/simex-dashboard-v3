@@ -79,8 +79,10 @@ export function createPresentationControllerChannel({
     if (message.type === "ready" && message.sequence === 1) {
       lastAudienceSequence = 1;
       lastHeartbeatAt = scheduler.now();
-      setStatus("connected");
-      sendLatestState();
+      const reconnecting = status === "disconnected";
+      if (reconnecting) setStatus("reconnecting");
+      const baseline = sendLatestState();
+      setStatus(baseline ? "connected" : reconnecting ? "reconnecting" : "connecting");
       return;
     }
     if (message.sequence <= lastAudienceSequence) {
@@ -92,8 +94,14 @@ export function createPresentationControllerChannel({
     }
     lastAudienceSequence = message.sequence;
     lastHeartbeatAt = scheduler.now();
-    setStatus("connected");
-    if (message.type === "ready") sendLatestState();
+    if (message.type === "ready") {
+      const reconnecting = status === "disconnected" || status === "reconnecting";
+      if (status === "disconnected") setStatus("reconnecting");
+      const baseline = sendLatestState();
+      setStatus(baseline ? "connected" : reconnecting ? "reconnecting" : "connecting");
+    } else if (status === "disconnected") {
+      setStatus("reconnecting");
+    }
   }
 
   function start() {

@@ -200,6 +200,40 @@ test("Audience preserves canonical passive geometry across the Step 8 viewport f
   await popup.close();
 });
 
+test("date-position endpoints remain fully visible in the editor and Audience", async ({ page }) => {
+  test.setTimeout(120_000);
+  const scene = await createSavedPresentationScene(page);
+  await enterPresentWithScene(page, scene);
+  const { popup } = await openAudienceSession(page);
+  const yPosition = page.locator('[data-presentation-control-id="date-position-y"]');
+
+  for (const yPermille of [0, 1000]) {
+    await yPosition.fill(String(yPermille));
+    await page.locator('[data-presentation-control-id="date-position-save"]').click();
+    await expect(page.getByText("Unsaved position", { exact: true })).toHaveCount(0);
+    await expect.poll(() => popup.locator(".audience-scene-date").evaluate((element) => element.style.top))
+      .toBe(`${yPermille / 10}%`);
+
+    const geometry = await Promise.all([
+      page.locator(".presentation-date-position-stage").boundingBox(),
+      page.locator('[data-presentation-control-id="date-position-handle"]').boundingBox(),
+      popup.locator(".audience-display").boundingBox(),
+      popup.locator(".audience-scene-date").boundingBox(),
+    ]);
+    const [stage, handle, audience, date] = geometry;
+    expect(stage && handle && audience && date).toBeTruthy();
+    expect(handle.x).toBeGreaterThanOrEqual(stage.x);
+    expect(handle.y).toBeGreaterThanOrEqual(stage.y);
+    expect(handle.x + handle.width).toBeLessThanOrEqual(stage.x + stage.width);
+    expect(handle.y + handle.height).toBeLessThanOrEqual(stage.y + stage.height);
+    expect(date.x).toBeGreaterThanOrEqual(audience.x);
+    expect(date.y).toBeGreaterThanOrEqual(audience.y);
+    expect(date.x + date.width).toBeLessThanOrEqual(audience.x + audience.width);
+    expect(date.y + date.height).toBeLessThanOrEqual(audience.y + audience.height);
+  }
+  await popup.close();
+});
+
 async function assertAudiencePassiveAndBounded(popup, scene, viewport = null) {
   const audience = popup.locator(".audience-display");
   await expect(audience.locator("button, nav, a, [tabindex]")).toHaveCount(0);
