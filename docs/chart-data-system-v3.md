@@ -1,9 +1,11 @@
-# Chart Data System V3
+# Chart Data System V3 within Dashboard V6
 
 ## Scope
 
 Chart Data System V3 is the schema-driven authoring, validation, preparation,
-rendering, playback, and persistence architecture used by SimEx Dashboard V2.
+rendering, and playback architecture used by SimEx Dashboard. It is embedded
+in the Version 6 dashboard configuration and package boundary; this document
+does not describe a Version 3 dashboard envelope.
 
 Its central rule is:
 
@@ -22,8 +24,9 @@ Several independent contracts intentionally use different versions:
 | Contract | Version |
 | --- | --- |
 | Chart instance | `configVersion: 3` |
-| Dashboard configuration | `configVersion: 3` |
-| Portable dashboard bundle | `version: 3` |
+| Chart Data System | Version 3 |
+| Dashboard configuration | `configVersion: 6` |
+| Portable dashboard bundle | `version: 6` |
 | Quorum chart catalogue | `contract_version: "2"` |
 | Quorum companion protocol | `"1"` |
 
@@ -442,9 +445,10 @@ The same behavior is applied to mounted ECharts, image zoom, dashboard panels,
 and fullscreen views. Listener lifecycle and reduced-motion behavior are
 covered by browser tests.
 
-## Configuration and bundle version 3
+## Dashboard V6 configuration and package boundary
 
-Every saved chart uses `configVersion: 3`. Dashboard validation checks:
+Every saved chart uses `configVersion: 3`; the enclosing dashboard uses
+`configVersion: 6`. Dashboard validation checks:
 
 - exact top-level and nested shapes;
 - chart type and role references;
@@ -455,15 +459,16 @@ Every saved chart uses `configVersion: 3`. Dashboard validation checks:
 - page, section, landing, and chart identity;
 - absence of runtime-only rows.
 
-Portable bundles require an exact four-key outer envelope. The following is a
-shape schematic, not an importable bundle: a real export supplies a canonical
-timestamp or `null`, the exact fingerprint-entry map for its data sources, and
-the complete validated dashboard configuration.
+Portable bundles are Version 6. The package parser can deterministically
+normalize a raw Version 3–6 configuration before applying the strict current
+boundary; invalid or unsupported input is rejected. The following is a shape
+schematic, not an importable bundle: a real export supplies canonical metadata
+and the complete validated dashboard configuration.
 
 ```json
 {
   "bundleType": "simex-dashboard-bundle",
-  "version": 3,
+  "version": 6,
   "metadata": {
     "exportedAt": "<canonical ISO-8601 timestamp or null>",
     "sourceFingerprints": {
@@ -471,15 +476,16 @@ the complete validated dashboard configuration.
     }
   },
   "config": {
-    "configVersion": 3,
+    "configVersion": 6,
     "...": "<complete dashboard configuration>"
   }
 }
 ```
 
-Version 2 is rejected rather than migrated. This is deliberate: a guessed
-shape conversion cannot prove that the old visual encoded the intended
-analytical meaning.
+Unrecognized or invalid legacy input is rejected rather than partially
+applied. Deterministic normalization is limited to accepted Version 3–6
+shapes; it cannot guess an unknown visual or analytical meaning. Re-export a
+successful legacy import as Version 6.
 
 ## Quorum catalogue generation
 

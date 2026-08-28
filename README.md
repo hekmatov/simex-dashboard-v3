@@ -1,274 +1,82 @@
-# SimEx Dashboard V2
+# SimEx Dashboard
 
-SimEx Dashboard V2 is a static React and ECharts application for simulation
-exercise situational awareness and decision support. Contained chart configs
-remain version 3; dashboard schemas and portable bundles are version 4.
+SimEx Dashboard is a static React and ECharts workspace for simulation-exercise
+situational awareness, dashboard authoring, and controlled audience
+presentation. It is a training prototype, provided without warranty of
+availability, accuracy, suitability, security, support, or compatibility.
 
-The default HeV-A26 dashboard demonstrates biomedical and socio-economic
-monitoring. The application is a reusable authoring and display system rather
-than a fixed copy of the dashboard used in an earlier exercise.
+The application has four workspaces: application-owned **Home**, shared
+operational **View**, local-authoring **Build**, and moderator-controlled
+**Present** with a passive same-computer **Audience** output. Home is governed
+by the active Scenario preference, not by an authored Page. View and Build
+share the canonical renderer and saved layout; Present and Audience consume
+saved content rather than author it.
 
-Prototype for education and training only. Non-commercial. No guarantees of availability, accuracy, suitability, security, support, or compatibility.
+## Current contracts
 
-## What the dashboard supports
+- Dashboard configuration and portable packages are **Version 6**.
+- Chart definitions, schema-generated authoring, and the chart data pipeline
+  are **Version 3**.
+- Quorum's generated chart catalogue is contract version 2; its companion
+  protocol is version 1.
+- The core dashboard supports static/offline operation. URL-hosted media remains
+  an explicit network dependency rather than being silently embedded.
 
-- A showcase Home page plus configurable operational dashboard pages.
-- A schema-generated, six-stage chart wizard:
-  1. select a chart type by communication purpose;
-  2. select a tracked CSV, upload a CSV, or use schema-authorized concise
-     manual data;
-  3. bind typed data roles and transformations;
-  4. review the live chart before configuring relevant style and layout.
-- Twenty-six chart types across comparison, trend, composition, target,
-  relationship, readiness, timeline, geography, and operational families.
-- Real pie and donut charts, line and bar variants, KPIs, gauges, bullets,
-  delta cards and lists, heatmaps, readiness matrices, timelines, swimlanes,
-  choropleths, map scatter, tables, images, and other registered types.
-- Dataset profiling with detected column types, examples, and temporal
-  diagnostics.
-- Multiple measurements, primary and secondary axes, clusters, filters,
-  missing-value handling, and duplicate resolution shown only when the
-  selected roles produce collisions.
-- Preview-gated, schema-applicable series palettes and line or bar widths,
-  persisted through bundles and guided chart-type conversion.
-- A contextual chart editor and guided, atomic chart-type conversion.
-- Synchronized time playback with exact, last-known, bounded-nearest, and
-  explicitly authorized interpolation policies.
-- A reusable Collection Display framework for fixed grids, scrollable grids,
-  carousels, and priority-ranked KPI, gauge, bullet, or delta-list items.
-- Ctrl-wheel zoom guarding on charts that support wheel zoom.
-- Single- and multi-chart fullscreen views, image export, responsive layouts,
-  and an optional metadata-only Quorum companion.
+The operational ownership, draft, package, temporal, and mode rules are in the
+[V6 dashboard operation contract](docs/v3-dashboard-operation-contract.md).
+The user-facing workflow is in the [app manual](docs/app-manual.md), and the
+chart model is in [Chart Data System V3](docs/chart-data-system-v3.md).
 
-For user guidance, see [the app manual](docs/app-manual.md). For the data and
-configuration architecture, see
-[Chart Data System V3](docs/chart-data-system-v3.md).
+## What it supports
 
-## Three-mode training prototype
-
-Every workspace exposes **View**, **Build**, and **Present**. View is the
-shared operational dashboard, Build is the local authoring workspace, and
-Present controls a same-computer, same-origin audience window. The audience
-window is chrome-free and receives only the current scene controls; it loads
-the dashboard locally.
-
-Browser edits use `simex-dashboard-config-v3-three-mode-v1`. Earlier browser
-saves and pre-redesign packages are not migrated; start from the supplied
-dashboard or re-author the configuration before saving it again.
-
-## Design priorities
-
-Runtime performance is the dashboard's first architectural priority. Normal
-rendering and interaction paths should minimize repeated data preparation,
-chart reconstruction, memory retention, and defensive work. Strict validation
-belongs at configuration, import, and authoring boundaries rather than inside
-frequently repeated display operations.
-
-The operational dashboard is offline-first by design. Present's audience
-window is a same-computer training display and has no Quorum connection.
-Quorum remains optional for the local workspace; the audience runtime does not
-depend on it.
+- Schema-generated chart creation and contextual chart editing.
+- Shared View/Build chart layouts, bounded 2×4 chart footprints, and separate
+  layout and selected-chart drafts.
+- Inline Page and Section changes with named consequences.
+- Saved Chrono Groups and parent-child Scenes, View playback, and Present /
+  Audience presentation.
+- Scenario Passport, explicit package import/download/reset boundaries, and
+  deterministic legacy-package migration followed by Version 6 re-export.
+- Local source/media content management with portable verified assets.
+- Optional metadata-only Quorum companion control.
 
 ## Development
 
-Install dependencies:
+Install and run locally:
 
 ```powershell
 pnpm.cmd install
-```
-
-Run locally:
-
-```powershell
 pnpm.cmd dev -- --host 0.0.0.0 --port 5173
 ```
 
-Run verification:
+Create a normal static build or a flash-drive package:
 
 ```powershell
-pnpm.cmd test
-pnpm.cmd test:e2e
 pnpm.cmd build
-git diff --check
-```
-
-Create a flash-drive package from the currently tracked/promoted dashboard:
-
-```powershell
 pnpm.cmd package:flashdrive
 ```
 
-`package:flashdrive` does not read browser IndexedDB and therefore cannot include
-browser-authored Image bytes by itself. To include the dashboard currently
-authored in the browser:
+To promote browser-authored content into the repository baseline, download its
+package, place it at the repository root as
+`packaged-dashboard-bundle.json`, run `pnpm.cmd promote:bundle`, and review
+the resulting configuration and generated data before packaging.
 
-1. Use **Download Dashboard Package** in the app.
-2. Place the downloaded file at the project root as
-   `packaged-dashboard-bundle.json`.
-3. Run `pnpm.cmd promote:bundle`.
-4. Review the promoted `public/config/dashboard.json` and generated files under
-   `public/data/`.
-5. Run `pnpm.cmd package:flashdrive`.
-
-That export → promote → package sequence materializes local PNG, JPEG, and WebP
-Image-panel bytes under content-hashed package paths. HTTPS-linked Images remain
-network dependencies and are listed during export; they are not fetched or
-silently embedded, so they can be unavailable offline.
-
-Preview the built app:
-
-```powershell
-pnpm.cmd preview
-```
-
-The production site is written to `dist/`. Viewers need only a modern browser;
-Node.js and package tools are build-time dependencies.
+Publishing, deployment, pushes, and merges are separate approvals.
 
 ## Architecture map
 
-- `public/config/dashboard.json` — strict default dashboard configuration.
-- `public/data/**` — tracked CSV and GeoJSON sources.
-- `src/charting/schemas/chartSchemaRegistry.js` — validated chart-type
-  registry and discovery authority.
-- `src/charting/config/chartConfigV3.js` — chart-instance normalization and
-  validation.
-- `src/charting/config/dashboardBundleV3.js` — strict dashboard and bundle
-  version 3 boundary.
-- `src/charting/data/profileDataset.js` — dataset profiling.
-- `src/charting/data/prepareChartData.js` — canonical preparation pipeline.
-- `src/components/chart-authoring/ChartWizardV3.jsx` — six-stage chart
-  authoring.
-- `src/components/chart-authoring/ChartEditorV3.jsx` — contextual editing and
-  conversion.
-- `src/components/charts/ChartView.jsx` — shared preview and dashboard
-  rendering boundary.
-- `src/components/collection/CollectionDisplay.jsx` — shared repeated-entity
-  presentation.
-- `src/charting/time/**` — synchronized clocks, matching, playback, and
-  time-aware projection.
-- `public/integration/quorum-chart-catalogue.json` — generated metadata-only
-  Quorum catalogue contract version 2.
-- `src/lib/quorumCompanionClient.js` — optional fail-closed companion client.
-
-## Chart authoring
-
-Chart discovery, fields, validation, editor sections, and conversions are
-generated from the same registry. A chart type therefore exposes only roles
-and controls that its renderer can use. The title remains reachable for repair;
-other visual controls remain hidden until the selected source and data roles
-produce a renderer-ready preview.
-
-Series appearance is declared by semantic renderer mark rather than chart ID.
-Bar families expose palette and bar width, line and area families expose
-palette and line width, mixed charts expose both widths, and composition or
-relationship charts expose palettes. Types whose renderers cannot apply these
-settings do not expose or persist them.
-
-Manual entry is not a chart-type shortcut. It is available only when the
-selected schema declares a concise inline-data contract. Uploaded CSV text and
-inline rows are stored in the dashboard configuration so they can round-trip
-through an exported bundle.
-
-Time matching is owned by synchronization groups. Charts store group
-membership; the group and its members define matching behavior. Interpolation
-requires a continuous chart family, numeric profile evidence, valid bounds,
-and explicit permission. It never extrapolates.
-
-## Portable dashboard bundles
-
-Exported files have exactly five outer keys. The following is a shape
-schematic, not an importable bundle: a real export contains a canonical
-timestamp or `null`, one fingerprint entry for every data source, and the
-complete validated dashboard configuration.
-
-```json
-{
-  "bundleType": "simex-dashboard-bundle",
-  "version": 4,
-  "metadata": {
-    "exportedAt": "<canonical ISO-8601 timestamp or null>",
-    "sourceFingerprints": {
-      "<source-id>": "<deterministic fingerprint or null>"
-    },
-    "networkDependencies": ["<https-linked-image-url>"]
-  },
-  "config": {
-    "configVersion": 4,
-    "...": "<complete dashboard configuration>"
-  },
-  "assetPayloads": {
-    "<asset-id>": {
-      "mediaType": "image/png",
-      "byteLength": 1234,
-      "sha256": "<content hash>",
-      "base64": "<verified local bytes>"
-    }
-  }
-}
-```
-
-Older bundle envelopes and legacy alternate shapes are rejected. Raw version 3
-dashboard configs are deterministically migrated before validation. The
-user-facing envelope error is:
-
-```text
-This dashboard supports version 4 bundles only.
-```
-
-Tracked files remain file-backed. Uploaded CSV text, schema-authorized inline
-rows, Free-text sources, and verified local Image bytes travel inside the
-bundle. Import stages and validates every local asset before replacing the
-dashboard. Export refuses missing or corrupt local bytes and separately lists
-HTTPS-linked Image dependencies.
-
-## Optional Quorum companion
-
-The local Quorum moderator companion can request an operator-authorized set of
-up to four configured chart IDs through a same-origin, metadata-only protocol.
-Manual and companion fullscreen actions use the same revisioned browser
-display state. If discovery is absent or incompatible, the dashboard remains
-fully usable in standalone mode.
-
-The integration does not exchange transcripts, speaker data, summaries,
-topics, evidence text, or other discussion content. Catalogue contract version
-2 and chart schema version 3 are independent of the companion protocol, which
-remains version 1.
-
-Generate the catalogue with:
-
-```powershell
-pnpm.cmd run build:quorum-catalogue
-```
-
-See [the Quorum companion guide](docs/quorum-companion.md).
-
-## Static deployment
-
-An ordinary build embeds the prepared default data for portable and static
-operation:
-
-```powershell
-pnpm.cmd build
-```
-
-The dedicated Cloudflare build leaves configuration and prepared data as
-separate resources to avoid the host's per-file limit:
-
-```text
-pnpm run build:cloudflare:linux
-```
-
-No deployment is performed by the verification workflow. Publishing,
-Cloudflare branch changes, and repository integration require separate
-approval.
-
-The build currently emits three non-failing classic-script notices for the
-local Vanta/Three scripts and `portable-dashboard-data.js`. It also emits
-Vite's advisory that the main minified JavaScript chunk exceeds 500 kB.
-Code-splitting is the appropriate future optimization if startup size becomes
-a deployment concern.
-
-## Verification record
-
-The final local verification evidence for this revamp is in
-[docs/verification/2026-07-26-chart-system-v3.md](docs/verification/2026-07-26-chart-system-v3.md).
+- `src/App.jsx` — mode selection, persistence, and application recovery.
+- `src/lib/dashboardMode.js` — Home/View/Build/Present availability and
+  preference reconciliation.
+- `src/charting/config/dashboardConfigStructure.js` — strict V6 dashboard
+  configuration boundary.
+- `src/charting/config/dashboardBundleV3.js` — package parsing,
+  normalization, and serialization.
+- `src/components/build/BuildWorkspace.jsx` — Build draft coordination and
+  authoring surfaces.
+- `src/components/time/` — Chrono Group and Scene libraries, editing, and
+  saved/live temporal boundaries.
+- `src/components/presentation/` — Present controller and passive Audience
+  projection.
+- `src/lib/dashboardPackage*.js` — package candidate, import, and export
+  transactions.
