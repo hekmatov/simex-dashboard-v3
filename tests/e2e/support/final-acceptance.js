@@ -9,10 +9,48 @@ export const WORKSPACE_VIEWPORTS = Object.freeze([
 ]);
 
 export async function setActualPageZoom(page, context, scale = 2) {
+  const viewport = page.viewportSize();
+  if (!viewport) {
+    throw new Error("A fixed viewport is required for the 200% reflow gate.");
+  }
+  const baselineDevicePixelRatio = await page.evaluate(() => window.devicePixelRatio);
   const cdp = await context.newCDPSession(page);
-  await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: scale });
-  await expect.poll(() => page.evaluate(() => window.visualViewport?.scale)).toBe(scale);
-  return async () => cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+  const reflowViewport = {
+    width: Math.floor(viewport.width / scale),
+    height: Math.floor(viewport.height / scale),
+  };
+  // Chromium does not expose its browser-zoom control to Playwright. Device
+  // metrics reproduce the decision-changing 200% signature: a halved CSS
+  // viewport at doubled DPR, without compositor-only visual scaling.
+  await cdp.send("Emulation.setDeviceMetricsOverride", {
+    ...reflowViewport,
+    deviceScaleFactor: scale,
+    mobile: false,
+  });
+  await expect.poll(() => page.evaluate(() => ({
+    devicePixelRatio: window.devicePixelRatio,
+    height: window.innerHeight,
+    narrowLayout: matchMedia("(max-width: 767px)").matches,
+    visualScale: window.visualViewport?.scale ?? 1,
+    width: window.innerWidth,
+  }))).toEqual({
+    devicePixelRatio: scale,
+    height: reflowViewport.height,
+    narrowLayout: reflowViewport.width <= 767,
+    visualScale: 1,
+    width: reflowViewport.width,
+  });
+  return async () => {
+    await cdp.send("Emulation.setDeviceMetricsOverride", {
+      ...viewport,
+      deviceScaleFactor: baselineDevicePixelRatio,
+      mobile: false,
+    });
+    await expect.poll(() => page.evaluate(() => ({
+      height: window.innerHeight,
+      width: window.innerWidth,
+    }))).toEqual(viewport);
+  };
 }
 
 export async function expectNoViewportOverflow(page, { vertical = false } = {}) {

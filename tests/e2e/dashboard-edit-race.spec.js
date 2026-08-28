@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import {
+  enterAuthoredDashboard,
+  openDashboardPage,
+} from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -14,6 +17,7 @@ test.beforeEach(async ({ page, request }) => {
   });
   await page.goto("/");
   await enterAuthoredDashboard(page);
+  await openDashboardPage(page, "biomedical");
   await expect(page.getByRole("button", {
     name: "Build",
   })).toBeVisible();
@@ -77,8 +81,17 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
 async function openBiomedicalPageInspector(page) {
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  const inspector = map.getByRole("button", { name: "Inspector", exact: true });
+  await expect.poll(() => inspector.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      bottom: bounds.bottom <= window.innerHeight,
+      left: bounds.left >= 0,
+      right: bounds.right <= window.innerWidth,
+      top: bounds.top >= 0,
+    };
+  })).toEqual({ bottom: true, left: true, right: true, top: true });
+  await inspector.click();
   return map;
 }
 

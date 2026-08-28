@@ -17,6 +17,7 @@ import {
   createSavedPresentationScene,
   enterPresentWithScene,
   openAudienceSession,
+  readStoredScene,
 } from "./support/present-audience-workflow.js";
 
 const DESKTOP_VIEWPORT = WORKSPACE_VIEWPORTS.find(({ width, height }) => width === 1200 && height === 900);
@@ -83,6 +84,28 @@ test("200% text reflow keeps canonical Home, mode controls, and Dashboard map fo
     const focusIndicator = firstTreeItem.locator(":scope > .build-tree-row");
     await expect(map).toHaveAttribute("data-open", "true");
     await expect(map).toBeVisible();
+    await expect.poll(() => map.evaluate((element) => {
+      const viewport = window.visualViewport;
+      const viewportBounds = {
+        left: viewport?.offsetLeft ?? 0,
+        top: viewport?.offsetTop ?? 0,
+        right: (viewport?.offsetLeft ?? 0) + (viewport?.width ?? window.innerWidth),
+        bottom: (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight),
+      };
+      const contained = (target) => {
+        if (!target) return false;
+        const bounds = target.getBoundingClientRect();
+        return bounds.left >= viewportBounds.left
+          && bounds.top >= viewportBounds.top
+          && bounds.right <= viewportBounds.right
+          && bounds.bottom <= viewportBounds.bottom;
+      };
+      return {
+        firstRow: contained(element.querySelector('[role="treeitem"] .build-tree-row')),
+        header: contained(element.querySelector(".dashboard-map-header")),
+        panel: contained(element),
+      };
+    })).toEqual({ firstRow: true, header: true, panel: true });
     await firstTreeItem.focus();
     const wrapperFocus = await readFocusVisibility(firstTreeItem);
     expect(wrapperFocus.visible).toBe(true);
@@ -222,7 +245,9 @@ test("viewport fan-out preserves canonical Home and cross-mode analytical identi
 
 test("1920 Audience preserves room-distance composition through the public workflow", async ({ page }, testInfo) => {
   test.setTimeout(150_000);
-  const scene = await createSavedPresentationScene(page);
+  const scene = await createSavedPresentationScene(page, {
+    sceneName: "Room-distance presentation fixture",
+  });
   const savedChartIds = scene.present.chartIds;
   expect(savedChartIds.length).toBeGreaterThan(0);
   expect(new Set(savedChartIds).size).toBe(savedChartIds.length);
@@ -232,6 +257,19 @@ test("1920 Audience preserves room-distance composition through the public workf
   );
 
   await enterPresentWithScene(page, scene);
+  const authoredDatePosition = {
+    xPermille: 0,
+    yPermille: 1000,
+    widthPermille: 280,
+  };
+  await page.locator('[data-presentation-control-id="date-position-x"]').fill(String(authoredDatePosition.xPermille));
+  await page.locator('[data-presentation-control-id="date-position-y"]').fill(String(authoredDatePosition.yPermille));
+  await page.locator('[data-presentation-control-id="date-position-width"]').fill(String(authoredDatePosition.widthPermille));
+  await page.locator('[data-presentation-control-id="date-position-save"]').click();
+  await expect(page.getByText("Unsaved position", { exact: true })).toHaveCount(0);
+  await expect.poll(() => readStoredScene(page, scene.id)).toMatchObject({
+    audience: { datePosition: authoredDatePosition },
+  });
   let popup;
   let checkpointPath;
   try {
@@ -254,6 +292,17 @@ test("1920 Audience preserves room-distance composition through the public workf
     await expect(title).toBeVisible();
     await expect(sceneName).toHaveText(scene.name);
     await expect(sceneDate).toBeVisible();
+    expect(await sceneDate.evaluate((element) => ({
+      left: element.style.left,
+      top: element.style.top,
+      transform: element.style.transform,
+      width: element.style.width,
+    }))).toEqual({
+      left: "0%",
+      top: "100%",
+      transform: "translateY(-100%)",
+      width: "28%",
+    });
     await expect(cells).toHaveCount(savedChartIds.length);
     expect(await grid.evaluate((element) => [...element.classList])).toEqual(expect.arrayContaining([
       `displayed-count-${savedChartIds.length}`,
@@ -285,6 +334,11 @@ test("1920 Audience preserves room-distance composition through the public workf
     expectContainedGeometry(geometry.title, geometry.header, "Audience title");
     expectContainedGeometry(geometry.sceneName, geometry.header, "Audience Scene name");
     expectContainedGeometry(geometry.sceneDate, geometry.root, "Audience Scene date");
+    expectNonOverlappingGeometry(
+      geometry.sceneName,
+      geometry.sceneDate,
+      "Audience Scene name and Scene date",
+    );
     expectContainedGeometry(geometry.grid, geometry.root, "Audience chart grid");
     expect(geometry.cells).toHaveLength(savedChartIds.length);
     expectPairwiseNonOverlapping(geometry.cells);
@@ -407,6 +461,14 @@ function expectPairwiseNonOverlapping(cells) {
       ).toBe(true);
     }
   }
+}
+
+function expectNonOverlappingGeometry(left, right, label) {
+  const separated = left.right <= right.left + GEOMETRY_TOLERANCE
+    || right.right <= left.left + GEOMETRY_TOLERANCE
+    || left.bottom <= right.top + GEOMETRY_TOLERANCE
+    || right.bottom <= left.top + GEOMETRY_TOLERANCE;
+  expect(separated, `${label} overlap by more than 1px: ${JSON.stringify({ left, right })}`).toBe(true);
 }
 
 function expectAudienceLayoutGeometry(layout, cells) {

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { validateScene } from "../src/charting/time/sceneSchema.js";
+
 import {
   addBuildLayoutPage,
   addBuildLayoutSection,
@@ -63,7 +65,7 @@ test("rename, merge, and explicit removal dispositions mutate only the Structure
     "pressure",
     { disposition: "delete-charts" },
   );
-  assert.deepEqual(deleted.value.chronoGroups[0].members, []);
+  assert.deepEqual(deleted.value.chronoGroups, []);
   assert.deepEqual(deleted.value.scenes[0].chartIds, []);
 });
 
@@ -127,6 +129,45 @@ test("Page merge and Page removal require eligible destinations and preserve sou
   assert.equal(protectedDraft.error.code, "FINAL_PAGE_PROTECTED");
 });
 
+test("deleting every chart in a Page drops Chrono Groups whose membership becomes empty", () => {
+  const removed = removeBuildLayoutPage(
+    createBuildLayoutDraft(fixture()),
+    "biomedical",
+    { disposition: "delete-charts" },
+  );
+
+  assert.deepEqual(removed.value.chronoGroups, []);
+});
+
+test("chart and Page deletion prune only canonical Scenes whose parent disappears", () => {
+  const saved = canonicalPartialSurvivalFixture();
+  const removedSection = removeBuildLayoutSection(
+    createBuildLayoutDraft(saved),
+    "biomedical",
+    "removable",
+    { disposition: "delete-charts" },
+  );
+
+  assert.deepEqual(removedSection.value.chronoGroups.map(({ id }) => id), ["shared-group", "operations-group"]);
+  assert.deepEqual(removedSection.value.scenes.map(({ id }) => id), ["biomedical-shared-scene", "operations-scene"]);
+
+  const removedPage = removeBuildLayoutPage(
+    createBuildLayoutDraft(saved),
+    "biomedical",
+    { disposition: "delete-charts" },
+  );
+
+  assert.deepEqual(removedPage.value.pages.map(({ id }) => id), ["landing", "operations"]);
+  assert.deepEqual(removedPage.value.chronoGroups.map(({ id }) => id), ["shared-group", "operations-group"]);
+  assert.deepEqual(removedPage.value.scenes, [saved.scenes.at(-1)]);
+  assert.doesNotThrow(() => validateScene(removedPage.value.scenes[0], {
+    pages: removedPage.value.pages,
+    chronoGroups: removedPage.value.chronoGroups,
+    charts: [{ id: "operations-chart", pageId: "operations" }],
+    scenes: removedPage.value.scenes,
+  }));
+});
+
 function fixture() {
   return {
     id: "dashboard",
@@ -149,4 +190,59 @@ function fixture() {
 
 function panel(id, title) {
   return { id: `${id}-panel`, chart: { id, title, footprint: { columns: 2, rows: 1 } } };
+}
+
+function canonicalPartialSurvivalFixture() {
+  return {
+    id: "canonical-partial-survival",
+    pages: [
+      { id: "landing", label: "Dashboard overview", landing: {}, sections: [{ id: "hero", title: "Hero", panels: [] }] },
+      {
+        id: "biomedical",
+        label: "Biomedical",
+        sections: [
+          { id: "removable", title: "Removable", panels: [panel("removed-chart", "Removed chart")] },
+          { id: "retained", title: "Retained", panels: [panel("shared-biomedical-chart", "Shared biomedical chart")] },
+        ],
+      },
+      {
+        id: "operations",
+        label: "Operations",
+        sections: [{ id: "operations-section", title: "Operations", panels: [panel("operations-chart", "Operations chart")] }],
+      },
+    ],
+    chronoGroups: [
+      canonicalGroup("removed-group", ["removed-chart"]),
+      canonicalGroup("shared-group", ["shared-biomedical-chart", "operations-chart"]),
+      canonicalGroup("operations-group", ["operations-chart"]),
+    ],
+    scenes: [
+      canonicalScene("removed-group-scene", "Removed group scene", "biomedical", "removed-group", "removed-chart"),
+      canonicalScene("biomedical-shared-scene", "Biomedical shared scene", "biomedical", "shared-group", "shared-biomedical-chart"),
+      canonicalScene("operations-scene", "Operations scene", "operations", "operations-group", "operations-chart"),
+    ],
+  };
+}
+
+function canonicalGroup(id, chartIds) {
+  return {
+    id,
+    name: id,
+    period: { start: "2027-01-01", end: "2027-01-02" },
+    members: chartIds.map((chartId) => ({ chartId })),
+  };
+}
+
+function canonicalScene(id, name, pageId, chronoGroupId, chartId) {
+  return {
+    id,
+    name,
+    pageId,
+    chronoGroupId,
+    period: { start: "2027-01-01T00:00:00.000Z", end: "2027-01-02T00:00:00.000Z" },
+    members: [{ chartId, width: 1 }],
+    frames: { mode: "calendar", interval: { value: 1, unit: "day" } },
+    present: { chartIds: [chartId], layout: "single" },
+    audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+  };
 }

@@ -156,6 +156,7 @@ export function removeBuildLayoutPage(draft, pageId, { disposition, targetPageId
     return failCommand(draft, "PAGE_DISPOSITION_REQUIRED", "Choose what happens to the Page content.");
   }
   next.value.pages.splice(index, 1);
+  pruneScenesWithRemovedParents(next.value, { pageIds: new Set([pageId]) });
   repairLandingRoutes(next.value);
   return markDirty(next, pageId);
 }
@@ -272,12 +273,23 @@ function removePageScopedSceneChartReferences(dashboard, pageId, chartIds) {
 
 function removeChartReferences(dashboard, chartIds) {
   const removed = new Set(chartIds);
-  dashboard.chronoGroups = (dashboard?.chronoGroups ?? []).map((group) => {
+  const removedChronoGroupIds = new Set();
+  dashboard.chronoGroups = (dashboard?.chronoGroups ?? []).flatMap((group) => {
     group.members = (group.members ?? []).filter(({ chartId }) => !removed.has(chartId));
     if (Array.isArray(group.chartIds)) group.chartIds = group.chartIds.filter((id) => !removed.has(id));
-    return group;
+    if (group.members.length > 0) return [group];
+    removedChronoGroupIds.add(group.id);
+    return [];
   });
   for (const scene of dashboard?.scenes ?? []) removeSceneChartReferences(scene, chartIds);
+  pruneScenesWithRemovedParents(dashboard, { chronoGroupIds: removedChronoGroupIds });
+}
+
+function pruneScenesWithRemovedParents(dashboard, { pageIds = new Set(), chronoGroupIds = new Set() } = {}) {
+  dashboard.scenes = (dashboard?.scenes ?? []).filter((scene) => (
+    !pageIds.has(scene?.pageId)
+    && !chronoGroupIds.has(scene?.chronoGroupId)
+  ));
 }
 
 function removeSceneChartReferences(scene, chartIds) {

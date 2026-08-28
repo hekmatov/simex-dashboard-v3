@@ -891,7 +891,8 @@
   border-radius: 8px;
   font-size: 22px;
   font-weight: 800;
-  padding: 8px 12px;
+  line-height: 1;
+  padding: 7px 12px;
   position: absolute;
   z-index: 1;
 }

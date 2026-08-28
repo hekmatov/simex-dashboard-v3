@@ -1,13 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+
 test.beforeEach(async ({ page, request }) => {
   await request.post("/__test__/catalogue-mode", { data: { mode: "absent" } });
   await page.goto("/");
   await page.evaluate(() => {
     localStorage.removeItem("simex-dashboard-config-v3-three-mode-v1");
-    localStorage.removeItem("simex-dashboard-mode-v3");
+    localStorage.removeItem("simex-dashboard-ui-mode-v1");
   });
   await page.reload();
+  await enterAuthoredDashboard(page);
 });
 
 test("the canonical chart canvas stays mounted while switching between View and Build", async ({ page }) => {

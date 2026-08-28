@@ -503,6 +503,7 @@ async function createChart(wizard, title) {
   await expect(wizard.getByRole("button", { name: "Create chart" }))
     .toBeEnabled();
   await wizard.getByRole("button", { name: "Create chart" }).click();
+  await expect(wizard).toHaveCount(0);
 }
 
 function creationStage(wizard, name) {
@@ -530,7 +531,11 @@ async function expectExactSixStages(wizard) {
 
 async function expectStoredChart(page, typeId, title) {
   await expect.poll(() => page.evaluate(({ key, expectedType, expectedTitle }) => {
-    const dashboard = JSON.parse(localStorage.getItem(key));
+    const storedDashboard = localStorage.getItem(key);
+    if (!storedDashboard) {
+      return false;
+    }
+    const dashboard = JSON.parse(storedDashboard);
     return dashboard.pages
       .flatMap(({ sections }) => sections)
       .flatMap(({ panels }) => panels)

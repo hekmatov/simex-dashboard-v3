@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  LANDING_CONTRACT,
   enterAuthoredDashboard,
   openDashboardPage,
 } from "./support/landingWorkflow.js";
@@ -112,6 +111,10 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
     configVersion: 4,
     id: "replacement-dashboard",
     programLabel: "Imported replacement",
+    contentLibrary: {
+      mediaItems: {},
+      sourceEntries: {},
+    },
     dataSources: {
       external_cases: source,
     },
@@ -159,7 +162,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   await expect(page.getByRole("heading", { name: "Replacement", exact: true })).toBeVisible();
   await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
 
-  const inspector = await openPageInspector(page, "Biomedical");
+  const inspector = await openSelectedPageInspector(page);
   await inspector.getByLabel("Page title", { exact: true }).fill("Imported profile retained");
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
@@ -213,8 +216,9 @@ test("additive imported tracked profiles survive an edit and browser reload", as
   await installDashboard(page, dashboard);
 
   await openDashboard(page);
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build" }).click();
-  const inspector = await openPageInspector(page, "Biomedical");
+  const inspector = await openSelectedPageInspector(page);
   await inspector.getByLabel("Page title", { exact: true }).fill("Imported profile retained");
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
@@ -227,9 +231,26 @@ test("additive imported tracked profiles survive an edit and browser reload", as
   await expect(page.getByRole("heading", {
     name: "Dashboard configuration error",
   })).toHaveCount(0);
-  await expect(page.getByRole("button", {
-    name: LANDING_CONTRACT.primaryAction,
+  await expect(page.getByLabel("Dashboard mode").getByRole("button", {
+    name: "View",
+    exact: true,
+  })).toHaveAttribute("aria-pressed", "true");
+  await openDashboardPage(page, "biomedical");
+  await expect(page.getByRole("heading", {
+    name: "Imported profile retained",
+    exact: true,
   })).toBeVisible();
+  await expect(page.locator('[data-panel-id="bio_confirmed_cases"]')).toBeVisible();
+  await expect.poll(() => page.evaluate((key) => {
+    const stored = JSON.parse(localStorage.getItem(key));
+    return {
+      profileSourceId: stored.datasetProfiles?.external_cases?.sourceId,
+      sourceLabel: stored.dataSources?.external_cases?.provenance?.label,
+    };
+  }, STORAGE_KEY)).toEqual({
+    profileSourceId: "external_cases",
+    sourceLabel: "Imported exercise cases",
+  });
 });
 
 test("removing a page also removes its synchronized chart memberships", async ({
@@ -269,7 +290,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
       groups: stored.chronoGroups,
     };
   }, STORAGE_KEY)).toEqual({
-    pages: ["home", "socio_economic"],
+    pages: ["old-homepage-content", "socio_economic"],
     groups: [],
   });
 });
@@ -297,10 +318,9 @@ async function openDashboard(page) {
   await enterAuthoredDashboard(page);
 }
 
-async function openPageInspector(page, pageLabel) {
+async function openSelectedPageInspector(page) {
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("treeitem", { name: pageLabel, exact: true }).click();
   await map.getByRole("button", { name: "Inspector", exact: true }).click();
   return map;
 }

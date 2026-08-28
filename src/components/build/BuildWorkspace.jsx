@@ -204,9 +204,31 @@ export default function BuildWorkspace({
       const visibleHeaderBottom = commandHeaderBottom > crownBottom
         ? commandHeaderBottom
         : crownBottom;
+      const panelHeaderHeight = panel.querySelector(".dashboard-map-header")
+        ?.getBoundingClientRect().height ?? 0;
+      const firstMapRow = panel.querySelector('[role="treeitem"] .build-tree-row');
+      const panelStyle = window.getComputedStyle(panel);
+      const panelChromeHeight = [
+        panelStyle.borderTopWidth,
+        panelStyle.borderBottomWidth,
+        panelStyle.paddingTop,
+        panelStyle.paddingBottom,
+        panelStyle.rowGap,
+      ].reduce((total, value) => total + (Number.parseFloat(value) || 0), 0);
+      const minimumUsableHeight = firstMapRow
+        ? firstMapRow.getBoundingClientRect().bottom - panel.getBoundingClientRect().top
+        : panelHeaderHeight + panelChromeHeight + 44;
+      const viewportBottom = window.visualViewport
+        ? window.visualViewport.offsetTop + window.visualViewport.height
+        : window.innerHeight;
+      const crownSafeTop = Math.max(12, crownBottom + 12);
+      const latestUsableTop = Math.max(
+        crownSafeTop,
+        viewportBottom - minimumUsableHeight - 12,
+      );
       panel.style.setProperty(
         "--dashboard-map-top",
-        `${Math.max(12, visibleHeaderBottom + 12)}px`,
+        `${Math.min(Math.max(crownSafeTop, visibleHeaderBottom + 12), latestUsableTop)}px`,
       );
     };
     const scheduleUpdate = () => {
@@ -218,6 +240,8 @@ export default function BuildWorkspace({
     const observedSurfaces = [
       document.querySelector(".dashboard-command-crown"),
       document.querySelector(".build-command-header"),
+      dashboardMapRef.current?.querySelector(".dashboard-map-header"),
+      dashboardMapRef.current?.querySelector('[role="treeitem"] .build-tree-row'),
     ].filter(Boolean);
     const observer = typeof ResizeObserver === "function"
       ? new ResizeObserver(scheduleUpdate)

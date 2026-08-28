@@ -58,6 +58,7 @@ export async function installAudienceFaultInstrumentation(context) {
 export async function createSavedPresentationScene(page, {
   chronoGroupId = null,
   entry = "fresh",
+  sceneName = "Presentation fixture",
   url = LIVE_APP_URL,
 } = {}) {
   if (entry === "fresh") {
@@ -75,7 +76,7 @@ export async function createSavedPresentationScene(page, {
   if (chronoGroupId) {
     await studio.locator('[data-scene-workflow-id="parent-chrono-group"]').selectOption(chronoGroupId);
   }
-  await studio.locator("#scene-name").fill(`Presentation fixture ${Date.now()}`);
+  await studio.locator("#scene-name").fill(sceneName);
   await studio.locator('[data-scene-workflow-id="save-scene"]').click();
 
   const scene = await expect.poll(async () => page.evaluate(({ key, oldIds }) => {

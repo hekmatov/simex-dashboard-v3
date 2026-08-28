@@ -1843,6 +1843,22 @@
   visibility: visible;
 }
 
+@media (max-width: 899px) {
+  .dashboard-map-panel {
+    left: 12px;
+    width: auto;
+  }
+
+  .dashboard-map-header {
+    align-items: center;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  }
+
+  .dashboard-map-panel .build-structure-rail > .build-region-heading {
+    display: none;
+  }
+}
+
 @media (min-width: 900px) {
   .canonical-dashboard-frame.build-workspace {
     transition: margin-left 180ms ease, width 180ms ease;

@@ -466,7 +466,6 @@ test("timer-owned pending edit uses the bounded session fallback", async ({ page
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_LONG__ = true; });
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
   await map.getByRole("button", { name: "Inspector", exact: true }).click();
   await map.getByLabel("Page title", { exact: true }).fill("Timer-owned failed edit");
 
@@ -544,7 +543,6 @@ test("reset completes with session fallback when browser storage is full", async
   const editedLabel = "Draft retained after reset failure";
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
   await map.getByRole("button", { name: "Inspector", exact: true }).click();
   const pageTitleInput = map.getByLabel("Page title", { exact: true });
   await pageTitleInput.fill(editedLabel);
@@ -571,7 +569,6 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
   await openDashboardEditMode(page);
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
   await map.getByRole("button", { name: "Inspector", exact: true }).click();
   const pageTitleInput = map.getByLabel("Page title", { exact: true });
   const pageTitle = await pageTitleInput.inputValue();
@@ -609,7 +606,8 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
   )), { timeout: 60_000 }).toBeGreaterThan(attemptsBeforeCancel);
 
   await page.reload();
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await openDashboardPage(page, "biomedical");
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.getByRole("heading", { name: baseline.pageTitle, exact: true }))
     .toBeVisible();
   await expect(page.getByRole("button", {
