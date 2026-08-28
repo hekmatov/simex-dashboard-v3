@@ -1553,7 +1553,8 @@ export default function App() {
         }}
         onImportPackage={() => dashboardRendererRef.current?.requestDashboardPackageImport?.()}
         onDownloadPackage={() => dashboardRendererRef.current?.requestDashboardPackageExport?.()}
-        onResetToSource={() => dashboardRendererRef.current?.requestResetDashboardToSource?.()}
+        onDiscardBuildChanges={() => dashboardRendererRef.current?.requestDiscardBuildChanges?.()}
+        onClearDashboard={() => dashboardRendererRef.current?.requestDeleteDashboardContent?.()}
       />}
       density={densityForDashboardMode(mode)}
       persistenceNotice={Object.values(persistenceNotices).join(" ")}

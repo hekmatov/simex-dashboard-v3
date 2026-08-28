@@ -357,11 +357,12 @@ test("pending final save locks the edit mutation surface", async ({ page }) => {
 test("pending reset locks the edit mutation surface", async ({ page }) => {
   test.setTimeout(90_000);
   await openDashboardEditMode(page);
-  await page.getByRole("button", { name: "Reset", exact: true }).click();
-  const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
+  await page.locator(".build-command-header")
+    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await armPendingMutationSurfaceObservation(page, "Resetting...");
-  await confirmation.getByRole("button", { name: "Reset", exact: true }).click();
+  await armPendingMutationSurfaceObservation(page, "Discarding Build changes…");
+  await confirmation.getByRole("button", { name: "Discard Build changes", exact: true }).click();
   const observed = await readPendingMutationSurfaceObservation(page);
 
   await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
@@ -546,10 +547,11 @@ test("reset completes with session fallback when browser storage is full", async
   await map.getByRole("button", { name: "Inspector", exact: true }).click();
   const pageTitleInput = map.getByLabel("Page title", { exact: true });
   await pageTitleInput.fill(editedLabel);
-  await page.getByRole("button", { name: "Reset", exact: true }).click();
-  const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
+  await page.locator(".build-command-header")
+    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
   await expect(confirmation).toBeVisible();
-  await confirmation.getByRole("button", { name: "Reset", exact: true })
+  await confirmation.getByRole("button", { name: "Discard Build changes", exact: true })
     .evaluate((button) => {
       globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
       button.click();
@@ -586,9 +588,10 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
   await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
   await expect(page.locator(".chart-editor-v3")).toBeHidden();
 
-  await page.getByRole("button", { name: "Reset", exact: true }).click();
-  await page.getByRole("dialog", { name: "Discard these edits?" })
-    .getByRole("button", { name: "Reset", exact: true }).click();
+  await page.locator(".build-command-header")
+    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Discard Build changes?" })
+    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(baseline.pageTitle);
   await expect(page.getByRole("heading", { name: baseline.sectionTitle, exact: true }))
@@ -681,10 +684,11 @@ test("edit-session save and reset use session fallback when storage is full", as
   await sectionTitleTrigger.click();
   await page.getByLabel("Section title", { exact: true }).first()
     .fill("Reset-only pending title");
-  await page.getByRole("button", { name: "Reset", exact: true }).click();
-  const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
+  await page.locator(".build-command-header")
+    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
-  await confirmation.getByRole("button", { name: "Reset", exact: true }).click();
+  await confirmation.getByRole("button", { name: "Discard Build changes", exact: true }).click();
   await expect(confirmation).toBeHidden();
   await expect(page.getByRole("button", { name: "View", exact: true }))
     .toHaveAttribute("aria-pressed", "true");

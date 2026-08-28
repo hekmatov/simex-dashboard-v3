@@ -31,7 +31,7 @@ export function reduceScenarioDraft(state, action) {
   switch (action?.type) {
     case "EDIT_FIELD": {
       if (!EDITABLE_FIELDS.has(action.field)) {
-        return withError(state, issue("READ_ONLY_FIELD", "Source provenance is read-only."));
+        return withError(state, issue("READ_ONLY_FIELD", "This Scenario field is not editable."));
       }
       return {
         ...state,
@@ -114,10 +114,6 @@ export default function ScenarioAuthoring({ draft, disabled = false, onAction })
         Updated
         <input disabled={busy} value={value.lastUpdated ?? ""} onChange={(event) => onAction?.({ type: "EDIT_FIELD", field: "lastUpdated", value: event.target.value })} />
       </label>
-      <dl className="scenario-source-provenance">
-        <div><dt>Source</dt><dd>{value.source?.label || "No source provenance"}</dd></div>
-        <div><dt>Source kind</dt><dd>{value.source?.kind || "unknown"}</dd></div>
-      </dl>
       <footer className="build-surface-actions">
         <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scenario</button>
         <button type="button" className="secondary" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Scenario</button>
@@ -131,7 +127,6 @@ function scenarioValue(dashboard) {
     scenarioLabel: dashboard?.scenarioLabel ?? "",
     programLabel: dashboard?.programLabel ?? "",
     lastUpdated: dashboard?.lastUpdated ?? "",
-    source: clone(dashboard?.source ?? null),
     home: { enabled: dashboard?.home?.enabled !== false },
   };
 }

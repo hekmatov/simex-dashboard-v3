@@ -139,7 +139,7 @@ test("Structure suspension restores target, scroll, focus, and active command", 
   assert.deepEqual(resumed.restoration, restoration);
 });
 
-test("Scenario Passport keeps source provenance read-only and validates direct edits", () => {
+test("Scenario draft excludes dashboard-level provenance and validates direct edits", () => {
   assert.equal(typeof scenarioModule?.createScenarioDraft, "function");
   assert.equal(typeof scenarioModule?.reduceScenarioDraft, "function");
   let draft = scenarioModule.createScenarioDraft({
@@ -154,7 +154,8 @@ test("Scenario Passport keeps source provenance read-only and validates direct e
     value: { kind: "local", label: "Changed" },
   });
   assert.equal(draft.error.code, "READ_ONLY_FIELD");
-  assert.equal(draft.value.source.label, "Exercise source package");
+  assert.equal(Object.hasOwn(draft.value, "source"), false);
+  assert.equal(Object.hasOwn(draft.baseline, "source"), false);
 
   draft = scenarioModule.reduceScenarioDraft(draft, {
     type: "EDIT_FIELD",
@@ -245,7 +246,7 @@ test("Structure and Scenario surfaces expose scoped actions without mutating the
   assert.match(structureHtml, /Add page/);
   assert.match(scenarioHtml, /Scenario Passport/);
   assert.match(scenarioHtml, /Save Scenario/);
-  assert.match(scenarioHtml, /Source A/);
+  assert.doesNotMatch(scenarioHtml, /Source provenance|Source A|unknown/i);
   assert.equal(JSON.stringify(dashboard), before);
 });
 

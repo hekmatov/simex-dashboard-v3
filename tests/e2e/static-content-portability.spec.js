@@ -85,10 +85,11 @@ test("bundle v6 restores local Image and Free-text in a fresh offline browser co
   await expectStaticPanels(page, authored.image.panel.id, authored.text.panel.id);
 
   const bundlePath = testInfo.outputPath("static-content-bundle-v6.json");
+  const downloadButton = await passportPackageDownloadButton(page);
   page.once("dialog", (dialog) => dialog.accept("static-content-bundle-v6"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Download Dashboard Package" }).click(),
+    downloadButton.click(),
   ]);
   await download.saveAs(bundlePath);
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
@@ -194,10 +195,11 @@ test("package import quota failure preserves the prior dashboard and authored st
   await createFreeText(page);
   await createImage(page);
   const bundlePath = testInfo.outputPath("quota-import-bundle-v6.json");
+  const downloadButton = await passportPackageDownloadButton(page);
   page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v6"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Download Dashboard Package" }).click(),
+    downloadButton.click(),
   ]);
   await download.saveAs(bundlePath);
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
@@ -327,10 +329,11 @@ test("asset commit failure restores the prior dashboard and authored store atomi
   await openBiomedicalBuild(page);
   const imagePanelId = await createImage(page);
   const bundlePath = testInfo.outputPath("commit-recovery-bundle-v6.json");
+  const downloadButton = await passportPackageDownloadButton(page);
   page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v6"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Download Dashboard Package" }).click(),
+    downloadButton.click(),
   ]);
   await download.saveAs(bundlePath);
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
@@ -451,6 +454,18 @@ async function expectRejectedImport(page, path, message) {
 
 function packageInput(page) {
   return page.locator('input[type="file"][accept*="application/json"]').first();
+}
+
+async function passportPackageDownloadButton(page) {
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  if (!await passport.isVisible().catch(() => false)) {
+    await page.locator(".dashboard-scenario-trigger").click();
+  }
+  await expect(passport).toBeVisible();
+  return passport.getByRole("button", {
+    name: "Download Dashboard Package",
+    exact: true,
+  });
 }
 
 async function persistedStaticContent(page) {

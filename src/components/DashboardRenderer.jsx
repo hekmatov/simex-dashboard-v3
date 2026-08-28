@@ -485,8 +485,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     requestDashboardPackageExport() {
       void exportDashboardPackage();
     },
-    requestResetDashboardToSource() {
+    requestDiscardBuildChanges() {
       requestResetEditSession();
+    },
+    requestDeleteDashboardContent() {
+      openDeleteDashboardContentConfirmation();
     },
     async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };
@@ -700,6 +703,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function requestDashboardPackageImport() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     setBuildSelectionError("");
     if (externalDirty.scenario) {
       setBuildSelectionError(SCENARIO_DIRTY_BLOCK_REASON);
@@ -724,12 +728,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setResetEditSessionConfirmation(true);
   }
 
+  function openDeleteDashboardContentConfirmation() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    clearModeratorError("delete-dashboard-content");
+    setDeleteContentConfirmation(true);
+  }
+
   function confirmDashboardPackageImport() {
     setPackageImportConfirmation(false);
     importInputRef.current?.click();
   }
 
   async function exportDashboardPackage() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     setBuildSelectionError("");
     const issues = collectCurrentPackageExportIssues();
     if (issues.length > 0) {
@@ -1765,14 +1776,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       } : null}
       onSaveLayout={saveBuildLayoutChanges}
       onDiscardLayout={discardBuildLayoutChanges}
-      onUploadPackage={requestDashboardPackageImport}
-      onDownloadPackage={exportDashboardPackage}
       onFinish={saveEditMode}
       onReset={requestResetEditSession}
-      onDeleteDashboardContent={() => {
-        clearModeratorError("delete-dashboard-content");
-        setDeleteContentConfirmation(true);
-      }}
       onLocalDraftsChange={handleLocalDraftsChange}
       onDeviceLayoutChange={onDeviceLayoutChange}
       onDisplayAction={onDisplayAction}
@@ -1939,10 +1944,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       />
       <ConfirmDialog
         open={resetEditSessionConfirmation}
-        title="Discard these edits?"
-        message="Reset changes? All unsaved dashboard edits will be replaced by the most recently saved dashboard."
+        title="Discard Build changes?"
+        message="Replace local work with the baseline captured when you entered Build? This does not contact the deployed online dashboard."
         cancelLabel="Keep editing"
-        confirmLabel={moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset"}
+        confirmLabel={moderatorOperation.kind === "reset-session" ? "Discarding Build changes…" : "Discard Build changes"}
         disabled={moderatorOperation.kind === "reset-session"}
         confirmDisabled={moderatorOperation.kind === "reset-session"}
         error={moderatorOperation.errorKind === "reset-session" ? moderatorOperation.error : ""}
@@ -2108,8 +2113,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               <IconControl
                 interactionId="shell.reset-edits"
                 className="header-edit-floating-button secondary"
-                ariaLabel={moderatorOperation.kind === "reset-session" ? "Resetting edits" : "Reset edits"}
-                tooltip={moderatorOperation.kind === "reset-session" ? "Resetting edits" : "Reset edits"}
+                ariaLabel="Discard Build changes"
+                tooltip="Discard Build changes"
                 data-icon-surface="dark"
                 onClick={requestResetEditSession}
                 disabled={moderatorOperation.kind !== null}
@@ -2391,10 +2396,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       />
       <ConfirmDialog
         open={resetEditSessionConfirmation}
-        title="Discard these edits?"
-        message="Reset changes? All unsaved dashboard edits will be replaced by the most recently saved dashboard."
+        title="Discard Build changes?"
+        message="Replace local work with the baseline captured when you entered Build? This does not contact the deployed online dashboard."
         cancelLabel="Keep editing"
-        confirmLabel={moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset edits"}
+        confirmLabel={moderatorOperation.kind === "reset-session" ? "Discarding Build changes…" : "Discard Build changes"}
         disabled={moderatorOperation.kind === "reset-session"}
         confirmDisabled={moderatorOperation.kind === "reset-session"}
         error={moderatorOperation.errorKind === "reset-session" ? moderatorOperation.error : ""}

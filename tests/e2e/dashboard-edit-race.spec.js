@@ -64,9 +64,10 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
     .textContent()).trim();
   await map.getByLabel("Page title", { exact: true })
     .fill("Must never reappear");
-  await page.getByRole("button", { name: "Reset", exact: true }).click();
-  await page.getByRole("dialog", { name: "Discard these edits?" })
-    .getByRole("button", { name: "Reset", exact: true })
+  await page.locator(".build-command-header")
+    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Discard Build changes?" })
+    .getByRole("button", { name: "Discard Build changes", exact: true })
     .click();
   await page.waitForTimeout(800);
 

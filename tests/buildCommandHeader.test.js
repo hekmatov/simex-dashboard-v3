@@ -67,7 +67,17 @@ test("Build commands are grouped by task above an independently inert Dashboard 
   assert.match(html, /data-build-command-group="structure"[\s\S]*Pages &amp; sections/);
   assert.match(html, /data-build-command-group="time"[\s\S]*Chrono Studio[\s\S]*Scene Studio/);
   assert.match(html, /data-build-command-group="layout"[\s\S]*Layout changes[\s\S]*Save Layout Changes[\s\S]*Discard Layout Changes/);
-  assert.match(html, /data-build-command-group="session"[\s\S]*Reset[\s\S]*Finish Build[\s\S]*Delete dashboard content/);
+  assert.match(html, /data-build-command-group="session"[\s\S]*Discard Build changes[\s\S]*Finish Build/);
+  assert.doesNotMatch(html, /data-build-command-group="package"/);
+  assert.doesNotMatch(html, /Upload Dashboard Package|Download Dashboard Package|Clear dashboard|Delete dashboard content/);
+  assert.match(
+    html,
+    /<button[^>]*aria-describedby="[^"]+"[^>]*>Discard Build changes<\/button>/,
+  );
+  assert.match(
+    html,
+    /role="tooltip"[^>]*>Restores the dashboard to the baseline captured when you entered Build\. It does not contact the deployed online dashboard\.<\/span>/,
+  );
   assert.match(html, /id="dashboard-map-panel"[^>]*aria-label="Dashboard map"[^>]*inert/);
   assert.doesNotMatch(html, /aria-label="Build commands"[^>]*inert/);
   assert.match(html, /<h2>Dashboard map<\/h2>/);

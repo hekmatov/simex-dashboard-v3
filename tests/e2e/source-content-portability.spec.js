@@ -82,10 +82,11 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
   expect(importedFixture.assetIds).toHaveLength(1);
   expect(importedFixture.chartVersions).toEqual([3]);
 
+  const downloadButton = await passportPackageDownloadButton(page);
   page.once("dialog", (dialog) => dialog.accept("journey-g-roundtrip"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Download Dashboard Package", exact: true }).click(),
+    downloadButton.click(),
   ]);
   const bundlePath = testInfo.outputPath("journey-g-roundtrip.json");
   await download.saveAs(bundlePath);
@@ -283,6 +284,18 @@ async function openBiomedical(page) {
 
 function packageInput(page) {
   return page.locator('input[type="file"][accept*="application/json"]').first();
+}
+
+async function passportPackageDownloadButton(page) {
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  if (!await passport.isVisible().catch(() => false)) {
+    await page.locator(".dashboard-scenario-trigger").click();
+  }
+  await expect(passport).toBeVisible();
+  return passport.getByRole("button", {
+    name: "Download Dashboard Package",
+    exact: true,
+  });
 }
 
 function canonicalPanel(page, panelId) {

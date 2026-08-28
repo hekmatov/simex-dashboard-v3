@@ -17,6 +17,8 @@ const vite = await createServer({
 const identityModule = await vite.ssrLoadModule("/src/components/app-shell/DashboardIdentityRow.jsx");
 const passportModule = await vite.ssrLoadModule("/src/components/app-shell/ScenarioPassportPopover.jsx")
   .catch(() => null);
+const scenarioModule = await vite.ssrLoadModule("/src/components/build/ScenarioAuthoring.jsx")
+  .catch(() => null);
 const workspaceModule = await vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx");
 const appModule = await vite.ssrLoadModule("/src/App.jsx").catch(() => null);
 await vite.close();
@@ -30,7 +32,8 @@ test("Build anchors Scenario Passport and package actions to the Crown identity"
     onSave() {},
     onImportPackage() {},
     onDownloadPackage() {},
-    onResetToSource() {},
+    onDiscardBuildChanges() {},
+    onClearDashboard() {},
   });
   const html = renderToStaticMarkup(React.createElement(identityModule.default, {
     dashboardIdentity: fixtureDashboard(),
@@ -50,10 +53,54 @@ test("Build anchors Scenario Passport and package actions to the Crown identity"
   assert.match(html, /type="checkbox"/);
   assert.match(html, />Show Home</);
   assert.match(html, /When off, Home is unavailable to dashboard visitors\. You can turn it back on here\./);
-  assert.match(html, />Import Dashboard Package</);
+  assert.match(html, />Upload Dashboard Package</);
   assert.match(html, />Download Dashboard Package</);
-  assert.match(html, />Reset Dashboard to Source</);
+  assert.match(html, />Discard Build changes</);
+  assert.match(html, />Clear dashboard…</);
+  assert.doesNotMatch(html, /Source provenance|No source provenance|unknown/i);
+  assert.match(
+    html,
+    /<button[^>]*aria-describedby="[^"]+"[^>]*>Discard Build changes<\/button>/,
+  );
+  assert.match(
+    html,
+    /role="tooltip"[^>]*>Restores the dashboard to the baseline captured when you entered Build\. It does not contact the deployed online dashboard\.<\/span>/,
+  );
   assert.doesNotMatch(html, /Save All|Export package/);
+});
+
+test("Scenario drafts omit dashboard-level provenance without changing per-source provenance", () => {
+  assert.equal(typeof scenarioModule?.createScenarioDraft, "function");
+  const dashboard = {
+    ...fixtureDashboard(),
+    source: { kind: "package", label: "dashboard-package.json" },
+    dataSources: {
+      cases: {
+        kind: "csv",
+        path: "data/cases.csv",
+        provenance: { label: "Epidemiology team" },
+      },
+    },
+    contentLibrary: {
+      mediaItems: {},
+      sourceEntries: {
+        cases: {
+          sourceId: "cases",
+          provenance: { label: "Epidemiology team" },
+        },
+      },
+    },
+  };
+
+  const draft = scenarioModule.createScenarioDraft(dashboard);
+
+  assert.equal(Object.hasOwn(draft.value, "source"), false);
+  assert.equal(Object.hasOwn(draft.baseline, "source"), false);
+  assert.deepEqual(dashboard.dataSources.cases.provenance, { label: "Epidemiology team" });
+  assert.deepEqual(
+    dashboard.contentLibrary.sourceEntries.cases.provenance,
+    { label: "Epidemiology team" },
+  );
 });
 
 test("package mutation is absent from View orientation and the generic Build panel", () => {
@@ -76,7 +123,10 @@ test("package mutation is absent from View orientation and the generic Build pan
   }));
 
   assert.doesNotMatch(viewHtml, /Scenario Passport|Dashboard Package/);
-  assert.doesNotMatch(workspaceHtml, /Import package|Export package|Scenario details|Program<input|Updated date/);
+  assert.doesNotMatch(
+    workspaceHtml,
+    /Upload Dashboard Package|Download Dashboard Package|Clear dashboard|Delete dashboard content|Scenario details|Program<input|Updated date/,
+  );
 });
 
 test("the live App wires the Crown Scenario Passport to renderer package operations", async () => {
@@ -85,7 +135,24 @@ test("the live App wires the Crown Scenario Passport to renderer package operati
   assert.match(app, /onScenarioRequest=/);
   assert.match(app, /requestDashboardPackageImport/);
   assert.match(app, /onDownloadPackage=.*exportConfig/s);
-  assert.match(app, /requestResetDashboardToSource/);
+  assert.match(app, /requestDiscardBuildChanges/);
+  assert.match(app, /requestDeleteDashboardContent/);
+});
+
+test("Passport package entry points retain the serialized moderator-operation guard", async () => {
+  const renderer = await readFile(
+    new URL("../src/components/DashboardRenderer.jsx", import.meta.url),
+    "utf8",
+  );
+  const uploadEntry = renderer.match(
+    /function requestDashboardPackageImport\(\) \{([\s\S]*?)\n  \}/,
+  )?.[1] ?? "";
+  const downloadEntry = renderer.match(
+    /async function exportDashboardPackage\(\) \{([\s\S]*?)\n  \}/,
+  )?.[1] ?? "";
+
+  assert.match(uploadEntry, /moderatorOperationGateRef\.current\.isActive\(\)/);
+  assert.match(downloadEntry, /moderatorOperationGateRef\.current\.isActive\(\)/);
 });
 
 test("Scenario Save applies identity and exact Home availability without replacing unrelated state", () => {

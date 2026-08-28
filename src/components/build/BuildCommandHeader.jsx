@@ -2,6 +2,8 @@ import React from "react";
 
 import ControlTooltip from "../common/ControlTooltip.jsx";
 
+const DISCARD_BUILD_CHANGES_DESCRIPTION = "Restores the dashboard to the baseline captured when you entered Build. It does not contact the deployed online dashboard.";
+
 export default function BuildCommandHeader({
   draftCoordinator,
   locked = false,
@@ -17,18 +19,11 @@ export default function BuildCommandHeader({
   parkedAuxiliaries = [],
   onFinish,
   onReset,
-  onDeleteDashboardContent,
-  deleteDashboardContentDisabled = locked,
-  deleteDashboardContentDisabledReason = disabledReason,
   onSaveLayout,
   onDiscardLayout,
   onAddChart,
   onAddStaticContent,
   onAccessibilityChange,
-  onUploadPackage,
-  onDownloadPackage,
-  packageDownloadDisabled = locked,
-  packageDownloadDisabledReason = disabledReason,
   onOpenAuxiliary,
   onResumeAuxiliary,
   getAuxiliaryLabel = (surface) => surface,
@@ -146,44 +141,18 @@ export default function BuildCommandHeader({
           </div>
         </section>
 
-        <section className="build-command-group" data-build-command-group="package" aria-label="Dashboard package commands">
-          <strong className="build-command-group__label">Dashboard package</strong>
-          <div className="build-command-group__controls">
-            <ControlTooltip disabled={locked} reason={disabledReason}>
-              <button type="button" className="secondary" aria-label="Upload Dashboard Package" disabled={locked} onClick={onUploadPackage}>
-                Upload package
-              </button>
-            </ControlTooltip>
-            <ControlTooltip disabled={packageDownloadDisabled} reason={packageDownloadDisabledReason}>
-              <button type="button" className="secondary" aria-label="Download Dashboard Package" disabled={packageDownloadDisabled} onClick={onDownloadPackage}>
-                Download package
-              </button>
-            </ControlTooltip>
-          </div>
-        </section>
-
         <section className="build-command-group build-command-group--session" data-build-command-group="session" aria-label="Build session commands">
           <strong className="build-command-group__label">Session</strong>
           <div className="build-command-group__controls">
-            <ControlTooltip disabled={locked} reason={disabledReason}>
-              <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
+            <ControlTooltip
+              disabled={locked}
+              explain={!locked}
+              reason={locked ? disabledReason : DISCARD_BUILD_CHANGES_DESCRIPTION}
+            >
+              <button type="button" className="secondary" disabled={locked} onClick={onReset}>Discard Build changes</button>
             </ControlTooltip>
             <ControlTooltip disabled={locked} reason={disabledReason}>
               <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
-            </ControlTooltip>
-            <ControlTooltip
-              disabled={deleteDashboardContentDisabled}
-              reason={deleteDashboardContentDisabledReason}
-            >
-              <button
-                type="button"
-                className="danger build-delete-dashboard-content"
-                aria-label="Delete dashboard content"
-                disabled={deleteDashboardContentDisabled}
-                onClick={onDeleteDashboardContent}
-              >
-                Clear dashboard…
-              </button>
             </ControlTooltip>
           </div>
         </section>

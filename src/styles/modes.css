@@ -453,11 +453,6 @@
   width: 100%;
 }
 
-.build-command-group[data-build-command-group="package"] .control-tooltip {
-  flex: 1 1 116px;
-  min-width: 0;
-}
-
 .mode-switcher .control-tooltip__reason {
   bottom: auto;
   top: calc(100% + 8px);
@@ -1414,7 +1409,7 @@
 
 .scenario-passport-heading :is(p, h2),
 .scenario-passport-package-actions :is(h3, p),
-.scenario-passport-provenance h3 {
+.scenario-passport-recovery-actions :is(h3, p) {
   margin: 0;
 }
 
@@ -1424,7 +1419,7 @@
 
 .scenario-passport-fields,
 .scenario-passport-package-actions,
-.scenario-passport-provenance {
+.scenario-passport-recovery-actions {
   display: grid;
   gap: 8px;
 }
@@ -1434,8 +1429,7 @@
   gap: 3px;
 }
 
-.scenario-passport-field > span,
-.scenario-passport-provenance dt {
+.scenario-passport-field > span {
   color: var(--simex-text-muted);
   font-size: 11px;
   font-weight: 800;
@@ -1474,37 +1468,22 @@
   margin-inline-end: auto;
 }
 
-.scenario-passport-provenance dl {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-}
-
-.scenario-passport-provenance dl > div {
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.scenario-passport-provenance dd {
-  color: var(--simex-text-strong);
-  margin: 0;
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-
-.scenario-passport-package-actions {
+.scenario-passport-package-actions,
+.scenario-passport-recovery-actions {
   border-top: 1px solid var(--simex-border-subtle);
   padding-top: 12px;
+}
+
+.scenario-passport-package-actions > .control-tooltip,
+.scenario-passport-recovery-actions > .control-tooltip,
+.scenario-passport-package-actions > .control-tooltip > button,
+.scenario-passport-recovery-actions > .control-tooltip > button {
+  width: 100%;
 }
 
 .scenario-package-disabled-reason {
   color: var(--simex-text-muted);
   font-size: 12px;
-}
-
-.scenario-package-reset {
-  color: var(--simex-danger, var(--simex-text-strong));
 }
 
 .dashboard-command-page-scroller {
@@ -3465,32 +3444,6 @@
   display: grid;
   font-weight: 700;
   gap: 5px;
-}
-
-.scenario-source-provenance {
-  background: var(--simex-surface-panel-alt);
-  border: 1px solid var(--simex-border-subtle);
-  border-radius: 8px;
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 10px;
-}
-
-.scenario-source-provenance div {
-  display: grid;
-  gap: 4px;
-  grid-template-columns: 92px minmax(0, 1fr);
-}
-
-.scenario-source-provenance dt {
-  color: var(--simex-text-muted);
-  font-weight: 700;
-}
-
-.scenario-source-provenance dd {
-  margin: 0;
-  overflow-wrap: anywhere;
 }
 
 .build-surface-actions {

@@ -115,11 +115,8 @@ export default function BuildWorkspace({
   chartSlotDraft = null,
   onSaveLayout,
   onDiscardLayout,
-  onUploadPackage,
-  onDownloadPackage,
   onFinish,
   onReset,
-  onDeleteDashboardContent,
   onLocalDraftsChange,
   onDisplayAction,
   selectionControllerRef,
@@ -720,11 +717,6 @@ export default function BuildWorkspace({
             parkedAuxiliaries={parkedAuxiliaries}
             onFinish={onFinish}
             onReset={onReset}
-            onDeleteDashboardContent={onDeleteDashboardContent}
-            deleteDashboardContentDisabled={mutationsDisabled}
-            deleteDashboardContentDisabledReason={mutationsDisabled
-              ? "Wait for the current dashboard operation to finish."
-              : ""}
             onSaveLayout={onSaveLayout}
             onDiscardLayout={() => {
               onDiscardLayout?.();
@@ -733,12 +725,6 @@ export default function BuildWorkspace({
             onAddChart={() => onAddChart?.()}
             onAddStaticContent={() => onAddStaticContent?.()}
             onAccessibilityChange={onAccessibilityChange}
-            onUploadPackage={onUploadPackage}
-            onDownloadPackage={onDownloadPackage}
-            packageDownloadDisabled={mutationsDisabled}
-            packageDownloadDisabledReason={mutationsDisabled
-              ? "Wait for the current dashboard operation to finish."
-              : ""}
             onOpenAuxiliary={openAuxiliary}
             onResumeAuxiliary={resumeAuxiliary}
             getAuxiliaryLabel={auxiliaryLabel}

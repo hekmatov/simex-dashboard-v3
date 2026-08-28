@@ -15,12 +15,23 @@ async function openBuildStructure(page, appUrl = "/") {
   await expect(page.getByRole("tree")).toBeVisible();
 }
 
+async function openScenarioPassport(page, { preserveFocus = false } = {}) {
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  if (!await passport.isVisible().catch(() => false)) {
+    const trigger = page.locator(".dashboard-scenario-trigger");
+    if (preserveFocus) await trigger.evaluate((element) => element.click());
+    else await trigger.click();
+  }
+  await expect(passport).toBeVisible();
+  return passport;
+}
+
 function treeItemLabel(tree, name) {
   return tree.getByRole("treeitem", { name, exact: true })
     .locator(":scope > .build-tree-row .build-tree-label");
 }
 
-test("Clear Dashboard preserves canonical Home identity and Look after durable deletion", async ({ page }) => {
+test("Clear dashboard in Scenario Passport preserves canonical Home identity and Look after durable deletion", async ({ page }) => {
   test.setTimeout(60_000);
   const sourceDashboard = JSON.parse(await readFile(
     new URL("../../public/config/dashboard.json", import.meta.url),
@@ -28,12 +39,10 @@ test("Clear Dashboard preserves canonical Home identity and Look after durable d
   ));
   await openBuildStructure(page, "http://127.0.0.1:4175/");
 
-  await page.locator(".dashboard-scenario-trigger").click();
-  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  const passport = await openScenarioPassport(page);
   await passport.getByLabel("Show Home", { exact: true }).uncheck();
-  await passport.getByRole("button", { name: "Close", exact: true }).click();
 
-  const clearTrigger = page.getByRole("button", { name: "Delete dashboard content", exact: true });
+  const clearTrigger = passport.getByRole("button", { name: "Clear dashboard", exact: true });
   await clearTrigger.click();
   const dialog = page.getByRole("dialog", { name: "Delete all dashboard content?" });
   await expect(dialog).toBeVisible();
@@ -82,7 +91,7 @@ test("Clear Dashboard preserves canonical Home identity and Look after durable d
   await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
-test("storage-rejected Clear is atomic and Cancel restores the trigger focus", async ({ page }) => {
+test("storage-rejected Clear dashboard is atomic and Cancel restores the Passport trigger focus", async ({ page }) => {
   test.setTimeout(60_000);
   const sourceDashboard = await readFile(
     new URL("../../public/config/dashboard.json", import.meta.url),
@@ -98,7 +107,8 @@ test("storage-rejected Clear is atomic and Cancel restores the trigger focus", a
   });
   await openBuildStructure(page, "http://127.0.0.1:4175/");
 
-  const clearTrigger = page.getByRole("button", { name: "Delete dashboard content", exact: true });
+  const passport = await openScenarioPassport(page);
+  const clearTrigger = passport.getByRole("button", { name: "Clear dashboard", exact: true });
   await clearTrigger.click();
   const dialog = page.getByRole("dialog", { name: "Delete all dashboard content?" });
   await dialog.getByLabel(/I understand that the authored dashboard content/).check();
@@ -343,8 +353,9 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   await expect(look.locator(".look-drawer-feedback")).toHaveText("Dashboard look saved.");
   await look.getByRole("button", { name: "Close", exact: true }).click();
 
+  const passport = await openScenarioPassport(page);
   const chooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  await passport.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const chooser = await chooserPromise;
   await expect(page.getByText(
     "Unsaved changes to this dashboard will be lost.", { exact: true },
@@ -370,8 +381,9 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   await expect(review).toHaveCount(0);
   await expect(importedTab).toHaveCount(0);
 
+  const secondPassport = await openScenarioPassport(page);
   const secondChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  await secondPassport.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const secondChooser = await secondChooserPromise;
   await secondChooser.setFiles({
     name: "imported-dashboard.json",
@@ -409,30 +421,11 @@ test("package export resolves drafts and round-trips a self-contained source", a
     now: "2026-08-21T09:10:11.000Z",
   });
 
-  const commandGeometry = await page.locator(".build-command-groups").evaluate((root) => {
-    const rect = (selector) => {
-      const box = root.querySelector(selector)?.getBoundingClientRect();
-      return box ? { left: box.left, right: box.right, top: box.top, bottom: box.bottom } : null;
-    };
-    const rootBox = root.getBoundingClientRect();
-    return {
-      viewportWidth: window.innerWidth,
-      template: getComputedStyle(root).gridTemplateColumns,
-      root: { left: rootBox.left, right: rootBox.right, top: rootBox.top, bottom: rootBox.bottom },
-      package: rect('[data-build-command-group="package"]'),
-      session: rect('[data-build-command-group="session"]'),
-      upload: rect('[data-build-command-group="package"] button'),
-      reset: rect('[data-build-command-group="session"] button'),
-    };
-  });
-  const controlsOverlap = commandGeometry.upload.right > commandGeometry.reset.left
-    && commandGeometry.upload.left < commandGeometry.reset.right
-    && commandGeometry.upload.bottom > commandGeometry.reset.top
-    && commandGeometry.upload.top < commandGeometry.reset.bottom;
-  expect(controlsOverlap, JSON.stringify(commandGeometry)).toBe(false);
+  await expect(page.locator('[data-build-command-group="package"]')).toHaveCount(0);
 
+  const packagePassport = await openScenarioPassport(page);
   const chooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  await packagePassport.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const chooser = await chooserPromise;
   await chooser.setFiles({
     name: "compact-dashboard.json",
@@ -442,13 +435,12 @@ test("package export resolves drafts and round-trips a self-contained source", a
   const importReview = page.getByRole("dialog", { name: "Review package contents" });
   await importReview.getByRole("button", { name: "Load package", exact: true }).click();
 
-  const scenarioTrigger = page.getByRole("button", { name: "HeV-A26 Day 2 Simulation", exact: true });
-  await scenarioTrigger.click();
-  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  const passport = await openScenarioPassport(page);
   await passport.getByRole("button", { name: /^Edit Program:/ }).click();
   await passport.getByLabel("Program", { exact: true }).fill("Unfinished export program");
   await passport.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "Download Dashboard Package", exact: true }).click();
+  const downloadPassport = await openScenarioPassport(page);
+  await downloadPassport.getByRole("button", { name: "Download Dashboard Package", exact: true }).click();
 
   const readiness = page.getByRole("dialog", { name: "Finish unfinished work before download" });
   await expect(readiness).toContainText("Scenario Passport draft");
@@ -460,9 +452,10 @@ test("package export resolves drafts and round-trips a self-contained source", a
   await passport.getByRole("button", { name: "Close", exact: true }).click();
 
   page.once("dialog", (dialog) => dialog.accept("self-contained-roundtrip"));
+  const resolvedPassport = await openScenarioPassport(page);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Download Dashboard Package", exact: true }).click(),
+    resolvedPassport.getByRole("button", { name: "Download Dashboard Package", exact: true }).click(),
   ]);
   const downloadedPath = await download.path();
   const exported = JSON.parse(await readFile(downloadedPath, "utf8"));
@@ -473,8 +466,9 @@ test("package export resolves drafts and round-trips a self-contained source", a
   expect(exported.config).not.toHaveProperty("dataSourceStates");
   expect(exported.config).not.toHaveProperty("chartDataStates");
 
+  const roundtripPassport = await openScenarioPassport(page);
   const roundtripChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  await roundtripPassport.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const roundtripChooser = await roundtripChooserPromise;
   await roundtripChooser.setFiles(downloadedPath);
   const roundtripReview = page.getByRole("dialog", { name: "Review package contents" });
@@ -500,7 +494,8 @@ test("cancelling the authored-content import warning preserves inline rename sta
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Pending package-safe rename");
 
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true })
+  const passport = await openScenarioPassport(page, { preserveFocus: true });
+  await passport.getByRole("button", { name: "Upload Dashboard Package", exact: true })
     .evaluate((element) => element.click());
   const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
   await expect(warning.getByText(
@@ -532,7 +527,8 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Stale local Page name");
 
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true })
+  const passport = await openScenarioPassport(page, { preserveFocus: true });
+  await passport.getByRole("button", { name: "Upload Dashboard Package", exact: true })
     .evaluate((element) => element.click());
   const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
   const chooserPromise = page.waitForEvent("filechooser");

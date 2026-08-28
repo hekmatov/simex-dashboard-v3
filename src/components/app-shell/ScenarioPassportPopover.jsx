@@ -1,9 +1,12 @@
 import React from "react";
 
+import ControlTooltip from "../common/ControlTooltip.jsx";
 import {
   createScenarioDraft,
   reduceScenarioDraft,
 } from "../build/ScenarioAuthoring.jsx";
+
+const DISCARD_BUILD_CHANGES_DESCRIPTION = "Restores the dashboard to the baseline captured when you entered Build. It does not contact the deployed online dashboard.";
 
 const FIELDS = Object.freeze([
   { id: "scenarioLabel", label: "Scenario name" },
@@ -20,7 +23,8 @@ export default function ScenarioPassportPopover({
   onDirtyChange,
   onImportPackage,
   onDownloadPackage,
-  onResetToSource,
+  onDiscardBuildChanges,
+  onClearDashboard,
 }) {
   const [draft, setDraft] = React.useState(() => createScenarioDraft(dashboard));
   const [editingField, setEditingField] = React.useState(null);
@@ -30,8 +34,6 @@ export default function ScenarioPassportPopover({
     dashboard?.scenarioLabel,
     dashboard?.programLabel,
     dashboard?.lastUpdated,
-    dashboard?.source?.kind,
-    dashboard?.source?.label,
     dashboard?.home?.enabled,
   ].join("\u0000");
 
@@ -73,9 +75,12 @@ export default function ScenarioPassportPopover({
   };
 
   if (!open) return null;
-  const packageDisabledReason = dirty
-    ? "Save or discard the Scenario changes before changing the dashboard package."
-    : "";
+  const scenarioMutationDisabled = dirty || busy;
+  const scenarioMutationDisabledReason = busy
+    ? "Wait for the Scenario to finish saving."
+    : dirty
+      ? "Save or discard the Scenario changes before uploading a package or discarding Build changes."
+      : "";
 
   return (
     <aside
@@ -160,20 +165,50 @@ export default function ScenarioPassportPopover({
         </button>
       </div>
 
-      <section className="scenario-passport-provenance" aria-labelledby="scenario-source-title">
-        <h3 id="scenario-source-title">Source provenance</h3>
-        <dl>
-          <div><dt>Source</dt><dd>{draft.value.source?.label || "No source provenance"}</dd></div>
-          <div><dt>Source kind</dt><dd>{draft.value.source?.kind || "unknown"}</dd></div>
-        </dl>
-      </section>
-
       <section className="scenario-passport-package-actions" aria-labelledby="dashboard-package-title">
         <h3 id="dashboard-package-title">Dashboard package</h3>
-        {packageDisabledReason && <p className="scenario-package-disabled-reason">{packageDisabledReason}</p>}
-        <button type="button" className="secondary" disabled={dirty || busy} title={packageDisabledReason} onClick={onImportPackage}>Import Dashboard Package</button>
-        <button type="button" className="secondary" disabled={dirty || busy} title={packageDisabledReason} onClick={onDownloadPackage}>Download Dashboard Package</button>
-        <button type="button" className="secondary scenario-package-reset" disabled={dirty || busy} title={packageDisabledReason} onClick={onResetToSource}>Reset Dashboard to Source</button>
+        {scenarioMutationDisabledReason && <p className="scenario-package-disabled-reason">{scenarioMutationDisabledReason}</p>}
+        <ControlTooltip disabled={scenarioMutationDisabled} reason={scenarioMutationDisabledReason}>
+          <button type="button" className="secondary" disabled={scenarioMutationDisabled} onClick={onImportPackage}>Upload Dashboard Package</button>
+        </ControlTooltip>
+        <ControlTooltip
+          disabled={busy}
+          reason={busy ? "Wait for the Scenario to finish saving." : ""}
+        >
+          <button type="button" className="secondary" disabled={busy} onClick={onDownloadPackage}>Download Dashboard Package</button>
+        </ControlTooltip>
+      </section>
+
+      <section className="scenario-passport-recovery-actions" aria-labelledby="dashboard-recovery-title">
+        <h3 id="dashboard-recovery-title">Dashboard recovery</h3>
+        <ControlTooltip
+          disabled={scenarioMutationDisabled}
+          explain={!scenarioMutationDisabled}
+          reason={scenarioMutationDisabledReason || DISCARD_BUILD_CHANGES_DESCRIPTION}
+        >
+          <button
+            type="button"
+            className="secondary"
+            disabled={scenarioMutationDisabled}
+            onClick={onDiscardBuildChanges}
+          >
+            Discard Build changes
+          </button>
+        </ControlTooltip>
+        <ControlTooltip
+          disabled={busy}
+          reason={busy ? "Wait for the Scenario to finish saving." : ""}
+        >
+          <button
+            type="button"
+            className="danger"
+            aria-label="Clear dashboard"
+            disabled={busy}
+            onClick={onClearDashboard}
+          >
+            Clear dashboard…
+          </button>
+        </ControlTooltip>
       </section>
     </aside>
   );

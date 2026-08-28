@@ -5879,6 +5879,9 @@ html[data-simex-eyedropper-active="true"] body * {
 
 .control-tooltip[data-control-tooltip-anchor="true"] {
   border-radius: var(--simex-component-surface-radius, 8px);
+}
+
+.control-tooltip[data-control-tooltip-kind="disabled"] {
   cursor: not-allowed;
 }
 
@@ -5910,7 +5913,8 @@ html[data-simex-eyedropper-active="true"] body * {
 }
 
 .control-tooltip[data-control-tooltip-anchor="true"]:hover > .control-tooltip__reason,
-.control-tooltip[data-control-tooltip-anchor="true"]:focus > .control-tooltip__reason {
+.control-tooltip[data-control-tooltip-anchor="true"]:focus > .control-tooltip__reason,
+.control-tooltip[data-control-tooltip-kind="explanation"]:focus-within > .control-tooltip__reason {
   opacity: 1;
   visibility: visible;
 }
