@@ -49,10 +49,30 @@ export async function readFocusVisibility(locator) {
   return locator.evaluate((element) => {
     const style = getComputedStyle(element);
     const bounds = element.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const visualViewport = {
+      left: viewport?.offsetLeft ?? 0,
+      top: viewport?.offsetTop ?? 0,
+      width: viewport?.width ?? window.innerWidth,
+      height: viewport?.height ?? window.innerHeight,
+    };
+    visualViewport.right = visualViewport.left + visualViewport.width;
+    visualViewport.bottom = visualViewport.top + visualViewport.height;
     return {
       outlineStyle: style.outlineStyle,
       outlineWidth: Number.parseFloat(style.outlineWidth),
-      visible: bounds.bottom > 0 && bounds.top < innerHeight && bounds.right > 0 && bounds.left < innerWidth,
+      outlineOffset: Number.parseFloat(style.outlineOffset),
+      bounds: {
+        left: bounds.left,
+        top: bounds.top,
+        right: bounds.right,
+        bottom: bounds.bottom,
+      },
+      visualViewport,
+      visible: bounds.bottom > visualViewport.top
+        && bounds.top < visualViewport.bottom
+        && bounds.right > visualViewport.left
+        && bounds.left < visualViewport.right,
     };
   });
 }

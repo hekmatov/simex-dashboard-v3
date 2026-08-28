@@ -234,6 +234,7 @@ export default function App() {
   const companionClientRef = React.useRef(null);
   const dashboardRendererRef = React.useRef(null);
   const buildPanelScrollRef = React.useRef(null);
+  const dashboardMapToggleRef = React.useRef(null);
   const contentDraftCoordinatorRef = React.useRef(null);
   const contentDraftCoordinatorDisposalRef = React.useRef(null);
   if (contentDraftCoordinatorRef.current === null) {
@@ -349,12 +350,7 @@ export default function App() {
     mode,
   ]);
 
-  function toggleBuildPanel() {
-    if (!buildPanelOpen) {
-      buildPanelScrollRef.current = { left: window.scrollX, top: window.scrollY };
-      setBuildPanelOpen(true);
-      return;
-    }
+  function closeBuildPanel({ returnFocus = false } = {}) {
     const previousScroll = buildPanelScrollRef.current;
     setBuildPanelOpen(false);
     buildPanelScrollRef.current = null;
@@ -363,6 +359,20 @@ export default function App() {
         window.scrollTo(previousScroll);
       }));
     }
+    if (returnFocus) {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        dashboardMapToggleRef.current?.focus();
+      }));
+    }
+  }
+
+  function toggleBuildPanel() {
+    if (!buildPanelOpen) {
+      buildPanelScrollRef.current = { left: window.scrollX, top: window.scrollY };
+      setBuildPanelOpen(true);
+      return;
+    }
+    closeBuildPanel();
   }
 
   const commandCrownPageActions = mode === "home" ? (
@@ -403,11 +413,23 @@ export default function App() {
         aria-pressed={buildPanelOpen}
         disabled={modeDisabled}
         onClick={toggleBuildPanel}
+        ref={dashboardMapToggleRef}
       >
         Dashboard map
       </button>
     </>
   ) : null;
+
+  React.useEffect(() => {
+    if (mode !== "build" || !buildPanelOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      closeBuildPanel({ returnFocus: true });
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [buildPanelOpen, mode]);
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;

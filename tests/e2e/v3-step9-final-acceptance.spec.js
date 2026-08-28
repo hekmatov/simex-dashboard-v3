@@ -39,19 +39,19 @@ test("200% text reflow keeps canonical Home, mode controls, and Dashboard map fo
     await mapToggle.press("Enter");
     const map = page.getByRole("complementary", { name: "Dashboard map" });
     const firstTreeItem = map.getByRole("treeitem").first();
+    const focusIndicator = firstTreeItem.locator(":scope > .build-tree-row");
     await expect(map).toHaveAttribute("data-open", "true");
     await expect(map).toBeVisible();
     await firstTreeItem.focus();
     const wrapperFocus = await readFocusVisibility(firstTreeItem);
     expect(wrapperFocus.visible).toBe(true);
-    await assertVisibleFocus(firstTreeItem.locator(":scope > .build-tree-row"));
-    await expect(firstTreeItem).toBeInViewport();
-    const treeBounds = await firstTreeItem.boundingBox();
-    expect(treeBounds).not.toBeNull();
-    expect(treeBounds.x).toBeGreaterThanOrEqual(0);
-    expect(treeBounds.y).toBeGreaterThanOrEqual(0);
-    expect(treeBounds.x + treeBounds.width).toBeLessThanOrEqual(DESKTOP_VIEWPORT.width);
-    expect(treeBounds.y + treeBounds.height).toBeLessThanOrEqual(DESKTOP_VIEWPORT.height);
+    const indicatorFocus = await readFocusVisibility(focusIndicator);
+    const outlineInset = indicatorFocus.outlineWidth + Math.max(0, indicatorFocus.outlineOffset);
+    expect(indicatorFocus.bounds.left - outlineInset).toBeGreaterThanOrEqual(indicatorFocus.visualViewport.left);
+    expect(indicatorFocus.bounds.top - outlineInset).toBeGreaterThanOrEqual(indicatorFocus.visualViewport.top);
+    expect(indicatorFocus.bounds.right + outlineInset).toBeLessThanOrEqual(indicatorFocus.visualViewport.right);
+    expect(indicatorFocus.bounds.bottom + outlineInset).toBeLessThanOrEqual(indicatorFocus.visualViewport.bottom);
+    await assertVisibleFocus(focusIndicator);
 
     await expect(page.getByRole("region", { name: "Build commands" })).toBeVisible();
     await expectNoViewportOverflow(page);
@@ -69,18 +69,17 @@ test("keyboard and screen-reader journey exposes truthful mode and Dashboard map
 
   await expect(modes).toHaveCount(1);
   await expect(home).toHaveAttribute("aria-pressed", "true");
-  await home.focus();
+  await pressUntilFocused(page, home, "Tab");
   await page.keyboard.press("Tab");
   await expect(view).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(view).toHaveAttribute("aria-pressed", "true");
-  await build.focus();
-  await expect(build).toBeFocused();
+  await pressUntilFocused(page, build, "Shift+Tab");
   await page.keyboard.press("Enter");
   await expect(build).toHaveAttribute("aria-pressed", "true");
 
   const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await mapToggle.focus();
+  await pressUntilFocused(page, mapToggle, "Tab");
   await page.keyboard.press("Enter");
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   const structure = map.getByRole("navigation", { name: "Dashboard structure" });
@@ -89,26 +88,24 @@ test("keyboard and screen-reader journey exposes truthful mode and Dashboard map
   await expect(map).toBeVisible();
   await expect(firstTreeItem).toHaveAttribute("aria-expanded", "true");
   await expect(firstTreeItem).toHaveAttribute("aria-selected", "true");
-  await firstTreeItem.focus();
+  await pressUntilFocused(page, firstTreeItem, "Tab", 160);
   await page.keyboard.press("ArrowDown");
   await expect(tree.getByRole("treeitem").nth(1)).toBeFocused();
   await page.keyboard.press("ArrowUp");
   await expect(firstTreeItem).toBeFocused();
 
-  await mapToggle.focus();
-  await page.keyboard.press("Enter");
-  await expect(map).toBeHidden();
-  await expect(mapToggle).toBeFocused();
-
   const snapshot = await page.locator("body").ariaSnapshot();
-  expect(snapshot).toContain("Home");
-  expect(snapshot).toContain("View");
-  expect(snapshot).toContain("Build");
   expect(snapshot).toContain("Dashboard map");
+  expect(snapshot).toContain("Dashboard structure");
+  expect(snapshot).toContain('treeitem "Old Homepage Content" [expanded] [selected]');
   await testInfo.attach("step9-screen-reader-journey.yml", {
     body: snapshot,
     contentType: "text/yaml",
   });
+
+  await page.keyboard.press("Escape");
+  await expect(map).toBeHidden();
+  await expect(mapToggle).toBeFocused();
 });
 
 test("touch input activates the phone recovery control with a 44 by 44 target", async ({ browser }) => {
@@ -139,4 +136,12 @@ async function assertVisibleFocus(target) {
   expect(focus.visible).toBe(true);
   expect(focus.outlineStyle).not.toBe("none");
   expect(focus.outlineWidth).toBeGreaterThanOrEqual(2);
+}
+
+async function pressUntilFocused(page, target, key, limit = 32) {
+  for (let attempt = 0; attempt < limit; attempt += 1) {
+    if (await target.evaluate((element) => document.activeElement === element)) return;
+    await page.keyboard.press(key);
+  }
+  await expect(target).toBeFocused();
 }
