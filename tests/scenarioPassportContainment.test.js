@@ -185,7 +185,6 @@ test("Clear durably replaces authored content before resetting Scenario and sele
       persistCalls.push({ candidate: structuredClone(candidate), options });
       return persisted;
     },
-    dashboard: baseline,
     cleanup: async (previous, replacement) => {
       assert.deepEqual(previous, baseline);
       assert.deepEqual(replacement.pages, []);
@@ -219,6 +218,77 @@ test("Clear durably replaces authored content before resetting Scenario and sele
   assert.deepEqual(baseline.home, { enabled: false });
 });
 
+test("Clear rebases on the queued-current dashboard after a preceding deferred commit", async () => {
+  const baseline = {
+    ...fixtureDashboard(),
+    scenarioLabel: "Baseline scenario",
+    lastUpdated: "2026-08-01",
+    source: { kind: "package", label: "baseline.json" },
+    globalStyles: { dashboardStyle: "baseline-style" },
+    assets: { "asset-baseline": { assetId: "asset-baseline" } },
+  };
+  let precedingCandidate;
+  let releasePrecedingCommit;
+  let markPrecedingCommitStarted;
+  const precedingCommitStarted = new Promise((resolve) => {
+    markPrecedingCommitStarted = resolve;
+  });
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: baseline,
+    commit: async (candidate) => {
+      precedingCandidate = structuredClone(candidate);
+      markPrecedingCommitStarted();
+      return new Promise((resolve) => {
+        releasePrecedingCommit = resolve;
+      });
+    },
+  });
+  const preceding = controller.mutate((next) => {
+    next.scenarioLabel = "Queued scenario";
+    next.lastUpdated = "2026-08-28";
+    next.source = { kind: "package", label: "queued.json" };
+    next.globalStyles = { dashboardStyle: "queued-style" };
+    next.pages.push({ id: "queued-page", label: "Queued page", sections: [] });
+    next.dataSources.queued = { type: "uploadedCsv" };
+    next.assets["asset-queued"] = { assetId: "asset-queued" };
+  });
+  await precedingCommitStarted;
+
+  const cleanupCalls = [];
+  const clear = appModule.clearDashboardContentDurably({
+    controller,
+    persist: async (candidate, options) => {
+      assert.deepEqual(options, { requireDurableStorage: true });
+      return structuredClone(candidate);
+    },
+    cleanup: async (previous, replacement) => {
+      cleanupCalls.push({
+        previous: structuredClone(previous),
+        replacement: structuredClone(replacement),
+      });
+    },
+  });
+
+  releasePrecedingCommit(structuredClone(precedingCandidate));
+  await preceding;
+  const committed = await clear;
+
+  assert.equal(committed.scenarioLabel, "Queued scenario");
+  assert.equal(committed.lastUpdated, "2026-08-28");
+  assert.deepEqual(committed.source, { kind: "package", label: "queued.json" });
+  assert.deepEqual(committed.globalStyles, { dashboardStyle: "queued-style" });
+  assert.deepEqual(committed.pages, []);
+  assert.deepEqual(committed.dataSources, {});
+  assert.deepEqual(committed.assets, {});
+  assert.equal(cleanupCalls.length, 1);
+  assert.equal(cleanupCalls[0].previous.scenarioLabel, "Queued scenario");
+  assert.deepEqual(cleanupCalls[0].previous.pages.map(({ id }) => id), ["overview", "queued-page"]);
+  assert.deepEqual(Object.keys(cleanupCalls[0].previous.dataSources), ["queued"]);
+  assert.deepEqual(Object.keys(cleanupCalls[0].previous.assets), ["asset-baseline", "asset-queued"]);
+  assert.deepEqual(cleanupCalls[0].replacement.pages, []);
+  assert.deepEqual(baseline.globalStyles, { dashboardStyle: "baseline-style" });
+});
+
 test("storage-rejected Clear preserves dashboard Scenario mode preference and focus", async () => {
   assert.equal(typeof appModule?.clearDashboardContentDurably, "function");
   const baseline = fixtureDashboard();
@@ -235,7 +305,6 @@ test("storage-rejected Clear preserves dashboard Scenario mode preference and fo
       options.push(commitOptions);
       throw new Error("Browser dashboard storage is unavailable.");
     },
-    dashboard: baseline,
     cleanup: async () => events.push("cleanup"),
     onResetScenario: () => events.push("scenario"),
     onModeChange: (mode) => events.push(`mode:${mode}`),

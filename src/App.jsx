@@ -934,14 +934,12 @@ export default function App() {
   }
 
   async function deleteDashboardContent() {
-    const previousDashboard = dashboardRef.current;
     return clearDashboardContentDurably({
       controller: ensureDashboardCommitController(),
       persist: persistConfiguration,
-      dashboard: previousDashboard,
-      cleanup: async (_previous, committed) => {
+      cleanup: async (previous, committed) => {
         setOperationError("");
-        await cleanupReplacedDashboardAssets(previousDashboard, committed, {
+        await cleanupReplacedDashboardAssets(previous, committed, {
           failureMessage: "Dashboard content was deleted, but unused browser source files could not be removed.",
         });
       },
@@ -1632,19 +1630,21 @@ export function saveScenarioPassportDurably({ controller, persist, value }) {
 export async function clearDashboardContentDurably({
   controller,
   persist,
-  dashboard,
   cleanup,
   onResetScenario,
   onModeChange,
   onPersistMode,
   onFocusMode,
 }) {
-  if (typeof controller?.replaceWith !== "function") {
+  if (typeof controller?.mutateWithCommit !== "function") {
     throw new TypeError("A dashboard commit controller is required.");
   }
-  const previousDashboard = configurationForPortableUse(dashboard);
-  const committed = await controller.replaceWith(
-    createBlankDashboardContent(previousDashboard),
+  let previousDashboard;
+  const committed = await controller.mutateWithCommit(
+    (current) => {
+      previousDashboard = configurationForPortableUse(current);
+      return createBlankDashboardContent(previousDashboard);
+    },
     createDurableContentDraftCommit(persist),
   );
   await cleanup?.(previousDashboard, committed);
