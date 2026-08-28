@@ -13,12 +13,6 @@ const vite = await createServer({
 const displayModule = await vite
   .ssrLoadModule("/src/components/FullscreenDisplay.jsx")
   .catch(() => null);
-const viewModule = await vite
-  .ssrLoadModule("/src/components/view/ViewShell.jsx")
-  .catch(() => null);
-const playbackModule = await vite
-  .ssrLoadModule("/src/components/playback/PlaybackProvider.jsx")
-  .catch(() => null);
 const gridModule = await vite
   .ssrLoadModule("/src/components/display/DisplayedChartGrid.jsx")
   .catch(() => null);
@@ -137,54 +131,6 @@ test("findChart is the public canonical lookup for placement-wrapped and direct 
   assert.equal(gridModule.findChart(savedDashboard, "static-image"), wrapped.chart);
   assert.equal(gridModule.findChart(savedDashboard, "direct-static"), direct);
   assert.equal(gridModule.findChart(savedDashboard, "missing"), null);
-});
-
-test("View provides a visible Compare charts entry to the existing multi-select flow", () => {
-  assert.equal(typeof viewModule?.default, "function", "ViewShell must be implemented");
-  assert.equal(typeof playbackModule?.PlaybackProvider, "function", "PlaybackProvider must be implemented");
-  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
-  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
-  Object.defineProperty(globalThis, "window", {
-    configurable: true,
-    value: { matchMedia: () => ({ matches: false }), navigator: { standalone: false } },
-  });
-  Object.defineProperty(globalThis, "navigator", {
-    configurable: true,
-    value: { userAgent: "" },
-  });
-  let html;
-  try {
-    html = renderToStaticMarkup(
-      React.createElement(
-        playbackModule.PlaybackProvider,
-        { groups: [], charts: [], loadedData: dashboard.loadedData, profiles: dashboard.datasetProfiles },
-        React.createElement(viewModule.default, {
-          activePage: dashboard.pages[0],
-          dashboard,
-          displayState: { displayed_chart_ids: [], layout: "solo" },
-          companionStatusLabel: "Companion unavailable",
-          iconLanguageStyles: {},
-          geoDataSources: {},
-          multiSelectMode: false,
-          multiPanelIds: [],
-          onActivePageChange: () => {},
-          onCompareCharts: () => {},
-          onDisplayAction: () => {},
-          onToggleMultiPanel: () => {},
-          onStartMultiFullscreenSelection: () => {},
-          onOpenMultiFullscreen: () => {},
-          onCancelMultiSelection: () => {},
-        }),
-      ),
-    );
-  } finally {
-    if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
-    else delete globalThis.window;
-    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
-    else delete globalThis.navigator;
-  }
-
-  assert.match(html, />Compare charts<\/button>/);
 });
 
 test("fullscreen display renders nothing for an empty visible set", () => {

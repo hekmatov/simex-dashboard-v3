@@ -18,17 +18,31 @@ let buildSelections = [];
 const PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const PNG_BYTES = Uint8Array.from(atob(PNG_BASE64), (character) => character.charCodeAt(0));
 
-function source(assetId, alt) {
+function placement(mediaId, alt) {
   return {
     kind: "staticImage",
-    sourceVersion: 1,
-    revision: 1,
-    origin: { kind: "asset", assetId },
+    sourceVersion: 2,
+    mediaId,
     alt,
     decorative: false,
     fit: "contain",
     crop: { x: 0, y: 0, width: 1000, height: 1000 },
     rotation: 0,
+  };
+}
+
+function mediaItem(mediaId, assetId, storageState = "durable") {
+  return {
+    mediaId,
+    revision: 1,
+    current: { kind: "asset", assetId },
+    displayName: mediaId,
+    defaultDescription: "",
+    origin: "uploaded",
+    health: storageState === "durable" ? "ready" : "staged",
+    dimensions: { width: 1, height: 1 },
+    byteLength: 68,
+    mediaType: "image/png",
   };
 }
 
@@ -60,7 +74,8 @@ function createAsyncAttempt(assetId) {
 
 function renderImage({ suffix, alt, storageState, resolveStaticAsset }) {
   const assetId = `asset-${suffix.repeat(64).slice(0, 64)}`;
-  const staticSource = source(assetId, alt);
+  const mediaId = `media-${suffix}`;
+  const staticSource = placement(mediaId, alt);
   root.render(React.createElement(React.StrictMode, null, React.createElement(ChartView, {
     chart: {
       configVersion: 3,
@@ -77,6 +92,7 @@ function renderImage({ suffix, alt, storageState, resolveStaticAsset }) {
     renderContext: {
       sources: { [`source-${suffix}`]: staticSource },
       assets: { [assetId]: manifestEntry(assetId, storageState) },
+      mediaItems: { [mediaId]: mediaItem(mediaId, assetId, storageState) },
       resolveStaticAsset,
     },
     surface: "view",
@@ -125,15 +141,23 @@ window.mountBuildImageFailure = () => {
     dataSources: {
       "build-failed-source": {
         kind: "staticImage",
-        sourceVersion: 1,
-        revision: 1,
-        origin: { kind: "url", url: "https://example.test/missing-build-image.png" },
+        sourceVersion: 2,
+        mediaId: "build-failed-media",
         alt: "Unavailable build image",
         decorative: false,
         fit: "contain",
         crop: { x: 0, y: 0, width: 1000, height: 1000 },
         rotation: 0,
       },
+    },
+    assets: {
+      "asset-build-failed": manifestEntry("asset-build-failed", "durable"),
+    },
+    contentRenderContext: {
+      mediaItems: {
+        "build-failed-media": mediaItem("build-failed-media", "asset-build-failed"),
+      },
+      resolveStaticAsset: () => ({ url: "https://example.test/missing-build-image.png" }),
     },
     editMode: true,
     isSelected: true,
