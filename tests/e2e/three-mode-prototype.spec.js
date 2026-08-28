@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
+import {
+  enterAuthoredDashboard,
+  openDashboardFromLanding,
+} from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -23,6 +27,7 @@ test("View, Build, and Present remain visible while preserving the active page",
   await expect(modes.getByRole("button", { name: "Build" })).toBeVisible();
   await expect(modes.getByRole("button", { name: "Present" })).toBeVisible();
 
+  await openDashboardFromLanding(page);
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: "Biomedical", exact: true })
     .click();
@@ -74,10 +79,8 @@ test("Build metadata persists on save and stays editable after storage fallback"
   await passport.getByRole("button", { name: "Save Scenario", exact: true }).click();
   await expect(page.getByRole("button", { name: "Build", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
-  await expect(passport).toContainText("Scenario saved");
-  await expect(page.getByRole("status")).toContainText(
-    "Browser storage is full. Dashboard changes remain available for this session only.",
-  );
+  await expect(passport).toContainText("Unsaved Scenario");
+  await expect(passport.getByRole("alert")).toContainText("Browser storage is full.");
   await expect.poll(() => page.evaluate((key) => (
     JSON.parse(localStorage.getItem(key)).programLabel
   ), STORAGE_KEY)).toBe("Three-mode training exercise");
@@ -234,7 +237,13 @@ test("Present retains synchronized time through blackout, reload, disconnect, an
   const audience = await openAudience(page);
   await selectTwoAudienceCharts(page);
 
-  await page.getByLabel("Synchronized time").selectOption({ index: 1 });
+  const source = page.getByLabel("Presentation source");
+  const groupSources = await source.locator('option[value^="group:"]').evaluateAll(
+    (options) => options.map((option) => option.value),
+  );
+  expect(groupSources.length).toBeGreaterThan(0);
+  const currentSource = await source.inputValue();
+  await source.selectOption(groupSources.find((value) => value !== currentSource) ?? groupSources[0]);
   await expect.poll(async () => Number.isFinite(
     await observedAudienceEpoch(page),
   )).toBe(true);
@@ -291,6 +300,7 @@ test("iPad and 1200px Build plus a 1920 by 1080 audience have no horizontal over
 });
 
 async function openBiomedical(page) {
+  await enterAuthoredDashboard(page);
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: "Biomedical", exact: true })
     .click();
@@ -341,7 +351,7 @@ async function selectTwoAudienceCharts(page) {
 
 async function openAudience(page) {
   const audiencePromise = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Open audience display" }).click();
+  await page.getByRole("button", { name: "Open new audience session" }).click();
   const audience = await audiencePromise;
   await audience.waitForLoadState("domcontentloaded");
   await expect(audience.locator(".audience-display")).toBeVisible();
@@ -377,8 +387,8 @@ async function installAudienceStateObserver(page) {
 }
 
 async function observedAudienceEpoch(page) {
-  return page.evaluate(() => (
-    globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestState?.time?.active_epoch_ms
-      ?? null
-  ));
+  return page.evaluate(() => {
+    const timeline = globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestState?.timeline;
+    return timeline?.frame_epochs?.[timeline.frame_index] ?? null;
+  });
 }

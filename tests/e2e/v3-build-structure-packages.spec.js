@@ -159,7 +159,19 @@ async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   importedPage.sections = importedPage.sections.slice(0, 1);
   importedPage.sections[0].panels = importedPage.sections[0].panels.slice(0, 1);
   const firstPlacement = importedPage.sections[0].panels[0];
-  (firstPlacement.chart ?? firstPlacement).title = "Imported Panel";
+  const firstChart = firstPlacement.chart ?? firstPlacement;
+  firstChart.title = "Imported Panel";
+  const sourceId = firstChart.sourceId;
+  config.dataSources = { [sourceId]: config.dataSources[sourceId] };
+  config.datasetProfiles = config.datasetProfiles?.[sourceId]
+    ? { [sourceId]: config.datasetProfiles[sourceId] }
+    : {};
+  config.contentLibrary = {
+    ...config.contentLibrary,
+    sourceEntries: config.contentLibrary?.sourceEntries?.[sourceId]
+      ? { [sourceId]: config.contentLibrary.sourceEntries[sourceId] }
+      : {},
+  };
   config.id = "imported-package-dashboard";
   config.title = "Imported package dashboard";
   config.pages = [importedPage];

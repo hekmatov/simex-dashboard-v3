@@ -15,6 +15,7 @@ import {
   buildChronoGroupClock,
   validateChronoGroups,
 } from "../src/charting/time/chronoGroupModel.js";
+import { classifyManagedSource } from "../src/content-library/sourceEntrySchema.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 
 const ROOT = process.cwd();
@@ -243,6 +244,21 @@ test("the curated dashboard is a clean version 6 configuration with exact analyt
   const typeIds = new Set(configuredCharts(dashboard).map(({ chart }) => chart.typeId));
   for (const required of REQUIRED_TYPES) {
     assert.ok(typeIds.has(required), `missing curated ${required}`);
+  }
+});
+
+test("the curated V6 dashboard retains every builder-managed source ownership record", async () => {
+  const { dashboard } = await loadTrackedInputs();
+  const managedSourceIds = Object.entries(dashboard.dataSources)
+    .filter(([sourceId, source]) => classifyManagedSource(sourceId, source)?.ownership === "builder")
+    .map(([sourceId]) => sourceId)
+    .sort();
+  const retainedSourceIds = Object.keys(dashboard.contentLibrary?.sourceEntries ?? {}).sort();
+
+  assert.deepEqual(retainedSourceIds, managedSourceIds);
+  for (const sourceId of managedSourceIds) {
+    assert.equal(dashboard.contentLibrary.sourceEntries[sourceId].sourceId, sourceId);
+    assert.equal(dashboard.contentLibrary.sourceEntries[sourceId].ownership, "builder");
   }
 });
 

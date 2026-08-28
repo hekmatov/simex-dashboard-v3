@@ -3185,6 +3185,387 @@
   },
   "contentLibrary": {
     "mediaItems": {},
-    "sourceEntries": {}
+    "sourceEntries": {
+      "bio_admissions": {
+        "sourceId": "bio_admissions",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_cases": {
+        "sourceId": "bio_cases",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_healthcare_cases": {
+        "sourceId": "bio_healthcare_cases",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_hospital_occupancy": {
+        "sourceId": "bio_hospital_occupancy",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_icu_occupancy": {
+        "sourceId": "bio_icu_occupancy",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_mortality": {
+        "sourceId": "bio_mortality",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_municipal_infections": {
+        "sourceId": "bio_municipal_infections",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_municipal_map_timeline": {
+        "sourceId": "bio_municipal_map_timeline",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Generated map timeline derived from the authoritative harmonized municipal biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_municipal_aggregate_timeseries": {
+        "sourceId": "bio_municipal_aggregate_timeseries",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Generated aggregate timeline derived from the authoritative harmonized municipal biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_municipal_latest_bubble": {
+        "sourceId": "bio_municipal_latest_bubble",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Generated latest municipal snapshot derived from the authoritative harmonized municipal biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_occupancy_gauges": {
+        "sourceId": "bio_occupancy_gauges",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_province_cases": {
+        "sourceId": "bio_province_cases",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_province_cases_latest": {
+        "sourceId": "bio_province_cases_latest",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical latest province snapshot",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_province_deltas": {
+        "sourceId": "bio_province_deltas",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical derived province changes",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_r_values": {
+        "sourceId": "bio_r_values",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_testing": {
+        "sourceId": "bio_testing",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_vaccination_current": {
+        "sourceId": "bio_vaccination_current",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical vaccination snapshot",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_vaccination_timeseries": {
+        "sourceId": "bio_vaccination_timeseries",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical vaccination time series",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_wastewater": {
+        "sourceId": "bio_wastewater",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical wastewater dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "bio_wastewater_latest": {
+        "sourceId": "bio_wastewater_latest",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise biomedical latest wastewater snapshot",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "geo_netherlands_municipalities_2020": {
+        "sourceId": "geo_netherlands_municipalities_2020",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Netherlands municipality boundaries, 2020",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "geo_netherlands_municipalities_2021": {
+        "sourceId": "geo_netherlands_municipalities_2021",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Netherlands municipality boundaries, 2021",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "geo_netherlands_municipalities_2026": {
+        "sourceId": "geo_netherlands_municipalities_2026",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Netherlands municipality boundaries, 2026",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "geo_netherlands_provinces": {
+        "sourceId": "geo_netherlands_provinces",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Netherlands province reference boundaries",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_adherence_deltas": {
+        "sourceId": "socio_adherence_deltas",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic derived adherence changes",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_behaviour": {
+        "sourceId": "socio_behaviour",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic behaviour dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_business_closures": {
+        "sourceId": "socio_business_closures",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic business dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_education_absenteeism": {
+        "sourceId": "socio_education_absenteeism",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise education absenteeism dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_healthcare_absenteeism": {
+        "sourceId": "socio_healthcare_absenteeism",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise healthcare absenteeism dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_lifestyle": {
+        "sourceId": "socio_lifestyle",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic lifestyle dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_loneliness": {
+        "sourceId": "socio_loneliness",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic loneliness dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_mental_wellbeing": {
+        "sourceId": "socio_mental_wellbeing",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic mental wellbeing dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_resilience": {
+        "sourceId": "socio_resilience",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic resilience dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_risk_deltas": {
+        "sourceId": "socio_risk_deltas",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic derived risk-perception changes",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_trust": {
+        "sourceId": "socio_trust",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic trust dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_unemployment": {
+        "sourceId": "socio_unemployment",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic unemployment dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_values": {
+        "sourceId": "socio_values",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic citizen-values dataset",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      },
+      "socio_values_deltas": {
+        "sourceId": "socio_values_deltas",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Simulation exercise socio-economic derived citizen-values changes",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      }
+    }
   }
 }

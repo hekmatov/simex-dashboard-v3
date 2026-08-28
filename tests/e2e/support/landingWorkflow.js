@@ -14,3 +14,12 @@ export async function openLanding(page) {
 export async function openDashboardFromLanding(page) {
   await page.getByRole("button", { name: LANDING_CONTRACT.primaryAction }).click();
 }
+
+export async function enterAuthoredDashboard(page) {
+  const modes = page.getByLabel("Dashboard mode");
+  await modes.waitFor({ state: "visible" });
+  const home = modes.getByRole("button", { name: "Home", exact: true });
+  if (await home.getAttribute("aria-pressed") === "true") {
+    await openDashboardFromLanding(page);
+  }
+}
