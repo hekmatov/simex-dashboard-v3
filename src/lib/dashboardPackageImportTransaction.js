@@ -102,12 +102,15 @@ export async function commitDashboardPackageImport({
 
   let committed;
   try {
-    committed = await replace(candidate.config);
+    committed = await replace(candidate.config, { transactionId });
     rebase(committed);
   } catch (error) {
     const restorationFailures = [];
     try {
-      const restored = await restoreDashboard(previousDashboard);
+      const restored = await restoreDashboard(previousDashboard, {
+        transactionId,
+        rollback: true,
+      });
       if (committed !== undefined) rebase(restored ?? previousDashboard);
     } catch (restoreError) {
       restorationFailures.push(restoreError);

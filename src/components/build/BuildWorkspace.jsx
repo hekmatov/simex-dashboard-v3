@@ -175,6 +175,16 @@ export default function BuildWorkspace({
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
   const auxiliaryLocked = mutationsDisabled || (chartDraftOpen && !chartEditorPlacementId);
+  const mutationDisabledReason = mutationsDisabled
+    ? "Wait for the current dashboard operation to finish."
+    : chartDraftOpen
+      ? "Finish or cancel the open chart draft."
+      : "";
+  const auxiliaryDisabledReason = mutationsDisabled
+    ? "Wait for the current dashboard operation to finish."
+    : auxiliaryLocked
+      ? "Finish or cancel the open chart draft."
+      : "";
   const navigationLocked = mutationsDisabled || localAuthoringEditing;
   const chronoGroupDraftSuspended = chronoGroupDraft?.status === "suspended"
     && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft });
@@ -698,7 +708,9 @@ export default function BuildWorkspace({
           <BuildCommandHeader
             draftCoordinator={draftCoordinator}
             locked={locked}
+            disabledReason={mutationDisabledReason}
             auxiliaryLocked={auxiliaryLocked}
+            auxiliaryDisabledReason={auxiliaryDisabledReason}
             chartDraftAvailable={chartDraftAvailable}
             staticDraftAvailable={staticDraftAvailable}
             accessibilityEnabled={accessibilityEnabled}
@@ -710,6 +722,9 @@ export default function BuildWorkspace({
             onReset={onReset}
             onDeleteDashboardContent={onDeleteDashboardContent}
             deleteDashboardContentDisabled={mutationsDisabled}
+            deleteDashboardContentDisabledReason={mutationsDisabled
+              ? "Wait for the current dashboard operation to finish."
+              : ""}
             onSaveLayout={onSaveLayout}
             onDiscardLayout={() => {
               onDiscardLayout?.();
@@ -721,6 +736,9 @@ export default function BuildWorkspace({
             onUploadPackage={onUploadPackage}
             onDownloadPackage={onDownloadPackage}
             packageDownloadDisabled={mutationsDisabled}
+            packageDownloadDisabledReason={mutationsDisabled
+              ? "Wait for the current dashboard operation to finish."
+              : ""}
             onOpenAuxiliary={openAuxiliary}
             onResumeAuxiliary={resumeAuxiliary}
             getAuxiliaryLabel={auxiliaryLabel}

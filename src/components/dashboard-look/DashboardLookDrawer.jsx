@@ -33,20 +33,6 @@ export function dashboardLookProfileSamples(appearancePreference = "system") {
   return samples;
 }
 
-export function DashboardLookPersistenceFlash({ message = "" }) {
-  if (!message) return null;
-  return (
-    <div
-      className="dashboard-look-persistence-flash"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      {message}
-    </div>
-  );
-}
-
 function AppearanceIcon({ iconId }) {
   if (iconId === "auto") return <SimExIcon iconId="auto" size={20} />;
   return (

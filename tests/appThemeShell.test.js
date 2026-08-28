@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -10,9 +11,14 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [{ default: AppFrame }, { resolveDashboardTheme }] = await Promise.all([
+const [
+  { default: AppFrame },
+  { resolveDashboardTheme },
+  { default: OperationStatusProvider },
+] = await Promise.all([
   vite.ssrLoadModule("/src/components/app-shell/AppFrame.jsx"),
   vite.ssrLoadModule("/src/theme/dashboardTheme.js"),
+  vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
 ]);
 await vite.close();
 
@@ -25,12 +31,17 @@ test("AppFrame exposes the resolved dashboard theme at the shell boundary", () =
     },
     appearancePreference: "dark",
   });
-  const html = renderToStaticMarkup(React.createElement(AppFrame, {
-    mode: "view",
-    density: "comfortable",
-    theme,
-    children: React.createElement("main", null, "Dashboard"),
-  }));
+  const queue = createOperationStatusQueue({ scheduler: staticScheduler });
+  const html = renderToStaticMarkup(React.createElement(
+    OperationStatusProvider,
+    { queue },
+    React.createElement(AppFrame, {
+      mode: "view",
+      density: "comfortable",
+      theme,
+      children: React.createElement("main", null, "Dashboard"),
+    }),
+  ));
 
   assert.match(html, /data-dashboard-style="humanist-standard"/);
   assert.match(html, /data-dashboard-color-profile="utility\/prismatic-index"/);
@@ -40,3 +51,59 @@ test("AppFrame exposes the resolved dashboard theme at the shell boundary", () =
   assert.match(html, /--simex-surface-panel:#202029/);
   assert.match(html, /--simex-data-1:#86b3dd/);
 });
+
+test("AppFrame renders one atomic live transition and drawer/footer-safe status geometry", () => {
+  const queue = createOperationStatusQueue({ scheduler: staticScheduler });
+  queue.beginOperation({
+    key: "source-load",
+    label: "Loading source",
+    blocking: true,
+  }).fail(new Error("Source load failed"));
+
+  const html = renderToStaticMarkup(React.createElement(
+    OperationStatusProvider,
+    { queue },
+    React.createElement(AppFrame, {
+      mode: "build",
+      density: "compact",
+      rightDrawer: "map",
+      children: React.createElement("main", null, "Dashboard"),
+    }),
+  ));
+
+  assert.match(html, /class="operation-status-viewport"/);
+  assert.match(html, /data-right-drawer="map"/);
+  assert.match(html, /--operation-status-drawer-offset:404px/);
+  assert.match(html, /right:calc\(var\(--operation-status-drawer-offset\) \+ max\(16px, env\(safe-area-inset-right\)\)\)/);
+  assert.match(html, /bottom:calc\(var\(--operation-status-footer-offset\) \+ max\(16px, env\(safe-area-inset-bottom\)\)\)/);
+  assert.match(html, /data-live-region="assertive"[^>]*aria-live="assertive"[^>]*aria-atomic="true"[^>]*>Source load failed</);
+  assert.match(html, /data-live-region="polite"[^>]*aria-live="polite"[^>]*aria-atomic="true"><\/span>/);
+  assert.match(html, /data-operation-status="failed"/);
+  assert.match(html, />Failed</);
+  assert.match(html, /aria-label="Dismiss Loading source status"/);
+});
+
+test("completed operation transitions use the single polite live message", () => {
+  const queue = createOperationStatusQueue({ scheduler: staticScheduler });
+  queue.beginOperation({ key: "layout", label: "Saving layout", blocking: true })
+    .succeed("Layout saved");
+  const html = renderToStaticMarkup(React.createElement(
+    OperationStatusProvider,
+    { queue },
+    React.createElement(AppFrame, {
+      mode: "build",
+      density: "compact",
+      rightDrawer: "look",
+      children: React.createElement("main", null, "Dashboard"),
+    }),
+  ));
+
+  assert.match(html, /data-operation-status="completed"/);
+  assert.match(html, /data-live-region="polite"[^>]*>Layout saved</);
+  assert.match(html, /--operation-status-drawer-offset:min\(400px, 42vw\)/);
+});
+
+const staticScheduler = {
+  setTimeout: () => 1,
+  clearTimeout: () => {},
+};

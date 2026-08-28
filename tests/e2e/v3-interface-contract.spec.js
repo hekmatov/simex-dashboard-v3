@@ -80,6 +80,84 @@ test("phone Build stays operational beneath its persistent recovery notice", asy
   await expect(notice).toBeVisible();
 });
 
+test("operation status shows blocking Finish Build work, completion, and footer-safe geometry", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+
+  await page.evaluate(() => {
+    window.__stage1OperationHistory = [];
+    const record = () => {
+      const notices = [...document.querySelectorAll('[data-operation-status]')];
+      window.__stage1OperationHistory.push(notices.map((notice) => ({
+        key: notice.querySelector("strong")?.textContent,
+        status: notice.getAttribute("data-operation-status"),
+      })));
+    };
+    new MutationObserver(record).observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ["data-operation-status"],
+    });
+  });
+
+  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
+  const notice = page.locator('[data-operation-status]').filter({ hasText: "Finishing Build" });
+  await expect(notice).toBeVisible();
+  await expect(notice).toHaveAttribute("data-operation-status", "completed");
+  await expect(notice).toContainText("Build finished.");
+  await expect(page.locator('[data-live-region="polite"]')).toContainText("Build finished.");
+  const lifecycle = await page.evaluate(() => window.__stage1OperationHistory.flat());
+  expect(lifecycle).toContainEqual({ key: "Finishing Build", status: "working" });
+  expect(lifecycle).toContainEqual({ key: "Finishing Build", status: "completed" });
+
+  const footer = page.locator(".dashboard-footer");
+  await expect(footer).toBeVisible();
+  await footer.evaluate((node) => node.scrollIntoView({ block: "end", behavior: "auto" }));
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const geometry = await page.locator(".operation-status-viewport").evaluate((viewport) => {
+    const noticeBox = viewport.querySelector('[data-operation-status]')?.getBoundingClientRect();
+    const footerBox = document.querySelector(".dashboard-footer")?.getBoundingClientRect();
+    return {
+      viewportRight: viewport.getBoundingClientRect().right,
+      noticeBottom: noticeBox?.bottom,
+      footerTop: footerBox?.top,
+      windowWidth: window.innerWidth,
+    };
+  });
+  expect(geometry.windowWidth - geometry.viewportRight).toBeGreaterThanOrEqual(15);
+  expect(geometry.noticeBottom).toBeLessThanOrEqual(geometry.footerTop - 15);
+});
+
+test("disabled reason is keyboard-focusable while a chart draft owns Build actions", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Add chart", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Add new chart" })).toBeVisible();
+
+  const finish = page.getByRole("button", { name: "Finish Build", exact: true });
+  await expect(finish).toBeDisabled();
+  await expect(finish).not.toHaveAttribute("aria-describedby", /.+/);
+  const anchor = finish.locator("..");
+  await expect(anchor).toHaveAttribute("data-control-tooltip-anchor", "true");
+  await expect(anchor).toHaveAttribute("tabindex", "0");
+  const reasonId = await anchor.getAttribute("aria-describedby");
+  expect(reasonId).toBeTruthy();
+
+  await anchor.focus();
+  await expect(anchor).toBeFocused();
+  await expect(page.locator(`#${reasonId}`)).toBeVisible();
+  await expect(page.locator(`#${reasonId}`)).toHaveText("Finish or cancel the open chart draft.");
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Add new chart" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Finish Build", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Finish Build", exact: true }).locator(".."))
+    .not.toHaveAttribute("tabindex", "0");
+});
+
 async function expectMinimumTargets(locator, minimum = 44) {
   const undersized = await locator.evaluateAll((controls, threshold) => controls
     .map((control) => {

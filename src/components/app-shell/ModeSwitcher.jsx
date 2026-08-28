@@ -1,5 +1,7 @@
 import React from "react";
 
+import ControlTooltip from "../common/ControlTooltip.jsx";
+
 const MODE_LABELS = {
   home: "Home",
   view: "View",
@@ -17,21 +19,22 @@ export default function ModeSwitcher({
   return (
     <nav className="mode-switcher" aria-label="Dashboard mode">
       {availableModes.map((value) => (
-        <button
+        <ControlTooltip
           key={value}
-          type="button"
-          data-dashboard-mode={value}
-          aria-pressed={mode === value}
-          aria-describedby={disabled && disabledReason ? "mode-switch-disabled-reason" : undefined}
           disabled={disabled}
-          onClick={() => onModeRequest(value)}
+          reason={disabledReason}
         >
-          {MODE_LABELS[value] ?? value}
-        </button>
+          <button
+            type="button"
+            data-dashboard-mode={value}
+            aria-pressed={mode === value}
+            disabled={disabled}
+            onClick={() => onModeRequest(value)}
+          >
+            {MODE_LABELS[value] ?? value}
+          </button>
+        </ControlTooltip>
       ))}
-      {disabled && disabledReason && (
-        <span id="mode-switch-disabled-reason" className="visually-hidden">{disabledReason}</span>
-      )}
     </nav>
   );
 }

@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 
 import App from "./App.jsx";
+import OperationStatusProvider from "./components/app-shell/OperationStatusProvider.jsx";
 import { registerServiceWorker } from "./serviceWorkerRegistration.js";
 import "./styles/tokens.css";
 import "./styles.css";
@@ -13,6 +14,7 @@ import "./styles/static-content.css";
 import "./styles/source-content.css";
 import "./styles/source-viewer.css";
 import "./styles/immersive-display.css";
+import "./styles/operation-status.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {
@@ -22,6 +24,8 @@ if ("serviceWorker" in navigator && !import.meta.env.DEV) {
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <OperationStatusProvider>
+      <App />
+    </OperationStatusProvider>
   </React.StrictMode>,
 );

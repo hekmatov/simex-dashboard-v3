@@ -9,6 +9,7 @@ import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import { useOperationStatus } from "./components/app-shell/OperationStatusProvider.jsx";
 import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
 import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
@@ -18,9 +19,7 @@ import {
   reorderPage,
   reorderSection,
 } from "./components/build/buildStructureModel.js";
-import DashboardLookDrawer, {
-  DashboardLookPersistenceFlash,
-} from "./components/dashboard-look/index.js";
+import DashboardLookDrawer from "./components/dashboard-look/index.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
 import { createPlaybackChartCollectionSelector } from "./charting/time/playbackPageScope.js";
 import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
@@ -64,6 +63,7 @@ import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
 import { createBlankDashboardContent } from "./lib/dashboardContentReset.js";
+import { prepareDashboardAuthoredPersistenceCandidate } from "./lib/dashboardAuthoredRevision.js";
 import {
   initialDisplayState,
   reduceDisplayState,
@@ -118,9 +118,9 @@ import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 export { validateConfigurationForPersistence };
 
-export function createDurableContentDraftCommit(persist) {
+export function createDurableContentDraftCommit(persist, context = {}) {
   if (typeof persist !== "function") throw new TypeError("A dashboard persistence function is required.");
-  return (candidate) => persist(candidate, { requireDurableStorage: true });
+  return (candidate) => persist(candidate, { ...context, requireDurableStorage: true });
 }
 
 export function saveSceneDatePositionDurably({
@@ -167,6 +167,7 @@ async function reconcileSavedAuthoredAssets(dashboard, activeRetainers = null) {
 }
 
 export default function App() {
+  const { beginOperation } = useOperationStatus();
   const [dashboardEntry] = React.useState(() => parseDashboardEntry(
     typeof window === "undefined" ? "" : window.location.search,
   ));
@@ -219,7 +220,6 @@ export default function App() {
   const [lookSavingScope, setLookSavingScope] = React.useState("");
   const [lookStatus, setLookStatus] = React.useState("");
   const [lookError, setLookError] = React.useState("");
-  const [lookPersistenceFlash, setLookPersistenceFlash] = React.useState("");
   const [prefersDark, setPrefersDark] = React.useState(() => (
     typeof window !== "undefined"
       && window.matchMedia?.("(prefers-color-scheme: dark)").matches === true
@@ -288,10 +288,7 @@ export default function App() {
   if (lookCommitSchedulerRef.current === null) {
     lookCommitSchedulerRef.current = createDashboardLookCommitScheduler({
       onCommit: commitDashboardLookPreview,
-      onError: (commitError) => {
-        setLookPersistenceFlash(DASHBOARD_LOOK_PERSISTENCE_WARNING);
-        setLookSavingScope("");
-      },
+      onError: () => setLookSavingScope(""),
     });
   }
 
@@ -309,12 +306,6 @@ export default function App() {
     const current = dashboardRef.current;
     if (current) void reconcileSavedAuthoredAssets(current, activeRetainers);
   }), [contentDraftCoordinator]);
-
-  React.useEffect(() => {
-    if (!lookPersistenceFlash) return undefined;
-    const timerId = window.setTimeout(() => setLookPersistenceFlash(""), 4500);
-    return () => window.clearTimeout(timerId);
-  }, [lookPersistenceFlash]);
 
   React.useEffect(() => {
     if (mode !== "build") setScenarioPassportOpen(false);
@@ -679,13 +670,23 @@ export default function App() {
     return persisted;
   }
 
-  async function persistConfiguration(nextConfig, { requireDurableStorage = false } = {}) {
+  async function persistConfiguration(nextConfig, context = {}) {
+    const { requireDurableStorage = false } = context;
     try {
       const trackedProfiles = trackedDatasetProfilesRef.current;
-      const profiles = nextConfig.datasetProfiles
+      const authoredCandidate = prepareDashboardAuthoredPersistenceCandidate({
+        previous: dashboardRef.current ?? nextConfig,
+        candidate: nextConfig,
+        context,
+      });
+      const profiles = authoredCandidate.datasetProfiles
         ?? dashboardRef.current?.datasetProfiles
         ?? {};
       const stored = canonicalConfigurationForStorage(
+        { ...authoredCandidate, datasetProfiles: profiles },
+        trackedProfiles,
+      );
+      const unstampedStored = canonicalConfigurationForStorage(
         { ...nextConfig, datasetProfiles: profiles },
         trackedProfiles,
       );
@@ -694,18 +695,19 @@ export default function App() {
         trackedProfiles,
       );
       validateConfigurationForPersistence(stored, configuredFallbackProfiles);
+      const loadSessionCandidate = () => loadDashboardConfig(
+        unstampedStored,
+        configuredFallbackProfiles,
+        null,
+        { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
+      );
       let prepared;
       try {
         prepared = await dashboardAssetPersistence.prepare(stored);
       } catch (assetError) {
         if (!isDashboardAssetStorageError(assetError)) throw assetError;
         if (requireDurableStorage) throw assetError;
-        const sessionDashboard = await loadDashboardConfig(
-          stored,
-          configuredFallbackProfiles,
-          null,
-          { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
-        );
+        const sessionDashboard = await loadSessionCandidate();
         lastDashboardPersistenceRef.current = false;
         reportPersistence(
           "dashboard",
@@ -734,9 +736,12 @@ export default function App() {
       }
       try {
         const persisted = persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
-        if (requireDurableStorage && !persisted) {
-          await prepared.rollback();
-          throw new Error("Browser dashboard storage is unavailable.");
+        if (!persisted) {
+          if (requireDurableStorage) {
+            await prepared.rollback();
+            throw new Error("Browser dashboard storage is unavailable.");
+          }
+          loaded = await loadSessionCandidate();
         }
       } catch (storageError) {
         if (!isStorageQuotaError(storageError)) {
@@ -753,6 +758,7 @@ export default function App() {
           false,
           SESSION_ONLY_MESSAGES.dashboardStorageFull,
         );
+        loaded = await loadSessionCandidate();
       }
       dashboardRef.current = loaded;
       setDashboard(loaded);
@@ -795,14 +801,18 @@ export default function App() {
     }
   }
 
-  function commitConfiguration(nextConfig) {
-    return ensureDashboardCommitController().replace(
+  function commitConfiguration(nextConfig, context = {}) {
+    return ensureDashboardCommitController().replaceWith(
       configurationForPortableUse(nextConfig),
+      (candidate) => persistSessionAwareConfiguration(candidate, context),
     );
   }
 
-  function mutateDashboard(mutator) {
-    const transaction = ensureDashboardCommitController().mutate(mutator);
+  function mutateDashboard(mutator, context = {}) {
+    const transaction = ensureDashboardCommitController().mutateWithCommit(
+      mutator,
+      (candidate) => persistSessionAwareConfiguration(candidate, context),
+    );
     reportBackgroundPersistence(transaction);
     return transaction;
   }
@@ -881,7 +891,10 @@ export default function App() {
     setRecoveryBusy(true);
     setRecoveryError("");
     try {
-      await persistConfiguration(recoveryImportCandidate.config);
+      await persistConfiguration(recoveryImportCandidate.config, {
+        preserveAuthoredRevision: true,
+        transactionId: "recovery-package-import",
+      });
       replaceRecoveryDashboardController(dashboardRef.current);
       setRecoveryImportCandidate(null);
     } catch (packageError) {
@@ -965,28 +978,33 @@ export default function App() {
   }
 
   async function deleteDashboardContent() {
-    return clearDashboardContentDurably({
-      controller: ensureDashboardCommitController(),
-      persist: persistConfiguration,
-      cleanup: async (previous, committed) => {
-        setOperationError("");
-        await cleanupReplacedDashboardAssets(previous, committed, {
-          failureMessage: "Dashboard content was deleted, but unused browser source files could not be removed.",
-        });
-      },
-      onResetScenario: () => {
-        setScenarioPassportOpen(false);
-        setScenarioPassportDirty(false);
-        dashboardRendererRef.current?.setAuthoredDirtyFlag?.("scenario", false);
-        setScenarioPassportResetRevision((current) => current + 1);
-      },
-      onModeChange: setMode,
-      onPersistMode: persistDashboardModePreference,
-      onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
-        key: current.key + 1,
-        mode: nextMode,
-      })),
-    });
+    return runOperationWithStatus({
+      key: "clear-dashboard",
+      label: "Clearing dashboard",
+      blocking: true,
+      intent: "warning",
+    }, () => clearDashboardContentDurably({
+        controller: ensureDashboardCommitController(),
+        persist: persistConfiguration,
+        cleanup: async (previous, committed) => {
+          setOperationError("");
+          await cleanupReplacedDashboardAssets(previous, committed, {
+            failureMessage: "Dashboard content was deleted, but unused browser source files could not be removed.",
+          });
+        },
+        onResetScenario: () => {
+          setScenarioPassportOpen(false);
+          setScenarioPassportDirty(false);
+          dashboardRendererRef.current?.setAuthoredDirtyFlag?.("scenario", false);
+          setScenarioPassportResetRevision((current) => current + 1);
+        },
+        onModeChange: setMode,
+        onPersistMode: persistDashboardModePreference,
+        onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
+          key: current.key + 1,
+          mode: nextMode,
+        })),
+      }), "Dashboard cleared.");
   }
 
   async function cleanupReplacedDashboardAssets(
@@ -1011,19 +1029,44 @@ export default function App() {
   }
 
   async function commitDashboardLookPreview(nextPreview) {
+    const status = beginOperation({
+      key: "dashboard-look",
+      label: "Saving dashboard look",
+    });
     setLookSavingScope("auto");
     setLookError("");
-    await ensureDashboardCommitController().mutateWithCommit((next) => {
-      next.globalStyles = {
-        ...(next.globalStyles ?? {}),
-        ...dashboardLookUpdates(nextPreview),
-        ...chartColorUpdates(nextPreview),
-      };
-    }, persistDashboardLookConfiguration);
-    setLookStatus(lastDashboardPersistenceRef.current
-      ? "Dashboard look saved."
-      : SESSION_ONLY_MESSAGES.dashboardLook);
-    setLookSavingScope("");
+    try {
+      await ensureDashboardCommitController().mutateWithCommit((next) => {
+        next.globalStyles = {
+          ...(next.globalStyles ?? {}),
+          ...dashboardLookUpdates(nextPreview),
+          ...chartColorUpdates(nextPreview),
+        };
+      }, persistDashboardLookConfiguration);
+      const message = lastDashboardPersistenceRef.current
+        ? "Dashboard look saved."
+        : SESSION_ONLY_MESSAGES.dashboardLook;
+      setLookStatus(message);
+      status.succeed(message);
+    } catch (error) {
+      setLookError(DASHBOARD_LOOK_PERSISTENCE_WARNING);
+      status.fail(DASHBOARD_LOOK_PERSISTENCE_WARNING);
+      throw error;
+    } finally {
+      setLookSavingScope("");
+    }
+  }
+
+  async function runOperationWithStatus(options, action, successMessage) {
+    const status = beginOperation(options);
+    try {
+      const result = await action();
+      status.succeed(successMessage);
+      return result;
+    } catch (error) {
+      status.fail(error);
+      throw error;
+    }
   }
 
   function reportBackgroundPersistence(promise) {
@@ -1109,7 +1152,11 @@ export default function App() {
       );
     }
     const resetDashboard = editBaseline
-      ? await commitConfiguration(editBaseline)
+      ? await commitConfiguration(editBaseline, {
+          preserveAuthoredRevision: true,
+          rollback: true,
+          transactionId: "build-baseline-restoration",
+        })
       : configurationForPortableUse(dashboardRef.current ?? dashboard);
     setEditBaseline(null);
     setMode("view");
@@ -1121,70 +1168,95 @@ export default function App() {
 
   async function createChart(payload, target) {
     requireChartAuthoringPayload(payload);
-    const committed = await ensureDashboardCommitController().mutate((current) => (
-      integrateCreatedChart(current, payload, target)
-    ));
-    publishCommittedChartArtifact(payload?.runtimeArtifact);
-    return committed;
+    return runOperationWithStatus({
+      key: "chart-create",
+      label: "Creating chart",
+    }, async () => {
+      const committed = await ensureDashboardCommitController().mutate((current) => (
+        integrateCreatedChart(current, payload, target)
+      ));
+      publishCommittedChartArtifact(payload?.runtimeArtifact);
+      return committed;
+    }, "Chart created.");
   }
 
   async function saveChart(payload) {
     requireChartAuthoringPayload(payload);
-    const committed = await ensureDashboardCommitController().mutate((current) => (
-      integrateSavedChart(current, payload)
-    ));
-    publishCommittedChartArtifact(payload?.runtimeArtifact);
-    return committed;
+    return runOperationWithStatus({
+      key: "chart-save",
+      label: "Saving chart",
+    }, async () => {
+      const committed = await ensureDashboardCommitController().mutate((current) => (
+        integrateSavedChart(current, payload)
+      ));
+      publishCommittedChartArtifact(payload?.runtimeArtifact);
+      return committed;
+    }, "Chart saved.");
   }
 
-  function commitDurableContentDraftConfiguration(nextConfig) {
+  function commitDurableContentDraftConfiguration(nextConfig, context = {}) {
     return ensureDashboardCommitController().replaceWith(
       configurationForPortableUse(nextConfig),
-      createDurableContentDraftCommit(persistConfiguration),
+      createDurableContentDraftCommit(persistConfiguration, context),
     );
   }
 
-  function commitImportedConfiguration(nextConfig) {
+  function commitImportedConfiguration(nextConfig, context = {}) {
     const portable = configurationForPortableUse(nextConfig);
     return ensureDashboardCommitController().replaceWith(
       portable,
-      (candidate) => persistConfiguration(candidate, { requireDurableStorage: true }),
+      (candidate) => persistConfiguration(candidate, {
+        ...context,
+        preserveAuthoredRevision: true,
+        requireDurableStorage: true,
+      }),
     );
   }
 
-  async function persistSessionAwareConfiguration(nextConfig) {
-    return persistConfiguration(nextConfig);
+  async function persistSessionAwareConfiguration(nextConfig, context = {}) {
+    return persistConfiguration(nextConfig, context);
   }
 
   async function commitStaticPanel(prepared) {
+    const status = beginOperation({
+      key: "static-content-save",
+      label: "Saving dashboard content",
+    });
     const controller = ensureDashboardCommitController();
     const previousDashboard = controller.getCurrent();
-    if (hasStagedStaticImageAsset(prepared)) {
-      const result = await commitDurableStaticPanelTransaction({
-        prepared,
-        store: browserAuthoredAssetStore,
-        readSessionAsset: readSessionImageAssetBytes,
-        discardSessionAsset: discardSessionImageAsset,
-        commitPrepared: (transaction) => commitStaticPanelTransaction(transaction, {
-          controller,
-        }),
+    try {
+      if (hasStagedStaticImageAsset(prepared)) {
+        const result = await commitDurableStaticPanelTransaction({
+          prepared,
+          store: browserAuthoredAssetStore,
+          readSessionAsset: readSessionImageAssetBytes,
+          discardSessionAsset: discardSessionImageAsset,
+          commitPrepared: (transaction) => commitStaticPanelTransaction(transaction, {
+            controller,
+          }),
+        });
+        await cleanupReplacedDashboardAssets(previousDashboard, result.dashboard, {
+          transactionKind: "static-content",
+          failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
+        });
+        await reconcileSavedAuthoredAssets(result.dashboard, contentDraftCoordinator.getActiveRetainers());
+        status.succeed("Dashboard content saved.");
+        return result;
+      }
+      const result = await commitStaticPanelTransaction(prepared, {
+        controller,
       });
       await cleanupReplacedDashboardAssets(previousDashboard, result.dashboard, {
         transactionKind: "static-content",
         failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
       });
       await reconcileSavedAuthoredAssets(result.dashboard, contentDraftCoordinator.getActiveRetainers());
+      status.succeed("Dashboard content saved.");
       return result;
+    } catch (error) {
+      status.fail(error);
+      throw error;
     }
-    const result = await commitStaticPanelTransaction(prepared, {
-      controller,
-    });
-    await cleanupReplacedDashboardAssets(previousDashboard, result.dashboard, {
-      transactionKind: "static-content",
-      failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
-    });
-    await reconcileSavedAuthoredAssets(result.dashboard, contentDraftCoordinator.getActiveRetainers());
-    return result;
   }
 
   function publishCommittedChartArtifact(artifact) {
@@ -1206,16 +1278,21 @@ export default function App() {
   }
 
   async function removeChart(panelId) {
-    const controller = ensureDashboardCommitController();
-    const previousDashboard = controller.getCurrent();
-    const committed = await controller.mutate((next) => {
-      removeDashboardPanel(next, panelId);
-    });
-    await cleanupReplacedDashboardAssets(previousDashboard, committed, {
-      transactionKind: "panel-removal",
-    });
-    await reconcileSavedAuthoredAssets(committed, contentDraftCoordinator.getActiveRetainers());
-    return committed;
+    return runOperationWithStatus({
+      key: "chart-remove",
+      label: "Removing chart",
+    }, async () => {
+      const controller = ensureDashboardCommitController();
+      const previousDashboard = controller.getCurrent();
+      const committed = await controller.mutate((next) => {
+        removeDashboardPanel(next, panelId);
+      });
+      await cleanupReplacedDashboardAssets(previousDashboard, committed, {
+        transactionKind: "panel-removal",
+      });
+      await reconcileSavedAuthoredAssets(committed, contentDraftCoordinator.getActiveRetainers());
+      return committed;
+    }, "Chart removed.");
   }
 
   async function inspectImportPackage(file) {
@@ -1235,6 +1312,11 @@ export default function App() {
 
   async function confirmImportPackage() {
     if (!packageImportCandidate || packageImportBusy) return null;
+    const status = beginOperation({
+      key: "package-import",
+      label: "Importing dashboard package",
+      blocking: true,
+    });
     setPackageImportBusy(true);
     setPackageImportError("");
     try {
@@ -1295,11 +1377,13 @@ export default function App() {
         failureMessage: "The package was loaded, but source files from the previous dashboard could not be removed from browser storage.",
       });
       await reconcileSavedAuthoredAssets(committed, contentDraftCoordinator.getActiveRetainers());
+      status.succeed("Dashboard package imported.");
       return committed;
     } catch (importError) {
       setPackageImportError(
         importError?.message || "Dashboard package could not be loaded.",
       );
+      status.fail(importError);
       return null;
     } finally {
       setPackageImportBusy(false);
@@ -1308,13 +1392,17 @@ export default function App() {
 
   async function exportConfig(configOverride) {
     setOperationError("");
+    const defaultName = `SimEx-dashboard-bundle-${dateStamp()}`;
+    const chosenName = window.prompt(
+      "Name this exported dashboard bundle",
+      defaultName,
+    );
+    if (!chosenName) return false;
+    const status = beginOperation({
+      key: "package-export",
+      label: "Exporting dashboard package",
+    });
     try {
-      const defaultName = `SimEx-dashboard-bundle-${dateStamp()}`;
-      const chosenName = window.prompt(
-        "Name this exported dashboard bundle",
-        defaultName,
-      );
-      if (!chosenName) return false;
       const prepared = await prepareDashboardPackageExport(
         configOverride ?? dashboard,
         {
@@ -1335,9 +1423,11 @@ export default function App() {
         bundle,
         chosenName.endsWith(".json") ? chosenName : `${chosenName}.json`,
       );
+      status.succeed("Dashboard package exported.");
       return true;
     } catch (exportError) {
       setOperationError(exportError.message || "Could not export dashboard bundle.");
+      status.fail(exportError);
       throw exportError;
     }
   }
@@ -1408,6 +1498,11 @@ export default function App() {
       showPageNavigation={mode !== "home"}
       onModeRequest={requestMode}
       modeDisabled={modeDisabled || buildDraftLocked}
+      modeDisabledReason={buildDraftLocked
+        ? "Finish or cancel the open editor or draft before changing mode."
+        : modeDisabled
+          ? "Wait for the current mode change to finish."
+          : ""}
       blockedReason={blockedReason}
       dashboardIdentity={commandCrownProjection.dashboardIdentity}
       activePage={commandCrownProjection.activePage}
@@ -1454,6 +1549,7 @@ export default function App() {
       persistenceNotice={Object.values(persistenceNotices).join(" ")}
       theme={dashboardTheme}
       lookDrawerOpen={lookDrawerOpen}
+      rightDrawer={lookDrawerOpen ? "look" : buildPanelOpen ? "map" : null}
     >
     {mode === "home" ? (
       <CanonicalHomeWorkspace
@@ -1569,13 +1665,20 @@ export default function App() {
         reportBackgroundPersistence(transaction);
         return transaction;
       }}
-      onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
+      onDashboardChange={(updates, context) => mutateDashboard(
+        (next) => Object.assign(next, updates),
+        context,
+      )}
       onBackgroundPersistenceError={reportBackgroundPersistenceError}
       onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(
         (next) => applyDashboardEdits(next, edits),
       )}
       onPanelEditCommit={(config) => reportBackgroundPersistence(commitConfiguration(config))}
-      onPanelEditCancel={(config) => reportBackgroundPersistence(commitConfiguration(config))}
+      onPanelEditCancel={(config) => reportBackgroundPersistence(commitConfiguration(config, {
+        preserveAuthoredRevision: true,
+        rollback: true,
+        transactionId: "chart-edit-cancel",
+      }))}
       onSectionChange={(pageId, sectionId, updates) => mutateDashboard((next) => {
         const page = next.pages.find(({ id }) => id === pageId);
         Object.assign(page.sections.find(({ id }) => id === sectionId), updates);
@@ -1612,7 +1715,6 @@ export default function App() {
       onCancel={cancelDashboardLook}
       onPreviewChange={changeDashboardLookPreview}
     />
-    <DashboardLookPersistenceFlash message={lookPersistenceFlash} />
     <DashboardPackageReviewDialog
       candidate={packageImportCandidate}
       busy={packageImportBusy}

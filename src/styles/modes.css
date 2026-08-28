@@ -445,6 +445,24 @@
   gap: 8px;
 }
 
+.build-command-group__controls > .control-tooltip {
+  align-items: stretch;
+}
+
+.build-command-group__controls > .control-tooltip > :is(button, label) {
+  width: 100%;
+}
+
+.build-command-group[data-build-command-group="package"] .control-tooltip {
+  flex: 1 1 116px;
+  min-width: 0;
+}
+
+.mode-switcher .control-tooltip__reason {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
 .dashboard-blank-canvas {
   align-items: center;
   display: grid;

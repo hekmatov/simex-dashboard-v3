@@ -23,6 +23,7 @@ export default function DashboardCommandCrown({
   scenarioNode,
   disabled = false,
   disabledReason = "",
+  contextDisabledReason = disabledReason,
 }) {
   return (
     <div className="dashboard-command-crown" style={{ "--dashboard-mode-context-block-size": "52px" }}>
@@ -53,7 +54,7 @@ export default function DashboardCommandCrown({
         mode={mode}
         contextNode={contextNode}
         statusNode={statusNode}
-        disabledReason={disabledReason}
+        disabledReason={contextDisabledReason}
       />
     </div>
   );

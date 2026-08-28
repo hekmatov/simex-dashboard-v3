@@ -1,0 +1,86 @@
+.operation-status-viewport {
+  max-width: min(360px, calc(100vw - var(--operation-status-drawer-offset) - 32px));
+  pointer-events: none;
+  position: fixed;
+  transition: right 160ms ease;
+  width: 100%;
+  z-index: 1500;
+}
+
+.operation-status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.operation-status-notice {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-inline-start: 5px solid var(--simex-info);
+  border-radius: var(--simex-component-surface-radius, 10px);
+  box-shadow: var(--simex-style-panel-shadow, 0 14px 34px rgb(18 26 28 / 18%));
+  color: var(--simex-text-strong);
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  pointer-events: auto;
+}
+
+.operation-status-notice[data-operation-status="completed"] {
+  border-inline-start-color: var(--simex-success);
+}
+
+.operation-status-notice[data-operation-status="failed"] {
+  background: var(--simex-error-soft);
+  border-inline-start-color: var(--simex-error);
+}
+
+.operation-status-notice__heading {
+  align-items: baseline;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.operation-status-notice__heading span {
+  color: var(--simex-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.operation-status-notice p {
+  color: var(--simex-text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.operation-status-notice__dismiss {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--simex-text-strong);
+  justify-self: end;
+  min-height: 44px;
+  padding: 6px 10px;
+}
+
+.operation-status-notice__dismiss:focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 899px) {
+  .operation-status-viewport {
+    --operation-status-drawer-offset: 0px !important;
+    left: max(16px, env(safe-area-inset-left));
+    max-width: none;
+    right: max(16px, env(safe-area-inset-right)) !important;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operation-status-viewport {
+    transition: none;
+  }
+}

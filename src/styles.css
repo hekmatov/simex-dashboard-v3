@@ -5872,3 +5872,51 @@ html[data-simex-eyedropper-active="true"] body * {
 }
 
 
+.control-tooltip {
+  display: inline-flex;
+  position: relative;
+}
+
+.control-tooltip[data-control-tooltip-anchor="true"] {
+  border-radius: var(--simex-component-surface-radius, 8px);
+  cursor: not-allowed;
+}
+
+.control-tooltip[data-control-tooltip-anchor="true"]:focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 3px;
+}
+
+.control-tooltip__reason {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-component-surface-radius, 8px);
+  bottom: calc(100% + 8px);
+  box-shadow: var(--simex-shadow-elevated);
+  color: var(--simex-text-strong);
+  font-size: 0.82rem;
+  left: 50%;
+  line-height: 1.35;
+  max-width: min(280px, calc(100vw - 32px));
+  opacity: 0;
+  padding: 8px 10px;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+  transition: opacity 120ms ease, visibility 120ms ease;
+  visibility: hidden;
+  width: max-content;
+  z-index: 1700;
+}
+
+.control-tooltip[data-control-tooltip-anchor="true"]:hover > .control-tooltip__reason,
+.control-tooltip[data-control-tooltip-anchor="true"]:focus > .control-tooltip__reason {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control-tooltip__reason {
+    transition: none;
+  }
+}

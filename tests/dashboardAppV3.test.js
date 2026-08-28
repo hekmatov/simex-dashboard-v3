@@ -145,7 +145,33 @@ test("App owns one scoped content coordinator and transports only its wrappers t
     assert.match(sourceText, /onContentDraftDiscard/);
   }
   assert.match(app, /commitDashboard: commitDurableContentDraftConfiguration/);
-  assert.match(app, /replaceWith\([\s\S]*createDurableContentDraftCommit\(persistConfiguration\)/);
+  assert.match(app, /replaceWith\([\s\S]*createDurableContentDraftCommit\(persistConfiguration, context\)/);
+});
+
+test("Stage 1 lifecycle owners use the consolidated operation-status queue", async () => {
+  const app = await source("src/App.jsx");
+  const renderer = await source("src/components/DashboardRenderer.jsx");
+  const lookDrawer = await source("src/components/dashboard-look/DashboardLookDrawer.jsx");
+
+  assert.match(app, /useOperationStatus/);
+  for (const key of [
+    "chart-create",
+    "chart-save",
+    "static-content-save",
+    "chart-remove",
+    "package-import",
+    "package-export",
+    "clear-dashboard",
+    "dashboard-look",
+  ]) {
+    assert.match(app, new RegExp(`key:\\s*["']${key}["']`));
+  }
+  assert.match(renderer, /useOperationStatus/);
+  for (const key of ["source-content-save", "layout-save", "finish-build"]) {
+    assert.match(renderer, new RegExp(`key:\\s*["']${key}["']`));
+  }
+  assert.doesNotMatch(app, /DashboardLookPersistenceFlash|lookPersistenceFlash/);
+  assert.doesNotMatch(lookDrawer, /dashboard-look-persistence-flash/);
 });
 
 test("content draft dashboard commits require durable storage and survive a reload", async () => {

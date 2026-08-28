@@ -260,7 +260,10 @@ export function createContentDraftCoordinator({
         } catch (assetError) {
           const rollbackErrors = [];
           try {
-            await commitDashboard(structuredClone(previousDashboard), { transactionId: `${transactionId}:rollback` });
+            await commitDashboard(structuredClone(previousDashboard), {
+              transactionId: `${transactionId}:rollback`,
+              rollback: true,
+            });
           } catch (error) {
             rollbackErrors.push(error);
           }

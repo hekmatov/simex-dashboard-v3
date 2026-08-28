@@ -1,6 +1,7 @@
 ﻿import React from "react";
 
 import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
+import { useOperationStatus } from "./app-shell/OperationStatusProvider.jsx";
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import StaticContentEditor from "./static-content/StaticContentEditor.jsx";
@@ -139,6 +140,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   operationError = "",
   themeProjection,
 }, ref) {
+  const { beginOperation } = useOperationStatus();
   const playback = usePlayback();
   const buildMode = mode === "build";
   const editMode = buildMode;
@@ -178,8 +180,22 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [contentDraftCoordinator],
   );
   const onContentDraftCommit = React.useCallback(
-    (draftId, buildCandidate) => contentDraftCoordinator?.commitDraft(draftId, { buildCandidate }),
-    [contentDraftCoordinator],
+    async (draftId, buildCandidate) => {
+      if (!contentDraftCoordinator) return undefined;
+      const status = beginOperation({
+        key: "source-content-save",
+        label: "Saving source content",
+      });
+      try {
+        const result = await contentDraftCoordinator.commitDraft(draftId, { buildCandidate });
+        status.succeed("Source content saved.");
+        return result;
+      } catch (error) {
+        status.fail(error);
+        throw error;
+      }
+    },
+    [beginOperation, contentDraftCoordinator],
   );
   const onContentDraftDiscard = React.useCallback(
     (draftId, reason) => {
@@ -974,6 +990,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function saveBuildLayoutChanges() {
     if (!buildLayoutDraft || !layoutDraftDirty || buildLayoutDraft.status === "saving") return;
+    const status = beginOperation({
+      key: "layout-save",
+      label: "Saving layout changes",
+    });
     const saving = beginBuildLayoutSave(buildLayoutDraft);
     setBuildLayoutDraft(saving);
     Promise.resolve(onStructureChange?.({
@@ -981,12 +1001,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       chronoGroups: saving.value.chronoGroups ?? dashboard.chronoGroups ?? [],
       scenes: saving.value.scenes ?? dashboard.scenes ?? [],
     }))
-      .then(() => setBuildLayoutDraft(null))
-      .catch((error) => setBuildLayoutDraft((current) => failBuildLayoutSave(current ?? saving, {
-        code: error?.name === "QuotaExceededError" ? "QUOTA_EXHAUSTED" : "LAYOUT_SAVE_FAILED",
-        message: error?.message ?? "Layout changes could not be saved.",
-        retryable: true,
-      })));
+      .then(() => {
+        setBuildLayoutDraft(null);
+        status.succeed("Layout changes saved.");
+      })
+      .catch((error) => {
+        status.fail(error);
+        setBuildLayoutDraft((current) => failBuildLayoutSave(current ?? saving, {
+          code: error?.name === "QuotaExceededError" ? "QUOTA_EXHAUSTED" : "LAYOUT_SAVE_FAILED",
+          message: error?.message ?? "Layout changes could not be saved.",
+          retryable: true,
+        }));
+      });
   }
 
   function discardBuildLayoutChanges() {
@@ -1371,9 +1397,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function saveEditMode() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    const status = beginOperation({
+      key: "finish-build",
+      label: "Finishing Build",
+      blocking: true,
+    });
     void performModeratorOperation("save-session", async () => {
-      await onModeRequest("view");
-      setChartEditBaseline(null);
+      try {
+        await onModeRequest("view");
+        setChartEditBaseline(null);
+        status.succeed("Build finished.");
+      } catch (error) {
+        status.fail(error);
+        throw error;
+      }
     });
   }
 
@@ -1552,7 +1590,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await pendingEdits.flush();
       return commitContentDeletion(plan, createContentDeletionAdapters({
         getDashboard: () => dashboardStateRef.current,
-        commitDashboard: async (candidate) => onDashboardChange(candidate),
+        commitDashboard: async (candidate, context) => onDashboardChange(candidate, context),
         assetStore: browserAuthoredAssetStore,
       }));
   }, [onDashboardChange, pendingEdits]);
@@ -2035,6 +2073,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                 data-icon-surface="dark"
                 onClick={saveEditMode}
                 disabled={moderatorOperation.kind !== null}
+                disabledReason={moderatorOperation.kind !== null
+                  ? "Wait for the current dashboard operation to finish."
+                  : ""}
               />
             ) : (
               <IconControl
@@ -2046,6 +2087,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                 data-icon-surface="dark"
                 onClick={() => onModeRequest("build")}
                 disabled={moderatorOperation.kind !== null}
+                disabledReason={moderatorOperation.kind !== null
+                  ? "Wait for the current dashboard operation to finish."
+                  : ""}
               />
             )}
             {editMode && (
@@ -2057,6 +2101,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                 data-icon-surface="dark"
                 onClick={requestResetEditSession}
                 disabled={moderatorOperation.kind !== null}
+                disabledReason={moderatorOperation.kind !== null
+                  ? "Wait for the current dashboard operation to finish."
+                  : ""}
               />
             )}
           </div>

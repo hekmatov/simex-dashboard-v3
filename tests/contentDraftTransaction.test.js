@@ -415,6 +415,55 @@ test("validation and persistence failures publish no durable item and restore by
   }
 });
 
+test("asset-commit compensation marks the dashboard restoration as rollback context", async () => {
+  let dashboard = makeDashboardV5();
+  const contexts = [];
+  const coordinator = createContentDraftCoordinator({
+    getDashboard: () => dashboard,
+    commitDashboard: async (candidate, context) => {
+      contexts.push(structuredClone(context));
+      dashboard = structuredClone(candidate);
+      return dashboard;
+    },
+    assetStore: {
+      snapshot: async () => new Map([["asset-rollback", null]]),
+      restore: async () => {},
+      stage: async () => ({ assetId: "asset-rollback" }),
+      commitMany: async () => { throw new Error("asset commit failed"); },
+      rollback: async () => {},
+    },
+    readSessionAsset: () => sessionAsset("asset-rollback"),
+    discardSessionAsset: () => true,
+  });
+  coordinator.stageDraft({
+    draftId: "rollback-context",
+    owner: "manager",
+    kind: "manager-add",
+    payload: {},
+    assetIds: ["asset-rollback"],
+    mediaIds: [],
+    sourceIds: ["source-rollback"],
+  });
+
+  await assert.rejects(coordinator.commitDraft("rollback-context", {
+    buildCandidate: ({ dashboard: current }) => {
+      current.contentLibrary.sourceEntries["source-rollback"] = { sourceId: "source-rollback" };
+      return {
+        dashboard: current,
+        commitAssetIds: ["asset-rollback"],
+        discardAssetIds: [],
+        itemIds: ["source-rollback"],
+      };
+    },
+  }), /asset commit failed/);
+
+  assert.deepEqual(contexts, [
+    { transactionId: "content-draft:rollback-context" },
+    { transactionId: "content-draft:rollback-context:rollback", rollback: true },
+  ]);
+  assert.deepEqual(dashboard, makeDashboardV5());
+});
+
 function coordinatorHarness({ rejectCommit = false, rejectSessionDiscard = false } = {}) {
   let dashboard = makeDashboardV5();
   const commits = [];

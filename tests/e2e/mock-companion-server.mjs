@@ -3,13 +3,24 @@ import { readFile, stat } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 
 import { WebSocketServer } from "ws";
+import { createServer as createViteServer } from "vite";
 
 const APP_HOST = "127.0.0.1";
 const APP_PORT = 4173;
 const CONTROL_PORT = 4174;
 const DIST_ROOT = resolve("dist");
+const distAvailable = await isFile(resolve(DIST_ROOT, "index.html"));
+const vite = distAvailable ? null : await createViteServer({
+  root: process.cwd(),
+  appType: "spa",
+  logLevel: "error",
+  server: { middlewareMode: true, hmr: false },
+});
 const catalogue = JSON.parse(
-  await readFile(resolve(DIST_ROOT, "integration/quorum-chart-catalogue.json"), "utf8"),
+  await readFile(resolve(
+    distAvailable ? DIST_ROOT : "public",
+    "integration/quorum-chart-catalogue.json",
+  ), "utf8"),
 );
 const credential = "e2e-opaque-credential";
 const sessionId = "e2e-session";
@@ -60,6 +71,11 @@ const appServer = createServer(async (request, response) => {
       credential,
       gateway_path: "/companion/ws",
     });
+  }
+  if (!distAvailable) {
+    return vite.middlewares(request, response, () => (
+      json(response, 404, { error: "not found" })
+    ));
   }
   return serveStatic(url.pathname, response);
 });
@@ -226,4 +242,12 @@ function listen(server, port) {
   return new Promise((resolvePromise) => {
     server.listen(port, APP_HOST, resolvePromise);
   });
+}
+
+async function isFile(filePath) {
+  try {
+    return (await stat(filePath)).isFile();
+  } catch {
+    return false;
+  }
 }

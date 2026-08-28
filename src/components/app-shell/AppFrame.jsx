@@ -1,6 +1,7 @@
 import React from "react";
 
 import DashboardCommandCrown from "./DashboardCommandCrown.jsx";
+import OperationStatusViewport from "./OperationStatusViewport.jsx";
 import PhoneModeNotice from "./PhoneModeNotice.jsx";
 
 export default function AppFrame({
@@ -9,6 +10,7 @@ export default function AppFrame({
   showPageNavigation = true,
   onModeRequest,
   modeDisabled = false,
+  modeDisabledReason = "",
   blockedReason = "",
   persistenceNotice = "",
   dashboardIdentity,
@@ -27,6 +29,7 @@ export default function AppFrame({
   children,
   theme,
   lookDrawerOpen = false,
+  rightDrawer = null,
 }) {
   const phoneUnsupported = mode === "build" || mode === "present";
   const frameRef = React.useRef(null);
@@ -117,13 +120,15 @@ export default function AppFrame({
         scenarioDirty={scenarioDirty}
         scenarioNode={scenarioNode}
         disabled={modeDisabled}
-        disabledReason={blockedReason}
+        disabledReason={modeDisabledReason || blockedReason}
+        contextDisabledReason={blockedReason}
       />
       {blockedReason && <p className="mode-switch-error" role="alert">{blockedReason}</p>}
       {persistenceNotice && (
         <p className="app-persistence-notice" role="status">{persistenceNotice}</p>
       )}
       {children}
+      <OperationStatusViewport rightDrawer={rightDrawer} />
     </div>
   );
 }

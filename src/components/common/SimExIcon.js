@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 
 import { getInteraction } from "../../iconography/iconCatalog.js";
 import { ICON_GLYPHS, getIconGlyph } from "../../iconography/iconGlyphs.js";
+import ControlTooltip from "./ControlTooltip.js";
 
 export const SimExIcon = React.memo(function SimExIcon({
   iconId,
@@ -39,6 +40,7 @@ export const IconControl = React.memo(function IconControl({
   pressed,
   selected,
   disabled = false,
+  disabledReason = "",
   className = "",
   type = "button",
   ...buttonProps
@@ -56,6 +58,9 @@ export const IconControl = React.memo(function IconControl({
   } = buttonProps;
   const isPlanned = interaction.status === "planned";
   const isDisabled = disabled || isPlanned;
+  const workflowDisabled = disabled === true
+    && typeof disabledReason === "string"
+    && disabledReason.trim() !== "";
   const isPressed = pressed ?? selected ?? ariaPressedProp;
   const resolvedLabel = ariaLabelProp ?? ariaLabel ?? interaction.label;
   const resolvedTooltip = tooltip ?? interaction.tooltip ?? resolvedLabel;
@@ -73,21 +78,18 @@ export const IconControl = React.memo(function IconControl({
     ...restButtonProps
   } = forwardedButtonProps;
 
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(
+  const control = React.createElement(
       "button",
       {
         ...restButtonProps,
-        ref: tooltipState.anchorRef,
+        ref: workflowDisabled ? undefined : tooltipState.anchorRef,
         type,
         className: joinClassNames("simex-icon-control", className),
         disabled: isDisabled,
         "aria-disabled": isDisabled || undefined,
         "aria-label": resolvedLabel,
         "aria-pressed": isPressed,
-        "aria-describedby": describedBy,
+        "aria-describedby": workflowDisabled ? undefined : describedBy,
         "data-icon-control": interaction.id,
         "data-icon-tooltip": resolvedTooltip,
         "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
@@ -106,8 +108,18 @@ export const IconControl = React.memo(function IconControl({
         className: iconClassName,
         decorative: true,
       }),
-    ),
-    tooltipState.layer,
+  );
+  return React.createElement(
+    React.Fragment,
+    null,
+    workflowDisabled
+      ? React.createElement(
+          ControlTooltip,
+          { disabled: true, reason: disabledReason },
+          control,
+        )
+      : control,
+    workflowDisabled ? null : tooltipState.layer,
   );
 });
 

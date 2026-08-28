@@ -136,9 +136,11 @@ test("asset-free V5 import restores the exact prior dashboard when renderer reba
   };
   let current = structuredClone(prior);
   const assetMutations = [];
+  const persistenceContexts = [];
 
   await assert.rejects(commitDashboardPackageImport({
     candidate: { config: imported, assetPayloads: {} },
+    transactionId: "import-context",
     prepare: async () => {},
     snapshotAssets: async () => {
       assetMutations.push("snapshot-assets");
@@ -146,14 +148,16 @@ test("asset-free V5 import restores the exact prior dashboard when renderer reba
     },
     restoreAssets: async () => { assetMutations.push("restore-assets"); },
     snapshotDashboard: async () => structuredClone(current),
-    restoreDashboard: async (dashboardValue) => {
+    restoreDashboard: async (dashboardValue, context) => {
+      persistenceContexts.push(["restore", structuredClone(context)]);
       current = structuredClone(dashboardValue);
       return current;
     },
     stageAsset: async () => { assetMutations.push("stage-asset"); },
     commitAssets: async () => { assetMutations.push("commit-assets"); },
     rollbackAsset: async () => { assetMutations.push("rollback-asset"); },
-    replace: async (config) => {
+    replace: async (config, context) => {
+      persistenceContexts.push(["replace", structuredClone(context)]);
       current = structuredClone(config);
       return current;
     },
@@ -166,6 +170,10 @@ test("asset-free V5 import restores the exact prior dashboard when renderer reba
 
   assert.deepEqual(current, prior);
   assert.deepEqual(assetMutations, []);
+  assert.deepEqual(persistenceContexts, [
+    ["replace", { transactionId: "import-context" }],
+    ["restore", { transactionId: "import-context", rollback: true }],
+  ]);
 });
 
 test("preparation and replacement failures preserve the candidate and current renderer drafts", async () => {

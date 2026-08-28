@@ -217,20 +217,6 @@ test("closing Dashboard Look dismisses immediately while the latest selection fl
   await scheduler.flush();
 });
 
-test("a failed background appearance save renders a non-blocking session-only flash", () => {
-  assert.equal(typeof drawerModule.DashboardLookPersistenceFlash, "function");
-  if (typeof drawerModule.DashboardLookPersistenceFlash !== "function") return;
-  const html = renderToStaticMarkup(React.createElement(
-    drawerModule.DashboardLookPersistenceFlash,
-    { message: "Couldn’t save dashboard appearance. Your selection remains active for this session." },
-  ));
-
-  assert.match(html, /role="status"/);
-  assert.match(html, /dashboard-look-persistence-flash/);
-  assert.match(html, /selection remains active for this session/i);
-  assert.doesNotMatch(html, /<button/);
-});
-
 test("look-only commits retain the loaded dashboard runtime and canonical content identities", () => {
   assert.equal(typeof lookModel.applyDashboardLookConfiguration, "function");
   if (typeof lookModel.applyDashboardLookConfiguration !== "function") return;
