@@ -31,6 +31,7 @@ test("dashboard-content deletion starts safe and names every destructive consequ
   assert.match(html, />2 Chrono Groups</);
   assert.match(html, />1 Scene</);
   assert.match(html, /type="checkbox"/);
-  assert.match(html, /I understand that all Pages, charts, Chrono Groups, Scenes, and dashboard data sources will be permanently deleted/);
+  assert.match(html, /Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes\. Canonical Home remains available\./);
+  assert.match(html, /I understand that the authored dashboard content listed above will be permanently deleted/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>Delete all dashboard content<\/button>/);
 });

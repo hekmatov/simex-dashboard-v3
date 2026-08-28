@@ -8,6 +8,7 @@ const RUNTIME_CONTENT_KEYS = Object.freeze([
 export function createBlankDashboardContent(dashboard = {}) {
   const blank = structuredClone(dashboard);
   blank.pages = [];
+  blank.home = { enabled: true };
   blank.dataSources = {};
   blank.datasetProfiles = {};
   blank.contentLibrary = { mediaItems: {}, sourceEntries: {} };

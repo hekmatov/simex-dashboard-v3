@@ -201,6 +201,7 @@ export default function App() {
   const [buildStructureProjection, setBuildStructureProjection] = React.useState(null);
   const [scenarioPassportOpen, setScenarioPassportOpen] = React.useState(false);
   const [scenarioPassportDirty, setScenarioPassportDirty] = React.useState(false);
+  const [scenarioPassportResetRevision, setScenarioPassportResetRevision] = React.useState(0);
   const [compareSelectionActive, setCompareSelectionActive] = React.useState(false);
   const [blockedReason, setBlockedReason] = React.useState("");
   const [activePageId, setActivePageId] = React.useState(null);
@@ -934,14 +935,29 @@ export default function App() {
 
   async function deleteDashboardContent() {
     const previousDashboard = dashboardRef.current;
-    const committed = await commitConfiguration(
-      createBlankDashboardContent(previousDashboard),
-    );
-    setOperationError("");
-    await cleanupReplacedDashboardAssets(previousDashboard, committed, {
-      failureMessage: "Dashboard content was deleted, but unused browser source files could not be removed.",
+    return clearDashboardContentDurably({
+      controller: ensureDashboardCommitController(),
+      persist: persistConfiguration,
+      dashboard: previousDashboard,
+      cleanup: async (_previous, committed) => {
+        setOperationError("");
+        await cleanupReplacedDashboardAssets(previousDashboard, committed, {
+          failureMessage: "Dashboard content was deleted, but unused browser source files could not be removed.",
+        });
+      },
+      onResetScenario: () => {
+        setScenarioPassportOpen(false);
+        setScenarioPassportDirty(false);
+        dashboardRendererRef.current?.setAuthoredDirtyFlag?.("scenario", false);
+        setScenarioPassportResetRevision((current) => current + 1);
+      },
+      onModeChange: setMode,
+      onPersistMode: persistDashboardModePreference,
+      onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
+        key: current.key + 1,
+        mode: nextMode,
+      })),
     });
-    return committed;
   }
 
   async function cleanupReplacedDashboardAssets(
@@ -1385,6 +1401,7 @@ export default function App() {
       scenarioExpanded={scenarioPassportOpen}
       scenarioDirty={scenarioPassportDirty}
       scenarioNode={<ScenarioPassportPopover
+        key={scenarioPassportResetRevision}
         open={mode === "build" && scenarioPassportOpen}
         dashboard={dashboard}
         onClose={() => setScenarioPassportOpen(false)}
@@ -1610,6 +1627,32 @@ export function saveScenarioPassportDurably({ controller, persist, value }) {
     (next) => applyScenarioPassportValue(next, value),
     createDurableContentDraftCommit(persist),
   );
+}
+
+export async function clearDashboardContentDurably({
+  controller,
+  persist,
+  dashboard,
+  cleanup,
+  onResetScenario,
+  onModeChange,
+  onPersistMode,
+  onFocusMode,
+}) {
+  if (typeof controller?.replaceWith !== "function") {
+    throw new TypeError("A dashboard commit controller is required.");
+  }
+  const previousDashboard = configurationForPortableUse(dashboard);
+  const committed = await controller.replaceWith(
+    createBlankDashboardContent(previousDashboard),
+    createDurableContentDraftCommit(persist),
+  );
+  await cleanup?.(previousDashboard, committed);
+  onResetScenario?.(committed);
+  onModeChange?.("home");
+  onPersistMode?.("home");
+  onFocusMode?.("home");
+  return committed;
 }
 
 export function applyScenarioPassportValue(next, value) {

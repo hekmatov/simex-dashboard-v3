@@ -12,6 +12,7 @@ test("blanking dashboard content removes every authored and source-owned collect
     timezone: "Europe/Amsterdam",
     programLabel: "Preparedness programme",
     scenarioLabel: "Exercise A",
+    home: { enabled: false },
     globalStyles: {
       dashboardStyle: "editorial",
       dashboardColorProfile: "common-ground",
@@ -36,6 +37,7 @@ test("blanking dashboard content removes every authored and source-owned collect
   const blank = createBlankDashboardContent(dashboard);
 
   assert.deepEqual(blank.pages, []);
+  assert.deepEqual(blank.home, { enabled: true });
   assert.deepEqual(blank.dataSources, {});
   assert.deepEqual(blank.datasetProfiles, {});
   assert.deepEqual(blank.contentLibrary, { mediaItems: {}, sourceEntries: {} });
@@ -52,5 +54,7 @@ test("blanking dashboard content removes every authored and source-owned collect
   assert.deepEqual(blank.globalStyles, dashboard.globalStyles);
   assert.deepEqual(blank.layout, dashboard.layout);
   assert.notEqual(blank.globalStyles, dashboard.globalStyles);
+  assert.notEqual(blank.home, dashboard.home);
+  assert.deepEqual(dashboard.home, { enabled: false });
   assert.equal(dashboard.pages.length, 1);
 });

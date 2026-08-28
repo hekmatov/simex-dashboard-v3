@@ -3,14 +3,14 @@ import { readFile } from "node:fs/promises";
 
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 
-async function openBuildStructure(page) {
+async function openBuildStructure(page, appUrl = "/") {
   await page.setViewportSize({ width: 1200, height: 900 });
-  await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await page.goto(appUrl);
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
+    .click();
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
     .click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await expect(page.getByRole("tree")).toBeVisible();
@@ -21,38 +21,121 @@ function treeItemLabel(tree, name) {
     .locator(":scope > .build-tree-row .build-tree-label");
 }
 
-test("deleting dashboard content requires explicit acknowledgement and persists a recoverable blank canvas", async ({ page }) => {
-  await openBuildStructure(page);
+test("Clear Dashboard preserves canonical Home identity and Look after durable deletion", async ({ page }) => {
+  test.setTimeout(60_000);
+  const sourceDashboard = JSON.parse(await readFile(
+    new URL("../../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  await openBuildStructure(page, "http://127.0.0.1:4175/");
 
-  await page.getByRole("button", { name: "Delete dashboard content", exact: true }).click();
+  await page.locator(".dashboard-scenario-trigger").click();
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  await passport.getByLabel("Show Home", { exact: true }).uncheck();
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
+
+  const clearTrigger = page.getByRole("button", { name: "Delete dashboard content", exact: true });
+  await clearTrigger.click();
   const dialog = page.getByRole("dialog", { name: "Delete all dashboard content?" });
   await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(
+    "Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes. Canonical Home remains available.",
+  );
   await expect(dialog.getByRole("button", { name: "Delete all dashboard content", exact: true }))
     .toBeDisabled();
   await expect(dialog.getByText(/Pages$/)).toBeVisible();
   await expect(dialog.getByText(/data sources$/)).toBeVisible();
 
-  await dialog.getByLabel(/I understand that all Pages/).check();
+  await dialog.getByLabel(/I understand that the authored dashboard content/).check();
   await dialog.getByRole("button", { name: "Delete all dashboard content", exact: true }).click();
 
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "This dashboard has no content" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Create first Page", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
+  await expect(page.locator('[aria-label="Dashboard pages"]')).toHaveCount(0);
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem(
     "simex-dashboard-config-v3-three-mode-v1",
   )));
   expect(stored.pages).toEqual([]);
+  expect(stored.home).toEqual({ enabled: true });
   expect(stored.dataSources).toEqual({});
   expect(stored.datasetProfiles).toBeUndefined();
+  expect(stored.contentLibrary).toEqual({ mediaItems: {}, sourceEntries: {} });
+  expect(stored.assets).toEqual({});
   expect(stored.chronoGroups).toEqual([]);
   expect(stored.scenes).toEqual([]);
+  expect(stored.id).toBe(sourceDashboard.id);
+  expect(stored.title).toBe(sourceDashboard.title);
+  expect(stored.scenarioLabel).toBe(sourceDashboard.scenarioLabel);
+  expect(stored.programLabel).toBe(sourceDashboard.programLabel);
+  expect(stored.globalStyles).toEqual(sourceDashboard.globalStyles);
+  expect(stored.layout).toEqual(sourceDashboard.layout);
+
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await page.locator(".dashboard-scenario-trigger").click();
+  const rebasedPassport = page.getByRole("complementary", { name: "Scenario Passport" });
+  await expect(rebasedPassport.getByLabel("Show Home", { exact: true })).toBeChecked();
+  await expect(rebasedPassport.getByText("Scenario saved", { exact: true })).toBeVisible();
+  await rebasedPassport.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "This dashboard has no content" })).toBeVisible();
-  await page.getByRole("button", { name: "Create first Page", exact: true }).click();
-  await expect(page.locator('[data-canonical-page-id="new_page"]')).toBeVisible();
-  await page.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
-  await expect(page.getByRole("button", { name: "New page", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("storage-rejected Clear is atomic and Cancel restores the trigger focus", async ({ page }) => {
+  test.setTimeout(60_000);
+  const sourceDashboard = await readFile(
+    new URL("../../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  );
+  await page.addInitScript(({ dashboard, dashboardKey, modeKey }) => {
+    localStorage.setItem(dashboardKey, dashboard);
+    localStorage.setItem(modeKey, "build");
+  }, {
+    dashboard: sourceDashboard,
+    dashboardKey: "simex-dashboard-config-v3-three-mode-v1",
+    modeKey: "simex-dashboard-ui-mode-v1",
+  });
+  await openBuildStructure(page, "http://127.0.0.1:4175/");
+
+  const clearTrigger = page.getByRole("button", { name: "Delete dashboard content", exact: true });
+  await clearTrigger.click();
+  const dialog = page.getByRole("dialog", { name: "Delete all dashboard content?" });
+  await dialog.getByLabel(/I understand that the authored dashboard content/).check();
+  const before = await page.evaluate(() => ({
+    dashboard: localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"),
+    mode: localStorage.getItem("simex-dashboard-ui-mode-v1"),
+  }));
+  await page.evaluate((dashboardKey) => {
+    const setItem = Storage.prototype.setItem;
+    let rejectNextDashboardWrite = true;
+    Storage.prototype.setItem = function rejectOneClearWrite(key, value) {
+      if (rejectNextDashboardWrite && key === dashboardKey) {
+        rejectNextDashboardWrite = false;
+        throw new DOMException("Storage full", "QuotaExceededError");
+      }
+      return setItem.call(this, key, value);
+    };
+  }, "simex-dashboard-config-v3-three-mode-v1");
+
+  await dialog.getByRole("button", { name: "Delete all dashboard content", exact: true }).click();
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("alert")).toContainText("Browser storage is full");
+  const after = await page.evaluate(() => ({
+    dashboard: localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"),
+    mode: localStorage.getItem("simex-dashboard-ui-mode-v1"),
+  }));
+  expect(after).toEqual(before);
+  await expect(page.getByRole("button", { name: "Build", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator('[data-canonical-mode="home"]')).toHaveCount(0);
+  await expect(page.getByRole("treeitem", { name: "Biomedical", exact: true })).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Keep dashboard", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(clearTrigger).toBeFocused();
 });
 
 async function packageFixture({ preserveSocioEconomicIds = false } = {}) {

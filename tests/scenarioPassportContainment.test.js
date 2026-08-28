@@ -159,6 +159,95 @@ test("Scenario durable Save retains the committed baseline after failure and sup
   ]);
 });
 
+test("Clear durably replaces authored content before resetting Scenario and selecting Home", async () => {
+  assert.equal(typeof appModule?.clearDashboardContentDurably, "function");
+  const baseline = {
+    ...fixtureDashboard(),
+    home: { enabled: false },
+    globalStyles: { dashboardStyle: "evidence-ledger" },
+    dataSources: { cases: { type: "uploadedCsv" } },
+  };
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: baseline,
+    commit: async () => {
+      throw new Error("The session-aware committer must not run.");
+    },
+  });
+  const events = [];
+  const persistCalls = [];
+  let resolvePersist;
+  const persisted = new Promise((resolve) => {
+    resolvePersist = resolve;
+  });
+  const transaction = appModule.clearDashboardContentDurably({
+    controller,
+    persist: (candidate, options) => {
+      persistCalls.push({ candidate: structuredClone(candidate), options });
+      return persisted;
+    },
+    dashboard: baseline,
+    cleanup: async (previous, replacement) => {
+      assert.deepEqual(previous, baseline);
+      assert.deepEqual(replacement.pages, []);
+      events.push("cleanup");
+    },
+    onResetScenario: () => events.push("scenario"),
+    onModeChange: (mode) => events.push(`mode:${mode}`),
+    onPersistMode: (mode) => events.push(`persist:${mode}`),
+    onFocusMode: (mode) => events.push(`focus:${mode}`),
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(persistCalls.length, 1);
+  assert.deepEqual(persistCalls[0].options, { requireDurableStorage: true });
+  assert.deepEqual(persistCalls[0].candidate.pages, []);
+  assert.deepEqual(persistCalls[0].candidate.home, { enabled: true });
+  assert.deepEqual(controller.getCurrent(), baseline);
+  assert.deepEqual(events, []);
+
+  resolvePersist(structuredClone(persistCalls[0].candidate));
+  const committed = await transaction;
+  assert.deepEqual(committed.home, { enabled: true });
+  assert.deepEqual(committed.globalStyles, baseline.globalStyles);
+  assert.deepEqual(events, [
+    "cleanup",
+    "scenario",
+    "mode:home",
+    "persist:home",
+    "focus:home",
+  ]);
+  assert.deepEqual(baseline.home, { enabled: false });
+});
+
+test("storage-rejected Clear preserves dashboard Scenario mode preference and focus", async () => {
+  assert.equal(typeof appModule?.clearDashboardContentDurably, "function");
+  const baseline = fixtureDashboard();
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: baseline,
+    commit: async (candidate) => structuredClone(candidate),
+  });
+  const events = [];
+  const options = [];
+
+  await assert.rejects(appModule.clearDashboardContentDurably({
+    controller,
+    persist: async (_candidate, commitOptions) => {
+      options.push(commitOptions);
+      throw new Error("Browser dashboard storage is unavailable.");
+    },
+    dashboard: baseline,
+    cleanup: async () => events.push("cleanup"),
+    onResetScenario: () => events.push("scenario"),
+    onModeChange: (mode) => events.push(`mode:${mode}`),
+    onPersistMode: (mode) => events.push(`persist:${mode}`),
+    onFocusMode: (mode) => events.push(`focus:${mode}`),
+  }), /storage is unavailable/i);
+
+  assert.deepEqual(options, [{ requireDurableStorage: true }]);
+  assert.deepEqual(controller.getCurrent(), baseline);
+  assert.deepEqual(events, []);
+});
+
 test("successful Home-off replacement reconciliation persists and focuses View only on fallback", () => {
   assert.equal(typeof appModule?.reconcileCommittedDashboardMode, "function");
   const events = [];

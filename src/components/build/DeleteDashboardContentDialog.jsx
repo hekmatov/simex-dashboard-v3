@@ -42,7 +42,7 @@ export default function DeleteDashboardContentDialog({
       <section className="confirm-dialog delete-dashboard-content-dialog">
         <h2 id="delete-dashboard-content-title">Delete all dashboard content?</h2>
         <p id="delete-dashboard-content-description">
-          This permanently clears the dashboard’s authored content and source material. Dashboard Look and identity settings are preserved.
+          Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes. Canonical Home remains available. Dashboard Look and identity settings are preserved.
         </p>
         <ul className="delete-dashboard-content-summary" aria-label="Content to delete">
           {consequences.map((label) => <li key={label}>{label}</li>)}
@@ -54,7 +54,7 @@ export default function DeleteDashboardContentDialog({
             disabled={busy}
             onChange={(event) => setAcknowledged(event.target.checked)}
           />
-          <span>I understand that all Pages, charts, Chrono Groups, Scenes, and dashboard data sources will be permanently deleted.</span>
+          <span>I understand that the authored dashboard content listed above will be permanently deleted.</span>
         </label>
         {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
         <div className="confirm-dialog-actions">
