@@ -1,3 +1,6 @@
+import { mkdir, copyFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+
 import { expect, test } from "@playwright/test";
 
 import {
@@ -9,8 +12,45 @@ import {
   setActualPageZoom,
 } from "./support/final-acceptance.js";
 import { openDashboardFromLanding, openLanding } from "./support/landingWorkflow.js";
+import {
+  createSavedPresentationScene,
+  enterPresentWithScene,
+  openAudienceSession,
+} from "./support/present-audience-workflow.js";
 
 const DESKTOP_VIEWPORT = WORKSPACE_VIEWPORTS.find(({ width, height }) => width === 1200 && height === 900);
+const AUDIENCE_PRIMARY_VISUAL = [
+  ".chart-echarts-host canvas",
+  ".chart-image-viewport :is(img, svg)",
+  ".chart-table-scroll table",
+  ".chart-card-collection",
+  ".chart-target-collection",
+  ".free-text-chart-view__content",
+].join(", ");
+const AUDIENCE_FORBIDDEN_INTERACTION = [
+  "button",
+  "nav",
+  "a",
+  "input",
+  "select",
+  "textarea",
+  "[contenteditable]",
+  "[tabindex]",
+  '[role="button"]',
+  '[role="link"]',
+].join(", ");
+const AUDIENCE_INVALID_CHART_STATE = [
+  ".chart-status-error",
+  ".chart-status-empty",
+  ".chart-deferred-placeholder",
+  ".chart-image-pending",
+  ".chart-image-loading",
+  ".chart-embedded-echarts-error",
+  ".static-content-state--loading",
+  ".static-content-state--error",
+  "[data-chart-state-overlay]",
+  "[data-static-failure]",
+].join(", ");
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize(DESKTOP_VIEWPORT);
@@ -178,6 +218,95 @@ test("viewport fan-out preserves canonical Home and cross-mode analytical identi
   }
 });
 
+test("1920 Audience preserves room-distance composition through the public workflow", async ({ page }, testInfo) => {
+  test.setTimeout(150_000);
+  const scene = await createSavedPresentationScene(page);
+  const savedChartIds = scene.present.chartIds;
+  expect(savedChartIds.length).toBeGreaterThan(0);
+  expect(new Set(savedChartIds).size).toBe(savedChartIds.length);
+
+  await enterPresentWithScene(page, scene);
+  let popup;
+  let checkpointPath;
+  try {
+    ({ popup } = await openAudienceSession(page));
+    await popup.setViewportSize({ width: 1920, height: 1080 });
+
+    const audience = popup.locator('.audience-display[data-output-mode="active"]');
+    const grid = audience.locator(
+      '.displayed-chart-grid[data-display-surface="audience"][data-layout-system="presentation"]',
+    );
+    const header = audience.locator(".audience-shared-header");
+    const title = audience.locator(".audience-shared-header h1");
+    const sceneName = audience.locator(".audience-scene-name");
+    const sceneDate = audience.locator(".audience-scene-date");
+    const cells = grid.locator("[data-displayed-chart-id]");
+
+    await expect(audience).toBeVisible();
+    await expect(grid).toBeVisible();
+    await expect(header).toBeVisible();
+    await expect(title).toBeVisible();
+    await expect(sceneName).toHaveText(scene.name);
+    await expect(sceneDate).toBeVisible();
+    await expect(cells).toHaveCount(savedChartIds.length);
+    expect(await cells.evaluateAll((elements) => (
+      elements.map((element) => element.getAttribute("data-displayed-chart-id"))
+    ))).toEqual(savedChartIds);
+    await expect(audience.locator(AUDIENCE_FORBIDDEN_INTERACTION)).toHaveCount(0);
+
+    for (let index = 0; index < savedChartIds.length; index += 1) {
+      const cell = cells.nth(index);
+      await expect(cell.locator('.chart-view-frame[data-chart-interaction-mode="passive"]')).toHaveCount(1);
+      await expect(cell.locator(AUDIENCE_PRIMARY_VISUAL).first()).toBeVisible();
+      await expect(cell.locator(AUDIENCE_INVALID_CHART_STATE)).toHaveCount(0);
+    }
+
+    const geometry = await readAudienceRoomDistanceGeometry(popup);
+    expect(geometry.root.width).toBe(geometry.viewport.width);
+    expect(geometry.root.height).toBe(geometry.viewport.height);
+    expect(geometry.root.left).toBe(0);
+    expect(geometry.root.top).toBe(0);
+    expect(geometry.documentOverflow).toEqual({ horizontal: false, vertical: false });
+
+    expectContainedGeometry(geometry.header, geometry.root, "Audience header");
+    expectContainedGeometry(geometry.title, geometry.header, "Audience title");
+    expectContainedGeometry(geometry.sceneName, geometry.header, "Audience Scene name");
+    expectContainedGeometry(geometry.sceneDate, geometry.root, "Audience Scene date");
+    expectContainedGeometry(geometry.grid, geometry.root, "Audience chart grid");
+    expect(geometry.cells).toHaveLength(savedChartIds.length);
+    for (const cell of geometry.cells) {
+      expect(cell.id).toBe(savedChartIds[cell.index]);
+      expectContainedGeometry(cell.bounds, geometry.grid, `Audience cell ${cell.id}`);
+      expectContainedGeometry(cell.frame, cell.bounds, `Audience frame ${cell.id}`);
+      expectContainedGeometry(cell.primary, cell.frame, `Audience primary visual ${cell.id}`);
+      expect(cell.overflow, `Audience cell ${cell.id} overflow`).toEqual({ horizontal: false, vertical: false });
+      expect(cell.bounds.width, `Audience cell ${cell.id} width`).toBeGreaterThanOrEqual(480);
+      expect(cell.bounds.height, `Audience cell ${cell.id} height`).toBeGreaterThanOrEqual(300);
+      expect(cell.primary.width, `Audience primary visual ${cell.id} width`).toBeGreaterThanOrEqual(
+        cell.bounds.width / 2,
+      );
+      expect(cell.primary.height, `Audience primary visual ${cell.id} height`).toBeGreaterThanOrEqual(
+        cell.bounds.height / 2,
+      );
+    }
+
+    checkpointPath = await captureCheckpoint(
+      popup,
+      testInfo,
+      "audience-1920x1080-room-distance.png",
+    );
+  } finally {
+    if (popup && !popup.isClosed()) await popup.close();
+  }
+
+  const durablePath = resolve(
+    dirname(testInfo.file),
+    "../../docs/audits/2026-08-28-v3-step-9-final-acceptance/screenshots/audience-1920x1080-room-distance.png",
+  );
+  await mkdir(dirname(durablePath), { recursive: true });
+  await copyFile(checkpointPath, durablePath);
+});
+
 async function readCanonicalCanvasIdentity(page) {
   await expect(page.locator("[data-canonical-canvas-id]")).toBeVisible();
   return page.evaluate(() => ({
@@ -185,6 +314,67 @@ async function readCanonicalCanvasIdentity(page) {
     panelIds: [...document.querySelectorAll("[data-canonical-panel-id]")]
       .map((panel) => panel.getAttribute("data-canonical-panel-id")),
   }));
+}
+
+async function readAudienceRoomDistanceGeometry(popup) {
+  return popup.evaluate(({ invalidStateSelector, primarySelector }) => {
+    const root = document.querySelector('.audience-display[data-output-mode="active"]');
+    const grid = root.querySelector(
+      '.displayed-chart-grid[data-display-surface="audience"][data-layout-system="presentation"]',
+    );
+    const bounds = (element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      root: bounds(root),
+      header: bounds(root.querySelector(".audience-shared-header")),
+      title: bounds(root.querySelector(".audience-shared-header h1")),
+      sceneName: bounds(root.querySelector(".audience-scene-name")),
+      sceneDate: bounds(root.querySelector(".audience-scene-date")),
+      grid: bounds(grid),
+      documentOverflow: {
+        horizontal: document.documentElement.scrollWidth > window.innerWidth,
+        vertical: document.documentElement.scrollHeight > window.innerHeight,
+      },
+      cells: [...grid.querySelectorAll("[data-displayed-chart-id]")].map((cell, index) => {
+        const frame = cell.querySelector('.chart-view-frame[data-chart-interaction-mode="passive"]');
+        const primary = frame.querySelector(primarySelector);
+        return {
+          index,
+          id: cell.getAttribute("data-displayed-chart-id"),
+          bounds: bounds(cell),
+          frame: bounds(frame),
+          primary: bounds(primary),
+          invalidStateCount: cell.querySelectorAll(invalidStateSelector).length,
+          overflow: {
+            horizontal: cell.scrollWidth > cell.clientWidth + 1,
+            vertical: cell.scrollHeight > cell.clientHeight + 1,
+          },
+        };
+      }),
+    };
+  }, {
+    invalidStateSelector: AUDIENCE_INVALID_CHART_STATE,
+    primarySelector: AUDIENCE_PRIMARY_VISUAL,
+  });
+}
+
+function expectContainedGeometry(inner, outer, label) {
+  expect(inner.width, `${label} width`).toBeGreaterThan(0);
+  expect(inner.height, `${label} height`).toBeGreaterThan(0);
+  expect(inner.left, `${label} left`).toBeGreaterThanOrEqual(outer.left - 1);
+  expect(inner.top, `${label} top`).toBeGreaterThanOrEqual(outer.top - 1);
+  expect(inner.right, `${label} right`).toBeLessThanOrEqual(outer.right + 1);
+  expect(inner.bottom, `${label} bottom`).toBeLessThanOrEqual(outer.bottom + 1);
 }
 
 async function readSavedPackage(page) {
