@@ -1392,7 +1392,11 @@ export default function App() {
           setScenarioPassportDirty(dirty);
           dashboardRendererRef.current?.setAuthoredDirtyFlag?.("scenario", dirty);
         }}
-        onSave={(value) => mutateDashboard((next) => applyScenarioPassportValue(next, value))}
+        onSave={(value) => saveScenarioPassportDurably({
+          controller: ensureDashboardCommitController(),
+          persist: persistConfiguration,
+          value,
+        })}
         onSaveSucceeded={(savedDashboard) => {
           if (savedDashboard?.home?.enabled === false) void requestMode("view");
         }}
@@ -1595,6 +1599,16 @@ export default function App() {
         </PlaybackProvider>
       )}
     </DashboardChartThemeProvider>
+  );
+}
+
+export function saveScenarioPassportDurably({ controller, persist, value }) {
+  if (typeof controller?.mutateWithCommit !== "function") {
+    return Promise.reject(new TypeError("A dashboard commit controller is required."));
+  }
+  return controller.mutateWithCommit(
+    (next) => applyScenarioPassportValue(next, value),
+    createDurableContentDraftCommit(persist),
   );
 }
 

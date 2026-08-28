@@ -90,6 +90,33 @@ test("Scenario Passport saves Home off and on explicitly across reload", async (
   const showHome = passport.getByRole("checkbox", { name: "Show Home", exact: true });
   await expect(showHome).toBeChecked();
   await showHome.uncheck();
+  const priorStoredDashboard = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+  await page.evaluate((storageKey) => {
+    window.__simexNativeStorageSetItem = Storage.prototype.setItem;
+    let failedDashboardWrite = false;
+    Storage.prototype.setItem = function setItem(key, value) {
+      if (key === storageKey && !failedDashboardWrite) {
+        failedDashboardWrite = true;
+        throw new DOMException("Browser storage is full.", "QuotaExceededError");
+      }
+      return window.__simexNativeStorageSetItem.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+
+  await passport.getByRole("button", { name: "Save Scenario", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(passport).toContainText("Unsaved Scenario");
+  await expect(passport.getByRole("alert")).toContainText("Browser storage is full.");
+  await expect(showHome).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY))
+    .toBe(priorStoredDashboard);
+
+  await page.evaluate(() => {
+    Storage.prototype.setItem = window.__simexNativeStorageSetItem;
+    delete window.__simexNativeStorageSetItem;
+  });
   await passport.getByRole("button", { name: "Save Scenario", exact: true }).click();
 
   await expect(page.getByRole("button", { name: "View", exact: true }))

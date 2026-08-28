@@ -6,6 +6,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
+import { createSerializedDashboardCommitController } from "../src/lib/dashboardCommitController.js";
+
 const vite = await createServer({
   root: process.cwd(),
   appType: "custom",
@@ -113,6 +115,48 @@ test("Scenario Save applies identity and exact Home availability without replaci
     title: "Keep dashboard title",
     source: { kind: "package", label: "Keep source" },
   });
+});
+
+test("Scenario durable Save retains the committed baseline after failure and supports retry", async () => {
+  assert.equal(typeof appModule?.saveScenarioPassportDurably, "function");
+  const baseline = fixtureDashboard();
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: baseline,
+    commit: async (candidate) => structuredClone(candidate),
+  });
+  const options = [];
+  let attempt = 0;
+  const persist = async (candidate, commitOptions) => {
+    options.push(commitOptions);
+    attempt += 1;
+    if (attempt === 1) throw new Error("Browser dashboard storage is unavailable.");
+    return structuredClone(candidate);
+  };
+  const value = {
+    scenarioLabel: "Imported exercise",
+    programLabel: "Response program",
+    lastUpdated: "2026-08-28",
+    home: { enabled: false },
+  };
+
+  await assert.rejects(appModule.saveScenarioPassportDurably({
+    controller,
+    persist,
+    value,
+  }), /storage is unavailable/i);
+  assert.deepEqual(controller.getCurrent(), baseline);
+
+  const committed = await appModule.saveScenarioPassportDurably({
+    controller,
+    persist,
+    value,
+  });
+  assert.deepEqual(committed.home, { enabled: false });
+  assert.equal(controller.getCurrent().scenarioLabel, "Imported exercise");
+  assert.deepEqual(options, [
+    { requireDurableStorage: true },
+    { requireDurableStorage: true },
+  ]);
 });
 
 test("successful Home-off replacement reconciliation persists and focuses View only on fallback", () => {
