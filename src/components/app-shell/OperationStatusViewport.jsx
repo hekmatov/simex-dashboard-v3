@@ -2,9 +2,9 @@ import React from "react";
 
 import { useOperationStatus } from "./OperationStatusProvider.jsx";
 
-const RIGHT_DRAWER_OFFSETS = Object.freeze({
-  look: "min(400px, 42vw)",
-  map: "404px",
+const RIGHT_DRAWER_SELECTORS = Object.freeze({
+  look: ".look-drawer",
+  map: ".dashboard-map-panel",
 });
 
 const useBrowserLayoutEffect = typeof window === "undefined"
@@ -14,24 +14,28 @@ const useBrowserLayoutEffect = typeof window === "undefined"
 export default function OperationStatusViewport({ rightDrawer = null }) {
   const { dismissOperation, snapshot } = useOperationStatus();
   const [footerOffset, setFooterOffset] = React.useState(0);
+  const [drawerOffset, setDrawerOffset] = React.useState(0);
 
   useBrowserLayoutEffect(() => {
     let frame = 0;
     const update = () => {
       frame = 0;
       const footer = document.querySelector(".dashboard-footer");
-      if (!footer) {
-        setFooterOffset(0);
-        return;
-      }
-      const rect = footer.getBoundingClientRect();
       const viewportBottom = window.visualViewport
         ? window.visualViewport.offsetTop + window.visualViewport.height
         : window.innerHeight;
-      const overlap = rect.bottom > 0 && rect.top < viewportBottom
-        ? Math.max(0, viewportBottom - rect.top)
+      const footerRect = footer?.getBoundingClientRect();
+      const overlap = footerRect?.bottom > 0 && footerRect.top < viewportBottom
+        ? Math.max(0, viewportBottom - footerRect.top)
         : 0;
       setFooterOffset(Math.ceil(overlap));
+
+      const drawerSelector = RIGHT_DRAWER_SELECTORS[rightDrawer];
+      const drawer = drawerSelector ? document.querySelector(drawerSelector) : null;
+      setDrawerOffset(measureOperationStatusDrawerOffset({
+        viewportWidth: window.innerWidth,
+        drawerRect: drawer?.getBoundingClientRect(),
+      }));
     };
     const schedule = () => {
       if (!frame) frame = window.requestAnimationFrame(update);
@@ -42,13 +46,14 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
     window.visualViewport?.addEventListener("resize", schedule);
     window.visualViewport?.addEventListener("scroll", schedule);
     const footer = document.querySelector(".dashboard-footer");
-    const observer = footer && typeof ResizeObserver === "function"
-      ? new ResizeObserver(schedule)
-      : null;
+    const drawerSelector = RIGHT_DRAWER_SELECTORS[rightDrawer];
+    const drawer = drawerSelector ? document.querySelector(drawerSelector) : null;
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(schedule) : null;
     if (footer) {
       observer?.observe(footer);
       if (footer.parentElement) observer?.observe(footer.parentElement);
     }
+    if (drawer) observer?.observe(drawer);
     return () => {
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
@@ -57,10 +62,10 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
       observer?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [snapshot.announcement?.revision]);
+  }, [rightDrawer, snapshot.announcement?.revision]);
 
   const geometry = {
-    "--operation-status-drawer-offset": RIGHT_DRAWER_OFFSETS[rightDrawer] ?? "0px",
+    "--operation-status-drawer-offset": `${drawerOffset}px`,
     "--operation-status-footer-offset": `${footerOffset}px`,
     right: "calc(var(--operation-status-drawer-offset) + max(16px, env(safe-area-inset-right)))",
     bottom: "calc(var(--operation-status-footer-offset) + max(16px, env(safe-area-inset-bottom)))",
@@ -118,6 +123,19 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
       </div>
     </div>
   );
+}
+
+export function measureOperationStatusDrawerOffset({ viewportWidth, drawerRect } = {}) {
+  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0 || !drawerRect) return 0;
+  const left = Number(drawerRect.left);
+  const right = Number(drawerRect.right);
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return 0;
+  const visibleLeft = Math.max(0, Math.min(viewportWidth, left));
+  const visibleRight = Math.max(0, Math.min(viewportWidth, right));
+  if (visibleRight <= visibleLeft) return 0;
+  const rightInset = viewportWidth - visibleRight;
+  if (visibleLeft <= 16 && rightInset <= 16) return 0;
+  return Math.ceil(viewportWidth - visibleLeft);
 }
 
 function statusLabel(status) {

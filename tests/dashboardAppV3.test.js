@@ -11,7 +11,13 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
+
 const ROOT = path.resolve(import.meta.dirname, "..");
+const inertScheduler = Object.freeze({
+  setTimeout: () => 1,
+  clearTimeout: () => {},
+});
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -172,6 +178,53 @@ test("Stage 1 lifecycle owners use the consolidated operation-status queue", asy
   }
   assert.doesNotMatch(app, /DashboardLookPersistenceFlash|lookPersistenceFlash/);
   assert.doesNotMatch(lookDrawer, /dashboard-look-persistence-flash/);
+});
+
+test("Finish Build completes only after View mode reports a confirmed transition", async () => {
+  const { createServer } = await import("vite");
+  const vite = await createServer({
+    root: process.cwd(),
+    appType: "custom",
+    logLevel: "silent",
+    server: { middlewareMode: true },
+  });
+  const { completeFinishBuildTransition } = await vite.ssrLoadModule(
+    "/src/components/DashboardRenderer.jsx",
+  );
+  await vite.close();
+  const queue = createOperationStatusQueue({ scheduler: inertScheduler });
+
+  const blockedStatus = queue.beginOperation({
+    key: "finish-build",
+    label: "Finishing Build",
+    blocking: true,
+  });
+  await assert.rejects(
+    async () => completeFinishBuildTransition({
+      requestMode: async () => ({
+        ok: false,
+        mode: "build",
+        reason: "Finish or cancel the open draft.",
+      }),
+      status: blockedStatus,
+    }),
+    /Finish or cancel the open draft/,
+  );
+  assert.equal(queue.getSnapshot().notices[0].status, "failed");
+  assert.equal(queue.getSnapshot().notices[0].message, "Finish or cancel the open draft.");
+
+  const confirmedStatus = queue.beginOperation({
+    key: "finish-build",
+    label: "Finishing Build",
+    blocking: true,
+  });
+  const outcome = await completeFinishBuildTransition({
+    requestMode: async () => ({ ok: true, mode: "view" }),
+    status: confirmedStatus,
+  });
+  assert.deepEqual(outcome, { ok: true, mode: "view" });
+  assert.equal(queue.getSnapshot().notices[0].status, "completed");
+  assert.equal(queue.getSnapshot().notices[0].message, "Build finished.");
 });
 
 test("content draft dashboard commits require durable storage and survive a reload", async () => {

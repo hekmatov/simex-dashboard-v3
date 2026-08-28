@@ -14,11 +14,16 @@ const vite = await createServer({
 const [
   { default: AppFrame },
   { resolveDashboardTheme },
-  { default: OperationStatusProvider },
+  {
+    createOperationStatusProviderQueueOwner,
+    default: OperationStatusProvider,
+  },
+  { measureOperationStatusDrawerOffset },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/components/app-shell/AppFrame.jsx"),
   vite.ssrLoadModule("/src/theme/dashboardTheme.js"),
   vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
+  vite.ssrLoadModule("/src/components/app-shell/OperationStatusViewport.jsx"),
 ]);
 await vite.close();
 
@@ -73,7 +78,7 @@ test("AppFrame renders one atomic live transition and drawer/footer-safe status 
 
   assert.match(html, /class="operation-status-viewport"/);
   assert.match(html, /data-right-drawer="map"/);
-  assert.match(html, /--operation-status-drawer-offset:404px/);
+  assert.match(html, /--operation-status-drawer-offset:0px/);
   assert.match(html, /right:calc\(var\(--operation-status-drawer-offset\) \+ max\(16px, env\(safe-area-inset-right\)\)\)/);
   assert.match(html, /bottom:calc\(var\(--operation-status-footer-offset\) \+ max\(16px, env\(safe-area-inset-bottom\)\)\)/);
   assert.match(html, /data-live-region="assertive"[^>]*aria-live="assertive"[^>]*aria-atomic="true"[^>]*>Source load failed</);
@@ -100,7 +105,43 @@ test("completed operation transitions use the single polite live message", () =>
 
   assert.match(html, /data-operation-status="completed"/);
   assert.match(html, /data-live-region="polite"[^>]*>Layout saved</);
-  assert.match(html, /--operation-status-drawer-offset:min\(400px, 42vw\)/);
+  assert.match(html, /--operation-status-drawer-offset:0px/);
+});
+
+test("operation status reserves the measured tablet drawer but not a full-screen mobile drawer", () => {
+  assert.equal(measureOperationStatusDrawerOffset({
+    viewportWidth: 820,
+    drawerRect: { left: 420, right: 820 },
+  }), 400);
+  assert.equal(measureOperationStatusDrawerOffset({
+    viewportWidth: 820,
+    drawerRect: { left: 12, right: 808 },
+  }), 0);
+  assert.equal(measureOperationStatusDrawerOffset({
+    viewportWidth: 390,
+    drawerRect: { left: 0, right: 390 },
+  }), 0);
+});
+
+test("operation status provider cleanup disposes only its internally owned queue", () => {
+  let injectedDisposals = 0;
+  const injectedQueue = { dispose: () => { injectedDisposals += 1; } };
+  const injectedOwner = createOperationStatusProviderQueueOwner({
+    suppliedQueue: injectedQueue,
+    createQueue: () => assert.fail("an injected queue must be reused"),
+  });
+  assert.equal(injectedOwner.queue, injectedQueue);
+  injectedOwner.dispose();
+  assert.equal(injectedDisposals, 0);
+
+  let internalDisposals = 0;
+  const internalQueue = { dispose: () => { internalDisposals += 1; } };
+  const internalOwner = createOperationStatusProviderQueueOwner({
+    createQueue: () => internalQueue,
+  });
+  assert.equal(internalOwner.queue, internalQueue);
+  internalOwner.dispose();
+  assert.equal(internalDisposals, 1);
 });
 
 const staticScheduler = {

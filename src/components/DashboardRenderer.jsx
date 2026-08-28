@@ -92,6 +92,20 @@ function createExternalDirtyState() {
   return { chronoGroup: false, scene: false, scenario: false, dashboardMetadata: false };
 }
 
+export async function completeFinishBuildTransition({ requestMode, status }) {
+  try {
+    const outcome = await requestMode("view");
+    if (outcome?.ok !== true || outcome.mode !== "view") {
+      throw new Error(outcome?.reason ?? "Build could not be finished.");
+    }
+    status.succeed("Build finished.");
+    return outcome;
+  } catch (error) {
+    status.fail(error);
+    throw error;
+  }
+}
+
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
   contentDraftCoordinator = null,
@@ -1404,14 +1418,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       blocking: true,
     });
     void performModeratorOperation("save-session", async () => {
-      try {
-        await onModeRequest("view");
-        setChartEditBaseline(null);
-        status.succeed("Build finished.");
-      } catch (error) {
-        status.fail(error);
-        throw error;
-      }
+      const outcome = await completeFinishBuildTransition({
+        requestMode: onModeRequest,
+        status,
+      });
+      setChartEditBaseline(null);
+      return outcome;
     });
   }
 

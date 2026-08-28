@@ -128,6 +128,18 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   });
   expect(geometry.windowWidth - geometry.viewportRight).toBeGreaterThanOrEqual(15);
   expect(geometry.noticeBottom).toBeLessThanOrEqual(geometry.footerTop - 15);
+
+  await page.setViewportSize({ width: 820, height: 900 });
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
+  const lookDrawer = page.getByRole("dialog", { name: "Dashboard look", exact: true });
+  await expect(lookDrawer).toBeVisible();
+  await expect.poll(async () => page.evaluate(() => {
+    const viewportBox = document.querySelector(".operation-status-viewport")?.getBoundingClientRect();
+    const drawerBox = document.querySelector(".look-drawer")?.getBoundingClientRect();
+    return viewportBox && drawerBox ? drawerBox.left - viewportBox.right : -1;
+  })).toBeGreaterThanOrEqual(15);
+  expect(await lookDrawer.evaluate((drawer) => drawer.getBoundingClientRect().width))
+    .toBeGreaterThanOrEqual(399);
 });
 
 test("disabled reason is keyboard-focusable while a chart draft owns Build actions", async ({ page }) => {

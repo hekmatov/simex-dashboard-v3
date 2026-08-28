@@ -4,12 +4,28 @@ import { createOperationStatusQueue } from "../../lib/operationStatusQueue.js";
 
 const OperationStatusContext = React.createContext(null);
 
+export function createOperationStatusProviderQueueOwner({
+  suppliedQueue = null,
+  createQueue = createOperationStatusQueue,
+} = {}) {
+  const owned = suppliedQueue === null;
+  const queue = owned ? createQueue() : suppliedQueue;
+  return Object.freeze({
+    queue,
+    dispose() {
+      if (owned) queue.dispose();
+    },
+  });
+}
+
 export default function OperationStatusProvider({ children, queue: suppliedQueue = null }) {
-  const queueRef = React.useRef(null);
-  if (queueRef.current === null) {
-    queueRef.current = suppliedQueue ?? createOperationStatusQueue();
+  const ownerRef = React.useRef(null);
+  if (ownerRef.current === null) {
+    ownerRef.current = createOperationStatusProviderQueueOwner({ suppliedQueue });
   }
-  const queue = queueRef.current;
+  const owner = ownerRef.current;
+  const queue = owner.queue;
+  React.useEffect(() => () => owner.dispose(), [owner]);
   const snapshot = React.useSyncExternalStore(
     queue.subscribe,
     queue.getSnapshot,

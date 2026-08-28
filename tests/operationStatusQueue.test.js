@@ -43,6 +43,26 @@ test("stable keys update one notice and stale handles cannot overwrite newer wor
   assert.equal(queue.getSnapshot().notices[0].message, "Package imported");
 });
 
+test("a dismissed operation handle cannot mutate a later operation that reuses its key", () => {
+  const queue = createOperationStatusQueue({ scheduler: fakeClock() });
+  const first = queue.beginOperation({ key: "package", label: "First package", blocking: true });
+  assert.equal(first.dismiss(), true);
+
+  const second = queue.beginOperation({ key: "package", label: "Second package", blocking: true });
+  assert.equal(first.dismiss(), false);
+  assert.equal(first.fail(new Error("stale failure")), false);
+  assert.equal(first.succeed("stale success"), false);
+  assert.deepEqual(queue.getSnapshot().notices.map(pickNotice), [{
+    key: "package",
+    label: "Second package",
+    status: "working",
+    message: "Second package",
+  }]);
+
+  assert.equal(second.succeed("Second package imported"), true);
+  assert.equal(queue.getSnapshot().notices[0].message, "Second package imported");
+});
+
 test("visible success is polite for four seconds while fast hidden success never flashes", () => {
   const clock = fakeClock();
   const queue = createOperationStatusQueue({ scheduler: clock });
@@ -95,6 +115,32 @@ test("the visible stack retains only the four most recently updated notices", ()
     queue.getSnapshot().notices.map(({ key }) => key),
     ["operation-2", "operation-3", "operation-4", "operation-5"],
   );
+});
+
+test("overflow failures remain pending and surface without a stale announcement", () => {
+  const queue = createOperationStatusQueue({ scheduler: fakeClock() });
+  const operations = [];
+  for (let index = 1; index <= 5; index += 1) {
+    const operation = queue.beginOperation({
+      key: `failure-${index}`,
+      label: `Failure ${index}`,
+      blocking: true,
+    });
+    operation.fail(new Error(`Failure ${index} details`));
+    operations.push(operation);
+  }
+
+  assert.deepEqual(
+    queue.getSnapshot().notices.map(({ key }) => key),
+    ["failure-2", "failure-3", "failure-4", "failure-5"],
+  );
+  assert.equal(operations[4].dismiss(), true);
+  assert.deepEqual(
+    queue.getSnapshot().notices.map(({ key }) => key),
+    ["failure-1", "failure-2", "failure-3", "failure-4"],
+  );
+  assert.equal(queue.getSnapshot().announcement, null);
+  assert.equal(operations[0].dismiss(), true);
 });
 
 function pickNotice({ key, label, status, message }) {

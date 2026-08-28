@@ -13,6 +13,7 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
   const records = new Map();
   const listeners = new Set();
   let sequence = 0;
+  let operationGeneration = 0;
   let announcementRevision = 0;
   let announcement = null;
   let snapshot = freezeSnapshot([], announcement);
@@ -31,7 +32,7 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
     }
     const previous = records.get(normalizedKey);
     clearRecordTimers(previous);
-    const revision = (previous?.revision ?? 0) + 1;
+    const generation = ++operationGeneration;
     const visible = blocking === true || delayMs === 0 || previous?.visible === true;
     const record = {
       key: normalizedKey,
@@ -42,7 +43,7 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
       blocking: blocking === true,
       visible,
       order: ++sequence,
-      revision,
+      generation,
       scheduler,
       progressTimer: null,
       dismissTimer: null,
@@ -50,28 +51,26 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
     records.set(normalizedKey, record);
     if (visible) {
       announce(record, "polite");
-      enforceVisibleLimit();
       publish();
     } else {
       record.progressTimer = scheduler.setTimeout(() => {
-        const current = currentRecord(normalizedKey, revision);
+        const current = currentRecord(normalizedKey, generation);
         if (!current) return;
         current.progressTimer = null;
         current.visible = true;
         current.order = ++sequence;
         announce(current, "polite");
-        enforceVisibleLimit();
         publish();
       }, delayMs);
     }
 
     return Object.freeze({
       succeed(message) {
-        const current = currentRecord(normalizedKey, revision);
+        const current = currentRecord(normalizedKey, generation);
         if (!current) return false;
         clearTimer(current, "progressTimer");
         if (!current.visible) {
-          records.delete(normalizedKey);
+          removeRecord(normalizedKey, generation);
           publish();
           return true;
         }
@@ -80,18 +79,17 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
         current.message = optionalText(message) ?? `${current.label} completed.`;
         current.order = ++sequence;
         announce(current, "polite");
-        enforceVisibleLimit();
         publish();
         current.dismissTimer = scheduler.setTimeout(() => {
-          const latest = currentRecord(normalizedKey, revision);
+          const latest = currentRecord(normalizedKey, generation);
           if (!latest || latest.status !== "completed") return;
-          records.delete(normalizedKey);
+          removeRecord(normalizedKey, generation);
           publish();
         }, SUCCESS_DISMISS_MS);
         return true;
       },
       fail(error) {
-        const current = currentRecord(normalizedKey, revision);
+        const current = currentRecord(normalizedKey, generation);
         if (!current) return false;
         clearRecordTimers(current);
         current.visible = true;
@@ -100,31 +98,31 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
         current.message = failureMessage(error, current.label);
         current.order = ++sequence;
         announce(current, "assertive");
-        enforceVisibleLimit();
         publish();
         return true;
       },
       dismiss() {
-        const current = currentRecord(normalizedKey, revision);
-        if (!current) return false;
-        return dismissOperation(normalizedKey);
+        return dismissOperation(normalizedKey, generation);
       },
     });
   }
 
-  function dismissOperation(key) {
+  function dismissOperation(key, expectedGeneration = null) {
     const normalizedKey = requiredText(key, "Operation key");
     const current = records.get(normalizedKey);
-    if (!current) return false;
+    if (!current || (
+      expectedGeneration !== null
+      && current.generation !== expectedGeneration
+    )) return false;
     clearRecordTimers(current);
-    records.delete(normalizedKey);
+    removeRecord(normalizedKey, current.generation);
     publish();
     return true;
   }
 
-  function currentRecord(key, revision) {
+  function currentRecord(key, generation) {
     const current = records.get(key);
-    return current?.revision === revision ? current : null;
+    return current?.generation === generation ? current : null;
   }
 
   function announce(record, politeness) {
@@ -136,21 +134,19 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
     });
   }
 
-  function enforceVisibleLimit() {
-    const visible = [...records.values()]
-      .filter((record) => record.visible)
-      .sort((left, right) => left.order - right.order);
-    while (visible.length > MAX_VISIBLE_NOTICES) {
-      const removed = visible.shift();
-      clearRecordTimers(removed);
-      records.delete(removed.key);
-    }
+  function removeRecord(key, generation) {
+    const current = currentRecord(key, generation);
+    if (!current) return false;
+    records.delete(key);
+    if (announcement?.key === key) announcement = null;
+    return true;
   }
 
   function publish() {
     const notices = [...records.values()]
       .filter((record) => record.visible)
       .sort((left, right) => left.order - right.order)
+      .slice(-MAX_VISIBLE_NOTICES)
       .map(publicNotice);
     snapshot = freezeSnapshot(notices, announcement);
     for (const listener of listeners) listener(snapshot);

@@ -1082,19 +1082,26 @@ export default function App() {
   }
 
   async function requestMode(nextMode) {
+    if (nextMode === mode) return { ok: true, mode: nextMode };
     if (
-      nextMode === mode
-      || dashboardEntry.surface !== "workspace"
+      dashboardEntry.surface !== "workspace"
       || !isAvailableDashboardMode(nextMode, dashboardRef.current ?? dashboard)
-    ) return;
+    ) {
+      return {
+        ok: false,
+        mode,
+        reason: "That dashboard mode is unavailable.",
+      };
+    }
     setModeDisabled(true);
     setBlockedReason("");
     try {
       if (mode === "build") {
         const result = await prepareToLeaveBuild();
         if (!result?.ok) {
-          setBlockedReason(result?.reason ?? "Finish the current Build operation before changing mode.");
-          return;
+          const reason = result?.reason ?? "Finish the current Build operation before changing mode.";
+          setBlockedReason(reason);
+          return { ok: false, mode, reason };
         }
         for (const owner of ["manager", "qmd", "image", "chart"]) {
           await contentDraftCoordinator.discardOwner(owner, { reason: "mode-departure" });
@@ -1113,8 +1120,11 @@ export default function App() {
         mode: nextMode,
       }));
       persistDashboardModePreference(nextMode);
+      return { ok: true, mode: nextMode };
     } catch (modeError) {
-      setBlockedReason(boundedBackgroundPersistenceError(modeError).message);
+      const reason = boundedBackgroundPersistenceError(modeError).message;
+      setBlockedReason(reason);
+      return { ok: false, mode, reason };
     } finally {
       setModeDisabled(false);
     }
