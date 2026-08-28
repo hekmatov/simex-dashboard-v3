@@ -62,7 +62,7 @@ test("Step 7 Build controls and fields use the shared 44px interaction contract"
   await expectMinimumTargets(wizard.locator('button:visible, input:visible:not([type="checkbox"]):not([type="radio"]), select:visible, textarea:visible'));
 });
 
-test("unsupported phone Build keeps authoring mounted but exposes only its recovery notice", async ({ page }) => {
+test("phone Build stays operational beneath its persistent recovery notice", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -71,9 +71,13 @@ test("unsupported phone Build keeps authoring mounted but exposes only its recov
   await expect(notice).toBeVisible();
   await expect(notice.getByRole("button", { name: "Switch to View", exact: true })).toBeVisible();
   await expectMinimumTarget(notice.getByRole("button"));
-  await expect(page.locator(".build-mode-shell")).toHaveCount(1);
-  await expect(page.locator(".build-mode-shell")).toBeHidden();
-  await expect(page.locator('.app-frame[data-dashboard-mode="build"] button:visible')).toHaveCount(1);
+  const buildShell = page.locator(".build-mode-shell");
+  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await expect(buildShell).toBeVisible();
+  await expect(mapToggle).toBeEnabled();
+  await mapToggle.click();
+  await expect(page.getByRole("complementary", { name: "Dashboard map" })).toBeVisible();
+  await expect(notice).toBeVisible();
 });
 
 async function expectMinimumTargets(locator, minimum = 44) {
