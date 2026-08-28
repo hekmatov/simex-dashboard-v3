@@ -2,15 +2,14 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 async function openBuildStructure(page, appUrl = "/") {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto(appUrl);
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
-    .click();
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
     .click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await expect(page.getByRole("tree")).toBeVisible();
@@ -191,9 +190,7 @@ test("cross-page tree selection reveals the canonical target before opening Unit
   const section = page.locator('[data-canonical-section-id="public_response"]');
   await expect(section).toBeInViewport();
 
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await page.locator('[data-dashboard-page-id="biomedical"]').click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
 
   await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).click();

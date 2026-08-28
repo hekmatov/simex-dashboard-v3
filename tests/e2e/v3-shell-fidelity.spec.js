@@ -298,7 +298,7 @@ test("live Build Structure tree exposes a 44px caret and visible 3px focus", asy
     .toHaveCount(0);
 });
 
-test("canonical View and Build frames project landing and analytical Page metadata", async ({ page }) => {
+test("canonical View and Build frames project analytical Page metadata", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await enterAuthoredDashboard(page);
@@ -321,9 +321,7 @@ test("canonical View and Build frames project landing and analytical Page metada
     return [style.paddingTop, style.paddingRight];
   })).toEqual(["12px", "20px"]);
 
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await page.locator('[data-dashboard-page-id="biomedical"]').click();
   await expect(frame).toHaveAttribute("data-page-type", "analytical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "View", exact: true })

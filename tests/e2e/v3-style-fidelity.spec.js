@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const NATIVE_STYLES = Object.freeze([
   Object.freeze({
@@ -116,8 +117,7 @@ test("target collections inherit dark shared surfaces and text", async ({ page }
     localStorage.setItem("simex-dashboard-appearance-v3", "dark");
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "View", exact: true }).click();
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   const panel = page.locator('[data-panel-id="bio_icu_capacity_bullet"]');
   await panel.scrollIntoViewIfNeeded();
   await expect(panel.locator(".chart-target-collection-item").first()).toBeVisible();
@@ -148,8 +148,8 @@ test("target collections inherit dark shared surfaces and text", async ({ page }
 test("expanded Orbit starts below the live command crown", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.locator("[data-build-edit-for]").first().click();
   const orbit = page.locator(".unit-orbit");
   await expect(orbit).toBeVisible();
@@ -224,8 +224,7 @@ test("native style signatures resolve real shell, section, panel, and control pa
 test("section headers adapt only to title and description content", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 
   const metrics = await page.evaluate(() => {
     const section = document.querySelector("[data-canonical-section-id]");
@@ -627,8 +626,7 @@ test("native outer paint remains continuous while transient Look chrome may comp
 async function openBiomedicalLook(page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Dashboard look" })).toBeVisible();
 }
@@ -709,9 +707,7 @@ function readApprovedTokenMatrix(html) {
 test("section headers preserve wrapped title geometry in View and Build", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await openDashboardPage(page, "biomedical");
 
   const wrappedTitle = "Medication patterns, longitudinal outcomes, and service demand across the enrolled study population";
   const readHeader = () => page.locator("[data-canonical-section-id]").first().evaluate((section, title) => {

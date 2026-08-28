@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { openDashboardPage } from "./support/landingWorkflow.js";
 import {
   createSavedPresentationScene,
   enterPresentWithScene,
@@ -9,7 +10,7 @@ import {
 test("production View launches from the built static output", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator('button[data-dashboard-mode="view"]')).toBeVisible();
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await openDashboardPage(page, "biomedical");
   await expect(page.locator('[data-panel-id="bio_confirmed_cases"]')).toBeVisible();
   await expect(page.locator('[data-panel-id="bio_confirmed_cases"] [data-canonical-runtime-ledger]')).toBeVisible();
 });
@@ -17,7 +18,7 @@ test("production View launches from the built static output", async ({ page }) =
 test("installed production package opens its first Present and Audience from the cold offline runtime graph", async ({ context, page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await openDashboardPage(page, "biomedical");
   await page.locator('button[data-dashboard-mode="build"]').click();
   const scene = await createSavedPresentationScene(page, { entry: "build-biomedical" });
   await expectServiceWorkerReady(page);

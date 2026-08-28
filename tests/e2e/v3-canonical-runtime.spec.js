@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { openDashboardPage } from "./support/landingWorkflow.js";
 import {
   createSavedPresentationScene,
   enterPresentWithScene,
@@ -16,7 +17,7 @@ const EXPECTED_PRESENT_TIME = Object.freeze({
 test("canonical runtime ledger preserves tracked semantics across View, Build, Present, and Audience", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await openDashboardPage(page, "biomedical");
 
   const view = await readLedger(page, `[data-panel-id="${PANEL_ID}"]`);
   expect(view).toMatchObject({

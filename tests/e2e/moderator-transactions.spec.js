@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -35,7 +36,7 @@ test.beforeEach(async ({ request, page }) => {
 
 async function openDashboardEditMode(page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build" }).click();
 }
 
@@ -52,7 +53,7 @@ async function storedDashboard(page) {
 test("rendered version-3 layouts drive desktop spans and a taller phone full canvas", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   const expected = [
     ["bio_current_cases_kpi", "standard", "span 2", "span 1", "360px"],
     ["bio_r_values", "standard", "span 2", "span 1", "360px"],
@@ -608,7 +609,7 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
   )), { timeout: 60_000 }).toBeGreaterThan(attemptsBeforeCancel);
 
   await page.reload();
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.locator('[data-dashboard-page-id="biomedical"]').click();
   await expect(page.getByRole("heading", { name: baseline.pageTitle, exact: true }))
     .toBeVisible();
   await expect(page.getByRole("button", {

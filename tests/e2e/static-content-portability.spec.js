@@ -3,6 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
+import { openDashboardPage } from "./support/landingWorkflow.js";
+import { openAudienceSession } from "./support/present-audience-workflow.js";
 
 const APP_URL = "http://127.0.0.1:4173/";
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -57,7 +59,7 @@ test("production StrictMode root keeps the reloaded durable Image URL active", a
   }, activeUrl)).toBe(true);
 });
 
-test("bundle v5 restores local Image and Free-text in a fresh offline browser context", async ({
+test("bundle v6 restores local Image and Free-text in a fresh offline browser context", async ({
   browser,
   page,
 }, testInfo) => {
@@ -68,7 +70,7 @@ test("bundle v5 restores local Image and Free-text in a fresh offline browser co
   const imagePanelId = await createImage(page);
 
   const authored = await persistedStaticContent(page);
-  expect(authored.configVersion).toBe(5);
+  expect(authored.configVersion).toBe(6);
   expect(authored.text.source.qmd).toBe(TEXT_QMD);
   expect(authored.text.source.revision).toBe(1);
   expect(authored.image.panel.id).toBe(imagePanelId);
@@ -79,11 +81,11 @@ test("bundle v5 restores local Image and Free-text in a fresh offline browser co
   expect(authored.serialized).not.toContain("data:image/");
 
   await page.reload();
-  await openBiomedical(page);
+  await openBiomedicalBuild(page, { navigate: false });
   await expectStaticPanels(page, authored.image.panel.id, authored.text.panel.id);
 
-  const bundlePath = testInfo.outputPath("static-content-bundle-v5.json");
-  page.once("dialog", (dialog) => dialog.accept("static-content-bundle-v5"));
+  const bundlePath = testInfo.outputPath("static-content-bundle-v6.json");
+  page.once("dialog", (dialog) => dialog.accept("static-content-bundle-v6"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Download Dashboard Package" }).click(),
@@ -92,8 +94,8 @@ test("bundle v5 restores local Image and Free-text in a fresh offline browser co
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
   await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
   const bundle = JSON.parse(await readFile(bundlePath, "utf8"));
-  expect(bundle.version).toBe(5);
-  expect(bundle.config.configVersion).toBe(5);
+  expect(bundle.version).toBe(6);
+  expect(bundle.config.configVersion).toBe(6);
   expect(Object.keys(bundle.assetPayloads)).toEqual([authored.image.mediaItem.current.assetId]);
 
   const assetId = authored.image.mediaItem.current.assetId;
@@ -166,11 +168,15 @@ test("bundle v5 restores local Image and Free-text in a fresh offline browser co
     await importedPage.setViewportSize({ width: 1440, height: 900 });
     await importedPage.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Present", exact: true }).click();
-    const audiencePromise = freshContext.waitForEvent("page");
-    await importedPage.getByRole("button", { name: "Open audience display" }).click();
-    const audience = await audiencePromise;
-    await audience.waitForLoadState("domcontentloaded");
+    const { popup: audience } = await openAudienceSession(importedPage, {
+      waitForBaseline: false,
+    });
     await importedPage.getByRole("checkbox", { name: IMAGE_TITLE }).check();
+    await expect(audience.locator(".audience-display")).toHaveAttribute(
+      "data-connection-status",
+      "connected",
+      { timeout: 45_000 },
+    );
     await expect(audience.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
     await audience.close();
   } finally {
@@ -187,8 +193,8 @@ test("package import quota failure preserves the prior dashboard and authored st
   await openBiomedicalBuild(page);
   await createFreeText(page);
   await createImage(page);
-  const bundlePath = testInfo.outputPath("quota-import-bundle-v5.json");
-  page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v5"));
+  const bundlePath = testInfo.outputPath("quota-import-bundle-v6.json");
+  page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v6"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Download Dashboard Package" }).click(),
@@ -320,8 +326,8 @@ test("asset commit failure restores the prior dashboard and authored store atomi
   await page.setViewportSize({ width: 1024, height: 768 });
   await openBiomedicalBuild(page);
   const imagePanelId = await createImage(page);
-  const bundlePath = testInfo.outputPath("commit-recovery-bundle-v5.json");
-  page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v5"));
+  const bundlePath = testInfo.outputPath("commit-recovery-bundle-v6.json");
+  page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v6"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Download Dashboard Package" }).click(),
@@ -381,8 +387,7 @@ async function openBiomedicalBuild(page, { navigate = true } = {}) {
 }
 
 async function openBiomedical(page) {
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 }
 
 async function createFreeText(page) {

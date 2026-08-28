@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
+import { openDashboardPage } from "./support/landingWorkflow.js";
+import { openAudienceSession } from "./support/present-audience-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -48,7 +50,7 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await captureCheckpoint(audience, testInfo, "audience-1920x1080-two-cell.png");
 
   const firstProtocol = await observedAudienceState(page);
-  expect(firstProtocol.items).toEqual([
+  expect(presentationItems(firstProtocol)).toEqual([
     { kind: "chart", chart_id: authored.temporalChartId },
     {
       kind: "image",
@@ -57,11 +59,11 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
       revision: authored.imageRevision,
     },
   ]);
-  expect(Object.keys(firstProtocol.items[1]).sort()).toEqual([
+  expect(Object.keys(presentationItems(firstProtocol)[1]).sort()).toEqual([
     "kind", "media_id", "panel_id", "revision",
   ]);
 
-  await injectRejectedFreeTextEnvelope(page, firstProtocol);
+  const rejectedSequence = await injectRejectedFreeTextEnvelope(page, firstProtocol);
   await page.waitForTimeout(250);
   await expectAudienceCount(audience, 2);
   await expect(audience.getByText("Injected protocol Free text", { exact: true })).toHaveCount(0);
@@ -69,26 +71,31 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await expect(audience.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
 
   const beforeTime = await audienceImageSnapshot(audience, imagePanelId);
-  await page.getByLabel("Synchronized time").selectOption(authored.chronoGroupId);
+  await page.locator('[data-presentation-control-id="source"]')
+    .selectOption(`group:${authored.chronoGroupId}`);
+  await expect.poll(() => observedControllerStateSequence(page))
+    .toBeGreaterThan(rejectedSequence);
+  await expect(audience.locator(".audience-output"))
+    .toHaveAttribute("data-connection-status", "connected");
   const slider = page.getByLabel("Presentation time");
   await expect(slider).toBeEnabled();
-  await expect.poll(async () => (await observedAudienceState(page)).time?.group_id)
+  await expect.poll(async () => (await observedAudienceState(page)).source?.chrono_group_id)
     .toBe(authored.chronoGroupId);
   await audience.waitForTimeout(600);
   const beforeChart = await audienceChartSnapshot(audience, authored.temporalChartId);
   expectRenderedTemporalChart(beforeChart);
   const beforeChartTime = await observedAudienceState(page);
   const firstTarget = await moveRangeToOtherBoundary(slider);
-  await expect.poll(async () => (await observedAudienceState(page)).time?.active_epoch_ms)
-    .not.toBe(beforeChartTime.time?.active_epoch_ms);
+  await expect.poll(async () => presentationActiveEpoch(await observedAudienceState(page)))
+    .not.toBe(presentationActiveEpoch(beforeChartTime));
   await expect.poll(() => audienceChartSnapshot(audience, authored.temporalChartId), {
     timeout: 15_000,
   }).not.toEqual(beforeChart);
   const afterTimeProtocol = await observedAudienceState(page);
   const afterChart = await audienceChartSnapshot(audience, authored.temporalChartId);
   const afterTime = await audienceImageSnapshot(audience, imagePanelId);
-  expect(afterTimeProtocol.items[1]).toEqual(firstProtocol.items[1]);
-  expect(afterTimeProtocol.time.active_epoch_ms).not.toBe(beforeChartTime.time.active_epoch_ms);
+  expect(presentationItems(afterTimeProtocol)[1]).toEqual(presentationItems(firstProtocol)[1]);
+  expect(presentationActiveEpoch(afterTimeProtocol)).not.toBe(presentationActiveEpoch(beforeChartTime));
   expect(afterChart.activeDate).not.toBe(beforeChart.activeDate);
   expect(afterChart.pixelHash).not.toBe(beforeChart.pixelHash);
   expect(afterTime).toEqual(beforeTime);
@@ -114,7 +121,8 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await expect(audience.locator("button, .chart-image-actions, .static-content-state__actions")).toHaveCount(0);
   await expectNoOverflow(audience);
   const failedProtocol = await observedAudienceState(page);
-  expect(failedProtocol.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
+  expect(presentationItems(failedProtocol).find(({ kind }) => kind === "image"))
+    .toEqual(presentationItems(firstProtocol)[1]);
   await audience.waitForTimeout(600);
   const temporalSiblingIds = [authored.temporalChartId, ...authored.additionalChartIds];
   const failedChartsBefore = new Map(await Promise.all(temporalSiblingIds.map(async (chartId) => {
@@ -124,8 +132,8 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   })));
   const failedImageBefore = await audienceImageSnapshot(audience, imagePanelId);
   await moveRangeToOppositeBoundary(slider, firstTarget);
-  await expect.poll(async () => (await observedAudienceState(page)).time?.active_epoch_ms)
-    .not.toBe(failedProtocol.time?.active_epoch_ms);
+  await expect.poll(async () => presentationActiveEpoch(await observedAudienceState(page)))
+    .not.toBe(presentationActiveEpoch(failedProtocol));
   await expect.poll(async () => {
     const after = await Promise.all(temporalSiblingIds.map((chartId) => audienceChartSnapshot(audience, chartId)));
     return after.every((snapshot, index) => (
@@ -146,7 +154,8 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
     expect(after.pixelHash).not.toBe(before.pixelHash);
   }
   const failedAfterTime = await observedAudienceState(page);
-  expect(failedAfterTime.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
+  expect(presentationItems(failedAfterTime).find(({ kind }) => kind === "image"))
+    .toEqual(presentationItems(firstProtocol)[1]);
   expect(await audienceImageSnapshot(audience, imagePanelId)).toEqual(failedImageBefore);
   await expect(audience.locator('[data-static-failure="asset-read-failed"]')).toBeVisible();
   await expect(audience.locator('[data-presentation-item-kind="chart"]')).toHaveCount(3);
@@ -162,7 +171,8 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await expect(reconnected.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
   await expectNoOverflow(reconnected);
   const replayed = await observedAudienceState(page);
-  expect(replayed.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
+  expect(presentationItems(replayed).find(({ kind }) => kind === "image"))
+    .toEqual(presentationItems(firstProtocol)[1]);
   const compactGeometry = await audienceGeometry(reconnected);
   expect(compactGeometry.viewport).toEqual({ width: 1366, height: 768 });
   expect(compactGeometry.cells).toHaveLength(4);
@@ -170,8 +180,7 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
 });
 
 async function openBiomedical(page) {
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 }
 
 async function createFreeText(page) {
@@ -261,12 +270,9 @@ function presentChoice(page, itemId) {
 }
 
 async function openAudience(page) {
-  const popup = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Open audience display" }).click();
-  const audience = await popup;
-  await audience.waitForLoadState("domcontentloaded");
-  await expect(audience.locator(".audience-display")).toBeVisible();
-  return audience;
+  const { popup } = await openAudienceSession(page);
+  await expect(popup.locator(".audience-display")).toBeVisible();
+  return popup;
 }
 
 async function reopenAudience(page) {
@@ -281,9 +287,23 @@ async function reopenAudience(page) {
 async function installAudienceStateObserver(page) {
   await page.evaluate(() => {
     const originalPostMessage = BroadcastChannel.prototype.postMessage;
-    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = { latestState: null, latestEnvelope: null };
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = {
+      latestState: null,
+      latestEnvelope: null,
+      latestControllerSequence: 0,
+    };
     globalThis.__SIMEX_E2E_NATIVE_BROADCAST_POST__ = originalPostMessage;
     BroadcastChannel.prototype.postMessage = function observePresentationState(data) {
+      if (
+        data?.protocol_version === 3
+        && ["state", "heartbeat", "ended"].includes(data.type)
+        && Number.isSafeInteger(data.sequence)
+      ) {
+        globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestControllerSequence = Math.max(
+          globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestControllerSequence,
+          data.sequence,
+        );
+      }
       if (data?.protocol_version === 3 && data.type === "state") {
         globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState = structuredClone(data.payload);
         globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestEnvelope = structuredClone(data);
@@ -294,27 +314,36 @@ async function installAudienceStateObserver(page) {
 }
 
 async function injectRejectedFreeTextEnvelope(page, acceptedState) {
-  await page.evaluate((state) => {
+  return page.evaluate((state) => {
     const accepted = globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestEnvelope;
+    const injectedSequence = globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestControllerSequence + 1;
     const channel = new BroadcastChannel(`simex-presentation-${accepted.session_id}`);
     globalThis.__SIMEX_E2E_NATIVE_BROADCAST_POST__.call(channel, {
       protocol_version: 3,
       session_id: accepted.session_id,
-      sequence: accepted.sequence + 10_000,
+      sequence: injectedSequence,
       type: "state",
       payload: {
         ...structuredClone(state),
-        items: [{
-          kind: "freeText",
-          panel_id: "injected-free-text",
-          media_id: "injected-media",
-          revision: 1,
-          source: "Injected protocol Free text",
-        }],
-        layout: "solo",
+        composition: {
+          ...structuredClone(state.composition),
+          displayed_chart_ids: ["injected-free-text"],
+          layout: "solo",
+        },
+        payload: {
+          ...structuredClone(state.payload),
+          items: [{
+            kind: "freeText",
+            panel_id: "injected-free-text",
+            media_id: "injected-media",
+            revision: 1,
+            source: "Injected protocol Free text",
+          }],
+        },
       },
     });
     channel.close();
+    return injectedSequence;
   }, acceptedState);
 }
 
@@ -325,6 +354,21 @@ async function observedAudienceState(page) {
   return page.evaluate(() => structuredClone(
     globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState,
   ));
+}
+
+async function observedControllerStateSequence(page) {
+  return page.evaluate(() => (
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestEnvelope?.sequence ?? 0
+  ));
+}
+
+function presentationItems(state) {
+  return state?.payload?.items ?? [];
+}
+
+function presentationActiveEpoch(state) {
+  const timeline = state?.timeline;
+  return timeline?.frame_epochs?.[timeline.frame_index] ?? null;
 }
 
 async function expectAudienceCount(audience, count) {

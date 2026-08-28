@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const FIRST_CHART = "bio_confirmed_cases";
@@ -70,7 +71,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
   test.setTimeout(60_000);
   await page.goto("/");
   await expectCompanionConnected(page, request);
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 
   const firstPanel = page.locator(`[data-panel-id="${FIRST_CHART}"]`);
   await firstPanel.getByRole("button", {
@@ -127,7 +128,7 @@ test("comparison selection caps at four charts and Escape cancels selection", as
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 
   const panels = page.locator(".chart-panel");
   await expect(panels.nth(4)).toBeAttached();
@@ -294,7 +295,7 @@ test("missing bootstrap preserves standalone dashboard behavior", async ({
   await page.goto("/");
 
   expect((await bootstrapResponse).status()).toBe(404);
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page
     .locator(`[data-panel-id="${FIRST_CHART}"]`)
     .getByRole("button", { name: "Focus chart" })

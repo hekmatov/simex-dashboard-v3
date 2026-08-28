@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { expectNoRetiredDashboardStyle } from "./support/dashboard-style-audit.js";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const STYLE_OPTIONS = [
   { label: "Evidence Ledger", profile: "evidence-ledger/brighter-vellum" },
@@ -12,8 +13,7 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 
   for (const style of STYLE_OPTIONS) {
     await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
@@ -22,13 +22,11 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
     await look.locator(`[data-profile-option="${style.profile}"] input`).check();
     await page.keyboard.press("Escape");
 
-    for (const pageName of ["Home", "Biomedical", "Socio-economic"]) {
-      await page.locator(".dashboard-command-page-scroller")
-        .getByRole("button", { name: pageName, exact: true }).click();
+    for (const pageId of ["old-homepage-content", "biomedical", "socio_economic"]) {
+      await page.locator(`[data-dashboard-page-id="${pageId}"]`).click();
       await expectNoRetiredDashboardStyle(page);
     }
-    await page.locator(".dashboard-command-page-scroller")
-      .getByRole("button", { name: "Biomedical", exact: true }).click();
+    await page.locator('[data-dashboard-page-id="biomedical"]').click();
 
     const icon = page.locator(".simex-icon-control:visible").first();
     await icon.hover();
@@ -50,8 +48,7 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await look.getByLabel("Signal + Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.keyboard.press("Escape");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 

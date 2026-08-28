@@ -171,7 +171,7 @@ test("saved V6 configuration preserves canonical Home availability and authored 
   expect(persistedBiomedical.sections[0].panels[0].layout.size).toBe("wide");
 
   await openDashboardFromLanding(page);
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.locator('[data-dashboard-page-id="biomedical"]').click();
   await expect(page.getByRole("heading", { name: "Saved biomedical briefing" })).toBeVisible();
 });
 

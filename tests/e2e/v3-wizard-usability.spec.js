@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 test("chart-panel tooltips escape clipping and use selected-style paint", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
 
@@ -113,8 +113,7 @@ test("Data Source actions and Review repairs are concise and explicit", async ({
 
 async function openWizard(page) {
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();

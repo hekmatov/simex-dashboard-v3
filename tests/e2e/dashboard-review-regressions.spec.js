@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  LANDING_CONTRACT,
+  enterAuthoredDashboard,
+  openDashboardPage,
+} from "./support/landingWorkflow.js";
+
 const APP_URL = "http://127.0.0.1:4173";
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -33,8 +39,8 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   };
   await installDashboard(page, dashboard);
 
-  await openDashboard(page);
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
   const panel = page.locator('[data-panel-id="bio_current_cases_kpi"]');
   await expect(panel).toBeVisible();
 
@@ -222,7 +228,7 @@ test("additive imported tracked profiles survive an edit and browser reload", as
     name: "Dashboard configuration error",
   })).toHaveCount(0);
   await expect(page.getByRole("button", {
-    name: "Explore the live dashboard",
+    name: LANDING_CONTRACT.primaryAction,
   })).toBeVisible();
 });
 
@@ -231,8 +237,8 @@ test("removing a page also removes its synchronized chart memberships", async ({
   request,
 }) => {
   await installDashboard(page, await fetchJson(request, "/config/dashboard.json"));
-  await openDashboard(page);
-  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build" }).click();
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
   await navigation.getByRole("button", {
@@ -288,9 +294,7 @@ async function installDashboard(page, dashboard) {
 
 async function openDashboard(page) {
   await page.goto("/");
-  await page.getByRole("button", {
-    name: "Explore the live dashboard",
-  }).click();
+  await enterAuthoredDashboard(page);
 }
 
 async function openPageInspector(page, pageLabel) {

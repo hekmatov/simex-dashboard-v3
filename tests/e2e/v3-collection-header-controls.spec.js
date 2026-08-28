@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { openDashboardPage } from "./support/landingWorkflow.js";
+
 const CONTROL_URL = "http://127.0.0.1:4174";
 
 test.beforeEach(async ({ page, request }) => {
@@ -7,8 +9,7 @@ test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Explore the live dashboard" }).click();
-  await page.getByRole("navigation", { name: "Dashboard pages" }).getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 });
 
 test("multi-page Collection transport stays in the header and leaves Build Edit rightmost", async ({ page }) => {

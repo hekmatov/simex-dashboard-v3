@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const APP_URL = "http://127.0.0.1:4175/";
@@ -114,8 +115,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await seedMapBudgetCopies(page);
   await page.reload();
   await openBuild(page, { width: 1440, height: 900 });
-  await page.getByRole("navigation", { name: "Dashboard pages" })
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.locator('[data-dashboard-page-id="biomedical"]').click();
   const seededMaps = page.locator('[data-canonical-section-id="outbreak_dynamics"] [data-panel-id^="journey-i-map-"]');
   await expect(seededMaps).toHaveCount(4);
   for (let index = 0; index < 3; index += 1) {
@@ -303,9 +303,9 @@ test("Journey K — valid GeoJSON geometry change warns then confirms", async ({
 
 async function openBuild(page, viewport) {
   await page.setViewportSize(viewport);
-  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  const home = page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Home", exact: true });
-  if (await home.count()) await home.click();
+  await openDashboardPage(page, "old-homepage-content");
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "old-homepage-content");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.locator('[data-canonical-mode="build"]')).toBeVisible();
 }

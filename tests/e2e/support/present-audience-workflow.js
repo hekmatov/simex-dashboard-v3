@@ -101,18 +101,20 @@ export async function enterPresentWithScene(page, scene) {
   }
 }
 
-export async function openAudienceSession(page) {
+export async function openAudienceSession(page, { waitForBaseline = true } = {}) {
   const popupPromise = page.context().waitForEvent("page");
   await page.locator('[data-presentation-control-id="open-new-session"]').click();
   const popup = await popupPromise;
   await popup.waitForLoadState("domcontentloaded");
   const channelId = new URL(popup.url()).searchParams.get("channel");
   expect(channelId).toBeTruthy();
-  await expect(popup.locator(".audience-display")).toHaveAttribute(
-    "data-connection-status",
-    "connected",
-    { timeout: 45_000 },
-  );
+  if (waitForBaseline) {
+    await expect(popup.locator(".audience-display")).toHaveAttribute(
+      "data-connection-status",
+      "connected",
+      { timeout: 45_000 },
+    );
+  }
   return { popup, channelId };
 }
 

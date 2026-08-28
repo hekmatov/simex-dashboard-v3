@@ -26,6 +26,11 @@ export async function enterAuthoredDashboard(page) {
 
 export async function openDashboardPage(page, pageId) {
   await enterAuthoredDashboard(page);
+  const currentPage = page.locator("[data-canonical-page-id]");
+  await currentPage.waitFor({ state: "visible" });
+  if (await currentPage.getAttribute("data-canonical-page-id") === pageId) {
+    return;
+  }
   const modes = page.getByLabel("Dashboard mode");
   const view = modes.getByRole("button", { name: "View", exact: true });
   if (await view.getAttribute("aria-pressed") !== "true") {

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 const TIMELINE_FIXTURE = {
@@ -20,9 +22,7 @@ test.beforeEach(async ({ page, request }) => {
     data: { mode: "absent" },
   });
   await page.goto("/");
-  await page.getByRole("button", {
-    name: "Explore the live dashboard",
-  }).click();
+  await enterAuthoredDashboard(page);
   await page.getByRole("button", { name: "Build" }).click();
 });
 

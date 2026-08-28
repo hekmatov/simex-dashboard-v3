@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -7,7 +8,7 @@ test.beforeEach(async ({ request, page }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 });

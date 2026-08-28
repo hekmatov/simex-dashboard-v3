@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -300,9 +300,7 @@ test("Scenario Passport owns direct identity edits and package operations in Bui
 async function openBiomedicalBuild(page) {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await enterAuthoredDashboard(page);
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
 }

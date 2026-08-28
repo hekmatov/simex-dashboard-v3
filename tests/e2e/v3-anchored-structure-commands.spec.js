@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+
 const CONTROL_URL = "http://127.0.0.1:4174";
 
 test.beforeEach(async ({ page, request }) => {
@@ -7,7 +9,7 @@ test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Explore the live dashboard" }).click();
+  await enterAuthoredDashboard(page);
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.locator('[data-dashboard-mode="build"]')).toBeVisible();
   const navigation = page.locator('[data-build-page-navigation="anchored"]');

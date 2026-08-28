@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -12,8 +13,7 @@ test.beforeEach(async ({ request }) => {
 test("View Chrono seeks scopes traces moves and safety-pauses without losing session", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
 
   const chrono = page.getByRole("region", { name: "Chrono playback controls" });

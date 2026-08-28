@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -344,9 +345,7 @@ test("Journey E — incompatible CSV replacement blocks and imports as new", asy
 async function openBiomedicalBuild(page, viewport) {
   await page.setViewportSize(viewport);
   if (page.url() === "about:blank") await page.goto("http://127.0.0.1:4175/");
-  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  const biomedical = page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Biomedical", exact: true });
-  if (await biomedical.count()) await biomedical.click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 }
 

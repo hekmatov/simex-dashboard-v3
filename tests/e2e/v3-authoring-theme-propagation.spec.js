@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 test("selected dashboard style reaches every Build authoring surface", async ({ page }) => {
   test.setTimeout(90_000);
@@ -9,8 +10,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await look.getByLabel("Signal + Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.keyboard.press("Escape");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
@@ -83,8 +83,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
 test("Unit Orbit retains the selected theme outside AppFrame", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
   const orbit = page.locator(".unit-orbit");
@@ -95,8 +94,7 @@ test("Unit Orbit retains the selected theme outside AppFrame", async ({ page }) 
 test("View Chrono and Present controls contain no retired dashboard paint", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const chrono = page.getByRole("region", { name: "Chrono playback controls" });
@@ -118,8 +116,7 @@ test("standalone source viewer receives the selected dashboard style", async ({ 
   await look.getByLabel("Signal + Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.keyboard.press("Escape");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
 

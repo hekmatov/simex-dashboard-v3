@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -273,8 +274,7 @@ test(
       viewport: { width: 1024, height: 768 },
     });
     await page.reload();
-    await page.locator(".dashboard-command-page-scroller")
-      .getByRole("button", { name: "Biomedical", exact: true }).click();
+    await page.locator('[data-dashboard-page-id="biomedical"]').click();
     const reloaded = await readSavedFreeText(page, "Reload handoff field guide");
     expect(reloaded.source.qmd).toBe(INITIAL_QMD);
     expect(reloaded.source.revision).toBe(1);
@@ -467,8 +467,7 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
 
 async function openBiomedicalBuild(page) {
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
 }

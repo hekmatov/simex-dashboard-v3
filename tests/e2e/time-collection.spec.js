@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
@@ -400,11 +402,7 @@ test("collection carousels remain independent while Chrono plays", async ({
 
 async function openDashboard(page) {
   await page.goto("/");
-  const explore = page.getByRole("button", {
-    name: "Explore the live dashboard",
-  });
-  await expect(explore).toBeVisible({ timeout: 15_000 });
-  await explore.click();
+  await enterAuthoredDashboard(page);
 }
 
 async function installScenarioDashboard(page, request, configure) {
