@@ -15,7 +15,7 @@ export default function ModeSwitcher({
   disabledReason = "",
 }) {
   return (
-    <div className="mode-switcher" aria-label="Dashboard mode">
+    <nav className="mode-switcher" aria-label="Dashboard mode">
       {availableModes.map((value) => (
         <button
           key={value}
@@ -32,6 +32,6 @@ export default function ModeSwitcher({
       {disabled && disabledReason && (
         <span id="mode-switch-disabled-reason" className="visually-hidden">{disabledReason}</span>
       )}
-    </div>
+    </nav>
   );
 }
