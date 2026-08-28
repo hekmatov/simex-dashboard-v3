@@ -72,7 +72,7 @@ function createAsyncAttempt(assetId) {
   return promise;
 }
 
-function renderImage({ suffix, alt, storageState, resolveStaticAsset }) {
+function renderImage({ suffix, alt, storageState, mediaStorageState = storageState, resolveStaticAsset }) {
   const assetId = `asset-${suffix.repeat(64).slice(0, 64)}`;
   const mediaId = `media-${suffix}`;
   const staticSource = placement(mediaId, alt);
@@ -92,7 +92,7 @@ function renderImage({ suffix, alt, storageState, resolveStaticAsset }) {
     renderContext: {
       sources: { [`source-${suffix}`]: staticSource },
       assets: { [assetId]: manifestEntry(assetId, storageState) },
-      mediaItems: { [mediaId]: mediaItem(mediaId, assetId, storageState) },
+      mediaItems: { [mediaId]: mediaItem(mediaId, assetId, mediaStorageState) },
       resolveStaticAsset,
     },
     surface: "view",
@@ -114,6 +114,7 @@ window.mountSynchronousImage = (suffix, alt) => renderImage({
   suffix,
   alt,
   storageState: "staged",
+  mediaStorageState: "durable",
   resolveStaticAsset: () => ({ url: `data:image/png;base64,${PNG_BASE64}` }),
 });
 window.mountImmediateAsyncImage = (suffix, alt) => renderImage({
@@ -124,6 +125,7 @@ window.mountImmediateAsyncImage = (suffix, alt) => renderImage({
 });
 window.mountBuildImageFailure = () => {
   buildSelections = [];
+  const assetId = `asset-${"b".repeat(64)}`;
   const chart = {
     configVersion: 3,
     id: "build-failed-image",
@@ -151,11 +153,11 @@ window.mountBuildImageFailure = () => {
       },
     },
     assets: {
-      "asset-build-failed": manifestEntry("asset-build-failed", "durable"),
+      [assetId]: manifestEntry(assetId, "durable"),
     },
     contentRenderContext: {
       mediaItems: {
-        "build-failed-media": mediaItem("build-failed-media", "asset-build-failed"),
+        "build-failed-media": mediaItem("build-failed-media", assetId),
       },
       resolveStaticAsset: () => ({ url: "https://example.test/missing-build-image.png" }),
     },
