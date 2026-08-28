@@ -7,7 +7,7 @@ import {
   sha256HexSync,
 } from "../../src/static-content/assets/assetPayloadEnvelope.js";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
-import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const APP_URL = "http://127.0.0.1:4175/";
@@ -278,8 +278,7 @@ async function openBuild(page, { width, height, navigate = true }) {
 }
 
 async function openBiomedical(page) {
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: PAGE_LABEL, exact: true }).click();
+  await openDashboardPage(page, "biomedical");
 }
 
 function packageInput(page) {
