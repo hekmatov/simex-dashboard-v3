@@ -7,6 +7,7 @@ import {
   sha256HexSync,
 } from "../../src/static-content/assets/assetPayloadEnvelope.js";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
+import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const APP_URL = "http://127.0.0.1:4175/";
@@ -32,7 +33,7 @@ test.beforeEach(async ({ page, request }) => {
   await page.reload();
 });
 
-test("Journey G — V5 offline round trip and V4 migration retain library", async ({ browser, page }, testInfo) => {
+test("Journey G — V6 offline round trip and V4 migration retain library", async ({ browser, page }, testInfo) => {
   test.setTimeout(180_000);
   await openBuild(page, { width: 1440, height: 900 });
 
@@ -60,19 +61,19 @@ test("Journey G — V5 offline round trip and V4 migration retain library", asyn
     value: v4,
   });
   const migrated = await storedSnapshot(page);
-  expect(migrated.configVersion).toBe(5);
+  expect(migrated.configVersion).toBe(6);
   expect(migrated.chartVersions).toEqual([3]);
   expect(migrated.sourceEntryIds.length).toBeGreaterThan(0);
   expect(migrated.temporalReviewCount).toBe(0);
 
   const fixture = await buildJourneyBundle(page);
   await importPackage(page, {
-    name: "journey-g-v5.json",
+    name: "journey-g-v6.json",
     value: fixture,
   });
   const importedFixture = await journeySnapshot(page);
   expect(importedFixture).toMatchObject({
-    configVersion: 5,
+    configVersion: 6,
     mediaIds: [MEDIA_UNUSED, MEDIA_USED],
     sourceIds: [CSV_ID, GEOJSON_ID],
     usedMediaId: MEDIA_USED,
@@ -89,8 +90,8 @@ test("Journey G — V5 offline round trip and V4 migration retain library", asyn
   const bundlePath = testInfo.outputPath("journey-g-roundtrip.json");
   await download.saveAs(bundlePath);
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
-  expect(exported.version).toBe(5);
-  expect(exported.config.configVersion).toBe(5);
+  expect(exported.version).toBe(6);
+  expect(exported.config.configVersion).toBe(6);
   expect(exported.config.contentLibrary.mediaItems[MEDIA_USED].revision).toBe(7);
   expect(exported.config.contentLibrary.mediaItems[MEDIA_UNUSED].revision).toBe(2);
   expect(exported.config.contentLibrary.mediaItems[MEDIA_USED].current.assetId)
@@ -271,6 +272,7 @@ async function importPackage(page, { name, value }) {
 async function openBuild(page, { width, height, navigate = true }) {
   await page.setViewportSize({ width, height });
   if (navigate) await page.goto(APP_URL);
+  await enterAuthoredDashboard(page);
   await openBiomedical(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 }

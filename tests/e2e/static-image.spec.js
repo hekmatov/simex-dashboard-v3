@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
+import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -738,6 +739,7 @@ test(`IM-08 guided crop remains operable with keyboard and pointer at actual 200
 
 async function openBiomedicalBuild(page) {
   await page.goto("/");
+  await enterAuthoredDashboard(page);
   await page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 }
@@ -829,7 +831,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
       mediaItems: Object.keys(dashboard.contentLibrary.mediaItems).length,
     };
   }, STORAGE_KEY);
-  expect(durableShape).toEqual({ configVersion: 5, hasAssets: true, staticImages: 1, mediaItems: 1 });
+  expect(durableShape).toEqual({ configVersion: 6, hasAssets: true, staticImages: 1, mediaItems: 1 });
 }
 
 async function findPersistedChartId(page, title) {
