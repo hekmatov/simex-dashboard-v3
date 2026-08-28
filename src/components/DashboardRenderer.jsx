@@ -59,7 +59,7 @@ import {
   findPanelPlacement,
 } from "../lib/dashboardSelectors.js";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
-import { createImportedRendererDraftState } from "../lib/dashboardPackageImportTransaction.js";
+import { createDashboardReplacementRendererState } from "../lib/dashboardPackageImportTransaction.js";
 import { buildPresentableItemIndex } from "../static-content/staticPanelCapabilities.js";
 import { collectDashboardPackageExportIssues } from "../lib/dashboardPackageExport.js";
 import { summarizeDashboardContent } from "../lib/dashboardContentReset.js";
@@ -426,7 +426,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await onCommitPendingConfiguration?.();
     },
     resetAfterDashboardReplacement(replacementDashboard) {
-      const rebasedDrafts = createImportedRendererDraftState(replacementDashboard);
+      const rebasedDrafts = createDashboardReplacementRendererState(
+        replacementDashboard,
+        { buildLayoutDraft: buildLayoutDraftRef.current },
+      );
       pendingEdits.cancel();
       for (const resolve of buildRevealResolversRef.current.values()) resolve(false);
       buildRevealResolversRef.current.clear();
@@ -435,6 +438,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setDashboardDraft(rebasedDrafts.dashboardDraft);
       setPageDrafts(rebasedDrafts.pageDrafts);
       setSectionDrafts(rebasedDrafts.sectionDrafts);
+      buildLayoutDraftRef.current = rebasedDrafts.buildLayoutDraft;
+      setBuildLayoutDraft(rebasedDrafts.buildLayoutDraft);
       setChartEditorPlacementId(null);
       setChartEditorVisible(false);
       setChartEditBaseline(null);

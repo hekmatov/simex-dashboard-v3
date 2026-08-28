@@ -5,10 +5,12 @@ import {
   applyDashboardEdits,
   createDebouncedDashboardEdits,
 } from "../src/lib/dashboardCommitController.js";
-import {
+import * as packageImportModel from "../src/lib/dashboardPackageImportTransaction.js";
+
+const {
   commitDashboardPackageImport,
   createImportedRendererDraftState,
-} from "../src/lib/dashboardPackageImportTransaction.js";
+} = packageImportModel;
 
 function dashboard({
   programLabel,
@@ -92,6 +94,33 @@ test("package replacement drains delayed authored edits before commit and rebase
     pageDrafts: {},
     sectionDrafts: {},
   });
+});
+
+test("post-replacement renderer state drops a dirty layout projection for the committed dashboard", () => {
+  assert.equal(typeof packageImportModel.createDashboardReplacementRendererState, "function");
+  const replacement = dashboard({
+    programLabel: "Restored program",
+    pageTitle: "Restored page",
+    sectionTitle: "Restored section",
+  });
+  const dirtyLayoutDraft = {
+    status: "dirty",
+    value: dashboard({
+      programLabel: "Stale local program",
+      pageTitle: "Stale local page",
+      sectionTitle: "Stale local section",
+    }),
+  };
+
+  const reset = packageImportModel.createDashboardReplacementRendererState(
+    replacement,
+    { buildLayoutDraft: dirtyLayoutDraft },
+  );
+  const workingDashboard = reset.buildLayoutDraft?.value ?? replacement;
+
+  assert.equal(reset.buildLayoutDraft, null);
+  assert.equal(workingDashboard.pages[0].title, "Restored page");
+  assert.equal(workingDashboard.pages[0].sections[0].title, "Restored section");
 });
 
 test("Home-off import exposes its committed dashboard only after replacement and rebase succeed", async () => {

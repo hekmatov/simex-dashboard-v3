@@ -190,3 +190,11 @@ export function createImportedRendererDraftState(dashboard) {
     sectionDrafts: {},
   };
 }
+
+export function createDashboardReplacementRendererState(dashboard, rendererState = {}) {
+  return {
+    ...structuredClone(rendererState),
+    ...createImportedRendererDraftState(dashboard),
+    buildLayoutDraft: null,
+  };
+}

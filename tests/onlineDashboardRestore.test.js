@@ -88,6 +88,10 @@ test("App prepares queued Build work and durably replaces before resetting live 
     renderer,
     /async prepareForOnlineDashboardRestore\(\)[\s\S]*?pendingEdits\.flush\(\)[\s\S]*?onCommitPendingConfiguration/,
   );
+  assert.match(
+    renderer,
+    /const rebasedDrafts = createDashboardReplacementRendererState\([\s\S]*?buildLayoutDraftRef\.current\s*=\s*rebasedDrafts\.buildLayoutDraft;[\s\S]*?setBuildLayoutDraft\(rebasedDrafts\.buildLayoutDraft\)/,
+  );
 });
 
 test("preparation loads BASE_URL definition, profiles, and portable sources before validation", async (t) => {
