@@ -116,7 +116,7 @@ test("zero Page and zero Section recovery stays inline in the live Build shell",
   await page.getByRole("button", { name: "Pages & sections", exact: true }).click();
   const structure = page.getByRole("dialog", { name: "Structure authoring" });
 
-  for (const label of ["Home", "Biomedical", "Socio-economic"]) {
+  for (const label of ["Old Homepage Content", "Biomedical", "Socio-economic"]) {
     await structure.getByRole("button", { name: `Delete ${label} page`, exact: true }).click();
     await page.getByRole("dialog", { name: `Delete Page ${label}?` })
       .getByRole("button", { name: "Delete page", exact: true }).click();

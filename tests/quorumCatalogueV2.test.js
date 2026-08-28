@@ -347,7 +347,7 @@ test("generation and canonical digests are deterministic and match the persisted
   assert.deepEqual(persisted, snapshot);
 });
 
-test("equivalent raw V3 and normalized V5 dashboards produce one catalogue identity", async () => {
+test("equivalent raw and normalized V6 dashboards produce one catalogue identity", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const profiles = await readJson("public/config/dataset-profiles.json");
   const normalized = normalizeDashboardSource(dashboard, profiles);
@@ -363,8 +363,8 @@ test("equivalent raw V3 and normalized V5 dashboards produce one catalogue ident
     nodeSha256,
   );
 
-  assert.equal(dashboard.configVersion, 3);
-  assert.equal(normalized.configVersion, 5);
+  assert.equal(dashboard.configVersion, 6);
+  assert.equal(normalized.configVersion, 6);
   assert.deepEqual(normalizedSnapshot, rawSnapshot);
 });
 
