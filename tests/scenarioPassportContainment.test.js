@@ -20,6 +20,11 @@ const passportModule = await vite.ssrLoadModule("/src/components/app-shell/Scena
 const scenarioModule = await vite.ssrLoadModule("/src/components/build/ScenarioAuthoring.jsx")
   .catch(() => null);
 const workspaceModule = await vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx");
+const rendererModule = await vite.ssrLoadModule("/src/components/DashboardRenderer.jsx");
+const playbackModule = await vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx");
+const operationStatusModule = await vite.ssrLoadModule(
+  "/src/components/app-shell/OperationStatusProvider.jsx",
+);
 const appModule = await vite.ssrLoadModule("/src/App.jsx").catch(() => null);
 await vite.close();
 
@@ -129,6 +134,16 @@ test("package mutation is absent from View orientation and the generic Build pan
   );
 });
 
+test("the live DashboardRenderer Build surface leaves package controls exclusively in Passport", () => {
+  const html = renderLiveDashboardBuild();
+
+  assert.doesNotMatch(html, /<button[^>]*aria-label="(?:Import|Export)"/);
+  assert.match(
+    html,
+    /<input[^>]*class="visually-hidden"[^>]*type="file"[^>]*accept="application\/json,\.json"/,
+  );
+});
+
 test("the live App wires the Crown Scenario Passport to renderer package operations", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(app, /ScenarioPassportPopover/);
@@ -153,6 +168,12 @@ test("Passport package entry points retain the serialized moderator-operation gu
 
   assert.match(uploadEntry, /moderatorOperationGateRef\.current\.isActive\(\)/);
   assert.match(downloadEntry, /moderatorOperationGateRef\.current\.isActive\(\)/);
+  assert.doesNotMatch(renderer, /interactionId="shell\.(?:import|export)"/);
+  assert.equal(
+    renderer.match(/importInputRef\.current\?\.click\(\)/g)?.length,
+    2,
+    "only the guarded request and its authored-dirty confirmation may open the package chooser",
+  );
 });
 
 test("Scenario Save applies identity and exact Home availability without replacing unrelated state", () => {
@@ -422,4 +443,46 @@ function fixtureDashboard() {
     chronoGroups: [],
     dataSources: {},
   };
+}
+
+function renderLiveDashboardBuild() {
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      clearTimeout: globalThis.clearTimeout,
+      matchMedia: () => ({ matches: false }),
+      navigator: { standalone: false },
+      requestAnimationFrame: (callback) => callback(),
+      setTimeout: globalThis.setTimeout,
+    },
+  });
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { userAgent: "" },
+  });
+  try {
+    return renderToStaticMarkup(React.createElement(
+      operationStatusModule.default,
+      null,
+      React.createElement(
+        playbackModule.PlaybackProvider,
+        { groups: [], charts: [], loadedData: {}, profiles: {} },
+        React.createElement(rendererModule.default, {
+          dashboard: fixtureDashboard(),
+          mode: "build",
+          activePageId: "overview",
+          accessibilityEnabled: false,
+          deviceLayout: "desktop",
+          displayState: { display_revision: 0, displayed_chart_ids: [], layout: "single" },
+        }),
+      ),
+    ));
+  } finally {
+    if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+    else delete globalThis.window;
+    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+    else delete globalThis.navigator;
+  }
 }

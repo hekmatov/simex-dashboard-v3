@@ -2140,8 +2140,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               <IconControl interactionId="shell.add-tab" disabled={moderatorMutationLocked} onClick={addPage} />
               <IconControl interactionId="shell.remove-tab" className="secondary" disabled={moderatorMutationLocked || (dashboard.pages ?? []).length <= 1} onClick={removeActivePage} />
             </div>
-            <IconControl interactionId="shell.import" disabled={moderatorMutationLocked} onClick={() => importInputRef.current?.click()} />
-            <IconControl interactionId="shell.export" disabled={moderatorMutationLocked} onClick={exportDashboardPackage} />
             <GlobalPanelColorControls disabled={moderatorMutationLocked} colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <GlobalIconAccentControl
               disabled={moderatorMutationLocked}
