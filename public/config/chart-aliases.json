@@ -1,27 +1,4 @@
 {
-  "home_operational_pressure_kpis": {
-    "aliases": [
-      "operational pressure at a glance"
-    ],
-    "keywords": [
-      "kpi",
-      "home",
-      "operational",
-      "pressure",
-      "kpis"
-    ]
-  },
-  "home_case_map": {
-    "aliases": [
-      "wastewater early-warning preview"
-    ],
-    "keywords": [
-      "mapScatter",
-      "home",
-      "case",
-      "map"
-    ]
-  },
   "bio_confirmed_cases": {
     "aliases": [
       "confirmed cases"

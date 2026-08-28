@@ -34,7 +34,20 @@ function legacyHome({ sections = [] } = {}) {
 }
 
 test("V5 reserved Home analytical sections migrate at the same index", () => {
-  const overview = { id: "home-overview", title: "Overview", panels: [] };
+  const overview = {
+    id: "home-overview",
+    title: "Overview",
+    panels: [{
+      id: "legacy-map-placement",
+      chart: {
+        configVersion: 3,
+        id: "home-case-map",
+        typeId: "mapScatter",
+        sourceId: "cases",
+        roles: { geography: { field: "province" }, value: { field: "cases" } },
+      },
+    }],
+  };
   const source = makeDashboardV5({
     pages: [ordinaryPage("before"), legacyHome({ sections: [overview] }), ordinaryPage("after")],
     scenes: [{ id: "briefing", pageId: "home", chartIds: ["home-case-map"] }],

@@ -24,10 +24,6 @@ const ALIASES_PATH = path.join(ROOT, "public", "config", "chart-aliases.json");
 const PROFILES_PATH = path.join(ROOT, "public", "config", "dataset-profiles.json");
 
 const EXPECTED_SECTIONS = {
-  home_overview: [
-    "home_operational_pressure_kpis",
-    "home_case_map",
-  ],
   outbreak_dynamics: [
     "bio_confirmed_cases",
     "bio_daily_cases_bar",
@@ -83,8 +79,6 @@ const EXPECTED_SECTIONS = {
 };
 
 const EXPECTED_CHART_MAPPING = {
-  home_operational_pressure_kpis: ["kpi", "bio_occupancy_gauges"],
-  home_case_map: ["mapScatter", "bio_wastewater_latest"],
   bio_confirmed_cases: ["line", "bio_cases"],
   bio_daily_cases_bar: ["bar", "bio_cases"],
   bio_new_cases_deaths: ["mixed", "bio_cases"],
@@ -232,7 +226,7 @@ test("the curated dashboard is a clean version 6 configuration with exact analyt
     ]),
   );
   assert.deepEqual(sections, EXPECTED_SECTIONS);
-  assert.equal(configuredCharts(dashboard).length, 40);
+  assert.equal(configuredCharts(dashboard).length, 38);
   assert.deepEqual(
     Object.fromEntries(configuredCharts(dashboard).map(({ chart }) => [
       chart.id,
@@ -595,36 +589,27 @@ test("all configured geography joins resolve and the choropleth is genuinely tim
   );
 });
 
-test("default authored homepage content is preserved as an ordinary V6 page", async () => {
+test("the shipped V6 dashboard omits legacy Home placements while retaining their shared sources", async () => {
   const { dashboard } = await loadTrackedInputs();
-  const home = dashboard.pages.find(({ id }) => id === "old-homepage-content");
-  assert.deepEqual({
-    id: home.id,
-    label: home.label,
-    title: home.title,
-    description: home.description,
-  }, {
-    id: "old-homepage-content",
-    label: "Old Homepage Content",
-    title: "Old Homepage Content",
-    description: "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
-  });
-  assert.equal(home.landing, undefined);
+  const charts = configuredCharts(dashboard).map(({ chart }) => chart);
+
+  assert.equal(dashboard.pages.some(({ id }) => id === "old-homepage-content"), false);
+  assert.equal(charts.some(({ id }) => id === "home_operational_pressure_kpis"), false);
+  assert.equal(charts.some(({ id }) => id === "home_case_map"), false);
   assert.deepEqual(dashboard.home, { enabled: true });
   assert.equal(dashboard.pages.some(({ id }) => id === "home"), false);
+
+  assert.equal(dashboard.dataSources.bio_occupancy_gauges.kind, "csv");
+  assert.equal(dashboard.dataSources.bio_wastewater_latest.kind, "csv");
+  assert.equal(dashboard.contentLibrary.sourceEntries.bio_occupancy_gauges.sourceId, "bio_occupancy_gauges");
+  assert.equal(dashboard.contentLibrary.sourceEntries.bio_wastewater_latest.sourceId, "bio_wastewater_latest");
   assert.deepEqual(
-    {
-      id: home.sections[0].id,
-      title: home.sections[0].title,
-      description: home.sections[0].description,
-      layout: home.sections[0].layout,
-    },
-    {
-      id: "home_overview",
-      title: "Scenario overview",
-      description: "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
-      layout: "two-column",
-    },
+    charts.filter(({ sourceId }) => sourceId === "bio_occupancy_gauges").map(({ id }) => id),
+    ["bio_occupancy_collection"],
+  );
+  assert.deepEqual(
+    charts.filter(({ sourceId }) => sourceId === "bio_wastewater_latest").map(({ id }) => id),
+    ["bio_wastewater_map", "bio_wastewater_province"],
   );
 });
 
