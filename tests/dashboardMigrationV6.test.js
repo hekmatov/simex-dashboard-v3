@@ -115,3 +115,19 @@ test("V6 normalization is idempotent", () => {
   const source = makeDashboardV6();
   assert.deepEqual(migrateDashboardV5ToV6(migrateDashboardV5ToV6(source)), source);
 });
+
+test("V5 and V6 migration normalize partial content-library collections", () => {
+  const v5 = makeDashboardV5();
+  v5.contentLibrary = {};
+  const v6 = makeDashboardV6();
+  v6.contentLibrary = {};
+
+  assert.deepEqual(migrateDashboardV5ToV6(v5).contentLibrary, {
+    mediaItems: {},
+    sourceEntries: {},
+  });
+  assert.deepEqual(migrateDashboardV5ToV6(v6).contentLibrary, {
+    mediaItems: {},
+    sourceEntries: {},
+  });
+});

@@ -1,3 +1,5 @@
+import { normalizeContentLibrary } from "../../content-library/contentLibrarySchema.js";
+
 export const LEGACY_HOME_PAGE_ID = "home";
 export const LEGACY_HOME_CONTENT_TITLE = "Old Homepage Content";
 
@@ -21,6 +23,7 @@ export function normalizeDashboardHomePreference(home, { ordinaryPageCount }) {
 export function migrateDashboardV5ToV6(input) {
   if (!isOrdinaryObject(input)) throw new TypeError("Dashboard V6 migration input must be an object.");
   const dashboard = structuredClone(input);
+  dashboard.contentLibrary = normalizeContentLibrary(dashboard.contentLibrary);
   if (dashboard.configVersion === 6) {
     dashboard.home = normalizeDashboardHomePreference(dashboard.home, {
       ordinaryPageCount: Array.isArray(dashboard.pages) ? dashboard.pages.length : 0,
