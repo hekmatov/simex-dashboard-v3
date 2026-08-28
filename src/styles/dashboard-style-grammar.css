@@ -1513,21 +1513,6 @@
   min-inline-size: var(--simex-control-min, 44px);
 }
 
-@media (max-width: 767px) {
-  .app-frame[data-dashboard-mode="build"] > :not(.phone-mode-banner) {
-    display: none !important;
-  }
-
-  body:has(.app-frame[data-dashboard-mode="build"]) > :is(
-    .unit-orbit,
-    .build-authoring-auxiliary,
-    .simex-tooltip-layer,
-    .audience-snapshot-source
-  ) {
-    display: none !important;
-  }
-}
-
 /* Viewport tooltips replace the retired pseudo-element bubble. The layer is
    portalled to body so chart-panel clipping never hides explanatory text. */
 .simex-icon-control[data-icon-tooltip]::after {

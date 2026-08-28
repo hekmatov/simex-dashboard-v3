@@ -8,9 +8,8 @@ import {
   readFocusVisibility,
   setActualPageZoom,
 } from "./support/final-acceptance.js";
-import { openLanding } from "./support/landingWorkflow.js";
+import { openDashboardFromLanding, openLanding } from "./support/landingWorkflow.js";
 
-const APP_URL = "http://127.0.0.1:4185/";
 const DESKTOP_VIEWPORT = WORKSPACE_VIEWPORTS.find(({ width, height }) => width === 1200 && height === 900);
 
 test.beforeEach(async ({ page }) => {
@@ -111,14 +110,14 @@ test("keyboard and screen-reader journey exposes truthful mode and Dashboard map
   await expect(mapToggle).toBeFocused();
 });
 
-test("touch input activates the phone recovery control with a 44 by 44 target", async ({ browser }) => {
+test("touch input activates the phone recovery control with a 44 by 44 target", async ({ browser, baseURL }) => {
   const touchContext = await browser.newContext({
     hasTouch: true,
     viewport: WORKSPACE_VIEWPORTS[0],
   });
   try {
     const touchPage = await touchContext.newPage();
-    await touchPage.goto(APP_URL);
+    await touchPage.goto(baseURL);
     const modes = touchPage.getByLabel("Dashboard mode");
     await modes.getByRole("button", { name: "Build", exact: true }).tap();
 
@@ -133,6 +132,64 @@ test("touch input activates the phone recovery control with a 44 by 44 target", 
     await touchContext.close();
   }
 });
+
+test("viewport fan-out preserves canonical Home and cross-mode analytical identities", async ({ page }) => {
+  test.setTimeout(240_000);
+  for (const viewport of WORKSPACE_VIEWPORTS) {
+    await page.setViewportSize(viewport);
+    await openLanding(page);
+
+    const appFrame = page.locator(".app-frame");
+    const modes = page.getByRole("navigation", { name: "Dashboard mode" });
+    await expect(appFrame).toHaveAttribute("data-dashboard-mode", "home");
+    await expect(page.getByRole("main")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "SimEx Dashboard", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Getting started with building", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (
+      getComputedStyle(document.documentElement).getPropertyValue("--simex-surface-canvas").trim()
+    ))).not.toBe("");
+    await expectNoViewportOverflow(page);
+
+    if (viewport.width === 390 && viewport.height === 844) {
+      await expect(page.locator("[data-phone-mode-notice]")).toHaveCount(0);
+    }
+
+    const savedPackage = await readSavedPackage(page);
+    await openDashboardFromLanding(page);
+    await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
+    const viewCanvas = await readCanonicalCanvasIdentity(page);
+
+    await modes.getByRole("button", { name: "Build", exact: true }).click();
+    await expect(appFrame).toHaveAttribute("data-dashboard-mode", "build");
+    if (viewport.width === 390 && viewport.height === 844) {
+      await expect(page.locator('[data-phone-mode-notice="build"]')).toBeVisible();
+      await expect(page.locator(".build-workspace")).toHaveCount(1);
+      await expect(page.locator(".build-workspace")).toBeVisible();
+      expect(await readCanonicalCanvasIdentity(page)).toEqual(viewCanvas);
+      await page.getByRole("button", { name: "Switch to View", exact: true }).click();
+      await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
+    } else {
+      expect(await readCanonicalCanvasIdentity(page)).toEqual(viewCanvas);
+    }
+
+    await modes.getByRole("button", { name: "Home", exact: true }).click();
+    await expect(appFrame).toHaveAttribute("data-dashboard-mode", "home");
+    expect(await readSavedPackage(page)).toBe(savedPackage);
+  }
+});
+
+async function readCanonicalCanvasIdentity(page) {
+  await expect(page.locator("[data-canonical-canvas-id]")).toBeVisible();
+  return page.evaluate(() => ({
+    canvasId: document.querySelector("[data-canonical-canvas-id]")?.getAttribute("data-canonical-canvas-id"),
+    panelIds: [...document.querySelectorAll("[data-canonical-panel-id]")]
+      .map((panel) => panel.getAttribute("data-canonical-panel-id")),
+  }));
+}
+
+async function readSavedPackage(page) {
+  return page.evaluate(() => localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
+}
 
 async function assertVisibleFocus(target) {
   const focus = await readFocusVisibility(target);

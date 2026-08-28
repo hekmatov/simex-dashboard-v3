@@ -1,4 +1,5 @@
 import { expect } from "@playwright/test";
+import { openDashboardPage } from "./landingWorkflow.js";
 
 export const LIVE_APP_URL = "http://127.0.0.1:4185/";
 export const DASHBOARD_STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -61,7 +62,7 @@ export async function createSavedPresentationScene(page, {
 } = {}) {
   if (entry === "fresh") {
     await page.goto(url);
-    await page.locator('[data-dashboard-page-id="biomedical"]').click();
+    await openDashboardPage(page, "biomedical");
     await page.locator('[data-dashboard-mode="build"]').click();
   } else if (entry !== "build-biomedical") {
     throw new Error(`Unknown presentation Scene workflow entry: ${entry}`);

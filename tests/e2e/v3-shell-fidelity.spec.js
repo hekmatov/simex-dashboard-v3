@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -45,9 +46,7 @@ test.beforeEach(async ({ request }) => {
 test("wide View and Build use the shared canonical canvas maximum", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await openDashboardPage(page, "biomedical");
   const view = await readCanvasState(page);
 
   await page.getByLabel("Dashboard mode")
@@ -69,9 +68,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
@@ -124,9 +121,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
 test("Build Structure double click navigates, highlights, and focuses section rename", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
@@ -148,7 +143,7 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   const crownPages = page.locator(".dashboard-command-page-scroller");
-  await crownPages.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
@@ -185,6 +180,7 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
 test("shared Page row pins only the accepted View and Build actions", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
+  await enterAuthoredDashboard(page);
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
 
   await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
@@ -222,6 +218,7 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
 test("repeated public Add Page requests use current dashboard state and unique IDs", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
+  await enterAuthoredDashboard(page);
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
@@ -248,9 +245,7 @@ test("repeated public Add Page requests use current dashboard state and unique I
 test("active comparison selection disables repeated crown activation without clearing selection", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await openDashboardPage(page, "biomedical");
 
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
   const compareCharts = pinned.getByRole("button", { name: "Compare charts", exact: true });
@@ -273,14 +268,15 @@ test("active comparison selection disables repeated crown activation without cle
 test("live Build Structure tree exposes a 44px caret and visible 3px focus", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
+  await enterAuthoredDashboard(page);
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
-  const home = structure.getByRole("treeitem", { name: "Home", exact: true });
-  const caret = home.getByRole("button", { name: "Collapse Home", exact: true });
+  const home = structure.getByRole("treeitem", { name: "Old Homepage Content", exact: true });
+  const caret = home.getByRole("button", { name: "Collapse Old Homepage Content", exact: true });
   const target = await caret.boundingBox();
   expect(target?.width).toBeGreaterThanOrEqual(44);
   expect(target?.height).toBeGreaterThanOrEqual(44);
@@ -305,24 +301,25 @@ test("live Build Structure tree exposes a 44px caret and visible 3px focus", asy
 test("canonical View and Build frames project landing and analytical Page metadata", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
+  await enterAuthoredDashboard(page);
   const frame = page.locator(".canonical-dashboard-frame");
   const header = frame.locator(".dashboard-header");
 
-  await expect(frame).toHaveAttribute("data-page-type", "landing");
+  await expect(frame).toHaveAttribute("data-page-type", "analytical");
   expect(await header.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return [style.paddingTop, style.paddingRight];
-  })).toEqual(["18px", "22px"]);
+  })).toEqual(["12px", "20px"]);
 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
   await expect(frame).toHaveAttribute("data-canonical-mode", "build");
-  await expect(frame).toHaveAttribute("data-page-type", "landing");
+  await expect(frame).toHaveAttribute("data-page-type", "analytical");
   expect(await header.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return [style.paddingTop, style.paddingRight];
-  })).toEqual(["18px", "22px"]);
+  })).toEqual(["12px", "20px"]);
 
   await page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Biomedical", exact: true })
@@ -343,9 +340,7 @@ test("look drawer allows transient compression and restores dashboard geometry a
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await openDashboardPage(page, "biomedical");
   const before = await readCanvasState(page);
 
   await page.evaluate(() => window.scrollTo(0, 700));
@@ -453,12 +448,13 @@ test("denied dashboard writes remain usable with session-only feedback", async (
   });
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
+  await enterAuthoredDashboard(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
-  const home = structure.getByRole("treeitem", { name: "Home", exact: true });
+  const home = structure.getByRole("treeitem", { name: "Old Homepage Content", exact: true });
   await home.locator(":scope > .build-tree-row .build-tree-label").dblclick();
-  const rename = structure.getByRole("textbox", { name: "Rename page Home" });
+  const rename = structure.getByRole("textbox", { name: "Rename page Old Homepage Content" });
   await rename.fill("Session-only Home");
   await rename.press("Enter");
   await expect(page.locator(".dashboard-command-page-scroller")
@@ -486,9 +482,7 @@ test("look drawer phone sheet", async ({ page }) => {
 test("best-effort phone banner preserves state and leaves Present operable", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Biomedical", exact: true })
-    .click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
@@ -538,8 +532,9 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await expect(buildNotice.getByRole("button", { name: "Switch to View", exact: true }))
     .toHaveCount(1);
   await expect(workspace).toHaveCount(1);
-  await expect(workspace).toBeHidden();
-  await expect(page.locator('.app-frame[data-dashboard-mode="build"] button:visible')).toHaveCount(1);
+  await expect(workspace).toBeVisible();
+  await expect(chartDraft).toBeVisible();
+  await expect(saveChanges).toBeVisible();
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
   await expect(page.locator(
     '.build-tree-item-wrap[aria-label="Phone-preserved Biomedical layout"] > .build-tree-row .build-tree-label',
@@ -603,6 +598,6 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   const presentNotice = page.locator('[data-phone-mode-notice="present"]');
   await expect(presentNotice).toBeVisible();
   await expect(presentWorkspace).toHaveCount(1);
-  await expect(presentWorkspace).toBeHidden();
+  await expect(presentWorkspace).toBeVisible();
   await expect(presentNotice.getByRole("button", { name: "Switch to View", exact: true })).toBeVisible();
 });

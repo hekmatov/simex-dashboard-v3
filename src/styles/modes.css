@@ -1227,6 +1227,13 @@
     z-index: 1301;
   }
 
+  .app-frame:is(
+    [data-dashboard-mode="build"],
+    [data-dashboard-mode="present"]
+  ) > .mode-switch-error {
+    display: none;
+  }
+
   /* Let empty View action-rail space pass through to the phone crown while
      retaining direct pointer actions on the rail's own controls. */
   .canonical-dashboard-frame.view-shell .view-page-actions {

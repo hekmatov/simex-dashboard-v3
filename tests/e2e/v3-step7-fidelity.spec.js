@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const VIEWPORTS = [
@@ -21,8 +22,7 @@ test("Step 7 canonical content and responsive canvas contract hold at approved v
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await page.locator(".dashboard-command-page-scroller")
-      .getByRole("button", { name: "Biomedical", exact: true }).click();
+    await openDashboardPage(page, "biomedical");
     const view = await readCanvasContract(page);
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
@@ -32,8 +32,8 @@ test("Step 7 canonical content and responsive canvas contract hold at approved v
       const workspace = page.locator(".build-workspace");
       await expect(notice).toBeVisible();
       await expect(workspace).toHaveCount(1);
-      await expect(workspace).toBeHidden();
-      await expect(page.locator("[data-canonical-canvas-id]")).toBeHidden();
+      await expect(workspace).toBeVisible();
+      await expect(page.locator("[data-canonical-canvas-id]")).toBeVisible();
       expect(phoneBuild.canvasId).toBe(view.canvasId);
       expect(phoneBuild.ids).toEqual(view.ids);
 

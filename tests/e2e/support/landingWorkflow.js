@@ -23,3 +23,13 @@ export async function enterAuthoredDashboard(page) {
     await openDashboardFromLanding(page);
   }
 }
+
+export async function openDashboardPage(page, pageId) {
+  await enterAuthoredDashboard(page);
+  const modes = page.getByLabel("Dashboard mode");
+  const view = modes.getByRole("button", { name: "View", exact: true });
+  if (await view.getAttribute("aria-pressed") !== "true") {
+    await view.click();
+  }
+  await page.locator(`[data-dashboard-page-id="${pageId}"]`).click();
+}
