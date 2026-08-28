@@ -37,7 +37,7 @@ function createDashboard() {
   };
 }
 
-test("App persistence validation accepts a canonical V5 typed static transaction", () => {
+test("App persistence validation accepts a canonical V6 typed static transaction", () => {
   const draft = createStaticContentDraft({
     stage: "preview-and-add",
     contentTypeId: "freeText",
@@ -62,7 +62,7 @@ test("App persistence validation accepts a canonical V5 typed static transaction
     stagedAssetIds: finalized.stagedAssetIds,
   });
 
-  assert.equal(prepared.candidateDashboard.configVersion, 5);
+  assert.equal(prepared.candidateDashboard.configVersion, 6);
   assert.equal(Object.hasOwn(prepared.candidateDashboard, "assets"), false);
   assert.strictEqual(
     validateDashboardConfig(prepared.candidateDashboard, {
@@ -73,7 +73,7 @@ test("App persistence validation accepts a canonical V5 typed static transaction
   );
 });
 
-test("the App-owned persistence boundary admits canonical V5 typed static validation", async () => {
+test("the App-owned persistence boundary admits canonical V6 typed static validation", async () => {
   const vite = await createServer({
     root: process.cwd(),
     appType: "custom",
@@ -120,7 +120,7 @@ test("the App-owned persistence boundary admits canonical V5 typed static valida
   );
 });
 
-test("dashboard V5 hydration excludes typed static sources from tabular loading without an opt-in flag", async () => {
+test("dashboard V6 hydration excludes typed static sources from tabular loading without an opt-in flag", async () => {
   const draft = createStaticContentDraft({
     stage: "preview-and-add",
     contentTypeId: "freeText",
@@ -150,7 +150,7 @@ test("dashboard V5 hydration excludes typed static sources from tabular loading 
 
   const hydrated = await loadDashboardConfig(candidate, {}, null);
 
-  assert.equal(hydrated.configVersion, 5);
+  assert.equal(hydrated.configVersion, 6);
   assert.equal(hydrated.dataSources[finalized.panel.sourceId].kind, "staticText");
   assert.equal(Object.hasOwn(hydrated.loadedData, finalized.panel.sourceId), false);
   assert.equal(Object.hasOwn(hydrated.datasetProfiles, finalized.panel.sourceId), false);
@@ -262,7 +262,7 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
   });
 });
 
-test("ordinary chart create and edit commits survive a staged Image through durable V5 persistence", async () => {
+test("ordinary chart create and edit commits survive a staged Image through durable V6 persistence", async () => {
   const dashboard = createDashboard();
   dashboard.dataSources.status = {
     kind: "inline",
@@ -336,7 +336,7 @@ test("ordinary chart create and edit commits survive a staged Image through dura
   assert.equal(durableRecords.get(assetId).status, "durable");
   assert.equal(persisted.length, 3);
   for (const candidate of persisted) {
-    assert.equal(candidate.configVersion, 5);
+    assert.equal(candidate.configVersion, 6);
     assert.equal(candidate.assets[assetId].storageState, "durable");
     assert.equal(candidate.dataSources["readiness-image-source"].kind, "staticImage");
   }

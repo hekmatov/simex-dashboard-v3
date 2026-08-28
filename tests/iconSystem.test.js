@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
 import { validateDashboardStructure } from "../src/charting/config/dashboardConfigStructure.js";
-import { makeDashboardV5 } from "./helpers/contentLibraryFixtures.js";
+import { makeDashboardV6 } from "./helpers/contentLibraryFixtures.js";
 import {
   IconControl,
   SimExIcon,
@@ -357,13 +357,13 @@ test("SimExIcon uses the deterministic unknown glyph for dynamic misses", () => 
   assert.match(html, /aria-hidden="true"/);
 });
 
-test("version 3 global styles accept one icon accent and reject malformed values", async () => {
+test("current global styles accept one icon accent and reject malformed values", async () => {
   // Use the current dashboard contract so this test isolates icon accent validation.
   const { globalStyles } = JSON.parse(await readFile(
     new URL("../public/config/dashboard.json", import.meta.url),
     "utf8",
   ));
-  const dashboard = makeDashboardV5({ globalStyles });
+  const dashboard = makeDashboardV6({ globalStyles });
   dashboard.globalStyles.iconAccent = "#19D3C5";
   assert.doesNotThrow(() => validateDashboardStructure(dashboard));
 

@@ -6,6 +6,7 @@ import {
   isolateStaticTemporalMembership,
   migrateDashboardV3ToV4,
 } from "../src/charting/config/migrateDashboardV3ToV4.js";
+import { migrateDashboardV4ToV5 } from "../src/content-library/migrateDashboardV4ToV5.js";
 import {
   createStaticContentDraft,
   finalizeStaticContentDraft,
@@ -96,17 +97,22 @@ test("multiply-used legacy Image sources split deterministically without leaving
   assert.deepEqual(migrated.dataSources[panels[0].sourceId], migrated.dataSources[panels[1].sourceId]);
   assert.deepEqual(migrateDashboardV3ToV4(migrated), migrated);
 
-  const siblingBefore = structuredClone(migrated.dataSources[panels[1].sourceId]);
+  const current = migrateDashboardV4ToV5(migrated);
+  const currentPanels = current.pages[0].sections[0].panels;
+  const placement = current.dataSources[currentPanels[0].sourceId];
+  const mediaItem = current.contentLibrary.mediaItems[placement.mediaId];
+  const siblingBefore = structuredClone(current.dataSources[currentPanels[1].sourceId]);
   const prepared = prepareStaticPanelTransaction({
-    dashboard: migrated,
+    dashboard: current,
     operation: "update",
-    panelId: panels[0].id,
-    panel: panels[0],
-    source: { ...migrated.dataSources[panels[0].sourceId], alt: "Edited A" },
+    panelId: currentPanels[0].id,
+    panel: currentPanels[0],
+    placement: { ...placement, alt: "Edited A" },
+    mediaItem,
   });
-  assert.equal(prepared.candidateDashboard.dataSources[panels[0].sourceId].alt, "Edited A");
+  assert.equal(prepared.candidateDashboard.dataSources[currentPanels[0].sourceId].alt, "Edited A");
   assert.deepEqual(
-    prepared.candidateDashboard.dataSources[panels[1].sourceId],
+    prepared.candidateDashboard.dataSources[currentPanels[1].sourceId],
     siblingBefore,
   );
 });
@@ -206,15 +212,18 @@ test("a migrated missing alt remains viewable but must be corrected before an au
     src: "images/briefing.png",
     alt: "",
   }));
-  const panel = migrated.pages[0].sections[0].panels[0];
-  const source = migrated.dataSources[panel.sourceId];
+  const current = migrateDashboardV4ToV5(migrated);
+  const panel = current.pages[0].sections[0].panels[0];
+  const placement = current.dataSources[panel.sourceId];
+  const mediaItem = current.contentLibrary.mediaItems[placement.mediaId];
   const draft = createStaticContentDraft({
     mode: "edit",
     stage: "content",
     contentTypeId: "image",
     destination: { pageId: "overview", sectionId: "briefing" },
     panel,
-    source,
+    placement,
+    mediaItem,
   });
 
   assert.throws(
@@ -228,10 +237,11 @@ test("a migrated missing alt remains viewable but must be corrected before an au
     contentTypeId: "image",
     destination: { pageId: "overview", sectionId: "briefing" },
     panel,
-    source: { ...source, alt: "Briefing map" },
+    placement: { ...placement, alt: "Briefing map" },
+    mediaItem,
   });
   const finalized = finalizeStaticContentDraft({ ...corrected, stage: "preview-and-add" });
-  assert.equal(Object.hasOwn(finalized.source, "migrationWarnings"), false);
+  assert.equal(Object.hasOwn(finalized.placement, "migrationWarnings"), false);
 });
 
 function legacyImageDashboard({ src, alt = "", fit = "contain" }) {

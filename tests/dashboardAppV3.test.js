@@ -216,7 +216,7 @@ test("only the v3 storage key is read and malformed current state fails closed",
   }));
   assert.throws(
     () => readDashboardStorage(storage, storageKey),
-    /version 3/i,
+    /version 5 or 6/i,
   );
 });
 
@@ -386,7 +386,7 @@ test("replacement dashboards ignore fallback profiles for absent sources", async
   }]);
 });
 
-test("tracked descriptors and profiles round-trip through the portable V5 bundle", async () => {
+test("tracked descriptors and profiles round-trip through the portable V6 bundle", async () => {
   const {
     parseDashboardBundle,
     serializeDashboardBundle,
@@ -401,7 +401,7 @@ test("tracked descriptors and profiles round-trip through the portable V5 bundle
   });
   const parsed = parseDashboardBundle(JSON.stringify(bundle));
 
-  assert.equal(parsed.configVersion, 5);
+  assert.equal(parsed.configVersion, 6);
   assert.equal(parsed.pages.flatMap(({ sections }) => (
     sections.flatMap(({ panels }) => panels)
   )).length, 40);
@@ -434,7 +434,7 @@ test("the live loader hydrates inline and uploaded v3 sources with reusable prof
   ));
 });
 
-test("bundle promotion accepts V5 and materializes uploaded CSV descriptors", async () => {
+test("bundle promotion accepts V6 and materializes uploaded CSV descriptors", async () => {
   const {
     serializeDashboardBundle,
   } = await import("../src/charting/config/dashboardBundleV3.js");
@@ -523,7 +523,7 @@ test("bundle promotion accepts V5 and materializes uploaded CSV descriptors", as
       version: 2,
       config: {},
     })),
-    /version 4 or version 5 bundles only/i,
+    /version 4, version 5, or version 6 bundles only/i,
   );
 });
 

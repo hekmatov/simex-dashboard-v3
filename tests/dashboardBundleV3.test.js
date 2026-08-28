@@ -235,32 +235,32 @@ function deltaListChart(overrides = {}) {
   };
 }
 
-test("bundle v5 migrates and round-trips uploaded and inline sources", () => {
+test("bundle v6 migrates and round-trips uploaded and inline sources", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, {
     now: "2026-07-26T12:00:00.000Z",
   });
 
   assert.equal(bundle.bundleType, "simex-dashboard-bundle");
-  assert.equal(bundle.version, 5);
-  assert.equal(bundle.config.configVersion, 5);
+  assert.equal(bundle.version, 6);
+  assert.equal(bundle.config.configVersion, 6);
   assert.equal(bundle.metadata.exportedAt, "2026-07-26T12:00:00.000Z");
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
 
-test("the canonical boundary emits dashboard v5 and bundle v5 while contained charts remain v3", () => {
+test("the canonical boundary emits dashboard v6 and bundle v6 while contained charts remain v3", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, { now: null });
 
-  assert.equal(DASHBOARD_SCHEMA_VERSION, 5);
-  assert.equal(DASHBOARD_BUNDLE_VERSION, 5);
-  assert.equal(bundle.version, 5);
-  assert.equal(bundle.config.configVersion, 5);
+  assert.equal(DASHBOARD_SCHEMA_VERSION, 6);
+  assert.equal(DASHBOARD_BUNDLE_VERSION, 6);
+  assert.equal(bundle.version, 6);
+  assert.equal(bundle.config.configVersion, 6);
   assert.equal(bundle.config.pages[0].sections[0].panels[0].configVersion, 3);
-  assert.equal(parseDashboardBundle(JSON.stringify(bundle)).configVersion, 5);
+  assert.equal(parseDashboardBundle(JSON.stringify(bundle)).configVersion, 6);
 });
 
-test("bundle v5 verifies migrated local authored payloads and declares linked image dependencies", () => {
+test("bundle v6 verifies migrated local authored payloads and declares linked image dependencies", () => {
   const bytes = imageFixtureBytes("image/png");
   const sha256 = sha256HexSync(bytes);
   const assetId = `asset-${sha256}`;
@@ -303,7 +303,7 @@ test("bundle v5 verifies migrated local authored payloads and declares linked im
   assert.deepEqual(bundle.metadata.networkDependencies, ["https://example.test/linked.webp"]);
   const parsed = parseDashboardBundle(JSON.stringify(bundle), { includeEnvelope: true });
   assert.deepEqual(parsed.assetPayloads, bundle.assetPayloads);
-  assert.equal(parsed.config.configVersion, 5);
+  assert.equal(parsed.config.configVersion, 6);
 
   const missing = structuredClone(bundle);
   delete missing.assetPayloads[assetId];

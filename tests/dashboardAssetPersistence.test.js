@@ -193,7 +193,7 @@ test("legacy embedded image references hydrate before deterministic replacement-
     getItem: () => JSON.stringify(prepared.storageConfig),
   }, key, { assets: persistence });
 
-  assert.equal(restored.configVersion, 5);
+  assert.equal(restored.configVersion, 6);
   assert.equal(restored.dataSources.briefing.kind, "staticImage");
   assert.equal(restored.dataSources.briefing.sourceVersion, 2);
   assert.equal(restored.dataSources.briefing.mediaId, "media-briefing");

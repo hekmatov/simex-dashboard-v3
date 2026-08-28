@@ -15,6 +15,7 @@ import { sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope
 import { buildPortableData } from "../scripts/build-portable-data.mjs";
 import { packageFlashDrive } from "../scripts/package-flashdrive.mjs";
 import { preparePromotedDashboard } from "../scripts/promote-dashboard-bundle.mjs";
+import { enterAuthoredDashboard } from "./e2e/support/landingWorkflow.js";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -89,6 +90,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
     const pageErrors = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
     await page.goto(serverUrl, { waitUntil: "domcontentloaded" });
+    await enterAuthoredDashboard(page);
     await page.locator(".dashboard-command-page-scroller")
       .getByRole("button", { name: "Biomedical", exact: true }).click();
     const runtimeDiagnostic = await page.evaluate(async ({ title }) => {
@@ -124,6 +126,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
 
     await waitForServiceWorker(page);
     await page.reload({ waitUntil: "domcontentloaded" });
+    await enterAuthoredDashboard(page);
     await page.locator(".dashboard-command-page-scroller")
       .getByRole("button", { name: "Biomedical", exact: true }).click();
     await imagePanel.waitFor({ state: "attached", timeout: 20_000 });
@@ -135,7 +138,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
     const choice = page.locator('[data-presentable-item-id="ps04_image_panel"]');
     await choice.getByRole("checkbox").check();
     const audiencePromise = context.waitForEvent("page");
-    await page.getByRole("button", { name: "Open audience display" }).click();
+    await page.getByRole("button", { name: "Open new audience session" }).click();
     const audience = await audiencePromise;
     await audience.waitForLoadState("domcontentloaded");
     await assertVisible(audience.locator(`img[alt="${IMAGE_ALT}"]`));
