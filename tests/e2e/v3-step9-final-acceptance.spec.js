@@ -95,6 +95,9 @@ test("keyboard and screen-reader journey exposes truthful mode and Dashboard map
   await expect(firstTreeItem).toBeFocused();
 
   const snapshot = await page.locator("body").ariaSnapshot();
+  expect(snapshot).toContain("Home");
+  expect(snapshot).toContain("View");
+  expect(snapshot).toContain("Build");
   expect(snapshot).toContain("Dashboard map");
   expect(snapshot).toContain("Dashboard structure");
   expect(snapshot).toContain('treeitem "Old Homepage Content" [expanded] [selected]');
