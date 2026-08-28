@@ -5,6 +5,7 @@ import {
   createScenarioDraft,
   reduceScenarioDraft,
 } from "../build/ScenarioAuthoring.jsx";
+import { ONLINE_DASHBOARD_RESTORE_DESCRIPTION } from "../../lib/onlineDashboardRestore.js";
 
 const DISCARD_BUILD_CHANGES_DESCRIPTION = "Restores the dashboard to the baseline captured when you entered Build. It does not contact the deployed online dashboard.";
 
@@ -24,6 +25,7 @@ export default function ScenarioPassportPopover({
   onImportPackage,
   onDownloadPackage,
   onDiscardBuildChanges,
+  onRestoreOnlineDashboard,
   onClearDashboard,
 }) {
   const [draft, setDraft] = React.useState(() => createScenarioDraft(dashboard));
@@ -193,6 +195,23 @@ export default function ScenarioPassportPopover({
             onClick={onDiscardBuildChanges}
           >
             Discard Build changes
+          </button>
+        </ControlTooltip>
+        <ControlTooltip
+          disabled={busy}
+          explain={!busy}
+          reason={busy
+            ? "Wait for the Scenario to finish saving."
+            : ONLINE_DASHBOARD_RESTORE_DESCRIPTION}
+        >
+          <button
+            type="button"
+            className="secondary"
+            aria-label="Restore online dashboard"
+            disabled={busy}
+            onClick={onRestoreOnlineDashboard}
+          >
+            Restore online dashboard…
           </button>
         </ControlTooltip>
         <ControlTooltip

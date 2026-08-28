@@ -12,6 +12,7 @@ import AppFrame from "./components/app-shell/AppFrame.jsx";
 import { useOperationStatus } from "./components/app-shell/OperationStatusProvider.jsx";
 import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
+import RestoreOnlineDashboardDialog from "./components/app-shell/RestoreOnlineDashboardDialog.jsx";
 import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
 import BuildPageNavigation from "./components/build/BuildPageNavigation.jsx";
 import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
@@ -64,6 +65,10 @@ import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransa
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
 import { createBlankDashboardContent } from "./lib/dashboardContentReset.js";
 import { prepareDashboardAuthoredPersistenceCandidate } from "./lib/dashboardAuthoredRevision.js";
+import {
+  commitOnlineDashboardRestore,
+  prepareOnlineDashboardRestore,
+} from "./lib/onlineDashboardRestore.js";
 import {
   initialDisplayState,
   reduceDisplayState,
@@ -181,6 +186,9 @@ export default function App() {
   const [packageImportCandidate, setPackageImportCandidate] = React.useState(null);
   const [packageImportBusy, setPackageImportBusy] = React.useState(false);
   const [packageImportError, setPackageImportError] = React.useState("");
+  const [onlineRestoreOpen, setOnlineRestoreOpen] = React.useState(false);
+  const [onlineRestoreBusy, setOnlineRestoreBusy] = React.useState(false);
+  const [onlineRestoreError, setOnlineRestoreError] = React.useState("");
   const initialModeInputsRef = React.useRef(null);
   if (initialModeInputsRef.current === null) {
     initialModeInputsRef.current = {
@@ -1368,7 +1376,7 @@ export default function App() {
         snapshotDashboard: () => ensureDashboardCommitController().getCurrent(),
         restoreDashboard: commitImportedConfiguration,
         rebase: (importedDashboard) => {
-          dashboardRendererRef.current?.resetAfterPackageImport?.(importedDashboard);
+          dashboardRendererRef.current?.resetAfterDashboardReplacement?.(importedDashboard);
         },
       });
       setPackageImportCandidate(null);
@@ -1397,6 +1405,100 @@ export default function App() {
       return null;
     } finally {
       setPackageImportBusy(false);
+    }
+  }
+
+  async function restoreOnlineDashboard() {
+    if (onlineRestoreBusy) return null;
+    const status = beginOperation({
+      key: "online-dashboard-restore",
+      label: "Restoring online dashboard",
+      blocking: true,
+      intent: "warning",
+    });
+    setOnlineRestoreBusy(true);
+    setOnlineRestoreError("");
+    try {
+      const candidate = await prepareOnlineDashboardRestore({
+        baseUrl: import.meta.env.BASE_URL,
+        loadDefinition: loadDashboardDefinition,
+        hydrate: (onlineDashboard, profiles, portableSources) => loadDashboardConfig(
+          onlineDashboard,
+          profiles,
+          portableSources,
+          { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
+        ),
+        validate: (hydrated) => {
+          const profiles = hydrated.datasetProfiles ?? {};
+          const stored = configurationForStorage(hydrated, profiles);
+          validateConfigurationForPersistence(
+            stored,
+            profilesForConfiguredCsvSources(stored.dataSources, profiles),
+          );
+        },
+      });
+      await dashboardRendererRef.current?.prepareForOnlineDashboardRestore?.();
+      const controller = ensureDashboardCommitController();
+      const result = await commitOnlineDashboardRestore({
+        current: controller.getCurrent(),
+        candidate: configurationForPortableUse(candidate),
+        commitController: {
+          whenIdle: () => controller.whenIdle(),
+          replaceWith: (replacement) => controller.replaceWith(
+            replacement,
+            (durableCandidate) => persistConfiguration(durableCandidate, {
+              preserveAuthoredRevision: true,
+              requireDurableStorage: true,
+              transactionId: "online-dashboard-restore",
+            }),
+          ),
+        },
+        cleanupAssets: (previous, committed) => (
+          dashboardAssetPersistence.removeDashboardAssets(previous, {
+            retainedDashboard: committed,
+          })
+        ),
+      });
+      const committed = result.dashboard;
+      trackedDatasetProfilesRef.current = committed.datasetProfiles ?? {};
+      dashboardRendererRef.current?.resetAfterDashboardReplacement?.(committed);
+      setScenarioPassportOpen(false);
+      setScenarioPassportDirty(false);
+      dashboardRendererRef.current?.setAuthoredDirtyFlag?.("scenario", false);
+      setScenarioPassportResetRevision((current) => current + 1);
+      if (mode === "build") {
+        setEditBaseline(configurationForEditBaseline(
+          committed,
+          trackedDatasetProfilesRef.current,
+        ));
+      }
+      reconcileCommittedDashboardMode({
+        currentMode: mode,
+        committedDashboard: committed,
+        onModeChange: setMode,
+        onPersistMode: persistDashboardModePreference,
+        onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
+          key: current.key + 1,
+          mode: nextMode,
+        })),
+      });
+      await reconcileSavedAuthoredAssets(
+        committed,
+        contentDraftCoordinator.getActiveRetainers(),
+      );
+      setOnlineRestoreOpen(false);
+      setOnlineRestoreError("");
+      status.succeed(result.cleanupWarning
+        ? "Online dashboard restored, but unused browser source files could not be removed."
+        : "Online dashboard restored.");
+      return committed;
+    } catch (restoreError) {
+      const message = restoreError?.message || "Online dashboard could not be restored.";
+      setOnlineRestoreError(message);
+      status.fail(message);
+      return null;
+    } finally {
+      setOnlineRestoreBusy(false);
     }
   }
 
@@ -1554,6 +1656,10 @@ export default function App() {
         onImportPackage={() => dashboardRendererRef.current?.requestDashboardPackageImport?.()}
         onDownloadPackage={() => dashboardRendererRef.current?.requestDashboardPackageExport?.()}
         onDiscardBuildChanges={() => dashboardRendererRef.current?.requestDiscardBuildChanges?.()}
+        onRestoreOnlineDashboard={() => {
+          setOnlineRestoreError("");
+          setOnlineRestoreOpen(true);
+        }}
         onClearDashboard={() => dashboardRendererRef.current?.requestDeleteDashboardContent?.()}
       />}
       density={densityForDashboardMode(mode)}
@@ -1735,6 +1841,18 @@ export default function App() {
         if (packageImportBusy) return;
         setPackageImportCandidate(null);
         setPackageImportError("");
+      }}
+    />
+    <RestoreOnlineDashboardDialog
+      open={onlineRestoreOpen}
+      busy={onlineRestoreBusy}
+      error={onlineRestoreError}
+      onDownloadPackage={() => dashboardRendererRef.current?.requestDashboardPackageExport?.()}
+      onConfirm={restoreOnlineDashboard}
+      onCancel={() => {
+        if (onlineRestoreBusy) return;
+        setOnlineRestoreOpen(false);
+        setOnlineRestoreError("");
       }}
     />
     </AppFrame>

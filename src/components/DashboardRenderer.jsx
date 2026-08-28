@@ -421,8 +421,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await pendingEdits.flush();
       await onCommitPendingConfiguration?.();
     },
-    resetAfterPackageImport(importedDashboard) {
-      const rebasedDrafts = createImportedRendererDraftState(importedDashboard);
+    async prepareForOnlineDashboardRestore() {
+      await pendingEdits.flush();
+      await onCommitPendingConfiguration?.();
+    },
+    resetAfterDashboardReplacement(replacementDashboard) {
+      const rebasedDrafts = createImportedRendererDraftState(replacementDashboard);
       pendingEdits.cancel();
       for (const resolve of buildRevealResolversRef.current.values()) resolve(false);
       buildRevealResolversRef.current.clear();

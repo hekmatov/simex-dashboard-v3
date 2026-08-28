@@ -38,6 +38,7 @@ test("Build anchors Scenario Passport and package actions to the Crown identity"
     onImportPackage() {},
     onDownloadPackage() {},
     onDiscardBuildChanges() {},
+    onRestoreOnlineDashboard() {},
     onClearDashboard() {},
   });
   const html = renderToStaticMarkup(React.createElement(identityModule.default, {
@@ -61,6 +62,7 @@ test("Build anchors Scenario Passport and package actions to the Crown identity"
   assert.match(html, />Upload Dashboard Package</);
   assert.match(html, />Download Dashboard Package</);
   assert.match(html, />Discard Build changes</);
+  assert.match(html, />Restore online dashboard…</);
   assert.match(html, />Clear dashboard…</);
   assert.doesNotMatch(html, /Source provenance|No source provenance|unknown/i);
   assert.match(
@@ -70,6 +72,10 @@ test("Build anchors Scenario Passport and package actions to the Crown identity"
   assert.match(
     html,
     /role="tooltip"[^>]*>Restores the dashboard to the baseline captured when you entered Build\. It does not contact the deployed online dashboard\.<\/span>/,
+  );
+  assert.match(
+    html,
+    /role="tooltip"[^>]*>Fetches and validates the dashboard served by this deployed SimEx instance\. Unlike Discard Build changes, it does not use the Build-entry baseline\.<\/span>/,
   );
   assert.doesNotMatch(html, /Save All|Export package/);
 });
@@ -151,6 +157,7 @@ test("the live App wires the Crown Scenario Passport to renderer package operati
   assert.match(app, /requestDashboardPackageImport/);
   assert.match(app, /onDownloadPackage=.*exportConfig/s);
   assert.match(app, /requestDiscardBuildChanges/);
+  assert.match(app, /onRestoreOnlineDashboard/);
   assert.match(app, /requestDeleteDashboardContent/);
 });
 
