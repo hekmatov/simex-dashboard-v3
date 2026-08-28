@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { scenePresentLayoutToDisplayLayout } from "../../src/components/time/scenePresentLayout.js";
 import {
   WORKSPACE_VIEWPORTS,
   captureCheckpoint,
@@ -224,6 +225,10 @@ test("1920 Audience preserves room-distance composition through the public workf
   const savedChartIds = scene.present.chartIds;
   expect(savedChartIds.length).toBeGreaterThan(0);
   expect(new Set(savedChartIds).size).toBe(savedChartIds.length);
+  const savedDisplayLayout = scenePresentLayoutToDisplayLayout(
+    scene.present.layout,
+    savedChartIds.length,
+  );
 
   await enterPresentWithScene(page, scene);
   let popup;
@@ -249,6 +254,10 @@ test("1920 Audience preserves room-distance composition through the public workf
     await expect(sceneName).toHaveText(scene.name);
     await expect(sceneDate).toBeVisible();
     await expect(cells).toHaveCount(savedChartIds.length);
+    expect(await grid.evaluate((element) => [...element.classList])).toEqual(expect.arrayContaining([
+      `displayed-count-${savedChartIds.length}`,
+      `layout-${savedDisplayLayout}`,
+    ]));
     expect(await cells.evaluateAll((elements) => (
       elements.map((element) => element.getAttribute("data-displayed-chart-id"))
     ))).toEqual(savedChartIds);
@@ -261,6 +270,9 @@ test("1920 Audience preserves room-distance composition through the public workf
       await expect(cell.locator(AUDIENCE_INVALID_CHART_STATE)).toHaveCount(0);
     }
 
+    await expect(audience).toHaveAttribute("data-render-status", "current");
+    await expect(audience).toHaveAttribute("data-connection-status", "connected");
+    await expect(audience.locator("[data-connection-indicator]")).toHaveCount(0);
     const geometry = await readAudienceRoomDistanceGeometry(popup);
     expect(geometry.root.width).toBe(geometry.viewport.width);
     expect(geometry.root.height).toBe(geometry.viewport.height);
@@ -274,6 +286,7 @@ test("1920 Audience preserves room-distance composition through the public workf
     expectContainedGeometry(geometry.sceneDate, geometry.root, "Audience Scene date");
     expectContainedGeometry(geometry.grid, geometry.root, "Audience chart grid");
     expect(geometry.cells).toHaveLength(savedChartIds.length);
+    expectPairwiseNonOverlapping(geometry.cells);
     for (const cell of geometry.cells) {
       expect(cell.id).toBe(savedChartIds[cell.index]);
       expectContainedGeometry(cell.bounds, geometry.grid, `Audience cell ${cell.id}`);
@@ -375,6 +388,23 @@ function expectContainedGeometry(inner, outer, label) {
   expect(inner.top, `${label} top`).toBeGreaterThanOrEqual(outer.top - 1);
   expect(inner.right, `${label} right`).toBeLessThanOrEqual(outer.right + 1);
   expect(inner.bottom, `${label} bottom`).toBeLessThanOrEqual(outer.bottom + 1);
+}
+
+function expectPairwiseNonOverlapping(cells) {
+  for (let leftIndex = 0; leftIndex < cells.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < cells.length; rightIndex += 1) {
+      const left = cells[leftIndex];
+      const right = cells[rightIndex];
+      const separated = left.bounds.right <= right.bounds.left + 1
+        || right.bounds.right <= left.bounds.left + 1
+        || left.bounds.bottom <= right.bounds.top + 1
+        || right.bounds.bottom <= left.bounds.top + 1;
+      expect(
+        separated,
+        `Audience cells ${left.id} and ${right.id} overlap by more than 1px`,
+      ).toBe(true);
+    }
+  }
 }
 
 async function readSavedPackage(page) {
