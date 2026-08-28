@@ -28,22 +28,21 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "dataSources",
     "description",
     "globalStyles",
+    "home",
     "id",
     "lastUpdated",
     "layout",
     "pages",
     "programLabel",
     "scenarioLabel",
-    "scenes",
     "timezone",
     "title",
   ],
+  home: ["enabled"],
   page: [
     "description",
     "id",
     "label",
-    "landing",
-    "pageType",
     "sections",
     "title",
   ],
@@ -54,24 +53,14 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "panels",
     "title",
   ],
-  landing: [
-    "capabilities",
-    "faq",
-    "hero",
-    "resources",
-  ],
-  hero: [
-    "deliveryLabel",
-    "headline",
-    "primaryAction",
-    "summary",
-  ],
-  heroAction: ["label", "pageId"],
-  capability: ["description", "number", "title"],
-  faq: ["description", "heading", "items"],
-  faqItem: ["answer", "question"],
-  resources: ["description", "heading", "repository"],
-  repository: ["destination", "label"],
+  landing: [],
+  hero: [],
+  heroAction: [],
+  capability: [],
+  faq: [],
+  faqItem: [],
+  resources: [],
+  repository: [],
   globalStyles: [
     "accessibility",
     "chartColorMode",
@@ -109,6 +98,7 @@ test("the strict semantic boundary covers the current showcase structure exactly
 
 test("every packaged dashboard structure family participates in the digest and stale match", async (t) => {
   const { dashboard, aliases } = await trackedInputs();
+  addAuthoredLandingFixture(dashboard);
   const originalBytes = Buffer.from(
     canonicalDashboardSemanticsBytes(dashboard, aliases),
   );
@@ -252,6 +242,7 @@ test("every packaged dashboard structure family participates in the digest and s
 
 test("the producer rejects unknown structural fields, wrong types, cycles, and accessors", async (t) => {
   const { dashboard, aliases } = await trackedInputs();
+  addAuthoredLandingFixture(dashboard);
   const cases = {
     "unknown root field": (value) => {
       value.legacyDashboard = {};
@@ -326,6 +317,7 @@ test("the producer rejects unknown structural fields, wrong types, cycles, and a
 
 test("the producer rejects duplicate structural identities and broken landing references", async (t) => {
   const { dashboard, aliases } = await trackedInputs();
+  addAuthoredLandingFixture(dashboard);
   const cases = {
     "duplicate page ID": (value) => {
       value.pages[2].id = value.pages[1].id;
@@ -362,6 +354,7 @@ test("the producer rejects duplicate structural identities and broken landing re
 
 test("bundle validation and runtime loading enforce the same dashboard structure boundary", async (t) => {
   const { dashboard, profiles } = await trackedInputs();
+  addAuthoredLandingFixture(dashboard);
   const cases = {
     "unknown page field": {
       mutate(value) {
@@ -379,13 +372,13 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       mutate(value) {
         landing(value).hero.primaryAction.pageId = "missing-page";
       },
-      error: /Landing primary action for page "home" references unknown page "missing-page"\./,
+      error: /Landing primary action for page "old-homepage-content" references unknown page "missing-page"\./,
     },
     "cyclic landing data": {
       mutate(value) {
         landing(value).hero = landing(value);
       },
-      error: /Dashboard configuration property "pages" 0 property "landing" property "hero" contains a cyclic structural reference\./,
+      error: /Dashboard configuration property "pages" \d+ property "landing" property "hero" contains a cyclic structural reference\./,
     },
   };
 
@@ -409,6 +402,7 @@ test("bundle validation and runtime loading enforce the same dashboard structure
 
 test("structural cycle guards allow shared non-cyclic references", async () => {
   const { dashboard, profiles } = await trackedInputs();
+  addAuthoredLandingFixture(dashboard);
   const sharedFaqItem = landing(dashboard).faq.items[0];
   landing(dashboard).faq.items[1] = sharedFaqItem;
   dashboard.datasetProfiles = profiles;
@@ -420,13 +414,20 @@ test("structural cycle guards allow shared non-cyclic references", async () => {
 test("runtime loading rejects a dashboard without a migratable version", async () => {
   await assert.rejects(
     loadDashboardConfig({}, {}),
-    /migration supports version 3 or version 4 input/i,
+    /dashboard configuration version 5 or 6 is required/i,
   );
 });
 
 test("runtime loading requires configured pages instead of synthesizing a legacy page", async () => {
-  const missingPages = runtimeDashboard();
-  delete missingPages.pages;
+  const missingPages = {
+    configVersion: 6,
+    contentLibrary: { mediaItems: {}, sourceEntries: {} },
+    dataSources: {},
+    home: { enabled: true },
+    id: "missing-pages-dashboard",
+    title: "Missing pages dashboard",
+    timezone: "UTC",
+  };
   await assert.rejects(
     loadDashboardConfig(missingPages, {}),
     /dashboard configuration property "pages" is required/i,
@@ -484,21 +485,25 @@ async function readJson(path) {
 
 function structureInventory(dashboard) {
   const landingPage = dashboard.pages.find((page) => page.landing);
+  const landingContent = landingPage?.landing;
   const sections = dashboard.pages.flatMap((page) => page.sections);
   return {
     root: keysOf([dashboard]),
+    home: keysOf([dashboard.home]),
     page: keysOf(dashboard.pages),
     section: keysOf(sections),
-    landing: keysOf([landingPage.landing]),
-    hero: keysOf([landingPage.landing.hero]),
-    heroAction: keysOf([
-      landingPage.landing.hero.primaryAction,
-    ]),
-    capability: keysOf(landingPage.landing.capabilities),
-    faq: keysOf([landingPage.landing.faq]),
-    faqItem: keysOf(landingPage.landing.faq.items),
-    resources: keysOf([landingPage.landing.resources]),
-    repository: keysOf([landingPage.landing.resources.repository]),
+    landing: keysOf(landingContent ? [landingContent] : []),
+    hero: keysOf(landingContent ? [landingContent.hero] : []),
+    heroAction: keysOf(
+      landingContent ? [landingContent.hero.primaryAction] : [],
+    ),
+    capability: keysOf(landingContent?.capabilities ?? []),
+    faq: keysOf(landingContent ? [landingContent.faq] : []),
+    faqItem: keysOf(landingContent?.faq?.items ?? []),
+    resources: keysOf(landingContent ? [landingContent.resources] : []),
+    repository: keysOf(
+      landingContent ? [landingContent.resources.repository] : [],
+    ),
     globalStyles: keysOf([dashboard.globalStyles]),
     accessibility: keysOf([dashboard.globalStyles.accessibility]),
     panelColors: keysOf([dashboard.globalStyles.panelColors]),
@@ -516,6 +521,44 @@ function landing(dashboard) {
 
 function pageById(dashboard, pageId) {
   return dashboard.pages.find(({ id }) => id === pageId);
+}
+
+function addAuthoredLandingFixture(dashboard) {
+  const page = pageById(dashboard, "old-homepage-content");
+  page.pageType = "landing";
+  page.landing = {
+    capabilities: [{
+      number: "01",
+      title: "Explore",
+      description: "Review the authored dashboard content.",
+    }],
+    hero: {
+      deliveryLabel: "Fixture",
+      headline: "Authored landing fixture",
+      summary: "A non-reserved landing page for semantic boundary coverage.",
+      primaryAction: {
+        label: "Open Biomedical",
+        pageId: "biomedical",
+      },
+    },
+    faq: {
+      heading: "Questions",
+      description: "Fixture questions for semantic coverage.",
+      items: [
+        { question: "What is covered?", answer: "Landing semantics." },
+        { question: "Where does it lead?", answer: "Biomedical." },
+      ],
+    },
+    resources: {
+      heading: "Resources",
+      description: "Fixture resources for semantic coverage.",
+      repository: {
+        label: "Repository",
+        destination: "https://example.test/simex-dashboard",
+      },
+    },
+  };
+  return dashboard;
 }
 
 function configuredChart(dashboard, chartId) {
