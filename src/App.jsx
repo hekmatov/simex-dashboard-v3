@@ -191,6 +191,8 @@ export default function App() {
   }
   const initialModeResolvedRef = React.useRef(false);
   const [mode, setMode] = React.useState(null);
+  const modeRef = React.useRef(mode);
+  modeRef.current = mode;
   const [surfaceFocusRequest, setSurfaceFocusRequest] = React.useState({
     key: 0,
     mode: null,
@@ -561,11 +563,18 @@ export default function App() {
       action,
       validChartIdsRef.current,
     );
+    const shouldShowCompanionDisplay = action.type === "companion_set"
+      && next.displayed_chart_ids.length > 0
+      && modeRef.current === "home";
     if (next !== current) {
       displayStateRef.current = next;
       setDisplayState(next);
       const reason = displayActionReason(action);
       if (reason) companionClientRef.current?.displayStateChanged(reason);
+    }
+    if (shouldShowCompanionDisplay) {
+      modeRef.current = "view";
+      setMode("view");
     }
     return next;
   }, []);

@@ -1888,6 +1888,20 @@
       calc(100% - var(--simex-dashboard-map-reserved-width) - 48px)
     );
   }
+
+  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"] .build-command-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"]
+    :is(
+      .build-command-group[data-build-command-group="package"],
+      .build-command-group--session,
+      .build-command-group--layout
+    ) {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -23,9 +23,12 @@ test("Quorum chart display remains available when the dashboard starts on showca
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "From complex exercise data to shared situational awareness",
+      name: "SimEx Dashboard",
+      exact: true,
     }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Home", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
   await expectCompanionConnected(page, request);
 
   await control(request, "display-set", {
@@ -36,6 +39,8 @@ test("Quorum chart display remains available when the dashboard starts on showca
   await expect(
     page.locator(`[data-displayed-chart-id="${FIRST_CHART}"]`),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "View", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
 });
 
 test("operator-authorized display and immersive Exit share actual browser state", async ({
@@ -272,7 +277,8 @@ test("runtime chart-definition drift disables companion commands", async ({
 
   expect((await catalogueResponse).ok()).toBe(true);
   await expect(page.getByRole("heading", {
-    name: "From complex exercise data to shared situational awareness",
+    name: "SimEx Dashboard",
+    exact: true,
   })).toBeVisible();
   const result = await control(request, "display-set", {
     chart_ids: [FIRST_CHART],

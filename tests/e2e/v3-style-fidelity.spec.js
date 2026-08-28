@@ -325,7 +325,7 @@ test("Present gives the audience monitor half the workspace without duplicate Pa
   await expect(page.getByLabel("Display Page")).toHaveCount(0);
 });
 
-test("Dashboard map clears visible Build controls and closing restores its frame", async ({ page }) => {
+test("Dashboard map clears actionable Build controls without command overflow and closing restores its frame", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
@@ -335,7 +335,6 @@ test("Dashboard map clears visible Build controls and closing restores its frame
   const look = pinned.getByRole("button", { name: "Dashboard look", exact: true });
   const toggle = pinned.getByRole("button", { name: "Dashboard map", exact: true });
   const drawer = page.locator(".dashboard-map-panel");
-  const commandHeader = page.locator(".build-command-header");
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
 
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -348,16 +347,38 @@ test("Dashboard map clears visible Build controls and closing restores its frame
   await expect(drawer).toBeVisible();
   await expect.poll(() => page.evaluate(() => {
     const map = document.querySelector(".dashboard-map-panel")?.getBoundingClientRect();
-    const header = document.querySelector(".build-command-header")?.getBoundingClientRect();
-    return map && header ? map.top - header.bottom : Number.NEGATIVE_INFINITY;
-  })).toBeGreaterThanOrEqual(0);
+    const commandGrid = document.querySelector(".build-command-groups");
+    const commandHeader = document.querySelector(".build-command-header");
+    if (!map || !commandGrid || !commandHeader) return null;
+    const actionable = [...document.querySelectorAll(
+      ".build-command-header :is(button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href])",
+    )].filter((node) => {
+      const style = getComputedStyle(node);
+      return style.display !== "none" && style.visibility !== "hidden";
+    });
+    const intersectingControls = actionable.filter((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.right > map.left
+        && rect.left < map.right
+        && rect.bottom > map.top
+        && rect.top < map.bottom;
+    }).map((node) => node.textContent?.trim() || node.getAttribute("aria-label"));
+    const commandGridRect = commandGrid.getBoundingClientRect();
+    const commandHeaderRect = commandHeader.getBoundingClientRect();
+    return {
+      commandOverflow: Math.max(
+        commandHeader.scrollWidth - commandHeader.clientWidth,
+        Math.ceil(commandGridRect.right - commandHeaderRect.right),
+        0,
+      ),
+      intersectingControls,
+    };
+  })).toEqual({ commandOverflow: 0, intersectingControls: [] });
   const openFrame = await frame.boundingBox();
   const openDrawer = await drawer.boundingBox();
-  const openHeader = await commandHeader.boundingBox();
   expect(openFrame.width).toBeGreaterThanOrEqual(closed.width * 0.65);
   expect(openFrame.x).toBeGreaterThanOrEqual(0);
   expect(openDrawer.x).toBeLessThan(1440);
-  expect(openDrawer.y).toBeGreaterThanOrEqual(openHeader.y + openHeader.height);
 
   await toggle.click();
   await expect(drawer).toBeHidden();
