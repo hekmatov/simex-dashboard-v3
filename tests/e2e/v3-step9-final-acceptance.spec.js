@@ -20,6 +20,7 @@ import {
 } from "./support/present-audience-workflow.js";
 
 const DESKTOP_VIEWPORT = WORKSPACE_VIEWPORTS.find(({ width, height }) => width === 1200 && height === 900);
+const GEOMETRY_TOLERANCE = 1;
 const AUDIENCE_PRIMARY_VISUAL = [
   ".chart-echarts-host canvas",
   ".chart-image-viewport :is(img, svg)",
@@ -287,6 +288,7 @@ test("1920 Audience preserves room-distance composition through the public workf
     expectContainedGeometry(geometry.grid, geometry.root, "Audience chart grid");
     expect(geometry.cells).toHaveLength(savedChartIds.length);
     expectPairwiseNonOverlapping(geometry.cells);
+    expectAudienceLayoutGeometry(savedDisplayLayout, geometry.cells);
     for (const cell of geometry.cells) {
       expect(cell.id).toBe(savedChartIds[cell.index]);
       expectContainedGeometry(cell.bounds, geometry.grid, `Audience cell ${cell.id}`);
@@ -384,10 +386,10 @@ async function readAudienceRoomDistanceGeometry(popup) {
 function expectContainedGeometry(inner, outer, label) {
   expect(inner.width, `${label} width`).toBeGreaterThan(0);
   expect(inner.height, `${label} height`).toBeGreaterThan(0);
-  expect(inner.left, `${label} left`).toBeGreaterThanOrEqual(outer.left - 1);
-  expect(inner.top, `${label} top`).toBeGreaterThanOrEqual(outer.top - 1);
-  expect(inner.right, `${label} right`).toBeLessThanOrEqual(outer.right + 1);
-  expect(inner.bottom, `${label} bottom`).toBeLessThanOrEqual(outer.bottom + 1);
+  expect(inner.left, `${label} left`).toBeGreaterThanOrEqual(outer.left - GEOMETRY_TOLERANCE);
+  expect(inner.top, `${label} top`).toBeGreaterThanOrEqual(outer.top - GEOMETRY_TOLERANCE);
+  expect(inner.right, `${label} right`).toBeLessThanOrEqual(outer.right + GEOMETRY_TOLERANCE);
+  expect(inner.bottom, `${label} bottom`).toBeLessThanOrEqual(outer.bottom + GEOMETRY_TOLERANCE);
 }
 
 function expectPairwiseNonOverlapping(cells) {
@@ -395,16 +397,129 @@ function expectPairwiseNonOverlapping(cells) {
     for (let rightIndex = leftIndex + 1; rightIndex < cells.length; rightIndex += 1) {
       const left = cells[leftIndex];
       const right = cells[rightIndex];
-      const separated = left.bounds.right <= right.bounds.left + 1
-        || right.bounds.right <= left.bounds.left + 1
-        || left.bounds.bottom <= right.bounds.top + 1
-        || right.bounds.bottom <= left.bounds.top + 1;
+      const separated = left.bounds.right <= right.bounds.left + GEOMETRY_TOLERANCE
+        || right.bounds.right <= left.bounds.left + GEOMETRY_TOLERANCE
+        || left.bounds.bottom <= right.bounds.top + GEOMETRY_TOLERANCE
+        || right.bounds.bottom <= left.bounds.top + GEOMETRY_TOLERANCE;
       expect(
         separated,
         `Audience cells ${left.id} and ${right.id} overlap by more than 1px`,
       ).toBe(true);
     }
   }
+}
+
+function expectAudienceLayoutGeometry(layout, cells) {
+  if (layout === "solo") {
+    expect(cells, "solo Audience cell count").toHaveLength(1);
+    return;
+  }
+  if (layout === "sideBySide") {
+    expect(cells, "sideBySide Audience cell count").toHaveLength(2);
+    expectHorizontalOrder(cells[0], cells[1], "sideBySide cells");
+    expectSharedRow(cells[0], cells[1], "sideBySide cells");
+    return;
+  }
+  if (layout === "overUnder") {
+    expect(cells, "overUnder Audience cell count").toHaveLength(2);
+    expectVerticalOrder(cells[0], cells[1], "overUnder cells");
+    expectSharedColumn(cells[0], cells[1], "overUnder cells");
+    return;
+  }
+  if (layout === "leftFocus" || layout === "rightFocus") {
+    expect(cells, `${layout} Audience cell count`).toHaveLength(3);
+    const [focused, upper, lower] = cells;
+    expectVerticalOrder(upper, lower, `${layout} secondary cells`);
+    expectSharedColumn(upper, lower, `${layout} secondary cells`);
+    expectVerticalSpan(focused, upper, lower, `${layout} focused cell`);
+    if (layout === "leftFocus") {
+      expectHorizontalOrder(focused, upper, "leftFocus upper cells");
+      expectHorizontalOrder(focused, lower, "leftFocus lower cells");
+    } else {
+      expectHorizontalOrder(upper, focused, "rightFocus upper cells");
+      expectHorizontalOrder(lower, focused, "rightFocus lower cells");
+    }
+    return;
+  }
+  if (layout === "topFocus" || layout === "bottomFocus") {
+    expect(cells, `${layout} Audience cell count`).toHaveLength(3);
+    const focused = layout === "topFocus" ? cells[0] : cells[2];
+    const left = layout === "topFocus" ? cells[1] : cells[0];
+    const right = layout === "topFocus" ? cells[2] : cells[1];
+    expectHorizontalOrder(left, right, `${layout} secondary cells`);
+    expectSharedRow(left, right, `${layout} secondary cells`);
+    expectHorizontalSpan(focused, left, right, `${layout} focused cell`);
+    if (layout === "topFocus") {
+      expectVerticalOrder(focused, left, "topFocus left cells");
+      expectVerticalOrder(focused, right, "topFocus right cells");
+    } else {
+      expectVerticalOrder(left, focused, "bottomFocus left cells");
+      expectVerticalOrder(right, focused, "bottomFocus right cells");
+    }
+    return;
+  }
+  if (layout === "grid2x2") {
+    expect(cells, "grid2x2 Audience cell count").toHaveLength(4);
+    const [topLeft, topRight, bottomLeft, bottomRight] = cells;
+    expectHorizontalOrder(topLeft, topRight, "grid2x2 top row");
+    expectHorizontalOrder(bottomLeft, bottomRight, "grid2x2 bottom row");
+    expectVerticalOrder(topLeft, bottomLeft, "grid2x2 left column");
+    expectVerticalOrder(topRight, bottomRight, "grid2x2 right column");
+    expectSharedRow(topLeft, topRight, "grid2x2 top row");
+    expectSharedRow(bottomLeft, bottomRight, "grid2x2 bottom row");
+    expectSharedColumn(topLeft, bottomLeft, "grid2x2 left column");
+    expectSharedColumn(topRight, bottomRight, "grid2x2 right column");
+    return;
+  }
+  throw new Error(`Unknown Audience runtime layout: ${String(layout)}`);
+}
+
+function expectHorizontalOrder(left, right, label) {
+  expect(left.bounds.right, `${label} horizontal order`).toBeLessThanOrEqual(
+    right.bounds.left + GEOMETRY_TOLERANCE,
+  );
+}
+
+function expectVerticalOrder(upper, lower, label) {
+  expect(upper.bounds.bottom, `${label} vertical order`).toBeLessThanOrEqual(
+    lower.bounds.top + GEOMETRY_TOLERANCE,
+  );
+}
+
+function expectSharedRow(left, right, label) {
+  expect(Math.abs(left.bounds.top - right.bounds.top), `${label} top alignment`).toBeLessThanOrEqual(
+    GEOMETRY_TOLERANCE,
+  );
+  expect(Math.abs(left.bounds.bottom - right.bounds.bottom), `${label} bottom alignment`).toBeLessThanOrEqual(
+    GEOMETRY_TOLERANCE,
+  );
+}
+
+function expectSharedColumn(upper, lower, label) {
+  expect(Math.abs(upper.bounds.left - lower.bounds.left), `${label} left alignment`).toBeLessThanOrEqual(
+    GEOMETRY_TOLERANCE,
+  );
+  expect(Math.abs(upper.bounds.right - lower.bounds.right), `${label} right alignment`).toBeLessThanOrEqual(
+    GEOMETRY_TOLERANCE,
+  );
+}
+
+function expectVerticalSpan(focused, upper, lower, label) {
+  expect(focused.bounds.top, `${label} top span`).toBeLessThanOrEqual(
+    Math.min(upper.bounds.top, lower.bounds.top) + GEOMETRY_TOLERANCE,
+  );
+  expect(focused.bounds.bottom, `${label} bottom span`).toBeGreaterThanOrEqual(
+    Math.max(upper.bounds.bottom, lower.bounds.bottom) - GEOMETRY_TOLERANCE,
+  );
+}
+
+function expectHorizontalSpan(focused, left, right, label) {
+  expect(focused.bounds.left, `${label} left span`).toBeLessThanOrEqual(
+    Math.min(left.bounds.left, right.bounds.left) + GEOMETRY_TOLERANCE,
+  );
+  expect(focused.bounds.right, `${label} right span`).toBeGreaterThanOrEqual(
+    Math.max(left.bounds.right, right.bounds.right) - GEOMETRY_TOLERANCE,
+  );
 }
 
 async function readSavedPackage(page) {
