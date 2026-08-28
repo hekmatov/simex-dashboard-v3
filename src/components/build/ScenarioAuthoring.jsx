@@ -40,6 +40,20 @@ export function reduceScenarioDraft(state, action) {
         error: null,
       };
     }
+    case "SET_HOME_ENABLED": {
+      if (typeof action.enabled !== "boolean") {
+        return withError(state, issue(
+          "HOME_ENABLED_BOOLEAN_REQUIRED",
+          "Home availability must be on or off.",
+        ));
+      }
+      return {
+        ...state,
+        value: { ...state.value, home: { enabled: action.enabled } },
+        status: "dirty",
+        error: null,
+      };
+    }
     case "SAVE_REQUEST": {
       const validation = validateScenarioDraft(state.value);
       return validation ? withError(state, validation) : { ...state, status: "saving", error: null };
@@ -118,6 +132,7 @@ function scenarioValue(dashboard) {
     programLabel: dashboard?.programLabel ?? "",
     lastUpdated: dashboard?.lastUpdated ?? "",
     source: clone(dashboard?.source ?? null),
+    home: { enabled: dashboard?.home?.enabled !== false },
   };
 }
 

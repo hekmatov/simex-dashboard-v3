@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+
+import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
+const MODE_STORAGE_KEY = "simex-dashboard-ui-mode-v1";
 
 test.describe.configure({ timeout: 150_000 });
 
@@ -79,6 +83,89 @@ test("Build metadata persists on save and stays editable after storage fallback"
   ), STORAGE_KEY)).toBe("Three-mode training exercise");
   await passport.getByRole("button", { name: "Edit Program: Retain this Build draft", exact: true }).click();
   await expect(program).toHaveValue("Retain this Build draft");
+});
+
+test("Scenario Passport saves Home off and on explicitly across reload", async ({ page }) => {
+  let passport = await enterScenarioInspector(page);
+  const showHome = passport.getByRole("checkbox", { name: "Show Home", exact: true });
+  await expect(showHome).toBeChecked();
+  await showHome.uncheck();
+  await passport.getByRole("button", { name: "Save Scenario", exact: true }).click();
+
+  await expect(page.getByRole("button", { name: "View", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveCount(0);
+  await expect.poll(() => page.evaluate((key) => (
+    JSON.parse(localStorage.getItem(key)).home.enabled
+  ), STORAGE_KEY)).toBe(false);
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "View", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveCount(0);
+
+  passport = await enterScenarioInspector(page);
+  const hiddenHome = passport.getByRole("checkbox", { name: "Show Home", exact: true });
+  await expect(hiddenHome).not.toBeChecked();
+  await hiddenHome.check();
+  await passport.getByRole("button", { name: "Save Scenario", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate((key) => (
+    JSON.parse(localStorage.getItem(key)).home.enabled
+  ), STORAGE_KEY)).toBe(true);
+});
+
+test("Home-off package import changes mode, preference, and focus only after commit", async ({ page }) => {
+  const bundle = await homeOffPackageFixture();
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await page.locator('input[type="file"][accept*="application/json"]').first().setInputFiles({
+    name: "home-off-dashboard.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(bundle)),
+  });
+  const review = page.getByRole("dialog", { name: "Review package contents" });
+  await expect(review).toBeVisible();
+
+  await page.getByRole("button", { name: "Home", exact: true }).evaluate((element) => element.click());
+  await expect(page.getByRole("button", { name: "Home", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await page.evaluate((storageKey) => {
+    window.__simexNativeStorageSetItem = Storage.prototype.setItem;
+    let failedDashboardWrite = false;
+    Storage.prototype.setItem = function setItem(key, value) {
+      if (key === storageKey && !failedDashboardWrite) {
+        failedDashboardWrite = true;
+        throw new DOMException("Browser storage is full.", "QuotaExceededError");
+      }
+      return window.__simexNativeStorageSetItem.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+
+  await review.getByRole("button", { name: "Load package", exact: true }).click();
+  await expect(review).toContainText("Browser storage is full.");
+  await expect(page.getByRole("button", { name: "Home", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), MODE_STORAGE_KEY))
+    .toBe("home");
+
+  await page.evaluate(() => {
+    Storage.prototype.setItem = window.__simexNativeStorageSetItem;
+    delete window.__simexNativeStorageSetItem;
+  });
+  await review.getByRole("button", { name: "Load package", exact: true }).click();
+  await expect(review).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "View", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), MODE_STORAGE_KEY))
+    .toBe("view");
+  await expect(page.locator('[data-canonical-mode="view"]')).toBeFocused();
+
+  const importedPassport = await enterScenarioInspector(page);
+  await expect(importedPassport.getByRole("checkbox", { name: "Show Home", exact: true }))
+    .not.toBeChecked();
 });
 
 test("View compares charts and closes fullscreen with Escape", async ({ page }) => {
@@ -188,6 +275,27 @@ async function enterScenarioInspector(page) {
   const passport = page.getByRole("complementary", { name: "Scenario Passport" });
   await expect(passport).toBeVisible();
   return passport;
+}
+
+async function homeOffPackageFixture() {
+  const config = JSON.parse(await readFile(
+    new URL("../../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  config.home = { enabled: false };
+  config.dataSources = {};
+  config.datasetProfiles = {};
+  config.assets = {};
+  config.contentLibrary = { mediaItems: {}, sourceEntries: {} };
+  config.chronoGroups = [];
+  config.scenes = [];
+  config.pages = [{
+    id: "home_off_import_page",
+    label: "Imported dashboard",
+    title: "Imported dashboard",
+    sections: [{ id: "imported_section", title: "Imported section", panels: [] }],
+  }];
+  return serializeDashboardBundle(config, { now: "2026-08-28T12:00:00.000Z" });
 }
 
 async function enterPresent(page) {

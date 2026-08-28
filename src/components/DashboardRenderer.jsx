@@ -35,6 +35,7 @@ import {
   reorderBuildLayoutPanel,
   reorderBuildLayoutSection,
 } from "./build/buildLayoutDraft.js";
+
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
@@ -82,6 +83,13 @@ import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "../stati
 import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
 import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
 import { classifyManagedSource } from "../content-library/sourceEntrySchema.js";
+
+const SCENARIO_DIRTY_BLOCK_REASON =
+  "Save or discard changes to Scenario before leaving this edit. Stay in Build to continue editing.";
+
+function createExternalDirtyState() {
+  return { chronoGroup: false, scene: false, scenario: false, dashboardMetadata: false };
+}
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
@@ -155,12 +163,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
   const [packageExportIssues, setPackageExportIssues] = React.useState([]);
   const [deleteContentConfirmation, setDeleteContentConfirmation] = React.useState(false);
-  const [externalDirty, setExternalDirty] = React.useState({
-    chronoGroup: false,
-    scene: false,
-    scenario: false,
-    dashboardMetadata: false,
-  });
+  const [externalDirty, setExternalDirty] = React.useState(createExternalDirtyState);
+  const externalDirtyRef = React.useRef(externalDirty);
   React.useEffect(() => {
     if (!contentDraftCoordinator) {
       setContentDraftRetainers(null);
@@ -324,7 +328,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     ),
     staticContent: staticContentDirty,
     structure: localAuthoringDirty || layoutDraftDirty,
-    scenario: localAuthoringDirty,
+    scenario: localAuthoringDirty || externalDirty.scenario,
     inlineRename: inlineRenameDirty,
     pendingContent: pendingEdits.hasPending() || hasActiveContentRetainers(contentDraftRetainers),
     chronoGroup: externalDirty.chronoGroup,
@@ -352,8 +356,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
   const setAuthoredDirtyFlag = React.useCallback((key, dirty) => {
     if (!["chronoGroup", "scene", "scenario", "dashboardMetadata"].includes(key)) return false;
-    setExternalDirty((current) => ({ ...current, [key]: dirty === true }));
+    const next = { ...externalDirtyRef.current, [key]: dirty === true };
+    externalDirtyRef.current = next;
+    setExternalDirty(next);
     return true;
+  }, []);
+
+  const resetExternalDirty = React.useCallback(() => {
+    const next = createExternalDirtyState();
+    externalDirtyRef.current = next;
+    setExternalDirty(next);
   }, []);
 
   const handleLocalDraftsChange = React.useCallback((drafts) => {
@@ -375,6 +387,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   React.useImperativeHandle(ref, () => ({
     setAuthoredDirtyFlag,
     async prepareForPackageImport() {
+      if (externalDirtyRef.current.scenario) throw new Error(SCENARIO_DIRTY_BLOCK_REASON);
       await pendingEdits.flush();
       await onCommitPendingConfiguration?.();
     },
@@ -403,7 +416,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartDraftSessionRevision((current) => current + 1);
       setLocalAuthoringDrafts({});
       setInlineRenameDirty(false);
-      setExternalDirty({ chronoGroup: false, scene: false, scenario: false, dashboardMetadata: false });
+      resetExternalDirty();
       onInlineRenameDirtyChange?.(false);
       setBuildSelection(null);
       setPendingBuildSelection(null);
@@ -443,7 +456,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       void exportDashboardPackage();
     },
     requestResetDashboardToSource() {
-      setResetEditSessionConfirmation(true);
+      requestResetEditSession();
     },
     async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };
@@ -459,6 +472,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         return {
           ok: false,
           reason: buildLeaveBlockReason(localAuthoringDrafts),
+        };
+      }
+      if (destination === "mode" && externalDirtyRef.current.scenario) {
+        return {
+          ok: false,
+          reason: SCENARIO_DIRTY_BLOCK_REASON,
         };
       }
       if (chartWizardTarget) {
@@ -508,7 +527,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     chartDraftSessionStore, chartEditorDirty, chartWizardDirty, chartWizardTarget,
     externalDirty, inlineRenameDirty, layoutDraftDirty, localAuthoringDrafts,
     moderatorOperation.kind, multiSelectMode, onCommitPendingConfiguration,
-    onExportConfig, onInlineRenameDirtyChange, pendingEdits, setAuthoredDirtyFlag]);
+    onExportConfig, onInlineRenameDirtyChange, pendingEdits, resetExternalDirty,
+    setAuthoredDirtyFlag]);
 
   React.useEffect(() => {
     onComparisonSelectionChange?.(multiSelectMode);
@@ -651,11 +671,27 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function requestDashboardPackageImport() {
     setBuildSelectionError("");
+    if (externalDirty.scenario) {
+      setBuildSelectionError(SCENARIO_DIRTY_BLOCK_REASON);
+      onResolveScenarioDraft?.();
+      return;
+    }
     if (authoredDirty) {
       setPackageImportConfirmation(true);
       return;
     }
     importInputRef.current?.click();
+  }
+
+  function requestResetEditSession() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    clearModeratorError("reset-session");
+    if (externalDirtyRef.current.scenario) {
+      setBuildSelectionError(SCENARIO_DIRTY_BLOCK_REASON);
+      onResolveScenarioDraft?.();
+      return;
+    }
+    setResetEditSessionConfirmation(true);
   }
 
   function confirmDashboardPackageImport() {
@@ -1417,7 +1453,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartDraftSessionRevision((current) => current + 1);
         setLocalAuthoringDrafts({});
         setInlineRenameDirty(false);
-        setExternalDirty({ chronoGroup: false, scene: false, scenario: false, dashboardMetadata: false });
+        resetExternalDirty();
         onInlineRenameDirtyChange?.(false);
         setBuildSelection(null);
         setPendingBuildSelection(null);
@@ -1682,7 +1718,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onUploadPackage={requestDashboardPackageImport}
       onDownloadPackage={exportDashboardPackage}
       onFinish={saveEditMode}
-      onReset={() => setResetEditSessionConfirmation(true)}
+      onReset={requestResetEditSession}
       onDeleteDashboardContent={() => {
         clearModeratorError("delete-dashboard-content");
         setDeleteContentConfirmation(true);
@@ -2019,11 +2055,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                 ariaLabel={moderatorOperation.kind === "reset-session" ? "Resetting edits" : "Reset edits"}
                 tooltip={moderatorOperation.kind === "reset-session" ? "Resetting edits" : "Reset edits"}
                 data-icon-surface="dark"
-                onClick={() => {
-                  if (moderatorOperationGateRef.current.isActive()) return;
-                  clearModeratorError("reset-session");
-                  setResetEditSessionConfirmation(true);
-                }}
+                onClick={requestResetEditSession}
                 disabled={moderatorOperation.kind !== null}
               />
             )}

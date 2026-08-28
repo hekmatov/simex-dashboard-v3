@@ -81,6 +81,7 @@ import {
   isAvailableDashboardMode,
   persistDashboardModePreference,
   readDashboardModePreference,
+  reconcileDashboardMode,
   reconcileLoadedDashboardMode,
   resolveInitialDashboardMode,
 } from "./lib/dashboardMode.js";
@@ -1235,6 +1236,16 @@ export default function App() {
       });
       setPackageImportCandidate(null);
       setOperationError("");
+      reconcileCommittedDashboardMode({
+        currentMode: mode,
+        committedDashboard: committed,
+        onModeChange: setMode,
+        onPersistMode: persistDashboardModePreference,
+        onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
+          key: current.key + 1,
+          mode: nextMode,
+        })),
+      });
       await cleanupReplacedDashboardAssets(previousDashboard, committed, {
         failureMessage: "The package was loaded, but source files from the previous dashboard could not be removed from browser storage.",
       });
@@ -1381,11 +1392,10 @@ export default function App() {
           setScenarioPassportDirty(dirty);
           dashboardRendererRef.current?.setAuthoredDirtyFlag?.("scenario", dirty);
         }}
-        onSave={(value) => mutateDashboard((next) => {
-          next.scenarioLabel = value.scenarioLabel;
-          next.programLabel = value.programLabel;
-          next.lastUpdated = value.lastUpdated;
-        })}
+        onSave={(value) => mutateDashboard((next) => applyScenarioPassportValue(next, value))}
+        onSaveSucceeded={(savedDashboard) => {
+          if (savedDashboard?.home?.enabled === false) void requestMode("view");
+        }}
         onImportPackage={() => dashboardRendererRef.current?.requestDashboardPackageImport?.()}
         onDownloadPackage={() => dashboardRendererRef.current?.requestDashboardPackageExport?.()}
         onResetToSource={() => dashboardRendererRef.current?.requestResetDashboardToSource?.()}
@@ -1586,6 +1596,29 @@ export default function App() {
       )}
     </DashboardChartThemeProvider>
   );
+}
+
+export function applyScenarioPassportValue(next, value) {
+  next.scenarioLabel = value.scenarioLabel;
+  next.programLabel = value.programLabel;
+  next.lastUpdated = value.lastUpdated;
+  next.home = { enabled: value.home.enabled };
+  return next;
+}
+
+export function reconcileCommittedDashboardMode({
+  currentMode,
+  committedDashboard,
+  onModeChange,
+  onPersistMode,
+  onFocusMode,
+}) {
+  const nextMode = reconcileDashboardMode(currentMode, committedDashboard);
+  if (nextMode === currentMode) return nextMode;
+  onModeChange?.(nextMode);
+  onPersistMode?.(nextMode);
+  if (currentMode === "home" && nextMode === "view") onFocusMode?.(nextMode);
+  return nextMode;
 }
 
 export function configurationForStorage(dashboard, fallbackProfiles = {}) {

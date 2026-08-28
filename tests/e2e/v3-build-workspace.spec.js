@@ -186,9 +186,76 @@ test("chart recovery states retain canonical plot geometry", async ({ page }) =>
   await expect(partial.locator('.chart-state-surface--partial')).toBeVisible();
 });
 
+test("Home availability draft blocks package controls and mode exit until Discard", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+
+  const scenarioTrigger = page.locator(".dashboard-scenario-trigger");
+  await scenarioTrigger.click();
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  const showHome = passport.getByRole("checkbox", { name: "Show Home", exact: true });
+  await expect(showHome).toBeChecked();
+  await expect(passport).toContainText(
+    "When off, Home is unavailable to dashboard visitors. You can turn it back on here.",
+  );
+
+  await showHome.uncheck();
+  await expect(passport).toContainText("Unsaved Scenario");
+  for (const name of [
+    "Import Dashboard Package",
+    "Download Dashboard Package",
+    "Reset Dashboard to Source",
+  ]) {
+    await expect(passport.getByRole("button", { name, exact: true })).toBeDisabled();
+  }
+
+  await page.getByRole("button", { name: "Reset", exact: true })
+    .evaluate((element) => element.click());
+  await expect(page.getByRole("dialog", { name: "Discard these edits?" })).toHaveCount(0);
+  await expect(showHome).not.toBeChecked();
+
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "View", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".mode-switch-error")).toHaveText(
+    "Save or discard changes to Scenario before leaving this edit. Stay in Build to continue editing.",
+  );
+
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(scenarioTrigger).toContainText("Unsaved");
+  await scenarioTrigger.click();
+  await passport.getByRole("button", { name: "Discard Scenario", exact: true }).click();
+  await expect(showHome).toBeChecked();
+  await expect(passport.getByRole("button", { name: "Import Dashboard Package", exact: true })).toBeEnabled();
+});
+
 test("Scenario Passport owns direct identity edits and package operations in Build", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
+  await expect(page.getByLabel("Dashboard mode")).toBeVisible();
+  await page.evaluate(async (storageKey) => {
+    const config = await fetch("/config/dashboard.json").then((response) => response.json());
+    config.home = { enabled: true };
+    config.dataSources = {};
+    config.datasetProfiles = {};
+    config.assets = {};
+    config.contentLibrary = { mediaItems: {}, sourceEntries: {} };
+    config.chronoGroups = [];
+    config.scenes = [];
+    delete config.loadedData;
+    delete config.dataSourceStates;
+    config.pages = [{
+      id: "passport_package_page",
+      label: "Passport package Page",
+      title: "Passport package Page",
+      sections: [{ id: "passport_section", title: "Passport Section", panels: [] }],
+    }];
+    localStorage.setItem(storageKey, JSON.stringify(config));
+  }, STORAGE_KEY);
+  await page.reload();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
 

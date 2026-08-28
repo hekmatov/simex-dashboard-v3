@@ -172,12 +172,14 @@ test("Scenario Save/Discard/Stay and failed-save retry are scope-specific", () =
     programLabel: "PDPC",
     lastUpdated: "2026-08-19",
     source: { kind: "package", label: "Source A" },
+    home: { enabled: true },
   });
   draft = scenarioModule.reduceScenarioDraft(draft, {
-    type: "EDIT_FIELD",
-    field: "scenarioLabel",
-    value: "Day 3",
+    type: "SET_HOME_ENABLED",
+    enabled: false,
   });
+  assert.equal(draft.status, "dirty");
+  assert.deepEqual(draft.value.home, { enabled: false });
   const stay = scenarioModule.reduceScenarioDraft(draft, { type: "STAY" });
   assert.equal(stay.status, "dirty");
   const saving = scenarioModule.reduceScenarioDraft(stay, { type: "SAVE_REQUEST" });
@@ -186,10 +188,37 @@ test("Scenario Save/Discard/Stay and failed-save retry are scope-specific", () =
     error: { code: "QUOTA_EXHAUSTED", message: "Storage quota exhausted", retryable: true },
   });
   assert.equal(failed.status, "error");
-  assert.equal(failed.value.scenarioLabel, "Day 3");
-  assert.equal(failed.baseline.scenarioLabel, "Day 2");
+  assert.deepEqual(failed.value.home, { enabled: false });
+  assert.deepEqual(failed.baseline.home, { enabled: true });
   assert.equal(scenarioModule.reduceScenarioDraft(failed, { type: "SAVE_REQUEST" }).status, "saving");
-  assert.equal(scenarioModule.reduceScenarioDraft(failed, { type: "DISCARD" }).value.scenarioLabel, "Day 2");
+  assert.deepEqual(
+    scenarioModule.reduceScenarioDraft(failed, { type: "DISCARD" }).value.home,
+    { enabled: true },
+  );
+});
+
+test("Scenario Home availability accepts only boolean draft edits", () => {
+  const baseline = scenarioModule.createScenarioDraft({
+    scenarioLabel: "Day 2",
+    programLabel: "PDPC",
+    lastUpdated: "2026-08-19",
+    home: { enabled: false },
+  });
+  assert.deepEqual(baseline.value.home, { enabled: false });
+
+  const invalid = scenarioModule.reduceScenarioDraft(baseline, {
+    type: "SET_HOME_ENABLED",
+    enabled: "false",
+  });
+  assert.deepEqual(invalid.value.home, { enabled: false });
+  assert.equal(invalid.status, "error");
+
+  const enabled = scenarioModule.reduceScenarioDraft(invalid, {
+    type: "SET_HOME_ENABLED",
+    enabled: true,
+  });
+  assert.deepEqual(enabled.value.home, { enabled: true });
+  assert.equal(enabled.status, "dirty");
 });
 
 test("Structure and Scenario surfaces expose scoped actions without mutating their inputs", () => {

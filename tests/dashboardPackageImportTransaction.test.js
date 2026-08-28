@@ -94,6 +94,29 @@ test("package replacement drains delayed authored edits before commit and rebase
   });
 });
 
+test("Home-off import exposes its committed dashboard only after replacement and rebase succeed", async () => {
+  const events = [];
+  const imported = {
+    ...dashboard({ programLabel: "Imported Home-off program" }),
+    home: { enabled: false },
+  };
+
+  const committed = await commitDashboardPackageImport({
+    candidate: { config: imported },
+    ...compensationBoundary(),
+    prepare: async () => { events.push("prepare"); },
+    replace: async (config) => {
+      events.push("replace");
+      return structuredClone(config);
+    },
+    rebase: () => { events.push("rebase"); },
+  });
+  events.push(`resolved:${committed.home.enabled}`);
+
+  assert.deepEqual(events, ["prepare", "replace", "rebase", "resolved:false"]);
+  assert.deepEqual(committed.home, { enabled: false });
+});
+
 test("asset-free V5 import restores the exact prior dashboard when renderer rebase fails", async () => {
   const prior = dashboard({
     programLabel: "Prior program",

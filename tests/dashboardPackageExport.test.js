@@ -153,6 +153,40 @@ test("package preparation strips browser-only asset references", async () => {
   );
 });
 
+test("V6 package preparation and round-trip preserve explicit Home-off availability", async () => {
+  const dashboard = packageDashboard();
+  dashboard.configVersion = 6;
+  dashboard.home = { enabled: false };
+  dashboard.assets = {};
+  dashboard.contentLibrary = { mediaItems: {}, sourceEntries: {} };
+
+  const prepared = await prepareDashboardPackageExport(dashboard, {
+    readText: async (path) => ({
+      "data/cases.csv": "date,cases\n2026-08-21,4\n",
+      "data/generated-summary.csv": "date,total\n2026-08-21,4\n",
+    })[path],
+    readJson: async () => ({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        properties: { name: "Area A" },
+        geometry: { type: "Point", coordinates: [4.9, 52.3] },
+      }],
+    }),
+    readImageDataUrl: async () => "data:image/png;base64,aW1hZ2U=",
+  });
+  assert.deepEqual(prepared.config.home, { enabled: false });
+
+  prepared.config.dataSources = {};
+  prepared.config.datasetProfiles = {};
+  prepared.config.pages[0].sections[0].panels = [];
+  const imported = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(
+    prepared.config,
+    { now: "2026-08-28T12:00:00.000Z" },
+  )));
+  assert.deepEqual(imported.home, { enabled: false });
+});
+
 test("portable packages reject browser-only asset references", () => {
   const dashboard = packageDashboard();
   delete dashboard.dataSources.cases;

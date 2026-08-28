@@ -16,6 +16,7 @@ export default function ScenarioPassportPopover({
   dashboard = {},
   onClose,
   onSave,
+  onSaveSucceeded,
   onDirtyChange,
   onImportPackage,
   onDownloadPackage,
@@ -31,6 +32,7 @@ export default function ScenarioPassportPopover({
     dashboard?.lastUpdated,
     dashboard?.source?.kind,
     dashboard?.source?.label,
+    dashboard?.home?.enabled,
   ].join("\u0000");
 
   React.useEffect(() => {
@@ -55,11 +57,14 @@ export default function ScenarioPassportPopover({
     if (saving.status !== "saving") return;
     Promise.resolve(onSave?.(saving.value))
       .then((savedDashboard) => {
+        const savedValue = savedDashboard ?? saving.value;
         setDraft((current) => reduceScenarioDraft(current, {
           type: "SAVE_SUCCEEDED",
-          savedValue: savedDashboard ?? current.value,
+          savedValue,
         }));
         setEditingField(null);
+        onDirtyChange?.(false);
+        onSaveSucceeded?.(savedValue);
       })
       .catch((error) => setDraft((current) => reduceScenarioDraft(current, {
         type: "SAVE_FAILED",
@@ -118,6 +123,23 @@ export default function ScenarioPassportPopover({
           </div>
         ))}
       </div>
+
+      <fieldset className="scenario-passport-home">
+        <legend>Canonical Home</legend>
+        <label>
+          <input
+            type="checkbox"
+            checked={draft.value.home.enabled}
+            disabled={busy}
+            onChange={(event) => dispatch({
+              type: "SET_HOME_ENABLED",
+              enabled: event.target.checked,
+            })}
+          />
+          Show Home
+        </label>
+        <p>When off, Home is unavailable to dashboard visitors. You can turn it back on here.</p>
+      </fieldset>
 
       {draft.error && <p className="build-operation-error" role="alert">{draft.error.message}</p>}
       <div className="scenario-passport-draft-actions">

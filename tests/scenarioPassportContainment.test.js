@@ -16,6 +16,7 @@ const identityModule = await vite.ssrLoadModule("/src/components/app-shell/Dashb
 const passportModule = await vite.ssrLoadModule("/src/components/app-shell/ScenarioPassportPopover.jsx")
   .catch(() => null);
 const workspaceModule = await vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx");
+const appModule = await vite.ssrLoadModule("/src/App.jsx").catch(() => null);
 await vite.close();
 
 test("Build anchors Scenario Passport and package actions to the Crown identity", () => {
@@ -44,6 +45,9 @@ test("Build anchors Scenario Passport and package actions to the Crown identity"
   assert.match(html, /Edit Scenario name: HeV-A26 Day 2 Simulation/);
   assert.match(html, /Edit Program: Pandemic &amp; Disaster Preparedness Center/);
   assert.match(html, /Edit Updated: 2026-07-27/);
+  assert.match(html, /type="checkbox"/);
+  assert.match(html, />Show Home</);
+  assert.match(html, /When off, Home is unavailable to dashboard visitors\. You can turn it back on here\./);
   assert.match(html, />Import Dashboard Package</);
   assert.match(html, />Download Dashboard Package</);
   assert.match(html, />Reset Dashboard to Source</);
@@ -82,6 +86,60 @@ test("the live App wires the Crown Scenario Passport to renderer package operati
   assert.match(app, /requestResetDashboardToSource/);
 });
 
+test("Scenario Save applies identity and exact Home availability without replacing unrelated state", () => {
+  assert.equal(typeof appModule?.applyScenarioPassportValue, "function");
+  const next = {
+    scenarioLabel: "Day 2",
+    programLabel: "PDPC",
+    lastUpdated: "2026-07-27",
+    home: { enabled: true, ignored: "remove me" },
+    title: "Keep dashboard title",
+    source: { kind: "package", label: "Keep source" },
+  };
+
+  const result = appModule.applyScenarioPassportValue(next, {
+    scenarioLabel: "Day 3",
+    programLabel: "Response program",
+    lastUpdated: "2026-08-28",
+    home: { enabled: false },
+  });
+
+  assert.equal(result, next);
+  assert.deepEqual(next, {
+    scenarioLabel: "Day 3",
+    programLabel: "Response program",
+    lastUpdated: "2026-08-28",
+    home: { enabled: false },
+    title: "Keep dashboard title",
+    source: { kind: "package", label: "Keep source" },
+  });
+});
+
+test("successful Home-off replacement reconciliation persists and focuses View only on fallback", () => {
+  assert.equal(typeof appModule?.reconcileCommittedDashboardMode, "function");
+  const events = [];
+  const result = appModule.reconcileCommittedDashboardMode({
+    currentMode: "home",
+    committedDashboard: { home: { enabled: false }, pages: [{ id: "overview" }] },
+    onModeChange: (mode) => events.push(`mode:${mode}`),
+    onPersistMode: (mode) => events.push(`persist:${mode}`),
+    onFocusMode: (mode) => events.push(`focus:${mode}`),
+  });
+
+  assert.equal(result, "view");
+  assert.deepEqual(events, ["mode:view", "persist:view", "focus:view"]);
+
+  const unchanged = [];
+  assert.equal(appModule.reconcileCommittedDashboardMode({
+    currentMode: "build",
+    committedDashboard: { home: { enabled: false }, pages: [{ id: "overview" }] },
+    onModeChange: (mode) => unchanged.push(mode),
+    onPersistMode: (mode) => unchanged.push(mode),
+    onFocusMode: (mode) => unchanged.push(mode),
+  }), "build");
+  assert.deepEqual(unchanged, []);
+});
+
 function fixtureDashboard() {
   return {
     id: "dashboard",
@@ -90,7 +148,8 @@ function fixtureDashboard() {
     programLabel: "Pandemic & Disaster Preparedness Center",
     lastUpdated: "2026-07-27",
     source: { kind: "package", label: "hev-a26-dashboard.v3.json" },
-    pages: [{ id: "home", label: "Home", sections: [{ id: "overview", panels: [] }] }],
+    home: { enabled: true },
+    pages: [{ id: "overview", label: "Overview", sections: [{ id: "overview", panels: [] }] }],
     chronoGroups: [],
     dataSources: {},
   };
