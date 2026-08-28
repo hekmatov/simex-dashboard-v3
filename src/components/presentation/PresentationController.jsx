@@ -50,7 +50,12 @@ export function buildPresentationState({
   blackout = false,
 }) {
   const scene = playback.activeScene ?? null;
-  const group = playback.activeGroup ?? null;
+  const implicitEmptyDefaultGroup = (
+    playback.source?.kind === "default"
+    && !scene
+    && (playback.clock?.length ?? 0) === 0
+  );
+  const group = implicitEmptyDefaultGroup ? null : playback.activeGroup ?? null;
   const source = scene
     ? {
         kind: "scene",

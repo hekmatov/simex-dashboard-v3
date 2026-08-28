@@ -164,6 +164,44 @@ test("Chrono Group projection uses its authored inclusive period rather than obs
   assert.deepEqual(projected.timeline.period, { start: 0, end: 86_399_999 });
 });
 
+test("implicit empty default-page playback projects as a manual static-only source", () => {
+  const projected = controllerModule.buildPresentationState({
+    dashboard: { id: "dashboard-static", configVersion: 6, lastUpdated: "2026-08-28" },
+    activePageId: "biomedical",
+    displayedChartIds: ["chart-a"],
+    layout: "solo",
+    playback: {
+      ...playback,
+      activeScene: null,
+      activeSceneId: null,
+      activeGroup: {
+        id: "default-page",
+        name: "Default page timeline",
+        members: [],
+      },
+      activeGroupId: "default-page",
+      activeIndex: 0,
+      clock: [],
+      source: { kind: "default" },
+    },
+    presentableItemIndex,
+    audienceFacts: {
+      dashboard_name: true,
+      page: false,
+      parent_chrono_group: false,
+      scene_name: false,
+      scene_date: false,
+    },
+  });
+
+  assert.deepEqual(projected.source, {
+    kind: "manual",
+    scene_id: null,
+    chrono_group_id: null,
+  });
+  assert.equal(projected.timeline, null);
+});
+
 test("END effects execute once in order and report truthful close outcomes", () => {
   assert.equal(typeof controllerModule?.executePresentationEndEffects, "function");
   const calls = [];
