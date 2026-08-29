@@ -2548,12 +2548,23 @@ test("save and reset are adjacent and reset confirmation is accessible", () => {
 });
 
 test("chart editor actions lock while persistence is pending", () => {
+  const tree = EditSessionActions({
+    valid: true,
+    submitting: true,
+    onRemove() {},
+  });
+  const controls = findElementsByType(tree, IconControl);
   const html = render(React.createElement(EditSessionActions, {
     valid: true,
     submitting: true,
+    onRemove() {},
   }));
   assert.match(html, /aria-label="Saving changes"/);
-  assert.equal((html.match(/disabled=""/g) ?? []).length, 3);
+  assert.equal((html.match(/disabled=""/g) ?? []).length, 4);
+  assert.deepEqual(
+    controls.map(({ props }) => props.disabledReason),
+    Array(4).fill("Wait for the current chart operation to finish."),
+  );
 });
 
 test("pending chart persistence disables and guards removal", () => {

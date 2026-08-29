@@ -81,13 +81,19 @@ import {
   createChartEditSession,
   dismissChartEditSession,
   isChartEditSessionDirty,
+  materializeChartEditSessionSave,
+  prepareActiveQuickChartEditRemoval,
+  prepareChartEditSessionSave,
   projectChartEditSessionDashboard,
   reduceChartEditSession,
 } from "../charting/forms/chartEditSession.js";
 import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnloadGuard.js";
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
-import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
+import {
+  prepareStaticPanelTransaction,
+  removeDashboardPanel,
+} from "../static-content/staticPanelTransaction.js";
 import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
 import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
 import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
@@ -720,7 +726,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setPendingRemovalPanelId(panelId);
   }
 
-  function performModeratorOperation(kind, transaction) {
+  function performModeratorOperation(kind, transaction, { onError } = {}) {
     return moderatorOperationGateRef.current.run(async () => {
       setModeratorOperation({ kind, errorKind: null, error: "" });
       try {
@@ -728,6 +734,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setModeratorOperation({ kind: null, errorKind: null, error: "" });
         return result;
       } catch (error) {
+        onError?.(error);
         setModeratorOperation({
           kind: null,
           errorKind: kind,
@@ -898,16 +905,67 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function confirmPanelRemoval() {
     const panelId = pendingRemovalPanelId;
-    if (panelId === null) return;
+    if (panelId === null || moderatorOperationGateRef.current.isActive()) return;
+    const removalRequest = prepareActiveQuickChartEditRemoval(
+      chartEditSession,
+      panelId,
+    );
+    if (!removalRequest) {
+      void performModeratorOperation("remove-chart", async () => {
+        await pendingEdits.flush();
+        await onPanelRemove(panelId);
+        setChartEditBaseline(null);
+        setChartEditSession(null);
+        setChartEditorVisible(false);
+        setChartEditorPlacementId((current) => (current === panelId ? null : current));
+        setSelectedPanelId((current) => (current === panelId ? null : current));
+        setPendingRemovalPanelId(null);
+      });
+      return;
+    }
+
+    const removalPlacementId = removalRequest.intent.placementId;
+    const layoutDraftSnapshot = buildLayoutDraftRef.current;
+    let rebasedLayoutValue = null;
+    if (layoutDraftSnapshot?.value) {
+      rebasedLayoutValue = structuredClone(layoutDraftSnapshot.value);
+      removeDashboardPanel(rebasedLayoutValue, removalPlacementId);
+    }
+    setChartEditSession(removalRequest.session);
     void performModeratorOperation("remove-chart", async () => {
       await pendingEdits.flush();
-      await onPanelRemove(panelId);
+      const committed = await onPanelRemove(removalPlacementId);
+      if (rebasedLayoutValue) {
+        setBuildLayoutDraft((current) => (
+          current?.draftId === layoutDraftSnapshot.draftId
+            ? {
+                ...current,
+                value: {
+                  ...rebasedLayoutValue,
+                  lastUpdated: committed?.lastUpdated ?? rebasedLayoutValue.lastUpdated,
+                },
+              }
+            : current
+        ));
+      }
       setChartEditBaseline(null);
       setChartEditSession(null);
       setChartEditorVisible(false);
-      setChartEditorPlacementId((current) => (current === panelId ? null : current));
-      setSelectedPanelId((current) => (current === panelId ? null : current));
+      setChartEditorPlacementId((current) => (current === removalPlacementId ? null : current));
+      setSelectedPanelId((current) => (current === removalPlacementId ? null : current));
       setPendingRemovalPanelId(null);
+    }, {
+      onError(error) {
+        setChartEditSession((current) => (
+          current?.placementId === removalRequest.intent.placementId
+          && current.status === "saving"
+            ? reduceChartEditSession(current, {
+                type: "PERSISTENCE_FAILED",
+                error,
+              })
+            : current
+        ));
+      },
     });
   }
 
@@ -1219,6 +1277,60 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartEditSession((current) => current
       ? reduceChartEditSession(current, { type: "RESET" })
       : current);
+  }
+
+  function saveQuickChartEditSession() {
+    if (
+      moderatorOperationGateRef.current.isActive()
+      || typeof onChartSave !== "function"
+      || chartEditSession?.activeSurface !== "quick"
+    ) return Promise.resolve(null);
+
+    const request = prepareChartEditSessionSave(chartEditSession);
+    const layoutDraftSnapshot = buildLayoutDraftRef.current;
+    const rebasedLayoutValue = layoutDraftSnapshot?.value
+      ? projectChartEditSessionDashboard(layoutDraftSnapshot.value, request.session)
+      : null;
+    setChartEditSession(request.session);
+    return performModeratorOperation("save-chart", async () => {
+      await pendingEdits.flush();
+      const payload = materializeChartEditSessionSave(
+        request.intent,
+        dashboardStateRef.current.chronoGroups ?? [],
+      );
+      const committed = await onChartSave(payload);
+      if (rebasedLayoutValue) {
+        setBuildLayoutDraft((current) => (
+          current?.draftId === layoutDraftSnapshot.draftId
+            ? {
+                ...current,
+                value: {
+                  ...rebasedLayoutValue,
+                  lastUpdated: committed?.lastUpdated ?? rebasedLayoutValue.lastUpdated,
+                },
+              }
+            : current
+        ));
+      }
+      setChartEditBaseline(null);
+      setChartEditSession(null);
+      setChartEditorVisible(false);
+      setChartEditorPlacementId(null);
+      setChartEditorDirty(false);
+      return committed;
+    }, {
+      onError(error) {
+        setChartEditSession((current) => (
+          current?.placementId === request.intent.placementId
+          && current.status === "saving"
+            ? reduceChartEditSession(current, {
+                type: "PERSISTENCE_FAILED",
+                error,
+              })
+            : current
+        ));
+      },
+    });
   }
 
   function resumeQuickChartEditSession() {
@@ -1916,8 +2028,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       session={chartEditSession}
       disabled={moderatorMutationLocked}
       onDraftChange={changeQuickChartDraft}
+      onSave={typeof onChartSave === "function" ? saveQuickChartEditSession : undefined}
       onReset={resetQuickChartDraft}
       onClose={dismissSelectedPanel}
+      onRemove={typeof onPanelRemove === "function"
+        ? () => removePanel(chartEditSession.placementId)
+        : undefined}
     />
   )) : null;
   const buildWorkspace = editMode ? (

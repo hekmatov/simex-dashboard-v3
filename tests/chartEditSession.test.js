@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import * as chartEditSessionModel from "../src/charting/forms/chartEditSession.js";
 import {
   chartEditSessionPendingSurface,
   createChartEditSession,
@@ -146,6 +147,27 @@ test("Save uses a narrow intent and promotes only the persisted value to the bas
   assert.equal(chartEditSessionPendingSurface(saved), null);
 });
 
+test("quick Save omits an unchanged Chrono baseline so persistence can rebase on current groups", () => {
+  const changed = changeChart(createSession(), "quick", {
+    title: "Saved without stale Chrono data",
+  });
+  const request = prepareChartEditSessionSave(changed);
+  const currentGroups = [{
+    id: "group-a",
+    label: "Concurrent Chrono label",
+    chartIds: ["chart-a"],
+  }];
+
+  const payload = materializeChartEditSessionSave(
+    request.intent,
+    currentGroups,
+  );
+
+  assert.equal(payload.placementId, "placement-a");
+  assert.equal(payload.chart.title, "Saved without stale Chrono data");
+  assert.equal(Object.hasOwn(payload, "chronoGroups"), false);
+});
+
 test("Reset restores the shared saved chart and Chrono baseline", () => {
   const initial = createSession();
   const changed = reduceChartEditSession(initial, {
@@ -182,6 +204,37 @@ test("confirmed Remove immediately yields only the placement deletion intent", (
   assert.equal(Object.hasOwn(request.intent, "dashboard"), false);
   assert.equal(changed.status, "dirty");
   assert.equal(changed.draft.title, "Unsaved title that must not be saved first");
+});
+
+test("parent quick removal ownership excludes other placements and surfaces", () => {
+  assert.equal(
+    typeof chartEditSessionModel.prepareActiveQuickChartEditRemoval,
+    "function",
+  );
+  const quick = createSession();
+  const full = reduceChartEditSession(quick, {
+    type: "OPEN",
+    surface: "full",
+  });
+
+  const request = chartEditSessionModel.prepareActiveQuickChartEditRemoval(
+    quick,
+    "placement-a",
+  );
+
+  assert.equal(request.session.status, "saving");
+  assert.deepEqual(request.intent, {
+    kind: "remove",
+    placementId: "placement-a",
+  });
+  assert.equal(
+    chartEditSessionModel.prepareActiveQuickChartEditRemoval(quick, "placement-b"),
+    null,
+  );
+  assert.equal(
+    chartEditSessionModel.prepareActiveQuickChartEditRemoval(full, "placement-a"),
+    null,
+  );
 });
 
 test("opening the full editor continues the same quick draft and baseline", () => {

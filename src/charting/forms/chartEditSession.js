@@ -184,14 +184,20 @@ export function materializeChartEditSessionSave(intent, currentChronoGroups) {
   if (!isRecord(intent) || intent.kind !== "save") {
     throw new TypeError("A chart edit Save intent is required.");
   }
-  return {
+  const payload = {
     placementId: requiredPlacementId(intent.placementId),
     chart: cloneChart(intent.chart),
-    chronoGroups: applyChartEditSessionChronoGroupChanges(
+  };
+  if (
+    (intent.chronoGroupChanges?.upsert?.length ?? 0) > 0
+    || (intent.chronoGroupChanges?.remove?.length ?? 0) > 0
+  ) {
+    payload.chronoGroups = applyChartEditSessionChronoGroupChanges(
       currentChronoGroups,
       intent.chronoGroupChanges,
-    ),
-  };
+    );
+  }
+  return payload;
 }
 
 export function prepareConfirmedChartEditRemoval(state) {
@@ -208,6 +214,14 @@ export function prepareConfirmedChartEditRemoval(state) {
       placementId: state.placementId,
     },
   };
+}
+
+export function prepareActiveQuickChartEditRemoval(state, placementId) {
+  if (
+    state?.activeSurface !== "quick"
+    || state.placementId !== placementId
+  ) return null;
+  return prepareConfirmedChartEditRemoval(state);
 }
 
 function changeSession(state, action) {

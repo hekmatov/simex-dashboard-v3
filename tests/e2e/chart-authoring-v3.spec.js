@@ -507,8 +507,8 @@ test("quick edit previews immediately while unchanged and suspended click-away s
     (key) => localStorage.getItem(key),
     STORAGE_KEY,
   )).toBe(storedDashboardBeforeEdit);
-  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
-  await expect(editor.getByRole("button", { name: "Remove chart", exact: true })).toBeDisabled();
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(editor.getByRole("button", { name: "Remove chart", exact: true })).toBeEnabled();
   await expect(editor.getByRole("button", { name: "Open full editor" })).toBeDisabled();
   const restorationTarget = editor.locator(
     ".control-tooltip:has(.chart-quick-editor-open-full)",
@@ -552,6 +552,63 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await expect.poll(() => page.locator(".unit-orbit-scroll").evaluate(
     (scroller) => scroller.scrollTop,
   )).toBe(quickEditorScrollTop);
+});
+
+test("quick edit Save and confirmed Remove persist only the target placement", async ({
+  page,
+}) => {
+  await openBiomedicalPage(page);
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const before = await storedQuickPersistenceSnapshot(page);
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    return [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+  });
+
+  await panel.getByRole("button", { name: "Edit chart" }).click();
+  let editor = page.locator(".chart-quick-editor");
+  await expect(editor).toBeVisible();
+  await editor.getByLabel("Chart title").fill("Durable quick save");
+  const save = editor.getByRole("button", { name: "Save", exact: true });
+  await expect(save).toBeEnabled();
+  await save.click();
+
+  await expect(editor).toHaveCount(0);
+  await expect.poll(async () => (
+    await storedQuickPersistenceSnapshot(page)
+  ).targetTitle).toBe("Durable quick save");
+  const afterSave = await storedQuickPersistenceSnapshot(page);
+  expect(afterSave.lastUpdated).toBe(today);
+  expect(afterSave.layout).toEqual(before.layout);
+  expect(afterSave.unrelatedChart).toEqual(before.unrelatedChart);
+  expect(afterSave.chronoGroups).toEqual(before.chronoGroups);
+
+  await panel.getByRole("button", { name: "Edit chart" }).click();
+  editor = page.locator(".chart-quick-editor");
+  await expect(editor).toBeVisible();
+  await editor.getByRole("button", { name: "Remove chart", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "Remove chart", exact: true }).click();
+
+  await expect(panel).toHaveCount(0);
+  await expect.poll(async () => (
+    await storedQuickPersistenceSnapshot(page)
+  ).targetTitle).toBe(null);
+  const afterRemove = await storedQuickPersistenceSnapshot(page);
+  expect(afterRemove.lastUpdated).toBe(today);
+  expect(afterRemove.panelIds).toEqual(
+    before.panelIds.filter((panelId) => panelId !== "bio_confirmed_cases"),
+  );
+  expect(afterRemove.unrelatedChart).toEqual(before.unrelatedChart);
+  expect(afterRemove.municipalChronoGroup).toEqual(before.municipalChronoGroup);
+  expect(afterRemove.nationalChronoMembers).toEqual(
+    before.nationalChronoMembers.filter(({ chartId }) => chartId !== "bio_confirmed_cases"),
+  );
 });
 
 test("editor chart conversion supports compatible changes and recoverable remapping", async ({
@@ -610,6 +667,56 @@ function sourceLabel(sourceId) {
     socio_behaviour: "Simulation exercise socio-economic behaviour dataset",
     bio_province_deltas: "Simulation exercise biomedical derived province changes",
   }[sourceId];
+}
+
+async function storedQuickPersistenceSnapshot(page) {
+  return page.evaluate(async (storageKey) => {
+    const storedDashboard = localStorage.getItem(storageKey);
+    const dashboard = storedDashboard
+      ? JSON.parse(storedDashboard)
+      : await fetch("/config/dashboard.json").then((response) => response.json());
+    const placements = dashboard.pages.flatMap((pageEntry) => (
+      (pageEntry.sections ?? []).flatMap((section) => (
+        (section.panels ?? []).map((placement) => ({
+          pageId: pageEntry.id,
+          sectionId: section.id,
+          placement,
+          chart: placement.chart ?? placement,
+        }))
+      ))
+    ));
+    const target = placements.find(({ placement, chart }) => (
+      (placement.id ?? chart.id) === "bio_confirmed_cases"
+    ));
+    const unrelated = placements.find(({ chart }) => chart.id === "bio_daily_cases_bar");
+    const chronoGroups = structuredClone(dashboard.chronoGroups ?? []);
+    return {
+      lastUpdated: dashboard.lastUpdated,
+      targetTitle: target?.chart?.title ?? null,
+      panelIds: placements.map(({ placement, chart }) => placement.id ?? chart.id),
+      layout: dashboard.pages.map((pageEntry) => ({
+        id: pageEntry.id,
+        sections: (pageEntry.sections ?? []).map((section) => ({
+          id: section.id,
+          panels: (section.panels ?? []).map((placement) => {
+            const chart = placement.chart ?? placement;
+            return {
+              id: placement.id ?? chart.id,
+              layout: structuredClone(placement.layout ?? chart.layout ?? null),
+            };
+          }),
+        })),
+      })),
+      unrelatedChart: structuredClone(unrelated?.chart ?? null),
+      chronoGroups,
+      municipalChronoGroup: structuredClone(
+        chronoGroups.find(({ id }) => id === "municipal_outbreak") ?? null,
+      ),
+      nationalChronoMembers: structuredClone(
+        chronoGroups.find(({ id }) => id === "national_outbreak")?.members ?? [],
+      ),
+    };
+  }, STORAGE_KEY);
 }
 
 async function expectStoredChart(page, typeId, title) {

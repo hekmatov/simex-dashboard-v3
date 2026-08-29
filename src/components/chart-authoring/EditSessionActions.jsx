@@ -3,6 +3,8 @@ import React from "react";
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
 import { IconControl } from "../common/SimExIcon.js";
 
+const PERSISTENCE_PENDING_REASON = "Wait for the current chart operation to finish.";
+
 export default function EditSessionActions({
   valid = false,
   submitting = false,
@@ -35,7 +37,9 @@ export default function EditSessionActions({
         ariaLabel: submitting ? savingLabel : saveLabel,
         tooltip: submitting ? savingLabel : saveLabel,
         disabled: disabled || saveDisabled || !valid || submitting,
-        disabledReason: saveDisabled ? saveDisabledReason : "",
+        disabledReason: submitting
+          ? PERSISTENCE_PENDING_REASON
+          : saveDisabled ? saveDisabledReason : "",
         onClick: onSave,
       }),
       React.createElement(IconControl, {
@@ -44,6 +48,7 @@ export default function EditSessionActions({
         ariaLabel: resetLabel,
         tooltip: resetLabel,
         disabled: disabled || submitting,
+        disabledReason: submitting ? PERSISTENCE_PENDING_REASON : "",
         onClick: onRequestReset,
       }),
       React.createElement(IconControl, {
@@ -52,6 +57,7 @@ export default function EditSessionActions({
         ariaLabel: cancelLabel,
         tooltip: cancelLabel,
         disabled: disabled || submitting,
+        disabledReason: submitting ? PERSISTENCE_PENDING_REASON : "",
         onClick: onCancel,
       }),
       typeof onRemove === "function"
@@ -59,7 +65,9 @@ export default function EditSessionActions({
             interactionId: "chart.remove",
             className: "chart-editor-remove",
             disabled: disabled || removeDisabled || submitting,
-            disabledReason: removeDisabled ? removeDisabledReason : "",
+            disabledReason: submitting
+              ? PERSISTENCE_PENDING_REASON
+              : removeDisabled ? removeDisabledReason : "",
             onClick: () => {
               if (!disabled && !removeDisabled && !submitting) onRemove();
             },
