@@ -820,6 +820,45 @@ test("replacement source compatibility validates numeric interpretation against 
   }
 });
 
+test("temporal source replacement requires clean complete profile evidence", () => {
+  const state = synchronizedState();
+  const requested = reduceWizardState(state, {
+    type: "requestSourceChange",
+    sourceId: "partial-temporal",
+    source: null,
+    rows: [
+      { reportedAt: "2027-05-03", value: 14 },
+      { reportedAt: "not-a-date", value: 15 },
+    ],
+    profile: {
+      rowCount: 2,
+      columns: [
+        {
+          name: "reportedAt",
+          type: "temporal",
+          examples: ["2027-05-03"],
+          temporal: {
+            values: ["2027-05-03", null],
+            diagnostics: [{
+              index: 1,
+              value: "not-a-date",
+              code: "invalid-date-format",
+            }],
+            parsingMetadata: {
+              interpretation: "temporal",
+              format: "YYYY-MM-DD",
+            },
+          },
+        },
+        { name: "value", type: "numeric", examples: [14, 15] },
+      ],
+    },
+  });
+
+  assert.equal(requested.confirmation, "changeSource");
+  assert.equal(requested.draft, state.draft);
+});
+
 test("incompatible source changes require explicit confirmation and cancellation preserves the draft", () => {
   const firstRows = [
     { period: "May", capacity: 4, region: "North" },

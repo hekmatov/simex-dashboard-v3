@@ -8,6 +8,7 @@ import {
   resolveBindingValue,
   resolveEffectiveBinding,
 } from "../data/bindings.js";
+import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateChronoGroups } from "../time/chronoGroupModel.js";
 
@@ -745,24 +746,49 @@ function sourceMappingsAreCompatible(draft, profile) {
 
 function bindingHasCompatibleProfileEvidence(binding, column, effectiveType) {
   if (!["temporal", "number", "boolean"].includes(effectiveType)) return true;
-  const values = presentProfileEvidence(column, effectiveType);
-  if (values.length === 0) return effectiveType !== "temporal";
-  return values.every((value) => resolveBindingValue(value, binding, column).ok);
+  const values = presentProfileEvidence(column);
+  if (
+    values.length > 0
+    && !values.every((value) => resolveBindingValue(value, binding, column).ok)
+  ) {
+    return false;
+  }
+  return effectiveType !== "temporal"
+    || hasCanonicalTemporalProfileEvidence(column.temporal);
 }
 
-function presentProfileEvidence(column, effectiveType) {
+function presentProfileEvidence(column) {
   const values = Array.isArray(column.values)
     ? column.values
     : Array.isArray(column.examples)
       ? column.examples
-      : effectiveType === "temporal" && Array.isArray(column.temporal?.values)
-        ? column.temporal.values
-        : [];
+      : [];
   return values.filter((value) => (
     value !== null
     && value !== undefined
     && !(typeof value === "string" && value.trim() === "")
   ));
+}
+
+function hasCanonicalTemporalProfileEvidence(temporal) {
+  if (
+    !isRecord(temporal)
+    || !Array.isArray(temporal.values)
+    || temporal.values.length === 0
+    || !Array.isArray(temporal.diagnostics)
+    || temporal.diagnostics.length > 0
+  ) {
+    return false;
+  }
+  let hasCanonicalValue = false;
+  for (const value of temporal.values) {
+    if (value === null) continue;
+    if (typeof value !== "string" || value === "") return false;
+    const parsed = parseTemporalValue(value);
+    if (!parsed.ok || parsed.canonical !== value) return false;
+    hasCanonicalValue = true;
+  }
+  return hasCanonicalValue;
 }
 
 function hasSourceMappings(draft) {
