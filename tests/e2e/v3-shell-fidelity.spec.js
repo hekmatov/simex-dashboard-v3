@@ -355,7 +355,7 @@ test("look drawer allows transient compression and restores dashboard geometry a
 
   const system = drawer.getByLabel("System", { exact: true });
   const dark = drawer.getByLabel("Dark", { exact: true });
-  await drawer.getByRole("button", { name: "Close", exact: true }).focus();
+  await drawer.getByRole("button", { name: "Close Dashboard look", exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(system).toBeFocused();
   await page.keyboard.press("ArrowRight");
@@ -367,13 +367,13 @@ test("look drawer allows transient compression and restores dashboard geometry a
     return { width: style.outlineWidth, style: style.outlineStyle };
   });
   expect(focus).toEqual({ width: "3px", style: "solid" });
-  await expect(page.locator(".look-drawer-layer")).toHaveAttribute("data-resolved-appearance", "dark");
+  await expect(drawer).toHaveAttribute("data-resolved-appearance", "dark");
   expect(await drawer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await expect(drawer.locator('[data-icon-id="auto"]')).toHaveCount(1);
   await expect(drawer.locator('[data-icon-id="appearanceLight"]')).toHaveCount(1);
   await expect(drawer.locator('[data-icon-id="appearanceDark"]')).toHaveCount(1);
 
-  await drawer.getByRole("button", { name: "Close", exact: true }).click();
+  await drawer.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
   await expect(drawer).toHaveCount(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
 
@@ -386,7 +386,7 @@ test("look drawer allows transient compression and restores dashboard geometry a
   expect(open.sections).toEqual(before.sections);
   expect(open.panels).toEqual(before.panels);
 
-  await drawer.getByRole("button", { name: "Close", exact: true }).click();
+  await drawer.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
   await expect(drawer).toHaveCount(0);
   const restored = await readCanvasState(page);
   expect(restored.frame).toEqual(before.frame);
@@ -470,11 +470,14 @@ test("look drawer phone sheet", async ({ page }) => {
   const drawer = page.getByRole("dialog", { name: "Dashboard look" });
   await expect(drawer).toBeVisible();
   const box = await drawer.boundingBox();
+  const crownBox = await page.locator(".dashboard-command-crown").boundingBox();
   expect(box).not.toBeNull();
-  expect(box.width).toBe(390);
-  expect(box.height).toBe(844);
+  expect(crownBox).not.toBeNull();
+  expect(box.width).toBeCloseTo(390, 2);
+  expect(box.y).toBeCloseTo(crownBox.y + crownBox.height + 12, 2);
+  expect(box.y + box.height).toBeCloseTo(844, 2);
   await expect(page.locator(".look-drawer-click-catcher")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(drawer.getByRole("button", { name: "Close", exact: true })).toHaveCSS("min-height", "44px");
+  await expect(drawer.getByRole("button", { name: "Close Dashboard look", exact: true })).toHaveCSS("min-height", "44px");
 });
 
 test("best-effort phone banner preserves state and leaves Present operable", async ({ page }) => {

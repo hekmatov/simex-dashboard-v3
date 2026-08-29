@@ -116,3 +116,11 @@ test("More is a dialog drawer containing exactly Scene Studio and Chart accessib
   assert.match(html, /type="checkbox"[\s\S]*Chart accessibility/);
   assert.doesNotMatch(html, /Add chart|Add Text\/Image|Source content|Chrono Studio|Discard Build changes|Finish Build|Pages/);
 });
+
+test("More preserves the selected chart until Scene Studio captures its restoration", () => {
+  const html = renderWorkspace();
+  const moreButton = html.match(/<button[^>]*data-build-command-action="more"[^>]*>/)?.[0];
+
+  assert.ok(moreButton, "Build renders the More command");
+  assert.match(moreButton, /data-unit-orbit-preserve-open/);
+});

@@ -95,6 +95,7 @@ export default function BuildCommandHeader({
             type="button"
             className="secondary"
             data-build-command-action="more"
+            data-unit-orbit-preserve-open
             aria-controls="build-more-drawer"
             aria-expanded={moreOpen}
             aria-haspopup="dialog"
