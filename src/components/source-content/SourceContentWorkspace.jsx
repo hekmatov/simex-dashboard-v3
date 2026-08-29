@@ -16,6 +16,7 @@ export default function SourceContentWorkspace({
   viewState = null,
   ownerControllerRef = null,
   onOwnersChange,
+  onRetainedOwnersChange,
   onViewStateChange,
   onRequestClose,
   onContentDraftStage,
@@ -45,9 +46,13 @@ export default function SourceContentWorkspace({
   const [ownerResetGeneration, setOwnerResetGeneration] = React.useState(0);
   const [renameOperation, setRenameOperation] = React.useState({ busy: false, error: "" });
   const renamePromiseRef = React.useRef(null);
-  const sourceContentOwners = React.useMemo(
-    () => selectSourceContentOwners(ownerRegistry),
+  const retainedSourceContentOwners = React.useMemo(
+    () => selectRetainedSourceContentOwners(ownerRegistry),
     [ownerRegistry],
+  );
+  const sourceContentOwners = React.useMemo(
+    () => retainedSourceContentOwners.filter((owner) => owner.eligible !== false),
+    [retainedSourceContentOwners],
   );
   const preserveDraftsOnUnmount = !shouldDiscardSourceContentDraftsOnUnmount(
     active,
@@ -102,6 +107,14 @@ export default function SourceContentWorkspace({
   React.useEffect(() => {
     onOwnersChange?.(sourceContentOwners);
   }, [onOwnersChange, sourceContentOwners]);
+
+  React.useEffect(() => {
+    onRetainedOwnersChange?.(retainedSourceContentOwners);
+  }, [onRetainedOwnersChange, retainedSourceContentOwners]);
+
+  React.useEffect(() => () => {
+    onRetainedOwnersChange?.([]);
+  }, [onRetainedOwnersChange]);
 
   React.useImperativeHandle(ownerControllerRef, () => ({
     suspend() {
@@ -391,10 +404,14 @@ export function reduceSourceContentOwnerRegistry(registry = createSourceContentO
   return registry;
 }
 
-export function selectSourceContentOwners(registry = {}) {
+export function selectRetainedSourceContentOwners(registry = {}) {
   return Object.values(registry)
-    .filter((owner) => owner.eligible !== false)
     .sort((left, right) => left.draftId.localeCompare(right.draftId));
+}
+
+export function selectSourceContentOwners(registry = {}) {
+  return selectRetainedSourceContentOwners(registry)
+    .filter((owner) => owner.eligible !== false);
 }
 
 export function buildEligibleContentRenameDraft({ dashboard, item, displayName, defaultDescription = "" } = {}) {

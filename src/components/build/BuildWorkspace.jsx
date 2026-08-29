@@ -136,6 +136,7 @@ export default function BuildWorkspace({
   const parkedAuxiliaries = draftCoordinator.parkedAuxiliaries;
   const [sourceContentViewState, setSourceContentViewState] = React.useState(() => createSourceContentViewState());
   const [sourceContentOwners, setSourceContentOwners] = React.useState([]);
+  const [retainedSourceContentOwners, setRetainedSourceContentOwners] = React.useState([]);
   const sourceContentControllerRef = React.useRef(null);
   const [chronoGroupDraft, setChronoGroupDraft] = React.useState(null);
   const [sceneDraft, setSceneDraft] = React.useState(null);
@@ -668,6 +669,7 @@ export default function BuildWorkspace({
     coordinator: draftCoordinator,
     chartOwners,
     owners: [...temporalOwners, ...sourceContentOwners, ...(Array.isArray(owners) ? owners : [])],
+    retainedSourceOwners: retainedSourceContentOwners,
     parkedAuxiliaries,
     layoutDraft,
     actions: {
@@ -771,6 +773,7 @@ export default function BuildWorkspace({
                 ownerControllerRef={sourceContentControllerRef}
                 viewState={sourceContentViewState}
                 onOwnersChange={setSourceContentOwners}
+                onRetainedOwnersChange={setRetainedSourceContentOwners}
                 onViewStateChange={setSourceContentViewState}
                 onRequestClose={closeAuxiliary}
                 onContentDraftStage={onContentDraftStage}

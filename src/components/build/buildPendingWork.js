@@ -28,6 +28,7 @@ export function selectBuildPendingWork({
   coordinator = null,
   chartOwners = [],
   owners = [],
+  retainedSourceOwners = [],
   parkedAuxiliaries = coordinator?.parkedAuxiliaries ?? [],
   layoutDraft = null,
   actions = {},
@@ -50,6 +51,11 @@ export function selectBuildPendingWork({
     [...adoptedChartOwners.values()].map(({ kind }) => kind),
   );
   const adoptedKinds = new Set([...adoptedOwners.values()].map(({ kind }) => kind));
+  for (const owner of Array.isArray(retainedSourceOwners) ? retainedSourceOwners : []) {
+    if (isAdoptedOwner(owner) && new Set(["source-content-create", "source-content-edit"]).has(owner.kind)) {
+      adoptedKinds.add(owner.kind);
+    }
+  }
   for (const session of parkedAuxiliaries ?? []) {
     const temporalKind = temporalOwnerKind(session?.surface);
     if (temporalKind && (session?.dirty === true || isPendingState(session?.status))) {
@@ -184,6 +190,7 @@ function descriptorForChartOwner(owner, actions) {
 }
 
 function descriptorForOwner(owner, actions) {
+  if (owner?.eligible === false) return null;
   const ownerActions = actions.ownerById?.[owner.draftId] ?? {};
   const activity = owner.activity === "suspended" ? "suspended" : "active";
   const activation = activity === "suspended" ? "resume" : "focus";

@@ -453,6 +453,38 @@ test("Source Content owners keep exact create/edit identities and bypass pending
   assert.deepEqual(selectBuildPendingWork({ owners: [{ ...create, status: "clean" }], actions }), []);
 });
 
+test("retained ineligible Source Content suppresses legacy pendingContent without publishing a row", () => {
+  const retained = {
+    draftId: "source-content-create:manager-media-invalid",
+    kind: "source-content-create",
+    scopeId: "manager-media-invalid",
+    status: "dirty",
+    activity: "active",
+    surface: "source-content-catalogue",
+    eligible: false,
+  };
+
+  assert.deepEqual(selectBuildPendingWork({
+    authoredDirty: { pendingContent: true },
+    retainedSourceOwners: [retained],
+  }), []);
+  assert.deepEqual(selectBuildPendingWork({
+    authoredDirty: { pendingContent: true },
+    owners: [retained],
+    retainedSourceOwners: [retained],
+  }), []);
+
+  const eligible = { ...retained, eligible: true };
+  assert.deepEqual(selectBuildPendingWork({
+    authoredDirty: { pendingContent: true },
+    owners: [eligible],
+    retainedSourceOwners: [eligible],
+  }).map(({ id, label }) => ({ id, label })), [{
+    id: retained.draftId,
+    label: "New Source Content draft",
+  }]);
+});
+
 test("layout-owned Scene consequences publish only the layout transaction descriptor", () => {
   const layoutDraft = {
     draftId: "layout:dashboard-1",

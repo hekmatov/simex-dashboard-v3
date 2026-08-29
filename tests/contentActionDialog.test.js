@@ -17,6 +17,7 @@ const ContentActionDialog = dialogModule.default;
 const {
   createSourceContentOwnerRegistry,
   reduceSourceContentOwnerRegistry,
+  selectRetainedSourceContentOwners,
   selectSourceContentOwners,
   visibleManagerItems,
 } = workspaceModule;
@@ -117,6 +118,13 @@ test("Source Content owner eligibility follows valid dirty forms without losing 
     type: "ELIGIBILITY", transactionDraftId: input.draftId, eligible: false,
   });
   assert.deepEqual(selectSourceContentOwners(registry), []);
+  assert.deepEqual(selectRetainedSourceContentOwners(registry).map(({ draftId, eligible }) => ({
+    draftId,
+    eligible,
+  })), [{
+    draftId: ownerId,
+    eligible: false,
+  }]);
   registry = reduceSourceContentOwnerRegistry(registry, {
     type: "STATUS", transactionDraftId: input.draftId, status: "error", error: "retry retained",
   });
@@ -125,6 +133,7 @@ test("Source Content owner eligibility follows valid dirty forms without losing 
   });
   assert.equal(selectSourceContentOwners(registry)[0].draftId, ownerId);
   assert.equal(selectSourceContentOwners(registry)[0].status, "error");
+  assert.equal(selectRetainedSourceContentOwners(registry)[0].draftId, ownerId);
 });
 
 test("duplicate media eligibility uses the newly selected choice in the same change", () => {
