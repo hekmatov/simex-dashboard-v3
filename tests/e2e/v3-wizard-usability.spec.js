@@ -81,7 +81,7 @@ test("New Chart keeps stable geometry and exposes editable destination placement
   await expect(wizard.locator(".chart-wizard-destination .chart-proof-state")).toHaveCount(0);
 });
 
-test("Data Source actions and Review repairs are concise and explicit", async ({ page }) => {
+test("Data source existing CSV actions, blank measurement, and Review repairs are concise and explicit", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   const flow = await openWizard(page);
   const { wizard } = flow;
@@ -112,6 +112,9 @@ test("Data Source actions and Review repairs are concise and explicit", async ({
   await repair.click();
   await expect(flow.stageButton("mapAndPrepare"))
     .toHaveAttribute("aria-current", "step");
+  const measurements = wizard.locator('[data-field-id="measurements"] select');
+  await expect(measurements).toHaveCount(1);
+  await expect(measurements).toHaveValue("");
 });
 
 async function openWizard(page) {

@@ -30,7 +30,7 @@ test("Build Page management uses one full-size trigger and full-size grouped act
   expect(await navigation.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
 });
 
-test("Step 7 Build controls and fields use the shared 44px interaction contract", async ({ page }) => {
+test("source-first Step 7 Build controls and fields use the shared 44px interaction contract", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();

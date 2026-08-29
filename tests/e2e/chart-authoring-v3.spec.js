@@ -30,7 +30,7 @@ test.beforeEach(async ({ page, request }) => {
   await page.getByRole("button", { name: "Build" }).click();
 });
 
-test("fresh pie authoring progressively reveals schema fields and persists the created chart", async ({
+test("source-first existing CSV pie authoring progressively reveals schema fields and persists the created chart", async ({
   page,
 }) => {
   test.setTimeout(240_000);
