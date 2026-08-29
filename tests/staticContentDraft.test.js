@@ -30,6 +30,24 @@ test("Text/Image ownership starts on the first semantic change and stays scoped 
   assert.equal(edit.status, "error");
 });
 
+test("creation destination and type choices stay clean until a retainable semantic mutation", () => {
+  let creation = createStaticContentDraft();
+  creation = reduceStaticContentDraft(creation, {
+    type: "setDestination",
+    destination: { pageId: "overview", sectionId: "response" },
+  });
+  creation = reduceStaticContentDraft(creation, { type: "setContentType", contentTypeId: "freeText" });
+  creation = reduceStaticContentDraft(creation, { type: "setStage", stage: "content" });
+
+  assert.equal(isStaticContentDraftDirty(creation), false);
+  assert.equal(projectStaticContentDraftOwner({ draft: creation, dirty: true, active: false }), null);
+
+  creation = reduceStaticContentDraft(creation, { type: "updateSource", updates: { qmd: "Unsaved draft" } });
+  assert.equal(isStaticContentDraftDirty(creation), true);
+  assert.equal(projectStaticContentDraftOwner({ draft: creation, active: false })?.kind, "text-image-create");
+  assert.throws(() => finalizeStaticContentDraft(creation), /Preview & add/i);
+});
+
 test("Text and Image drafts default to Standard 2x1 and persist the shared footprint model", () => {
   for (const contentTypeId of ["freeText", "image"]) {
     let draft = createStaticContentDraft({

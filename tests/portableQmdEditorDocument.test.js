@@ -65,6 +65,8 @@ test("unsupported valid QMD opens Advanced QMD without changing its exact source
     "```js\nconst safe = true;\n```",
     "A note.[^proof]\n\n[^proof]: Exact.",
     "<span data-authored=\"true\">inert markup</span>",
+    "# Exact level-one heading",
+    "#### Exact level-four heading",
     "| A | B |\n| --- | --- |\n| only-one-cell |",
   ];
   for (const source of cases) {
@@ -85,4 +87,53 @@ test("unsafe links cannot be serialized by the visual document bridge", () => {
   });
   assert.equal(result.ok, false);
   assert.match(result.errors[0], /link/i);
+});
+
+test("the visual serializer accepts only Composer Heading and Subheading levels", () => {
+  for (const level of [1, 4, 5, 6]) {
+    const result = serializePortableQmdEditorDocument({
+      type: "doc",
+      content: [{ type: "heading", attrs: { level }, content: [{ type: "text", text: "Unsupported" }] }],
+    });
+    assert.equal(result.ok, false, `h${level}`);
+    assert.match(result.errors[0], /Heading|Subheading/);
+  }
+});
+
+test("literal Markdown-like text stays literal through two visual serializations", () => {
+  const literals = [
+    "_literal emphasis_ and `literal code` and ~~literal strike~~.",
+    "# literal heading",
+    "- literal bullet",
+    "1. literal numbered item",
+    "> literal quote",
+    "---",
+    '<span data-authored="true">literal raw-looking markup</span>',
+  ];
+  const document = {
+    type: "doc",
+    content: literals.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })),
+  };
+
+  const first = serializePortableQmdEditorDocument(document);
+  assert.equal(first.ok, true, JSON.stringify(first.errors));
+  const parsed = parsePortableQmdEditorDocument(first.source);
+  assert.equal(parsed.mode, "visual", parsed.reason);
+  assert.deepEqual(parsed.document, document);
+  const second = serializePortableQmdEditorDocument(parsed.document);
+  assert.deepEqual(second, first);
+  const reparsed = parsePortableQmdEditorDocument(second.source);
+  assert.deepEqual(reparsed.document, document);
+});
+
+test("aligned tables stay exact in Advanced QMD instead of losing alignment", () => {
+  const source = [
+    "| Start | Centre | End |",
+    "| :--- | :---: | ---: |",
+    "| A | B | C |",
+  ].join("\n");
+  const parsed = parsePortableQmdEditorDocument(source);
+  assert.equal(parsed.mode, "advanced");
+  assert.equal(parsed.source, source);
+  assert.match(parsed.reason, /table shape/i);
 });

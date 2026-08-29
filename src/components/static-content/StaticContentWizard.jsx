@@ -40,6 +40,7 @@ export function StaticContentWizard({
   onContentDraftDiscard,
   onDraftChange,
   onDirtyChange,
+  onRestorationChange,
   onCreate,
   onClose,
   onSuspend,
@@ -117,6 +118,9 @@ export function StaticContentWizard({
     dispatch({ type: "requestCancel", restoration });
   };
   const requestDiscard = () => dispatch({ type: "requestCancel", restoration: focusRestoration(draft.stage) });
+  const reportSurface = React.useCallback((surface) => {
+    onRestorationChange?.({ ...focusRestoration(draft.stage), surface });
+  }, [draft.stage, onRestorationChange]);
   const reset = async () => {
     cleanupImageDraftAssets(draft, dashboard);
     await discardActiveContentDraft("static-content-reset");
@@ -217,17 +221,24 @@ export function StaticContentWizard({
           })}
         </nav>
 
-        <section className="static-content-dialog__body" data-static-content-stage={draft.stage}>
-          {draft.stage === "destination" && <DestinationFields dashboard={dashboard} draft={draft} dispatch={dispatch} />}
-          {draft.stage === "content-type" && <ContentTypeFields draft={draft} dispatch={dispatch} />}
+        <section
+          className="static-content-dialog__body"
+          data-static-content-stage={draft.stage}
+          onFocusCapture={() => onRestorationChange?.(focusRestoration(draft.stage))}
+          onScroll={() => onRestorationChange?.(focusRestoration(draft.stage))}
+        >
+          {draft.stage === "destination" && <DestinationFields dashboard={dashboard} draft={draft} dispatch={dispatch} disabled={disabled} />}
+          {draft.stage === "content-type" && <ContentTypeFields draft={draft} dispatch={dispatch} disabled={disabled} />}
           {draft.stage === "content" && (
             <StaticContentFields
               draft={draft}
               dashboard={dashboard}
               contentRenderContext={contentRenderContext}
+              disabled={disabled}
               dispatch={dispatch}
               onFreeTextValidation={setFreeTextValidation}
               restoration={restoration}
+              onSurfaceChange={reportSurface}
               onRetainMedia={retainMedia}
               onRestorePreviousImage={() => void discardActiveContentDraft("restore-previous-image")}
             />
@@ -263,7 +274,7 @@ export function StaticContentWizard({
   );
 }
 
-function DestinationFields({ dashboard, draft, dispatch }) {
+function DestinationFields({ dashboard, draft, dispatch, disabled }) {
   const pages = (dashboard.pages ?? []).filter(({ landing }) => !landing);
   const page = pages.find(({ id }) => id === draft.destination?.pageId) ?? pages[0];
   return (
@@ -273,6 +284,7 @@ function DestinationFields({ dashboard, draft, dispatch }) {
       <select
         id="static-destination-page"
         data-static-initial-focus="true"
+        disabled={disabled}
         value={draft.destination?.pageId ?? ""}
         onChange={(event) => {
           const nextPage = pages.find(({ id }) => id === event.target.value);
@@ -285,6 +297,7 @@ function DestinationFields({ dashboard, draft, dispatch }) {
       <label htmlFor="static-destination-section">Section</label>
       <select
         id="static-destination-section"
+        disabled={disabled}
         value={draft.destination?.sectionId ?? ""}
         onChange={(event) => dispatch({ type: "setDestination", destination: { pageId: page?.id, sectionId: event.target.value } })}
       >
@@ -295,7 +308,7 @@ function DestinationFields({ dashboard, draft, dispatch }) {
   );
 }
 
-function ContentTypeFields({ draft, dispatch }) {
+function ContentTypeFields({ draft, dispatch, disabled }) {
   return (
     <fieldset>
       <legend>Content type</legend>
@@ -304,6 +317,7 @@ function ContentTypeFields({ draft, dispatch }) {
           <input
             data-static-initial-focus={index === 0 ? "true" : undefined}
             type="radio"
+            disabled={disabled}
             name="static-content-type"
             value={option.id}
             checked={draft.contentTypeId === option.id}
@@ -316,13 +330,16 @@ function ContentTypeFields({ draft, dispatch }) {
   );
 }
 
-export function StaticContentFields({ draft, dashboard = {}, contentRenderContext = {}, restoration, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage }) {
+export function StaticContentFields({ draft, dashboard = {}, contentRenderContext = {}, restoration, disabled = false, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage, onSurfaceChange }) {
   return (
     <div>
+      {disabled && <p id="static-content-pending-reason" role="status">Text/Image authoring is unavailable while this draft action is pending.</p>}
       <label htmlFor="static-panel-title">Panel title</label>
       <input
         id="static-panel-title"
         data-static-initial-focus="true"
+        disabled={disabled}
+        aria-describedby={disabled ? "static-content-pending-reason" : undefined}
         value={draft.panel?.title ?? ""}
         onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
       />
@@ -330,6 +347,7 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
         subject="Panel"
         idPrefix={`static-panel-${draft.draftIdentity?.panelId ?? "draft"}`}
         value={resolveChartFootprint(draft.panel?.layout)}
+        disabled={disabled}
         onChange={({ columns, rows }) => dispatch({
           type: "setPanel",
           updates: {
@@ -343,13 +361,13 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
         })}
       />
       {draft.contentTypeId === "freeText"
-        ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} restoration={restoration} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} />
-        : <ImageFields draft={draft} dashboard={dashboard} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
+        ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} restoration={restoration} disabled={disabled} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} onSurfaceChange={onSurfaceChange} />
+        : <ImageFields draft={draft} dashboard={dashboard} disabled={disabled} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
     </div>
   );
 }
 
-function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, dispatch, onValidationChange, onRetainMedia }) {
+function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, disabled, dispatch, onValidationChange, onRetainMedia, onSurfaceChange }) {
   return (
     <FreeTextSourceEditor
       id="static-qmd-source"
@@ -357,6 +375,8 @@ function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, d
       panelId={draft.panel?.id ?? "static-text-preview"}
       panelTitle={draft.panel?.title ?? ""}
       initialSurface={restoration?.surface}
+      disabled={disabled}
+      onSurfaceChange={onSurfaceChange}
       mediaItems={{ ...(dashboard.contentLibrary?.mediaItems ?? {}), ...(draft.pendingMediaItems ?? {}) }}
       assets={draft.assets}
       contentRenderContext={contentRenderContext}
@@ -374,7 +394,7 @@ function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, d
   );
 }
 
-function ImageFields({ draft, dashboard, dispatch, onRetainMedia, onRestorePreviousImage }) {
+function ImageFields({ draft, dashboard, disabled, dispatch, onRetainMedia, onRestorePreviousImage }) {
   const source = draft.source ?? {};
   const mediaItem = draft.mediaItem;
   const editorSource = { ...source, origin: mediaItem?.current };
@@ -384,6 +404,7 @@ function ImageFields({ draft, dashboard, dispatch, onRetainMedia, onRestorePrevi
       assets={draft.assets}
       mediaItems={dashboard.contentLibrary?.mediaItems ?? {}}
       imageEditing={draft.imageEditing}
+      disabled={disabled}
       onOriginChange={(current) => dispatch({ type: "setMediaCurrent", current })}
       onReplace={({ origin, manifestEntry }) => {
         const action = { type: "replaceImage", current: origin, origin, manifestEntry };
@@ -415,6 +436,7 @@ function ImageFields({ draft, dashboard, dispatch, onRetainMedia, onRestorePrevi
       source={source}
       sourceUrl={resolveImageDraftUrl(mediaItem)}
       containedPackagePath={mediaItem?.current?.kind === "package"}
+      disabled={disabled}
       sourceControls={sourceControls}
       onTransformChange={({ crop, rotation, fit }) => dispatch({ type: "setImageTransform", crop, rotation, fit })}
       onReset={() => dispatch({ type: "resetImage" })}

@@ -228,6 +228,34 @@ test("trusted underline rendering creates semantic u and never an authored under
   assert.deepEqual(result, { underlines: ["semantic underline"], invalid: 0 });
 });
 
+test("Lead and Caption directives render as one fixed semantic paragraph each", async () => {
+  await page.goto(`${baseURL}/tests/fixtures/portable-qmd-browser.html`);
+  const result = await page.evaluate(async () => {
+    const { compilePortableQmd } = await import("/src/static-content/qmd/compilePortableQmd.js");
+    const source = [
+      "::: {.simex-text-lead}",
+      "Lead copy.",
+      ":::",
+      "",
+      "::: {.simex-text-caption}",
+      "Caption copy.",
+      ":::",
+    ].join("\n");
+    const target = document.querySelector("#target");
+    target.replaceChildren(compilePortableQmd(source, { panelId: "semantic-text" }).fragment);
+    return {
+      lead: [...target.querySelectorAll("p.portable-qmd-lead")].map((node) => ({ text: node.textContent, nested: node.querySelectorAll("p").length })),
+      caption: [...target.querySelectorAll("p.portable-qmd-caption")].map((node) => ({ text: node.textContent, nested: node.querySelectorAll("p").length })),
+      totalParagraphs: target.querySelectorAll("p").length,
+    };
+  });
+  assert.deepEqual(result, {
+    lead: [{ text: "Lead copy.", nested: 0 }],
+    caption: [{ text: "Caption copy.", nested: 0 }],
+    totalParagraphs: 2,
+  });
+});
+
 test("repeated footnotes keep unique occurrence links while missing definitions remain visible text", async () => {
   await page.goto(`${baseURL}/tests/fixtures/portable-qmd-browser.html`);
   const result = await page.evaluate(async () => {

@@ -5,7 +5,7 @@ const UNSUPPORTED_SOURCE = Object.freeze([
   [/^\s*```/m, "fenced code"],
   [/(^|[^\\])\$\$?[\s\S]*?\$/, "math"],
   [/\[\^[a-z][a-z0-9._:-]*\]/i, "footnotes"],
-  [/<\/?[a-z!][^>]*>/i, "raw or inert markup"],
+  [/(^|[^\\])<\/?[a-z!][^>]*>/i, "raw or inert markup"],
   [/^\s*>/m, "block quotes"],
   [/(^|[^\\])`/, "inline code"],
 ]);
@@ -41,6 +41,10 @@ export function parsePortableQmdEditorDocument(source) {
   if (!parsed.ok) return advanced(source, "source that is not valid Portable QMD");
   const unsupportedBlock = parsed.ast.tokens.find((token) => !ALLOWED_BLOCK_TOKENS.has(token.type));
   if (unsupportedBlock) return advanced(source, `the unsupported ${unsupportedBlock.type} construct`);
+  const unsupportedHeading = parsed.ast.tokens.find((token) => (
+    token.type === "heading_open" && !["h2", "h3"].includes(token.tag)
+  ));
+  if (unsupportedHeading) return advanced(source, "a heading level outside Heading or Subheading");
   for (const token of parsed.ast.tokens) {
     if (token.type !== "inline") continue;
     const unsupportedInline = (token.children ?? []).find((child) => !ALLOWED_INLINE_TOKENS.has(child.type));
@@ -211,7 +215,10 @@ function serializeBlock(node, errors, depth) {
   }
   if (node.type === "heading") {
     const level = Number(node.attrs?.level);
-    if (!Number.isInteger(level) || level < 1 || level > 6) { errors.push("Heading level must be from 1 through 6."); return null; }
+    if (![2, 3].includes(level)) {
+      errors.push("Visual headings must use Heading (level 2) or Subheading (level 3).");
+      return null;
+    }
     return `${"#".repeat(level)} ${serializeInline(node.content, errors)}`;
   }
   if (node.type === "bulletList" || node.type === "orderedList") {
@@ -299,13 +306,25 @@ function requireToken(token, type) {
 }
 
 function escapeInlineText(value) {
-  return String(value).replaceAll("\\", "\\\\").replace(/([*\[\]+])/g, "\\$1");
+  return String(value)
+    .replaceAll("\\", "\\\\")
+    .replace(/([*_[\]+`~<])/g, "\\$1")
+    .replace(
+      /(^|\n)( {0,3})(#{1,6}(?=\s|$)|>(?=\s|$)|-(?=\s|$)|\d+\.(?=\s|$)|---(?=\s|$))/g,
+      (_match, lineStart, indent, marker) => `${lineStart}${indent}${escapeBlockMarker(marker)}`,
+    );
+}
+
+function escapeBlockMarker(marker) {
+  if (/^\d+\.$/.test(marker)) return `${marker.slice(0, -1)}\\.`;
+  return `\\${marker}`;
 }
 
 function hasSupportedTableShape(source) {
   const lines = source.split("\n");
   for (let index = 1; index < lines.length; index += 1) {
     if (!/^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(lines[index])) continue;
+    if (/:\s*-|-\s*:/.test(lines[index])) return false;
     const expected = tableColumnCount(lines[index - 1]);
     if (expected < 1 || tableColumnCount(lines[index]) !== expected) return false;
     for (let row = index + 1; row < lines.length && /\|/.test(lines[row]); row += 1) {

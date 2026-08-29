@@ -17,6 +17,8 @@ import { sanitizePortableQmdHtmlPaste } from "../../static-content/qmd/portableQ
 
 const Lead = fixedSemanticParagraph("lead", "portable-qmd-lead");
 const Caption = fixedSemanticParagraph("caption", "portable-qmd-caption");
+const PENDING_REASON = "Text/Image authoring is unavailable while this draft action is pending.";
+const LOADING_REASON = "The Composer is still loading.";
 const PortableMedia = Node.create({
   name: "portableMedia",
   group: "inline",
@@ -42,7 +44,17 @@ const PortableMedia = Node.create({
 
 export function createPortableQmdEditorExtensions() {
   return [
-    StarterKit.configure({ link: false, underline: false }),
+    StarterKit.configure({
+      blockquote: false,
+      code: false,
+      codeBlock: false,
+      hardBreak: false,
+      heading: { levels: [2, 3] },
+      horizontalRule: false,
+      link: false,
+      strike: false,
+      underline: false,
+    }),
     Underline,
     Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, protocols: ["http", "https"] }),
     TableKit.configure({ table: { resizable: false, allowTableNodeSelection: true } }),
@@ -59,11 +71,16 @@ export default function PortableQmdRichTextEditor({
   onMediaSelect,
 } = {}) {
   const parsed = React.useMemo(() => parsePortableQmdEditorDocument(source), [source]);
-  const [announcement, setAnnouncement] = React.useState("");
+  const [announcement, setAnnouncement] = React.useState({ message: "", kind: "status" });
   const [linkOpen, setLinkOpen] = React.useState(false);
   const [linkValue, setLinkValue] = React.useState("");
   const [linkError, setLinkError] = React.useState("");
-  const lastEmitted = React.useRef(source);
+  const disabledRef = React.useRef(disabled);
+  disabledRef.current = disabled;
+  const acceptedRef = React.useRef({
+    source,
+    document: parsed.mode === "visual" ? parsed.document : { type: "doc", content: [{ type: "paragraph" }] },
+  });
   const editor = useEditor({
     immediatelyRender: false,
     editable: !disabled,
@@ -79,28 +96,40 @@ export default function PortableQmdRichTextEditor({
         const html = event.clipboardData?.getData("text/html");
         if (!html) return false;
         event.preventDefault();
+        if (disabledRef.current) {
+          setAnnouncement({ message: PENDING_REASON, kind: "status" });
+          return true;
+        }
         const imported = sanitizePortableQmdHtmlPaste(html);
         const nodes = imported.document.content.map((node) => view.state.schema.nodeFromJSON(node));
         const slice = new Slice(Fragment.fromArray(nodes), 0, 0);
         view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView());
-        setAnnouncement(imported.removed.length
-          ? "Some unsupported paste formatting was removed; the visible text was kept where possible."
-          : "Formatted content pasted.");
+        setAnnouncement({
+          message: imported.removed.length
+            ? "Some unsupported paste formatting was removed; the visible text was kept where possible."
+            : "Formatted content pasted.",
+          kind: "status",
+        });
         return true;
       },
     },
     onUpdate({ editor: current }) {
-      const serialized = serializePortableQmdEditorDocument(current.getJSON());
-      if (!serialized.ok || serialized.source === lastEmitted.current) return;
-      lastEmitted.current = serialized.source;
-      onSourceChange?.(serialized.source);
+      const result = reconcilePortableQmdEditorUpdate({
+        editor: current,
+        accepted: acceptedRef.current,
+        onSourceChange,
+      });
+      acceptedRef.current = result.accepted;
+      if (result.announcement) {
+        setAnnouncement({ message: result.announcement, kind: result.ok ? "status" : "error" });
+      }
     },
   });
 
   React.useEffect(() => { editor?.setEditable(!disabled); }, [disabled, editor]);
   React.useEffect(() => {
-    if (!editor || parsed.mode !== "visual" || source === lastEmitted.current) return;
-    lastEmitted.current = source;
+    if (!editor || parsed.mode !== "visual" || source === acceptedRef.current.source) return;
+    acceptedRef.current = { source, document: parsed.document };
     editor.commands.setContent(parsed.document, { emitUpdate: false });
   }, [editor, parsed, source]);
 
@@ -109,16 +138,19 @@ export default function PortableQmdRichTextEditor({
     callback(editor.chain().focus()).run();
   };
   const applyLink = () => {
+    if (disabledRef.current || !editor) return;
     const href = validatePortableHref(linkValue);
     if (!href) {
       setLinkError("Enter an HTTP, HTTPS, or local #heading destination.");
       return;
     }
-    editor?.chain().focus().extendMarkRange("link").setLink({ href }).run();
+    editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
     setLinkError("");
     setLinkOpen(false);
   };
-  const disabledReason = "Text/Image authoring is unavailable while this draft action is pending.";
+  const standardState = portableQmdComposerControlState({ disabled, editor });
+  const undoState = portableQmdComposerControlState({ disabled, editor, action: "undo" });
+  const redoState = portableQmdComposerControlState({ disabled, editor, action: "redo" });
 
   return (
     <section
@@ -127,40 +159,44 @@ export default function PortableQmdRichTextEditor({
       onKeyDown={(event) => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
           event.preventDefault();
+          if (disabledRef.current || !editor) return;
           setLinkValue(editor?.getAttributes("link")?.href ?? "");
           setLinkOpen(true);
         }
       }}
     >
       <div role="toolbar" aria-label="Composer formatting" className="portable-qmd-composer__toolbar">
-        <label>
-          <span>Semantic text style</span>
-          <select
-            aria-label="Semantic text style"
-            disabled={disabled || !editor}
-            value={currentSemanticStyle(editor)}
-            onChange={(event) => applySemanticStyle(editor, event.target.value)}
-          >
-            <option value="paragraph">Paragraph</option>
-            <option value="lead">Lead</option>
-            <option value="heading">Heading</option>
-            <option value="subheading">Subheading</option>
-            <option value="caption">Caption</option>
-          </select>
-        </label>
-        <ComposerButton label="Bold" pressed={editor?.isActive("bold")} disabled={disabled || !editor} reason={disabledReason} onClick={() => command((chain) => chain.toggleBold())} />
-        <ComposerButton label="Italic" pressed={editor?.isActive("italic")} disabled={disabled || !editor} reason={disabledReason} onClick={() => command((chain) => chain.toggleItalic())} />
-        <ComposerButton label="Underline" pressed={editor?.isActive("underline")} disabled={disabled || !editor} reason={disabledReason} onClick={() => command((chain) => chain.toggleUnderline())} />
-        <ComposerButton label="Bullet list" pressed={editor?.isActive("bulletList")} disabled={disabled || !editor} reason={disabledReason} onClick={() => command((chain) => chain.toggleBulletList())} />
-        <ComposerButton label="Numbered list" pressed={editor?.isActive("orderedList")} disabled={disabled || !editor} reason={disabledReason} onClick={() => command((chain) => chain.toggleOrderedList())} />
-        <ComposerButton label="Link" pressed={editor?.isActive("link")} disabled={disabled || !editor} reason={disabledReason} onClick={() => {
+        <ControlTooltip disabled={standardState.disabled} reason={standardState.reason}>
+          <label>
+            <span>Semantic text style</span>
+            <select
+              id="portable-qmd-semantic-style"
+              aria-label="Semantic text style"
+              disabled={standardState.disabled}
+              value={currentSemanticStyle(editor)}
+              onChange={(event) => { if (!disabledRef.current) applySemanticStyle(editor, event.target.value); }}
+            >
+              <option value="paragraph">Paragraph</option>
+              <option value="lead">Lead</option>
+              <option value="heading">Heading</option>
+              <option value="subheading">Subheading</option>
+              <option value="caption">Caption</option>
+            </select>
+          </label>
+        </ControlTooltip>
+        <ComposerButton label="Bold" pressed={editor?.isActive("bold")} {...standardState} onClick={() => command((chain) => chain.toggleBold())} />
+        <ComposerButton label="Italic" pressed={editor?.isActive("italic")} {...standardState} onClick={() => command((chain) => chain.toggleItalic())} />
+        <ComposerButton label="Underline" pressed={editor?.isActive("underline")} {...standardState} onClick={() => command((chain) => chain.toggleUnderline())} />
+        <ComposerButton label="Bullet list" pressed={editor?.isActive("bulletList")} {...standardState} onClick={() => command((chain) => chain.toggleBulletList())} />
+        <ComposerButton label="Numbered list" pressed={editor?.isActive("orderedList")} {...standardState} onClick={() => command((chain) => chain.toggleOrderedList())} />
+        <ComposerButton label="Link" pressed={editor?.isActive("link")} {...standardState} onClick={() => {
           setLinkValue(editor?.getAttributes("link")?.href ?? ""); setLinkError(""); setLinkOpen(true);
         }} />
-        <ComposerButton label="Table" disabled={disabled || !editor} reason={disabledReason} onClick={() => command((chain) => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))} />
-        <ComposerButton label="Insert image" disabled={disabled} reason={disabledReason} onClick={() => onMediaSelect?.()} />
-        <ComposerButton label="Clear formatting" disabled={disabled || !editor} reason={disabledReason} onClick={() => command((chain) => chain.unsetAllMarks().clearNodes())} />
-        <ComposerButton label="Undo" disabled={disabled || !editor?.can().undo()} reason={disabledReason} onClick={() => command((chain) => chain.undo())} />
-        <ComposerButton label="Redo" disabled={disabled || !editor?.can().redo()} reason={disabledReason} onClick={() => command((chain) => chain.redo())} />
+        <ComposerButton label="Table" {...standardState} onClick={() => command((chain) => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))} />
+        <ComposerButton label="Insert image" disabled={disabled} reason={disabled ? PENDING_REASON : ""} onClick={() => onMediaSelect?.()} />
+        <ComposerButton label="Clear formatting" {...standardState} onClick={() => command((chain) => chain.unsetAllMarks().clearNodes())} />
+        <ComposerButton label="Undo" {...undoState} onClick={() => command((chain) => chain.undo())} />
+        <ComposerButton label="Redo" {...redoState} onClick={() => command((chain) => chain.redo())} />
       </div>
       {linkOpen && (
         <div className="portable-qmd-composer__link-editor" role="group" aria-label="Link editor">
@@ -168,18 +204,20 @@ export default function PortableQmdRichTextEditor({
           <input
             id="portable-qmd-link-destination"
             value={linkValue}
+            disabled={disabled || !editor}
             aria-invalid={linkError ? "true" : undefined}
-            aria-describedby={linkError ? "portable-qmd-link-error" : undefined}
+            aria-describedby={[linkError ? "portable-qmd-link-error" : "", disabled ? "portable-qmd-pending-reason" : ""].filter(Boolean).join(" ") || undefined}
             onChange={(event) => setLinkValue(event.target.value)}
           />
           {linkError && <p id="portable-qmd-link-error" className="form-error">{linkError}</p>}
-          <button type="button" onClick={applyLink}>Apply link</button>
-          <button type="button" className="secondary" onClick={() => { editor?.chain().focus().unsetLink().run(); setLinkOpen(false); setLinkError(""); }}>Remove link</button>
+          <ComposerButton label="Apply link" {...standardState} onClick={applyLink} />
+          <ComposerButton label="Remove link" {...standardState} onClick={() => { if (disabledRef.current || !editor) return; editor.chain().focus().unsetLink().run(); setLinkOpen(false); setLinkError(""); }} />
           <button type="button" className="secondary" onClick={() => { setLinkOpen(false); setLinkError(""); }}>Cancel</button>
         </div>
       )}
+      {disabled && <p id="portable-qmd-pending-reason" className="visually-hidden">{PENDING_REASON}</p>}
       <EditorContent editor={editor} />
-      <p className="portable-qmd-composer__announcement" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
+      <p className="portable-qmd-composer__announcement" role={announcement.kind === "error" ? "alert" : "status"} aria-live={announcement.kind === "error" ? "assertive" : "polite"} aria-atomic="true">{announcement.message}</p>
     </section>
   );
 }
@@ -189,6 +227,7 @@ function ComposerButton({ label, pressed, disabled, reason, onClick }) {
     <ControlTooltip disabled={disabled} reason={reason}>
       <button
         type="button"
+        id={`portable-qmd-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         aria-label={label}
         aria-pressed={pressed === undefined ? undefined : Boolean(pressed)}
         disabled={disabled}
@@ -197,6 +236,29 @@ function ComposerButton({ label, pressed, disabled, reason, onClick }) {
       >{label}</button>
     </ControlTooltip>
   );
+}
+
+export function reconcilePortableQmdEditorUpdate({ editor, accepted, onSourceChange } = {}) {
+  const serialized = serializePortableQmdEditorDocument(editor?.getJSON?.());
+  if (!serialized.ok) {
+    if (accepted?.document) editor?.commands?.setContent?.(accepted.document, { emitUpdate: false });
+    return {
+      ok: false,
+      accepted,
+      announcement: "That Composer change could not be saved as Portable QMD, so the last saved Composer content was restored.",
+    };
+  }
+  const next = { source: serialized.source, document: editor.getJSON() };
+  if (serialized.source !== accepted?.source) onSourceChange?.(serialized.source);
+  return { ok: true, accepted: next, announcement: "" };
+}
+
+export function portableQmdComposerControlState({ disabled = false, editor = null, action = "command" } = {}) {
+  if (disabled) return { disabled: true, reason: PENDING_REASON };
+  if (!editor) return { disabled: true, reason: LOADING_REASON };
+  if (action === "undo" && !editor.can().undo()) return { disabled: true, reason: "Nothing to undo." };
+  if (action === "redo" && !editor.can().redo()) return { disabled: true, reason: "Nothing to redo." };
+  return { disabled: false, reason: "" };
 }
 
 function fixedSemanticParagraph(name, className) {

@@ -1,5 +1,6 @@
 import React from "react";
 
+import ControlTooltip from "../common/ControlTooltip.jsx";
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
@@ -16,7 +17,7 @@ export function FreeTextSourceEditor({
   id = "static-qmd-source", value = "", panelId = "static-text-preview", panelTitle = "",
   initialSurface = "composer",
   disabled = false, mediaItems = {}, assets = {}, contentRenderContext = {},
-  onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem,
+  onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem, onSurfaceChange,
 } = {}) {
   const initial = React.useMemo(() => analyze(value, panelId), []);
   const initialEditorDocument = React.useMemo(() => parsePortableQmdEditorDocument(value), []);
@@ -49,6 +50,8 @@ export function FreeTextSourceEditor({
   React.useEffect(() => {
     onValidationChange?.({ ...initial, pending: false, source: value, sourceRevision: 0, previewRevision: lastValidRevision.current });
   }, []);
+  React.useEffect(() => { onSurfaceChange?.(activeTab); }, [activeTab, onSurfaceChange]);
+  React.useEffect(() => { if (disabled) setPickerOpen(false); }, [disabled]);
 
   React.useEffect(() => {
     if (value === observedSource.current) return undefined;
@@ -93,6 +96,7 @@ export function FreeTextSourceEditor({
   }
 
   const changeSource = (nextSource) => {
+    if (disabled) return;
     revision.current += 1;
     setPending(true);
     onValidationChange?.(pendingValidation(nextSource, revision.current, lastValidRevision.current));
@@ -102,10 +106,12 @@ export function FreeTextSourceEditor({
   const selectedMediaNode = Number.isInteger(selectedMediaIdentity?.mediaNodeIndex) ? mediaNodes[selectedMediaIdentity.mediaNodeIndex] : null;
   const selectedPlacement = selectedMediaNode ? { mediaId: selectedMediaNode.mediaId, alt: selectedMediaNode.alt, ...selectedMediaNode.attributes } : null;
   const updateSelectedPlacement = (placement) => {
+    if (disabled) return;
     if (!selectedMediaNode || !Number.isInteger(selectedMediaNode.sourceStart) || !Number.isInteger(selectedMediaNode.sourceEnd)) return;
     changeSource(`${value.slice(0, selectedMediaNode.sourceStart)}${serializePortableMediaReference(placement)}${value.slice(selectedMediaNode.sourceEnd)}`);
   };
   const chooseMedia = (item) => {
+    if (disabled) return;
     if (pickerMode === "change" && selectedPlacement) {
       updateSelectedPlacement({ ...selectedPlacement, mediaId: item.mediaId });
       closeChangePicker();
@@ -164,7 +170,9 @@ export function FreeTextSourceEditor({
           <label htmlFor={id}>Portable QMD source</label>
           <textarea ref={sourceInputRef} id={id} value={value} disabled={disabled} aria-describedby={`${id}-advanced-help ${id}-status`} aria-invalid={!pending && !analysis.ok ? "true" : undefined} onChange={(event) => changeSource(event.target.value)} />
           <small id={`${id}-advanced-help`}>Advanced QMD preserves exact authored source. Preview rendering remains local and inert.</small>
-          <button type="button" className="secondary" disabled={disabled} onClick={() => { setPickerMode("insert"); setPickerOpen(true); }}>Insert image</button>
+          <ControlTooltip disabled={disabled} reason={PENDING_REASON}>
+            <button type="button" className="secondary" disabled={disabled} onClick={() => { setPickerMode("insert"); setPickerOpen(true); }}>Insert image</button>
+          </ControlTooltip>
           {!pending && analysis.errors.length > 0 && <ValidationErrors id={id} value={value} errors={analysis.errors} />}
         </section>
       </div>
@@ -181,7 +189,8 @@ function ValidationErrors({ id, value, errors }) {
 }
 
 function pendingValidation(source, sourceRevision, previewRevision) { return { ok: false, pending: true, errors: [], warnings: [], source, sourceRevision, previewRevision }; }
-function ToolbarButton({ label, command, onCommand, disabled }) { return <button type="button" aria-label={label} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => onCommand(command)}>{label}</button>; }
+const PENDING_REASON = "Text/Image authoring is unavailable while this draft action is pending.";
+function ToolbarButton({ label, command, onCommand, disabled }) { return <ControlTooltip disabled={disabled} reason={PENDING_REASON}><button type="button" aria-label={label} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => onCommand(command)}>{label}</button></ControlTooltip>; }
 
 function ChangeMediaPicker({ mediaItems, selectedMediaId, onSelect, onCancel }) {
   const eligible = collectionValues(mediaItems).filter((item) => item?.health === "ready" && ["asset", "package"].includes(item?.current?.kind)).sort((left, right) => left.mediaId.localeCompare(right.mediaId));

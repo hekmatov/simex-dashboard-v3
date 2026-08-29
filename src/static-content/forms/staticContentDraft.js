@@ -408,6 +408,7 @@ function stagedAssetIdsForSource(mediaItem, assets = {}) {
 
 export function isStaticContentDraftDirty(state) {
   if (!state?.baseline) return false;
+  if (state.mode === "create") return hasRetainableStaticContentMutation(state);
   const current = {
     destination: state.destination,
     contentTypeId: state.contentTypeId,
@@ -418,6 +419,36 @@ export function isStaticContentDraftDirty(state) {
     pendingMediaItems: state.pendingMediaItems,
   };
   return JSON.stringify(current) !== JSON.stringify(state.baseline);
+}
+
+export function hasRetainableStaticContentMutation(state) {
+  if (!state?.contentTypeId || !state?.draftIdentity) return false;
+  if (state.mode === "edit") {
+    const current = {
+      destination: state.destination,
+      contentTypeId: state.contentTypeId,
+      panel: state.panel,
+      placement: state.placement,
+      mediaItem: state.mediaItem,
+      assets: state.assets,
+      pendingMediaItems: state.pendingMediaItems,
+    };
+    return JSON.stringify(current) !== JSON.stringify(state.baseline);
+  }
+  const defaultPanel = normalizePanel(null, state.contentTypeId, state.draftIdentity);
+  const defaultPlacement = normalizeSource(null, state.contentTypeId, state.draftIdentity);
+  const defaultMediaItem = normalizeDraftMediaItem(null, defaultPlacement, defaultPanel, state.baseline?.assets ?? {});
+  return JSON.stringify({
+    panel: state.panel,
+    placement: state.placement,
+    mediaItem: state.mediaItem,
+    pendingMediaItems: state.pendingMediaItems ?? {},
+  }) !== JSON.stringify({
+    panel: defaultPanel,
+    placement: defaultPlacement,
+    mediaItem: defaultMediaItem,
+    pendingMediaItems: {},
+  });
 }
 
 function restoreStaticContentBaseline(state, { status }) {
@@ -455,6 +486,7 @@ export function projectStaticContentDraftOwner({
 } = {}) {
   if (!draft || dirty !== true || !["dirty", "saving", "error"].includes(status)) return null;
   const edit = draft.mode === "edit";
+  if (!edit && !hasRetainableStaticContentMutation(draft)) return null;
   const scopeId = edit ? String(placementId ?? "").trim() : String(draft.draftIdentity?.panelId ?? "").trim();
   if (!scopeId) return null;
   const kind = edit ? "text-image-edit" : "text-image-create";

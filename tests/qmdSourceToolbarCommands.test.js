@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { applyQmdToolbarCommand } from "../src/static-content/qmd/sourceToolbarCommands.js";
 
-test("font choice applies semantic heading or body text to selected lines", () => {
+test("semantic text style applies heading or paragraph text to selected lines", () => {
   assert.deepEqual(
     applyQmdToolbarCommand("# Overview\nDetails", 0, 18, { type: "font", value: "heading-2" }),
     { source: "## Overview\n## Details", selectionStart: 0, selectionEnd: 22 },

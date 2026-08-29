@@ -2339,6 +2339,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       disabled={moderatorMutationLocked}
       onDraftChange={setStaticContentDraft}
       onDirtyChange={setStaticContentDirty}
+      onRestorationChange={setStaticContentRestoration}
       onSave={async ({ panel, placement, mediaItem, assets, stagedAssetIds }) => {
         await pendingEdits.flush();
         const prepared = prepareStaticPanelTransaction({
@@ -2698,6 +2699,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         disabled={moderatorMutationLocked}
         onDraftChange={setStaticContentDraft}
         onDirtyChange={setStaticContentDirty}
+        onRestorationChange={setStaticContentRestoration}
         onSuspend={suspendStaticContentOwner}
         onClose={() => {
           setStaticWizardTarget(null);

@@ -53,7 +53,7 @@ export const CANONICAL_HOME_CONTENT = deepFreeze({
       },
       {
         question: "How do I add source material and supporting content?",
-        answer: "In Build, use Source content to manage data and media, or Add Text/Image for text and narrative panels. The QMD editor supports font choice, bold, underline, italics, lists, tables, and a live preview.",
+        answer: "In Build, use Source content to manage data and media, or Add Text/Image for text and narrative panels. The QMD editor supports semantic text styles, bold, underline, italics, lists, tables, and a live preview.",
       },
       {
         question: "How do I show change over time?",

@@ -14,6 +14,14 @@ test("Flow Frame Decorative local image inspector keeps responsive geometry and 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(HARNESS_URL);
   await mountJourney(page, "build", 1280);
+  await page.getByRole("button", { name: "Insert image" }).first().click();
+  const insertPicker = page.getByRole("region", { name: "Media picker" });
+  await expect(insertPicker.getByRole("heading", { name: "Insert image" })).toBeVisible();
+  await insertPicker.getByLabel(/Alternate map/).evaluate((node) => node.click());
+  await expect(page.locator("#journey-qmd-source")).toHaveValue(/simex-media:alternate/);
+  await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();
+  await expect(page.getByRole("region", { name: "Image placement" })).toBeVisible();
+  await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();
   const responsePlacement = page.getByRole("button", { name: "Edit placement for Response map" });
   await responsePlacement.click();
   await expect(responsePlacement).toBeFocused();
@@ -110,6 +118,7 @@ async function mountJourney(page, surface, contentWidth, options = {}) {
     const ReactDOMClient = ReactDOMModule.default ?? ReactDOMModule;
     const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
     const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const { serializePortableMediaReference } = await import("/src/static-content/qmd/portableQmdMedia.js");
     window.__journeyRoot?.unmount();
     document.querySelector("#target").replaceChildren();
     const target = document.querySelector("#target");
@@ -147,6 +156,7 @@ async function mountJourney(page, surface, contentWidth, options = {}) {
       return React.createElement(FreeTextSourceEditor, {
         id: "journey-qmd-source", value: source, panelId: "journey-panel", mediaItems, assets,
         contentRenderContext: { resolveAsset }, onChange: setSource,
+        onMediaSelect: (item) => setSource((current) => `${current}\n\n${serializePortableMediaReference({ mediaId: item.mediaId, alt: item.defaultDescription })}`),
         onOpenMediaItem: (mediaId) => window.__journeyOpenMedia.push(mediaId),
       });
     }

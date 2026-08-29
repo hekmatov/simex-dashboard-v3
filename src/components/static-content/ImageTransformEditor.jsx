@@ -18,20 +18,21 @@ export function ImageTransformEditor({
   source = {},
   sourceUrl = "",
   containedPackagePath = false,
+  disabled = false,
   sourceControls,
   onTransformChange,
   onReset,
 } = {}) {
   const pointer = React.useRef(null);
   const transform = normalizeImageTransform(source);
-  const update = (updates) => onTransformChange?.({ ...transform, ...updates });
+  const update = (updates) => { if (!disabled) onTransformChange?.({ ...transform, ...updates }); };
   const nudge = (delta) => update({ crop: nudgeImageCrop(transform.crop, delta) });
   const rotate = (delta) => update({
     crop: rotateImageCrop(transform.crop, delta),
     rotation: (transform.rotation + delta + 360) % 360,
   });
   const beginPointer = (event, mode) => {
-    if (event.button !== 0) return;
+    if (disabled || event.button !== 0) return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     pointer.current = {
       mode,
@@ -42,6 +43,7 @@ export function ImageTransformEditor({
     };
   };
   const movePointer = (event) => {
+    if (disabled) return;
     const start = pointer.current;
     if (!start?.bounds?.width || !start.bounds.height) return;
     const dx = Math.round(((event.clientX - start.x) / start.bounds.width) * 1000);
@@ -70,9 +72,11 @@ export function ImageTransformEditor({
         <div
           className="image-crop-selection"
           role="group"
-          tabIndex="0"
+          tabIndex={disabled ? -1 : 0}
+          aria-disabled={disabled ? "true" : undefined}
           aria-label="Crop selection. Use arrow keys to move it."
           onKeyDown={(event) => {
+            if (disabled) return;
             const step = event.shiftKey ? 1 : 10;
             const delta = event.key === "ArrowLeft" ? { dx: -step }
               : event.key === "ArrowRight" ? { dx: step }
@@ -92,6 +96,7 @@ export function ImageTransformEditor({
             type="button"
             className="image-crop-handle image-crop-handle--south-east"
             aria-label="Resize crop from bottom right"
+            disabled={disabled}
             onPointerDown={(event) => {
               event.stopPropagation();
               beginPointer(event, "resize");
@@ -110,10 +115,10 @@ export function ImageTransformEditor({
           <div>
             <h3 id="image-crop-heading">Crop and position</h3>
             <div className="image-crop-nudges" aria-label="Move crop selection">
-              <button type="button" className="secondary" aria-label="Move crop left" onClick={() => nudge({ dx: -10 })}>←</button>
-              <button type="button" className="secondary" aria-label="Move crop up" onClick={() => nudge({ dy: -10 })}>↑</button>
-              <button type="button" className="secondary" aria-label="Move crop down" onClick={() => nudge({ dy: 10 })}>↓</button>
-              <button type="button" className="secondary" aria-label="Move crop right" onClick={() => nudge({ dx: 10 })}>→</button>
+              <button type="button" className="secondary" aria-label="Move crop left" disabled={disabled} onClick={() => nudge({ dx: -10 })}>←</button>
+              <button type="button" className="secondary" aria-label="Move crop up" disabled={disabled} onClick={() => nudge({ dy: -10 })}>↑</button>
+              <button type="button" className="secondary" aria-label="Move crop down" disabled={disabled} onClick={() => nudge({ dy: 10 })}>↓</button>
+              <button type="button" className="secondary" aria-label="Move crop right" disabled={disabled} onClick={() => nudge({ dx: 10 })}>→</button>
             </div>
             <div className="image-crop-numeric">
               {CROP_FIELDS.map(([key, label]) => (
@@ -121,6 +126,7 @@ export function ImageTransformEditor({
                   {label}
                   <input
                     id={`static-image-crop-${key}`}
+                    disabled={disabled}
                     type="number"
                     min={key === "width" || key === "height" ? 1 : 0}
                     max="1000"
@@ -144,16 +150,16 @@ export function ImageTransformEditor({
           <div>
             <h3 id="image-presentation-heading">Rotation and fit</h3>
             <div className="image-rotation-controls">
-              <button type="button" className="secondary" onClick={() => rotate(-90)}>Rotate left</button>
+              <button type="button" className="secondary" disabled={disabled} onClick={() => rotate(-90)}>Rotate left</button>
               <output aria-live="polite">{transform.rotation}°</output>
-              <button type="button" className="secondary" onClick={() => rotate(90)}>Rotate right</button>
+              <button type="button" className="secondary" disabled={disabled} onClick={() => rotate(90)}>Rotate right</button>
             </div>
             <label htmlFor="static-image-fit">Fit</label>
-            <select id="static-image-fit" value={transform.fit} onChange={(event) => update({ fit: event.target.value })}>
+            <select id="static-image-fit" disabled={disabled} value={transform.fit} onChange={(event) => update({ fit: event.target.value })}>
               <option value="contain">Contain</option>
               <option value="cover">Cover</option>
             </select>
-            <button type="button" className="secondary" onClick={onReset}>Reset image</button>
+            <button type="button" className="secondary" disabled={disabled} onClick={onReset}>Reset image</button>
           </div>
         </section>
       </div>

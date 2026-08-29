@@ -9,8 +9,10 @@ test.beforeEach(async ({ request }) => {
 });
 
 test("Composer semantic text style, keyboard formatting, underline, Panel size, and Preview", async ({ page }) => {
-  await page.setViewportSize({ width: 768, height: 900 });
+  await page.setViewportSize({ width: 1200, height: 800 });
   const wizard = await openTextImageComposer(page);
+  const title = "Operational response note";
+  await wizard.getByLabel("Panel title").fill(title);
   const composer = wizard.getByLabel("Portable QMD Composer editing area");
 
   await composer.fill("Operational response");
@@ -30,8 +32,16 @@ test("Composer semantic text style, keyboard formatting, underline, Panel size, 
   const preview = wizard.getByRole("tabpanel", { name: "Preview" });
   await expect(preview).toContainText("Operational response");
   await expect(preview.locator("u")).toContainText("Operational response");
-  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
+  const advancedTab = wizard.getByRole("tab", { name: "Advanced QMD" });
+  await expect(advancedTab).toBeVisible();
+  await advancedTab.focus();
+  await advancedTab.press("Enter");
   await expect(wizard.getByLabel("Portable QMD source")).toHaveValue(/::: \{\.simex-text-lead\}[\s\S]*\+\+\*\*Operational response\*\*\+\+/);
+  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+  await expect(page.getByRole("button", { name: `Move panel ${title}`, exact: true })).toBeVisible();
 });
 
 test("sanitized paste keeps visible text and removes hostile formatting", async ({ page }) => {
@@ -71,32 +81,62 @@ test("Advanced QMD preserves unsupported source untouched", async ({ page }) => 
   await expect(wizard.getByRole("tab", { name: "Advanced QMD" })).toHaveAttribute("aria-selected", "true");
 });
 
-test("resume Text/Image restores the Preview surface and focus", async ({ page }) => {
-  await page.setViewportSize({ width: 768, height: 900 });
-  let wizard = await openTextImageComposer(page);
+test("resume Text/Image restores the current surface, focus, and scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 600 });
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  let wizard = page.getByRole("dialog", { name: "Add Text/Image" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Close Text/Image editor" }).click();
+  await expect(wizard).toHaveCount(0);
+  await expect(page.locator('[data-pending-work-kind="text-image-create"]')).toHaveCount(0);
+
+  wizard = await openTextImageComposerFromBuild(page);
   await wizard.getByLabel("Portable QMD Composer editing area").fill("Resume proof");
-  const previewTab = wizard.getByRole("tab", { name: "Preview" });
-  await previewTab.click();
-  await previewTab.focus();
-  await previewTab.press("Escape");
+  const pending = page.locator('[data-pending-work-kind="text-image-create"]');
+  await expect(pending).toHaveAttribute("data-pending-work-activity", "active");
+  await expect(pending).toHaveAttribute("data-pending-work-surface", "composer");
+  await wizard.getByRole("tab", { name: "Preview" }).click();
+  await expect(pending).toHaveAttribute("data-pending-work-surface", "preview");
+  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
+  const source = wizard.getByLabel("Portable QMD source");
+  await source.focus();
+  const body = wizard.locator(".static-content-dialog__body");
+  await body.evaluate((node) => { node.scrollTop = Math.min(220, node.scrollHeight - node.clientHeight); node.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  const capturedScroll = await body.evaluate((node) => node.scrollTop);
+  expect(capturedScroll).toBeGreaterThan(0);
+  await expect(pending).toHaveAttribute("data-pending-work-surface", "advanced");
+
+  await wizard.getByRole("button", { name: "Close Text/Image editor" }).focus();
+  await pending.getByRole("button", { name: /Focus New Text\/Image draft/ }).evaluate((node) => node.click());
+  await expect(source).toBeFocused();
+  expect(await body.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await source.press("Escape");
   await expect(wizard).toHaveCount(0);
 
-  const pending = page.locator('[data-pending-work-kind="text-image-create"]');
   await expect(pending).toHaveAttribute("data-pending-work-activity", "suspended");
-  await expect(pending).toHaveAttribute("data-pending-work-surface", "preview");
+  await expect(pending).toHaveAttribute("data-pending-work-surface", "advanced");
   await pending.getByRole("button", { name: /Resume New Text\/Image draft/ }).click();
 
   wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
-  await expect(wizard.getByRole("tab", { name: "Preview" })).toBeFocused();
-  await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText("Resume proof");
+  await expect(wizard.getByRole("tab", { name: "Advanced QMD" })).toHaveAttribute("aria-selected", "true");
+  await expect(wizard.getByLabel("Portable QMD source")).toBeFocused();
+  expect(await wizard.locator(".static-content-dialog__body").evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await expect(wizard.getByLabel("Portable QMD source")).toHaveValue("Resume proof");
 });
 
 async function openTextImageComposer(page) {
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  return openTextImageComposerFromBuild(page);
+}
+
+async function openTextImageComposerFromBuild(page) {
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();

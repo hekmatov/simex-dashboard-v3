@@ -63,6 +63,7 @@ export function renderPortableQmd(ast, options = {}) {
 
 function renderTokens(tokens, root, environment) {
   const parents = [root];
+  let semanticParagraphDepth = 0;
   const current = () => parents[parents.length - 1];
   const open = (node) => {
     current().append(node);
@@ -74,6 +75,9 @@ function renderTokens(tokens, root, environment) {
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
+    if (semanticParagraphDepth > 0 && (token.type === "paragraph_open" || token.type === "paragraph_close")) {
+      continue;
+    }
     if (SIMPLE_BLOCKS[token.type]) {
       const node = createElement(environment.document, SIMPLE_BLOCKS[token.type]);
       if (token.type === "ordered_list_open") {
@@ -108,10 +112,12 @@ function renderTokens(tokens, root, environment) {
     if (token.type === "lead_open" || token.type === "caption_open") {
       const style = token.type === "lead_open" ? "lead" : "caption";
       open(createElement(environment.document, "p", `portable-qmd-${style}`));
+      semanticParagraphDepth += 1;
       continue;
     }
     if (token.type === "lead_close" || token.type === "caption_close") {
       close();
+      semanticParagraphDepth = Math.max(0, semanticParagraphDepth - 1);
       continue;
     }
     if (token.type === "inline") {

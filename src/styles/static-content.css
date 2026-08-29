@@ -84,7 +84,7 @@
 }
 
 .free-text-source-editor__tabs {
-  display: none;
+  display: flex;
   gap: 8px;
   margin-bottom: 10px;
 }

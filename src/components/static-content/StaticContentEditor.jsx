@@ -16,6 +16,7 @@ export function StaticContentEditor({
   disabled,
   onDraftChange,
   onDirtyChange,
+  onRestorationChange,
   onSave,
   onCancel,
   onSuspend,
@@ -40,6 +41,7 @@ export function StaticContentEditor({
       disabled={disabled}
       onDraftChange={onDraftChange}
       onDirtyChange={onDirtyChange}
+      onRestorationChange={onRestorationChange}
       onCreate={onSave}
       onClose={onCancel}
       onSuspend={onSuspend}

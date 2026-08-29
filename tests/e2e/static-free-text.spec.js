@@ -93,30 +93,29 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Free-text toolbar authors portable font, emphasis, lists, and tables", async ({ page }) => {
+test("Free-text toolbar authors portable semantic styles, emphasis, lists, and tables", async ({ page }) => {
   await openBiomedicalBuild(page);
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
-  const source = wizard.getByLabel("QMD-style source");
+  const composer = wizard.getByLabel("Portable QMD Composer editing area");
 
-  await source.fill("Brief");
-  await source.evaluate((node) => node.setSelectionRange(0, 5));
+  await composer.fill("Brief");
+  await composer.press("Control+a");
   await wizard.getByRole("button", { name: "Bold" }).click();
-  await expect(source).toHaveValue("**Brief**");
-  await wizard.getByLabel("Font choice").selectOption("heading-2");
-  await expect(source).toHaveValue("## **Brief**");
+  await wizard.getByLabel("Semantic text style").selectOption("heading");
+  await expect(composer.locator("h2 strong")).toHaveText("Brief");
 
-  await source.fill("First\nSecond");
-  await source.evaluate((node) => node.setSelectionRange(0, node.value.length));
-  await wizard.getByRole("button", { name: "Bulleted list" }).click();
-  await expect(source).toHaveValue("- First\n- Second");
+  await composer.fill("First\nSecond");
+  await composer.press("Control+a");
+  await wizard.getByRole("button", { name: "Bullet list" }).click();
+  await expect(composer.locator("ul li")).toHaveCount(2);
 
-  await source.fill("");
-  await wizard.getByRole("button", { name: "Insert table" }).click();
-  await expect(source).toHaveValue("| Column 1 | Column 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |");
+  await composer.fill("");
+  await wizard.getByRole("button", { name: "Table" }).click();
+  await expect(composer.locator("table")).toBeVisible();
   await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
 });
 

@@ -18,6 +18,7 @@ const vite = await createServer({
 });
 const editorModule = await vite.ssrLoadModule("/src/components/static-content/StaticContentEditor.jsx");
 const freeTextEditorModule = await vite.ssrLoadModule("/src/components/static-content/FreeTextSourceEditor.jsx");
+const wizardModule = await vite.ssrLoadModule("/src/components/static-content/StaticContentWizard.jsx");
 await vite.close();
 
 test("StaticContentEditor mounts an existing V5 Image edit with media placement settings", () => {
@@ -54,6 +55,34 @@ test("Free-text authoring restores the saved Preview or Advanced QMD surface", (
       initialSurface: surface,
     }));
     assert.match(html, new RegExp(`id="static-qmd-source-${surface}-tab"[^>]*aria-selected="true"`));
+  }
+});
+
+test("workflow pending disables every current Text and Image mutating field", () => {
+  for (const contentTypeId of ["freeText", "image"]) {
+    const draft = createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId,
+      stage: "content",
+    });
+    const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+      draft,
+      disabled: true,
+      dashboard: { pages: [], assets: {}, contentLibrary: { mediaItems: {} } },
+      dispatch() {},
+    }));
+    assert.match(html, /Text\/Image authoring is unavailable while this draft action is pending/);
+    assert.match(html, /<input[^>]*id="static-panel-title"[^>]*disabled/);
+    assert.match(html, /role="gridcell"[^>]*disabled/);
+    if (contentTypeId === "freeText") {
+      assert.match(html, /<select[^>]*id="portable-qmd-semantic-style"[^>]*disabled/);
+      assert.match(html, /<textarea[^>]*id="static-qmd-source"[^>]*disabled/);
+    } else {
+      for (const id of ["static-image-origin-kind", "static-image-file", "static-image-alt", "static-image-crop-x", "static-image-fit"]) {
+        assert.match(html, new RegExp(`<[^>]+id="${id}"[^>]*disabled`), id);
+      }
+      assert.match(html, /class="image-crop-selection"[^>]*aria-disabled="true"/);
+    }
   }
 });
 

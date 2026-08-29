@@ -14,6 +14,7 @@ export function ImageSourceEditor({
   assets = {},
   imageEditing = {},
   mediaItems = {},
+  disabled = false,
   onOriginChange,
   onReplace,
   onRestorePreviousImage,
@@ -26,6 +27,8 @@ export function ImageSourceEditor({
   const mountedRef = React.useRef(true);
   const intakeRevisionRef = React.useRef(0);
   const acceptedAssetIdRef = React.useRef(null);
+  const disabledRef = React.useRef(disabled);
+  disabledRef.current = disabled;
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const origin = source.origin ?? { kind: "replacementRequired", reason: "Choose an image." };
   const [originKind, setSelectedOriginKind] = React.useState(
@@ -41,14 +44,21 @@ export function ImageSourceEditor({
       intakeRevisionRef.current += 1;
     };
   }, []);
+  React.useEffect(() => {
+    if (!disabled) return;
+    intakeRevisionRef.current += 1;
+    setPickerOpen(false);
+  }, [disabled]);
 
   const setOriginKind = (kind) => {
+    if (disabledRef.current) return;
     setSelectedOriginKind(kind);
     setValidation({ status: "idle", errors: [], warnings: [] });
     if (kind === "url") onOriginChange?.({ kind: "url", url: "" });
     else if (kind === "package") onOriginChange?.({ kind: "package", path: "" });
   };
   const chooseFile = async (event) => {
+    if (disabledRef.current) return;
     const file = event.target.files?.[0];
     if (!file) return;
     const intakeRevision = ++intakeRevisionRef.current;
@@ -60,7 +70,7 @@ export function ImageSourceEditor({
       currentAssetBytes: authoredAssetManifestBytes(assets),
       currentAssetIds: Object.keys(assets),
     });
-    if (!mountedRef.current || intakeRevision !== intakeRevisionRef.current) {
+    if (!mountedRef.current || disabledRef.current || intakeRevision !== intakeRevisionRef.current) {
       if (result.ok) {
         discardUnreferencedSessionImageAssets(
           [result.assetId],
@@ -89,8 +99,8 @@ export function ImageSourceEditor({
         <div>
           <h3 id="image-source-heading">Choose image</h3>
           <p>Upload is recommended. Linked images need a network; packaged paths must belong to this dashboard.</p>
-          <button type="button" className="secondary" onClick={() => setPickerOpen(true)}>Choose from media</button>
-          {pickerOpen && (
+          <button type="button" className="secondary" disabled={disabled} onClick={() => setPickerOpen(true)}>Choose from media</button>
+          {pickerOpen && !disabled && (
             <MediaPicker
               mediaItems={mediaItems}
               assets={assets}
@@ -103,6 +113,7 @@ export function ImageSourceEditor({
           <label htmlFor="static-image-origin-kind">Image origin</label>
           <select
             id="static-image-origin-kind"
+            disabled={disabled}
             value={originKind}
             onChange={(event) => setOriginKind(event.target.value)}
           >
@@ -114,6 +125,7 @@ export function ImageSourceEditor({
           <input
             id="static-image-file"
             type="file"
+            disabled={disabled}
             accept="image/png,image/jpeg,image/webp"
             onChange={chooseFile}
             aria-describedby="static-image-file-help"
@@ -125,6 +137,7 @@ export function ImageSourceEditor({
               <input
                 id="static-image-url"
                 type="url"
+                disabled={disabled}
                 inputMode="url"
                 value={origin.kind === "url" ? origin.url : ""}
                 onChange={(event) => onOriginChange?.({ kind: "url", url: event.target.value })}
@@ -138,6 +151,7 @@ export function ImageSourceEditor({
               <label htmlFor="static-image-package-path">Dashboard package path</label>
               <input
                 id="static-image-package-path"
+                disabled={disabled}
                 value={origin.kind === "package" ? origin.path : ""}
                 onChange={(event) => onOriginChange?.({ kind: "package", path: event.target.value })}
                 onBlur={(event) => reportOriginError({ kind: "package", path: event.target.value }, setValidation)}
@@ -162,7 +176,7 @@ export function ImageSourceEditor({
           {imageEditing.replacementUndo && (
             <div role="status">
               <p>Replacement selected. Save, discard, or restore the previous image.</p>
-              <button type="button" className="secondary" onClick={onRestorePreviousImage}>Restore previous image</button>
+              <button type="button" className="secondary" disabled={disabled} onClick={onRestorePreviousImage}>Restore previous image</button>
             </div>
           )}
         </div>
@@ -175,6 +189,7 @@ export function ImageSourceEditor({
           <label>
             <input
               type="checkbox"
+              disabled={disabled}
               checked={source.decorative === true}
               onChange={(event) => onDecorativeChange?.(event.target.checked)}
             /> Decorative image
@@ -184,6 +199,7 @@ export function ImageSourceEditor({
               <label htmlFor="static-image-alt">Alternative text</label>
               <input
                 id="static-image-alt"
+                disabled={disabled}
                 value={source.alt ?? ""}
                 onChange={(event) => onAltChange?.(event.target.value)}
                 aria-describedby={imageEditing.altReviewRequired ? "static-image-alt-review" : undefined}
