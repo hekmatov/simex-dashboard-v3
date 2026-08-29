@@ -305,9 +305,9 @@ test("Journey K — valid GeoJSON geometry change warns then confirms", async ({
 
 async function openBuild(page, viewport) {
   await page.setViewportSize(viewport);
-  await openDashboardPage(page, "old-homepage-content");
+  await openDashboardPage(page, "biomedical");
   await expect(page.locator(".canonical-dashboard-frame"))
-    .toHaveAttribute("data-canonical-page-id", "old-homepage-content");
+    .toHaveAttribute("data-canonical-page-id", "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.locator('[data-canonical-mode="build"]')).toBeVisible();
 }
