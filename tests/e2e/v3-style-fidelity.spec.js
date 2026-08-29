@@ -4,7 +4,7 @@ import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const NATIVE_STYLES = Object.freeze([
   Object.freeze({
-    id: "evidence-ledger", label: "Evidence Ledger",
+    id: "evidence-ledger", label: "Ledger",
     profile: "evidence-ledger/brighter-vellum",
     shellRadius: "0px", surfaceRadius: "2px", panelRadius: "2px", controlRadius: "2px",
     panelShadow: "none", shellShadow: "none",
@@ -14,7 +14,7 @@ const NATIVE_STYLES = Object.freeze([
     textPaint: "rgb(29, 37, 41)", borderPaint: "rgb(183, 176, 162)",
   }),
   Object.freeze({
-    id: "humanist-standard", label: "Humanist Standard",
+    id: "humanist-standard", label: "Humanist",
     profile: "humanist-standard/common-ground",
     shellRadius: "18px", surfaceRadius: "18px", panelRadius: "14px", controlRadius: "10px",
     panelShadow: "rgba(36, 57, 52, 0.1) 0px 8px 20px 0px",
@@ -25,7 +25,7 @@ const NATIVE_STYLES = Object.freeze([
     textPaint: "rgb(29, 43, 42)", borderPaint: "rgb(183, 197, 191)",
   }),
   Object.freeze({
-    id: "signal-instrument", label: "Signal + Instrument",
+    id: "signal-instrument", label: "Instrument",
     profile: "signal-instrument/calibrated-steel",
     shellRadius: "6px", surfaceRadius: "6px", panelRadius: "4px", controlRadius: "3px",
     panelShadow: "rgba(19, 38, 45, 0.14) 0px 1px 2px 0px, rgba(255, 255, 255, 0.55) 0px 1px 0px 0px inset",
@@ -42,13 +42,11 @@ const PROFILE_OUTER = Object.freeze({
   "evidence-ledger/ash-register": ["#deded9", "#151615"],
   "evidence-ledger/cool-archive": ["#dfe3e1", "#141817"],
   "humanist-standard/common-ground": ["#e6ece8", "#121a18"],
-  "humanist-standard/quiet-commons": ["#e9e9e5", "#171918"],
   "humanist-standard/open-forum": ["#e8e6ed", "#17151c"],
   "signal-instrument/calibrated-steel": ["#dce4e6", "#0d1518"],
   "signal-instrument/quiet-telemetry": ["#e1e5e6", "#111719"],
   "signal-instrument/amber-vector": ["#e2e3e5", "#151314"],
   "utility/prismatic-index": ["#e2e2e7", "#111117"],
-  "utility/chromatic-polarity": ["#ddd5cb", "#161319"],
   "utility/luminance-ladder": ["#ded8e7", "#150d1b"],
   "graphpad/sunrise-reference": ["#e8ddd2", "#160f14"],
   "graphpad/lakeside-reference": ["#dde4e3", "#0e1515"],
@@ -60,13 +58,11 @@ const PROFILE_CATALOGUE_IDS = Object.freeze({
   "evidence-ledger/ash-register": "ash-register",
   "evidence-ledger/cool-archive": "cool-archive",
   "humanist-standard/common-ground": "common-ground",
-  "humanist-standard/quiet-commons": "quiet-commons",
   "humanist-standard/open-forum": "open-forum",
   "signal-instrument/calibrated-steel": "calibrated-steel",
   "signal-instrument/quiet-telemetry": "quiet-telemetry",
   "signal-instrument/amber-vector": "amber-vector",
   "utility/prismatic-index": "prismatic-index",
-  "utility/chromatic-polarity": "chromatic-polarity",
   "utility/luminance-ladder": "luminance-ladder",
   "graphpad/sunrise-reference": "sunrise-reference-faithful",
   "graphpad/lakeside-reference": "lakeside-reference-faithful",
@@ -262,7 +258,7 @@ test("section headers adapt only to title and description content", async ({ pag
 
 test("Humanist contours retain accepted translucency and steady shell elevation", async ({ page }) => {
   await openBiomedicalLook(page);
-  await page.getByLabel("Humanist Standard", { exact: true }).check();
+  await page.getByLabel("Humanist", { exact: true }).check();
   await page.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
   for (const appearance of ["Light", "Dark"]) {
     await page.getByLabel(appearance, { exact: true }).check();
@@ -303,7 +299,7 @@ test("Humanist contours retain accepted translucency and steady shell elevation"
 
 test("native Dark charts yield legacy white defaults to profile surfaces", async ({ page }) => {
   await openBiomedicalLook(page);
-  await page.getByLabel("Signal + Instrument", { exact: true }).check();
+  await page.getByLabel("Instrument", { exact: true }).check();
   await page.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.getByLabel("Dark", { exact: true }).check();
   await expect(page.locator(".chart-view-frame").first())
@@ -390,7 +386,7 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
   await openBiomedicalLook(page);
   const look = await selectAutoSavedLook(
     page,
-    "Evidence Ledger",
+    "Ledger",
     "evidence-ledger/brighter-vellum",
   );
   await look.getByRole("button", { name: "Close", exact: true }).click();
@@ -583,7 +579,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
   }
 });
 
-test("all 15 profiles project every approved Light and Dark palette token", async ({ page }) => {
+test("all 13 profiles project every approved Light and Dark palette token", async ({ page }) => {
   await openBiomedicalLook(page);
   const appFrame = page.locator(".app-frame");
   for (const [profile, approvedOuter] of Object.entries(PROFILE_OUTER)) {
@@ -657,9 +653,9 @@ async function selectAutoSavedLook(page, styleLabel, profileId) {
   const feedback = look.locator(".look-drawer-feedback");
   const style = look.getByLabel(styleLabel, { exact: true });
   if (await style.isChecked()) {
-    const alternative = styleLabel === "Humanist Standard"
-      ? "Evidence Ledger"
-      : "Humanist Standard";
+    const alternative = styleLabel === "Humanist"
+      ? "Ledger"
+      : "Humanist";
     await look.getByLabel(alternative, { exact: true }).check();
     await expect(feedback).toHaveText("Dashboard look saved.");
   }

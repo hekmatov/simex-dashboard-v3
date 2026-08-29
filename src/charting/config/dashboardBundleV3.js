@@ -445,9 +445,29 @@ export function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
   const v6 = migrateDashboardV5ToV6(v5);
   const chartNormalized = normalizeDashboardChartInstances(v6);
   const presentationNormalized = stripLegacyVantaBackground(chartNormalized);
-  return normalizeDashboardTemporalConfig(presentationNormalized, {
-    profiles: temporalMigrationProfiles(presentationNormalized, profiles),
+  const lookNormalized = normalizeRetiredDashboardLook(presentationNormalized);
+  return normalizeDashboardTemporalConfig(lookNormalized, {
+    profiles: temporalMigrationProfiles(lookNormalized, profiles),
   });
+}
+
+const RETIRED_DASHBOARD_COLOR_PROFILES = new Set([
+  "humanist-standard/quiet-commons",
+  "utility/chromatic-polarity",
+]);
+
+function normalizeRetiredDashboardLook(config) {
+  if (!RETIRED_DASHBOARD_COLOR_PROFILES.has(config?.globalStyles?.dashboardColorProfile)) {
+    return config;
+  }
+  return {
+    ...config,
+    globalStyles: {
+      ...config.globalStyles,
+      dashboardStyle: "evidence-ledger",
+      dashboardColorProfile: "evidence-ledger/brighter-vellum",
+    },
+  };
 }
 
 function validCanonicalInstant(now) {

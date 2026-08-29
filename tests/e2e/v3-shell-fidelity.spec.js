@@ -415,7 +415,7 @@ test("denied Dashboard Look and appearance writes remain live with session-only 
   const drawer = page.getByRole("dialog", { name: "Dashboard look" });
   const feedback = drawer.locator(".look-drawer-feedback");
 
-  await drawer.getByLabel("Humanist Standard", { exact: true }).check();
+  await drawer.getByLabel("Humanist", { exact: true }).check();
   await expect(page.locator(".app-frame")).toHaveAttribute(
     "data-dashboard-style", "humanist-standard",
   );

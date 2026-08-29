@@ -19,7 +19,9 @@ function actionHarness(log = []) {
 
 test("every adopted authored dirty key maps to one stable pending-work descriptor", () => {
   const ids = new Map();
-  const projectedKeys = AUTHORED_DIRTY_KEYS.filter((key) => key !== "inlineRename");
+  const projectedKeys = AUTHORED_DIRTY_KEYS.filter(
+    (key) => !new Set(["inlineRename", "scenario", "dashboardMetadata"]).has(key),
+  );
   for (const key of projectedKeys) {
     const log = [];
     const [entry] = selectBuildPendingWork({
@@ -44,6 +46,35 @@ test("every adopted authored dirty key maps to one stable pending-work descripto
     assert.deepEqual(log, [`resume:${key}`]);
   }
   assert.equal(ids.size, projectedKeys.length);
+});
+
+test("atomic Passport and dashboard metadata flags never publish Pending Work while adopted owners remain unchanged", () => {
+  const owner = {
+    draftId: "chart-edit:panel-a",
+    kind: "chart-edit",
+    scopeId: "panel-a",
+    targetId: "panel-a",
+    status: "dirty",
+    activity: "active",
+    surface: "quick",
+  };
+  const pending = selectBuildPendingWork({
+    authoredDirty: {
+      scenario: true,
+      dashboardMetadata: true,
+      chartEditor: true,
+    },
+    coordinator: { slots: { chart: owner } },
+    actions: {
+      ...actionHarness(),
+      ownerById: { [owner.draftId]: { focus() {} } },
+    },
+  });
+
+  assert.deepEqual(pending.map(({ id, kind }) => ({ id, kind })), [{
+    id: owner.draftId,
+    kind: owner.kind,
+  }]);
 });
 
 test("incomplete inline rename stays local and never publishes a duplicate global descriptor", () => {

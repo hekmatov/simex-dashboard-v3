@@ -4,9 +4,9 @@ import { expectNoRetiredDashboardStyle } from "./support/dashboard-style-audit.j
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const STYLE_OPTIONS = [
-  { label: "Evidence Ledger", profile: "evidence-ledger/brighter-vellum" },
-  { label: "Humanist Standard", profile: "humanist-standard/common-ground" },
-  { label: "Signal + Instrument", profile: "signal-instrument/calibrated-steel" },
+  { label: "Ledger", profile: "evidence-ledger/brighter-vellum" },
+  { label: "Humanist", profile: "humanist-standard/common-ground" },
+  { label: "Instrument", profile: "signal-instrument/calibrated-steel" },
 ];
 
 test("selected style owns hover, focus, disabled, generated, SVG, and portal paint", async ({ page }) => {
@@ -45,7 +45,7 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await page.goto("/");
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Dashboard look" });
-  await look.getByLabel("Signal + Instrument", { exact: true }).check();
+  await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.keyboard.press("Escape");
   await openDashboardPage(page, "biomedical");

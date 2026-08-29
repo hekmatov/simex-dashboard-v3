@@ -1134,11 +1134,16 @@ export default function App() {
   }
 
   async function requestPage(nextPageId) {
-    if (nextPageId === activePageId) return;
     const navigablePages = mode === "build" && buildStructureProjection
       ? buildStructureProjection.pages
       : dashboard?.pages;
     if (!(navigablePages ?? []).some(({ id }) => id === nextPageId)) return;
+    if (mode === "home") {
+      setActivePageId(nextPageId);
+      await requestMode("view");
+      return;
+    }
+    if (nextPageId === activePageId) return;
     setBlockedReason("");
     if (mode === "build") {
       const result = await prepareToLeaveBuild("page");
@@ -1607,7 +1612,6 @@ export default function App() {
     <AppFrame
       mode={mode}
       availableModes={availableDashboardModes(dashboard)}
-      showPageNavigation={mode !== "home"}
       onModeRequest={requestMode}
       modeDisabled={modeDisabled || buildDraftLocked}
       modeDisabledReason={buildDraftLocked

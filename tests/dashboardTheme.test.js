@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { normalizeDashboardBoundary } from "../src/charting/config/dashboardBundleV3.js";
 import { validateDashboardStructure } from "../src/charting/config/dashboardConfigStructure.js";
 
 let themeModule = {};
@@ -16,17 +17,37 @@ const APPROVED_PROFILE_IDS = [
   "evidence-ledger/ash-register",
   "evidence-ledger/cool-archive",
   "humanist-standard/common-ground",
-  "humanist-standard/quiet-commons",
   "humanist-standard/open-forum",
   "signal-instrument/calibrated-steel",
   "signal-instrument/quiet-telemetry",
   "signal-instrument/amber-vector",
   "utility/prismatic-index",
-  "utility/chromatic-polarity",
   "utility/luminance-ladder",
   "graphpad/sunrise-reference",
   "graphpad/lakeside-reference",
   "utility/monochrome-reserve",
+];
+
+const APPROVED_STYLE_CATALOGUE = [
+  ["evidence-ledger", "Ledger"],
+  ["humanist-standard", "Humanist"],
+  ["signal-instrument", "Instrument"],
+];
+
+const APPROVED_PROFILE_CATALOGUE = [
+  ["evidence-ledger/brighter-vellum", "Vellum"],
+  ["evidence-ledger/ash-register", "Register"],
+  ["evidence-ledger/cool-archive", "Archive"],
+  ["humanist-standard/common-ground", "Common Ground"],
+  ["humanist-standard/open-forum", "Forum"],
+  ["signal-instrument/calibrated-steel", "Steel"],
+  ["signal-instrument/quiet-telemetry", "Telemetry"],
+  ["signal-instrument/amber-vector", "Amber"],
+  ["utility/prismatic-index", "Prismatic"],
+  ["utility/luminance-ladder", "Ladder"],
+  ["graphpad/sunrise-reference", "Sunrise"],
+  ["graphpad/lakeside-reference", "Lakeside"],
+  ["utility/monochrome-reserve", "Monochrome"],
 ];
 
 test("dashboard configuration accepts only approved saved look values", async () => {
@@ -49,17 +70,17 @@ test("dashboard configuration accepts only approved saved look values", async ()
   );
 });
 
-test("theme resolver exposes all 15 approved profiles in both appearances", () => {
+test("theme resolver exposes the exact renamed style and 13-profile catalogue in both appearances", () => {
   assert.equal(typeof themeModule.resolveDashboardTheme, "function");
   if (typeof themeModule.resolveDashboardTheme !== "function") return;
 
   assert.deepEqual(
-    themeModule.DASHBOARD_STYLES.map(({ id }) => id),
-    ["evidence-ledger", "humanist-standard", "signal-instrument"],
+    themeModule.DASHBOARD_STYLES.map(({ id, name }) => [id, name]),
+    APPROVED_STYLE_CATALOGUE,
   );
   assert.deepEqual(
-    themeModule.DASHBOARD_COLOR_PROFILES.map(({ id }) => id),
-    APPROVED_PROFILE_IDS,
+    themeModule.DASHBOARD_COLOR_PROFILES.map(({ id, name }) => [id, name]),
+    APPROVED_PROFILE_CATALOGUE,
   );
   for (const dashboardColorProfile of APPROVED_PROFILE_IDS) {
     for (const appearancePreference of ["light", "dark"]) {
@@ -79,6 +100,59 @@ test("theme resolver exposes all 15 approved profiles in both appearances", () =
         33,
       );
     }
+  }
+});
+
+test("obsolete cosmetic profiles normalize to Vellum before strict validation without losing dashboard content", async () => {
+  const shipped = JSON.parse(await readFile(
+    new URL("../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  assert.deepEqual(
+    {
+      dashboardStyle: shipped.globalStyles.dashboardStyle,
+      dashboardColorProfile: shipped.globalStyles.dashboardColorProfile,
+    },
+    {
+      dashboardStyle: "evidence-ledger",
+      dashboardColorProfile: "evidence-ledger/brighter-vellum",
+    },
+  );
+
+  const substantive = structuredClone({
+    title: shipped.title,
+    pages: shipped.pages,
+    dataSources: shipped.dataSources,
+    contentLibrary: shipped.contentLibrary,
+    assets: shipped.assets,
+  });
+  for (const [dashboardStyle, dashboardColorProfile] of [
+    ["humanist-standard", "humanist-standard/quiet-commons"],
+    ["signal-instrument", "utility/chromatic-polarity"],
+  ]) {
+    const candidate = structuredClone(shipped);
+    Object.assign(candidate.globalStyles, { dashboardStyle, dashboardColorProfile });
+    const normalized = normalizeDashboardBoundary(candidate);
+
+    assert.equal(normalized.globalStyles.dashboardStyle, "evidence-ledger");
+    assert.equal(normalized.globalStyles.dashboardColorProfile, "evidence-ledger/brighter-vellum");
+    assert.deepEqual({
+      title: normalized.title,
+      pages: normalized.pages,
+      dataSources: normalized.dataSources,
+      contentLibrary: normalized.contentLibrary,
+      assets: normalized.assets,
+    }, substantive);
+    assert.doesNotThrow(() => validateDashboardStructure(normalized));
+  }
+
+  for (const dashboardColorProfile of [
+    "humanist-standard/quiet-commons",
+    "utility/chromatic-polarity",
+  ]) {
+    const invalid = structuredClone(shipped);
+    invalid.globalStyles.dashboardColorProfile = dashboardColorProfile;
+    assert.throws(() => validateDashboardStructure(invalid), /dashboard color profile/i);
   }
 });
 

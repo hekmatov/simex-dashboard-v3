@@ -19,8 +19,6 @@ const DEFINITIONS = Object.freeze({
   pendingContent: Object.freeze({ id: "source-content", kind: "content", label: "Source content changes", origin: "source-content", priority: 60 }),
   chronoGroup: Object.freeze({ id: "chrono-group", kind: "chrono", label: "Chrono Studio changes", origin: "chrono-studio", priority: 70 }),
   scene: Object.freeze({ id: "scene", kind: "scene", label: "Scene Studio changes", origin: "scene-studio", priority: 80 }),
-  scenario: Object.freeze({ id: "scenario", kind: "scenario", label: "Scenario Passport changes", origin: "scenario-passport", priority: 90 }),
-  dashboardMetadata: Object.freeze({ id: "dashboard-metadata", kind: "metadata", label: "Dashboard details", origin: "dashboard-map", priority: 100 }),
 });
 
 export function selectBuildPendingWork({
@@ -85,7 +83,7 @@ export function selectBuildPendingWork({
 
   for (const key of AUTHORED_DIRTY_KEYS) {
     if (authoredDirty?.[key] !== true) continue;
-    if (key === "inlineRename") continue;
+    if (key === "inlineRename" || !DEFINITIONS[key]) continue;
     if (
       (key === "chartEditor" && adoptedChartKinds.has("chart-edit"))
       || (key === "chartWizard" && adoptedChartKinds.has("chart-create"))

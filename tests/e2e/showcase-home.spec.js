@@ -24,7 +24,7 @@ test("Old Homepage Content is absent when Home enters the first ordinary Page th
   await expectLandingReady(page);
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toBeVisible();
   await expect(page.locator('[data-canonical-mode="home"]')).toHaveAttribute("tabindex", "-1");
   await expect(page.locator(".playback-surface, .present-workspace, .dashboard-canvas")).toHaveCount(0);
 
@@ -41,6 +41,91 @@ test("Old Homepage Content is absent when Home enters the first ordinary Page th
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await expectLandingReady(page);
   await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
+});
+
+test("Home page navigation enters View for every page including the selected return target and removes the header gap", async ({ page, request }) => {
+  const response = await request.get("http://127.0.0.1:4173/config/dashboard.json");
+  const configured = await response.json();
+  const expectedPageIds = configured.pages.map(({ id }) => id);
+
+  await openLanding(page);
+  await expectLandingReady(page);
+  const homeFrame = page.locator('[data-canonical-mode="home"]');
+  const pageNavigation = page.getByRole("navigation", { name: "Dashboard pages" });
+  await expect(pageNavigation).toBeVisible();
+  await expect(pageNavigation.locator("[data-dashboard-page-id]")).toHaveCount(expectedPageIds.length);
+  expect(await pageNavigation.locator("[data-dashboard-page-id]").evaluateAll(
+    (buttons) => buttons.map((button) => button.dataset.dashboardPageId),
+  )).toEqual(expectedPageIds);
+  await expect(
+    page.locator(".dashboard-command-pinned-actions")
+      .getByRole("button", { name: "Dashboard look", exact: true }),
+  ).toBeVisible();
+  await expect(homeFrame.locator(":scope > .canonical-dashboard-header")).toHaveCount(0);
+  const gap = await homeFrame.evaluate((frame) => {
+    const content = frame.querySelector(":scope > .canonical-dashboard-content");
+    const hero = content.querySelector(".showcase-hero");
+    return Math.abs(hero.getBoundingClientRect().top - content.getBoundingClientRect().top);
+  });
+  expect(gap).toBeLessThanOrEqual(1);
+
+  for (const pageId of expectedPageIds) {
+    await page.getByRole("navigation", { name: "Dashboard pages" })
+      .locator(`[data-dashboard-page-id="${pageId}"]`).click();
+    await expect(page.locator(`[data-canonical-mode="view"][data-canonical-page-id="${pageId}"]`)).toBeFocused();
+    await page.getByRole("button", { name: "Home", exact: true }).click();
+    await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
+  }
+});
+
+test("three Home styles expose materially distinct computed signatures without phone overflow", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openLanding(page);
+
+  const styles = [
+    ["Ledger", "evidence-ledger"],
+    ["Humanist", "humanist-standard"],
+    ["Instrument", "signal-instrument"],
+  ];
+  const signatures = {};
+  for (const [label, id] of styles) {
+    await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
+    const look = page.getByRole("dialog", { name: "Dashboard look" });
+    await look.getByLabel(label, { exact: true }).check();
+    await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", id);
+    await page.keyboard.press("Escape");
+    signatures[id] = await readHomeStyleSignature(page);
+    expect(signatures[id].heroGap).toBeLessThanOrEqual(1);
+  }
+
+  expect(signatures["evidence-ledger"]).toMatchObject({
+    rootRadius: "0px",
+    sectionBorderTop: "1px",
+    cardShadow: "none",
+  });
+  expect(signatures["evidence-ledger"].headingFont).toContain("Georgia");
+  expect(signatures["humanist-standard"].rootDisplay).toBe("grid");
+  expect(signatures["humanist-standard"].rootGap).toBe("24px");
+  expect(parseFloat(signatures["humanist-standard"].sectionRadius)).toBeGreaterThanOrEqual(14);
+  expect(signatures["humanist-standard"].sectionShadow).not.toBe("none");
+  expect(signatures["signal-instrument"].microcopyFont).toContain("Cascadia Mono");
+  expect(signatures["signal-instrument"].sectionBorderLeft).toBe("4px");
+  expect(signatures["signal-instrument"].gridGap).toBe("8px");
+  expect(parseFloat(signatures["signal-instrument"].sectionPaddingTop))
+    .toBeLessThan(parseFloat(signatures["humanist-standard"].sectionPaddingTop));
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const [label, id] of styles) {
+    await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
+    const look = page.getByRole("dialog", { name: "Dashboard look" });
+    await look.getByLabel(label, { exact: true }).check();
+    await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", id);
+    await page.keyboard.press("Escape");
+    expect(await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    )).toBe(false);
+  }
 });
 
 test("Home exposes the exact public beta orientation contract", async ({ page }) => {
@@ -92,7 +177,7 @@ test("Home inherits Dashboard Look semantic tokens and exposes repository Issues
 
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Dashboard look" });
-  await look.getByLabel("Signal + Instrument", { exact: true }).check();
+  await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await look.getByLabel("Dark", { exact: true }).check();
   await page.keyboard.press("Escape");
@@ -317,6 +402,36 @@ async function readLandingTheme(page) {
           outlineColor: summaryStyle.outlineColor,
         };
       })(),
+    };
+  });
+}
+
+async function readHomeStyleSignature(page) {
+  return page.evaluate(() => {
+    const root = document.querySelector(".showcase-landing");
+    const section = root.querySelector(".showcase-section");
+    const card = root.querySelector(".showcase-capability-grid article");
+    const heading = root.querySelector(".showcase-section h2");
+    const microcopy = root.querySelector(".showcase-eyebrow");
+    const grid = root.querySelector(".showcase-capability-grid");
+    const rootStyle = getComputedStyle(root);
+    const sectionStyle = getComputedStyle(section);
+    const content = document.querySelector('[data-canonical-mode="home"] > .canonical-dashboard-content');
+    const hero = content.querySelector(".showcase-hero");
+    return {
+      rootDisplay: rootStyle.display,
+      rootGap: rootStyle.rowGap,
+      rootRadius: rootStyle.borderRadius,
+      sectionRadius: sectionStyle.borderRadius,
+      sectionShadow: sectionStyle.boxShadow,
+      sectionBorderTop: sectionStyle.borderTopWidth,
+      sectionBorderLeft: sectionStyle.borderLeftWidth,
+      sectionPaddingTop: sectionStyle.paddingTop,
+      cardShadow: getComputedStyle(card).boxShadow,
+      headingFont: getComputedStyle(heading).fontFamily,
+      microcopyFont: getComputedStyle(microcopy).fontFamily,
+      gridGap: getComputedStyle(grid).gap,
+      heroGap: Math.abs(hero.getBoundingClientRect().top - content.getBoundingClientRect().top),
     };
   });
 }

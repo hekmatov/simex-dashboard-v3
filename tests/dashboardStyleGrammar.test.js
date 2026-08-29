@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -10,11 +11,21 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [{ default: AppFrame }, { resolveDashboardTheme }] = await Promise.all([
+const [
+  { default: AppFrame },
+  { resolveDashboardTheme },
+  { default: OperationStatusProvider },
+] = await Promise.all([
   vite.ssrLoadModule("/src/components/app-shell/AppFrame.jsx"),
   vite.ssrLoadModule("/src/theme/dashboardTheme.js"),
+  vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
 ]);
 await vite.close();
+
+const staticScheduler = {
+  setTimeout: () => 1,
+  clearTimeout: () => {},
+};
 
 function renderStyle(dashboardStyle, appearancePreference = "light") {
   const theme = resolveDashboardTheme({
@@ -25,12 +36,17 @@ function renderStyle(dashboardStyle, appearancePreference = "light") {
     },
     appearancePreference,
   });
-  return renderToStaticMarkup(React.createElement(AppFrame, {
-    mode: "view",
-    density: "comfortable",
-    theme,
-    children: React.createElement("main", null, "Dashboard"),
-  }));
+  const queue = createOperationStatusQueue({ scheduler: staticScheduler });
+  return renderToStaticMarkup(React.createElement(
+    OperationStatusProvider,
+    { queue },
+    React.createElement(AppFrame, {
+      mode: "view",
+      density: "comfortable",
+      theme,
+      children: React.createElement("main", null, "Dashboard"),
+    }),
+  ));
 }
 
 test("approved dashboard styles expose distinct paint grammar without changing palette tokens", () => {

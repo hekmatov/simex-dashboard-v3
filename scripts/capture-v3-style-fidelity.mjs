@@ -6,9 +6,9 @@ const REFERENCE_URL = "http://127.0.0.1:8765/.planning/sketches/003-dashboard-vi
 const PRODUCTION_URL = "http://127.0.0.1:4173/";
 const output = path.resolve("docs/audits/2026-08-19-v3-step-6-sketch-fidelity/screenshots");
 const pairs = Object.freeze([
-  Object.freeze({ id: "evidence-ledger", label: "Evidence Ledger", profile: "evidence-ledger/brighter-vellum", sketchProfile: "evidence-signature" }),
-  Object.freeze({ id: "humanist-standard", label: "Humanist Standard", profile: "humanist-standard/common-ground", sketchProfile: "humanist-signature" }),
-  Object.freeze({ id: "signal-instrument", label: "Signal + Instrument", profile: "signal-instrument/calibrated-steel", sketchProfile: "signal-signature" }),
+  Object.freeze({ id: "evidence-ledger", label: "Ledger", profile: "evidence-ledger/brighter-vellum", sketchProfile: "evidence-signature" }),
+  Object.freeze({ id: "humanist-standard", label: "Humanist", profile: "humanist-standard/common-ground", sketchProfile: "humanist-signature" }),
+  Object.freeze({ id: "signal-instrument", label: "Instrument", profile: "signal-instrument/calibrated-steel", sketchProfile: "signal-signature" }),
 ]);
 
 await fs.mkdir(output, { recursive: true });

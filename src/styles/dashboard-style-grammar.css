@@ -1875,3 +1875,162 @@
   border-color: var(--simex-selected);
   color: var(--simex-text-strong);
 }
+
+/* Home keeps one semantic structure while each approved style establishes a
+   materially different editorial rhythm through typography and geometry. */
+.app-frame[data-dashboard-style="evidence-ledger"] .showcase-landing {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] :is(
+  .showcase-section,
+  .showcase-faq,
+  .showcase-resources
+) {
+  border-top: 1px solid var(--simex-border-strong);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] :is(
+  .showcase-capability-grid article,
+  .showcase-route,
+  .showcase-tour,
+  .showcase-faq details,
+  .showcase-resources a,
+  .showcase-landing-preview img
+) {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .showcase-landing {
+  display: grid;
+  gap: 24px;
+  padding: 0 24px 24px;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .showcase-landing > :is(
+  .showcase-hero,
+  .showcase-proof-grid,
+  .showcase-section,
+  .showcase-tour,
+  .showcase-faq,
+  .showcase-resources
+) {
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  margin: 0;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .showcase-section {
+  background: var(--simex-surface-panel-alt);
+  padding: 48px;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .showcase-section + .showcase-section {
+  padding-top: 48px;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] :is(
+  .showcase-capability-grid article,
+  .showcase-route,
+  .showcase-faq details
+) {
+  border-radius: var(--simex-style-panel-radius);
+  padding: 24px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .showcase-hero {
+  border-bottom: 2px solid var(--simex-border-strong);
+  min-height: 320px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .showcase-hero-copy {
+  padding: clamp(28px, 4vw, 40px);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .showcase-hero h1 {
+  font-size: clamp(36px, 4vw, 52px);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .showcase-section {
+  border-left: 4px solid var(--simex-accent);
+  border-top: 1px solid var(--simex-border-strong);
+  padding: 28px 32px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .showcase-section + .showcase-section {
+  padding-top: 28px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] :is(
+  .showcase-capability-grid,
+  .showcase-route-grid,
+  .showcase-faq-items
+) {
+  gap: 8px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] :is(
+  .showcase-capability-grid article,
+  .showcase-route,
+  .showcase-faq details
+) {
+  border-radius: var(--simex-style-control-radius);
+  box-shadow: none;
+  padding: 14px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .showcase-route {
+  gap: 8px;
+  min-height: 180px;
+  padding: 18px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .showcase-proof-grid > div {
+  padding: 14px 18px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] :is(
+  .showcase-pill,
+  .showcase-proof-grid span,
+  .showcase-route p,
+  .showcase-route span,
+  .showcase-faq summary
+) {
+  font-family: var(--simex-style-data-font);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] :is(
+  .showcase-tour,
+  .showcase-status
+) {
+  margin: 0 32px 28px;
+}
+
+@media (max-width: 640px) {
+  .app-frame[data-dashboard-style="humanist-standard"] .showcase-landing {
+    gap: 12px;
+    padding: 0 12px 12px;
+  }
+
+  .app-frame[data-dashboard-style="humanist-standard"] .showcase-section,
+  .app-frame[data-dashboard-style="humanist-standard"] .showcase-section + .showcase-section {
+    padding: 28px 18px;
+  }
+
+  .app-frame[data-dashboard-style="signal-instrument"] .showcase-section,
+  .app-frame[data-dashboard-style="signal-instrument"] .showcase-section + .showcase-section {
+    padding: 24px 18px;
+  }
+
+  .app-frame[data-dashboard-style="signal-instrument"] :is(
+    .showcase-tour,
+    .showcase-status
+  ) {
+    margin: 0 18px 24px;
+  }
+}

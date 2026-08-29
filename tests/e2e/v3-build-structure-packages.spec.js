@@ -442,7 +442,7 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
 
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Dashboard look" });
-  await look.getByLabel("Humanist Standard", { exact: true }).check();
+  await look.getByLabel("Humanist", { exact: true }).check();
   await look.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
   await expect(look.locator(".look-drawer-feedback")).toHaveText("Dashboard look saved.");
   await look.getByRole("button", { name: "Close", exact: true }).click();

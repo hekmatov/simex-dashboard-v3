@@ -28,7 +28,9 @@ export default function CanonicalDashboardFrame({
       tabIndex={landmarkTabIndex ?? (["home", "view"].includes(mode) ? -1 : undefined)}
       aria-labelledby={landmarkLabelledBy}
     >
-      <div className="canonical-dashboard-header">{dashboardHeader}</div>
+      {dashboardHeader != null ? (
+        <div className="canonical-dashboard-header">{dashboardHeader}</div>
+      ) : null}
       {workspaceControls ? (
         <div className="canonical-dashboard-workspace-controls">{workspaceControls}</div>
       ) : null}

@@ -1,13 +1,34 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
+test("catalogue exposes the exact renamed styles and profiles without retired choices", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await expect(look.locator('input[name="dashboard-style"]')).toHaveCount(3);
+  await expect(look.locator('input[name="dashboard-profile"]')).toHaveCount(13);
+  for (const label of [
+    "Ledger", "Humanist", "Instrument",
+    "Vellum", "Register", "Archive", "Common Ground", "Forum", "Steel",
+    "Telemetry", "Amber", "Prismatic", "Ladder", "Sunrise", "Lakeside", "Monochrome",
+  ]) {
+    await expect(look.getByLabel(label, { exact: true })).toHaveCount(1);
+  }
+  for (const label of [
+    "Evidence Ledger", "Humanist Standard", "Signal + Instrument",
+    "Quiet Commons", "Chromatic Polarity",
+  ]) {
+    await expect(look.getByLabel(label, { exact: true })).toHaveCount(0);
+  }
+});
+
 test("selected dashboard style reaches every Build authoring surface", async ({ page }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/");
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Dashboard look" });
-  await look.getByLabel("Signal + Instrument", { exact: true }).check();
+  await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.keyboard.press("Escape");
   await openDashboardPage(page, "biomedical");
@@ -122,7 +143,7 @@ test("standalone source viewer receives the selected dashboard style", async ({ 
   await page.goto("/");
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Dashboard look" });
-  await look.getByLabel("Signal + Instrument", { exact: true }).check();
+  await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.keyboard.press("Escape");
   await openDashboardPage(page, "biomedical");

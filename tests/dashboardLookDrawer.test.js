@@ -51,9 +51,17 @@ test("approved look drawer exposes all values with immediate persistence and no 
 
   assert.match(html, /role="dialog"/);
   assert.match(html, /aria-modal="true"/);
-  assert.match(html, /class="look-drawer-click-catcher"/);
+  assert.match(html, /class="[^"]*\blook-drawer-click-catcher\b[^"]*"/);
   assert.doesNotMatch(html, /scrim|backdrop-filter|opacity:/i);
-  assert.equal((html.match(/data-profile-option=/g) ?? []).length, 15);
+  assert.equal((html.match(/data-profile-option=/g) ?? []).length, 13);
+  for (const label of [
+    "Ledger", "Humanist", "Instrument",
+    "Vellum", "Register", "Archive", "Common Ground", "Forum", "Steel",
+    "Telemetry", "Amber", "Prismatic", "Ladder", "Sunrise", "Lakeside", "Monochrome",
+  ]) {
+    assert.match(html, new RegExp(`>${label}<`));
+  }
+  assert.doesNotMatch(html, /Evidence Ledger|Humanist Standard|Signal \+ Instrument|Quiet Commons|Chromatic Polarity/);
   assert.doesNotMatch(html, />Set (?:dashboard look|chart colors|appearance)<\/button>/);
   assert.doesNotMatch(html, /Saved[\s\S]*Preview/);
   assert.doesNotMatch(html, /Use [^<]+ Signature/);
@@ -283,5 +291,5 @@ test("colour-profile swatch projections are reused while appearance is unchanged
 
   assert.strictEqual(second, first);
   assert.notStrictEqual(dark, first);
-  assert.equal(first.length, 15);
+  assert.equal(first.length, 13);
 });
