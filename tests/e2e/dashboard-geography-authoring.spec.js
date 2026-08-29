@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -19,37 +20,30 @@ test.beforeEach(async ({ page, request }) => {
 test("a fresh chronological choropleth reaches preview through the early GeoJSON selector", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "Add chart" }).first().click();
-  const wizard = page.getByRole("dialog");
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
 
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByLabel("Search chart types").fill(
+  await flow.selectExistingSource(
+    "Generated map timeline derived from the authoritative harmonized municipal biomedical dataset",
+  );
+  await flow.chooseChartType(
     "chronological choropleth",
+    /Chronological choropleth/i,
   );
-  await wizard.getByRole("button", {
-    name: /Chronological choropleth/i,
-  }).click();
-  await wizard.getByRole("button", { name: /^Data source\./ }).click();
-  await wizard.getByLabel("Managed data source").selectOption(
-    "bio_municipal_map_timeline",
-  );
+  await flow.goToDataSource();
   await wizard.getByLabel("GeoJSON source").selectOption(
     "geo_netherlands_municipalities_2021",
   );
 
-  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
-  await wizard.locator('[data-field-id="geography"] select').selectOption(
-    "MunicipalityCode",
-  );
-  await wizard.locator('[data-field-id="value"] select').selectOption(
-    "infectionsPer10000",
-  );
-  await wizard.locator('[data-field-id="time"] select').selectOption("Datum");
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("geography", "MunicipalityCode");
+  await flow.selectRole("value", "infectionsPer10000");
+  await flow.selectRole("time", "Datum");
 
   await expect(
     wizard.locator('[data-field-id="geoSource"]'),
   ).toHaveCount(1);
-  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
+  await flow.goToConfigure();
   await expect(
     wizard.locator(".chart-authoring-preview-ready"),
   ).toBeVisible();
@@ -60,7 +54,7 @@ test("a fresh chronological choropleth reaches preview through the early GeoJSON
   await expect(
     wizard.locator('[data-field-id="geoSource"]'),
   ).toHaveCount(0);
-  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
+  await flow.goToReview();
   await expect(
     wizard.getByRole("button", { name: "Create chart" }),
   ).toBeEnabled();

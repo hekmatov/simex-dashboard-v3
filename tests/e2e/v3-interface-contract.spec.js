@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { chartAuthoringWorkflow } from "./support/chart-authoring-workflow.js";
+
 const CONTROL_URL = "http://127.0.0.1:4174";
 
 test.beforeEach(async ({ request }) => {
@@ -57,8 +59,13 @@ test("Step 7 Build controls and fields use the shared 44px interaction contract"
 
   await page.getByRole("button", { name: "Add chart", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
+  const stageLabels = await wizard.getByRole("navigation", { name: "Chart creation steps" })
+    .getByRole("button").allTextContents();
+  expect(stageLabels.map((label) => label.replace(/(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u, "")))
+    .toEqual(["Destination", "Data source", "Chart type", "Map and prepare", "Configure", "Review"]);
   await expectMinimumTargets(wizard.locator('button:visible, input:visible:not([type="checkbox"]):not([type="radio"]), select:visible, textarea:visible'));
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
+  const flow = chartAuthoringWorkflow(wizard);
+  await flow.goToChartType();
   await expectMinimumTargets(wizard.locator('button:visible, input:visible:not([type="checkbox"]):not([type="radio"]), select:visible, textarea:visible'));
 });
 

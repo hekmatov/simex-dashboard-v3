@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chartAuthoringWorkflow } from "./support/chart-authoring-workflow.js";
 
 const HARNESS_URL =
   "http://127.0.0.1:4175/tests/e2e/modal-focus-harness.html";
@@ -16,11 +17,10 @@ test("wizard traps both Tab directions and explicit discard restores its trigger
   await initialWizard.getByRole("button", { name: "Next step", exact: true }).click();
 
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
+  const flow = chartAuthoringWorkflow(wizard);
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByRole("heading", { name: "Choose a chart type" })).toBeVisible();
-  await expect(
-    wizard.getByRole("button", { name: /^Chart type\./ }),
-  ).toBeFocused();
+  await expect(wizard.getByRole("heading", { name: "Choose a data source" })).toBeVisible();
+  await expect(flow.stageButton("dataSource")).toBeFocused();
   const enabledButtons = wizard.locator("button:not([disabled])");
   const first = enabledButtons.first();
   const last = enabledButtons.last();
@@ -122,7 +122,9 @@ test("reopened wizard focuses the reset selected step rather than stale state", 
     name: "Set chart size to 3 columns by 2 rows",
   }).click();
   await wizard.getByRole("button", { name: "Next step", exact: true }).click();
-  await expect(wizard.getByRole("heading", { name: "Choose a chart type" })).toBeVisible();
+  const flow = chartAuthoringWorkflow(wizard);
+  await expect(wizard.getByRole("heading", { name: "Choose a data source" })).toBeVisible();
+  await expect(flow.stageButton("dataSource")).toBeFocused();
   await wizard.getByRole("button", { name: "Discard chart draft" })
     .evaluate((button) => button.click());
   await page.getByRole("dialog", { name: "Discard chart?" })
@@ -132,9 +134,8 @@ test("reopened wizard focuses the reset selected step rather than stale state", 
 
   await trigger.click();
   wizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expect(
-    wizard.getByRole("button", { name: /^Destination\./ }),
-  ).toBeFocused();
+  const reopenedFlow = chartAuthoringWorkflow(wizard);
+  await expect(reopenedFlow.stageButton("destination")).toBeFocused();
 });
 
 test("reopening a modal never duplicates or leaks the document listener", async ({

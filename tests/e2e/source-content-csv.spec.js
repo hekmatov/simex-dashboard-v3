@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { chartAuthoringWorkflow, openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -194,39 +195,39 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await closeManager(page);
 
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  let wizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expectExactSixStages(wizard);
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await wizard.getByLabel("Managed data source").selectOption({ label: "Journey D unused source" });
+  let flow = await openChartAuthoring(page);
+  let wizard = flow.wizard;
+  await flow.goToDestination();
+  await flow.selectExistingSource("Journey D unused source");
   await expect(wizard.getByRole("region", { name: "Selected source profile" })).toContainText("capacity");
+  await flow.chooseChartType(null, /^Line\./);
   expect(await csvInventory(page)).toEqual(afterManagerAdd);
   await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   await page.getByRole("dialog", { name: /Discard chart/ }).getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  wizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expectExactSixStages(wizard);
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await wizard.getByLabel("CSV file").setInputFiles(CHART_CSV);
+  flow = await openChartAuthoring(page);
+  wizard = flow.wizard;
+  await flow.goToDestination();
+  await flow.uploadCsv(CHART_CSV);
+  await flow.chooseChartType(null, /^Line\./);
   expect(await csvInventory(page)).toEqual(afterManagerAdd);
   await wizard.getByRole("button", { name: "Close", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   expect(await csvInventory(page)).toEqual(afterManagerAdd);
   await page.getByRole("button", { name: "Resume chart draft" }).click();
   wizard = page.getByRole("dialog", { name: "Add new chart" });
+  flow = chartAuthoringWorkflow(wizard);
+  await flow.goToDataSource();
   await expect(wizard.getByLabel("CSV file")).toBeVisible();
   await expect(wizard.getByRole("region", { name: "Selected source profile" })).toContainText("cases");
   expect(await csvInventory(page)).toEqual(afterManagerAdd);
-  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
-  await wizard.getByRole("button", { name: "Add measurement" }).click();
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("measurements", "cases");
   await wizard.getByLabel("Observation / X-axis").selectOption("date");
-  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
+  await flow.goToConfigure();
   await wizard.getByLabel("Chart title").fill("Journey D CSV chart");
-  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
+  await flow.goToReview();
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
   await wizard.getByRole("button", { name: "Create chart" }).click();
   await expect(wizard).toHaveCount(0);
@@ -376,14 +377,6 @@ function remapTarget(dialog, chartTitle) {
 function withoutRender(snapshot) {
   const { render: _render, ...durable } = snapshot;
   return durable;
-}
-
-async function expectExactSixStages(wizard) {
-  const labels = await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button").allTextContents();
-  expect(labels.map((label) => label.replace(
-    /(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u,
-    "",
-  ))).toEqual(["Destination", "Chart type", "Data source", "Map and prepare data", "Configure chart", "Review and create"]);
 }
 
 async function csvInventory(page) {

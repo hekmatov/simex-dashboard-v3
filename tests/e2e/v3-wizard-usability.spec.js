@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 test("chart-panel tooltips escape clipping and use selected-style paint", async ({ page }) => {
@@ -47,13 +48,14 @@ test("chart-panel tooltips escape clipping and use selected-style paint", async 
 
 test("New Chart keeps stable geometry and exposes editable destination placement", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
-  const wizard = await openWizard(page);
+  const flow = await openWizard(page);
+  const { wizard } = flow;
 
   await expect(wizard).toHaveAccessibleName("Add new chart");
   await expect(wizard.getByRole("heading", { name: "Add new chart", exact: true })).toHaveCount(1);
   await expect(wizard.locator(".chart-wizard-header .eyebrow")).toHaveCount(0);
 
-  const stages = wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button");
+  const stages = flow.stageButtons;
   await expect(stages).toHaveCount(6);
   const rows = await stages.evaluateAll((buttons) => (
     new Set(buttons.map((button) => Math.round(button.getBoundingClientRect().top))).size
@@ -62,10 +64,10 @@ test("New Chart keeps stable geometry and exposes editable destination placement
 
   const initialHeight = await wizard.evaluate((node) => Math.round(node.getBoundingClientRect().height));
   expect(initialHeight).toBe(852);
-  await stages.nth(4).click();
+  await flow.goToConfigure();
   await expect.poll(() => wizard.evaluate((node) => Math.round(node.getBoundingClientRect().height)))
     .toBe(initialHeight);
-  await stages.nth(0).click();
+  await flow.goToDestination();
 
   await expect(wizard.getByLabel("Destination page")).toBeEnabled();
   await expect(wizard.getByLabel("Destination section")).toBeEnabled();
@@ -81,10 +83,11 @@ test("New Chart keeps stable geometry and exposes editable destination placement
 
 test("Data Source actions and Review repairs are concise and explicit", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
-  const wizard = await openWizard(page);
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await wizard.getByLabel("Managed data source").selectOption("bio_cases");
+  const flow = await openWizard(page);
+  const { wizard } = flow;
+  await flow.selectExistingSource("Biomedical cases");
+  await flow.chooseChartType(null, /^Line\./);
+  await flow.goToDataSource();
 
   const viewSource = wizard.getByRole("button", { name: "View source CSV", exact: true });
   const resetSource = wizard.getByRole("button", { name: "Reset selection", exact: true });
@@ -100,14 +103,14 @@ test("Data Source actions and Review repairs are concise and explicit", async ({
   await expect(confirmation).toContainText("does not delete the CSV from the dashboard");
   await confirmation.getByRole("button", { name: "Keep selection", exact: true }).click();
 
-  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
+  await flow.goToReview();
   await expect(wizard.getByRole("heading", { name: "Review and create", exact: true })).toHaveCount(0);
   const summary = wizard.getByRole("alert", { name: "Chart creation issues" });
   await expect(summary).toBeVisible();
   const repair = summary.getByRole("button", { name: "Map and prepare data", exact: true });
   await expect(repair).toHaveCSS("text-decoration-line", "underline");
   await repair.click();
-  await expect(wizard.getByRole("button", { name: /^Map and prepare data\./ }))
+  await expect(flow.stageButton("mapAndPrepare"))
     .toHaveAttribute("aria-current", "step");
 });
 
@@ -117,8 +120,5 @@ async function openWizard(page) {
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  const wizard = page.getByRole("dialog");
-  await expect(wizard).toBeVisible();
-  return wizard;
+  return openChartAuthoring(page);
 }

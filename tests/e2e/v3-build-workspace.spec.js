@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -145,19 +146,19 @@ test("chart creation keeps canonical render and placement proofs reachable throu
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add new chart" });
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
   const deck = wizard.locator('[data-chart-proof-deck="persistent"]');
 
-  for (const stage of [
-    "destination",
-    "chart-type",
-    "data-source",
-    "map-and-prepare-data",
-    "configure-chart",
-    "review-and-create",
+  for (const goToStage of [
+    flow.goToDestination,
+    flow.goToDataSource,
+    flow.goToChartType,
+    flow.goToMapAndPrepare,
+    flow.goToConfigure,
+    flow.goToReview,
   ]) {
-    await wizard.locator(`#chart-stage-${stage}`).click();
+    await goToStage();
     await expect(deck.getByRole("article", { name: "Canonical render proof" })).toBeVisible();
     await expect(deck.getByRole("article", { name: "Placement proof" })).toBeVisible();
     await expect(deck.locator("[data-proof-revision]")).toHaveCount(2);

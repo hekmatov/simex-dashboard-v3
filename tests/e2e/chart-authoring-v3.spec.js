@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import {
+  chartAuthoringWorkflow,
+  openChartAuthoring,
+} from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -30,25 +34,25 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   page,
 }) => {
   test.setTimeout(240_000);
-  await openWizard(page);
-  let wizard = chartWizard(page);
+  let flow = await openChartAuthoring(page);
+  let { wizard } = flow;
 
-  await expectExactSixStages(wizard);
-  await expect(creationStage(wizard, /^Destination\. Complete\./))
-    .toBeEnabled();
-  await expect(creationStage(wizard, /^Chart type\. Not started\./))
-    .toBeEnabled();
-  await expect(creationStage(wizard, /^Data source\. Waiting on prerequisite\./))
-    .toBeEnabled();
-  await expect(creationStage(wizard, /^Map and prepare data\. Waiting on prerequisite\./))
-    .toBeEnabled();
-  await expect(creationStage(wizard, /^Configure chart\. Waiting on prerequisite\./))
-    .toBeEnabled();
-  await expect(creationStage(wizard, /^Review and create\. Waiting on prerequisite\./))
-    .toBeEnabled();
+  await expect(flow.stageButton("destination"))
+    .toHaveAttribute("data-status", "Complete");
+  await expect(flow.stageButton("dataSource"))
+    .toHaveAttribute("data-status", "Not started");
+  await expect(flow.stageButton("chartType"))
+    .toHaveAttribute("data-status", "Waiting on prerequisite");
+  await expect(flow.stageButton("mapAndPrepare"))
+    .toHaveAttribute("data-status", "Waiting on prerequisite");
+  await expect(flow.stageButton("configure"))
+    .toHaveAttribute("data-status", "Waiting on prerequisite");
+  await expect(flow.stageButton("review"))
+    .toHaveAttribute("data-status", "Waiting on prerequisite");
 
-  await chooseType(wizard, "pie", /^Pie\b/i);
-  await creationStage(wizard, /^Configure chart\./).click();
+  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.chooseChartType("pie", /^Pie\b/i);
+  await flow.goToConfigure();
   await expect(wizard.getByLabel("Chart title")).toBeVisible();
   await expect(wizard.getByLabel("Title alignment")).toHaveCount(0);
   await expect(wizard.locator('[data-color-field="background"]')).toHaveCount(0);
@@ -58,7 +62,8 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   const resumeDraft = page.getByRole("button", { name: "Resume chart draft" });
   await expect(resumeDraft).toBeVisible();
   await resumeDraft.click();
-  wizard = chartWizard(page);
+  wizard = page.getByRole("dialog", { name: "Add new chart" });
+  flow = chartAuthoringWorkflow(wizard);
 
   await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   const discard = page.getByRole("dialog", { name: "Discard chart?" });
@@ -70,22 +75,22 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   await discard.getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
 
-  await openWizard(page);
-  wizard = chartWizard(page);
-  await chooseType(wizard, "pie", /^Pie\b/i);
-  await selectExistingSource(wizard, "bio_mortality");
+  flow = await openChartAuthoring(page);
+  wizard = flow.wizard;
+  await flow.selectExistingSource("Biomedical mortality by age");
   await expect(
     wizard.getByRole("region", { name: "Selected source profile" }),
   ).toContainText("Age group");
   await expect(
     wizard.getByRole("region", { name: "Selected source profile" }),
   ).toContainText("deaths");
+  await flow.chooseChartType("pie", /^Pie\b/i);
 
-  await creationStage(wizard, /^Map and prepare data\./).click();
-  await selectRole(wizard, "category", "Age group");
-  await selectRole(wizard, "value", "deaths");
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("category", "Age group");
+  await flow.selectRole("value", "deaths");
 
-  await creationStage(wizard, /^Configure chart\./).click();
+  await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await expect(wizard.getByLabel("Title alignment")).toBeVisible();
   await expect(wizard.locator('[data-color-field="background"]')).toHaveCount(1);
@@ -95,7 +100,7 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   await wizard.getByRole("button", { name: "Add color" }).click();
   await wizard.getByLabel("Color 1", { exact: true }).fill("#DC2626");
   await wizard.getByLabel("Chart title").fill("E2E mortality composition");
-  await creationStage(wizard, /^Review and create\./).click();
+  await flow.goToReview();
   await wizard.getByRole("button", { name: "Create chart" }).click();
 
   await expect(wizard).toHaveCount(0);
@@ -112,14 +117,14 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
 });
 
 test("wizard eyedropper reveals the dashboard and Escape preserves the draft", async ({ page }) => {
-  await openWizard(page);
-  const wizard = chartWizard(page);
-  await chooseType(wizard, "pie", /^Pie\b/i);
-  await selectExistingSource(wizard, "bio_mortality");
-  await creationStage(wizard, /^Map and prepare data\./).click();
-  await selectRole(wizard, "category", "Age group");
-  await selectRole(wizard, "value", "deaths");
-  await creationStage(wizard, /^Configure chart\./).click();
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
+  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.chooseChartType("pie", /^Pie\b/i);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("category", "Age group");
+  await flow.selectRole("value", "deaths");
+  await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
 
   const picker = wizard.getByRole("button", {
@@ -218,13 +223,13 @@ for (const scenario of [
     page,
   }) => {
     test.setTimeout(240_000);
-    await openWizard(page);
-    const wizard = chartWizard(page);
-    await chooseType(wizard, scenario.query, scenario.name);
-    await selectExistingSource(wizard, scenario.sourceId);
-    await creationStage(wizard, /^Map and prepare data\./).click();
+    const flow = await openChartAuthoring(page);
+    const { wizard } = flow;
+    await flow.selectExistingSource(sourceLabel(scenario.sourceId));
+    await flow.chooseChartType(scenario.query, scenario.name);
+    await flow.goToMapAndPrepare();
     for (const [roleId, column] of Object.entries(scenario.roles)) {
-      await selectRole(wizard, roleId, column);
+      await flow.selectRole(roleId, column);
     }
     if (scenario.resolveDuplicates) {
       await expect(wizard.locator('[data-field-id="duplicates"]')).toBeVisible();
@@ -245,7 +250,7 @@ for (const scenario of [
       })).toBeVisible();
     }
 
-    await creationStage(wizard, /^Configure chart\./).click();
+    await flow.goToConfigure();
     await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
     await expect(wizard.getByRole("heading", { name: "Appearance" }))
       .toBeVisible();
@@ -257,7 +262,7 @@ for (const scenario of [
     for (const heading of scenario.absentSections) {
       await expect(wizard.getByRole("heading", { name: heading })).toHaveCount(0);
     }
-    await createChart(wizard, scenario.title);
+    await flow.createChart(scenario.title);
     await expectStoredChart(page, scenario.typeId, scenario.title);
   });
 }
@@ -265,11 +270,9 @@ for (const scenario of [
 test("bullet renderer preflight prevents a false-ready collection with colliding identity", async ({
   page,
 }) => {
-  await openWizard(page);
-  const wizard = chartWizard(page);
-  await chooseType(wizard, "bullet", /^Bullet\b/i);
-  await creationStage(wizard, /^Data source\./).click();
-  await wizard.locator('input[type="file"]').setInputFiles({
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
+  await flow.uploadCsv({
     name: "colliding-bullet-identities.csv",
     mimeType: "text/csv",
     buffer: Buffer.from([
@@ -278,11 +281,12 @@ test("bullet renderer preflight prevents a false-ready collection with colliding
       " Ward A ,6,8",
     ].join("\n")),
   });
-  await creationStage(wizard, /^Map and prepare data\./).click();
-  await selectRole(wizard, "actual", "actual");
-  await selectRole(wizard, "target", "capacity");
-  await selectRole(wizard, "entity", "ward");
-  await creationStage(wizard, /^Configure chart\./).click();
+  await flow.chooseChartType("bullet", /^Bullet\b/i);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("actual", "actual");
+  await flow.selectRole("target", "capacity");
+  await flow.selectRole("entity", "ward");
+  await flow.goToConfigure();
 
   const invalidPreview = wizard.locator(".chart-authoring-preview-invalid");
   await expect(invalidPreview).toBeVisible();
@@ -292,7 +296,7 @@ test("bullet renderer preflight prevents a false-ready collection with colliding
   await expect(invalidPreview.locator('[data-responsible-field="entity"]'))
     .toBeVisible();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toHaveCount(0);
-  await creationStage(wizard, /^Review and create\./).click();
+  await flow.goToReview();
   await expect(wizard.getByRole("button", { name: "Create chart" }))
     .toBeDisabled();
 });
@@ -300,19 +304,18 @@ test("bullet renderer preflight prevents a false-ready collection with colliding
 test("timeline upload profiles real CSV columns and creates a timeline chart", async ({
   page,
 }) => {
-  await openWizard(page);
-  const wizard = chartWizard(page);
-  await chooseType(wizard, "timeline", /^Timeline\b/i);
-  await creationStage(wizard, /^Data source\./).click();
-  await wizard.locator('input[type="file"]').setInputFiles(TIMELINE_FIXTURE);
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
+  await flow.uploadCsv(TIMELINE_FIXTURE);
   const profile = wizard.getByRole("region", {
     name: "Selected source profile",
   });
   await expect(profile).toContainText("event");
   await expect(profile).toContainText("start");
   await expect(profile).toContainText("Date or time");
+  await flow.chooseChartType("timeline", /^Timeline\b/i);
 
-  await creationStage(wizard, /^Map and prepare data\./).click();
+  await flow.goToMapAndPrepare();
   for (const [roleId, column] of Object.entries({
     event: "event",
     start: "start",
@@ -320,14 +323,14 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
     lane: "lane",
     status: "status",
   })) {
-    await selectRole(wizard, roleId, column);
+    await flow.selectRole(roleId, column);
   }
 
-  await creationStage(wizard, /^Configure chart\./).click();
+  await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await expect(wizard.getByRole("heading", { name: "Timeline" })).toBeVisible();
   await expect(wizard.getByRole("heading", { name: "Axes" })).toHaveCount(0);
-  await createChart(wizard, "E2E coordination timeline");
+  await flow.createChart("E2E coordination timeline");
   await expectStoredChart(page, "timeline", "E2E coordination timeline");
 });
 
@@ -467,66 +470,18 @@ test("editor chart conversion supports compatible changes and recoverable remapp
   await expectStoredChart(page, "scatter", "Confirmed cases");
 });
 
-async function openWizard(page) {
-  await page.getByRole("button", { name: "Add chart" }).first().click();
-}
-
 async function openBiomedicalPage(page) {
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: "Biomedical", exact: true })
     .click();
 }
 
-function chartWizard(page) {
-  return page.locator(".chart-wizard-backdrop");
-}
-
-async function chooseType(wizard, query, accessibleName) {
-  await creationStage(wizard, /^Chart type\./).click();
-  await wizard.getByLabel("Search chart types").fill(query);
-  await wizard.getByRole("button", { name: accessibleName }).click();
-}
-
-async function selectExistingSource(wizard, sourceId) {
-  await creationStage(wizard, /^Data source\./).click();
-  await wizard.getByLabel("Managed data source").selectOption(sourceId);
-}
-
-async function selectRole(wizard, roleId, column) {
-  await wizard.locator(`[data-field-id="${roleId}"] select`)
-    .selectOption(column);
-}
-
-async function createChart(wizard, title) {
-  await wizard.getByLabel("Chart title").fill(title);
-  await creationStage(wizard, /^Review and create\./).click();
-  await expect(wizard.getByRole("button", { name: "Create chart" }))
-    .toBeEnabled();
-  await wizard.getByRole("button", { name: "Create chart" }).click();
-  await expect(wizard).toHaveCount(0);
-}
-
-function creationStage(wizard, name) {
-  return wizard.getByRole("navigation", { name: "Chart creation steps" })
-    .getByRole("button", { name });
-}
-
-async function expectExactSixStages(wizard) {
-  const labels = await wizard
-    .getByRole("navigation", { name: "Chart creation steps" })
-    .getByRole("button")
-    .allTextContents();
-  expect(labels.map((label) => label.replace(
-    /(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u,
-    "",
-  ))).toEqual([
-    "Destination",
-    "Chart type",
-    "Data source",
-    "Map and prepare data",
-    "Configure chart",
-    "Review and create",
-  ]);
+function sourceLabel(sourceId) {
+  return {
+    bio_municipal_infections: "Biomedical municipal infections",
+    socio_behaviour: "Simulation exercise socio-economic behaviour dataset",
+    bio_province_deltas: "Simulation exercise biomedical derived province changes",
+  }[sourceId];
 }
 
 async function expectStoredChart(page, typeId, title) {

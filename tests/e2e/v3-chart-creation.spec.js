@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chartAuthoringWorkflow, openChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -19,31 +20,25 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-
-  let wizard = page.getByRole("dialog");
-  const stageLabels = await wizard.getByRole("navigation", { name: "Chart creation steps" })
-    .getByRole("button").allTextContents();
-  expect(stageLabels.map((label) => label.replace(/(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u, "")))
-    .toEqual(["Destination", "Chart type", "Data source", "Map and prepare data", "Configure chart", "Review and create"]);
-
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByRole("button", { name: /^Line\./ }).click();
+  let flow = await openChartAuthoring(page);
+  let { wizard } = flow;
+  await flow.selectExistingSource("Biomedical cases");
+  await flow.chooseChartType(null, /^Line\./);
   await expect(wizard).toHaveAccessibleName("Add new chart");
-  await expect(wizard.locator("#chart-stage-data-source")).toHaveAttribute("aria-current", "step");
+  await expect(flow.stageButton("mapAndPrepare")).toHaveAttribute("aria-current", "step");
   await wizard.getByRole("button", { name: "Close" }).click();
   await expect(wizard).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Resume chart draft" })).toBeVisible();
   await page.getByRole("button", { name: "Resume chart draft" }).click();
   wizard = page.getByRole("dialog");
+  flow = chartAuthoringWorkflow(wizard);
 
-  await wizard.getByLabel("Managed data source").selectOption("bio_cases");
-  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
-  await wizard.getByRole("button", { name: "Add measurement" }).click();
-  await wizard.getByLabel("Observation / X-axis").selectOption("date");
-  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("measurements", "national_total_cases");
+  await flow.selectRole("observation", "date");
+  await flow.goToConfigure();
   await wizard.getByLabel("Chart title").fill("E2E atomic Step 7 chart");
-  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
+  await flow.goToReview();
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
   await wizard.getByRole("button", { name: "Create chart" }).click();
 

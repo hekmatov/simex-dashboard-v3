@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -50,16 +51,14 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await expect(editor).toHaveCount(0);
   await expect(viewMode).toBeEnabled();
 
-  await page.getByRole("button", { name: "Add chart" }).first().click();
-  const wizard = page.locator(".chart-wizard-backdrop");
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByLabel("Search chart types").fill("pie");
-  await wizard.getByRole("button", { name: /^Pie\b/i }).click();
-  await wizard.getByLabel("Managed data source").selectOption("bio_mortality");
-  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
-  await wizard.locator('[data-field-id="category"] select').selectOption("Age group");
-  await wizard.locator('[data-field-id="value"] select').selectOption("deaths");
-  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
+  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.chooseChartType("pie", /^Pie\b/i);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("category", "Age group");
+  await flow.selectRole("value", "deaths");
+  await flow.goToConfigure();
   const wizardTitle = wizard.getByLabel("Chart title");
   await wizardTitle.fill("Playback-safe unsaved wizard title");
 

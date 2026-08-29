@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { chartAuthoringWorkflow, openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const APP_URL = "http://127.0.0.1:4175/";
@@ -74,15 +75,14 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await seedPackagedSource(page);
   await page.reload();
   await openBuild(page, { width: 1440, height: 900 });
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expectExactSixStages(wizard);
+  let flow = await openChartAuthoring(page);
+  const wizard = flow.wizard;
+  await flow.goToDestination();
   await wizard.getByLabel("Destination page").selectOption("biomedical");
   await wizard.getByLabel("Destination section").selectOption("outbreak_dynamics");
-  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByLabel("Search chart types").fill("map scatter");
-  await wizard.getByRole("button", { name: /Map scatter/i }).click();
-  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Data source\./ }).click();
+  await flow.selectExistingSource("Simulation exercise biomedical latest wastewater snapshot");
+  await flow.chooseChartType("map scatter", /Map scatter/i);
+  await flow.goToDataSource();
   const geoOptions = await wizard.getByLabel("GeoJSON source").locator("option").allTextContents();
   expect(geoOptions).toContain(SOURCE_NAME);
   expect(geoOptions).toContain("Journey I packaged boundaries");
@@ -96,19 +96,21 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await expect(wizard).toHaveCount(0);
   await page.getByRole("button", { name: "Resume chart draft", exact: true }).click();
   await expect(wizard).toBeVisible();
+  flow = chartAuthoringWorkflow(wizard);
+  await flow.goToDataSource();
   await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(1);
   await expect(wizard.getByLabel("GeoJSON source")).toHaveValue(stagedGeoSourceId);
-  await wizard.getByLabel("Managed data source").selectOption("bio_wastewater_latest");
+  await flow.selectExistingSource("Simulation exercise biomedical latest wastewater snapshot");
   await wizard.getByLabel("GeoJSON source").selectOption({ label: SOURCE_NAME });
   await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(0);
-  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Map and prepare data\./ }).click();
+  await flow.goToMapAndPrepare();
   await wizard.locator('[data-field-id="geography"] select').selectOption("province");
   await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles");
   await wizard.locator('[data-field-id="time"] select').selectOption("date");
-  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Configure chart\./ }).click();
+  await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await wizard.getByLabel("Chart title").fill("Journey I managed map");
-  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Review and create\./ }).click();
+  await flow.goToReview();
   await wizard.getByRole("button", { name: "Create chart", exact: true }).click();
   await expect(wizard).toHaveCount(0);
 
@@ -329,14 +331,6 @@ async function selectSourceRow(manager, name) {
   const row = manager.locator(".source-content-row").filter({ hasText: name }).first();
   await expect(row).toBeVisible();
   await row.click();
-}
-
-async function expectExactSixStages(wizard) {
-  const labels = await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button").allTextContents();
-  expect(labels.map((label) => label.replace(
-    /(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u,
-    "",
-  ))).toEqual(["Destination", "Chart type", "Data source", "Map and prepare data", "Configure chart", "Review and create"]);
 }
 
 async function geoJsonInventory(page) {

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -772,32 +773,15 @@ async function createImage(page, title) {
 }
 
 async function createAndEditOrdinaryChart(page, title, imageTitle) {
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add new chart" });
-  const stageLabels = await wizard.getByRole("navigation", { name: "Chart creation steps" })
-    .getByRole("button").allTextContents();
-  expect(stageLabels.map((label) => label.replace(
-    /(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u,
-    "",
-  ))).toEqual([
-    "Destination",
-    "Chart type",
-    "Data source",
-    "Map and prepare data",
-    "Configure chart",
-    "Review and create",
-  ]);
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await wizard.getByLabel("Managed data source").selectOption("bio_cases");
-  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
-  await wizard.getByRole("button", { name: "Add measurement" }).click();
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
+  await flow.goToDestination();
+  await flow.selectExistingSource("Biomedical cases");
+  await flow.chooseChartType(null, /^Line\./);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("measurements", "national_total_cases");
   await wizard.getByLabel("Observation / X-axis").selectOption("date");
-  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
-  await wizard.getByLabel("Chart title").fill(title);
-  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
-  await wizard.getByRole("button", { name: "Create chart" }).click();
-  await expect(wizard).toHaveCount(0);
+  await flow.createChart(title);
   expect((await readSavedImage(page, imageTitle)).source.crop.x).toBe(200);
 
   await expect.poll(() => findPersistedChartId(page, title)).not.toBeNull();

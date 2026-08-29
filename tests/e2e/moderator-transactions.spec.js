@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -290,19 +291,17 @@ async function armWizardPendingObservation(page) {
 }
 
 async function preparePieWizard(page, title) {
-  await page.getByRole("button", { name: "Add chart" }).first().click();
-  const wizard = page.locator(".chart-wizard-backdrop");
-  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
-  await wizard.getByLabel("Search chart types").fill("pie");
-  await wizard.getByRole("button", { name: /^Pie\b/i }).click();
-  await wizard.getByLabel("Managed data source").selectOption("bio_mortality");
-  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
-  await wizard.locator('[data-field-id="category"] select').selectOption("Age group");
-  await wizard.locator('[data-field-id="value"] select').selectOption("deaths");
-  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
+  const flow = await openChartAuthoring(page);
+  const { wizard } = flow;
+  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.chooseChartType("pie", /^Pie\b/i);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("category", "Age group");
+  await flow.selectRole("value", "deaths");
+  await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await wizard.getByLabel("Chart title").fill(title);
-  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
+  await flow.goToReview();
   await expect(wizard.getByRole("button", { name: "Create chart" })).toBeEnabled();
   return wizard;
 }
