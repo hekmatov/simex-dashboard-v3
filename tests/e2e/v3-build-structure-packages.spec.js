@@ -147,6 +147,100 @@ test("storage-rejected Clear dashboard is atomic and Cancel restores the Passpor
   await expect(clearTrigger).toBeFocused();
 });
 
+test("Restore online dashboard in Scenario Passport replaces dirty local work with the deployed copy", async ({ page }) => {
+  test.setTimeout(90_000);
+  const sourceDashboard = JSON.parse(await readFile(
+    new URL("../../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  expect(sourceDashboard.pages[0].id).toBe("biomedical");
+  expect(sourceDashboard.dataSources.bio_occupancy_gauges).toBeTruthy();
+  expect(sourceDashboard.dataSources.bio_wastewater_latest).toBeTruthy();
+  const localDashboard = structuredClone(sourceDashboard);
+  localDashboard.scenarioLabel = "Local-only scenario";
+  localDashboard.programLabel = "Local-only program";
+  localDashboard.lastUpdated = "2026-08-29";
+  localDashboard.pages[0].title = "Local-only biomedical page";
+  await page.addInitScript(({ dashboard, dashboardKey, modeKey }) => {
+    localStorage.setItem(dashboardKey, JSON.stringify(dashboard));
+    localStorage.setItem(modeKey, "build");
+  }, {
+    dashboard: localDashboard,
+    dashboardKey: "simex-dashboard-config-v3-three-mode-v1",
+    modeKey: "simex-dashboard-ui-mode-v1",
+  });
+  await openBuildStructure(page, "http://127.0.0.1:4175/");
+
+  const passport = await openScenarioPassport(page);
+  const discard = passport.getByRole("button", { name: "Discard Build changes", exact: true });
+  await discard.focus();
+  await expect(page.locator(`#${await discard.getAttribute("aria-describedby")}`)).toContainText(
+    "baseline captured when you entered Build. It does not contact the deployed online dashboard.",
+  );
+  const restore = passport.getByRole("button", { name: "Restore online dashboard", exact: true });
+  await restore.focus();
+  await expect(page.locator(`#${await restore.getAttribute("aria-describedby")}`)).toContainText(
+    "dashboard served by this deployed SimEx instance. Unlike Discard Build changes",
+  );
+  await restore.click();
+
+  let exportPrompt = null;
+  page.once("dialog", async (dialog) => {
+    exportPrompt = dialog.message();
+    await dialog.dismiss();
+  });
+  const restoreDialog = page.getByRole("dialog", { name: "Restore online dashboard?" });
+  await expect(restoreDialog).toContainText("replaces your local dashboard");
+  await expect(restoreDialog).toContainText(
+    "Download a dashboard package first if you want to preserve your local work.",
+  );
+  await restoreDialog.getByRole("button", { name: "Download package first", exact: true }).click();
+  expect(exportPrompt).toContain("Name this exported dashboard bundle");
+  await expect(restoreDialog).toBeVisible();
+  await restoreDialog.getByRole("button", { name: "Keep local dashboard", exact: true }).click();
+
+  await passport.getByRole("button", { name: /^Edit Program:/ }).click();
+  await passport.getByLabel("Program", { exact: true }).fill("Unsaved local Scenario draft");
+  await expect(passport.getByText("Unsaved Scenario", { exact: true })).toBeVisible();
+  await expect(restore).toBeEnabled();
+  await restore.click();
+  await restoreDialog.getByRole("button", { name: "Restore online dashboard", exact: true }).click();
+
+  await expect(restoreDialog).toHaveCount(0);
+  await expect(page.getByLabel("Operation status")
+    .getByText("Online dashboard restored.", { exact: true })).toBeVisible();
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem(
+    "simex-dashboard-config-v3-three-mode-v1",
+  )));
+  expect(stored.scenarioLabel).toBe(sourceDashboard.scenarioLabel);
+  expect(stored.programLabel).toBe(sourceDashboard.programLabel);
+  expect(stored.lastUpdated).toBe(sourceDashboard.lastUpdated);
+  expect(stored.pages[0].id).toBe("biomedical");
+  expect(stored.pages[0].title).toBe(sourceDashboard.pages[0].title);
+  expect(stored.dataSources.bio_occupancy_gauges).toEqual(
+    sourceDashboard.dataSources.bio_occupancy_gauges,
+  );
+  expect(stored.dataSources.bio_wastewater_latest).toEqual(
+    sourceDashboard.dataSources.bio_wastewater_latest,
+  );
+  expect(stored.pages.some(({ id }) => id === "old-homepage-content")).toBe(false);
+
+  const restoredPassport = await openScenarioPassport(page);
+  await expect(restoredPassport.getByRole("button", {
+    name: `Edit Scenario name: ${sourceDashboard.scenarioLabel}`,
+    exact: true,
+  })).toBeVisible();
+  await expect(restoredPassport.getByRole("button", {
+    name: `Edit Program: ${sourceDashboard.programLabel}`,
+    exact: true,
+  })).toBeVisible();
+  await expect(restoredPassport.getByRole("button", {
+    name: `Edit Updated: ${sourceDashboard.lastUpdated}`,
+    exact: true,
+  })).toBeVisible();
+  await expect(restoredPassport.getByText("Scenario saved", { exact: true })).toBeVisible();
+});
+
 async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   const config = JSON.parse(await readFile(
     new URL("../../public/config/dashboard.json", import.meta.url),

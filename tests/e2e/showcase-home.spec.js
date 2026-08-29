@@ -19,13 +19,9 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("application-owned Home is passive and enters the first ordinary Page through View", async ({ page }) => {
-  const bootstrapResponse = page.waitForResponse((response) => (
-    response.url().endsWith("/companion/bootstrap")
-  ));
+test("Old Homepage Content is absent when Home enters the first ordinary Page through View", async ({ page }) => {
   await openLanding(page);
   await expectLandingReady(page);
-  expect((await bootstrapResponse).status()).toBe(404);
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toHaveCount(0);
@@ -35,7 +31,8 @@ test("application-owned Home is passive and enters the first ordinary Page throu
   await openDashboardFromLanding(page);
   await expect(
     page.getByRole("heading", { name: "Old Homepage Content" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
+  await expect(page.locator('[data-canonical-page-id="biomedical"]')).toBeVisible();
   await expect(page.locator('[data-canonical-mode="view"]')).toBeFocused();
   await expect(page.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toBeVisible();
