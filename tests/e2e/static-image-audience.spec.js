@@ -190,7 +190,8 @@ async function createFreeText(page) {
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(FREE_TEXT_TITLE);
-  await wizard.getByLabel("QMD-style source").fill([
+  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
+  await wizard.getByLabel("Portable QMD source").fill([
     "## Internal runbook",
     "<script>globalThis.__mustRemainInert = true</script>",
     "![remote](https://example.test/must-not-load.png)",
@@ -204,7 +205,7 @@ async function createImage(page) {
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(IMAGE_TITLE);
   await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
