@@ -52,12 +52,20 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
-  for (const name of ["Chrono Studio", "Scene Studio", "Pages & sections"]) {
-    await page.getByRole("button", { name, exact: true }).click();
-    await expect(page.locator(".build-authoring-auxiliary")).toBeVisible();
-    await expectNoRetiredDashboardStyle(page);
-    await page.locator(".build-authoring-auxiliary").getByRole("button", { name: "Close", exact: true }).click();
-  }
+  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  await expect(page.locator(".build-authoring-auxiliary")).toBeVisible();
+  await expectNoRetiredDashboardStyle(page);
+  await page.locator(".build-authoring-auxiliary").getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  await expect(more).toBeVisible();
+  await expectNoRetiredDashboardStyle(page);
+  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await expect(page.locator(".build-authoring-auxiliary")).toBeVisible();
+  await expectNoRetiredDashboardStyle(page);
+  await page.locator(".build-authoring-auxiliary").getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
 
   await page.locator(".dashboard-scenario-trigger").click();
   const passport = page.getByRole("complementary", { name: "Scenario Passport" });

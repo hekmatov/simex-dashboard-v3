@@ -11,14 +11,18 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const inspectorModule = await vite.ssrLoadModule("/src/components/build/BuildInspector.jsx").catch(() => null);
-const structureModule = await vite.ssrLoadModule("/src/components/build/StructureAuthoring.jsx").catch(() => null);
+const [
+  { default: BuildInspector },
+  { default: BuildWorkspace },
+] = await Promise.all([
+  vite.ssrLoadModule("/src/components/build/BuildInspector.jsx"),
+  vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
+]);
 await vite.close();
 
-test("selected Page inspector exposes a deliberate delete control while recovery stays Structure-owned", () => {
-  assert.equal(typeof inspectorModule?.default, "function");
+test("selected Page inspector exposes deletion while the final Page remains guarded", () => {
   const dashboard = fixtureDashboard();
-  const html = renderToStaticMarkup(React.createElement(inspectorModule.default, {
+  const html = renderToStaticMarkup(React.createElement(BuildInspector, {
     dashboard,
     selection: { kind: "page", pageId: "biomedical" },
     onPageRemove() {},
@@ -26,40 +30,38 @@ test("selected Page inspector exposes a deliberate delete control while recovery
   assert.match(html, /<button(?=[^>]*aria-label="Delete Biomedical page")[^>]*>/);
   assert.doesNotMatch(html, /<button(?=[^>]*aria-label="Delete Biomedical page")(?=[^>]*disabled)[^>]*>/);
 
-  const finalPageHtml = renderToStaticMarkup(React.createElement(inspectorModule.default, {
+  const finalPageHtml = renderToStaticMarkup(React.createElement(BuildInspector, {
     dashboard: { pages: [dashboard.pages[0]] },
     selection: { kind: "page", pageId: "home" },
     onPageRemove() {},
   }));
   assert.match(finalPageHtml, /<button(?=[^>]*aria-label="Delete Home page")(?=[^>]*disabled)[^>]*>/);
-  assert.match(finalPageHtml, /Open Pages &amp; sections to remove the final Page/);
+  assert.match(finalPageHtml, /A dashboard must retain at least one Page\./);
+  assert.doesNotMatch(finalPageHtml, /Pages (?:&amp;|and) sections/);
 });
 
-test("Pages and sections requests Page deletion with named chart consequences before changing its draft", () => {
-  assert.equal(typeof structureModule?.createStructureDraft, "function");
-  assert.equal(typeof structureModule?.reduceStructureDraft, "function");
-  const draft = structureModule.createStructureDraft(fixtureDashboard());
-  const requested = structureModule.reduceStructureDraft(draft, {
-    type: "REQUEST_REMOVE_PAGE",
-    pageId: "biomedical",
-  });
-
-  assert.equal(requested.value.pages.length, 2);
-  assert.deepEqual(requested.pendingConsequence, {
-    kind: "remove-page",
-    pageId: "biomedical",
-    pageLabel: "Biomedical",
-    sectionCount: 1,
-    chartIds: ["confirmed-cases"],
-  });
-
-  const html = renderToStaticMarkup(React.createElement(structureModule.default, {
-    draft: requested,
-    onAction() {},
+test("Dashboard Map is the only live Build structure-inspection surface", () => {
+  const dashboard = fixtureDashboard();
+  const activePage = dashboard.pages[1];
+  const html = renderToStaticMarkup(React.createElement(BuildWorkspace, {
+    dashboard,
+    activePage,
+    buildPanelOpen: true,
+    selection: { kind: "page", pageId: activePage.id },
+    dashboardDraft: dashboard,
+    pageDrafts: {},
+    sectionDrafts: {},
+    deviceLayout: "desktop",
   }));
-  assert.match(html, /Delete Biomedical page/);
-  assert.match(html, /Delete Page Biomedical\?/);
-  assert.match(html, /1 Section and 1 chart/);
+
+  assert.match(
+    html,
+    /<aside(?=[^>]*\bid="dashboard-map-panel")(?=[^>]*\brole="complementary")[^>]*>/,
+  );
+  assert.match(html, /data-dashboard-map-region="structure"/);
+  assert.match(html, /aria-label="Dashboard structure"/);
+  assert.doesNotMatch(html, /Pages (?:&amp;|and) sections/);
+  assert.doesNotMatch(html, /data-context-shelf-entry="structure"/);
 });
 
 function fixtureDashboard() {
@@ -82,5 +84,7 @@ function fixtureDashboard() {
         }],
       },
     ],
+    chronoGroups: [],
+    scenes: [],
   };
 }

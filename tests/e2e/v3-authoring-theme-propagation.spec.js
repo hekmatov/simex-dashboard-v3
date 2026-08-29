@@ -14,14 +14,23 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
-  for (const label of ["Chrono Studio", "Scene Studio", "Pages & sections"]) {
-    await page.getByRole("button", { name: label, exact: true }).click();
-    const surface = page.locator(".build-authoring-auxiliary");
-    await expect(surface).toBeVisible();
-    await expectSelectedThemeChrome(surface);
-    await expectNoRetiredDashboardPaint(surface);
-    await surface.getByRole("button", { name: "Close", exact: true }).click();
-  }
+  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  let surface = page.locator(".build-authoring-auxiliary");
+  await expect(surface).toBeVisible();
+  await expectSelectedThemeChrome(surface);
+  await expectNoRetiredDashboardPaint(surface);
+  await surface.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  await expect(more).toBeVisible();
+  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  surface = page.locator(".build-authoring-auxiliary");
+  await expect(surface).toBeVisible();
+  await expectSelectedThemeChrome(surface);
+  await expectNoRetiredDashboardPaint(surface);
+  await surface.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
 
   await page.locator(".dashboard-scenario-trigger").click();
   const passport = page.getByRole("complementary", { name: "Scenario Passport" });

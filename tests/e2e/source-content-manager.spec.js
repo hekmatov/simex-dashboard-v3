@@ -12,18 +12,26 @@ test.beforeEach(async ({ page, request }) => {
   await page.reload();
 });
 
-test("three Build content commands preserve six/four stage contracts", async ({ page }) => {
+test("compact Build content commands preserve six/four stage contracts", async ({ page }) => {
   await openBuild(page, { width: 1440, height: 900 });
-  const content = page.getByRole("region", { name: "Content commands" });
-  await expect(content.getByRole("button")).toHaveText(["Add chart", "Add static content", "Source content"]);
-  await expect(page.getByRole("region", { name: "Structure commands" }).getByRole("button")).toHaveText(["Pages & sections"]);
+  const commands = page.getByRole("toolbar", { name: "Primary Build commands" });
+  await expect(commands.getByRole("button")).toHaveText([
+    "Add chart",
+    "Add Text/Image",
+    "Source content",
+    "Chrono Studio",
+    "Discard Build changes",
+    "Finish Build",
+    "More",
+  ]);
+  await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
 
-  await content.getByRole("button", { name: "Add chart" }).click();
+  await commands.getByRole("button", { name: "Add chart" }).click();
   const chartWizard = page.getByRole("dialog", { name: "Add new chart" });
   await expect(chartWizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button")).toHaveCount(6);
   await chartWizard.getByRole("button", { name: "Close", exact: true }).click();
 
-  await content.getByRole("button", { name: "Add static content" }).click();
+  await commands.getByRole("button", { name: "Add Text/Image" }).click();
   const staticWizard = page.getByRole("dialog", { name: "Add static content" });
   await expect(staticWizard.getByRole("navigation", { name: "Static content stages" }).getByRole("button")).toHaveCount(4);
   await staticWizard.getByRole("button", { name: "Close static content editor" }).click();

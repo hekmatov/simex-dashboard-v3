@@ -232,7 +232,7 @@ test("an imported self-contained package hydrates without tracked source request
   assert.deepEqual(loaded.loadedData.boundaries, geoJson);
 });
 
-test("export readiness reports every unfinished draft with its recovery action", () => {
+test("export readiness coalesces structure into one layout recovery action", () => {
   const issues = collectDashboardPackageExportIssues({
     chartEditor: true,
     chartWizard: true,
@@ -250,7 +250,6 @@ test("export readiness reports every unfinished draft with its recovery action",
     { id: "chart-editor", label: "Chart changes", actionLabel: "Return to chart editor" },
     { id: "chart-wizard", label: "New chart draft", actionLabel: "Resume chart draft" },
     { id: "layout", label: "Layout changes", actionLabel: "Review layout changes" },
-    { id: "structure", label: "Pages and sections draft", actionLabel: "Open Pages & sections" },
     { id: "scenario", label: "Scenario Passport draft", actionLabel: "Open Scenario Passport" },
     { id: "chrono-group", label: "Chrono Group draft", actionLabel: "Open Chrono Studio" },
     { id: "scene", label: "Scene draft", actionLabel: "Open Scene Studio" },

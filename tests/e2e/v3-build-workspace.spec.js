@@ -62,19 +62,19 @@ test("layout and selected-chart drafts stay independent through layout discard",
     exact: true,
   }).click();
 
-  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "dirty");
-  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
+  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
   await page.getByRole("button", { name: "Discard Layout Changes", exact: true }).click();
 
-  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "clean");
-  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
+  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveCount(0);
+  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
   await expect(page.getByRole("complementary", {
     name: "Chart settings for Trust in institutions over time",
   })).toBeVisible();
   await expect(target).toBeInViewport();
 });
 
-test("Context Shelf suspends and restores a dirty chart around auxiliary work", async ({ page }) => {
+test("More opens Scene Studio without losing dirty pending work", async ({ page }) => {
   await page.setViewportSize({ width: 1365, height: 900 });
   await page.goto("/");
   await enterAuthoredDashboard(page);
@@ -94,48 +94,49 @@ test("Context Shelf suspends and restores a dirty chart around auxiliary work", 
     name: "Set chart size to 3 columns by 1 row",
     exact: true,
   }).click();
-  await page.getByRole("button", { name: "Pages & sections", exact: true }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
 
-  const structure = page.getByRole("dialog", { name: "Structure authoring" });
-  await expect(structure).toBeVisible();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  await expect(more).toBeVisible();
+  await expect(more.getByRole("button", { name: "Scene Studio", exact: true })).toBeVisible();
+  await expect(more.getByRole("checkbox", { name: /Chart accessibility/ })).toBeVisible();
+  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+
+  const scene = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await expect(scene).toBeVisible();
   await expect(page.locator(".unit-orbit")).toBeHidden();
-  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "dirty");
-  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
-  await structure.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await scene.getByRole("button", { name: "Close", exact: true }).click();
 
   await expect(page.getByRole("complementary", {
     name: "Chart settings for Trust in institutions over time",
   })).toBeVisible();
   await expect(target).toBeInViewport();
-  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "dirty");
-  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
+  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
 });
 
-test("zero Page and zero Section recovery stays inline in the live Build shell", async ({ page }) => {
-  await page.setViewportSize({ width: 1200, height: 900 });
-  await page.goto("/");
-  await page.getByLabel("Dashboard mode")
-    .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  await page.getByRole("button", { name: "Pages & sections", exact: true }).click();
-  const structure = page.getByRole("dialog", { name: "Structure authoring" });
+test("compact command row and More expose exact Stage 3 ownership", async ({ page }) => {
+  await openBiomedicalBuild(page);
+  const commands = page.getByRole("toolbar", { name: "Primary Build commands" });
 
-  for (const label of ["Old Homepage Content", "Biomedical", "Socio-economic"]) {
-    await structure.getByRole("button", { name: `Delete ${label} page`, exact: true }).click();
-    await page.getByRole("dialog", { name: `Delete Page ${label}?` })
-      .getByRole("button", { name: "Delete page", exact: true }).click();
-  }
+  await expect(commands.getByRole("button")).toHaveText([
+    "Add chart",
+    "Add Text/Image",
+    "Source content",
+    "Chrono Studio",
+    "Discard Build changes",
+    "Finish Build",
+    "More",
+  ]);
+  await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
 
-  await expect(structure).toContainText("No Pages remain in this Structure draft.");
-  await expect(page.locator("[data-canonical-canvas-id]")).toBeVisible();
-  await structure.getByRole("button", { name: "Create replacement Page", exact: true }).click();
-  await structure.getByRole("button", { name: "Delete section…", exact: true }).click();
-  await page.getByRole("dialog", { name: "Delete Section?" })
-    .getByRole("button", { name: "Delete section", exact: true }).click();
-
-  await expect(structure).toContainText("New Page has no Sections.");
-  await structure.getByRole("button", { name: "Save Structure", exact: true }).click();
-  await expect(structure.getByRole("alert")).toContainText("New Page must retain a Section.");
+  await commands.getByRole("button", { name: "More", exact: true }).click();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  await expect(more.locator('[data-build-more-command="scene-studio"]')).toHaveCount(1);
+  await expect(more.locator('[data-build-more-command="chart-accessibility"]')).toHaveCount(1);
+  await expect(more.getByRole("button", { name: /Upload Dashboard Package|Clear dashboard/ })).toHaveCount(0);
 });
 
 test("chart creation keeps canonical render and placement proofs reachable through all six stages", async ({ page }) => {
