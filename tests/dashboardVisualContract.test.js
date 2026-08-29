@@ -45,7 +45,7 @@ test("retired-style source audit catches masked hex and alpha channels while pre
   const result = auditDashboardStyleSources([
     {
       filePath: "src/styles/masked.css",
-      source: ".legacy { color: #007c89; border-color: #3157d5; box-shadow: 0 2px 8px rgba(8, 34, 74, 0.18); }\n.legacy { color: var(--simex-text-strong); }",
+      source: ".legacy { color: teal; border-color: navy; outline-color: #008080; text-decoration-color: rgb(0, 0, 128); box-shadow: 0 2px 8px rgba(8, 34, 74, 0.18); }\n.legacy { color: #007c89; border-color: #3157d5; }\n.legacy { color: var(--simex-text-strong); }",
     },
     {
       filePath: "src/components/ColorField.jsx",
@@ -56,14 +56,45 @@ test("retired-style source audit catches masked hex and alpha channels while pre
   assert.deepEqual(
     result.active.map(({ filePath, color }) => [filePath, color]),
     [
+      ["src/styles/masked.css", "teal"],
+      ["src/styles/masked.css", "navy"],
+      ["src/styles/masked.css", "#008080"],
+      ["src/styles/masked.css", "rgb(0, 0, 128)"],
+      ["src/styles/masked.css", "rgba(8, 34, 74, 0.18)"],
       ["src/styles/masked.css", "#007c89"],
       ["src/styles/masked.css", "#3157d5"],
-      ["src/styles/masked.css", "rgba(8, 34, 74, 0.18)"],
     ],
   );
   assert.deepEqual(
     result.allowed.map(({ classification }) => classification),
     ["authored-color-swatch"],
+  );
+});
+
+test("theme source allowance is confined to the RAW_PROFILES payload", () => {
+  const result = auditDashboardStyleSources([{
+    filePath: "src/theme/dashboardTheme.js",
+    source: [
+      'const rogueBefore = "#08224a";',
+      "const RAW_PROFILES = Object.freeze([",
+      '  ["test/profile", "Test", "test", "#08224a #007c89", "#043bcb #3157d5"],',
+      "]);",
+      'const rogueAfter = "#007c89";',
+    ].join("\n"),
+  }]);
+
+  assert.deepEqual(
+    result.active.map(({ line, color }) => [line, color]),
+    [[1, "#08224a"], [5, "#007c89"]],
+  );
+  assert.deepEqual(
+    result.allowed.map(({ line, color, classification }) => [line, color, classification]),
+    [
+      [3, "#08224a", "theme-token-payload"],
+      [3, "#007c89", "theme-token-payload"],
+      [3, "#043bcb", "theme-token-payload"],
+      [3, "#3157d5", "theme-token-payload"],
+    ],
   );
 });
 

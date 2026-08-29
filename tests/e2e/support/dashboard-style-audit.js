@@ -17,14 +17,11 @@ export const RETIRED_DASHBOARD_COLOR_CHANNELS = Object.freeze([
   Object.freeze({ hex: "#f7f9fc", rgb: Object.freeze([247, 249, 252]) }),
   Object.freeze({ hex: "#075ea8", rgb: Object.freeze([7, 94, 168]) }),
   Object.freeze({ hex: "#3157d5", rgb: Object.freeze([49, 87, 213]) }),
+  Object.freeze({ hex: "#008080", rgb: Object.freeze([0, 128, 128]), keyword: "teal" }),
+  Object.freeze({ hex: "#000080", rgb: Object.freeze([0, 0, 128]), keyword: "navy" }),
 ]);
 
 const SOURCE_ALLOWLIST = Object.freeze([
-  Object.freeze({
-    file: /(?:^|\/)src\/theme\/dashboardTheme\.js$/,
-    line: /./,
-    classification: "theme-token-payload",
-  }),
   Object.freeze({
     file: /(?:^|\/)src\/components\/ColorField\.jsx$/,
     line: /(?:\bcolors\s*:|\bfallback\s*=|contrastRatio\()/,
@@ -55,10 +52,24 @@ function retiredSourcePattern() {
   const hexValues = RETIRED_DASHBOARD_COLOR_CHANNELS
     .map(({ hex }) => hex.slice(1))
     .join("|");
-  return new RegExp(`#(?:${hexValues})\\b|rgba?\\(\\s*(?:${rgbChannels})(?:\\s*[,/]?\\s*(?:0|1|0?\\.\\d+|\\d+(?:\\.\\d+)?%))?\\s*\\)`, "gi");
+  const keywords = RETIRED_DASHBOARD_COLOR_CHANNELS
+    .map(({ keyword }) => keyword)
+    .filter(Boolean)
+    .join("|");
+  return new RegExp(`#(?:${hexValues})\\b|rgba?\\(\\s*(?:${rgbChannels})(?:\\s*[,/]?\\s*(?:0|1|0?\\.\\d+|\\d+(?:\\.\\d+)?%))?\\s*\\)|\\b(?:${keywords})\\b`, "gi");
 }
 
-function sourceClassification(filePath, line) {
+function isThemeTokenPayload(filePath, lines, lineIndex) {
+  const normalizedPath = String(filePath ?? "").replaceAll("\\", "/");
+  if (!/(?:^|\/)src\/theme\/dashboardTheme\.js$/.test(normalizedPath)) return false;
+  const payloadStart = lines.findIndex((line) => /^\s*const RAW_PROFILES\s*=\s*Object\.freeze\(\[\s*$/.test(line));
+  if (payloadStart < 0) return false;
+  const payloadEnd = lines.findIndex((line, index) => index > payloadStart && /^\s*\]\);\s*$/.test(line));
+  return payloadEnd > payloadStart && lineIndex > payloadStart && lineIndex < payloadEnd;
+}
+
+function sourceClassification(filePath, line, lines, lineIndex) {
+  if (isThemeTokenPayload(filePath, lines, lineIndex)) return "theme-token-payload";
   const normalizedPath = String(filePath ?? "").replaceAll("\\", "/");
   return SOURCE_ALLOWLIST.find(({ file, line: linePattern }) => (
     file.test(normalizedPath) && linePattern.test(line)
@@ -75,16 +86,21 @@ export function auditDashboardStyleSources(sources = []) {
   const active = [];
   const allowed = [];
   for (const { filePath, source } of sources) {
-    const lines = String(source ?? "").split(/\r?\n/);
+    const normalizedPath = String(filePath ?? "").replaceAll("\\", "/");
+    const rawSource = String(source ?? "");
+    const auditableSource = /\.css$/i.test(normalizedPath)
+      ? rawSource.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\r\n]/g, " "))
+      : rawSource;
+    const lines = auditableSource.split(/\r?\n/);
     lines.forEach((line, index) => {
       for (const match of line.matchAll(retiredSourcePattern())) {
         const finding = {
-          filePath: String(filePath ?? "").replaceAll("\\", "/"),
+          filePath: normalizedPath,
           line: index + 1,
           color: match[0],
           declaration: line.trim(),
         };
-        const classification = sourceClassification(filePath, line);
+        const classification = sourceClassification(filePath, line, lines, index);
         if (classification) allowed.push({ ...finding, classification });
         else active.push(finding);
       }
@@ -148,11 +164,13 @@ export async function expectNoRetiredDashboardStyle(page) {
     }));
     const colorProperties = ["color", "backgroundColor", "fill", "stroke", "accentColor"];
     const compositeProperties = ["boxShadow", "textShadow", "backgroundImage"];
-    const normalizeHex = (value) => String(value || "").trim().toLowerCase();
+    const normalizeColor = (value) => String(value || "").trim().toLowerCase();
     const retiredHex = new Set(retiredChannels.map(({ hex }) => hex));
+    const retiredKeywords = new Set(retiredChannels.map(({ keyword }) => keyword).filter(Boolean));
     const hasRetiredChannel = (value) => {
       const source = String(value || "");
-      if (retiredHex.has(normalizeHex(source))) return true;
+      const normalized = normalizeColor(source);
+      if (retiredHex.has(normalized) || retiredKeywords.has(normalized)) return true;
       for (const match of source.matchAll(/rgba?\(([^)]+)\)/gi)) {
         const numbers = match[1].match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number);
         if (numbers?.length === 3 && retiredChannels.some(({ rgb }) => (
@@ -168,13 +186,11 @@ export async function expectNoRetiredDashboardStyle(page) {
       "input[type=\"color\"]",
       "[data-authored-color-swatch]",
     ].join(","));
-    const authoredCodeFont = (element) => Boolean(element.closest([
-      "code",
-      "pre",
-      "kbd",
-      ".free-text-source-editor",
-      ".portable-qmd-composer__source",
-    ].join(",")));
+    const authoredCodeFont = (element) => Boolean(element.closest("code, pre, kbd")) || element.matches([
+      ".free-text-source-editor__source > textarea",
+      ".free-text-source-editor__advanced > textarea",
+      ".portable-qmd-composer__surface",
+    ].join(","));
     const visible = (element, style) => {
       if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
       const rect = element.getBoundingClientRect();

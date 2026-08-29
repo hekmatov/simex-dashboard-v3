@@ -17,6 +17,15 @@ const STYLE_OPTIONS = [
   { label: "Instrument", profile: "signal-instrument/calibrated-steel" },
 ];
 
+async function captureStyleAuditFailure(page) {
+  try {
+    await expectNoRetiredDashboardStyle(page);
+  } catch (error) {
+    return String(error?.message ?? error);
+  }
+  return "";
+}
+
 test("selected style owns hover, focus, disabled, generated, SVG, and portal paint", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -30,6 +39,21 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
     await look.locator(`[data-profile-option="${style.profile}"] input`).check();
     await page.keyboard.press("Escape");
     await expectNoRetiredDashboardStyle(page);
+
+    if (style.label === "Ledger") {
+      await page.evaluate(() => {
+        const probe = document.createElement("div");
+        probe.dataset.dashboardStyleAuditProbe = "retired-keywords";
+        probe.textContent = "Retired colour probe";
+        probe.style.cssText = "color: teal; border: 1px solid navy;";
+        document.querySelector(".app-frame")?.append(probe);
+      });
+      const retiredKeywordFailure = await captureStyleAuditFailure(page);
+      expect(retiredKeywordFailure).toContain("rgb(0, 128, 128)");
+      expect(retiredKeywordFailure).toContain("rgb(0, 0, 128)");
+      await page.locator('[data-dashboard-style-audit-probe="retired-keywords"]').evaluate((node) => node.remove());
+      await expectNoRetiredDashboardStyle(page);
+    }
 
     for (const pageId of ["biomedical", "socio_economic"]) {
       await page.locator(`[data-dashboard-page-id="${pageId}"]`).click();
@@ -230,6 +254,13 @@ test("Text/Image Composer, sanitized notice, Preview, Advanced QMD, and Panel si
     .toContainText(/unsupported paste formatting was removed/i);
   await expect(wizard.getByRole("grid", { name: /Panel size:/ })).toBeVisible();
   await wizard.getByRole("gridcell", { name: "Set panel size to 4 columns by 2 rows" }).click();
+  await expectNoRetiredDashboardStyle(page);
+
+  const boldControl = wizard.getByRole("tabpanel", { name: "Composer" }).getByRole("button", { name: "Bold" });
+  await boldControl.evaluate((node) => { node.style.fontFamily = "Times New Roman"; });
+  const toolbarFontFailure = await captureStyleAuditFailure(page);
+  expect(toolbarFontFailure).toContain("fontFamily");
+  await boldControl.evaluate((node) => { node.style.removeProperty("font-family"); });
   await expectNoRetiredDashboardStyle(page);
 
   await wizard.getByRole("tab", { name: "Preview" }).click();
