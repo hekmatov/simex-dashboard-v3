@@ -85,15 +85,13 @@ import {
   prepareActiveQuickChartEditRemoval,
   prepareChartEditSessionSave,
   projectChartEditSessionDashboard,
+  rebaseChartPersistenceIntoLayoutDraft,
   reduceChartEditSession,
 } from "../charting/forms/chartEditSession.js";
 import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnloadGuard.js";
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
-import {
-  prepareStaticPanelTransaction,
-  removeDashboardPanel,
-} from "../static-content/staticPanelTransaction.js";
+import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
 import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
 import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
 import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
@@ -925,26 +923,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     }
 
     const removalPlacementId = removalRequest.intent.placementId;
-    const layoutDraftSnapshot = buildLayoutDraftRef.current;
-    let rebasedLayoutValue = null;
-    if (layoutDraftSnapshot?.value) {
-      rebasedLayoutValue = structuredClone(layoutDraftSnapshot.value);
-      removeDashboardPanel(rebasedLayoutValue, removalPlacementId);
-    }
+    const layoutDraftId = buildLayoutDraftRef.current?.draftId ?? null;
     setChartEditSession(removalRequest.session);
     void performModeratorOperation("remove-chart", async () => {
       await pendingEdits.flush();
       const committed = await onPanelRemove(removalPlacementId);
-      if (rebasedLayoutValue) {
+      if (layoutDraftId) {
         setBuildLayoutDraft((current) => (
-          current?.draftId === layoutDraftSnapshot.draftId
-            ? {
-                ...current,
-                value: {
-                  ...rebasedLayoutValue,
-                  lastUpdated: committed?.lastUpdated ?? rebasedLayoutValue.lastUpdated,
-                },
-              }
+          current?.draftId === layoutDraftId
+            ? rebaseChartPersistenceIntoLayoutDraft({
+                layoutDraft: current,
+                committedDashboard: committed,
+                intent: removalRequest.intent,
+              })
             : current
         ));
       }
@@ -1287,10 +1278,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     ) return Promise.resolve(null);
 
     const request = prepareChartEditSessionSave(chartEditSession);
-    const layoutDraftSnapshot = buildLayoutDraftRef.current;
-    const rebasedLayoutValue = layoutDraftSnapshot?.value
-      ? projectChartEditSessionDashboard(layoutDraftSnapshot.value, request.session)
-      : null;
+    const layoutDraftId = buildLayoutDraftRef.current?.draftId ?? null;
     setChartEditSession(request.session);
     return performModeratorOperation("save-chart", async () => {
       await pendingEdits.flush();
@@ -1299,16 +1287,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboardStateRef.current.chronoGroups ?? [],
       );
       const committed = await onChartSave(payload);
-      if (rebasedLayoutValue) {
+      if (layoutDraftId) {
         setBuildLayoutDraft((current) => (
-          current?.draftId === layoutDraftSnapshot.draftId
-            ? {
-                ...current,
-                value: {
-                  ...rebasedLayoutValue,
-                  lastUpdated: committed?.lastUpdated ?? rebasedLayoutValue.lastUpdated,
-                },
-              }
+          current?.draftId === layoutDraftId
+            ? rebaseChartPersistenceIntoLayoutDraft({
+                layoutDraft: current,
+                committedDashboard: committed,
+                intent: request.intent,
+              })
             : current
         ));
       }

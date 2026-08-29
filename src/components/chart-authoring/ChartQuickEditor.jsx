@@ -64,7 +64,7 @@ export default function ChartQuickEditor({
         "aria-labelledby": "chart-quick-editor-title",
         "aria-busy": locked ? "true" : undefined,
         "aria-disabled": locked ? "true" : undefined,
-        inert: locked ? "" : undefined,
+        inert: disabled && !saving ? true : undefined,
         "data-chart-quick-placement-id": session.placementId,
         "data-chart-edit-status": session.status,
         "data-chart-edit-dirty": dirty ? "true" : "false",

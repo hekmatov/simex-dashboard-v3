@@ -575,7 +575,17 @@ test("quick edit Save and confirmed Remove persist only the target placement", a
   await editor.getByLabel("Chart title").fill("Durable quick save");
   const save = editor.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeEnabled();
+  const pendingReasonEvidence = observeQuickEditorPendingReason(page);
   await save.click();
+
+  await expect(pendingReasonEvidence).resolves.toEqual({
+    editorInert: false,
+    buttonDisabled: true,
+    buttonDescribedBy: null,
+    anchorTabIndex: "0",
+    focused: true,
+    reasonText: "Wait for the current chart operation to finish.",
+  });
 
   await expect(editor).toHaveCount(0);
   await expect.poll(async () => (
@@ -609,6 +619,66 @@ test("quick edit Save and confirmed Remove persist only the target placement", a
   expect(afterRemove.nationalChronoMembers).toEqual(
     before.nationalChronoMembers.filter(({ chartId }) => chartId !== "bio_confirmed_cases"),
   );
+});
+
+test("quick edit Save rebases pending Page content onto a live layout draft", async ({
+  page,
+}) => {
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Socio-economic", exact: true })
+    .click();
+  const baselineSectionIds = await storedPageSectionIds(page, "socio_economic");
+  await page.getByRole("button", {
+    name: "Move Public response and policy signals later",
+    exact: true,
+  }).click();
+  await expect(page.locator('[data-pending-work-id="layout"]'))
+    .toHaveAttribute("data-pending-work-state", "dirty");
+
+  const dashboardMap = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await dashboardMap.click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  const pendingPageTitle = "Pending Socio Page title survives quick Save";
+  await map.getByLabel("Page title", { exact: true }).fill(pendingPageTitle);
+  await dashboardMap.click();
+
+  const target = page.locator('[data-panel-id="socio_trust_trend"]');
+  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const editor = page.locator(".chart-quick-editor");
+  const savedChartTitle = "Quick Save on a live layout draft";
+  await editor.getByLabel("Chart title").fill(savedChartTitle);
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+
+  const saveLayout = page.getByRole("button", {
+    name: "Save Layout Changes",
+    exact: true,
+  });
+  await saveLayout.click();
+  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveCount(0);
+
+  await expect.poll(() => page.evaluate(({ key, pageId, chartId }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const pageEntry = dashboard.pages.find(({ id }) => id === pageId);
+    const chart = pageEntry.sections
+      .flatMap(({ panels = [] }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .find(({ id }) => id === chartId);
+    return {
+      pageTitle: pageEntry.title,
+      chartTitle: chart.title,
+      sectionIds: pageEntry.sections.map(({ id }) => id),
+    };
+  }, {
+    key: STORAGE_KEY,
+    pageId: "socio_economic",
+    chartId: "socio_trust_trend",
+  })).toEqual({
+    pageTitle: pendingPageTitle,
+    chartTitle: savedChartTitle,
+    sectionIds: [baselineSectionIds[1], baselineSectionIds[0], ...baselineSectionIds.slice(2)],
+  });
 });
 
 test("editor chart conversion supports compatible changes and recoverable remapping", async ({
@@ -717,6 +787,58 @@ async function storedQuickPersistenceSnapshot(page) {
       ),
     };
   }, STORAGE_KEY);
+}
+
+function observeQuickEditorPendingReason(page) {
+  return page.evaluate(() => new Promise((resolve) => {
+    let timeoutId;
+    const inspect = () => {
+      const editor = document.querySelector(
+        '.chart-quick-editor[data-chart-edit-status="saving"]',
+      );
+      const button = editor?.querySelector('button[aria-label="Saving changes"]');
+      const anchor = button?.closest('[data-control-tooltip-anchor="true"]');
+      if (!editor || !button || !anchor) return false;
+      const reasonId = anchor.getAttribute("aria-describedby");
+      anchor.focus();
+      window.clearTimeout(timeoutId);
+      observer.disconnect();
+      resolve({
+        editorInert: editor.hasAttribute("inert"),
+        buttonDisabled: button.disabled,
+        buttonDescribedBy: button.getAttribute("aria-describedby"),
+        anchorTabIndex: anchor.getAttribute("tabindex"),
+        focused: document.activeElement === anchor,
+        reasonText: reasonId
+          ? document.getElementById(reasonId)?.textContent?.trim() ?? null
+          : null,
+      });
+      return true;
+    };
+    const observer = new MutationObserver(inspect);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    timeoutId = window.setTimeout(() => {
+      observer.disconnect();
+      resolve({ timedOut: true });
+    }, 5000);
+    inspect();
+  }));
+}
+
+function storedPageSectionIds(page, pageId) {
+  return page.evaluate(async ({ key, requestedPageId }) => {
+    const storedDashboard = localStorage.getItem(key);
+    const dashboard = storedDashboard
+      ? JSON.parse(storedDashboard)
+      : await fetch("/config/dashboard.json").then((response) => response.json());
+    return dashboard.pages
+      .find(({ id }) => id === requestedPageId)
+      .sections.map(({ id }) => id);
+  }, { key: STORAGE_KEY, requestedPageId: pageId });
 }
 
 async function expectStoredChart(page, typeId, title) {

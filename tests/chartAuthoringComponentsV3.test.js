@@ -32,6 +32,7 @@ import {
 } from "../src/charting/forms/formModel.js";
 import {
   createChartEditSession,
+  prepareChartEditSessionSave,
   reduceChartEditSession,
 } from "../src/charting/forms/chartEditSession.js";
 import {
@@ -2705,7 +2706,7 @@ test("quick editor emits detached draft changes and delegates every session acti
   assert.notEqual(drafts[1].presentation, session.draft.presentation);
 });
 
-test("quick editor keeps clean and locked saves inert while preserving full-editor access gating", () => {
+test("quick editor guards clean and externally locked actions while preserving full-editor access gating", () => {
   const session = createChartEditSession({
     placementId: "placement-line",
     chart: validLineChart(),
@@ -2728,12 +2729,68 @@ test("quick editor keeps clean and locked saves inert while preserving full-edit
   const editActions = findElement(lockedTree, (element) => (
     element.type === EditSessionActions
   ));
+  const lockedAside = findElement(lockedTree, (element) => element.type === "aside");
 
   form.props.onSubmit({ preventDefault() {} });
   openFull.props.onClick();
   assert.deepEqual(actions, []);
   assert.equal(openFull.props.disabled, true);
   assert.equal(editActions.props.disabled, true);
+  assert.equal(lockedAside.props.inert, true);
+});
+
+test("saving quick editor keeps pending reason anchors exposed while controls stay locked", () => {
+  const clean = createChartEditSession({
+    placementId: "placement-line",
+    chart: validLineChart(),
+  });
+  const dirty = reduceChartEditSession(clean, {
+    type: "CHANGE",
+    surface: "quick",
+    draft: { ...clean.draft, title: "Pending durable title" },
+  });
+  const saving = prepareChartEditSessionSave(dirty).session;
+  const html = render(React.createElement(ChartQuickEditor, {
+    session: saving,
+    disabled: true,
+    onSave() {},
+    onRemove() {},
+    onOpenFullEditor() {},
+  }));
+  const tree = ChartQuickEditor({
+    session: saving,
+    disabled: true,
+    onSave() {},
+    onRemove() {},
+    onOpenFullEditor() {},
+  });
+  const savingAside = findElement(tree, (element) => element.type === "aside");
+  const aside = html.match(/<aside\b[^>]*>/)?.[0] ?? "";
+  const reasonIds = [...html.matchAll(
+    /data-control-tooltip-kind="disabled" tabindex="0" aria-describedby="([^"]+)"/g,
+  )].map((match) => match[1]);
+
+  assert.match(aside, /aria-busy="true"/);
+  assert.match(aside, /data-chart-edit-status="saving"/);
+  assert.equal(savingAside.props.inert, undefined);
+  assert.doesNotMatch(aside, /\sinert(?:=|\s|>)/);
+  assert.equal(reasonIds.length, 4);
+  for (const reasonId of reasonIds) {
+    assert.match(
+      html,
+      new RegExp(`id="${reasonId}" role="tooltip"[^>]*>Wait for the current chart operation to finish\\.`),
+    );
+  }
+  for (const interactionId of [
+    "editor.save-changes",
+    "editor.reset-changes",
+    "editor.cancel",
+    "chart.remove",
+  ]) {
+    const button = buttonMarkupByInteraction(html, interactionId);
+    assert.match(button, /disabled=""/);
+    assert.doesNotMatch(button, /aria-describedby=/);
+  }
 });
 
 test("quick editor fails closed when durable and full-editor authorities are absent", () => {

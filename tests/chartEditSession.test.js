@@ -168,6 +168,189 @@ test("quick Save omits an unchanged Chrono baseline so persistence can rebase on
   assert.equal(Object.hasOwn(payload, "chronoGroups"), false);
 });
 
+test("quick Save rebases committed content into the live layout draft without losing layout order", () => {
+  assert.equal(
+    typeof chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft,
+    "function",
+  );
+  const baseline = dashboardFixtureWithLayoutSiblings();
+  const layoutDraft = {
+    draftId: "layout-dashboard-a",
+    kind: "layout",
+    targetId: "section-b",
+    status: "dirty",
+    baseline: structuredClone(baseline),
+    value: structuredClone(baseline),
+    error: null,
+  };
+  layoutDraft.value.pages[0].sections.reverse();
+  const committed = structuredClone(baseline);
+  delete committed.loadedData;
+  committed.pages[0].title = "Pending Page title";
+  committed.pages[0].sections[0].description = "Pending Section description";
+  committed.pages[0].sections[0].panels[0].chart.title = "Durable quick title";
+  committed.pages[0].sections[0].panels[1].chart.title = "Concurrent unrelated chart";
+  committed.chronoGroups[0].label = "Concurrent Chrono label";
+  committed.lastUpdated = "2026-08-29";
+  const beforeDraft = structuredClone(layoutDraft);
+  const beforeCommitted = structuredClone(committed);
+
+  const rebased = chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft({
+    layoutDraft,
+    committedDashboard: committed,
+    intent: { kind: "save", placementId: "placement-a" },
+  });
+
+  assert.deepEqual(
+    rebased.value.pages[0].sections.map(({ id }) => id),
+    ["section-b", "section-a"],
+  );
+  assert.equal(rebased.value.pages[0].title, "Pending Page title");
+  assert.equal(
+    rebased.value.pages[0].sections.find(({ id }) => id === "section-a").description,
+    "Pending Section description",
+  );
+  assert.equal(chartByPlacement(rebased.value, "placement-a").title, "Durable quick title");
+  assert.equal(
+    chartByPlacement(rebased.value, "placement-b").title,
+    "Concurrent unrelated chart",
+  );
+  assert.equal(rebased.value.chronoGroups[0].label, "Concurrent Chrono label");
+  assert.equal(rebased.value.lastUpdated, "2026-08-29");
+  assert.deepEqual(rebased.value.loadedData, baseline.loadedData);
+  assert.deepEqual(rebased.baseline, {
+    ...committed,
+    loadedData: baseline.loadedData,
+  });
+  assert.equal(rebased.status, "dirty");
+  assert.equal(rebased.targetId, "section-b");
+  assert.deepEqual(layoutDraft, beforeDraft);
+  assert.deepEqual(committed, beforeCommitted);
+});
+
+test("chart persistence rebases layout-owned reference removals with unrelated committed members", () => {
+  const baseline = dashboardFixtureWithLayoutSiblings();
+  baseline.chronoGroups = [{
+    id: "group-a",
+    label: "Admissions timeline",
+    members: [
+      { chartId: "chart-a", matchingPolicy: "snap_to_latest" },
+      { chartId: "chart-b", matchingPolicy: "snap_to_latest" },
+    ],
+  }];
+  baseline.scenes = [{
+    id: "scene-a",
+    name: "Admissions reveal",
+    members: [
+      { chartId: "chart-a", width: 1 },
+      { chartId: "chart-b", width: 1 },
+    ],
+    chartIds: ["chart-a", "chart-b"],
+    present: { chartIds: ["chart-a", "chart-b"] },
+  }];
+  const layoutDraft = {
+    draftId: "layout-dashboard-a",
+    kind: "layout",
+    targetId: "placement-a",
+    status: "dirty",
+    baseline: structuredClone(baseline),
+    value: structuredClone(baseline),
+    error: null,
+  };
+  layoutDraft.value.pages[0].sections[0].panels = layoutDraft.value.pages[0]
+    .sections[0].panels.filter(({ id }) => id !== "placement-a");
+  layoutDraft.value.chronoGroups[0].members = layoutDraft.value.chronoGroups[0]
+    .members.filter(({ chartId }) => chartId !== "chart-a");
+  layoutDraft.value.scenes[0].members = layoutDraft.value.scenes[0]
+    .members.filter(({ chartId }) => chartId !== "chart-a");
+  layoutDraft.value.scenes[0].chartIds = ["chart-b"];
+  layoutDraft.value.scenes[0].present.chartIds = ["chart-b"];
+
+  const committed = structuredClone(baseline);
+  committed.pages[0].sections[0].panels[1].chart.title = "Durable quick title";
+  committed.chronoGroups[0].members[1].matchingPolicy = "exact";
+  committed.chronoGroups[0].members.push({
+    chartId: "chart-c",
+    matchingPolicy: "snap_to_latest",
+  });
+  committed.scenes[0].members[1].width = 2;
+  committed.scenes[0].members.push({ chartId: "chart-c", width: 1 });
+  committed.scenes[0].chartIds.push("chart-c");
+  committed.scenes[0].present.chartIds.push("chart-c");
+
+  const rebased = chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft({
+    layoutDraft,
+    committedDashboard: committed,
+    intent: { kind: "save", placementId: "placement-b" },
+  });
+
+  assert.deepEqual(rebased.value.chronoGroups[0].members, [
+    { chartId: "chart-b", matchingPolicy: "exact" },
+    { chartId: "chart-c", matchingPolicy: "snap_to_latest" },
+  ]);
+  assert.deepEqual(rebased.value.scenes[0].members, [
+    { chartId: "chart-b", width: 2 },
+    { chartId: "chart-c", width: 1 },
+  ]);
+  assert.deepEqual(rebased.value.scenes[0].chartIds, ["chart-b", "chart-c"]);
+  assert.deepEqual(rebased.value.scenes[0].present.chartIds, ["chart-b", "chart-c"]);
+  assert.equal(chartByPlacement(rebased.value, "placement-a"), undefined);
+  assert.equal(chartByPlacement(rebased.value, "placement-b").title, "Durable quick title");
+});
+
+test("confirmed quick Remove rebases the exact deletion onto the reordered live layout draft", () => {
+  assert.equal(
+    typeof chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft,
+    "function",
+  );
+  const baseline = dashboardFixtureWithLayoutSiblings();
+  baseline.chronoGroups = [{
+    id: "group-a",
+    label: "Admissions timeline",
+    members: [
+      { chartId: "chart-a", matchingPolicy: "snap_to_latest" },
+      { chartId: "chart-b", matchingPolicy: "snap_to_latest" },
+    ],
+  }];
+  const layoutDraft = {
+    draftId: "layout-dashboard-a",
+    kind: "layout",
+    targetId: "placement-b",
+    status: "dirty",
+    baseline: structuredClone(baseline),
+    value: structuredClone(baseline),
+    error: null,
+  };
+  layoutDraft.value.pages[0].sections[0].panels.reverse();
+  const committed = structuredClone(baseline);
+  committed.pages[0].title = "Pending title before Remove";
+  committed.pages[0].sections[0].panels = committed.pages[0].sections[0].panels
+    .filter(({ id }) => id !== "placement-a");
+  committed.pages[0].sections[0].panels[0].chart.title = "Concurrent survivor";
+  committed.chronoGroups[0].members = committed.chronoGroups[0].members
+    .filter(({ chartId }) => chartId !== "chart-a");
+  committed.lastUpdated = "2026-08-29";
+
+  const rebased = chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft({
+    layoutDraft,
+    committedDashboard: committed,
+    intent: { kind: "remove", placementId: "placement-a" },
+  });
+
+  assert.deepEqual(
+    rebased.value.pages[0].sections[0].panels.map(({ id }) => id),
+    ["placement-b"],
+  );
+  assert.equal(rebased.value.pages[0].title, "Pending title before Remove");
+  assert.equal(chartByPlacement(rebased.value, "placement-b").title, "Concurrent survivor");
+  assert.deepEqual(rebased.value.chronoGroups[0].members, [{
+    chartId: "chart-b",
+    matchingPolicy: "snap_to_latest",
+  }]);
+  assert.deepEqual(rebased.baseline, committed);
+  assert.equal(rebased.status, "dirty");
+});
+
 test("Reset restores the shared saved chart and Chrono baseline", () => {
   const initial = createSession();
   const changed = reduceChartEditSession(initial, {
@@ -479,6 +662,42 @@ function dashboardFixture() {
       "source-a": [{ week: "2026-W01", value: 4 }],
     },
   };
+}
+
+function dashboardFixtureWithLayoutSiblings() {
+  const dashboard = dashboardFixture();
+  dashboard.pages[0] = {
+    ...dashboard.pages[0],
+    label: "Operations",
+    title: "Baseline Page title",
+    description: "Baseline Page description",
+    sections: [
+      {
+        ...dashboard.pages[0].sections[0],
+        title: "Section A",
+        description: "Baseline Section description",
+      },
+      {
+        id: "section-b",
+        title: "Section B",
+        description: "Second Section description",
+        panels: [{
+          id: "placement-c",
+          layout: { size: "compact" },
+          chart: chartFixture({ id: "chart-c", title: "Third chart" }),
+        }],
+      },
+    ],
+  };
+  return dashboard;
+}
+
+function chartByPlacement(dashboard, placementId) {
+  const placement = dashboard.pages
+    .flatMap(({ sections = [] }) => sections)
+    .flatMap(({ panels = [] }) => panels)
+    .find(({ id }) => id === placementId);
+  return placement?.chart ?? placement;
 }
 
 function targetChart(dashboard) {
