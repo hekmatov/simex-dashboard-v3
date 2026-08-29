@@ -95,6 +95,8 @@ import { classifyManagedSource } from "../content-library/sourceEntrySchema.js";
 
 const SCENARIO_DIRTY_BLOCK_REASON =
   "Save or discard changes to Scenario before leaving this edit. Stay in Build to continue editing.";
+const CHART_WIZARD_TAKEOVER_BLOCK_REASON =
+  "Resume or reset the chart changes before resuming the new chart draft.";
 
 function createExternalDirtyState() {
   return { chronoGroup: false, scene: false, scenario: false, dashboardMetadata: false };
@@ -835,10 +837,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       return;
     }
     if (issueId === "chart-wizard") {
-      if (!chartWizardTarget && chartWizardSuspendedTarget) {
-        setChartWizardTarget(chartWizardSuspendedTarget);
-        setChartWizardSuspended(false);
-      }
+      resumeSuspendedChartWizardWithTakeover();
       return;
     }
     if (["chrono-group", "scene"].includes(issueId)) {
@@ -862,12 +861,23 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     }
   }
 
-  function resumeChartWizardWork() {
-    if (!chartWizardTarget && chartWizardSuspendedTarget) {
-      setChartWizardTarget(chartWizardSuspendedTarget);
-      setChartWizardSuspended(false);
-      return;
+  function resumeSuspendedChartWizardWithTakeover() {
+    if (chartWizardTarget || !chartWizardSuspended || !chartWizardSuspendedTarget) return false;
+    if (moderatorOperationGateRef.current.isActive()) return true;
+    if (quickChartEditDirty) {
+      setBuildSelectionError(CHART_WIZARD_TAKEOVER_BLOCK_REASON);
+      return true;
     }
+    if (chartAuthoringActive) return true;
+    releaseCleanQuickChartEditSession();
+    setBuildSelectionError("");
+    setChartWizardTarget(chartWizardSuspendedTarget);
+    setChartWizardSuspended(false);
+    return true;
+  }
+
+  function resumeChartWizardWork() {
+    if (resumeSuspendedChartWizardWithTakeover()) return;
     openChartWizard();
   }
 
@@ -1569,13 +1579,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function openChartWizard(sectionId) {
-    if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
-    if (chartWizardSuspended && chartWizardSuspendedTarget) {
-      releaseCleanQuickChartEditSession();
-      setChartWizardTarget(chartWizardSuspendedTarget);
-      setChartWizardSuspended(false);
-      return;
-    }
+    if (moderatorOperationGateRef.current.isActive()) return;
+    if (resumeSuspendedChartWizardWithTakeover()) return;
+    if (chartAuthoringActive) return;
     const section = sectionId
       ? activePage?.sections?.find(({ id }) => id === sectionId)
       : buildSelection?.kind === "section"

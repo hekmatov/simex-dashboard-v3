@@ -451,12 +451,29 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await addChartFlow.selectExistingSource("Biomedical mortality by age");
   await addChartWizard.getByRole("button", { name: "Close", exact: true }).click();
   await expect(addChartWizard).toHaveCount(0);
+  const resumeChartDraft = page.getByRole("button", {
+    name: "Resume New chart draft",
+    exact: true,
+  });
+  await expect(resumeChartDraft).toBeVisible();
 
   await editChart.click();
   editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
-  await addChart.focus();
-  await addChart.press("Enter");
+  const takeoverTitle = editor.getByLabel("Chart title");
+  await takeoverTitle.fill("Blocked quick owner");
+  await resumeChartDraft.focus();
+  await resumeChartDraft.press("Enter");
+  await expect(editor).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Add new chart" })).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({
+    hasText: "Resume or reset the chart changes before resuming the new chart draft.",
+  })).toBeVisible();
+
+  await editor.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(takeoverTitle).toHaveValue("Confirmed cases");
+  await resumeChartDraft.focus();
+  await resumeChartDraft.press("Enter");
   await expect(editor).toHaveCount(0);
   const resumedAddChartWizard = page.getByRole("dialog", { name: "Add new chart" });
   await expect(resumedAddChartWizard).toBeVisible();
