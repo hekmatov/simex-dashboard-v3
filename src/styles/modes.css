@@ -373,6 +373,97 @@
   gap: 8px;
 }
 
+.build-command-main-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.build-command-main-row > .control-tooltip {
+  align-items: stretch;
+}
+
+.build-command-main-row button,
+.build-pending-work button {
+  font-size: 0.875rem;
+  line-height: 1.2;
+  min-height: 44px;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.build-pending-work {
+  animation: build-pending-work-enter 180ms ease-out both;
+  border-top: 1px solid var(--simex-border-subtle);
+  overflow: hidden;
+  padding-top: 8px;
+}
+
+.build-pending-work__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.build-pending-work__item {
+  align-items: center;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  display: flex;
+  flex: 1 1 280px;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 6px;
+}
+
+.build-pending-work__item[data-pending-work-state="dirty"],
+.build-pending-work__item[data-pending-work-state="error"] {
+  border-left: 4px solid var(--simex-warning);
+}
+
+.build-pending-work__summary {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.build-pending-work__summary small {
+  color: var(--simex-text-muted);
+}
+
+.build-pending-work__actions,
+.build-more-command-list {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.build-more-command-list {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.build-more-command-list > .control-tooltip > :is(button, label) {
+  width: 100%;
+}
+
+@keyframes build-pending-work-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .build-command-groups {
   align-items: stretch;
   display: grid;
@@ -1847,7 +1938,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .canonical-dashboard-frame.build-workspace {
+  .canonical-dashboard-frame.build-workspace,
+  .build-pending-work {
+    animation: none;
     transition: none;
   }
 }

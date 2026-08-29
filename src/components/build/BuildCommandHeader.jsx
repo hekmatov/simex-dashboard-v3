@@ -1,222 +1,178 @@
-import React from "react";
+import React, { useState } from "react";
 
 import ControlTooltip from "../common/ControlTooltip.jsx";
+import BuildMoreDrawer from "./BuildMoreDrawer.jsx";
 
 const DISCARD_BUILD_CHANGES_DESCRIPTION = "Restores the dashboard to the baseline captured when you entered Build. It does not contact the deployed online dashboard.";
 
 export default function BuildCommandHeader({
-  draftCoordinator,
+  pendingWork = [],
   locked = false,
   disabledReason = "",
   auxiliaryLocked = false,
   auxiliaryDisabledReason = disabledReason,
-  chartDraftAvailable = false,
-  staticDraftAvailable = false,
   accessibilityEnabled = false,
   operationError = "",
-  chronoGroupDraftSuspended = false,
-  sceneDraftSuspended = false,
-  parkedAuxiliaries = [],
   onFinish,
   onReset,
-  onSaveLayout,
-  onDiscardLayout,
   onAddChart,
   onAddStaticContent,
   onAccessibilityChange,
   onOpenAuxiliary,
-  onResumeAuxiliary,
-  getAuxiliaryLabel = (surface) => surface,
 }) {
-  const layoutSlot = draftCoordinator.slots.layout;
-  const chartSlot = draftCoordinator.slots.chart;
-  const layoutActionsDisabled = !layoutSlot
-    || layoutSlot.status === "clean"
-    || layoutSlot.status === "saving";
-  const layoutDisabledReason = layoutSlot?.status === "saving"
-    ? "Wait for layout changes to finish saving."
-    : "";
+  const [moreOpen, setMoreOpen] = useState(false);
 
   return (
     <section className="build-command-header" aria-label="Build commands">
-      <div className="build-command-groups">
-        <section className="build-command-group" data-build-command-group="content" aria-label="Content commands">
-          <strong className="build-command-group__label">Content</strong>
-          <div className="build-command-group__controls">
-            <ControlTooltip disabled={locked} reason={disabledReason}>
-              <button type="button" className="secondary" disabled={locked} onClick={onAddChart}>
-                {chartDraftAvailable ? "Resume chart draft" : "Add chart"}
-              </button>
-            </ControlTooltip>
-            <ControlTooltip disabled={locked} reason={disabledReason}>
-              <button id="add-static-content-command" type="button" className="secondary" disabled={locked} onClick={onAddStaticContent}>
-                {staticDraftAvailable ? "Resume static content draft" : "Add static content"}
-              </button>
-            </ControlTooltip>
-            <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
-              <button
-                id="source-content-command"
-                type="button"
-                className="secondary"
-                data-context-shelf-entry="source-content"
-                data-unit-orbit-preserve-open
-                disabled={auxiliaryLocked}
-                onClick={() => onOpenAuxiliary?.("source-content")}
-              >
-                Source content
-              </button>
-            </ControlTooltip>
-          </div>
-        </section>
-
-        <section
-          className="build-command-group build-command-group--accessibility"
-          data-build-command-group="accessibility"
-          aria-label="Chart accessibility settings"
+      <div className="build-command-main-row" role="toolbar" aria-label="Primary Build commands">
+        <ControlTooltip disabled={locked} reason={disabledReason}>
+          <button type="button" className="secondary" data-build-command-action="add-chart" disabled={locked} onClick={onAddChart}>
+            Add chart
+          </button>
+        </ControlTooltip>
+        <ControlTooltip disabled={locked} reason={disabledReason}>
+          <button
+            id="add-static-content-command"
+            type="button"
+            className="secondary"
+            data-build-command-action="add-text-image"
+            disabled={locked}
+            onClick={onAddStaticContent}
+          >
+            Add Text/Image
+          </button>
+        </ControlTooltip>
+        <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
+          <button
+            id="source-content-command"
+            type="button"
+            className="secondary"
+            data-build-command-action="source-content"
+            data-context-shelf-entry="source-content"
+            data-unit-orbit-preserve-open
+            disabled={auxiliaryLocked}
+            onClick={() => onOpenAuxiliary?.("source-content")}
+          >
+            Source content
+          </button>
+        </ControlTooltip>
+        <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
+          <button
+            id="chrono-studio-command"
+            type="button"
+            className="secondary"
+            data-build-command-action="chrono-studio"
+            data-context-shelf-entry="chrono-group"
+            data-unit-orbit-preserve-open
+            disabled={auxiliaryLocked}
+            onClick={() => onOpenAuxiliary?.("chrono-group")}
+          >
+            Chrono Studio
+          </button>
+        </ControlTooltip>
+        <ControlTooltip
+          disabled={locked}
+          explain={!locked}
+          reason={locked ? disabledReason : DISCARD_BUILD_CHANGES_DESCRIPTION}
         >
-          <strong className="build-command-group__label">Chart accessibility</strong>
-          <div className="build-command-group__controls">
-            <ControlTooltip disabled={locked} reason={disabledReason}>
-              <label className="accessibility-edit-toggle">
-                <input
-                  type="checkbox"
-                  disabled={locked}
-                  checked={accessibilityEnabled}
-                  onChange={(event) => onAccessibilityChange?.(event.target.checked)}
-                />
-                <span>
-                  Chart accessibility
-                  <small>Generate screen-reader chart descriptions</small>
-                </span>
-              </label>
-            </ControlTooltip>
-          </div>
-        </section>
-
-        <section className="build-command-group" data-build-command-group="structure" aria-label="Structure commands">
-          <strong className="build-command-group__label">Structure</strong>
-          <div className="build-command-group__controls">
-            <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
-              <button
-                type="button"
-                className="secondary"
-                data-context-shelf-entry="structure"
-                data-unit-orbit-preserve-open
-                disabled={auxiliaryLocked}
-                onClick={() => onOpenAuxiliary?.("structure")}
-              >
-                Pages &amp; sections
-              </button>
-            </ControlTooltip>
-          </div>
-        </section>
-
-        <section className="build-command-group" data-build-command-group="time" aria-label="Time commands">
-          <strong className="build-command-group__label">Time</strong>
-          <div className="build-command-group__controls">
-            <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
-              <button
-                type="button"
-                className="secondary"
-                data-context-shelf-entry="chrono-group"
-                data-unit-orbit-preserve-open
-                disabled={auxiliaryLocked}
-                onClick={() => onOpenAuxiliary?.("chrono-group")}
-              >
-                Chrono Studio
-              </button>
-            </ControlTooltip>
-            <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
-              <button
-                type="button"
-                className="secondary"
-                data-context-shelf-entry="scene"
-                data-unit-orbit-preserve-open
-                disabled={auxiliaryLocked}
-                onClick={() => onOpenAuxiliary?.("scene")}
-              >
-                Scene Studio
-              </button>
-            </ControlTooltip>
-          </div>
-        </section>
-
-        <section className="build-command-group build-command-group--session" data-build-command-group="session" aria-label="Build session commands">
-          <strong className="build-command-group__label">Session</strong>
-          <div className="build-command-group__controls">
-            <ControlTooltip
-              disabled={locked}
-              explain={!locked}
-              reason={locked ? disabledReason : DISCARD_BUILD_CHANGES_DESCRIPTION}
-            >
-              <button type="button" className="secondary" disabled={locked} onClick={onReset}>Discard Build changes</button>
-            </ControlTooltip>
-            <ControlTooltip disabled={locked} reason={disabledReason}>
-              <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
-            </ControlTooltip>
-          </div>
-        </section>
-
-        <section className="build-command-group build-command-group--layout" data-build-command-group="layout" aria-label="Layout draft commands">
-          <strong className="build-command-group__label">Layout draft</strong>
-          <div className="build-draft-slots" aria-label="Build draft status">
-            <span data-draft-slot="layout" data-draft-status={layoutSlot?.status ?? "clean"}>
-              <strong>Layout changes</strong>
-              <small>{layoutSlot?.status ?? "clean"}</small>
-            </span>
-            <span data-draft-slot="chart" data-draft-status={chartSlot?.status ?? "clean"}>
-              <strong>Chart changes</strong>
-              <small>{chartSlot?.status ?? "clean"}</small>
-            </span>
-          </div>
-          <div className="build-command-group__controls">
-            <ControlTooltip disabled={layoutActionsDisabled} reason={layoutDisabledReason}>
-              <button
-                type="button"
-                className="secondary"
-                data-unit-orbit-preserve-open
-                disabled={layoutActionsDisabled}
-                onClick={onSaveLayout}
-              >
-                Save Layout Changes
-              </button>
-            </ControlTooltip>
-            <ControlTooltip disabled={layoutActionsDisabled} reason={layoutDisabledReason}>
-              <button
-                type="button"
-                className="secondary"
-                data-unit-orbit-preserve-open
-                disabled={layoutActionsDisabled}
-                onClick={onDiscardLayout}
-              >
-                Discard Layout Changes
-              </button>
-            </ControlTooltip>
-          </div>
-        </section>
-
+          <button
+            type="button"
+            className="secondary"
+            data-build-command-action="discard-build-changes"
+            disabled={locked}
+            onClick={onReset}
+          >
+            Discard Build changes
+          </button>
+        </ControlTooltip>
+        <ControlTooltip disabled={locked} reason={disabledReason}>
+          <button type="button" data-build-command-action="finish-build" disabled={locked} onClick={onFinish}>
+            Finish Build
+          </button>
+        </ControlTooltip>
+        <ControlTooltip disabled={auxiliaryLocked && locked} reason={auxiliaryDisabledReason || disabledReason}>
+          <button
+            type="button"
+            className="secondary"
+            data-build-command-action="more"
+            aria-controls="build-more-drawer"
+            aria-expanded={moreOpen}
+            aria-haspopup="dialog"
+            disabled={auxiliaryLocked && locked}
+            onClick={() => setMoreOpen(true)}
+          >
+            More
+          </button>
+        </ControlTooltip>
       </div>
 
       {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
-      {(chronoGroupDraftSuspended || sceneDraftSuspended || parkedAuxiliaries.length > 0) && (
-        <nav className="build-command-status-rail" aria-label="Paused Build work">
-          {chronoGroupDraftSuspended && (
-            <button type="button" className="secondary" onClick={() => onOpenAuxiliary?.("chrono-group")}>
-              Resume Chrono Group draft
-            </button>
-          )}
-          {sceneDraftSuspended && (
-            <button type="button" className="secondary" onClick={() => onOpenAuxiliary?.("scene")}>
-              Resume Scene draft
-            </button>
-          )}
-          {parkedAuxiliaries.map(({ surface }) => (
-            <button key={surface} type="button" className="secondary" onClick={() => onResumeAuxiliary?.(surface)}>
-              Resume {getAuxiliaryLabel(surface)}
-            </button>
-          ))}
-        </nav>
-      )}
+      {pendingWork.length > 0 && <BuildPendingWorkRail pendingWork={pendingWork} />}
+
+      <BuildMoreDrawer
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        sceneDisabled={auxiliaryLocked}
+        sceneDisabledReason={auxiliaryDisabledReason}
+        accessibilityDisabled={locked}
+        accessibilityDisabledReason={disabledReason}
+        onOpenSceneStudio={() => onOpenAuxiliary?.("scene")}
+        accessibilityEnabled={accessibilityEnabled}
+        onAccessibilityChange={onAccessibilityChange}
+      />
     </section>
   );
+}
+
+function BuildPendingWorkRail({ pendingWork }) {
+  return (
+    <nav className="build-pending-work" aria-label="Pending Build work">
+      <ul className="build-pending-work__list">
+        {pendingWork.map((work) => {
+          const actionsDisabled = work.state === "saving";
+          return (
+            <li
+              key={work.id}
+              className="build-pending-work__item"
+              data-pending-work-id={work.id}
+              data-pending-work-kind={work.kind}
+              data-pending-work-state={work.state}
+              data-pending-work-origin={work.origin}
+            >
+              <span className="build-pending-work__summary">
+                <strong>{work.label}</strong>
+                <small>{pendingStateLabel(work.state)}</small>
+              </span>
+              <span className="build-pending-work__actions">
+                {work.kind === "layout" ? (
+                  <>
+                    <button type="button" className="secondary" disabled={actionsDisabled} onClick={work.save}>
+                      Save Layout Changes
+                    </button>
+                    <button type="button" className="secondary" disabled={actionsDisabled} onClick={work.discard}>
+                      Discard Layout Changes
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="secondary" onClick={work.resume}>
+                    Resume {work.label}
+                  </button>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function pendingStateLabel(state) {
+  return ({
+    dirty: "Unsaved",
+    error: "Needs attention",
+    saving: "Saving",
+    suspended: "Paused",
+    paused: "Paused",
+  })[state] ?? state;
 }

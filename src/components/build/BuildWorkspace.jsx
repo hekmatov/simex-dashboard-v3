@@ -14,10 +14,6 @@ import {
   collectChartPlacements,
   compatibleUnitOrbitCapabilities,
 } from "./panelEditingModel.js";
-import StructureAuthoring, {
-  createStructureDraft,
-  reduceStructureDraft,
-} from "./StructureAuthoring.jsx";
 import UnitOrbit, { revealUnitOrbitAnchor } from "./UnitOrbit.jsx";
 import SceneEditor from "../time/SceneEditor.jsx";
 import {
@@ -56,11 +52,11 @@ import {
   toSavedChronoGroup,
 } from "../time/chronoGroupDraft.js";
 import { dashboardThemeRootProps } from "../../theme/dashboardThemeRoot.js";
-import { initializeDeferredBuildDraft } from "./deferredBuildAuthoring.js";
 import {
   createBuildDraftCoordinatorState,
   reduceBuildDraftCoordinator,
 } from "./buildDraftCoordinator.js";
+import { selectBuildPendingWork } from "./buildPendingWork.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import SourceContentWorkspace, { createSourceContentViewState } from "../source-content/SourceContentWorkspace.jsx";
 import RightSideDrawer from "../common/RightSideDrawer.jsx";
@@ -73,7 +69,6 @@ export default function BuildWorkspace({
   onContentDraftCommit,
   onContentDraftDiscard,
   activePage,
-  pageType,
   buildPanelOpen = false,
   onCloseDashboardMap,
   selection,
@@ -86,7 +81,6 @@ export default function BuildWorkspace({
   onCloseChartEditor,
   onResumeChartEditor,
   chartDraftOpen = false,
-  chartDraftDirty = false,
   mutationsDisabled = false,
   accessibilityEnabled = false,
   deviceLayout,
@@ -106,15 +100,12 @@ export default function BuildWorkspace({
   onPageChange,
   onPageRemove,
   onSectionChange,
-  onPageReorder,
-  onSectionReorder,
-  onAddSection,
   onAddChart,
   onAddStaticContent,
-  chartDraftAvailable = false,
-  staticDraftAvailable = false,
   layoutDraft = null,
   chartSlotDraft = null,
+  authoredDirtyState = {},
+  pendingWorkResumeActions = {},
   onSaveLayout,
   onDiscardLayout,
   onFinish,
@@ -137,7 +128,6 @@ export default function BuildWorkspace({
   );
   const activeAuxiliary = draftCoordinator.activeAuxiliary?.surface ?? null;
   const parkedAuxiliaries = draftCoordinator.parkedAuxiliaries;
-  const [structureDraft, setStructureDraft] = React.useState(null);
   const [sourceContentViewState, setSourceContentViewState] = React.useState(() => createSourceContentViewState());
   const [chronoGroupDraft, setChronoGroupDraft] = React.useState(null);
   const [sceneDraft, setSceneDraft] = React.useState(null);
@@ -165,10 +155,9 @@ export default function BuildWorkspace({
     itemId: item.id,
   }))), [temporalContentItems]);
   const localAuthoringDrafts = React.useMemo(() => ({
-    structure: structureDraft,
     chronoGroup: chronoGroupDraft,
     scene: sceneDraft,
-  }), [sceneDraft, structureDraft, chronoGroupDraft]);
+  }), [sceneDraft, chronoGroupDraft]);
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
@@ -184,10 +173,6 @@ export default function BuildWorkspace({
       ? "Finish or cancel the open chart draft."
       : "";
   const navigationLocked = mutationsDisabled || localAuthoringEditing;
-  const chronoGroupDraftSuspended = chronoGroupDraft?.status === "suspended"
-    && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft });
-  const sceneDraftSuspended = sceneDraft?.status === "suspended"
-    && hasActiveLocalAuthoringDrafts({ scene: sceneDraft });
   const selectedChartItem = selection?.kind === "chart"
     ? collectChartPlacements(dashboard).find(({ placementId }) => placementId === selection.placementId)
     : null;
@@ -331,12 +316,6 @@ export default function BuildWorkspace({
   }, [dashboard, onResumeChartEditor, chooseSelection]);
 
   const initializeAuxiliary = (surface) => {
-    if (surface === "structure") {
-      setStructureDraft((current) => initializeDeferredBuildDraft(
-        current,
-        () => createStructureDraft(dashboard),
-      ));
-    }
     if (surface === "chrono-group") {
       const resumingDraft = chronoGroupDraft?.status === "suspended";
       setChronoGroupDraft((current) => current?.status === "suspended"
@@ -421,19 +400,55 @@ export default function BuildWorkspace({
     restoreCanvas(currentSession?.restoration ?? restoration);
   };
 
-  const resumeAuxiliary = (surface) => {
+  const resumeAuxiliary = (surface, draftId = null) => {
     if (activeAuxiliary === surface) return;
-    const parked = parkedAuxiliaries.find((entry) => entry.surface === surface);
-    if (!parked) return;
+    const parked = parkedAuxiliaries.find((entry) => (
+      entry.surface === surface && (draftId === null || entry.draftId === draftId)
+    ));
+    if (!parked) {
+      openAuxiliary(surface);
+      return;
+    }
     initializeAuxiliary(surface);
     dispatchDraftCoordinator({ type: "RESUME_AUXILIARY", session: parked });
     restoreCanvas(parked.restoration);
   };
 
+  const effectiveAuthoredDirtyState = {
+    ...authoredDirtyState,
+    chronoGroup: authoredDirtyState.chronoGroup === true
+      || hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft }),
+    scene: authoredDirtyState.scene === true
+      || hasActiveLocalAuthoringDrafts({ scene: sceneDraft }),
+  };
+  const discardPendingLayout = () => {
+    onDiscardLayout?.();
+    revealUnitOrbitAnchor(chartEditorPlacementId);
+  };
+  const pendingWork = selectBuildPendingWork({
+    authoredDirty: effectiveAuthoredDirtyState,
+    coordinator: draftCoordinator,
+    parkedAuxiliaries,
+    layoutDraft,
+    actions: {
+      resumeByKey: {
+        ...pendingWorkResumeActions,
+        pendingContent: pendingWorkResumeActions.pendingContent
+          ?? (() => resumeAuxiliary("source-content")),
+        chronoGroup: pendingWorkResumeActions.chronoGroup
+          ?? (() => resumeAuxiliary("chrono-group")),
+        scene: pendingWorkResumeActions.scene
+          ?? (() => resumeAuxiliary("scene")),
+      },
+      resumeAuxiliary,
+      saveLayout: onSaveLayout,
+      discardLayout: discardPendingLayout,
+    },
+  });
+
   const exportResolutionController = {
     resolve(issueId) {
       const surface = ({
-        structure: "structure",
         "chrono-group": "chrono-group",
         scene: "scene",
       })[issueId];
@@ -455,38 +470,6 @@ export default function BuildWorkspace({
       exportResolutionControllerRef.current = null;
     }
   }, [exportResolutionController, exportResolutionControllerRef]);
-
-  const dispatchStructure = (action) => {
-    let normalized = action;
-    if (action.type === "REQUEST_ADD_PAGE") {
-      const id = stableDraftId("page");
-      normalized = {
-        type: "ADD_PAGE",
-        page: { id, label: "New Page", title: "New Page", sections: [] },
-        initialSection: { id: `${id}-section`, title: "New Section", panels: [] },
-      };
-    }
-    if (action.type === "REQUEST_ADD_SECTION") {
-      normalized = {
-        type: "ADD_SECTION",
-        pageId: action.pageId,
-        section: { id: stableDraftId("section"), title: "New Section", panels: [] },
-      };
-    }
-    if (normalized.type === "SAVE_REQUEST") {
-      const saving = reduceStructureDraft(structureDraft, normalized);
-      setStructureDraft(saving);
-      if (saving.status !== "saving") return;
-      Promise.resolve(onStructureCommit?.(saving.value))
-        .then(() => setStructureDraft((current) => reduceStructureDraft(current, { type: "SAVE_SUCCEEDED" })))
-        .catch((error) => setStructureDraft((current) => reduceStructureDraft(current, {
-          type: "SAVE_FAILED",
-          error: storageFacingError(error, "STRUCTURE_SAVE_FAILED"),
-        })));
-      return;
-    }
-    setStructureDraft((current) => reduceStructureDraft(current, normalized));
-  };
 
   const commitTemporalContent = (updates) => onStructureCommit?.({
     pages: dashboard.pages,
@@ -640,31 +623,19 @@ export default function BuildWorkspace({
       data-device-layout={deviceLayout}
     >
           <BuildCommandHeader
-            draftCoordinator={draftCoordinator}
+            pendingWork={pendingWork}
             locked={locked}
             disabledReason={mutationDisabledReason}
             auxiliaryLocked={auxiliaryLocked}
             auxiliaryDisabledReason={auxiliaryDisabledReason}
-            chartDraftAvailable={chartDraftAvailable}
-            staticDraftAvailable={staticDraftAvailable}
             accessibilityEnabled={accessibilityEnabled}
             operationError={operationError}
-            chronoGroupDraftSuspended={chronoGroupDraftSuspended}
-            sceneDraftSuspended={sceneDraftSuspended}
-            parkedAuxiliaries={parkedAuxiliaries}
             onFinish={onFinish}
             onReset={onReset}
-            onSaveLayout={onSaveLayout}
-            onDiscardLayout={() => {
-              onDiscardLayout?.();
-              revealUnitOrbitAnchor(chartEditorPlacementId);
-            }}
             onAddChart={() => onAddChart?.()}
             onAddStaticContent={() => onAddStaticContent?.()}
             onAccessibilityChange={onAccessibilityChange}
             onOpenAuxiliary={openAuxiliary}
-            onResumeAuxiliary={resumeAuxiliary}
-            getAuxiliaryLabel={auxiliaryLabel}
           />
           {activeAuxiliary && typeof document !== "undefined" && createPortal((
             <aside
@@ -695,7 +666,6 @@ export default function BuildWorkspace({
                   onContentDraftDiscard={onContentDraftDiscard}
                 />
               )}
-              {renderedAuxiliary === "structure" && structureDraft && <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />}
               {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "library" && (
                 <ChronoStudio state={chronoContentState} cards={selectChronoStudioCards(chronoContentState)} onAction={dispatchChronoContent} />
               )}
@@ -813,7 +783,6 @@ function storageFacingError(error, fallbackCode) {
 
 function auxiliaryLabel(surface) {
   return ({
-    structure: "Structure",
     "chrono-group": "Chrono Studio",
     scene: "Scene Studio",
     "source-content": "Source content",

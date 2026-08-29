@@ -351,21 +351,25 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const selectedEditorDirty = Boolean(chartEditorDirty || staticContentDirty);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const layoutDraftDirty = ["dirty", "saving", "error", "suspended"].includes(buildLayoutDraft?.status);
-  const authoredDirty = hasUnsavedAuthoredContent({
+  const localDraftKeys = new Set(
+    activeLocalAuthoringDrafts(localAuthoringDrafts).map(({ key }) => key),
+  );
+  const authoredDirtyState = {
     ...createBuildDirtyState(),
     chartEditor: chartEditorDirty,
     chartWizard: chartWizardDirty || isMeaningfulChartDraft(
       chartDraftSessionStore.get(chartDraftSessionKey),
     ),
     staticContent: staticContentDirty,
-    structure: localAuthoringDirty || layoutDraftDirty,
-    scenario: localAuthoringDirty || externalDirty.scenario,
+    structure: layoutDraftDirty,
+    scenario: localDraftKeys.has("scenario") || externalDirty.scenario,
     inlineRename: inlineRenameDirty,
     pendingContent: pendingEdits.hasPending() || hasActiveContentRetainers(contentDraftRetainers),
-    chronoGroup: externalDirty.chronoGroup,
-    scene: externalDirty.scene,
+    chronoGroup: localDraftKeys.has("chronoGroup") || externalDirty.chronoGroup,
+    scene: localDraftKeys.has("scene") || externalDirty.scene,
     dashboardMetadata: externalDirty.dashboardMetadata,
-  });
+  };
+  const authoredDirty = hasUnsavedAuthoredContent(authoredDirtyState);
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
   const iconAccent = dashboard.globalStyles?.iconAccent ?? ICON_TOKENS.accentBase;
@@ -770,9 +774,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function collectCurrentPackageExportIssues() {
-    const localDraftKeys = new Set(
-      activeLocalAuthoringDrafts(localAuthoringDrafts).map(({ key }) => key),
-    );
     return collectDashboardPackageExportIssues({
       chartEditor: chartEditorDirty,
       chartWizard: chartWizardDirty || isMeaningfulChartDraft(
@@ -801,7 +802,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       }
       return;
     }
-    if (["structure", "chrono-group", "scene"].includes(issueId)) {
+    if (["chrono-group", "scene"].includes(issueId)) {
       buildWorkspaceExportResolutionRef.current?.resolve?.(issueId);
       return;
     }
@@ -810,19 +811,40 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       return;
     }
     if (issueId === "layout") {
-      document.querySelector('[data-build-command-group="layout"]')?.scrollIntoView({
+      document.querySelector('[data-pending-work-id="layout"]')?.scrollIntoView({
         block: "nearest",
         behavior: "auto",
       });
-      document.querySelector('[data-build-command-group="layout"] button:not(:disabled)')?.focus();
+      document.querySelector('[data-pending-work-id="layout"] button:not(:disabled)')?.focus();
       return;
     }
     if (issueId === "inline-rename") {
-      onOpenBuildPanel?.();
-      window.requestAnimationFrame(() => {
-        document.querySelector('#dashboard-map-panel input[type="text"]')?.focus();
-      });
+      resumeInlineRenameWork();
     }
+  }
+
+  function resumeChartWizardWork() {
+    if (!chartWizardTarget && chartWizardSuspendedTarget) {
+      setChartWizardTarget(chartWizardSuspendedTarget);
+      setChartWizardSuspended(false);
+      return;
+    }
+    openChartWizard();
+  }
+
+  function resumeStaticContentWork() {
+    if (chartEditorPlacementId && selectedPanelIsStatic) {
+      setChartEditorVisible(true);
+      return;
+    }
+    if (!staticWizardTarget) openStaticContentWizard();
+  }
+
+  function resumeInlineRenameWork() {
+    onOpenBuildPanel?.();
+    window.requestAnimationFrame(() => {
+      document.querySelector('#dashboard-map-panel input[type="text"]')?.focus();
+    });
   }
 
   function confirmPanelRemoval() {
@@ -1766,8 +1788,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onAddSection={addSection}
       onAddChart={openChartWizard}
       onAddStaticContent={openStaticContentWizard}
-      chartDraftAvailable={chartWizardSuspended}
-      staticDraftAvailable={Boolean(staticContentDraft)}
       layoutDraft={buildLayoutDraft ? {
         draftId: buildLayoutDraft.draftId,
         kind: "layout",
@@ -1785,6 +1805,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         restoration: null,
         resolution: null,
       } : null}
+      authoredDirtyState={authoredDirtyState}
+      pendingWorkResumeActions={{
+        structure: () => onOpenBuildPanel?.(),
+        chartEditor: () => setChartEditorVisible(Boolean(chartEditorPlacementId)),
+        chartWizard: resumeChartWizardWork,
+        staticContent: resumeStaticContentWork,
+        inlineRename: resumeInlineRenameWork,
+        scenario: () => onResolveScenarioDraft?.(),
+        dashboardMetadata: () => onOpenBuildPanel?.(),
+      }}
       onSaveLayout={saveBuildLayoutChanges}
       onDiscardLayout={discardBuildLayoutChanges}
       onFinish={saveEditMode}

@@ -89,7 +89,7 @@ export default function BuildInspector({
             Delete page…
           </button>
           {(dashboard.pages ?? []).length <= 1 && (
-            <small>Open Pages &amp; sections to remove the final Page and use its inline recovery rail.</small>
+            <small>A dashboard must retain at least one Page.</small>
           )}
         </div>
       </section>

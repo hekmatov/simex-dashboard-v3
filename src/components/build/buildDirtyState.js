@@ -1,4 +1,4 @@
-const AUTHORED_DIRTY_KEYS = Object.freeze([
+export const AUTHORED_DIRTY_KEYS = Object.freeze([
   "structure",
   "scenario",
   "chartEditor",
@@ -12,18 +12,7 @@ const AUTHORED_DIRTY_KEYS = Object.freeze([
 ]);
 
 export function createBuildDirtyState() {
-  return {
-    structure: false,
-    scenario: false,
-    chartEditor: false,
-    chartWizard: false,
-    staticContent: false,
-    inlineRename: false,
-    pendingContent: false,
-    chronoGroup: false,
-    scene: false,
-    dashboardMetadata: false,
-  };
+  return Object.fromEntries(AUTHORED_DIRTY_KEYS.map((key) => [key, false]));
 }
 
 export function hasUnsavedAuthoredContent(state = {}) {

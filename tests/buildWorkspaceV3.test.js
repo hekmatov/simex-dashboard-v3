@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   clearChronoGroupReviewForSave,
@@ -6,6 +7,21 @@ import {
 } from "../src/charting/time/temporalReview.js";
 
 const model = await import("../src/components/build/buildCanvasRestoration.js").catch(() => null);
+
+test("Build removes every live Pages and sections auxiliary route", async () => {
+  const [workspace, homeContent, packageExport] = await Promise.all([
+    readFile(new URL("../src/components/build/BuildWorkspace.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/home/canonicalHomeContent.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/dashboardPackageExport.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(workspace, /StructureAuthoring|openAuxiliary\("structure"\)|renderedAuxiliary === "structure"/);
+  assert.doesNotMatch(`${workspace}\n${homeContent}\n${packageExport}`, /Pages (?:& sections|and sections)/);
+  await assert.rejects(
+    readFile(new URL("../src/components/build/StructureAuthoring.jsx", import.meta.url), "utf8"),
+    { code: "ENOENT" },
+  );
+});
 
 test("Build save projections clear only the repaired Chrono or Scene review metadata", () => {
   const group = {

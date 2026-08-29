@@ -9,7 +9,6 @@ const EXPORT_ISSUES = Object.freeze([
   ["chartEditor", "chart-editor", "Chart changes", "Return to chart editor"],
   ["chartWizard", "chart-wizard", "New chart draft", "Resume chart draft"],
   ["layout", "layout", "Layout changes", "Review layout changes"],
-  ["structure", "structure", "Pages and sections draft", "Open Pages & sections"],
   ["scenario", "scenario", "Scenario Passport draft", "Open Scenario Passport"],
   ["chronoGroup", "chrono-group", "Chrono Group draft", "Open Chrono Studio"],
   ["scene", "scene", "Scene draft", "Open Scene Studio"],
@@ -18,8 +17,12 @@ const EXPORT_ISSUES = Object.freeze([
 ]);
 
 export function collectDashboardPackageExportIssues(state = {}) {
+  const normalized = {
+    ...state,
+    layout: state.layout === true || state.structure === true,
+  };
   return EXPORT_ISSUES.flatMap(([key, id, label, actionLabel]) => (
-    state[key] === true ? [{ id, label, actionLabel }] : []
+    normalized[key] === true ? [{ id, label, actionLabel }] : []
   ));
 }
 

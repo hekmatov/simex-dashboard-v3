@@ -45,7 +45,7 @@ export const CANONICAL_HOME_CONTENT = deepFreeze({
       },
       {
         question: "How do I organize pages and sections?",
-        answer: "In Build, open Pages & sections to add, rename, reorder, or remove pages and sections. Use Save Layout Changes when you are happy with the structure.",
+        answer: "In Build, use Dashboard Map to inspect and rename pages and sections. Save or discard any pending Layout changes from the Build header.",
       },
       {
         question: "How do I change the dashboard theme and colours?",
@@ -53,7 +53,7 @@ export const CANONICAL_HOME_CONTENT = deepFreeze({
       },
       {
         question: "How do I add source material and supporting content?",
-        answer: "In Build, use Source content to manage data and media, or Add static content for text and narrative panels. The QMD editor supports font choice, bold, underline, italics, lists, tables, and a live preview.",
+        answer: "In Build, use Source content to manage data and media, or Add Text/Image for text and narrative panels. The QMD editor supports font choice, bold, underline, italics, lists, tables, and a live preview.",
       },
       {
         question: "How do I show change over time?",
