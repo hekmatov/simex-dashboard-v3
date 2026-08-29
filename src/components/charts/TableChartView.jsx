@@ -2,6 +2,7 @@ import React from "react";
 import {
   chartDescriptionVisible,
   chartTitleClassName,
+  chartTitleVisible,
   titleContainerProps,
 } from "./chartViewPresentation.js";
 
@@ -11,7 +12,11 @@ export default function TableChartView({ model, chart = {}, provenance }) {
   const metadata = Array.isArray(model.rowMetadata) ? model.rowMetadata : [];
   const title = chart.title || "Table";
   const table = React.createElement("table", null,
-    React.createElement("caption", null, `${title} data table`),
+    React.createElement("caption", {
+      className: chartTitleVisible(chart)
+        ? undefined
+        : "chart-view-title--visually-hidden",
+    }, `${title} data table`),
     React.createElement("thead", null, React.createElement("tr", null, columns.map((column) => React.createElement("th", { key: column.key, scope: "col" }, column.label)))),
     React.createElement("tbody", null, rows.map((row, index) => React.createElement("tr", {
       key: metadata[index]?.key ?? canonicalRowKey(row, columns, metadata[index]?.time),

@@ -396,6 +396,10 @@ test("visually hidden chart titles remain structural headings across renderers",
       /<h3[^>]*class="chart-view-title chart-view-title--visually-hidden"[^>]*>Structural capacity title<\/h3>/,
     );
   }
+  assert.match(
+    table,
+    /<caption class="chart-view-title--visually-hidden">Structural capacity title data table<\/caption>/,
+  );
 });
 
 test("non-zoom schema capabilities cannot be bypassed by chart-local input", () => {
@@ -535,7 +539,7 @@ test("a single bullet summary exposes its exact label, actual, target, and time"
   assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);
 });
 
-test("repeated Gauge and Bullet charts dispatch through one accessible collection view", () => {
+test("repeated Gauge and Bullet charts keep shared title visibility independent of row count", () => {
   for (const [typeId, roles, rows] of [
     [
       "gauge",
@@ -575,6 +579,7 @@ test("repeated Gauge and Bullet charts dispatch through one accessible collectio
         sourceId: source,
         roles,
         presentation: {
+          title: { align: "left", visible: false },
           collection: {
             layout: "fixed",
             rows: 1,
@@ -603,6 +608,10 @@ test("repeated Gauge and Bullet charts dispatch through one accessible collectio
     }));
 
     assert.match(html, /class="chart-target-collection-view"/);
+    assert.match(
+      html,
+      new RegExp(`<h3[^>]*class="chart-view-title chart-view-title--visually-hidden"[^>]*>${title}</h3>`),
+    );
     assert.match(html, /data-collection-layout="fixed"/);
     assert.equal((html.match(new RegExp(`>${title}<`, "g")) ?? []).length, 1);
     assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 0);
