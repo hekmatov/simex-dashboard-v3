@@ -1,3 +1,9 @@
+import {
+  normalizeSceneDefaults,
+  validateScene,
+} from "../../charting/time/sceneSchema.js";
+import { validateChronoGroupDraft } from "./chronoGroupDraft.js";
+
 const STUDIOS = new Set(["chrono", "scene"]);
 const STATUS_FILTERS = new Set(["all", "ready", "needs-attention"]);
 const ITEM_TYPES = new Set(["chronoGroup", "scene"]);
@@ -261,6 +267,10 @@ export function createRunningTemporalSnapshot({ mode, content }) {
   return deepFreeze({ mode, content: clone(content), started: true });
 }
 
+export function hasUnresolvedFrameSource(scene) {
+  return scene?.frames?.mode === "unresolved";
+}
+
 function requestOperation(state, operation) {
   assertItemType(operation.itemType);
   const pendingOperation = { ...operation };
@@ -271,7 +281,10 @@ function requestOperation(state, operation) {
   return { ...state, view: "editor", operation: pendingOperation, conflict: null, error: null, returnContext };
 }
 
-export function withTemporalOwnerScope(draft, kind, localDraftId) {
+export function withTemporalOwnerScope(draft, kind, localDraftId, {
+  intent = "edit",
+  activity = draft?.ownerActivity ?? (draft?.status === "suspended" ? "suspended" : "active"),
+} = {}) {
   if (!draft) return draft;
   if (!new Set(["chrono", "scene"]).has(kind)) {
     throw new Error(`Unknown temporal owner kind: ${String(kind)}`);
@@ -279,7 +292,13 @@ export function withTemporalOwnerScope(draft, kind, localDraftId) {
   if (typeof localDraftId !== "string" || localDraftId.trim() === "") {
     throw new Error("Temporal owner local draft id is required.");
   }
-  return { ...draft, ownerKind: kind, ownerScopeId: localDraftId };
+  return {
+    ...draft,
+    ownerKind: kind,
+    ownerScopeId: localDraftId,
+    ownerIntent: intent,
+    ownerActivity: activity === "suspended" ? "suspended" : "active",
+  };
 }
 
 export function selectTemporalDraftOwners(drafts = {}) {
@@ -291,7 +310,11 @@ export function selectTemporalDraftOwners(drafts = {}) {
 
 function temporalOwner(draft, kind, surface) {
   if (!draft || draft.ownerKind !== kind || !draft.ownerScopeId) return null;
-  const activity = draft.status === "suspended" ? "suspended" : "active";
+  if (draft.ownerIntent === "create" && !isRetainableTemporalCreation(draft, kind)) return null;
+  const activity = draft.ownerActivity === "suspended"
+    || (draft.ownerActivity === undefined && draft.status === "suspended")
+    ? "suspended"
+    : "active";
   const status = draft.status === "suspended" ? draft.suspendedStatus : draft.status;
   if (!new Set(["dirty", "saving", "error"]).has(status)) return null;
   return {
@@ -304,6 +327,17 @@ function temporalOwner(draft, kind, surface) {
     surface,
     restoration: draft.restoration ?? null,
   };
+}
+
+function isRetainableTemporalCreation(draft, kind) {
+  if (kind === "chrono") return validateChronoGroupDraft(draft) === null;
+  if ((draft.findings ?? []).length > 0) return false;
+  try {
+    validateScene(normalizeSceneDefaults(draft.value), draft.validationContext);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function resolveConflict(state, choice) {

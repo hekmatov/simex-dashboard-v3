@@ -1,4 +1,5 @@
 import React from "react";
+import { hasUnresolvedFrameSource } from "./chronoContentState.js";
 
 export default function SceneLibrary({ state, sections = [], onAction = () => {} }) {
   const total = state?.scenes?.length ?? sections.reduce((sum, section) => sum + section.scenes.length, 0);
@@ -33,7 +34,7 @@ export default function SceneLibrary({ state, sections = [], onAction = () => {}
           type: "button", className: "temporal-content-card", "data-action": "open-content", "data-status": scene.status,
           onClick: () => onAction({ type: "OPEN_CONTENT", itemType: "scene", itemId: scene.id }),
         }, React.createElement("span", { className: "temporal-content-card__type" }, "Scene"), React.createElement("strong", null, scene.name), React.createElement("span", null, scene.chronoGroupName), React.createElement("span", { className: "temporal-content-card__status" }, scene.status === "needs-attention" ? "Needs attention" : "Ready")),
-        scene.status === "needs-attention" ? React.createElement("button", {
+        scene.status === "needs-attention" && hasUnresolvedFrameSource(scene) ? React.createElement("button", {
           type: "button",
           "data-scene-workflow-id": "repair-frame-source",
           onClick: () => onAction({ type: "START_REPAIR", itemType: "scene", itemId: scene.id, stage: "details", focusId: "scene-frame-source" }),

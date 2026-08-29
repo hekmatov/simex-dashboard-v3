@@ -203,6 +203,7 @@ export function reduceChronoGroupDraft(state, action) {
         ...state,
         status: "suspended",
         suspendedStatus: state.status,
+        ownerActivity: "suspended",
         restoration: clone(action.restoration ?? state.restoration),
       };
     case "RESUME":
@@ -211,6 +212,7 @@ export function reduceChronoGroupDraft(state, action) {
         stage: state.restoration?.stage ?? state.stage,
         status: state.suspendedStatus ?? (draftChanged(state) ? "dirty" : "clean"),
         suspendedStatus: null,
+        ownerActivity: "active",
       };
     default:
       throw new Error(`Unknown Chrono Group draft action: ${String(action?.type)}`);

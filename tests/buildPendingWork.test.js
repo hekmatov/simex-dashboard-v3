@@ -371,6 +371,35 @@ test("layout-owned Scene consequences publish only the layout transaction descri
   }]);
 });
 
+test("an unscoped live layout prop cannot duplicate its normalized coordinator owner", () => {
+  const pending = selectBuildPendingWork({
+    coordinator: {
+      slots: {
+        layout: {
+          draftId: "layout:dashboard-1",
+          kind: "layout",
+          scopeId: "dashboard-1",
+          status: "dirty",
+          activity: "active",
+        },
+        chart: null,
+      },
+    },
+    layoutDraft: {
+      draftId: "layout:dashboard-1",
+      kind: "layout",
+      status: "dirty",
+      targetId: "section-a",
+    },
+    authoredDirty: { structure: true },
+  });
+
+  assert.deepEqual(pending.map(({ id, kind }) => ({ id, kind })), [{
+    id: "layout:dashboard-1",
+    kind: "layout",
+  }]);
+});
+
 test("the conditional pending row slides in and disables motion when requested", async () => {
   const css = await readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8");
   assert.match(css, /\.build-pending-work\s*\{[^}]*animation:\s*build-pending-work-enter/s);

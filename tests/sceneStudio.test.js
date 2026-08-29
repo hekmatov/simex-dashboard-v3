@@ -67,15 +67,46 @@ test("Scene content is read-first and Edit is its only creation-adjacent action"
 test("a Needs attention Scene card opens repair at Frame source", () => {
   const html = renderToStaticMarkup(React.createElement(SceneLibrary, {
     state: { query: "", statusFilter: "all" },
-    sections: [{ pageId: "biomedical", pageLabel: "Biomedical", scenes: [{ ...scene, status: "needs-attention" }] }],
+    sections: [{ pageId: "biomedical", pageLabel: "Biomedical", scenes: [{
+      ...scene,
+      status: "needs-attention",
+      frames: { mode: "unresolved", reason: "source-chart-moved", previousChartId: "chart-old" },
+    }] }],
   }));
   assert.match(html, /data-scene-workflow-id="repair-frame-source"/);
+});
+
+test("a non-frame Needs attention Scene stays openable and uses generic repair routing", () => {
+  const reviewedScene = {
+    ...scene,
+    status: "needs-attention",
+    frames: { mode: "source", chartId: "chart-a", selection: "all" },
+    findingCodes: ["present-temporal-review"],
+  };
+  const libraryHtml = renderToStaticMarkup(React.createElement(SceneLibrary, {
+    state: { query: "", statusFilter: "all" },
+    sections: [{ pageId: "biomedical", pageLabel: "Biomedical", scenes: [reviewedScene] }],
+  }));
+  assert.match(libraryHtml, /data-action="open-content"/);
+  assert.doesNotMatch(libraryHtml, /repair-frame-source/);
+
+  const contentHtml = renderToStaticMarkup(React.createElement(SceneContent, {
+    content: reviewedScene,
+  }));
+  assert.match(contentHtml, /data-scene-workflow-id="repair-scene"/);
+  assert.match(contentHtml, />Repair</);
+  assert.doesNotMatch(contentHtml, /Repair Frame source/);
 });
 
 test("Needs attention exposes a Frame source repair action and saving a replacement clears the unresolved union", () => {
   const actions = [];
   const contentHtml = renderToStaticMarkup(React.createElement(SceneContent, {
-    content: { ...scene, status: "needs-attention", statusReasons: ["Frame source moved"] },
+    content: {
+      ...scene,
+      status: "needs-attention",
+      statusReasons: ["Frame source moved"],
+      frames: { mode: "unresolved", reason: "source-chart-moved", previousChartId: "chart-old" },
+    },
     onAction: (action) => actions.push(action),
   }));
   assert.match(contentHtml, /data-scene-workflow-id="repair-frame-source"/);

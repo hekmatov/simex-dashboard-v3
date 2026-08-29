@@ -563,6 +563,7 @@ export default function BuildWorkspace({
         createChronoGroupDraft({ ...input, initialStage: "period" }),
         "chrono",
         draftCoordinator.activeAuxiliary?.draftId ?? "auxiliary-chrono-group",
+        { intent },
       ));
     }
     if (itemType === "scene") {
@@ -585,6 +586,7 @@ export default function BuildWorkspace({
         },
         "scene",
         draftCoordinator.activeAuxiliary?.draftId ?? "auxiliary-scene",
+        { intent },
       );
       setSceneDraft(nextDraft);
     }

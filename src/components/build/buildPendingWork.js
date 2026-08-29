@@ -123,8 +123,13 @@ export function selectBuildPendingWork({
     }
   }
   if (isPendingState(layoutDraft?.status)) {
-    upsert(isAdoptedOwner(layoutDraft)
-      ? descriptorForOwner(layoutDraft, actions)
+    const scopedLayoutDraft = adoptedOwners.get(layoutDraft.draftId);
+    upsert(scopedLayoutDraft
+      ? descriptorForOwner({
+          ...layoutDraft,
+          ...scopedLayoutDraft,
+          targetId: layoutDraft.targetId ?? scopedLayoutDraft.targetId,
+        }, actions)
       : descriptorForDefinition(DEFINITIONS.structure, {
           state: layoutDraft.status,
           resume: actions.resumeByKey?.structure,

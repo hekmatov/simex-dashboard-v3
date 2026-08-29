@@ -168,6 +168,7 @@ export function reduceSceneDraft(state, action) {
         ...state,
         status: "suspended",
         suspendedStatus: state.status,
+        ownerActivity: "suspended",
         restoration: clone(action.restoration ?? state.restoration),
       };
     case "RESUME":
@@ -176,6 +177,7 @@ export function reduceSceneDraft(state, action) {
         stage: state.restoration?.stage ?? state.stage,
         status: state.suspendedStatus ?? (changed(state) ? "dirty" : "clean"),
         suspendedStatus: null,
+        ownerActivity: "active",
       };
     default:
       throw new Error(`Unknown Scene draft action: ${String(action?.type)}`);
