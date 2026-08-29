@@ -112,9 +112,12 @@ test("Data source existing CSV actions, blank measurement, and Review repairs ar
   await repair.click();
   await expect(flow.stageButton("mapAndPrepare"))
     .toHaveAttribute("aria-current", "step");
-  const measurements = wizard.locator('[data-field-id="measurements"] select');
-  await expect(measurements).toHaveCount(1);
-  await expect(measurements).toHaveValue("");
+  const measurementRows = wizard.locator(
+    '[data-field-id="measurements"] .chart-authoring-role-row',
+  );
+  await expect(measurementRows).toHaveCount(1);
+  await expect(measurementRows.getByRole("combobox", { name: "Column", exact: true }))
+    .toHaveValue("");
 });
 
 async function openWizard(page) {
