@@ -53,7 +53,7 @@ Repeated interaction concepts may appear on more than one surface. The surface-r
 
 | Token | Default | Meaning |
 | --- | --- | --- |
-| base | #08224A | Base icon color on light surfaces |
+| base | #17191B | Base icon color on light surfaces |
 | accentBase | #19D3C5 | Dashboard-level author-selected accent |
 | accentOnLight | #0D746D | Derived accent used on light surfaces |
 | accentOnDark | #32DED1 | Derived accent used on dark surfaces |

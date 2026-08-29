@@ -91,7 +91,7 @@ export default function AudienceSnapshotMonitor({
         const { default: html2canvas } = await import("html2canvas");
         if (cancelled || !sourceRef.current) return;
         const canvas = await html2canvas(sourceRef.current, {
-          backgroundColor: captureSource.themeProjection.cssVariables["--simex-surface-canvas"] ?? "#f7f9fc",
+          backgroundColor: captureSource.themeProjection.cssVariables["--simex-surface-canvas"] ?? "#f4f5f5",
           height: 720,
           logging: false,
           scale: 0.75,

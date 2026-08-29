@@ -19,10 +19,10 @@
   align-items: center;
   background: color-mix(
     in srgb,
-    var(--simex-surface-panel, #f5f8fb) 94%,
+    var(--simex-surface-panel) 94%,
     transparent
   );
-  border: 1px solid var(--simex-border-strong, rgb(8 34 74 / 24%));
+  border: 1px solid var(--simex-border-strong, color-mix(in srgb, var(--simex-text-strong) 24%, transparent));
   border-radius: var(--simex-style-surface-radius, 10px);
   box-shadow: var(--simex-style-panel-shadow, none);
   display: flex;

@@ -472,7 +472,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [iconAccent],
   );
   const iconLanguageStyles = React.useMemo(() => ({
-    "--simex-icon-base": ICON_TOKENS.base,
+    "--simex-icon-base": "var(--simex-text-strong)",
     "--simex-icon-accent": iconAccentVariants.base,
     "--simex-icon-accent-on-light": iconAccentVariants.onLight,
     "--simex-icon-accent-on-dark": iconAccentVariants.onDark,

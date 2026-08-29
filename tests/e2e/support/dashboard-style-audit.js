@@ -1,16 +1,97 @@
-const RETIRED_DASHBOARD_COLORS = Object.freeze([
-  "rgb(8, 34, 74)",
-  "rgb(4, 59, 203)",
-  "rgb(245, 248, 251)",
-  "rgb(248, 251, 255)",
-  "rgb(216, 226, 236)",
-  "rgb(234, 241, 246)",
-  "rgb(238, 244, 248)",
-  "rgb(225, 233, 240)",
-  "rgb(80, 106, 130)",
-  "rgb(106, 127, 146)",
-  "rgb(54, 81, 106)",
+export const RETIRED_DASHBOARD_COLOR_CHANNELS = Object.freeze([
+  Object.freeze({ hex: "#08224a", rgb: Object.freeze([8, 34, 74]) }),
+  Object.freeze({ hex: "#043bcb", rgb: Object.freeze([4, 59, 203]) }),
+  Object.freeze({ hex: "#007c89", rgb: Object.freeze([0, 124, 137]) }),
+  Object.freeze({ hex: "#f5f8fb", rgb: Object.freeze([245, 248, 251]) }),
+  Object.freeze({ hex: "#f8fbff", rgb: Object.freeze([248, 251, 255]) }),
+  Object.freeze({ hex: "#d8e2ec", rgb: Object.freeze([216, 226, 236]) }),
+  Object.freeze({ hex: "#eaf1f6", rgb: Object.freeze([234, 241, 246]) }),
+  Object.freeze({ hex: "#eef4f8", rgb: Object.freeze([238, 244, 248]) }),
+  Object.freeze({ hex: "#e1e9f0", rgb: Object.freeze([225, 233, 240]) }),
+  Object.freeze({ hex: "#506a82", rgb: Object.freeze([80, 106, 130]) }),
+  Object.freeze({ hex: "#6a7f92", rgb: Object.freeze([106, 127, 146]) }),
+  Object.freeze({ hex: "#36516a", rgb: Object.freeze([54, 81, 106]) }),
+  Object.freeze({ hex: "#49627a", rgb: Object.freeze([73, 98, 122]) }),
+  Object.freeze({ hex: "#18334e", rgb: Object.freeze([24, 51, 78]) }),
+  Object.freeze({ hex: "#edf5fb", rgb: Object.freeze([237, 245, 251]) }),
+  Object.freeze({ hex: "#f7f9fc", rgb: Object.freeze([247, 249, 252]) }),
+  Object.freeze({ hex: "#075ea8", rgb: Object.freeze([7, 94, 168]) }),
+  Object.freeze({ hex: "#3157d5", rgb: Object.freeze([49, 87, 213]) }),
 ]);
+
+const SOURCE_ALLOWLIST = Object.freeze([
+  Object.freeze({
+    file: /(?:^|\/)src\/theme\/dashboardTheme\.js$/,
+    line: /./,
+    classification: "theme-token-payload",
+  }),
+  Object.freeze({
+    file: /(?:^|\/)src\/components\/ColorField\.jsx$/,
+    line: /(?:\bcolors\s*:|\bfallback\s*=|contrastRatio\()/,
+    classification: "authored-color-swatch",
+  }),
+  Object.freeze({
+    file: /(?:^|\/)src\/components\/chart-authoring\/SeriesColorsField\.jsx$/,
+    line: /#[0-9a-f]{6}/i,
+    classification: "authored-color-swatch",
+  }),
+  Object.freeze({
+    file: /(?:^|\/)src\/components\/DashboardRenderer\.jsx$/,
+    line: /(?:<ColorField\b|panelBackgroundColor|panelBorderColor|chartAreaColor|chartAreaBorderColor|editHighlightColor)/,
+    classification: "authored-panel-color",
+  }),
+  Object.freeze({
+    file: /(?:^|\/)src\/components\/charts\/EChartsChartView\.jsx$/,
+    line: /(?:textStrong|textMuted|dataColors|chartMark|gridline)\s*:/,
+    classification: "chart-theme-payload",
+  }),
+]);
+
+function retiredSourcePattern() {
+  const separator = "(?:\\s*,\\s*|\\s+)";
+  const rgbChannels = RETIRED_DASHBOARD_COLOR_CHANNELS
+    .map(({ rgb }) => rgb.map((value) => String(value)).join(separator))
+    .join("|");
+  const hexValues = RETIRED_DASHBOARD_COLOR_CHANNELS
+    .map(({ hex }) => hex.slice(1))
+    .join("|");
+  return new RegExp(`#(?:${hexValues})\\b|rgba?\\(\\s*(?:${rgbChannels})(?:\\s*[,/]?\\s*(?:0|1|0?\\.\\d+|\\d+(?:\\.\\d+)?%))?\\s*\\)`, "gi");
+}
+
+function sourceClassification(filePath, line) {
+  const normalizedPath = String(filePath ?? "").replaceAll("\\", "/");
+  return SOURCE_ALLOWLIST.find(({ file, line: linePattern }) => (
+    file.test(normalizedPath) && linePattern.test(line)
+  ))?.classification;
+}
+
+/**
+ * Durable source-declaration audit. This intentionally scans authored source,
+ * rather than only computed style, so a stale declaration cannot hide behind a
+ * later semantic override. The allowlist is limited to user-authored colour
+ * swatches/panel data and the theme-token catalogue.
+ */
+export function auditDashboardStyleSources(sources = []) {
+  const active = [];
+  const allowed = [];
+  for (const { filePath, source } of sources) {
+    const lines = String(source ?? "").split(/\r?\n/);
+    lines.forEach((line, index) => {
+      for (const match of line.matchAll(retiredSourcePattern())) {
+        const finding = {
+          filePath: String(filePath ?? "").replaceAll("\\", "/"),
+          line: index + 1,
+          color: match[0],
+          declaration: line.trim(),
+        };
+        const classification = sourceClassification(filePath, line);
+        if (classification) allowed.push({ ...finding, classification });
+        else active.push(finding);
+      }
+    });
+  }
+  return { active, allowed };
+}
 
 /**
  * Audits every visible dashboard node, including body-level portals, generated
@@ -19,12 +100,22 @@ const RETIRED_DASHBOARD_COLORS = Object.freeze([
  * pixels painted into a canvas.
  */
 export async function expectNoRetiredDashboardStyle(page) {
-  const hits = await page.evaluate((retiredValues) => {
-    const retired = new Set(retiredValues);
-    const app = document.querySelector(".app-frame");
-    if (!app) return [{ kind: "contract", detail: "Missing .app-frame" }];
+  const hits = await page.evaluate((retiredChannels) => {
+    const rootSelectors = [
+      ".app-frame",
+      ".audience-theme-root",
+      ".application-recovery",
+      ".source-viewer-theme-root",
+      "[data-dashboard-style][style]",
+    ];
+    const themeRoots = [...new Set(rootSelectors.flatMap((selector) => (
+      [...document.querySelectorAll(selector)]
+    )))];
+    if (themeRoots.length === 0) {
+      return [{ kind: "contract", detail: `Missing dashboard theme root (${rootSelectors.join(", ")})` }];
+    }
 
-    const rootStyle = getComputedStyle(app);
+    const app = themeRoots[0];
     const approvedFonts = new Set([
       "--simex-style-body-font",
       "--simex-style-heading-font",
@@ -37,8 +128,46 @@ export async function expectNoRetiredDashboardStyle(page) {
       probe.remove();
       return resolved;
     }).filter(Boolean));
+    const semanticColors = Object.fromEntries([
+      "--simex-focus",
+      "--simex-selected",
+      "--simex-selected-soft",
+      "--simex-info",
+      "--simex-info-soft",
+      "--simex-warning",
+      "--simex-warning-soft",
+      "--simex-error",
+      "--simex-error-soft",
+    ].map((name) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${name})`;
+      app.append(probe);
+      const resolved = getComputedStyle(probe).color;
+      probe.remove();
+      return [name, resolved];
+    }));
     const colorProperties = ["color", "backgroundColor", "fill", "stroke", "accentColor"];
     const compositeProperties = ["boxShadow", "textShadow", "backgroundImage"];
+    const normalizeHex = (value) => String(value || "").trim().toLowerCase();
+    const retiredHex = new Set(retiredChannels.map(({ hex }) => hex));
+    const hasRetiredChannel = (value) => {
+      const source = String(value || "");
+      if (retiredHex.has(normalizeHex(source))) return true;
+      for (const match of source.matchAll(/rgba?\(([^)]+)\)/gi)) {
+        const numbers = match[1].match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number);
+        if (numbers?.length === 3 && retiredChannels.some(({ rgb }) => (
+          rgb.every((channel, index) => channel === numbers[index])
+        ))) return true;
+      }
+      return false;
+    };
+    const authoredPaint = (element) => Boolean(element.closest([
+      ".settings-color-field",
+      ".settings-color-popover",
+      ".chart-authoring-series-color",
+      "[data-color-field]",
+      "input[type=\"color\"]",
+    ].join(",")));
     const visible = (element, style) => {
       if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
       const rect = element.getBoundingClientRect();
@@ -55,24 +184,24 @@ export async function expectNoRetiredDashboardStyle(page) {
       const paint = {};
       for (const property of colorProperties) {
         const unusedSvgPaint = (property === "fill" || property === "stroke") && style[property] === "none";
-        if (!unusedSvgPaint && retired.has(style[property])) paint[property] = style[property];
+        if (!unusedSvgPaint && !authoredPaint(element) && hasRetiredChannel(style[property])) {
+          paint[property] = style[property];
+        }
       }
       for (const side of ["Top", "Right", "Bottom", "Left"]) {
         if (style[`border${side}Style`] !== "none"
           && Number.parseFloat(style[`border${side}Width`]) > 0
-          && retired.has(style[`border${side}Color`])) {
+          && hasRetiredChannel(style[`border${side}Color`])) {
           paint[`border${side}Color`] = style[`border${side}Color`];
         }
       }
       if (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0
-        && retired.has(style.outlineColor)) paint.outlineColor = style.outlineColor;
-      if (style.textDecorationLine !== "none" && retired.has(style.textDecorationColor)) {
+        && hasRetiredChannel(style.outlineColor)) paint.outlineColor = style.outlineColor;
+      if (style.textDecorationLine !== "none" && hasRetiredChannel(style.textDecorationColor)) {
         paint.textDecorationColor = style.textDecorationColor;
       }
       for (const property of compositeProperties) {
-        for (const value of retired) {
-          if (String(style[property]).includes(value)) paint[property] = style[property];
-        }
+        if (hasRetiredChannel(style[property])) paint[property] = style[property];
       }
       const fontFamily = String(style.fontFamily || "").trim().toLowerCase();
       const userAgentColorControl = element instanceof HTMLInputElement && element.type === "color";
@@ -82,15 +211,73 @@ export async function expectNoRetiredDashboardStyle(page) {
       return Object.keys(paint).length ? [{ kind, ...identity, paint }] : [];
     };
 
-    const dashboardNodes = [app, ...app.querySelectorAll("*")];
-    const portalNodes = [...document.body.querySelectorAll('[role="tooltip"], [role="dialog"], [role="menu"], [data-dashboard-portal]')]
-      .filter((node) => !app.contains(node));
-    const nodes = [...new Set([...dashboardNodes, ...portalNodes])];
+    const portalRoots = [...document.body.querySelectorAll([
+      '[role="tooltip"]',
+      '[role="dialog"]',
+      '[role="menu"]',
+      '[role="complementary"]',
+      '[data-dashboard-portal]',
+      ".build-authoring-auxiliary",
+      ".unit-orbit",
+      ".scene-observation-dialog",
+    ].join(","))];
+    const nodes = [...new Set([...themeRoots, ...portalRoots].flatMap((root) => (
+      [root, ...root.querySelectorAll("*")]
+    )))];
     const findings = [];
     for (const element of nodes) {
       const style = getComputedStyle(element);
       if (!visible(element, style) || element.classList.contains("visually-hidden")) continue;
       findings.push(...styleHits(element, style, "element"));
+
+      if (element instanceof HTMLInputElement && ["checkbox", "radio"].includes(element.type)) {
+        const rect = element.getBoundingClientRect();
+        const label = element.labels?.[0] ?? element.closest("label");
+        const labelRect = label?.getBoundingClientRect();
+        const labelStyle = label ? getComputedStyle(label) : null;
+        const declaredGaps = [labelStyle?.columnGap, labelStyle?.gap]
+          .map((value) => Number.parseFloat(value || ""))
+          .filter(Number.isFinite);
+        const gap = declaredGaps[0] ?? 0;
+        const geometry = {};
+        if (rect.width < 18 || rect.width > 20) geometry.glyphWidth = rect.width;
+        if (rect.height < 18 || rect.height > 20) geometry.glyphHeight = rect.height;
+        if (!label || !labelRect || labelRect.height < 44) geometry.labelTargetHeight = labelRect?.height ?? 0;
+        if (!Number.isFinite(gap) || gap < 8) geometry.labelGap = Number.isFinite(gap) ? gap : 0;
+        if (Object.keys(geometry).length) {
+          findings.push({ kind: "choice-geometry", ...describe(element), geometry });
+        }
+      } else if (
+        element.matches("button, select, textarea, input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=color])")
+        && element.getBoundingClientRect().height < 44
+      ) {
+        findings.push({
+          kind: "touch-target",
+          ...describe(element),
+          height: element.getBoundingClientRect().height,
+        });
+      }
+
+      if (element.matches("[data-pending-work-state]")) {
+        const state = element.getAttribute("data-pending-work-state");
+        const expected = state === "saving"
+          ? [semanticColors["--simex-info"], semanticColors["--simex-info-soft"]]
+          : state === "error"
+            ? [semanticColors["--simex-error"], semanticColors["--simex-error-soft"]]
+            : [semanticColors["--simex-warning"], semanticColors["--simex-warning-soft"]];
+        const painted = [
+          style.color,
+          style.backgroundColor,
+          style.borderTopColor,
+          style.borderRightColor,
+          style.borderBottomColor,
+          style.borderLeftColor,
+        ];
+        if (!expected.filter(Boolean).some((value) => painted.includes(value))) {
+          findings.push({ kind: "pending-semantic-state", ...describe(element), state, expected, painted });
+        }
+      }
+
       for (const pseudo of ["::before", "::after"]) {
         const pseudoStyle = getComputedStyle(element, pseudo);
         if (pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") {
@@ -100,14 +287,14 @@ export async function expectNoRetiredDashboardStyle(page) {
       if (element instanceof SVGElement) {
         for (const attribute of ["fill", "stroke", "color"]) {
           const value = element.getAttribute(attribute);
-          if (value && retired.has(value)) {
+          if (value && !authoredPaint(element) && hasRetiredChannel(value)) {
             findings.push({ kind: "svg-attribute", ...describe(element), paint: { [attribute]: value } });
           }
         }
       }
     }
     return findings;
-  }, RETIRED_DASHBOARD_COLORS);
+  }, RETIRED_DASHBOARD_COLOR_CHANNELS);
 
   if (hits.length) {
     throw new Error(`Retired dashboard style reached live UI:\n${JSON.stringify(hits, null, 2)}`);

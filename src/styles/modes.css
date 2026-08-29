@@ -7,7 +7,7 @@
 .app-frame-bar {
   align-items: center;
   background: #ffffff;
-  border-bottom: 1px solid #d8e2ec;
+  border-bottom: 1px solid var(--simex-border-subtle);
   display: flex;
   gap: 12px;
   min-height: 64px;
@@ -15,7 +15,7 @@
 }
 
 .app-frame-identity {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -29,7 +29,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   font: inherit;
   font-weight: 700;
   min-height: 44px;
@@ -37,7 +37,7 @@
 }
 
 .mode-switcher button[aria-pressed="true"] {
-  background: #08224a;
+  background: var(--simex-text-strong);
   color: #ffffff;
 }
 
@@ -976,7 +976,7 @@
   background: var(--simex-surface-panel, #fff);
   border: 1px solid var(--simex-border-strong, #9aa9b5);
   border-radius: 8px;
-  box-shadow: 0 18px 52px rgb(8 34 74 / 24%);
+  box-shadow: 0 18px 52px color-mix(in srgb, var(--simex-text-strong) 24%, transparent);
   height: var(--unit-orbit-max-height);
   max-height: var(--unit-orbit-max-height);
   overflow: hidden;
@@ -998,7 +998,7 @@
 
 .unit-orbit:focus-within {
   border-color: var(--simex-focus, #f2b541);
-  box-shadow: 0 18px 52px rgb(8 34 74 / 24%), 0 0 0 3px rgb(242 181 65 / 35%);
+  box-shadow: 0 18px 52px color-mix(in srgb, var(--simex-text-strong) 24%, transparent), 0 0 0 3px rgb(242 181 65 / 35%);
 }
 
 .build-sheet-close {
@@ -1990,7 +1990,7 @@
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-strong);
   border-radius: 10px;
-  box-shadow: 0 18px 42px rgb(8 34 74 / 18%);
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--simex-text-strong) 18%, transparent);
   max-height: calc(100vh - 198px);
   overflow: auto;
   overscroll-behavior: contain;

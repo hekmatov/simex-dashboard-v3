@@ -1,6 +1,6 @@
-﻿:root {
-  color: #08224a;
-  background: #f7f9fc;
+:root {
+  color: var(--simex-text-strong);
+  background: var(--simex-surface-canvas);
   font-family:
     Inter, Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif;
 }
@@ -39,8 +39,8 @@
 }
 
 .chart-wizard-step-button[aria-current="step"] {
-  border-color: var(--interactive, #075ea8);
-  box-shadow: inset 0 -3px 0 var(--interactive, #075ea8);
+  border-color: var(--simex-accent);
+  box-shadow: inset 0 -3px 0 var(--simex-accent);
 }
 
 .chart-wizard-step-button small {
@@ -112,7 +112,7 @@
 }
 
 .chart-proof-state {
-  border-left: 4px solid var(--interactive, #075ea8);
+  border-left: 4px solid var(--simex-accent);
   padding: 8px 12px;
 }
 
@@ -151,7 +151,7 @@
 }
 
 body {
-  background: #f7f9fc;
+  background: var(--simex-surface-canvas);
   margin: 0;
 }
 
@@ -171,7 +171,7 @@ body::before {
 
 .device-layout-control {
   align-items: center;
-  color: #49627a;
+  color: var(--simex-text-muted);
   display: flex;
   font-size: 13px;
   font-weight: 700;
@@ -211,7 +211,7 @@ body::before {
 
 .install-dashboard-button,
 .install-dashboard-prompt {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -229,9 +229,9 @@ body::before {
 .install-dashboard-prompt summary {
   align-items: center;
   background: white;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
-  color: #49627a;
+  color: var(--simex-text-muted);
   cursor: pointer;
   display: inline-flex;
   min-height: 34px;
@@ -244,15 +244,15 @@ body::before {
 }
 
 .install-dashboard-prompt[open] summary {
-  border-color: #043bcb;
-  color: #043bcb;
+  border-color: var(--simex-accent);
+  color: var(--simex-accent);
 }
 
 .install-dashboard-prompt p {
-  background: #f8fbff;
-  border: 1px solid #d8e2ec;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgb(8 34 74 / 12%);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   line-height: 1.45;
   margin: 8px 0 0;
   padding: 10px 12px;
@@ -315,10 +315,10 @@ body::before {
 .dashboard-header {
   align-items: flex-start;
   background:
-    linear-gradient(135deg, rgb(4 59 203 / 96%) 0%, rgb(0 124 137 / 92%) 56%, rgb(8 34 74 / 96%) 100%);
+    linear-gradient(135deg, color-mix(in srgb, var(--simex-accent) 96%, transparent) 0%, color-mix(in srgb, var(--simex-selected) 92%, transparent) 56%, color-mix(in srgb, var(--simex-text-strong) 96%, transparent) 100%);
   border: 1px solid rgb(255 255 255 / 32%);
   border-radius: 24px;
-  box-shadow: 0 22px 52px rgb(8 34 74 / 18%);
+  box-shadow: 0 22px 52px color-mix(in srgb, var(--simex-text-strong) 18%, transparent);
   color: white;
   display: flex;
   gap: 24px;
@@ -346,7 +346,7 @@ body::before {
   background: rgb(255 255 255 / 92%);
   border: 1px solid rgb(255 255 255 / 42%);
   border-radius: 18px;
-  box-shadow: 0 10px 24px rgb(8 34 74 / 20%);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--simex-text-strong) 20%, transparent);
   filter: none;
   height: 92px;
   object-fit: cover;
@@ -372,7 +372,7 @@ h1 {
 }
 
 .subtitle {
-  color: #edf5fb;
+  color: var(--simex-on-accent);
   margin: 10px 0 0;
   max-width: 760px;
 }
@@ -419,7 +419,7 @@ h1 {
 .header-text-edit-fields input {
   background: rgb(255 255 255 / 92%);
   border-color: rgb(255 255 255 / 34%);
-  color: #08224a;
+  color: var(--simex-text-strong);
   min-width: 0;
   width: 100%;
 }
@@ -483,7 +483,7 @@ h1 {
 
 .header-edit-card button {
   background: white;
-  color: #043bcb;
+  color: var(--simex-accent);
   width: 100%;
 }
 
@@ -534,10 +534,10 @@ h1 {
 
 .page-tabs {
   align-items: center;
-  background: rgb(248 251 255 / 88%);
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 18px;
-  box-shadow: 0 14px 34px rgb(8 34 74 / 8%);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -558,11 +558,11 @@ h1 {
 
 .dashboard-footer {
   align-items: center;
-  background: rgb(248 251 255 / 82%);
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 18px;
-  box-shadow: 0 12px 28px rgb(8 34 74 / 6%);
-  color: #49627a;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--simex-text-strong) 6%, transparent);
+  color: var(--simex-text-muted);
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
@@ -580,13 +580,13 @@ h1 {
 }
 
 .dashboard-footer strong {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 14px;
 }
 
 .dashboard-footer span,
 .dashboard-footer a {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -596,7 +596,7 @@ h1 {
 }
 
 .dashboard-footer a:hover {
-  color: #043bcb;
+  color: var(--simex-accent);
   text-decoration: underline;
 }
 
@@ -624,7 +624,7 @@ h1 {
 }
 
 .section-header p {
-  color: #49627a;
+  color: var(--simex-text-muted);
   margin: 6px 0 0;
 }
 
@@ -644,7 +644,7 @@ h1 {
 }
 
 .filter-pair span {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 13px;
   font-weight: 700;
   padding-bottom: 8px;
@@ -667,7 +667,7 @@ textarea {
 
 .page-tab-edit {
   align-items: center;
-  background: #edf5fb;
+  background: var(--simex-surface-panel-alt);
   border-radius: 14px;
   display: grid;
   gap: 6px;
@@ -685,7 +685,7 @@ textarea {
 }
 
 button {
-  background: #043bcb;
+  background: var(--simex-accent);
   border: 0;
   border-radius: 12px;
   color: white;
@@ -700,16 +700,16 @@ button:disabled {
 }
 
 button.secondary {
-  background: #edf5fb;
-  color: #08224a;
+  background: var(--simex-surface-panel-alt);
+  color: var(--simex-text-strong);
 }
 
 button.active {
-  background: #08224a;
+  background: var(--simex-text-strong);
 }
 
 label {
-  color: #08224a;
+  color: var(--simex-text-strong);
   display: grid;
   font-size: 13px;
   font-weight: 700;
@@ -719,9 +719,9 @@ label {
 input,
 select,
 textarea {
-  border: 1px solid rgb(8 34 74 / 20%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 20%, transparent);
   border-radius: 10px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   min-height: 32px;
   padding: 5px 8px;
 }
@@ -804,8 +804,8 @@ textarea {
 }
 
 .chart-canvas {
-  background: #eaf1f6;
-  border: 1px solid rgb(8 34 74 / 7%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 7%, transparent);
   border-radius: 16px;
   height: 380px;
   min-height: 0;
@@ -833,8 +833,8 @@ textarea {
 
 .chrono-timeline {
   align-items: center;
-  background: rgb(248 251 255 / 92%);
-  border-top: 1px solid rgb(8 34 74 / 9%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 92%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--simex-text-strong) 9%, transparent);
   display: grid;
   gap: 10px;
   grid-template-columns: auto auto minmax(0, 1fr) auto auto;
@@ -861,7 +861,7 @@ textarea {
 }
 
 .chrono-timeline span {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
@@ -878,7 +878,7 @@ textarea {
 }
 
 .chrono-slider-label strong {
-  background: #08224a;
+  background: var(--simex-text-strong);
   border-radius: 999px;
   color: white;
   font-size: 11px;
@@ -891,7 +891,7 @@ textarea {
 }
 
 .chrono-map-date-display {
-  background: rgb(8 34 74 / 82%);
+  background: color-mix(in srgb, var(--simex-text-strong) 82%, transparent);
   border: 1px solid rgb(255 255 255 / 30%);
   border-radius: 999px;
   color: white;
@@ -959,7 +959,7 @@ textarea {
 .kpi-card,
 .delta-card {
   background: white;
-  border: 1px solid rgb(8 34 74 / 10%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 14px;
   display: grid;
   gap: 3px;
@@ -975,12 +975,12 @@ textarea {
 .kpi-card span,
 .delta-card span,
 .delta-card small {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 13px;
 }
 
 .kpi-card strong {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 16px;
   line-height: 1.3;
 }
@@ -999,7 +999,7 @@ textarea {
 }
 
 .delta-positive {
-  color: #007c89;
+  color: var(--simex-selected);
 }
 
 .delta-negative {
@@ -1019,14 +1019,14 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid rgb(8 34 74 / 10%);
+  border-bottom: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   padding: 8px;
   text-align: left;
 }
 
 th {
-  background: #edf5fb;
-  color: #08224a;
+  background: var(--simex-surface-panel-alt);
+  color: var(--simex-text-strong);
   position: sticky;
   top: 0;
 }
@@ -1091,14 +1091,14 @@ th {
 
 .settings-series {
   background: #e8f1f9;
-  border: 1px solid rgb(8 34 74 / 16%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
   border-radius: 14px;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
   padding: 10px;
 }
 
 .settings-color-field {
-  color: #08224a;
+  color: var(--simex-text-strong);
   display: grid;
   font-size: 13px;
   font-weight: 700;
@@ -1114,9 +1114,9 @@ th {
 
 .settings-color-swatch {
   appearance: none;
-  border: 1px solid rgb(8 34 74 / 22%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 22%, transparent);
   border-radius: 10px;
-  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 80%), 0 2px 8px rgb(8 34 74 / 12%);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 80%), 0 2px 8px color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   cursor: pointer;
   display: block;
   height: 36px;
@@ -1127,7 +1127,7 @@ th {
 
 .settings-color-swatch[aria-expanded="true"] {
   box-shadow:
-    0 0 0 3px rgb(4 59 203 / 18%),
+    0 0 0 3px color-mix(in srgb, var(--simex-accent) 18%, transparent),
     inset 0 0 0 2px rgb(255 255 255 / 82%);
 }
 
@@ -1151,7 +1151,7 @@ th {
 }
 
 .settings-pipette-button.active {
-  background: #08224a;
+  background: var(--simex-text-strong);
   color: #ffffff;
 }
 
@@ -1166,7 +1166,7 @@ th {
 }
 
 .settings-color-field small {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 11px;
   font-weight: 600;
 }
@@ -1202,13 +1202,13 @@ th {
 .settings-color-tabs button[aria-selected="true"] {
   background: #e9f1ff;
   border-color: #5276b8;
-  color: #08224a;
+  color: var(--simex-text-strong);
   box-shadow: inset 0 -2px 0 var(--simex-icon-accent-on-light);
 }
 
 .settings-color-tab-panel {
-  background: #f8fbff;
-  border: 1px solid rgb(8 34 74 / 8%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
   border-radius: 10px;
   padding: 8px;
 }
@@ -1221,9 +1221,9 @@ th {
 .chart-authoring-section,
 .chart-authoring-preview {
   background: #fff;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 14px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -1261,10 +1261,10 @@ th {
 
 .chart-type-card {
   align-items: start;
-  background: #f8fbff;
-  border: 1px solid #d8e2ec;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   display: grid;
   gap: 5px;
   min-height: 96px;
@@ -1274,15 +1274,15 @@ th {
 
 .chart-type-card[aria-pressed="true"] {
   background: #eef4ff;
-  border-color: #043bcb;
-  box-shadow: 0 0 0 2px rgb(4 59 203 / 12%);
+  border-color: var(--simex-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--simex-accent) 12%, transparent);
 }
 
 .chart-type-card span,
 .chart-authoring-field small,
 .chart-authoring-detected,
 .chart-authoring-empty {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -1302,7 +1302,7 @@ th {
 .chart-type-picker input {
   border: 1px solid #bdcbd9;
   border-radius: 8px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   font: inherit;
   min-height: 38px;
   padding: 8px 10px;
@@ -1344,8 +1344,8 @@ th {
 
 .chart-authoring-series-color {
   align-content: start;
-  background: #f8fbff;
-  border: 1px solid #d8e2ec;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   display: grid;
   gap: 8px;
@@ -1368,8 +1368,8 @@ th {
 
 .chart-authoring-role-row {
   align-items: end;
-  background: #f8fbff;
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 10px;
   display: grid;
   gap: 8px;
@@ -1385,8 +1385,8 @@ th {
 
 .chart-authoring-filter-row {
   align-items: end;
-  background: #f8fbff;
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 10px;
   display: grid;
   gap: 8px;
@@ -1414,7 +1414,7 @@ th {
 }
 
 .chart-authoring-section-advanced {
-  background: #f8fbff;
+  background: var(--simex-surface-panel-alt);
 }
 
 .chart-authoring-section-advanced > summary {
@@ -1433,7 +1433,7 @@ th {
 .chart-authoring-preview-empty,
 .chart-authoring-preview-invalid {
   align-content: center;
-  background: #f8fbff;
+  background: var(--simex-surface-panel-alt);
   justify-items: start;
 }
 
@@ -1455,8 +1455,8 @@ th {
 }
 
 .settings-color-palette {
-  background: #f8fbff;
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 12px;
   display: grid;
   gap: 8px;
@@ -1476,7 +1476,7 @@ th {
 
 .settings-color-preset-grid button {
   aspect-ratio: 1;
-  border: 1px solid rgb(8 34 74 / 18%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 18%, transparent);
   border-radius: 9px;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 40%);
   cursor: pointer;
@@ -1485,12 +1485,12 @@ th {
 }
 
 .settings-color-preset-grid button.active {
-  box-shadow: 0 0 0 2px #08224a, inset 0 0 0 2px rgb(255 255 255 / 75%);
+  box-shadow: 0 0 0 2px var(--simex-text-strong), inset 0 0 0 2px rgb(255 255 255 / 75%);
   transform: scale(0.94);
 }
 
 .settings-color-preset-grid button:hover {
-  box-shadow: 0 0 0 2px rgb(4 59 203 / 24%), inset 0 0 0 1px rgb(255 255 255 / 55%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--simex-accent) 24%, transparent), inset 0 0 0 1px rgb(255 255 255 / 55%);
   transform: translateY(-1px);
 }
 
@@ -1503,10 +1503,10 @@ th {
 
 .settings-gradient-grid button {
   align-items: center;
-  background: #f8fbff;
-  border: 1px solid rgb(8 34 74 / 12%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   border-radius: 10px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   cursor: pointer;
   display: grid;
   gap: 4px;
@@ -1516,13 +1516,13 @@ th {
 
 .settings-gradient-grid button span {
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgb(8 34 74 / 12%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   display: block;
   height: 12px;
 }
 
 .settings-gradient-grid button small {
-  color: #506a82;
+  color: var(--simex-text-muted);
   font-size: 10px;
   line-height: 1.1;
 }
@@ -1747,10 +1747,10 @@ th {
 
 .chart-panel-selected {
   background: #f0f7ff;
-  border-color: var(--edit-highlight-color, #043bcb);
+  border-color: var(--edit-highlight-color, var(--simex-accent));
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--edit-highlight-color, #043bcb) 24%, transparent),
-    0 18px 46px rgb(8 34 74 / 16%);
+    0 0 0 3px color-mix(in srgb, var(--edit-highlight-color, var(--simex-accent)) 24%, transparent),
+    0 18px 46px color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
 }
 .chart-panel-dragging {
   opacity: 0.48;
@@ -1758,8 +1758,8 @@ th {
 }
 
 .chart-panel-drag-target {
-  border-color: #043bcb;
-  box-shadow: 0 0 0 3px rgb(4 59 203 / 18%);
+  border-color: var(--simex-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--simex-accent) 18%, transparent);
   transform: translateY(-3px);
 }
 
@@ -1805,7 +1805,7 @@ th {
 .chart-icon-button {
   align-items: center;
   background: rgb(255 255 255 / 86%);
-  color: #08224a;
+  color: var(--simex-text-strong);
   display: inline-flex;
   height: 28px;
   justify-content: center;
@@ -1951,11 +1951,11 @@ th {
 }
 
 .chart-export-menu {
-  background: #08224a;
+  background: var(--simex-text-strong);
   border: 1px solid rgb(255 255 255 / 18%);
   border-radius: 12px;
   bottom: calc(100% + 8px);
-  box-shadow: 0 14px 30px rgb(8 34 74 / 24%);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--simex-text-strong) 24%, transparent);
   display: grid;
   gap: 4px;
   min-width: 136px;
@@ -1990,11 +1990,11 @@ th {
 }
 
 .chart-info-tooltip {
-  background: #08224a;
+  background: var(--simex-text-strong);
   border: 1px solid rgb(255 255 255 / 18%);
   border-radius: 12px;
   bottom: calc(100% + 8px);
-  box-shadow: 0 14px 30px rgb(8 34 74 / 22%);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--simex-text-strong) 22%, transparent);
   color: white;
   font-size: 12px;
   left: 50%;
@@ -2029,7 +2029,7 @@ th {
 }
 
 .fullscreen-icon::after {
-  background: #edf5fb;
+  background: var(--simex-surface-panel-alt);
   content: "";
   height: 6px;
   left: 3px;
@@ -2046,7 +2046,7 @@ button.danger {
 
 .fullscreen-backdrop {
   align-items: stretch;
-  background: rgb(8 34 74 / 76%);
+  background: color-mix(in srgb, var(--simex-text-strong) 76%, transparent);
   display: grid;
   inset: 0;
   padding: 24px;
@@ -2055,7 +2055,7 @@ button.danger {
 }
 
 .fullscreen-panel {
-  background: #f8fbff;
+  background: var(--simex-surface-panel-alt);
   border-radius: 22px;
   display: grid;
   min-height: 0;
@@ -2085,7 +2085,7 @@ button.danger {
 }
 
 .settings-section {
-  border-top: 1px solid rgb(8 34 74 / 10%);
+  border-top: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   display: grid;
   gap: 8px;
   padding-top: 10px;
@@ -2111,7 +2111,7 @@ button.danger {
 
 .date-checklist-control {
   background: #f3f7fb;
-  border: 1px solid rgb(8 34 74 / 12%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   border-radius: 14px;
   display: grid;
   gap: 8px;
@@ -2138,7 +2138,7 @@ button.danger {
 }
 
 .settings-field-label {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 13px;
   font-weight: 700;
 }
@@ -2155,10 +2155,10 @@ button.danger {
 
 .column-help-button {
   align-items: center;
-  background: #eaf1f6;
-  border: 1px solid rgb(8 34 74 / 16%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
   border-radius: 999px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   cursor: help;
   display: inline-flex;
   font-size: 11px;
@@ -2172,12 +2172,12 @@ button.danger {
 
 .column-help-button:hover {
   background: #d8e8f5;
-  border-color: rgb(4 59 203 / 28%);
+  border-color: color-mix(in srgb, var(--simex-accent) 28%, transparent);
 }
 
 .compatibility-modal-backdrop {
   align-items: start;
-  background: rgb(8 34 74 / 42%);
+  background: color-mix(in srgb, var(--simex-text-strong) 42%, transparent);
   display: grid;
   inset: 0;
   justify-items: center;
@@ -2188,11 +2188,11 @@ button.danger {
 }
 
 .compatibility-modal {
-  background: #f8fbff;
+  background: var(--simex-surface-panel-alt);
   border: 1px solid rgb(255 255 255 / 70%);
   border-radius: 20px;
-  box-shadow: 0 24px 70px rgb(8 34 74 / 30%);
-  color: #08224a;
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--simex-text-strong) 30%, transparent);
+  color: var(--simex-text-strong);
   display: grid;
   gap: 14px;
   max-width: 760px;
@@ -2221,7 +2221,7 @@ button.danger {
 
 .compatibility-report-card {
   background: white;
-  border: 1px solid rgb(8 34 74 / 12%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   border-radius: 14px;
   display: grid;
   gap: 4px;
@@ -2230,7 +2230,7 @@ button.danger {
 
 .compatibility-report-card span,
 .compatibility-report-card small {
-  color: #506a82;
+  color: var(--simex-text-muted);
 }
 
 .compatibility-report-card ul {
@@ -2246,7 +2246,7 @@ button.danger {
 
 .date-checklist {
   background: white;
-  border: 1px solid rgb(8 34 74 / 10%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 12px;
   display: grid;
   gap: 4px;
@@ -2287,13 +2287,13 @@ button.danger {
 
 .date-calendar-details {
   background: white;
-  border: 1px solid rgb(8 34 74 / 10%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 6px;
   padding: 8px;
 }
 
 .date-calendar-details summary {
-  color: #08224a;
+  color: var(--simex-text-strong);
   cursor: pointer;
   font-size: 13px;
   font-weight: 700;
@@ -2308,7 +2308,7 @@ button.danger {
 }
 
 .date-calendar-month {
-  border-top: 1px solid rgb(8 34 74 / 10%);
+  border-top: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   display: grid;
   gap: 6px;
   padding-top: 8px;
@@ -2354,11 +2354,11 @@ button.danger {
 
 .date-calendar-day.available {
   background: #eef5fb;
-  color: #08224a;
+  color: var(--simex-text-strong);
 }
 
 .date-calendar-day.available:hover {
-  border-color: #043bcb;
+  border-color: var(--simex-accent);
 }
 
 .date-calendar-day.unavailable {
@@ -2370,11 +2370,11 @@ button.danger {
 
 .date-calendar-day.in-range {
   background: #dcecff;
-  border-color: rgb(4 59 203 / 18%);
+  border-color: color-mix(in srgb, var(--simex-accent) 18%, transparent);
 }
 
 .date-calendar-day.range-edge {
-  background: #043bcb;
+  background: var(--simex-accent);
   color: white;
   font-weight: 700;
 }
@@ -2386,7 +2386,7 @@ button.danger {
 .font-size-row {
   align-items: center;
   background: #f3f7fb;
-  border: 1px solid rgb(8 34 74 / 10%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 6px;
   display: grid;
   gap: 8px;
@@ -2395,7 +2395,7 @@ button.danger {
 }
 
 .font-size-row > span {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 13px;
   font-weight: 650;
 }
@@ -2449,10 +2449,10 @@ button.danger {
 }
 
 .tile-map-title {
-  background: rgb(248 251 255 / 88%);
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 10px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 17px;
   font-weight: 800;
   left: 52px;
@@ -2482,16 +2482,16 @@ button.danger {
 }
 
 .tile-map-point circle {
-  fill: rgb(4 59 203 / 62%);
+  fill: color-mix(in srgb, var(--simex-accent) 62%, transparent);
   stroke: rgb(255 255 255 / 88%);
   stroke-width: 2.4;
 }
 
 .tile-map-controls {
   background: white;
-  border: 1px solid rgb(8 34 74 / 18%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 18%, transparent);
   border-radius: 4px;
-  box-shadow: 0 3px 10px rgb(8 34 74 / 16%);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
   display: grid;
   left: 10px;
   overflow: hidden;
@@ -2503,7 +2503,7 @@ button.danger {
 .tile-map-controls button {
   background: white;
   border-radius: 0;
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 22px;
   line-height: 1;
   min-height: 30px;
@@ -2512,7 +2512,7 @@ button.danger {
 }
 
 .tile-map-controls button + button {
-  border-top: 1px solid rgb(8 34 74 / 18%);
+  border-top: 1px solid color-mix(in srgb, var(--simex-text-strong) 18%, transparent);
 }
 
 .tile-map-controls button[title="Reset map view"] {
@@ -2534,7 +2534,7 @@ button.danger {
 
 .settings-tabs {
   background: #edf4f9;
-  border: 1px solid rgb(8 34 74 / 10%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 14px;
   display: grid;
   gap: 4px;
@@ -2550,7 +2550,7 @@ button.danger {
 }
 
 .settings-tabs button.active {
-  background: #08224a;
+  background: var(--simex-text-strong);
   color: white;
 }
 
@@ -2561,7 +2561,7 @@ button.danger {
 
 .settings-collapsible-section {
   background: #f7fbff;
-  border: 1px solid rgb(8 34 74 / 10%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 14px;
   padding: 0;
 }
@@ -2570,7 +2570,7 @@ button.danger {
   align-items: center;
   background: transparent;
   border: 0;
-  color: #08224a;
+  color: var(--simex-text-strong);
   display: flex;
   font-weight: 800;
   justify-content: space-between;
@@ -2581,7 +2581,7 @@ button.danger {
 }
 
 .settings-section-body {
-  border-top: 1px solid rgb(8 34 74 / 8%);
+  border-top: 1px solid color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
   display: grid;
   gap: 8px;
   padding: 10px 12px 12px;
@@ -2625,7 +2625,7 @@ button.danger {
 .font-size-control {
   align-items: center;
   background: white;
-  border: 1px solid rgb(8 34 74 / 10%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
@@ -2690,12 +2690,12 @@ button.danger {
 
 .chart-zoom-guard:focus-visible {
   border-radius: 12px;
-  outline: 3px solid rgb(4 59 203 / 34%);
+  outline: 3px solid color-mix(in srgb, var(--simex-accent) 34%, transparent);
   outline-offset: 3px;
 }
 
 .chart-zoom-hint {
-  background: rgb(8 34 74 / 68%);
+  background: color-mix(in srgb, var(--simex-text-strong) 68%, transparent);
   border-radius: 6px;
   color: #fff;
   font-size: 0.6875rem;
@@ -2729,7 +2729,7 @@ button.danger {
 }
 
 .chart-view-title {
-  color: #18334e;
+  color: var(--simex-text-strong);
   font-size: 1rem;
 }
 
@@ -2749,7 +2749,7 @@ button.danger {
 
 .chart-view-description,
 .chart-view-provenance {
-  color: #506a82;
+  color: var(--simex-text-muted);
   font-size: 0.875rem;
   margin-top: 4px;
 }
@@ -2773,7 +2773,7 @@ button.danger {
 
 .chart-target-collection-item {
   background: #fff;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
   min-block-size: 0;
   overflow: hidden;
@@ -2781,7 +2781,7 @@ button.danger {
 }
 
 .chart-target-collection-label {
-  color: #18334e;
+  color: var(--simex-text-strong);
   font-size: 0.82rem;
   line-height: 1.18;
   margin: 0 0 2px;
@@ -2816,7 +2816,7 @@ button.danger {
 
 .chart-deferred-placeholder {
   align-items: center;
-  background: linear-gradient(110deg, #f7fafc 20%, #eaf1f6 42%, #f7fafc 64%);
+  background: linear-gradient(110deg, #f7fafc 20%, var(--simex-surface-panel-alt) 42%, #f7fafc 64%);
   background-size: 220% 100%;
   border-radius: 12px;
   color: #6b8298;
@@ -2827,10 +2827,10 @@ button.danger {
 
 .accessibility-edit-toggle {
   align-items: center;
-  background: #edf5fb;
+  background: var(--simex-surface-panel-alt);
   border: 1px solid #cddbe8;
   border-radius: 10px;
-  color: #18334e;
+  color: var(--simex-text-strong);
   display: inline-flex;
   gap: 8px;
   padding: 7px 10px;
@@ -2843,7 +2843,7 @@ button.danger {
 }
 
 .accessibility-edit-toggle small {
-  color: #506a82;
+  color: var(--simex-text-muted);
   font-size: 0.68rem;
   font-weight: 500;
 }
@@ -2913,7 +2913,7 @@ button.danger {
 }
 
 .collection-page-status {
-  color: #506a82;
+  color: var(--simex-text-muted);
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
 }
@@ -2997,9 +2997,9 @@ button.danger {
 }
 
 .collection-empty {
-  background: #eaf1f6;
+  background: var(--simex-surface-panel-alt);
   border-radius: 10px;
-  color: #506a82;
+  color: var(--simex-text-muted);
   margin: 12px 0 0;
   padding: 12px;
 }
@@ -3045,7 +3045,7 @@ button.danger {
 
 .chart-card {
   background: #fff;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
   min-width: 0;
   overflow: hidden;
@@ -3053,7 +3053,7 @@ button.danger {
 }
 
 .chart-card h4 {
-  color: #18334e;
+  color: var(--simex-text-strong);
   margin: 0 0 10px;
   overflow-wrap: anywhere;
 }
@@ -3072,14 +3072,14 @@ button.danger {
 }
 
 .chart-card dt {
-  color: #506a82;
+  color: var(--simex-text-muted);
   font-size: 0.8125rem;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .chart-card dd {
-  color: #18334e;
+  color: var(--simex-text-strong);
   font-weight: 700;
   margin: 0;
   min-width: 0;
@@ -3100,20 +3100,20 @@ button.danger {
 
 .chart-table-view caption {
   caption-side: top;
-  color: #506a82;
+  color: var(--simex-text-muted);
   padding-bottom: 6px;
   text-align: left;
 }
 
 .chart-table-view th,
 .chart-table-view td {
-  border-bottom: 1px solid #d8e2ec;
+  border-bottom: 1px solid var(--simex-border-subtle);
   padding: 8px 10px;
   text-align: left;
 }
 
 .chart-table-view th {
-  color: #18334e;
+  color: var(--simex-text-strong);
 }
 
 .playback-controls,
@@ -3167,8 +3167,8 @@ button.danger {
 
 .playback-controls--floating {
   align-items: center;
-  background: var(--simex-surface-panel, #f5f8fb);
-  border-color: var(--simex-border-strong, rgb(8 34 74 / 28%));
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong, color-mix(in srgb, var(--simex-text-strong) 28%, transparent));
   border-radius: 4px;
   box-shadow: var(--simex-style-panel-shadow);
   flex-wrap: wrap;
@@ -3306,7 +3306,7 @@ button.danger {
 }
 
 .chrono-range-boundaries {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   display: flex;
   font-size: 0.7rem;
   justify-content: space-between;
@@ -3482,7 +3482,7 @@ button.danger {
 
 .playback-member {
   background: #fff;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
   min-width: 0;
   padding: 14px;
@@ -3490,7 +3490,7 @@ button.danger {
 
 .playback-member--unavailable,
 .playback-view--empty {
-  color: #506a82;
+  color: var(--simex-text-muted);
 }
 
 .playback-view-header {
@@ -3987,7 +3987,7 @@ button.danger {
 }
 
 .section-edit-field span {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
@@ -4032,10 +4032,10 @@ button.danger {
 
 .edit-command-banner {
   align-items: center;
-  background: rgb(248 251 255 / 94%);
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 18px;
-  box-shadow: 0 14px 34px rgb(8 34 74 / 8%);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
   display: grid;
   gap: 14px;
   grid-template-columns: auto minmax(0, 1fr);
@@ -4045,10 +4045,10 @@ button.danger {
 
 .multi-select-banner {
   align-items: center;
-  background: rgb(248 251 255 / 96%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 96%, transparent);
   border: 1px solid rgb(0 166 118 / 20%);
   border-radius: 16px;
-  box-shadow: 0 12px 28px rgb(8 34 74 / 8%);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
   display: flex;
   gap: 10px;
   justify-content: flex-end;
@@ -4058,11 +4058,11 @@ button.danger {
 
 .multi-select-dock {
   align-items: center;
-  background: rgb(248 251 255 / 96%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 96%, transparent);
   border: 1px solid rgb(0 166 118 / 28%);
   border-radius: 16px;
   bottom: 24px;
-  box-shadow: 0 16px 38px rgb(8 34 74 / 24%);
+  box-shadow: 0 16px 38px color-mix(in srgb, var(--simex-text-strong) 24%, transparent);
   display: flex;
   gap: 10px;
   left: 50%;
@@ -4097,7 +4097,7 @@ button.danger {
 }
 
 .multi-select-limit-notice {
-  background: #08224a;
+  background: var(--simex-text-strong);
   border: 1px solid rgb(255 255 255 / 18%);
   border-radius: 10px;
   bottom: 86px;
@@ -4163,10 +4163,10 @@ button.danger {
 }
 
 .global-color-grid {
-  background: #f8fbff;
-  border: 1px solid rgb(8 34 74 / 12%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   border-radius: 14px;
-  box-shadow: 0 14px 30px rgb(8 34 74 / 16%);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
   display: grid;
   gap: 8px;
   min-width: 260px;
@@ -4180,7 +4180,7 @@ button.danger {
 
 .global-color-grid label {
   align-items: center;
-  color: #08224a;
+  color: var(--simex-text-strong);
   display: grid;
   font-size: 12px;
   font-weight: 800;
@@ -4197,7 +4197,7 @@ button.danger {
 .global-color-preview span {
   border: 2px solid;
   border-radius: 10px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 12px;
   font-weight: 800;
   padding: 12px;
@@ -4208,11 +4208,11 @@ button.danger {
   border-color: var(--multi-select-highlight-color, #00a676);
   box-shadow:
     0 0 0 3px color-mix(in srgb, var(--multi-select-highlight-color, #00a676) 26%, transparent),
-    0 18px 46px rgb(8 34 74 / 16%);
+    0 18px 46px color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
 }
 
 .multi-fullscreen-panel {
-  background: #f8fbff;
+  background: var(--simex-surface-panel-alt);
   border-radius: 22px;
   display: grid;
   gap: 12px;
@@ -4273,12 +4273,12 @@ button.danger {
 }
 
 .multi-fullscreen-title strong {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 15px;
 }
 
 .multi-fullscreen-title span {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 12px;
 }
 
@@ -4291,8 +4291,8 @@ button.danger {
 }
 
 .multi-fullscreen-cell {
-  background: #eaf1f6;
-  border: 1px solid rgb(8 34 74 / 8%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
   border-radius: 16px;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
@@ -4313,8 +4313,8 @@ button.danger {
 
 .multi-cell-controls {
   align-items: center;
-  background: rgb(248 251 255 / 88%);
-  border: 1px solid rgb(8 34 74 / 10%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 10%, transparent);
   border-radius: 999px;
   display: flex;
   gap: 6px;
@@ -4326,7 +4326,7 @@ button.danger {
 }
 
 .multi-cell-controls strong {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 12px;
   min-width: 18px;
   text-align: center;
@@ -4409,8 +4409,8 @@ button.danger {
 }
 
 .image-panel-frame {
-  background: #eaf1f6;
-  border: 1px solid rgb(8 34 74 / 8%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
   border-radius: 14px;
   height: 100%;
   min-height: 0;
@@ -4487,7 +4487,7 @@ button.danger {
 .wizard-choice-card,
 .wizard-review-card {
   background: rgb(255 255 255 / 78%);
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
   display: grid;
   gap: 10px;
@@ -4500,18 +4500,18 @@ button.danger {
 .binding-preview-summary small,
 .wizard-source-summary span,
 .wizard-source-summary small {
-  color: #506a82;
+  color: var(--simex-text-muted);
 }
 
 .data-profile-columns {
-  background: #eef4f8;
-  border: 1px solid #d8e2ec;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   padding: 10px;
 }
 
 .data-profile-columns summary {
-  color: #08224a;
+  color: var(--simex-text-strong);
   cursor: pointer;
   font-weight: 700;
 }
@@ -4532,12 +4532,12 @@ button.danger {
 
 .data-profile-column-list span,
 .data-profile-column-list small {
-  color: #506a82;
+  color: var(--simex-text-muted);
 }
 
 .binding-role-card h4,
 .binding-filter-card h4 {
-  color: #08224a;
+  color: var(--simex-text-strong);
   font-size: 14px;
   margin: 0;
 }
@@ -4564,7 +4564,7 @@ button.danger {
 }
 
 .binding-checkbox-list small {
-  color: #6a7f92;
+  color: var(--simex-text-faint);
   font-size: 11px;
 }
 
@@ -4577,7 +4577,7 @@ button.danger {
 }
 
 .binding-measure-appearance {
-  border-top: 1px solid #e1e9f0;
+  border-top: 1px solid var(--simex-border-subtle);
   display: grid;
   gap: 8px;
   grid-column: 1 / -1;
@@ -4652,7 +4652,7 @@ button.danger {
 }
 
 .chart-wizard-header {
-  border-bottom: 1px solid #d8e2ec;
+  border-bottom: 1px solid var(--simex-border-subtle);
 }
 
 .chart-wizard-header h2,
@@ -4661,18 +4661,18 @@ button.danger {
 }
 
 .chart-wizard-footer {
-  border-top: 1px solid #d8e2ec;
+  border-top: 1px solid var(--simex-border-subtle);
 }
 
 .chart-wizard-footer span {
-  color: #6a7f92;
+  color: var(--simex-text-faint);
   flex: 1;
   font-size: 12px;
   text-align: center;
 }
 
 .chart-wizard-steps {
-  background: #eaf1f6;
+  background: var(--simex-surface-panel-alt);
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(3, 1fr);
@@ -4683,15 +4683,15 @@ button.danger {
 
 .chart-wizard-steps li {
   border-bottom: 3px solid transparent;
-  color: #6a7f92;
+  color: var(--simex-text-faint);
   font-size: 12px;
   padding: 6px 4px;
   text-align: center;
 }
 
 .chart-wizard-steps li.active {
-  border-color: #043bcb;
-  color: #043bcb;
+  border-color: var(--simex-accent);
+  color: var(--simex-accent);
   font-weight: 800;
 }
 
@@ -4700,7 +4700,7 @@ button.danger {
 }
 
 .chart-wizard-step-tabs {
-  background: #eaf1f6;
+  background: var(--simex-surface-panel-alt);
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4712,7 +4712,7 @@ button.danger {
   border: 0;
   border-bottom: 3px solid transparent;
   border-radius: 0;
-  color: #506a82;
+  color: var(--simex-text-muted);
   min-width: 0;
   padding: 9px 6px;
 }
@@ -4720,12 +4720,12 @@ button.danger {
 .chart-wizard-step-button:hover,
 .chart-wizard-step-button:focus-visible {
   background: rgb(255 255 255 / 68%);
-  color: #043bcb;
+  color: var(--simex-accent);
 }
 
 .chart-wizard-step-button[aria-current="step"] {
-  border-bottom-color: #043bcb;
-  color: #043bcb;
+  border-bottom-color: var(--simex-accent);
+  color: var(--simex-accent);
   font-weight: 800;
 }
 
@@ -4782,7 +4782,7 @@ button.danger {
 
 .wizard-choice-card {
   background: white;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
   display: grid;
   gap: 12px;
@@ -4823,7 +4823,7 @@ button.danger {
   background: var(--simex-surface-panel, #fff);
   border: 1px solid var(--simex-border-strong, #9eb0c0);
   border-radius: var(--simex-style-control-radius, 8px);
-  color: var(--simex-text-strong, #08224a);
+  color: var(--simex-text-strong);
   cursor: pointer;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 12px;
@@ -4845,11 +4845,11 @@ button.danger {
 }
 
 .accessible-listbox-trigger:hover:not(:disabled) {
-  border-color: var(--simex-selected, #043bcb);
+  border-color: var(--simex-selected);
 }
 
 .accessible-listbox-trigger:focus-visible {
-  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus, #043bcb);
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
   outline-offset: 2px;
 }
 
@@ -4874,7 +4874,7 @@ button.danger {
   background: var(--simex-surface-panel, #fff);
   border: 1px solid var(--simex-border-strong, #9eb0c0);
   border-radius: var(--simex-style-control-radius, 8px);
-  box-shadow: var(--simex-shadow-elevated, 0 12px 28px rgb(8 34 74 / 20%));
+  box-shadow: var(--simex-shadow-elevated, 0 12px 28px color-mix(in srgb, var(--simex-text-strong) 20%, transparent));
   display: grid;
   gap: 2px;
   left: 0;
@@ -4906,7 +4906,7 @@ button.danger {
 .accessible-listbox-option:hover,
 .accessible-listbox-option[data-active="true"] {
   background: var(--simex-selected-soft, #e8efff);
-  color: var(--simex-text-strong, #08224a);
+  color: var(--simex-text-strong);
 }
 
 .accessible-listbox-option[aria-selected="true"] {
@@ -4920,7 +4920,7 @@ button.danger {
 
 .wizard-source-profile {
   background: white;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
   display: grid;
   gap: 14px;
@@ -4956,7 +4956,7 @@ button.danger {
 .wizard-source-profile-table td,
 .chart-wizard-manual-table th,
 .chart-wizard-manual-table td {
-  border-bottom: 1px solid #e1e9f0;
+  border-bottom: 1px solid var(--simex-border-subtle);
   padding: 8px 10px;
   text-align: left;
   vertical-align: middle;
@@ -4965,7 +4965,7 @@ button.danger {
 .wizard-source-profile-table thead th,
 .chart-wizard-manual-table thead th {
   background: #f2f6fa;
-  color: #36516a;
+  color: var(--simex-text-muted);
   font-size: 12px;
 }
 
@@ -5022,7 +5022,7 @@ button.danger {
 
 .confirm-dialog {
   background: white;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 14px;
   box-shadow: 0 24px 64px rgb(4 24 48 / 36%);
   display: grid;
@@ -5056,18 +5056,18 @@ button.danger {
 }
 
 .global-icon-accent-preview-light {
-  background: #f8fbff;
+  background: var(--simex-surface-panel-alt);
   color: var(--simex-icon-base);
 }
 
 .global-icon-accent-preview-dark {
-  background: #08224a;
+  background: var(--simex-text-strong);
   color: #fff;
 }
 
 /* Canonical icon-language runtime primitives */
 :root {
-  --simex-icon-base: #08224a;
+  --simex-icon-base: var(--simex-text-strong);
   --simex-icon-accent: #19d3c5;
   --simex-icon-accent-on-light: #0d746d;
   --simex-icon-accent-on-dark: #32ded1;
@@ -5280,7 +5280,7 @@ button.danger {
   border-bottom: 3px solid transparent;
   border-radius: 0;
   box-shadow: none;
-  color: #506a82;
+  color: var(--simex-text-muted);
   height: 46px;
   padding: 0;
   width: 46px;
@@ -5291,14 +5291,14 @@ button.danger {
   background: rgb(255 255 255 / 68%);
   border-bottom-color: #7f9fbd;
   box-shadow: none;
-  color: #043bcb;
+  color: var(--simex-accent);
   transform: none;
 }
 
 .chart-wizard-step-button.simex-icon-control[aria-current="step"] {
   background: #eef4ff;
-  border-bottom-color: #043bcb;
-  color: #043bcb;
+  border-bottom-color: var(--simex-accent);
+  color: var(--simex-accent);
 }
 
 .chart-wizard-step-button.simex-icon-control[data-complete="true"]:not([aria-current="step"]) {
@@ -5307,7 +5307,7 @@ button.danger {
 
 .chart-editor-tab.simex-icon-control {
   background: #eef5fb;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   color: #173f69;
   flex: 0 0 40px;
@@ -5317,8 +5317,8 @@ button.danger {
 }
 
 .chart-editor-tab.simex-icon-control[aria-current="page"] {
-  background: #043bcb;
-  border-color: #043bcb;
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
   color: #fff;
 }
 
@@ -5336,8 +5336,8 @@ button.danger {
 
 .chart-type-card.simex-icon-control {
   align-items: center;
-  background: #f8fbff;
-  border: 1px solid #d8e2ec;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 14px;
   display: inline-flex;
   gap: 10px;
@@ -5359,9 +5359,9 @@ button.danger {
 
 .chart-type-card.simex-icon-control[aria-pressed="true"] {
   background: #eef4ff;
-  border-color: #043bcb;
-  box-shadow: 0 0 0 2px rgb(4 59 203 / 12%);
-  color: #043bcb;
+  border-color: var(--simex-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--simex-accent) 12%, transparent);
+  color: var(--simex-accent);
 }
 
 .chart-authoring-icon-choice {
@@ -5431,7 +5431,7 @@ button.danger {
 .delete-dashboard-content-acknowledgement {
   align-items: start;
   background: var(--simex-surface-subtle, #f4f7fa);
-  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   display: grid;
   gap: 10px;
@@ -5455,7 +5455,7 @@ button.danger {
 }
 
 .wizard-source-summary {
-  background: #eaf1f6;
+  background: var(--simex-surface-panel-alt);
   border-radius: 10px;
   display: grid;
   gap: 3px;
@@ -5469,7 +5469,7 @@ button.danger {
 }
 
 .wizard-review-card dl div {
-  border-bottom: 1px solid #e1e9f0;
+  border-bottom: 1px solid var(--simex-border-subtle);
   display: grid;
   gap: 12px;
   grid-template-columns: 120px minmax(0, 1fr);
@@ -5477,7 +5477,7 @@ button.danger {
 }
 
 .wizard-review-card dt {
-  color: #506a82;
+  color: var(--simex-text-muted);
 }
 
 .wizard-review-card dd {
@@ -5520,16 +5520,16 @@ button.danger {
 }
 
 .header-edit-primary-actions .header-edit-floating-button.secondary {
-  background: rgb(8 34 74 / 34%);
+  background: color-mix(in srgb, var(--simex-text-strong) 34%, transparent);
   color: #fff;
 }
 
 .chart-editor-v3 {
   align-self: start;
   background: #fff;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 18px;
-  box-shadow: 0 18px 44px rgb(8 34 74 / 12%);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
   max-height: calc(100vh - 32px);
   min-width: 0;
   overflow: auto;
@@ -5566,7 +5566,7 @@ button.danger {
 }
 
 .chart-editor-type-select span {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -5589,15 +5589,15 @@ button.danger {
 
 .chart-editor-tab {
   background: #eef5fb;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   color: #173f69;
   flex: 0 0 auto;
   padding: 7px 10px;
 }
 
 .chart-editor-tab[aria-current="page"] {
-  background: #043bcb;
-  border-color: #043bcb;
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
   color: #fff;
 }
 
@@ -5669,8 +5669,8 @@ button.danger {
 
 .chart-editor-v3 {
   align-self: auto;
-  background: #f8fbff;
-  border: 1px solid rgb(216 226 236 / 92%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid color-mix(in srgb, var(--simex-border-subtle) 92%, transparent);
   box-shadow: 0 30px 90px rgb(4 24 48 / 38%);
   max-height: calc(100vh - 40px);
   max-width: 1180px;
@@ -5691,7 +5691,7 @@ button.danger {
 
 .chart-editor-header {
   background: #fff;
-  border-bottom: 1px solid #d8e2ec;
+  border-bottom: 1px solid var(--simex-border-subtle);
   padding: 14px 20px;
 }
 
@@ -5705,7 +5705,7 @@ button.danger {
 
 .chart-editor-preview {
   background: #fff;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 14px;
   min-height: 260px;
   overflow: hidden;
@@ -5719,7 +5719,7 @@ button.danger {
 
 .chart-editor-contextual-tabs {
   background: #fff;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 14px;
   min-width: 0;
   padding: 14px;
@@ -5731,7 +5731,7 @@ button.danger {
 
 .chart-editor-actions {
   background: #fff;
-  border-top: 1px solid #d8e2ec;
+  border-top: 1px solid var(--simex-border-subtle);
   justify-content: flex-end;
   padding: 12px 20px;
 }
@@ -5757,10 +5757,10 @@ html[data-simex-eyedropper-active="true"] body * {
 
 .simex-page-color-sampler {
   align-items: center;
-  background: #08224a;
+  background: var(--simex-text-strong);
   border: 1px solid rgb(255 255 255 / 28%);
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgb(8 34 74 / 28%);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--simex-text-strong) 28%, transparent);
   color: #ffffff;
   display: grid;
   font-size: 0.72rem;
@@ -5779,7 +5779,7 @@ html[data-simex-eyedropper-active="true"] body * {
 .simex-page-color-sampler-swatch {
   border: 2px solid #ffffff;
   border-radius: 7px;
-  box-shadow: 0 0 0 1px rgb(8 34 74 / 32%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--simex-text-strong) 32%, transparent);
   grid-row: 1 / span 2;
   height: 28px;
   width: 28px;
@@ -5827,10 +5827,10 @@ html[data-simex-eyedropper-active="true"] body * {
 .chart-panel-icon-button {
   align-items: center;
   background: rgb(255 255 255 / 92%);
-  border: 1px solid rgb(8 34 74 / 18%);
+  border: 1px solid color-mix(in srgb, var(--simex-text-strong) 18%, transparent);
   border-radius: 9px;
-  box-shadow: 0 6px 18px rgb(8 34 74 / 16%);
-  color: #08224a;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
+  color: var(--simex-text-strong);
   display: inline-flex;
   height: 32px;
   justify-content: center;
@@ -5840,7 +5840,7 @@ html[data-simex-eyedropper-active="true"] body * {
 
 .chart-panel-icon-button:hover,
 .chart-panel-icon-button:focus-visible {
-  background: #043bcb;
+  background: var(--simex-accent);
   color: #fff;
 }
 
@@ -5880,7 +5880,7 @@ html[data-simex-eyedropper-active="true"] body * {
 }
 
 .chart-source-popover {
-  background: #08224a;
+  background: var(--simex-text-strong);
   border: 1px solid rgb(255 255 255 / 16%);
   border-radius: 10px;
   bottom: 40px;

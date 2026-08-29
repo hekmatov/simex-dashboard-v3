@@ -14,10 +14,10 @@
 
 .static-content-dialog {
   background: var(--simex-surface-panel, #fff);
-  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 18px;
   box-shadow: 0 22px 70px rgb(15 35 54 / 24%);
-  color: var(--simex-text-strong, #18334e);
+  color: var(--simex-text-strong);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   max-height: min(860px, calc(100dvh - 24px));
@@ -38,14 +38,14 @@
 }
 
 .static-content-dialog > nav {
-  border-block: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border-block: 1px solid var(--simex-border-subtle);
   justify-content: flex-start;
   overflow-x: auto;
 }
 
 .static-content-dialog > footer {
   background: var(--simex-surface-panel, #fff);
-  border-top: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border-top: 1px solid var(--simex-border-subtle);
   justify-content: flex-end;
 }
 
@@ -70,7 +70,7 @@
 .free-text-chart-view :is(a, [tabindex="0"]):focus-visible,
 .chart-image-view :is(button, [tabindex="0"]):focus-visible,
 .image-transform-editor :is(button, input, select, [tabindex="0"]):focus-visible {
-  outline: 3px solid var(--simex-accent, #043bcb);
+  outline: 3px solid var(--simex-accent);
   outline-offset: 3px;
 }
 
@@ -95,7 +95,7 @@
 }
 
 .free-text-source-editor__tabs [aria-selected="true"] {
-  background: var(--simex-accent, #043bcb);
+  background: var(--simex-accent);
   color: #fff;
 }
 
@@ -107,7 +107,7 @@
 }
 
 .free-text-source-editor__pane {
-  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 14px;
   min-height: 360px;
   min-width: 0;
@@ -156,7 +156,7 @@
 .portable-qmd-composer__link-editor {
   align-items: end;
   background: var(--simex-surface-muted, #f7f9fb);
-  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   display: flex;
   flex-wrap: wrap;
@@ -165,7 +165,7 @@
 }
 
 .portable-qmd-composer__surface {
-  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   box-sizing: border-box;
   min-height: 260px;
@@ -173,7 +173,7 @@
 }
 
 .portable-qmd-composer__surface:focus-visible {
-  outline: 3px solid var(--simex-accent, #043bcb);
+  outline: 3px solid var(--simex-accent);
   outline-offset: 3px;
 }
 
@@ -190,13 +190,13 @@
 }
 
 .portable-qmd-lead {
-  color: var(--simex-text-strong, #18334e);
+  color: var(--simex-text-strong);
   font-size: 1.125rem;
   line-height: 1.55;
 }
 
 .portable-qmd-caption {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   font-size: 0.875rem;
 }
 
@@ -242,7 +242,7 @@
 }
 
 .free-text-source-editor__status {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   margin: 10px 0 0;
 }
 
@@ -282,7 +282,7 @@
 }
 
 .free-text-chart-view__header {
-  border-bottom: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border-bottom: 1px solid var(--simex-border-subtle);
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
 }
@@ -293,7 +293,7 @@
 }
 
 .free-text-chart-view__header p {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   margin: 0.35rem 0 0;
 }
 
@@ -315,8 +315,8 @@
 }
 
 .free-text-chart-view__content blockquote {
-  border-inline-start: 4px solid var(--simex-accent, #043bcb);
-  color: var(--simex-text-muted, #506a82);
+  border-inline-start: 4px solid var(--simex-accent);
+  color: var(--simex-text-muted);
   margin-inline: 0;
   padding-inline: 1rem;
 }
@@ -360,7 +360,7 @@
 }
 
 .portable-qmd-table-scroll :is(th, td) {
-  border-bottom: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border-bottom: 1px solid var(--simex-border-subtle);
   padding: 8px 12px;
   vertical-align: top;
 }
@@ -368,7 +368,7 @@
 .portable-qmd-code-scroll pre {
   background: #12283b;
   border-radius: 10px;
-  color: #f5f8fb;
+  color: var(--simex-surface-panel);
   margin: 0;
   min-width: max-content;
   padding: 14px;
@@ -380,7 +380,7 @@
 }
 
 .portable-qmd-fence-info {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   font: 0.8125rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
   margin: 0 0 0.4rem;
   overflow-wrap: anywhere;
@@ -442,8 +442,8 @@ pre.portable-qmd-math-fallback {
 
 .static-content-state--loading,
 .chart-status-empty {
-  background: #eaf1f6;
-  color: #506a82;
+  background: var(--simex-surface-panel-alt);
+  color: var(--simex-text-muted);
 }
 
 .image-transform-editor {
@@ -491,7 +491,7 @@ pre.portable-qmd-math-fallback {
 
 .image-crop-selection {
   border: 3px solid #fff;
-  box-shadow: 0 0 0 2px #043bcb, 0 2px 12px rgb(15 35 54 / 34%);
+  box-shadow: 0 0 0 2px var(--simex-accent), 0 2px 12px rgb(15 35 54 / 34%);
   cursor: move;
   height: var(--image-crop-height);
   left: var(--image-crop-x);
@@ -513,7 +513,7 @@ pre.portable-qmd-math-fallback {
 }
 
 .image-crop-handle::after {
-  background: #043bcb;
+  background: var(--simex-accent);
   border: 2px solid #fff;
   border-radius: 50%;
   content: "";
@@ -533,7 +533,7 @@ pre.portable-qmd-math-fallback {
 
 .image-guided-section {
   background: var(--simex-surface-muted, #f7f9fb);
-  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 14px;
   display: grid;
   gap: 12px;
@@ -544,7 +544,7 @@ pre.portable-qmd-math-fallback {
 
 .image-guided-section__step {
   align-items: center;
-  background: var(--simex-accent, #043bcb);
+  background: var(--simex-accent);
   border-radius: 50%;
   color: #fff;
   display: flex;
@@ -573,7 +573,7 @@ pre.portable-qmd-math-fallback {
 }
 
 .image-guided-section small {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   display: block;
   margin-block: 4px 10px;
 }
@@ -677,7 +677,7 @@ pre.portable-qmd-math-fallback {
 .chart-image-actions {
   align-items: center;
   background: var(--simex-surface-panel, #fff);
-  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
   bottom: 32px;
   box-shadow: 0 4px 18px rgb(15 35 54 / 18%);
@@ -707,14 +707,14 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-zoom-status {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   min-width: 4ch;
 }
 
 .chart-image-view figcaption {
-  color: var(--simex-text-muted, #506a82);
+  color: var(--simex-text-muted);
   font-size: 0.875rem;
   margin-top: 6px;
 }
