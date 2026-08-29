@@ -11,6 +11,10 @@ const sources = Object.freeze({
   tokens: "src/styles/tokens.css",
   grammar: "src/styles/dashboard-style-grammar.css",
   modes: "src/styles/modes.css",
+  appFrame: "src/components/app-shell/AppFrame.jsx",
+  rightDrawer: "src/components/common/RightSideDrawer.jsx",
+  rightDrawerStyles: "src/styles/right-side-drawer.css",
+  operationStatus: "src/components/app-shell/OperationStatusViewport.jsx",
 });
 
 async function source(path) {
@@ -64,5 +68,40 @@ test("View and Build share one central canvas maximum and responsive token", asy
     modes,
     /\.canonical-dashboard-frame\.build-workspace\s*\{[^{}]*top:\s*-2px/,
     "the superseded 768px coordinate compensation must not remain",
+  );
+});
+
+test("Look, Map, More, and Audience share one measured crown-bottom drawer coordinate", async () => {
+  const [appFrame, rightDrawer, rightDrawerStyles, modes, operationStatus] = await Promise.all([
+    source(sources.appFrame),
+    source(sources.rightDrawer),
+    source(sources.rightDrawerStyles),
+    source(sources.modes),
+    source(sources.operationStatus),
+  ]);
+
+  assert.match(appFrame, /--right-side-drawer-top/);
+  assert.match(appFrame, /rightSideDrawerTopFromCrown/);
+  assert.match(rightDrawer, /data-right-side-drawer/);
+  assert.match(rightDrawerStyles, /top:\s*var\(--right-side-drawer-top\)/);
+  assert.match(
+    rightDrawerStyles,
+    /data-drawer-modality="dialog"[\s\S]*?z-index:\s*1600/,
+    "dialog drawers must remain above interactive operation notices",
+  );
+  assert.match(
+    rightDrawerStyles,
+    /prefers-reduced-motion:\s*reduce[\s\S]*?animation:\s*none\s*!important[\s\S]*?transition:\s*none\s*!important/,
+  );
+  assert.match(operationStatus, /RIGHT_SIDE_DRAWER_SELECTOR/);
+  assert.doesNotMatch(
+    modes,
+    /\[data-dashboard-map-open="true"\][^{]*\{[^}]*\b(?:margin-left|width):/,
+    "Dashboard Map must overlay without compressing or repositioning the canvas",
+  );
+  assert.doesNotMatch(
+    modes,
+    /\[data-dashboard-map-open="true"\][\s\S]*?\.build-command-groups\s*\{/,
+    "Dashboard Map must not reflow the compact command bar",
   );
 });

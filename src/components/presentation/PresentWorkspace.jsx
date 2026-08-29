@@ -4,6 +4,7 @@ import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import { MAX_DISPLAYED_CHARTS, reduceDisplayState } from "../../lib/displayController.js";
 import { buildPresentableItemIndex } from "../../static-content/staticPanelCapabilities.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
+import AudienceDisplayOptionsDrawer from "./AudienceDisplayOptionsDrawer.jsx";
 import PresentationController, {
   buildPresentationState,
   presentationSourceEligibility,
@@ -24,6 +25,7 @@ export default function PresentWorkspace({
 }) {
   const playback = usePlayback();
   const [compositionHost, setCompositionHost] = React.useState(null);
+  const [audienceOptionsOpen, setAudienceOptionsOpen] = React.useState(false);
   const playbackDispatchRef = React.useRef(playback.dispatch);
   playbackDispatchRef.current = playback.dispatch;
   const playbackViewOwner = `present:${React.useId()}`;
@@ -150,7 +152,23 @@ export default function PresentWorkspace({
           <p>{sceneSummary(activePage, selectedCharts)}</p>
         </div>
         <div className="present-status-actions">
-          <button type="button" className="secondary dashboard-look-trigger" onClick={onOpenDashboardLook}>Dashboard look</button>
+          <button
+            type="button"
+            className="secondary dashboard-look-trigger"
+            onClick={onOpenDashboardLook}
+          >
+            Dashboard look
+          </button>
+          <button
+            type="button"
+            className="secondary audience-display-options-trigger"
+            aria-controls="audience-display-options-drawer"
+            aria-expanded={audienceOptionsOpen}
+            aria-haspopup="dialog"
+            onClick={() => setAudienceOptionsOpen(true)}
+          >
+            Audience display options
+          </button>
         </div>
         {connectionError && <p className="present-connection-error" role="status">{connectionError}</p>}
         {activeSceneTemporalReview && (
@@ -245,39 +263,6 @@ export default function PresentWorkspace({
               ))}
             </div>
           </section>
-          <fieldset className="present-audience-information">
-            <legend>Display on audience</legend>
-            <p>Shared information can be hidden without changing its value.</p>
-            {audienceInformation.map((fact) => {
-              const available = Boolean(fact.value);
-              const descriptionId = `present-audience-fact-${fact.key}`;
-              return (
-                <label
-                  className={`present-audience-fact${available ? "" : " is-unavailable"}`}
-                  key={fact.key}
-                  title={available ? undefined : fact.unavailableReason}
-                >
-                  <input
-                    type="checkbox"
-                    aria-label={`Display ${fact.label}`}
-                    aria-describedby={descriptionId}
-                    checked={audienceFacts[fact.key] === true}
-                    disabled={!available}
-                    onChange={(event) => setAudienceFactVisible(
-                      fact.key,
-                      event.target.checked,
-                    )}
-                  />
-                  <span>
-                    <strong>{fact.label}</strong>
-                    <small id={descriptionId}>
-                      {fact.value ?? fact.unavailableReason}
-                    </small>
-                  </span>
-                </label>
-              );
-            })}
-          </fieldset>
           <p className="present-scene-summary">{sceneSummary(activePage, selectedCharts)}</p>
         </aside>
 
@@ -340,6 +325,13 @@ export default function PresentWorkspace({
           onSaveSceneDatePosition={onSaveSceneDatePosition}
         />
       </section>
+      <AudienceDisplayOptionsDrawer
+        open={audienceOptionsOpen}
+        onClose={() => setAudienceOptionsOpen(false)}
+        audienceInformation={audienceInformation}
+        audienceFacts={audienceFacts}
+        onAudienceFactVisible={setAudienceFactVisible}
+      />
     </main>
   );
 }

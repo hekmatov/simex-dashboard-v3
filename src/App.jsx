@@ -422,17 +422,6 @@ export default function App() {
   ) : null;
 
   React.useEffect(() => {
-    if (mode !== "build" || !buildPanelOpen) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      event.preventDefault();
-      closeBuildPanel({ returnFocus: true });
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [buildPanelOpen, mode]);
-
-  React.useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
     const applyColorScheme = () => setPrefersDark(colorScheme.matches);
@@ -1818,6 +1807,7 @@ export default function App() {
       onDeleteDashboardContent={deleteDashboardContent}
       onOpenDashboardLook={openDashboardLook}
       buildPanelOpen={buildPanelOpen}
+      onCloseBuildPanel={() => closeBuildPanel()}
       themeProjection={dashboardThemeProjection}
       operationError={operationError}
     />

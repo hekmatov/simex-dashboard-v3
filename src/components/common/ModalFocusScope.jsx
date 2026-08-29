@@ -24,6 +24,7 @@ export default function ModalFocusScope({
   open = true,
   initialFocusRef,
   initialFocusSelector = "",
+  restoreFocus = true,
   onEscape = noop,
   tabIndex = -1,
   children,
@@ -33,6 +34,7 @@ export default function ModalFocusScope({
     open,
     initialFocusRef,
     initialFocusSelector,
+    restoreFocus,
     onEscape,
   });
   return React.createElement(as, {
@@ -54,6 +56,7 @@ export function useModalFocus({
   dialogRef: suppliedDialogRef,
   initialFocusRef,
   initialFocusSelector = "",
+  restoreFocus = true,
   onEscape = noop,
 } = {}) {
   const internalDialogRef = React.useRef(null);
@@ -61,11 +64,13 @@ export function useModalFocus({
   const latest = React.useRef({
     initialFocusRef,
     initialFocusSelector,
+    restoreFocus,
     onEscape,
   });
   latest.current = {
     initialFocusRef,
     initialFocusSelector,
+    restoreFocus,
     onEscape,
   };
 
@@ -78,6 +83,7 @@ export function useModalFocus({
       node,
       getInitialFocusRef: () => latest.current.initialFocusRef,
       getInitialFocusSelector: () => latest.current.initialFocusSelector,
+      restoreFocus: latest.current.restoreFocus,
       onEscape: () => latest.current.onEscape?.(),
     });
   }, [dialogRef, open]);
@@ -131,7 +137,7 @@ function registerModal(entry) {
       ownerDocument.removeEventListener("keydown", registry.onKeyDown, true);
       documentRegistries.delete(ownerDocument);
     }
-    if (wasTop) restoreFocus(registered);
+    if (wasTop && registered.restoreFocus) restoreFocus(registered);
   };
 }
 

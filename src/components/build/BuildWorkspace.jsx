@@ -63,6 +63,7 @@ import {
 } from "./buildDraftCoordinator.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import SourceContentWorkspace, { createSourceContentViewState } from "../source-content/SourceContentWorkspace.jsx";
+import RightSideDrawer from "../common/RightSideDrawer.jsx";
 
 export default function BuildWorkspace({
   themeProjection,
@@ -74,6 +75,7 @@ export default function BuildWorkspace({
   activePage,
   pageType,
   buildPanelOpen = false,
+  onCloseDashboardMap,
   selection,
   dashboardDraft,
   pageDrafts,
@@ -122,7 +124,6 @@ export default function BuildWorkspace({
   selectionControllerRef,
   exportResolutionControllerRef,
 }) {
-  const dashboardMapRef = React.useRef(null);
   const [mapRegion, setMapRegion] = React.useState("structure");
   const [draftCoordinator, dispatchDraftCoordinator] = React.useReducer(
     reduceBuildDraftCoordinator,
@@ -197,70 +198,6 @@ export default function BuildWorkspace({
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
   }, [localAuthoringDrafts, onLocalDraftsChange]);
-
-  React.useEffect(() => {
-    let frame = 0;
-    const updateDashboardMapTop = () => {
-      frame = 0;
-      const panel = dashboardMapRef.current;
-      if (!panel) return;
-      const crownBottom = document.querySelector(".dashboard-command-crown")
-        ?.getBoundingClientRect().bottom ?? 0;
-      const commandHeaderBottom = document.querySelector(".build-command-header")
-        ?.getBoundingClientRect().bottom ?? crownBottom;
-      const visibleHeaderBottom = commandHeaderBottom > crownBottom
-        ? commandHeaderBottom
-        : crownBottom;
-      const panelHeaderHeight = panel.querySelector(".dashboard-map-header")
-        ?.getBoundingClientRect().height ?? 0;
-      const firstMapRow = panel.querySelector('[role="treeitem"] .build-tree-row');
-      const panelStyle = window.getComputedStyle(panel);
-      const panelChromeHeight = [
-        panelStyle.borderTopWidth,
-        panelStyle.borderBottomWidth,
-        panelStyle.paddingTop,
-        panelStyle.paddingBottom,
-        panelStyle.rowGap,
-      ].reduce((total, value) => total + (Number.parseFloat(value) || 0), 0);
-      const minimumUsableHeight = firstMapRow
-        ? firstMapRow.getBoundingClientRect().bottom - panel.getBoundingClientRect().top
-        : panelHeaderHeight + panelChromeHeight + 44;
-      const viewportBottom = window.visualViewport
-        ? window.visualViewport.offsetTop + window.visualViewport.height
-        : window.innerHeight;
-      const crownSafeTop = Math.max(12, crownBottom + 12);
-      const latestUsableTop = Math.max(
-        crownSafeTop,
-        viewportBottom - minimumUsableHeight - 12,
-      );
-      panel.style.setProperty(
-        "--dashboard-map-top",
-        `${Math.min(Math.max(crownSafeTop, visibleHeaderBottom + 12), latestUsableTop)}px`,
-      );
-    };
-    const scheduleUpdate = () => {
-      if (!frame) frame = window.requestAnimationFrame(updateDashboardMapTop);
-    };
-    updateDashboardMapTop();
-    window.addEventListener("scroll", scheduleUpdate, { passive: true });
-    window.addEventListener("resize", scheduleUpdate);
-    const observedSurfaces = [
-      document.querySelector(".dashboard-command-crown"),
-      document.querySelector(".build-command-header"),
-      dashboardMapRef.current?.querySelector(".dashboard-map-header"),
-      dashboardMapRef.current?.querySelector('[role="treeitem"] .build-tree-row'),
-    ].filter(Boolean);
-    const observer = typeof ResizeObserver === "function"
-      ? new ResizeObserver(scheduleUpdate)
-      : null;
-    observedSurfaces.forEach((surface) => observer?.observe(surface));
-    return () => {
-      window.removeEventListener("scroll", scheduleUpdate);
-      window.removeEventListener("resize", scheduleUpdate);
-      observer?.disconnect();
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, [buildPanelOpen]);
 
   React.useEffect(() => {
     dispatchDraftCoordinator({ type: "SYNC_SLOT", slot: "layout", draft: layoutDraft });
@@ -788,21 +725,18 @@ export default function BuildWorkspace({
               )}
             </aside>
           ), document.body)}
-          <aside
-            ref={dashboardMapRef}
+          <RightSideDrawer
             id="dashboard-map-panel"
+            title="Dashboard map"
+            open={buildPanelOpen}
+            onClose={onCloseDashboardMap}
+            modality="complementary"
+            eyebrow="Build"
             className="dashboard-map-panel"
-            role="complementary"
-            aria-label="Dashboard map"
-            data-open={buildPanelOpen ? "true" : "false"}
-            aria-hidden={buildPanelOpen ? undefined : "true"}
-            inert={!buildPanelOpen}
-          >
-            <header className="dashboard-map-header">
-              <div>
-                <p className="eyebrow">Build</p>
-                <h2>Dashboard map</h2>
-              </div>
+            headerClassName="dashboard-map-header"
+            contentClassName="dashboard-map-content"
+            panelProps={{ "aria-label": "Dashboard map" }}
+            headerActions={(
               <div className="dashboard-map-region-switch" role="group" aria-label="Dashboard map regions">
                 <button
                   type="button"
@@ -823,7 +757,8 @@ export default function BuildWorkspace({
                   Inspector
                 </button>
               </div>
-            </header>
+            )}
+          >
             <section className="build-region-grid">
               {mapRegion === "structure" ? (
                 <section className="build-side-sheet build-structure-sheet" data-dashboard-map-region="structure">
@@ -835,7 +770,7 @@ export default function BuildWorkspace({
                 </section>
               )}
             </section>
-          </aside>
+          </RightSideDrawer>
           {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
               themeProjection={themeProjection}

@@ -907,6 +907,15 @@
   padding: 14px;
 }
 
+.audience-display-options-drawer__content {
+  padding: 18px;
+}
+
+.audience-display-options-drawer .present-audience-information {
+  border: 0;
+  padding: 0;
+}
+
 .present-audience-information > legend {
   font-weight: 800;
   padding-inline: 4px;

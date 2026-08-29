@@ -3,6 +3,11 @@ import React from "react";
 import DashboardCommandCrown from "./DashboardCommandCrown.jsx";
 import OperationStatusViewport from "./OperationStatusViewport.jsx";
 import PhoneModeNotice from "./PhoneModeNotice.jsx";
+import { rightSideDrawerTopFromCrown } from "../common/RightSideDrawer.jsx";
+
+const useBrowserLayoutEffect = typeof window === "undefined"
+  ? React.useEffect
+  : React.useLayoutEffect;
 
 export default function AppFrame({
   mode,
@@ -33,6 +38,7 @@ export default function AppFrame({
 }) {
   const phoneUnsupported = mode === "build" || mode === "present";
   const frameRef = React.useRef(null);
+  const [rightSideDrawerTop, setRightSideDrawerTop] = React.useState(12);
   const phoneRestorationRef = React.useRef({
     scrollX: 0,
     scrollY: 0,
@@ -83,6 +89,41 @@ export default function AppFrame({
     };
   }, [phoneUnsupported]);
 
+  useBrowserLayoutEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const crownBottom = frameRef.current
+        ?.querySelector(".dashboard-command-crown")
+        ?.getBoundingClientRect().bottom;
+      const viewportTop = window.visualViewport?.offsetTop ?? 0;
+      const next = rightSideDrawerTopFromCrown({ crownBottom, viewportTop });
+      setRightSideDrawerTop((current) => current === next ? current : next);
+    };
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    const crown = frameRef.current?.querySelector(".dashboard-command-crown");
+    const observer = typeof ResizeObserver === "function" && crown
+      ? new ResizeObserver(schedule)
+      : null;
+    observer?.observe(crown);
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    window.visualViewport?.addEventListener("resize", schedule);
+    window.visualViewport?.addEventListener("scroll", schedule);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      window.visualViewport?.removeEventListener("resize", schedule);
+      window.visualViewport?.removeEventListener("scroll", schedule);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <div
       ref={frameRef}
@@ -95,7 +136,11 @@ export default function AppFrame({
       data-appearance-preference={theme?.appearancePreference}
       data-resolved-appearance={theme?.resolvedAppearance}
       data-look-drawer-open={lookDrawerOpen ? "true" : undefined}
-      style={{ ...theme?.cssVariables, ...theme?.styleVariables }}
+      style={{
+        ...theme?.cssVariables,
+        ...theme?.styleVariables,
+        "--right-side-drawer-top": `${rightSideDrawerTop}px`,
+      }}
     >
       {phoneUnsupported && <PhoneModeNotice
         mode={mode}

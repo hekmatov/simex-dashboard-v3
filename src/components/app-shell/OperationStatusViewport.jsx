@@ -1,6 +1,10 @@
 import React from "react";
 
 import { useOperationStatus } from "./OperationStatusProvider.jsx";
+import {
+  RIGHT_SIDE_DRAWER_CHANGE_EVENT,
+  RIGHT_SIDE_DRAWER_SELECTOR,
+} from "../common/RightSideDrawer.jsx";
 
 const RIGHT_DRAWER_SELECTORS = Object.freeze({
   look: ".look-drawer",
@@ -15,9 +19,14 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
   const { dismissOperation, snapshot } = useOperationStatus();
   const [footerOffset, setFooterOffset] = React.useState(0);
   const [drawerOffset, setDrawerOffset] = React.useState(0);
+  const [activeDrawerId, setActiveDrawerId] = React.useState(null);
 
   useBrowserLayoutEffect(() => {
     let frame = 0;
+    let observedDrawer = null;
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(() => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    }) : null;
     const update = () => {
       frame = 0;
       const footer = document.querySelector(".dashboard-footer");
@@ -30,8 +39,14 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
         : 0;
       setFooterOffset(Math.ceil(overlap));
 
-      const drawerSelector = RIGHT_DRAWER_SELECTORS[rightDrawer];
-      const drawer = drawerSelector ? document.querySelector(drawerSelector) : null;
+      const drawer = activeRightSideDrawer(document)
+        ?? legacyRightSideDrawer(document, rightDrawer);
+      if (drawer !== observedDrawer) {
+        if (observedDrawer) observer?.unobserve(observedDrawer);
+        observedDrawer = drawer;
+        if (observedDrawer) observer?.observe(observedDrawer);
+      }
+      setActiveDrawerId(drawer?.dataset?.rightSideDrawer ?? rightDrawer ?? null);
       setDrawerOffset(measureOperationStatusDrawerOffset({
         viewportWidth: window.innerWidth,
         drawerRect: drawer?.getBoundingClientRect(),
@@ -43,20 +58,18 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
     update();
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
+    window.addEventListener(RIGHT_SIDE_DRAWER_CHANGE_EVENT, schedule);
     window.visualViewport?.addEventListener("resize", schedule);
     window.visualViewport?.addEventListener("scroll", schedule);
     const footer = document.querySelector(".dashboard-footer");
-    const drawerSelector = RIGHT_DRAWER_SELECTORS[rightDrawer];
-    const drawer = drawerSelector ? document.querySelector(drawerSelector) : null;
-    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(schedule) : null;
     if (footer) {
       observer?.observe(footer);
       if (footer.parentElement) observer?.observe(footer.parentElement);
     }
-    if (drawer) observer?.observe(drawer);
     return () => {
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
+      window.removeEventListener(RIGHT_SIDE_DRAWER_CHANGE_EVENT, schedule);
       window.visualViewport?.removeEventListener("resize", schedule);
       window.visualViewport?.removeEventListener("scroll", schedule);
       observer?.disconnect();
@@ -75,7 +88,7 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
   return (
     <div
       className="operation-status-viewport"
-      data-right-drawer={rightDrawer ?? "none"}
+      data-right-drawer={activeDrawerId ?? rightDrawer ?? "none"}
       style={geometry}
     >
       <span
@@ -123,6 +136,17 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
       </div>
     </div>
   );
+}
+
+export function activeRightSideDrawer(ownerDocument = document) {
+  return [...(ownerDocument?.querySelectorAll?.(RIGHT_SIDE_DRAWER_SELECTOR) ?? [])]
+    .filter((drawer) => drawer.getClientRects?.().length !== 0)
+    .at(-1) ?? null;
+}
+
+function legacyRightSideDrawer(ownerDocument, rightDrawer) {
+  const drawerSelector = RIGHT_DRAWER_SELECTORS[rightDrawer];
+  return drawerSelector ? ownerDocument?.querySelector?.(drawerSelector) : null;
 }
 
 export function measureOperationStatusDrawerOffset({ viewportWidth, drawerRect } = {}) {

@@ -7,7 +7,7 @@ import {
 } from "../../theme/dashboardTheme.js";
 import { resolveDashboardLookSurfaceAttributes } from "../../theme/dashboardLookDraft.js";
 import { SimExIcon } from "../common/SimExIcon.js";
-import ModalFocusScope from "../common/ModalFocusScope.jsx";
+import RightSideDrawer from "../common/RightSideDrawer.jsx";
 
 const APPEARANCE_OPTIONS = Object.freeze([
   Object.freeze({ value: "system", label: "System", iconId: "auto" }),
@@ -74,39 +74,35 @@ export default function DashboardLookDrawer({
   const update = (field, value) => onPreviewChange?.({ ...preview, [field]: value });
 
   return (
-    <div
-      className="look-drawer-layer"
-      data-open="true"
-      data-dashboard-style={surface.style}
-      data-dashboard-color-profile={surface.colorProfile}
-      data-resolved-appearance={surface.resolvedAppearance}
-    >
-      <div
-        className="look-drawer-click-catcher"
-        aria-hidden="true"
-        onMouseDown={onCancel}
-      />
-      <ModalFocusScope
-        as="aside"
-        open
-        className="look-drawer"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="look-drawer-title"
-        aria-describedby="look-drawer-description"
-        aria-busy={busy || undefined}
-        onEscape={onCancel}
-      >
-        <header className="look-drawer-header">
-          <div>
-            <p className="eyebrow">Dashboard settings</p>
-            <h2 id="look-drawer-title">Dashboard look</h2>
-            <p id="look-drawer-description">Selections are saved automatically and applied to the live dashboard.</p>
+    <RightSideDrawer
+      id="look-drawer"
+      title="Dashboard look"
+      open
+      onClose={onCancel}
+      modality="dialog"
+      eyebrow="Dashboard settings"
+      description="Selections are saved automatically and applied to the live dashboard."
+      className="look-drawer"
+      layerClassName="look-drawer-layer"
+      clickCatcherClassName="look-drawer-click-catcher"
+      headerClassName="look-drawer-header"
+      contentClassName="look-drawer-scroll"
+      panelProps={{
+        "data-dashboard-style": surface.style,
+        "data-dashboard-color-profile": surface.colorProfile,
+        "data-resolved-appearance": surface.resolvedAppearance,
+        "aria-busy": busy || undefined,
+      }}
+      footer={(
+        <footer className="look-drawer-footer">
+          <div className="look-drawer-feedback" aria-live="polite">
+            {error
+              ? <span className="look-drawer-error" role="alert">{error}</span>
+              : status || (busy ? "Saving selection…" : "Selections are saved automatically.")}
           </div>
-          <button type="button" className="secondary" onClick={onCancel}>Close</button>
-        </header>
-
-        <div className="look-drawer-scroll">
+        </footer>
+      )}
+    >
           <fieldset className="look-control-section look-appearance-section">
             <legend>Appearance</legend>
             <div className="look-appearance-options">
@@ -191,16 +187,6 @@ export default function DashboardLookDrawer({
               ))}
             </div>
           </fieldset>
-        </div>
-
-        <footer className="look-drawer-footer">
-          <div className="look-drawer-feedback" aria-live="polite">
-            {error
-              ? <span className="look-drawer-error" role="alert">{error}</span>
-              : status || (busy ? "Saving selection…" : "Selections are saved automatically.")}
-          </div>
-        </footer>
-      </ModalFocusScope>
-    </div>
+    </RightSideDrawer>
   );
 }

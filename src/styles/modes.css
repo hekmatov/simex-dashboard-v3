@@ -1721,20 +1721,13 @@
 }
 
 .dashboard-map-panel {
-  background: var(--simex-surface-panel);
-  border: 1px solid var(--simex-border-subtle);
-  box-shadow: var(--simex-style-panel-shadow);
-  display: grid;
-  gap: 10px;
-  /* Follow the command crown until it scrolls away, then use the full viewport. */
-  max-height: calc(100vh - var(--dashboard-map-top, 174px) - 12px);
-  overflow: auto;
+  --right-side-drawer-header-display: grid;
+  --right-side-drawer-max-width: min(380px, 100%);
+  --right-side-drawer-width: min(380px, calc(100vw - 24px));
+}
+
+.dashboard-map-content {
   padding: 10px;
-  position: fixed;
-  right: 12px;
-  top: var(--dashboard-map-top, 174px);
-  width: min(380px, calc(100vw - 24px));
-  z-index: 40;
 }
 
 .dashboard-map-panel .build-region-grid {
@@ -1822,30 +1815,7 @@
   }
 }
 
-/* Build authoring drawer: closed geometry remains canonical; the open desktop
-   state compresses the frame into the remaining viewport so its responsive
-   rules can reflow the chart canvas normally. */
-.dashboard-map-panel {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(calc(100% + 24px));
-  transition: opacity 160ms ease, transform 180ms ease, visibility 180ms;
-  visibility: hidden;
-}
-
-.dashboard-map-panel[data-open="true"] {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-  visibility: visible;
-}
-
 @media (max-width: 899px) {
-  .dashboard-map-panel {
-    left: 12px;
-    width: auto;
-  }
-
   .dashboard-map-header {
     align-items: center;
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);
@@ -1857,26 +1827,14 @@
 }
 
 @media (min-width: 900px) {
-  .canonical-dashboard-frame.build-workspace {
-    transition: margin-left 180ms ease, width 180ms ease;
-  }
-
   .scenario-passport-popover {
     inset-inline-start: 0;
     max-height: calc(100vh - 170px);
     width: min(430px, calc(100vw - 24px));
   }
 
-  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"] {
-    --simex-dashboard-map-reserved-width: 404px;
-  }
-
   .canonical-dashboard-frame.build-workspace[data-build-static-authoring-open="true"] {
     --simex-dashboard-map-reserved-width: min(444px, 38vw);
-  }
-
-  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"],
-  .canonical-dashboard-frame.build-workspace[data-build-static-authoring-open="true"] {
     margin-left: max(24px, calc((100vw - var(--simex-dashboard-map-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
     margin-right: auto;
     min-width: 0;
@@ -1886,23 +1844,9 @@
     );
   }
 
-  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"] .build-command-groups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"]
-    :is(
-      .build-command-group[data-build-command-group="package"],
-      .build-command-group--session,
-      .build-command-group--layout
-    ) {
-    grid-column: 1 / -1;
-    grid-row: auto;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dashboard-map-panel,
   .canonical-dashboard-frame.build-workspace {
     transition: none;
   }

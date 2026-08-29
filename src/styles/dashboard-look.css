@@ -17,32 +17,6 @@
   justify-content: flex-end;
 }
 
-.look-drawer-layer {
-  inset: 0;
-  position: fixed;
-  z-index: 1400;
-}
-
-.look-drawer-click-catcher {
-  background: transparent;
-  inset: 0;
-  position: absolute;
-}
-
-.look-drawer {
-  background: var(--simex-surface-panel);
-  border-left: 1px solid var(--simex-border-strong);
-  box-shadow: -18px 0 36px rgb(18 26 28 / 24%);
-  color: var(--simex-text-strong);
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  height: 100%;
-  margin-left: auto;
-  max-width: min(400px, 100%);
-  position: relative;
-  width: min(400px, 42vw);
-}
-
 .look-drawer-header {
   align-items: start;
   border-bottom: 1px solid var(--simex-border-subtle);
@@ -283,22 +257,12 @@
 }
 
 @media (max-width: 1023px) {
-  .look-drawer {
-    width: min(400px, 62vw);
-  }
-
   .look-profile-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 767px) {
-  .look-drawer {
-    border-left: 0;
-    max-width: none;
-    width: 100%;
-  }
-
   .look-drawer-header,
   .look-drawer-scroll,
   .look-drawer-footer {

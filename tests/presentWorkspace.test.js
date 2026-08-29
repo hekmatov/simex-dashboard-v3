@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -14,13 +15,23 @@ const vite = await createServer({
 const presentModule = await vite
   .ssrLoadModule("/src/components/presentation/PresentWorkspace.jsx")
   .catch(() => null);
+const audienceDrawerModule = await vite
+  .ssrLoadModule("/src/components/presentation/AudienceDisplayOptionsDrawer.jsx")
+  .catch(() => null);
 const rendererModule = await vite
   .ssrLoadModule("/src/components/DashboardRenderer.jsx")
   .catch(() => null);
 const playbackModule = await vite
   .ssrLoadModule("/src/components/playback/PlaybackProvider.jsx")
   .catch(() => null);
+const operationStatusModule = await vite
+  .ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx")
+  .catch(() => null);
 await vite.close();
+const presentWorkspaceSource = await readFile(
+  new URL("../src/components/presentation/PresentWorkspace.jsx", import.meta.url),
+  "utf8",
+);
 
 const dashboard = {
   title: "Response overview",
@@ -96,21 +107,24 @@ function renderPresent(Component, overrides = {}) {
     value: { userAgent: "" },
   });
   try {
+    const workspace = React.createElement(
+      playbackModule.PlaybackProvider,
+      { groups: [], charts: [], loadedData: {}, profiles: {}, ...playbackProps },
+      React.createElement(Component, {
+        dashboard,
+        activePageId: "biomedical",
+        onActivePageChange: () => {},
+        accessibilityEnabled: false,
+        ...(Component === rendererModule?.default
+          ? { mode: "present" }
+          : { runtime }),
+        ...componentOverrides,
+      }),
+    );
     return renderToStaticMarkup(
-      React.createElement(
-        playbackModule.PlaybackProvider,
-        { groups: [], charts: [], loadedData: {}, profiles: {}, ...playbackProps },
-        React.createElement(Component, {
-          dashboard,
-          activePageId: "biomedical",
-          onActivePageChange: () => {},
-          accessibilityEnabled: false,
-          ...(Component === rendererModule?.default
-            ? { mode: "present" }
-            : { runtime }),
-          ...componentOverrides,
-        }),
-      ),
+      Component === rendererModule?.default
+        ? React.createElement(operationStatusModule.default, null, workspace)
+        : workspace,
     );
   } finally {
     if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
@@ -166,25 +180,39 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /aria-label="Scene layout"/);
   assert.match(html, /aria-label="Presentation source"/);
   assert.match(html, /aria-label="Presentation time"/);
-  assert.match(html, /Display on audience/);
-  for (const label of [
-    "Dashboard name",
-    "Parent Chrono Group",
-    "Scene name",
-    "Scene date",
-  ]) {
-    assert.match(html, new RegExp(`>${label}<`));
-  }
+  assert.match(html, />Audience display options<\/button>/);
+  assert.doesNotMatch(presentWorkspaceSource, /present-audience-information/);
   assert.doesNotMatch(html, /aria-label="Current page"/);
   assert.doesNotMatch(html, /aria-label="Display Page"/);
   assert.match(html, /Response overview/);
   assert.match(html, /Biomedical/);
-  assert.match(html, /aria-label="Display Scene name"[^>]*disabled=""/);
   assert.doesNotMatch(html, /Show scene title/);
   assert.match(html, />Blackout<\/button>/);
   assert.match(html, />Restore<\/button>/);
   assert.match(html, />End presentation<\/button>/);
-  assert.doesNotMatch(html, /permission|role|authoriz|access control/i);
+  assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /permission|role|authoriz|access control/i);
+});
+
+test("Audience display options drawer preserves the live audience-fact values", () => {
+  assert.equal(typeof audienceDrawerModule?.default, "function");
+  const information = [
+    { key: "dashboard_name", label: "Dashboard name", value: "Test dashboard", unavailableReason: "" },
+    { key: "scene_name", label: "Scene name", value: null, unavailableReason: "No Scene is loaded." },
+  ];
+  const html = renderToStaticMarkup(React.createElement(audienceDrawerModule.default, {
+    open: true,
+    onClose() {},
+    audienceInformation: information,
+    audienceFacts: { dashboard_name: true, scene_name: false },
+    onAudienceFactVisible() {},
+  }));
+
+  assert.match(html, /data-right-side-drawer="audience-display-options-drawer"/);
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /aria-modal="true"/);
+  assert.match(html, /aria-label="Display Dashboard name"[^>]*checked/);
+  assert.match(html, /aria-label="Display Scene name"[^>]*disabled/);
+  assert.match(html, /No Scene is loaded\./);
 });
 
 test("Present exposes connecting and reconnecting moderator status copy", () => {

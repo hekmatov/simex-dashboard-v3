@@ -572,17 +572,6 @@
 }
 .app-frame[data-dashboard-style="evidence-ledger"] .build-tree-group{--build-tree-line:var(--simex-border-strong);--build-tree-line-width:1px;--build-tree-elbow-radius:0}.app-frame[data-dashboard-style="humanist-standard"] .build-tree-group{--build-tree-line:color-mix(in srgb,var(--simex-border-subtle) 72%,transparent);--build-tree-line-width:1px;--build-tree-elbow-radius:6px}.app-frame[data-dashboard-style="signal-instrument"] .build-tree-group{--build-tree-line:var(--simex-accent);--build-tree-line-width:2px;--build-tree-elbow-radius:0}
 
-/* Rapid shared-surface visual corrections: Look push layout, dark controls, and Carbon tree. */
-@media (min-width: 900px) {
-  .app-frame[data-look-drawer-open="true"] > :is(.canonical-dashboard-frame, .present-workspace) {
-    --look-drawer-width: min(400px, 42vw);
-    margin-left: auto;
-    margin-right: calc(var(--look-drawer-width) + 12px);
-    transition: margin-right 180ms ease, width 180ms ease;
-    width: calc(100% - var(--look-drawer-width) - 24px);
-  }
-}
-
 .look-drawer-layer {
   color: var(--simex-text-strong);
 }
@@ -768,19 +757,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-frame[data-look-drawer-open="true"] > :is(.canonical-dashboard-frame, .present-workspace),
   .build-tree-caret > span {
     transition: none;
-  }
-}
-
-/* DashboardRenderer keeps the canonical frame inside its app-shell main. */
-@media (min-width: 900px) {
-  .app-frame[data-look-drawer-open="true"] :is(.canonical-dashboard-frame, .present-workspace) {
-    --look-drawer-width: min(400px, 42vw);
-    margin-left: auto;
-    margin-right: calc(var(--look-drawer-width) + 12px);
-    width: calc(100% - var(--look-drawer-width) - 24px);
   }
 }
 

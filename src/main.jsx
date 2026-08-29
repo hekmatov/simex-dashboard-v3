@@ -15,6 +15,7 @@ import "./styles/source-content.css";
 import "./styles/source-viewer.css";
 import "./styles/immersive-display.css";
 import "./styles/operation-status.css";
+import "./styles/right-side-drawer.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {
