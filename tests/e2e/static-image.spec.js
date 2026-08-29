@@ -29,6 +29,40 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
+test("standalone Image page remains live without pageerror", async ({ page }) => {
+  test.setTimeout(120_000);
+  const pageErrors = [];
+  const unhandledRejections = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.exposeFunction("__captureStaticImageUnhandled", (message) => unhandledRejections.push(message));
+  await page.addInitScript(() => {
+    addEventListener("unhandledrejection", (event) => {
+      globalThis.__captureStaticImageUnhandled?.(String(event.reason?.message ?? event.reason));
+    });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  const panelId = await createImage(page, "Standalone Image survival proof");
+  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add Text/Image", exact: true })).toBeVisible();
+  const saved = await readSavedImage(page, "Standalone Image survival proof");
+  expect(saved.asset).toMatchObject({ mediaType: "image/png", storageState: "durable" });
+  await expect.poll(() => sessionAssetIds(page)).toEqual([]);
+  let panel = canonicalPanel(page, panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  panel = canonicalPanel(page, panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
+  await expect(page.getByRole("main")).toBeVisible();
+  expect(pageErrors).toEqual([]);
+  expect(unhandledRejections).toEqual([]);
+});
+
 for (const viewport of VIEWPORTS) {
   test(`Image completes its in-session production journey at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     test.setTimeout(180_000);

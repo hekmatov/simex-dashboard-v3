@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -85,6 +86,7 @@ const LINK_QMD = [
 ].join("\n");
 
 const SAFE_RECOVERY_QMD = "# Boundary recovery\n\nCurrent-session source recovered.";
+const EMBEDDED_PNG = Buffer.from(imageFixtureBytes("image/png"));
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -117,6 +119,70 @@ test("Free-text toolbar authors portable semantic styles, emphasis, lists, and t
   await wizard.getByRole("button", { name: "Table" }).click();
   await expect(composer.locator("table")).toBeVisible();
   await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+});
+
+test("embedded image persists through reload and a second Text/Image creation", async ({ page }) => {
+  test.setTimeout(120_000);
+  const pageErrors = [];
+  const unhandledRejections = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.exposeFunction("__captureStaticContentUnhandled", (message) => unhandledRejections.push(message));
+  await page.addInitScript(() => {
+    addEventListener("unhandledrejection", (event) => {
+      globalThis.__captureStaticContentUnhandled?.(String(event.reason?.message ?? event.reason));
+    });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill("Embedded durability proof");
+  await wizard.getByRole("button", { name: "Insert image" }).click();
+  await wizard.getByRole("region", { name: "Media picker" })
+    .getByLabel("PNG, JPEG, or WebP file").setInputFiles({
+      name: "embedded-proof.png",
+      mimeType: "image/png",
+      buffer: EMBEDDED_PNG,
+    });
+  await expect(wizard.locator('[data-qmd-media-host] img[alt="embedded-proof.png"]')).toBeVisible();
+  await expect(await advancedQmdSource(wizard)).toHaveValue(/!\[embedded-proof\.png\]\(simex-media:media-/);
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+
+  const first = await readEmbeddedPublication(page, "Embedded durability proof");
+  expect(first).toMatchObject({ placementCount: 1, sourceKind: "staticText", mediaCount: 1, assetCount: 1, assetState: "durable" });
+  expect(first.qmd).toContain(`simex-media:${first.mediaId}`);
+  await expect.poll(() => sessionAssetIds(page)).toEqual([]);
+  let panel = canonicalPanel(page, first.panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator('img[alt="embedded-proof.png"]')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  const reloaded = await readEmbeddedPublication(page, "Embedded durability proof");
+  expect(reloaded).toEqual(first);
+  panel = canonicalPanel(page, first.panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator('img[alt="embedded-proof.png"]')).toBeVisible();
+
+  await createFreeText(page, {
+    title: "Immediate second Text/Image",
+    qmd: "# Second creation\n\nPlain text remains intact.",
+    viewport: { width: 1280, height: 800 },
+    previewText: "Second creation",
+  });
+  expect((await readSavedFreeText(page, "Immediate second Text/Image")).source.qmd)
+    .toBe("# Second creation\n\nPlain text remains intact.");
+  panel = canonicalPanel(page, first.panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator('img[alt="embedded-proof.png"]')).toBeVisible();
+  expect(pageErrors).toEqual([]);
+  expect(unhandledRejections).toEqual([]);
 });
 
 for (const viewport of VIEWPORTS) {
@@ -641,6 +707,41 @@ async function readSavedFreeText(page, title) {
     }
     return null;
   }, { key: STORAGE_KEY, expectedTitle: title });
+}
+
+async function readEmbeddedPublication(page, title) {
+  return page.evaluate(({ key, expectedTitle }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const panels = (dashboard.pages ?? []).flatMap(({ sections = [] }) => sections)
+      .flatMap(({ panels: placements = [] }) => placements)
+      .map((placement) => placement.chart ?? placement)
+      .filter((panel) => panel.title === expectedTitle);
+    const panel = panels[0];
+    const source = dashboard.dataSources?.[panel?.sourceId];
+    const mediaIds = [...String(source?.qmd ?? "").matchAll(/simex-media:([^)\s}]+)/g)]
+      .map((match) => match[1]);
+    const media = dashboard.contentLibrary?.mediaItems?.[mediaIds[0]];
+    const assetId = media?.current?.kind === "asset" ? media.current.assetId : null;
+    return {
+      placementCount: panels.length,
+      panelId: panel?.id ?? null,
+      sourceKind: source?.kind ?? null,
+      qmd: source?.qmd ?? "",
+      mediaId: mediaIds[0] ?? null,
+      mediaCount: mediaIds.length,
+      assetId,
+      assetCount: assetId ? 1 : 0,
+      assetState: dashboard.assets?.[assetId]?.storageState ?? null,
+    };
+  }, { key: STORAGE_KEY, expectedTitle: title });
+}
+
+async function sessionAssetIds(page) {
+  return page.evaluate(() => {
+    const sessionKey = Object.getOwnPropertySymbols(globalThis)
+      .find((symbol) => Symbol.keyFor(symbol) === "simex.session-image-assets");
+    return sessionKey ? [...globalThis[sessionKey].keys()].sort() : [];
+  });
 }
 
 function canonicalPanel(page, panelId) {
