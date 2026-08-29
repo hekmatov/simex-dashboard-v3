@@ -11,6 +11,7 @@ export default function DataSourceStep({
   selectedSource = null,
   selectedSourceKind = "",
   profile = null,
+  allowSourceCreation = true,
   manualAllowed = false,
   manualTable = null,
   manualErrors = [],
@@ -47,11 +48,12 @@ export default function DataSourceStep({
         },
         loadedData,
         selectedSourceId: selectedSourceKind === "existing" ? selectedSourceId : "",
+        allowUpload: allowSourceCreation,
         uploadError,
         onSelect: onSelectExisting,
         onUpload: onUploadCsv,
       }),
-      manualAllowed
+      allowSourceCreation && manualAllowed
         ? React.createElement(
             "section",
             { className: "wizard-choice-card chart-wizard-manual-source" },
@@ -114,18 +116,24 @@ export default function DataSourceStep({
             { id: "chart-wizard-geo-source-help" },
             "Choose the validated boundary or point file used to locate the selected geographic identifiers.",
           ),
-          React.createElement(
-            "label",
-            null,
-            "Upload GeoJSON",
-            React.createElement("input", {
-              type: "file",
-              accept: ".geojson,application/geo+json,application/json",
-              onChange: (event) => onUploadGeoJson(event.target.files?.[0] ?? null),
-            }),
-          ),
-          geoUploadError
-            ? React.createElement("p", { className: "wizard-error", role: "alert" }, geoUploadError)
+          allowSourceCreation
+            ? React.createElement(
+                React.Fragment,
+                null,
+                React.createElement(
+                  "label",
+                  null,
+                  "Upload GeoJSON",
+                  React.createElement("input", {
+                    type: "file",
+                    accept: ".geojson,application/geo+json,application/json",
+                    onChange: (event) => onUploadGeoJson(event.target.files?.[0] ?? null),
+                  }),
+                ),
+                geoUploadError
+                  ? React.createElement("p", { className: "wizard-error", role: "alert" }, geoUploadError)
+                  : null,
+              )
             : null,
         )
       : null,

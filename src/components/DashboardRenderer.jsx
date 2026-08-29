@@ -80,10 +80,13 @@ import {
 import {
   createChartEditSession,
   dismissChartEditSession,
+  hasRetainableChartEditWork,
   isChartEditSessionDirty,
   materializeChartEditSessionSave,
   prepareActiveQuickChartEditRemoval,
+  prepareChartEditSessionRetry,
   prepareChartEditSessionSave,
+  projectChartEditSessionOwner,
   projectChartEditSessionDashboard,
   rebaseChartPersistenceIntoLayoutDraft,
   reduceChartEditSession,
@@ -180,6 +183,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [chartEditorDirty, setChartEditorDirty] = React.useState(false);
   const [chartEditSession, setChartEditSession] = React.useState(null);
   const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
+  const [chartCreateOwner, setChartCreateOwner] = React.useState(null);
   const [chartWizardSuspended, setChartWizardSuspended] = React.useState(false);
   const [chartWizardSuspendedTarget, setChartWizardSuspendedTarget] = React.useState(null);
   const [staticWizardTarget, setStaticWizardTarget] = React.useState(null);
@@ -318,8 +322,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     ? buildLayoutDraft.value
     : dashboard;
   const quickChartEditDirty = Boolean(
-    chartEditSession && isChartEditSessionDirty(chartEditSession),
+    chartEditSession && hasRetainableChartEditWork(chartEditSession),
   );
+  const chartEditOwner = chartEditSession
+    ? projectChartEditSessionOwner(chartEditSession)
+    : null;
+  const chartOwnerSlots = [chartEditOwner, chartCreateOwner]
+    .filter(Boolean)
+    .map((owner) => ({ ...owner, draftId: owner.id }));
+  const chartOwnerSlot = chartOwnerSlots[0] ?? null;
   const renderingDashboard = React.useMemo(
     () => chartEditSession
       ? projectChartEditSessionDashboard(workingDashboard, chartEditSession)
@@ -393,10 +404,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
   const authoredDirtyState = {
     ...createBuildDirtyState(),
-    chartEditor: chartEditorDirty,
-    chartWizard: chartWizardDirty || isMeaningfulChartDraft(
-      chartDraftSessionStore.get(chartDraftSessionKey),
-    ),
+    chartEditor: chartEditOwner ? false : chartEditorDirty,
+    chartWizard: false,
     staticContent: staticContentDirty,
     structure: layoutDraftDirty,
     scenario: localDraftKeys.has("scenario") || externalDirty.scenario,
@@ -456,6 +465,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartDraftSessionRevision((current) => current + 1);
   }, [chartDraftSessionKey, chartDraftSessionStore]);
 
+  const handleChartCreateOwnerChange = React.useCallback((owner) => {
+    setChartCreateOwner((current) => (
+      owner && current?.id === owner.id && !owner.restoration
+        ? { ...owner, restoration: current.restoration }
+        : owner
+    ));
+  }, []);
+
   React.useImperativeHandle(ref, () => ({
     setAuthoredDirtyFlag,
     async prepareForPackageImport() {
@@ -489,6 +506,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditSession(null);
       setChartWizardTarget(null);
       setChartWizardDirty(false);
+      setChartCreateOwner(null);
       chartDraftSessionStore.clear(chartDraftSessionKey);
       setChartWizardSuspended(false);
       setChartWizardSuspendedTarget(null);
@@ -878,6 +896,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setBuildSelectionError("");
     setChartWizardTarget(chartWizardSuspendedTarget);
     setChartWizardSuspended(false);
+    setChartCreateOwner((current) => current ? {
+      ...current,
+      activity: "active",
+      activation: "focus",
+    } : current);
     return true;
   }
 
@@ -901,31 +924,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
-  function confirmPanelRemoval() {
-    const panelId = pendingRemovalPanelId;
-    if (panelId === null || moderatorOperationGateRef.current.isActive()) return;
-    const removalRequest = prepareActiveQuickChartEditRemoval(
-      chartEditSession,
-      panelId,
-    );
-    if (!removalRequest) {
-      void performModeratorOperation("remove-chart", async () => {
-        await pendingEdits.flush();
-        await onPanelRemove(panelId);
-        setChartEditBaseline(null);
-        setChartEditSession(null);
-        setChartEditorVisible(false);
-        setChartEditorPlacementId((current) => (current === panelId ? null : current));
-        setSelectedPanelId((current) => (current === panelId ? null : current));
-        setPendingRemovalPanelId(null);
-      });
-      return;
-    }
-
+  function persistChartRemovalRequest(removalRequest) {
     const removalPlacementId = removalRequest.intent.placementId;
     const layoutDraftId = buildLayoutDraftRef.current?.draftId ?? null;
     setChartEditSession(removalRequest.session);
-    void performModeratorOperation("remove-chart", async () => {
+    return performModeratorOperation("remove-chart", async () => {
       await pendingEdits.flush();
       const committed = await onPanelRemove(removalPlacementId);
       if (layoutDraftId) {
@@ -958,6 +961,40 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         ));
       },
     });
+  }
+
+  function retryChartEditOperation() {
+    if (
+      moderatorOperationGateRef.current.isActive()
+      || chartEditSession?.pendingOperation?.kind !== "remove"
+    ) return Promise.resolve(null);
+    return persistChartRemovalRequest(
+      prepareChartEditSessionRetry(chartEditSession),
+    );
+  }
+
+  function confirmPanelRemoval() {
+    const panelId = pendingRemovalPanelId;
+    if (panelId === null || moderatorOperationGateRef.current.isActive()) return;
+    const removalRequest = prepareActiveQuickChartEditRemoval(
+      chartEditSession,
+      panelId,
+    );
+    if (!removalRequest) {
+      void performModeratorOperation("remove-chart", async () => {
+        await pendingEdits.flush();
+        await onPanelRemove(panelId);
+        setChartEditBaseline(null);
+        setChartEditSession(null);
+        setChartEditorVisible(false);
+        setChartEditorPlacementId((current) => (current === panelId ? null : current));
+        setSelectedPanelId((current) => (current === panelId ? null : current));
+        setPendingRemovalPanelId(null);
+      });
+      return;
+    }
+
+    void persistChartRemovalRequest(removalRequest);
   }
 
   function cancelPanelRemoval() {
@@ -1203,6 +1240,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       .find((element) => element.dataset.chartQuickPlacementId === placementId) ?? null;
   }
 
+  function findChartOwnerRoot(ownerId) {
+    if (typeof document === "undefined" || !ownerId) return null;
+    return [...document.querySelectorAll("[data-chart-owner-id]")]
+      .find((element) => element.dataset.chartOwnerId === ownerId) ?? null;
+  }
+
   function cancelQuickChartEditRestoration() {
     if (typeof window === "undefined" || !quickChartRestorationFrameRef.current) return;
     window.cancelAnimationFrame(quickChartRestorationFrameRef.current);
@@ -1212,7 +1255,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function releaseCleanQuickChartEditSession() {
     if (
       chartEditSession?.activeSurface !== "quick"
-      || isChartEditSessionDirty(chartEditSession)
+      || hasRetainableChartEditWork(chartEditSession)
     ) return false;
     cancelQuickChartEditRestoration();
     setChartEditSession(null);
@@ -1264,20 +1307,75 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       : current);
   }
 
+  const changeFullChartDraft = React.useCallback(({ draft, chronoGroups }) => {
+    setChartEditSession((current) => current && current.status !== "saving"
+      ? reduceChartEditSession(current, {
+          type: "CHANGE",
+          surface: "full",
+          draft,
+          chronoGroups,
+        })
+      : current);
+  }, []);
+
+  const recordFullChartRestoration = React.useCallback((restoration) => {
+    setChartEditSession((current) => current?.activeSurface === "full"
+      ? reduceChartEditSession(current, {
+          type: "OPEN",
+          surface: "full",
+          restoration,
+        })
+      : current);
+  }, []);
+
+  const recordChartCreateRestoration = React.useCallback((restoration) => {
+    setChartCreateOwner((current) => current
+      ? { ...current, restoration: structuredClone(restoration) }
+      : current);
+  }, []);
+
+  function openFullChartEditor() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    setChartEditSession((current) => current
+      ? reduceChartEditSession(current, {
+          type: "OPEN",
+          surface: "full",
+          restoration: {
+            surface: "full",
+            focusId: "chart-stage-destination",
+            scrollTop: 0,
+          },
+        })
+      : current);
+    setChartEditorVisible(false);
+  }
+
   function resetQuickChartDraft() {
     setChartEditSession((current) => current
       ? reduceChartEditSession(current, { type: "RESET" })
       : current);
   }
 
-  function saveQuickChartEditSession() {
+  function saveChartEditSession(fullValue = null) {
     if (
       moderatorOperationGateRef.current.isActive()
       || typeof onChartSave !== "function"
-      || chartEditSession?.activeSurface !== "quick"
+      || !chartEditSession
     ) return Promise.resolve(null);
 
-    const request = prepareChartEditSessionSave(chartEditSession);
+    const session = fullValue?.chart && chartEditSession.activeSurface === "full"
+      ? reduceChartEditSession(chartEditSession, {
+          type: "CHANGE",
+          surface: "full",
+          draft: fullValue.chart,
+          ...(Object.hasOwn(fullValue, "chronoGroups")
+            ? { chronoGroups: fullValue.chronoGroups }
+            : {}),
+        })
+      : chartEditSession;
+    const request = prepareChartEditSessionSave(session, {
+      runtimeArtifact: fullValue?.runtimeArtifact,
+    });
     const layoutDraftId = buildLayoutDraftRef.current?.draftId ?? null;
     setChartEditSession(request.session);
     return performModeratorOperation("save-chart", async () => {
@@ -1323,8 +1421,75 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (!chartEditSession) return false;
     const resumed = reduceChartEditSession(chartEditSession, { type: "RESUME" });
     setChartEditSession(resumed);
-    setChartEditorVisible(true);
-    restoreQuickChartEditSession(resumed.restoration, resumed.placementId);
+    setChartEditorVisible(resumed.activeSurface === "quick");
+    if (resumed.activeSurface === "quick") {
+      restoreQuickChartEditSession(resumed.restoration, resumed.placementId);
+    }
+    return true;
+  }
+
+  function suspendFullChartEditSession(restoration) {
+    if (moderatorOperationGateRef.current.isActive()) return false;
+    const next = dismissChartEditSession(chartEditSession, {
+      surface: "full",
+      restoration: { surface: "full", ...restoration },
+    });
+    setChartEditSession(next);
+    setChartEditorVisible(false);
+    if (next === null) {
+      setChartEditorPlacementId(null);
+      setChartEditBaseline(null);
+      setChartEditorDirty(false);
+    }
+    return true;
+  }
+
+  function discardChartEditOwner() {
+    if (moderatorOperationGateRef.current.isActive()) return false;
+    cancelQuickChartEditRestoration();
+    setChartEditSession(null);
+    setChartEditorVisible(false);
+    setChartEditorPlacementId(null);
+    setChartEditBaseline(null);
+    setChartEditorDirty(false);
+    return true;
+  }
+
+  function focusChartEditOwner() {
+    if (!chartEditSession?.activeSurface || typeof window === "undefined") return false;
+    const ownerId = `chart-edit:${chartEditSession.placementId}`;
+    window.requestAnimationFrame(() => {
+      const root = findChartOwnerRoot(ownerId)
+        ?? findQuickChartEditRoot(chartEditSession.placementId);
+      const restored = chartEditSession.restoration?.focusId
+        ? document.getElementById(chartEditSession.restoration.focusId)
+        : null;
+      const surfaceInitial = chartEditSession.activeSurface === "quick"
+        ? root?.querySelector("#chart-field-title")
+        : root?.querySelector("[data-modal-initial-focus=\"true\"]");
+      const target = restored && root?.contains(restored)
+        ? restored
+        : surfaceInitial ?? root?.querySelector(
+            "input:not(:disabled), select:not(:disabled), button:not(:disabled)",
+          );
+      target?.focus?.({ preventScroll: true });
+      root?.scrollIntoView?.({ block: "nearest", behavior: "auto" });
+    });
+    return true;
+  }
+
+  function focusChartCreateOwner() {
+    if (!chartCreateOwner || typeof window === "undefined") return false;
+    window.requestAnimationFrame(() => {
+      const root = findChartOwnerRoot(chartCreateOwner.id);
+      const restored = chartCreateOwner.restoration?.focusId
+        ? document.getElementById(chartCreateOwner.restoration.focusId)
+        : null;
+      const target = restored && root?.contains(restored)
+        ? restored
+        : root?.querySelector("[data-modal-initial-focus=\"true\"], button:not(:disabled)");
+      target?.focus?.({ preventScroll: true });
+    });
     return true;
   }
 
@@ -1687,6 +1852,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       : activePage?.sections?.[0];
     if (!activePage || !section) return;
     releaseCleanQuickChartEditSession();
+    setChartCreateOwner(null);
     setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
     setChartWizardSuspended(false);
   }
@@ -1792,6 +1958,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         chartDraftSessionStore.clear(chartDraftSessionKey);
         setChartWizardTarget(null);
         setChartWizardDirty(false);
+        setChartCreateOwner(null);
         setChartWizardSuspended(false);
         setChartWizardSuspendedTarget(null);
         setChartDraftSessionRevision((current) => current + 1);
@@ -1832,6 +1999,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartEditSession(null);
         setChartWizardTarget(null);
         setChartWizardDirty(false);
+        setChartCreateOwner(null);
         chartDraftSessionStore.clear(chartDraftSessionKey);
         setChartWizardSuspended(false);
         setChartWizardSuspendedTarget(null);
@@ -2014,9 +2182,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       session={chartEditSession}
       disabled={moderatorMutationLocked}
       onDraftChange={changeQuickChartDraft}
-      onSave={typeof onChartSave === "function" ? saveQuickChartEditSession : undefined}
+      onSave={typeof onChartSave === "function" ? saveChartEditSession : undefined}
       onReset={resetQuickChartDraft}
       onClose={dismissSelectedPanel}
+      onOpenFullEditor={openFullChartEditor}
       onRemove={typeof onPanelRemove === "function"
         ? () => removePanel(chartEditSession.placementId)
         : undefined}
@@ -2085,14 +2254,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         restoration: null,
         resolution: null,
       } : null}
-      chartSlotDraft={chartEditorPlacementId ? {
-        draftId: `chart-${chartEditorPlacementId}`,
-        kind: "chart",
-        targetId: chartEditorPlacementId,
-        status: chartEditorDirty ? "dirty" : "clean",
-        restoration: null,
-        resolution: null,
-      } : null}
+      chartSlotDraft={chartOwnerSlot}
+      chartOwners={chartOwnerSlots}
       authoredDirtyState={authoredDirtyState}
       pendingWorkResumeActions={{
         structure: () => onOpenBuildPanel?.(),
@@ -2106,6 +2269,24 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         inlineRename: resumeInlineRenameWork,
         scenario: () => onResolveScenarioDraft?.(),
         dashboardMetadata: () => onOpenBuildPanel?.(),
+      }}
+      pendingWorkOwnerActions={{
+        ...(chartEditOwner ? {
+          [chartEditOwner.id]: {
+            focus: focusChartEditOwner,
+            resume: resumeQuickChartEditSession,
+            save: chartEditOwner.operation === "remove"
+              ? retryChartEditOperation
+              : saveChartEditSession,
+            discard: discardChartEditOwner,
+          },
+        } : {}),
+        ...(chartCreateOwner ? {
+          [chartCreateOwner.id]: {
+            focus: focusChartCreateOwner,
+            resume: resumeChartWizardWork,
+          },
+        } : {}),
       }}
       onSaveLayout={saveBuildLayoutChanges}
       onDiscardLayout={discardBuildLayoutChanges}
@@ -2188,9 +2369,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         existingCharts={configuredCharts(dashboard)}
         onDirtyChange={setChartWizardDirty}
         onDraftStateChange={handleChartDraftStateChange}
-        onSuspendedChange={(suspended) => {
+        onOwnerChange={handleChartCreateOwnerChange}
+        onRestorationChange={recordChartCreateRestoration}
+        onSuspendedChange={(suspended, restoration) => {
           setChartWizardSuspended(suspended);
           setChartWizardSuspendedTarget(suspended ? chartWizardTarget : null);
+          if (suspended) {
+            setChartCreateOwner((current) => current ? {
+              ...current,
+              activity: "suspended",
+              restoration,
+              activation: "resume",
+            } : current);
+          }
         }}
         onClose={() => {
           if (!moderatorOperationGateRef.current.isActive()) setChartWizardTarget(null);
@@ -2201,11 +2392,51 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           }
           await pendingEdits.flush();
           await onChartCreate(payload, reviewedPlacement ?? chartWizardTarget);
+        }}
+        onCommitSuccess={() => {
+          chartDraftSessionStore.clear(chartDraftSessionKey);
+          setChartDraftSessionRevision((current) => current + 1);
+          setChartCreateOwner(null);
+          setChartWizardDirty(false);
           setChartWizardSuspended(false);
           setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);
         }}
+        onDiscardChanges={() => {
+          chartDraftSessionStore.clear(chartDraftSessionKey);
+          setChartDraftSessionRevision((current) => current + 1);
+          setChartCreateOwner(null);
+          setChartWizardDirty(false);
+          setChartWizardSuspended(false);
+          setChartWizardSuspendedTarget(null);
+        }}
       />
+      {chartEditSession && (
+        chartEditSession.activeSurface === "full" || chartEditSession.dirtyOrigins.full
+      ) && <ChartWizardV3
+        key={`chart-edit:${chartEditSession.placementId}`}
+        mode="edit"
+        open={chartEditSession.activeSurface === "full"}
+        editSession={chartEditSession}
+        editDirty={isChartEditSessionDirty(chartEditSession)}
+        destination={staticDestinationForPlacement(workingDashboard, chartEditSession.placementId)}
+        dashboard={workingDashboard}
+        disabled={moderatorMutationLocked}
+        dataSources={workingDashboard.dataSources}
+        loadedData={workingDashboard.loadedData}
+        datasetProfiles={workingDashboard.datasetProfiles ?? {}}
+        geoDataSources={geoDataSources}
+        chronoGroups={chartEditSession.chronoGroups}
+        existingCharts={configuredCharts(workingDashboard)}
+        onEditDraftChange={changeFullChartDraft}
+        onRestorationChange={recordFullChartRestoration}
+        onSuspendedChange={(suspended, restoration) => {
+          if (suspended) suspendFullChartEditSession(restoration);
+        }}
+        onClose={() => {}}
+        onSaveChanges={saveChartEditSession}
+        onDiscardChanges={discardChartEditOwner}
+      />}
       {staticWizardTarget && <StaticContentWizard
         open
         contentDraftCoordinator={contentDraftCoordinator}

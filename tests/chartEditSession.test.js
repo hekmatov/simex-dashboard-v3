@@ -10,9 +10,75 @@ import {
   materializeChartEditSessionSave,
   prepareChartEditSessionSave,
   prepareConfirmedChartEditRemoval,
+  projectChartEditSessionOwner,
   projectChartEditSessionDashboard,
   reduceChartEditSession,
 } from "../src/charting/forms/chartEditSession.js";
+
+test("one stable chart-edit owner spans Quick and Full active, suspended, saving, and error states", () => {
+  const clean = createSession();
+
+  assert.deepEqual(clean.owner, {
+    kind: "chart-edit",
+    scopeId: "placement-a",
+  });
+  assert.equal(clean.activity, "active");
+  assert.equal(projectChartEditSessionOwner(clean), null);
+
+  const quick = changeChart(clean, "quick", { title: "Quick title" });
+  const activeQuick = projectChartEditSessionOwner(quick);
+  assert.deepEqual(activeQuick, {
+    id: "chart-edit:placement-a",
+    kind: "chart-edit",
+    scopeId: "placement-a",
+    targetId: "placement-a",
+    label: "Chart changes",
+    status: "dirty",
+    activity: "active",
+    surface: "quick",
+    restoration: quick.restoration,
+    activation: "focus",
+  });
+
+  const full = reduceChartEditSession(quick, { type: "OPEN", surface: "full" });
+  assert.equal(projectChartEditSessionOwner(full).id, activeQuick.id);
+  assert.equal(projectChartEditSessionOwner(full).surface, "full");
+  assert.equal(projectChartEditSessionOwner(full).activation, "focus");
+
+  const suspended = reduceChartEditSession(full, {
+    type: "SUSPEND",
+    surface: "full",
+    restoration: { surface: "full", focusId: "chart-stage-configure-chart", scrollTop: 420 },
+  });
+  const suspendedOwner = projectChartEditSessionOwner(suspended);
+  assert.equal(suspended.activity, "suspended");
+  assert.equal(suspendedOwner.id, activeQuick.id);
+  assert.equal(suspendedOwner.status, "dirty");
+  assert.equal(suspendedOwner.activity, "suspended");
+  assert.equal(suspendedOwner.activation, "resume");
+  assert.deepEqual(suspendedOwner.restoration, {
+    surface: "full",
+    focusId: "chart-stage-configure-chart",
+    scrollTop: 420,
+  });
+
+  const saving = prepareChartEditSessionSave(suspended).session;
+  assert.equal(projectChartEditSessionOwner(saving).id, activeQuick.id);
+  assert.equal(projectChartEditSessionOwner(saving).status, "saving");
+  assert.equal(projectChartEditSessionOwner(saving).activity, "suspended");
+
+  const failed = reduceChartEditSession(saving, {
+    type: "PERSISTENCE_FAILED",
+    error: { code: "SAVE_FAILED", message: "Retry this Save.", retryable: true },
+  });
+  assert.equal(projectChartEditSessionOwner(failed).id, activeQuick.id);
+  assert.equal(projectChartEditSessionOwner(failed).status, "error");
+
+  assert.equal(
+    projectChartEditSessionOwner(reduceChartEditSession(failed, { type: "RESET" })),
+    null,
+  );
+});
 
 test("parent dismissal releases a clean session and retains a changed session", () => {
   const clean = createSession();
@@ -459,6 +525,56 @@ test("confirmed Remove immediately yields only the placement deletion intent", (
   assert.equal(changed.draft.title, "Unsaved title that must not be saved first");
 });
 
+test("clean and dirty Remove retain one operation-scoped owner for exact retry", () => {
+  for (const seed of [
+    createSession(),
+    changeChart(createSession(), "quick", { title: "Unsaved title to remove" }),
+  ]) {
+    const request = prepareConfirmedChartEditRemoval(seed);
+    assert.deepEqual(request.session.pendingOperation, {
+      kind: "remove",
+      intent: request.intent,
+    });
+    assert.deepEqual(projectChartEditSessionOwner(request.session), {
+      id: "chart-edit:placement-a",
+      kind: "chart-edit",
+      scopeId: "placement-a",
+      targetId: "placement-a",
+      label: "Chart changes",
+      status: "saving",
+      activity: "active",
+      surface: "quick",
+      restoration: request.session.restoration,
+      activation: "focus",
+      operation: "remove",
+    });
+
+    const failed = reduceChartEditSession(request.session, {
+      type: "PERSISTENCE_FAILED",
+      error: new Error("remove unavailable"),
+    });
+    const failedOwner = projectChartEditSessionOwner(failed);
+    assert.equal(failedOwner.status, "error");
+    assert.equal(failedOwner.operation, "remove");
+    const suspended = dismissChartEditSession(failed, {
+      surface: "quick",
+      restoration: { focusId: "chart-field-title", scrollTop: 140 },
+    });
+    assert.equal(projectChartEditSessionOwner(suspended).activity, "suspended");
+    assert.equal(projectChartEditSessionOwner(suspended).operation, "remove");
+    assert.equal(
+      typeof chartEditSessionModel.prepareChartEditSessionRetry,
+      "function",
+    );
+
+    const retry = chartEditSessionModel.prepareChartEditSessionRetry(failed);
+    assert.equal(retry.session.status, "saving");
+    assert.equal(retry.session.error, null);
+    assert.deepEqual(retry.intent, request.intent);
+    assert.equal(projectChartEditSessionOwner(retry.session).operation, "remove");
+  }
+});
+
 test("parent quick removal ownership excludes other placements and surfaces", () => {
   assert.equal(
     typeof chartEditSessionModel.prepareActiveQuickChartEditRemoval,
@@ -566,6 +682,27 @@ test("persistence failure retains the shared dirty draft and permits retry", () 
   const retry = prepareChartEditSessionSave(failed);
   assert.equal(retry.session.status, "saving");
   assert.equal(retry.intent.chart.title, "Retry title");
+});
+
+test("Full Save keeps its runtime artifact outside the chart and retains it for retry", () => {
+  const opened = reduceChartEditSession(createSession(), { type: "OPEN", surface: "full" });
+  const changed = changeChart(opened, "full", { title: "Full retry title" });
+  const runtimeArtifact = { id: "runtime-full-retry", preparedRevision: "prepared-a" };
+  const request = prepareChartEditSessionSave(changed, { runtimeArtifact });
+  const firstPayload = materializeChartEditSessionSave(request.intent, changed.chronoGroups);
+
+  assert.equal(Object.hasOwn(firstPayload.chart, "runtimeArtifact"), false);
+  assert.deepEqual(firstPayload.runtimeArtifact, runtimeArtifact);
+
+  const failed = reduceChartEditSession(request.session, {
+    type: "PERSISTENCE_FAILED",
+    error: { message: "Retry the Full Save.", retryable: true },
+  });
+  const retry = prepareChartEditSessionSave(failed);
+  const retryPayload = materializeChartEditSessionSave(retry.intent, changed.chronoGroups);
+
+  assert.deepEqual(retryPayload.runtimeArtifact, runtimeArtifact);
+  assert.equal(retryPayload.chart.title, "Full retry title");
 });
 
 test("preview starts from the latest dashboard and preserves unrelated changes", () => {

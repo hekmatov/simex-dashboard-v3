@@ -17,18 +17,45 @@ export function createChartEditSession({
   const surface = requiredSurface(activeSurface);
   const savedChart = cloneChart(chart);
   const savedChronoGroups = cloneChronoGroups(chronoGroups);
+  const scopeId = requiredPlacementId(placementId);
   return {
-    placementId: requiredPlacementId(placementId),
+    owner: { kind: "chart-edit", scopeId },
+    placementId: scopeId,
     savedChart,
     savedChronoGroups,
     draft: structuredClone(savedChart),
     chronoGroups: structuredClone(savedChronoGroups),
     dirtyOrigins: { quick: false, full: false },
     activeSurface: surface,
+    activity: "active",
     suspended: false,
     restoration: normalizeRestoration(restoration, surface),
+    pendingRuntimeArtifact: null,
+    pendingOperation: null,
     status: "clean",
     error: null,
+  };
+}
+
+export function projectChartEditSessionOwner(state) {
+  assertSession(state);
+  if (!hasRetainableChartEditWork(state)) return null;
+  const activity = state.activeSurface ? "active" : "suspended";
+  const surface = state.activeSurface ?? chartEditSessionPendingSurface(state);
+  return {
+    id: `chart-edit:${state.owner.scopeId}`,
+    kind: state.owner.kind,
+    scopeId: state.owner.scopeId,
+    targetId: state.placementId,
+    label: "Chart changes",
+    status: state.status,
+    activity,
+    surface,
+    restoration: structuredClone(state.restoration),
+    activation: activity === "active" ? "focus" : "resume",
+    ...(state.pendingOperation?.kind === "remove"
+      ? { operation: "remove" }
+      : {}),
   };
 }
 
@@ -55,6 +82,8 @@ export function reduceChartEditSession(state, action) {
         chronoGroups: structuredClone(state.savedChronoGroups),
         dirtyOrigins: { quick: false, full: false },
         suspended: false,
+        pendingRuntimeArtifact: null,
+        pendingOperation: null,
         status: "clean",
         error: null,
       };
@@ -80,9 +109,14 @@ export function isChartEditSessionDirty(state) {
     !== projectionKey(state.savedChart, state.savedChronoGroups);
 }
 
+export function hasRetainableChartEditWork(state) {
+  assertSession(state);
+  return isChartEditSessionDirty(state) || state.pendingOperation !== null;
+}
+
 export function chartEditSessionPendingSurface(state) {
   assertSession(state);
-  if (!isChartEditSessionDirty(state)) return null;
+  if (!hasRetainableChartEditWork(state)) return null;
   if (state.dirtyOrigins.full) return "full";
   if (state.dirtyOrigins.quick) return "quick";
   return state.activeSurface ?? state.restoration.surface;
@@ -97,7 +131,7 @@ export function dismissChartEditSession(state, {
     surface,
     restoration,
   });
-  return isChartEditSessionDirty(suspended) ? suspended : null;
+  return hasRetainableChartEditWork(suspended) ? suspended : null;
 }
 
 export function projectChartEditSessionDashboard(dashboard, state) {
@@ -162,15 +196,20 @@ export function applyChartEditSessionChronoGroupChanges(chronoGroups, changes) {
   return merged;
 }
 
-export function prepareChartEditSessionSave(state) {
+export function prepareChartEditSessionSave(state, {
+  runtimeArtifact = state?.pendingRuntimeArtifact,
+} = {}) {
   assertSession(state);
   assertNotSaving(state);
   if (!isChartEditSessionDirty(state)) {
     throw new Error("Chart edit Save requires a real change.");
   }
+  const pendingRuntimeArtifact = cloneRuntimeArtifact(runtimeArtifact);
   return {
     session: {
       ...state,
+      pendingRuntimeArtifact,
+      pendingOperation: null,
       status: "saving",
       error: null,
     },
@@ -182,6 +221,9 @@ export function prepareChartEditSessionSave(state) {
         state.savedChronoGroups,
         state.chronoGroups,
       ),
+      ...(pendingRuntimeArtifact
+        ? { runtimeArtifact: structuredClone(pendingRuntimeArtifact) }
+        : {}),
     },
   };
 }
@@ -202,6 +244,9 @@ export function materializeChartEditSessionSave(intent, currentChronoGroups) {
       currentChronoGroups,
       intent.chronoGroupChanges,
     );
+  }
+  if (Object.hasOwn(intent, "runtimeArtifact")) {
+    payload.runtimeArtifact = cloneRuntimeArtifact(intent.runtimeArtifact);
   }
   return payload;
 }
@@ -268,16 +313,37 @@ export function rebaseChartPersistenceIntoLayoutDraft({
 export function prepareConfirmedChartEditRemoval(state) {
   assertSession(state);
   assertNotSaving(state);
+  const intent = {
+    kind: "remove",
+    placementId: state.placementId,
+  };
+  return {
+    session: {
+      ...state,
+      pendingOperation: {
+        kind: "remove",
+        intent: structuredClone(intent),
+      },
+      status: "saving",
+      error: null,
+    },
+    intent,
+  };
+}
+
+export function prepareChartEditSessionRetry(state) {
+  assertSession(state);
+  assertNotSaving(state);
+  if (state.status !== "error" || state.pendingOperation?.kind !== "remove") {
+    throw new Error("Chart edit retry requires a failed retained operation.");
+  }
   return {
     session: {
       ...state,
       status: "saving",
       error: null,
     },
-    intent: {
-      kind: "remove",
-      placementId: state.placementId,
-    },
+    intent: structuredClone(state.pendingOperation.intent),
   };
 }
 
@@ -319,6 +385,9 @@ function changeSession(state, action) {
       ? { ...state.dirtyOrigins, [surface]: true }
       : { quick: false, full: false },
     suspended: false,
+    activity: "active",
+    pendingRuntimeArtifact: null,
+    pendingOperation: null,
     status: dirty ? "dirty" : "clean",
     error: null,
   };
@@ -337,6 +406,7 @@ function openSession(state, action) {
     ...state,
     activeSurface: surface,
     suspended: false,
+    activity: "active",
     restoration,
     status: state.status === "error"
       ? "error"
@@ -349,10 +419,12 @@ function suspendSession(state, action) {
   const surface = requiredSurface(action.surface);
   if (surface !== state.activeSurface) return state;
   const dirty = isChartEditSessionDirty(state);
+  const retainable = hasRetainableChartEditWork(state);
   return {
     ...state,
     activeSurface: null,
-    suspended: dirty,
+    suspended: retainable,
+    activity: "suspended",
     restoration: normalizeRestoration({
       ...state.restoration,
       ...action.restoration,
@@ -371,6 +443,7 @@ function resumeSession(state) {
     ...state,
     activeSurface: surface,
     suspended: false,
+    activity: "active",
     restoration: normalizeRestoration({
       ...state.restoration,
       surface,
@@ -399,6 +472,8 @@ function acceptSave(state, action) {
     chronoGroups: structuredClone(savedChronoGroups),
     dirtyOrigins: { quick: false, full: false },
     suspended: false,
+    pendingRuntimeArtifact: null,
+    pendingOperation: null,
     status: "clean",
     error: null,
   };
@@ -894,6 +969,14 @@ function cloneChronoGroups(chronoGroups) {
   return structuredClone(chronoGroups);
 }
 
+function cloneRuntimeArtifact(runtimeArtifact) {
+  if (runtimeArtifact === null || runtimeArtifact === undefined) return null;
+  if (!isRecord(runtimeArtifact)) {
+    throw new TypeError("Chart edit runtime artifact must be an object.");
+  }
+  return structuredClone(runtimeArtifact);
+}
+
 function assertSession(state) {
   if (
     !isRecord(state)
@@ -907,12 +990,24 @@ function assertSession(state) {
     || (state.activeSurface !== null && !SURFACES.has(state.activeSurface))
     || typeof state.suspended !== "boolean"
     || !isRecord(state.restoration)
+    || (state.pendingRuntimeArtifact !== null && !isRecord(state.pendingRuntimeArtifact))
+    || !isValidPendingOperation(state.pendingOperation)
     || !STATUSES.has(state.status)
   ) {
     throw new TypeError("Chart edit session state is invalid.");
   }
   requiredPlacementId(state.placementId);
   normalizeRestoration(state.restoration, state.activeSurface ?? "quick");
+}
+
+function isValidPendingOperation(operation) {
+  if (operation === null) return true;
+  return isRecord(operation)
+    && operation.kind === "remove"
+    && isRecord(operation.intent)
+    && operation.intent.kind === "remove"
+    && operation.intent.placementId === operation.intent.placementId?.trim()
+    && operation.intent.placementId !== "";
 }
 
 function assertNotSaving(state) {

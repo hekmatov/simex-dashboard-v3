@@ -131,6 +131,10 @@ function BuildPendingWorkRail({ pendingWork }) {
       <ul className="build-pending-work__list">
         {pendingWork.map((work) => {
           const actionsDisabled = work.state === "saving";
+          const chartOwner = work.kind === "chart-edit" || work.kind === "chart-create";
+          const pendingReason = actionsDisabled
+            ? "Wait for the current chart operation to finish."
+            : "";
           return (
             <li
               key={work.id}
@@ -139,6 +143,8 @@ function BuildPendingWorkRail({ pendingWork }) {
               data-pending-work-kind={work.kind}
               data-pending-work-state={work.state}
               data-pending-work-origin={work.origin}
+              data-pending-work-activity={work.activity}
+              data-pending-work-surface={work.surface}
             >
               <span className="build-pending-work__summary">
                 <strong>{work.label}</strong>
@@ -153,6 +159,48 @@ function BuildPendingWorkRail({ pendingWork }) {
                     <button type="button" className="secondary" disabled={actionsDisabled} onClick={work.discard}>
                       Discard Layout Changes
                     </button>
+                  </>
+                ) : chartOwner ? (
+                  <>
+                    <ControlTooltip disabled={actionsDisabled} reason={pendingReason}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        data-unit-orbit-preserve-open
+                        disabled={actionsDisabled}
+                        onClick={work.resume}
+                      >
+                        {work.activation === "focus" ? "Focus" : "Resume"} {work.label}
+                      </button>
+                    </ControlTooltip>
+                    {typeof work.save === "function" && (
+                      <ControlTooltip disabled={actionsDisabled} reason={pendingReason}>
+                        <button
+                          type="button"
+                          className="secondary"
+                          data-unit-orbit-preserve-open
+                          disabled={actionsDisabled}
+                          onClick={work.save}
+                        >
+                          {work.operation === "remove"
+                            ? work.state === "error" ? "Retry Remove" : "Remove chart"
+                            : work.state === "error" ? "Retry Save" : "Save changes"}
+                        </button>
+                      </ControlTooltip>
+                    )}
+                    {typeof work.discard === "function" && (
+                      <ControlTooltip disabled={actionsDisabled} reason={pendingReason}>
+                        <button
+                          type="button"
+                          className="secondary"
+                          data-unit-orbit-preserve-open
+                          disabled={actionsDisabled}
+                          onClick={work.discard}
+                        >
+                          Discard changes
+                        </button>
+                      </ControlTooltip>
+                    )}
                   </>
                 ) : (
                   <button type="button" className="secondary" onClick={work.resume}>

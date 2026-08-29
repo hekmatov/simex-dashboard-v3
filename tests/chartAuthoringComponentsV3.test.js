@@ -35,6 +35,7 @@ import {
   prepareChartEditSessionSave,
   reduceChartEditSession,
 } from "../src/charting/forms/chartEditSession.js";
+import { projectChartCreateOwner } from "../src/charting/forms/chartDraftSession.js";
 import {
   applyGeographySourceSelection,
 } from "../src/charting/forms/geographySource.js";
@@ -136,12 +137,15 @@ const chartWizardModule = await import(
 const {
   default: ChartWizardV3,
   applyWizardMembership,
+  buildChartWizardEditCommitPayload,
+  createChartWizardEditState,
   createChartCsvDraftLifecycle,
   createChartWizardState,
   createWizardCloseHandlers,
   createWizardPreparation,
   isChartWizardStateDirty,
   parseUploadedCsvFile,
+  routeChartWizardCommit,
   submitWizardDraft,
 } = chartWizardModule;
 const {
@@ -1332,6 +1336,30 @@ test("data source controls stay enabled before chart capability is known", () =>
   assert.doesNotMatch(html, /<select[^>]*disabled/);
   assert.doesNotMatch(html, /type="file"[^>]*disabled/);
   assert.doesNotMatch(html, /Enter data manually/);
+});
+
+test("edit-mode source selection keeps existing authorities and hides unsupported additions", () => {
+  const html = render(React.createElement(DataSourceStep, {
+    allowSourceCreation: false,
+    dashboard: {},
+    dataSources: {
+      "exercise-data": { kind: "dataset" },
+    },
+    loadedData: {
+      "exercise-data": [{ value: 4 }],
+    },
+    manualAllowed: true,
+    geographyRequired: true,
+    geoSources: [{ value: "managed-boundaries", label: "Managed boundaries" }],
+    onSelectExisting() {},
+    onGeoSourceChange() {},
+  }));
+
+  assert.match(html, /Managed data source/);
+  assert.match(html, /Managed boundaries/);
+  assert.doesNotMatch(html, /Upload a new CSV/);
+  assert.doesNotMatch(html, /Enter data manually/);
+  assert.doesNotMatch(html, /Upload GeoJSON/);
 });
 
 test("discard and source-removal confirmations call only the approved callbacks", () => {
@@ -2821,6 +2849,207 @@ test("quick editor fails closed when durable and full-editor authorities are abs
   assert.match(buttonMarkupByInteraction(html, "editor.save-changes"), /disabled=""/);
   assert.match(buttonMarkupByInteraction(html, "chart.remove"), /disabled=""/);
   assert.match(html, /Full editing is unavailable for this chart session\./);
+});
+
+test("Full wizard continues the shared Quick draft and exposes edit-only Save changes semantics", () => {
+  const chart = validLineChart();
+  const quick = reduceChartEditSession(
+    createChartEditSession({
+      placementId: "placement-line",
+      chart,
+      chronoGroups: [],
+    }),
+    {
+      type: "CHANGE",
+      surface: "quick",
+      draft: { ...chart, title: "Quick continuity title" },
+    },
+  );
+  const full = reduceChartEditSession(quick, { type: "OPEN", surface: "full" });
+  const initialDraftState = createChartWizardEditState({
+    session: full,
+    loadedData: {
+      "exercise-data": [
+        { period: "May", capacity: 4 },
+        { period: "June", capacity: 7 },
+      ],
+    },
+    profiles: {},
+    chronoGroups: [],
+    existingCharts: [chart],
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    stage: "review-and-create",
+  });
+
+  assert.equal(initialDraftState.draft.title, "Quick continuity title");
+  assert.equal(initialDraftState.draftId, "chart-edit:placement-line");
+
+  const html = render(React.createElement(ChartWizardV3, {
+    mode: "edit",
+    open: true,
+    editSession: full,
+    initialDraftState,
+    dataSources: { "exercise-data": { id: "exercise-data", kind: "dataset" } },
+    loadedData: initialDraftState.loadedData,
+    datasetProfiles: initialDraftState.profiles,
+    chronoGroups: [],
+    existingCharts: [chart],
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    onClose() {},
+    onSaveChanges() {},
+    onCreate() {
+      throw new Error("Edit mode must not expose chart creation.");
+    },
+  }));
+
+  assert.match(html, /Edit chart/);
+  assert.match(html, /aria-label="Chart editing steps"/);
+  assert.match(html, /aria-label="Save changes"/);
+  assert.doesNotMatch(html, /Add new chart|aria-label="Create chart"/);
+
+  const sourceHtml = render(React.createElement(ChartWizardV3, {
+    mode: "edit",
+    open: true,
+    editSession: full,
+    initialDraftState: { ...initialDraftState, stage: "data-source" },
+    dashboard: {
+      dataSources: { "exercise-data": { id: "exercise-data", kind: "dataset" } },
+      contentLibrary: { sourceEntries: {} },
+    },
+    dataSources: { "exercise-data": { id: "exercise-data", kind: "dataset" } },
+    loadedData: initialDraftState.loadedData,
+    datasetProfiles: initialDraftState.profiles,
+    chronoGroups: [],
+    existingCharts: [chart],
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    onClose() {},
+    onSaveChanges() {},
+  }));
+  assert.match(sourceHtml, /Managed data source/);
+  assert.doesNotMatch(sourceHtml, /Upload a new CSV|Enter data manually|Upload GeoJSON/);
+});
+
+test("edit-mode wizard commit routes only to the placement Save authority", async () => {
+  const calls = [];
+  const runtimeArtifact = { id: "runtime-full-only" };
+  const payload = buildChartWizardEditCommitPayload({
+    placementId: "placement-line",
+    finalized: {
+      chart: validLineChart({ title: "Full-only title" }),
+      chronoGroups: [],
+    },
+    runtimeArtifact,
+  });
+
+  assert.equal(Object.hasOwn(payload.chart, "runtimeArtifact"), false);
+  assert.equal(payload.runtimeArtifact, runtimeArtifact);
+
+  const result = await routeChartWizardCommit({
+    mode: "edit",
+    payload,
+    reviewedPlacement: { pageId: "page-a", sectionId: "section-a" },
+    onSaveChanges(value) {
+      calls.push(["save", value]);
+      return { committed: true };
+    },
+    onCreate() {
+      calls.push(["create"]);
+    },
+  });
+
+  assert.deepEqual(calls, [["save", payload]]);
+  assert.deepEqual(result, { committed: true });
+});
+
+test("chart creation acquires one owner only when retainable and keeps its identity through suspension and retry", () => {
+  const incomplete = createWizardState({
+    destination: { pageId: "page-a", sectionId: "section-a" },
+  });
+  assert.equal(projectChartCreateOwner(incomplete, { retainable: false }), null);
+
+  const valid = createWizardState({
+    draftId: "draft-a",
+    draft: validPieChart(),
+    status: "editing",
+  });
+  const active = projectChartCreateOwner(valid, {
+    retainable: true,
+    activity: "active",
+  });
+  assert.deepEqual(active, {
+    id: "chart-create:draft-a",
+    kind: "chart-create",
+    scopeId: "draft-a",
+    targetId: "draft-a",
+    label: "New chart draft",
+    status: "dirty",
+    activity: "active",
+    surface: "create",
+    restoration: null,
+    activation: "focus",
+  });
+
+  const suspended = projectChartCreateOwner({
+    ...valid,
+    suspension: {
+      restoration: { focusId: "chart-stage-review-and-create", scrollTop: 330 },
+    },
+  }, { retainable: true, activity: "suspended" });
+  assert.equal(suspended.id, active.id);
+  assert.equal(suspended.activity, "suspended");
+  assert.equal(suspended.activation, "resume");
+  assert.deepEqual(suspended.restoration, {
+    focusId: "chart-stage-review-and-create",
+    scrollTop: 330,
+  });
+
+  assert.equal(projectChartCreateOwner({ ...valid, status: "committing" }, {
+    retainable: true,
+  }).status, "saving");
+  assert.equal(projectChartCreateOwner({ ...valid, status: "failed" }, {
+    retainable: true,
+  }).status, "error");
+  assert.equal(projectChartCreateOwner({ ...valid, status: "ambiguous" }, {
+    retainable: true,
+  }).id, active.id);
+  assert.equal(projectChartCreateOwner({ ...valid, status: "committed" }, {
+    retainable: true,
+  }), null);
+  assert.equal(projectChartCreateOwner({ ...valid, discarded: true }, {
+    retainable: true,
+  }), null);
+});
+
+test("every committed creation authority resolves its owner before the surface closes", () => {
+  const calls = [];
+  assert.equal(typeof chartWizardModule.resolveChartCreationOwnerCommit, "function");
+
+  const resolved = chartWizardModule.resolveChartCreationOwnerCommit(
+    { status: "committed" },
+    {
+      onOwnerChange(owner) {
+        calls.push(["owner", owner]);
+      },
+      onCommitSuccess() {
+        calls.push(["success"]);
+      },
+    },
+  );
+
+  assert.equal(resolved, true);
+  assert.deepEqual(calls, [["owner", null], ["success"]]);
+  assert.equal(chartWizardModule.resolveChartCreationOwnerCommit(
+    { status: "failed" },
+    {
+      onOwnerChange() {
+        calls.push(["unexpected-owner"]);
+      },
+      onCommitSuccess() {
+        calls.push(["unexpected-success"]);
+      },
+    },
+  ), false);
+  assert.deepEqual(calls, [["owner", null], ["success"]]);
 });
 
 test("pending chart creation guards Escape, Close, and discard", () => {

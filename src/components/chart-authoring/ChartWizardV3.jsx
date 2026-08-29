@@ -53,6 +53,7 @@ import {
 import { buildCsvContentDraft } from "../../content-library/sourceEntrySchema.js";
 import { buildGeoJsonContentDraft } from "../../content-library/contentDraftTransaction.js";
 import { validateGeoJson as validateManagedGeoJson } from "../../lib/geoJsonValidation.js";
+import { projectChartCreateOwner } from "../../charting/forms/chartDraftSession.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
@@ -271,6 +272,7 @@ export function createWizardCloseHandlers({
  * validating complete synchronized-playback groups. It is never mutated.
  */
 export default function ChartWizardV3({
+  mode = "create",
   open,
   dataSources,
   loadedData,
@@ -281,6 +283,8 @@ export default function ChartWizardV3({
   destination = null,
   dashboard = null,
   dashboardRevision = null,
+  editSession = null,
+  editDirty = false,
   initialDraftState = null,
   suspendControllerRef = null,
   disabled = false,
@@ -291,9 +295,16 @@ export default function ChartWizardV3({
   onClose,
   onDirtyChange = noop,
   onDraftStateChange = noop,
+  onEditDraftChange = noop,
+  onOwnerChange = noop,
+  onRestorationChange = noop,
   onSuspendedChange = noop,
+  onSaveChanges,
+  onDiscardChanges = noop,
+  onCommitSuccess = noop,
   onCreate,
 }) {
+  const editMode = mode === "edit";
   const safeDataSources = isRecord(dataSources) ? dataSources : {};
   const safeLoadedData = collectionOrEmpty(loadedData);
   const safeDatasetProfiles = collectionOrEmpty(datasetProfiles);
@@ -302,14 +313,27 @@ export default function ChartWizardV3({
   const safeExistingCharts = Array.isArray(existingCharts)
     ? existingCharts
     : [];
-  const [wizard, setWizard] = React.useState(() => initialDraftState ?? createChartWizardState({
-      loadedData: safeLoadedData,
-      profiles: safeDatasetProfiles,
-      chronoGroups: safeGroups,
-      existingCharts: safeExistingCharts,
-      destination,
-      dashboardRevision,
-    }));
+  const [wizard, setWizard] = React.useState(() => initialDraftState ?? (
+    editMode
+      ? createChartWizardEditState({
+          session: editSession,
+          loadedData: safeLoadedData,
+          profiles: safeDatasetProfiles,
+          chronoGroups: safeGroups,
+          existingCharts: safeExistingCharts,
+          destination,
+          dashboardRevision,
+          source: readEntry(safeDataSources, editSession?.draft?.sourceId),
+        })
+      : createChartWizardState({
+          loadedData: safeLoadedData,
+          profiles: safeDatasetProfiles,
+          chronoGroups: safeGroups,
+          existingCharts: safeExistingCharts,
+          destination,
+          dashboardRevision,
+        })
+  ));
   const [query, setQuery] = React.useState("");
   const [localRows, setLocalRows] = React.useState({});
   const [sourceKind, setSourceKind] = React.useState(
@@ -392,26 +416,36 @@ export default function ChartWizardV3({
     initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
     onEscape: () => closeHandlers.requestClose(),
   });
+  const wizardBodyRef = React.useRef(null);
+  const lastRestorableFocusIdRef = React.useRef(null);
   React.useImperativeHandle(suspendControllerRef, () => ({
     suspend: requestClose,
   }));
 
   function requestClose() {
     if (operationLocked()) return false;
+    const activeElement = typeof document === "undefined" ? null : document.activeElement;
+    const focused = wizardDialogRef.current?.contains?.(activeElement)
+      && !activeElement?.closest?.(".chart-wizard-close")
+      ? activeElement
+      : null;
+    const restoration = {
+      stage: wizard.stage,
+      focusId: focused?.id
+        || lastRestorableFocusIdRef.current
+        || `chart-stage-${wizard.stage}`,
+      invokerId: editMode ? `edit-${editSession?.placementId}` : "build-add-chart",
+      scrollTop: wizardBodyRef.current?.scrollTop ?? 0,
+      targetId: editMode ? editSession?.placementId : wizard.draft?.id ?? null,
+    };
     const suspended = reduceWizardState(wizard, {
       type: "suspend",
-      restoration: {
-        stage: wizard.stage,
-        focusId: `chart-stage-${wizard.stage}`,
-        invokerId: "build-add-chart",
-        scrollTop: wizardDialogRef.current?.scrollTop ?? 0,
-        targetId: wizard.draft?.id ?? null,
-      },
+      restoration,
     });
     setWizard(suspended);
     onDraftStateChange(suspended);
     setSubmissionError("");
-    onSuspendedChange(true);
+    onSuspendedChange(true, { surface: editMode ? "full" : "create", ...restoration });
     onClose?.();
     return true;
   }
@@ -420,14 +454,25 @@ export default function ChartWizardV3({
     if (!open) return;
     setWizard((current) => {
       if (current.closed) {
-        return createChartWizardState({
-          loadedData: safeLoadedData,
-          profiles: safeDatasetProfiles,
-          chronoGroups: safeGroups,
-          existingCharts: safeExistingCharts,
-          destination,
-          dashboardRevision,
-        });
+        return editMode
+          ? createChartWizardEditState({
+              session: editSession,
+              loadedData: safeLoadedData,
+              profiles: safeDatasetProfiles,
+              chronoGroups: safeGroups,
+              existingCharts: safeExistingCharts,
+              destination,
+              dashboardRevision,
+              source: readEntry(safeDataSources, editSession?.draft?.sourceId),
+            })
+          : createChartWizardState({
+              loadedData: safeLoadedData,
+              profiles: safeDatasetProfiles,
+              chronoGroups: safeGroups,
+              existingCharts: safeExistingCharts,
+              destination,
+              dashboardRevision,
+            });
       }
       const resumed = current.suspension
         ? reduceWizardState(current, { type: "resume" })
@@ -436,7 +481,7 @@ export default function ChartWizardV3({
         ? resumed
         : reduceWizardState(resumed, { type: "setDestination", destination });
     });
-  }, [open, destination?.pageId, destination?.sectionId]);
+  }, [open, destination?.pageId, destination?.sectionId, editMode, editSession?.placementId]);
 
   const dirty = isChartWizardStateDirty({
     open,
@@ -451,6 +496,13 @@ export default function ChartWizardV3({
   React.useEffect(() => {
     onDraftStateChange(wizard);
   }, [onDraftStateChange, wizard]);
+  React.useEffect(() => {
+    if (!editMode || !wizard.draft) return;
+    onEditDraftChange({
+      draft: structuredClone(wizard.draft),
+      chronoGroups: structuredClone(wizard.chronoGroups),
+    });
+  }, [editMode, onEditDraftChange, wizard.draft, wizard.chronoGroups]);
   React.useEffect(() => (
     () => onDirtyChange(false)
   ), [onDirtyChange]);
@@ -497,11 +549,26 @@ export default function ChartWizardV3({
 
   React.useEffect(() => {
     if (!open) return;
+    const restoration = wizard.suspension?.resumed
+      ? wizard.suspension.restoration
+      : null;
+    if (restoration) {
+      if (wizardBodyRef.current && Number.isFinite(restoration.scrollTop)) {
+        wizardBodyRef.current.scrollTop = restoration.scrollTop;
+      }
+      const restored = restoration.focusId
+        ? document.getElementById(restoration.focusId)
+        : null;
+      if (restored && wizardDialogRef.current?.contains(restored)) {
+        restored.focus({ preventScroll: true });
+        return;
+      }
+    }
     const selectedStep = wizardDialogRef.current?.querySelector(
       "[data-modal-initial-focus=\"true\"]",
     );
     selectedStep?.focus?.({ preventScroll: true });
-  }, [open, wizard.stage, wizardDialogRef]);
+  }, [open, wizard.stage, wizard.suspension, wizardDialogRef]);
 
   const runtimeLoadedData = React.useMemo(
     () => mergeCollections(safeLoadedData, localRows),
@@ -542,7 +609,6 @@ export default function ChartWizardV3({
     ? wizard.sourceSelection?.profile ?? runtime.profile
     : null;
 
-  if (!open) return null;
   const syncedWizard = {
     ...wizard,
     loadedData: runtimeLoadedData,
@@ -597,8 +663,13 @@ export default function ChartWizardV3({
   const destinationResolution = hasDashboardPages(dashboard)
     ? resolveDestination(wizard.destination ?? {}, dashboard)
     : null;
-  const placementProof = destinationResolution
-    ? planIdentityPlacement({
+  const placementProof = editMode
+    ? {
+        ...legacyPlacementProof(wizard.destination ?? destination, destinationFootprint),
+        revision: `chart-edit:${editSession?.placementId ?? "unknown"}`,
+      }
+    : destinationResolution
+      ? planIdentityPlacement({
         destination: destinationResolution,
         anchorChartId: wizard.destination?.anchorId ?? null,
         position: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
@@ -608,8 +679,8 @@ export default function ChartWizardV3({
           selectedWidth: `width-${destinationFootprint.columns}`,
           selectedHeight: `height-${destinationFootprint.rows}`,
         },
-      }, dashboard)
-    : legacyPlacementProof(wizard.destination, destinationFootprint);
+        }, dashboard)
+      : legacyPlacementProof(wizard.destination, destinationFootprint);
   const creationStageStatuses = deriveVisibleStageStatuses({
     wizard,
     form,
@@ -617,6 +688,43 @@ export default function ChartWizardV3({
     renderProof,
     canCreate,
   });
+  const retainableCreation = !editMode
+    && canCreate
+    && placementProof.status === "valid"
+    && renderProof.status === "valid";
+  React.useEffect(() => {
+    if (editMode || !open) return;
+    if (!retainableCreation) {
+      onOwnerChange(null);
+      return;
+    }
+    const draftId = wizard.draftId ?? wizard.draft?.id;
+    if (!draftId) {
+      onOwnerChange(null);
+      return;
+    }
+    if (!wizard.draftId) {
+      setWizard((current) => reduceWizardState(current, {
+        type: "start",
+        draftId,
+        dashboardRevision: current.dashboardRevision ?? dashboardRevision,
+      }));
+      return;
+    }
+    onOwnerChange(projectChartCreateOwner(wizard, {
+      retainable: true,
+      activity: "active",
+    }));
+  }, [
+    dashboardRevision,
+    editMode,
+    onOwnerChange,
+    open,
+    retainableCreation,
+    wizard,
+  ]);
+
+  if (!open) return null;
 
   const dispatch = (action) => {
     setWizard((current) => reduceWizardState({
@@ -989,7 +1097,7 @@ export default function ChartWizardV3({
     }
   };
   const finish = async () => {
-    if (!canCreate || disabled) return;
+    if (!canCreate || disabled || (editMode && !editDirty)) return;
     return submissionGateRef.current.run(async () => {
       setSubmitting(true);
       try {
@@ -1008,6 +1116,25 @@ export default function ChartWizardV3({
           timezone: dashboard?.timezone ?? "UTC",
         });
         const finalizedWithRuntime = { ...finalized, runtimeArtifact };
+        if (editMode) {
+          const result = await routeChartWizardCommit({
+            mode,
+            payload: buildChartWizardEditCommitPayload({
+              placementId: editSession?.placementId,
+              finalized,
+              runtimeArtifact,
+            }),
+            reviewedPlacement: wizard.destination ?? destination,
+            onSaveChanges,
+            onCreate,
+          });
+          if (result === null) {
+            setSubmissionError("The chart could not be saved. Retry when the persistence issue is resolved.");
+          } else {
+            setSubmissionError("");
+          }
+          return result;
+        }
         transactionIdRef.current ??= [
           "chart-create",
           finalized.chart.id,
@@ -1031,7 +1158,7 @@ export default function ChartWizardV3({
           },
           renderProof,
           placementProof,
-          priorScrollAnchor: wizardDialogRef.current?.scrollTop ?? 0,
+          priorScrollAnchor: wizardBodyRef.current?.scrollTop ?? 0,
         });
         let committedManagedGeoJson = false;
         setWizard((current) => reduceWizardState(current, {
@@ -1097,10 +1224,13 @@ export default function ChartWizardV3({
               await csvDraftLifecycle.completeActive(finalized.chart.sourceId, input);
               return { dashboardRevision: dashboardRevision ?? "session-current" };
             }
-            if (typeof onCreate !== "function") {
-              throw new TypeError("Chart creation requires an onCreate callback.");
-            }
-            await onCreate(payload, reviewedPlacement);
+            await routeChartWizardCommit({
+              mode,
+              payload,
+              reviewedPlacement,
+              onSaveChanges,
+              onCreate,
+            });
             return { dashboardRevision: dashboardRevision ?? "session-current" };
           },
         });
@@ -1116,6 +1246,10 @@ export default function ChartWizardV3({
             result,
           }));
           if (result.status === "committed") {
+            resolveChartCreationOwnerCommit(result, {
+              onOwnerChange,
+              onCommitSuccess,
+            });
             setSubmissionError("");
             onSuspendedChange(false);
             if (sourceKind === "upload" || committedManagedGeoJson) onClose?.();
@@ -1147,6 +1281,7 @@ export default function ChartWizardV3({
     onDraftStateChange(closed);
     if (closed.closed) {
       onSuspendedChange(false);
+      onDiscardChanges();
       if (typeof onClose === "function") onClose();
     }
   }
@@ -1163,10 +1298,25 @@ export default function ChartWizardV3({
         role: "dialog",
         "aria-modal": "true",
         "aria-labelledby": "chart-wizard-title",
+        "data-chart-owner-id": editMode
+          ? `chart-edit:${editSession?.placementId ?? "unknown"}`
+          : wizard.draftId ? `chart-create:${wizard.draftId}` : undefined,
         "aria-busy": disabled || submitting ? "true" : undefined,
-        inert: disabled || submitting ? "" : undefined,
+        inert: disabled || submitting ? true : undefined,
         tabIndex: -1,
         ref: wizardDialogRef,
+        onFocusCapture: (event) => {
+          const target = event.target;
+          if (target?.id && !target.closest?.(".chart-wizard-close")) {
+            lastRestorableFocusIdRef.current = target.id;
+            onRestorationChange({
+              surface: editMode ? "full" : "create",
+              focusId: target.id,
+              scrollTop: wizardBodyRef.current?.scrollTop ?? 0,
+              targetId: editMode ? editSession?.placementId : wizard.draft?.id ?? null,
+            });
+          }
+        },
       },
       React.createElement(
         "header",
@@ -1177,7 +1327,7 @@ export default function ChartWizardV3({
           React.createElement(
             "h2",
             { id: "chart-wizard-title" },
-            "Add new chart",
+            editMode ? "Edit chart" : "Add new chart",
           ),
         ),
         React.createElement(IconControl, {
@@ -1191,7 +1341,7 @@ export default function ChartWizardV3({
         "nav",
         {
           className: "chart-wizard-step-tabs",
-          "aria-label": "Chart creation steps",
+          "aria-label": editMode ? "Chart editing steps" : "Chart creation steps",
         },
         CHART_CREATION_STAGES.map((stage) => React.createElement("button", {
           key: stage,
@@ -1214,7 +1364,7 @@ export default function ChartWizardV3({
         { className: "chart-wizard-workbench" },
         React.createElement(
           "div",
-          { className: "chart-wizard-body" },
+          { className: "chart-wizard-body", ref: wizardBodyRef },
         wizard.stage === "destination"
           ? React.createElement(
               "section",
@@ -1232,7 +1382,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.pageId ?? "",
-                      disabled: disabled || submitting,
+                      disabled: disabled || submitting || editMode,
                       onChange: (event) => {
                         const page = destinationChoices.pages.find(({ id }) => id === event.target.value);
                         const section = page?.sections?.[0] ?? null;
@@ -1260,7 +1410,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.sectionId ?? "",
-                      disabled: disabled || submitting,
+                      disabled: disabled || submitting || editMode,
                       onChange: (event) => updateDestination({
                         sectionId: event.target.value,
                         relation: "append",
@@ -1283,7 +1433,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
-                      disabled: disabled || submitting,
+                      disabled: disabled || submitting || editMode,
                       onChange: (event) => updateDestination({
                         relation: event.target.value,
                         position: event.target.value,
@@ -1305,7 +1455,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? "",
-                      disabled: disabled || submitting
+                      disabled: disabled || submitting || editMode
                         || (wizard.destination?.relation ?? wizard.destination?.position ?? "append") === "append",
                       onChange: (event) => updateDestination({ anchorId: event.target.value }),
                     },
@@ -1366,6 +1516,7 @@ export default function ChartWizardV3({
               selectedSource: source,
               selectedSourceKind: sourceKind || wizard.sourceSelection?.kind || "",
               profile: sourceProfile,
+              allowSourceCreation: !editMode,
               manualAllowed: wizard.draft
                 ? manualDataAllowed(getChartSchema(wizard.draft.typeId))
                 : false,
@@ -1496,14 +1647,19 @@ export default function ChartWizardV3({
               disabled: disabled || submitting,
               onClick: () => dispatch({ type: "requestClose" }),
             },
-            "Discard chart draft",
+            editMode ? "Discard changes" : "Discard chart draft",
           ),
           wizard.stage === "review-and-create"
             ? React.createElement(IconControl, {
-                interactionId: "wizard.create-chart",
-                ariaLabel: submitting ? "Creating chart" : "Create chart",
-                tooltip: submitting ? "Creating chart" : "Create chart",
+                interactionId: editMode ? "editor.save-changes" : "wizard.create-chart",
+                ariaLabel: submitting
+                  ? editMode ? "Saving changes" : "Creating chart"
+                  : editMode ? "Save changes" : "Create chart",
+                tooltip: submitting
+                  ? editMode ? "Saving changes" : "Creating chart"
+                  : editMode ? "Save changes" : "Create chart",
                 disabled: disabled || !canCreate || submitting
+                  || (editMode && !editDirty)
                   || placementProof.status !== "valid"
                   || renderProof.status !== "valid",
                 onClick: finish,
@@ -1514,8 +1670,10 @@ export default function ChartWizardV3({
     ),
     React.createElement(ConfirmDialog, {
       open: wizard.confirmation === "discardChart",
-      title: "Discard chart?",
-      message: "Your unfinished chart and its settings will be lost.",
+      title: editMode ? "Discard changes?" : "Discard chart?",
+      message: editMode
+        ? "Your unsaved chart changes will be lost."
+        : "Your unfinished chart and its settings will be lost.",
       confirmLabel: "Discard",
       cancelLabel: "Continue editing",
       onConfirm: confirmClose,
@@ -1990,6 +2148,53 @@ export function submitWizardDraft(state, onCreate) {
     : result;
 }
 
+export function routeChartWizardCommit({
+  mode = "create",
+  payload,
+  reviewedPlacement,
+  onSaveChanges,
+  onCreate,
+} = {}) {
+  if (mode === "edit") {
+    if (typeof onSaveChanges !== "function") {
+      throw new TypeError("Chart edit mode requires an onSaveChanges callback.");
+    }
+    return onSaveChanges(payload);
+  }
+  if (typeof onCreate !== "function") {
+    throw new TypeError("Chart creation requires an onCreate callback.");
+  }
+  return onCreate(payload, reviewedPlacement);
+}
+
+export function resolveChartCreationOwnerCommit(result, {
+  onOwnerChange = noop,
+  onCommitSuccess = noop,
+} = {}) {
+  if (result?.status !== "committed") return false;
+  onOwnerChange(null);
+  onCommitSuccess(result);
+  return true;
+}
+
+export function buildChartWizardEditCommitPayload({
+  placementId,
+  finalized,
+  runtimeArtifact,
+} = {}) {
+  if (!isRecord(finalized?.chart)) {
+    throw new TypeError("A finalized chart is required for chart edit Save.");
+  }
+  return {
+    placementId,
+    chart: finalized.chart,
+    ...(Object.hasOwn(finalized, "chronoGroups")
+      ? { chronoGroups: finalized.chronoGroups }
+      : {}),
+    ...(runtimeArtifact === undefined ? {} : { runtimeArtifact }),
+  };
+}
+
 export async function parseUploadedCsvFile(file, existingSources = {}) {
   if (!file || typeof file.text !== "function") {
     throw new TypeError("Choose a CSV file to upload.");
@@ -2061,6 +2266,11 @@ export function createChartWizardState({
   existingCharts = [],
   destination = null,
   dashboardRevision = null,
+  draftId = null,
+  draft = null,
+  source = null,
+  sourceSelection = null,
+  stage = null,
 }) {
   return createWizardState({
     loadedData,
@@ -2069,6 +2279,47 @@ export function createChartWizardState({
     charts: existingCharts,
     destination,
     dashboardRevision,
+    draftId,
+    draft,
+    source,
+    sourceSelection,
+    stage,
+  });
+}
+
+export function createChartWizardEditState({
+  session,
+  loadedData,
+  profiles = {},
+  chronoGroups,
+  existingCharts = [],
+  destination = null,
+  dashboardRevision = null,
+  source = null,
+  stage = null,
+} = {}) {
+  if (
+    session?.owner?.kind !== "chart-edit"
+    || session.owner.scopeId !== session.placementId
+    || !session.draft
+  ) {
+    throw new TypeError("Chart wizard edit mode requires one chart-edit session owner.");
+  }
+  const sourceId = session.draft.sourceId;
+  const rows = readEntry(loadedData, sourceId) ?? [];
+  const profile = readEntry(profiles, sourceId) ?? profileDataset(rows);
+  return createChartWizardState({
+    loadedData,
+    profiles: sourceId ? { ...profiles, [sourceId]: profile } : profiles,
+    chronoGroups: session.chronoGroups ?? chronoGroups,
+    existingCharts,
+    destination,
+    dashboardRevision,
+    draftId: `chart-edit:${session.placementId}`,
+    draft: session.draft,
+    source,
+    sourceSelection: sourceId ? { sourceId, source, rows, profile } : null,
+    stage,
   });
 }
 

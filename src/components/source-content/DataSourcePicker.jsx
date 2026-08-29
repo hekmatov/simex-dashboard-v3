@@ -10,6 +10,7 @@ export default function DataSourcePicker({
   loadedData = {},
   selectedSourceId = "",
   disabled = false,
+  allowUpload = true,
   uploadError = "",
   onSelect = noop,
   onUpload = noop,
@@ -43,26 +44,28 @@ export default function DataSourcePicker({
         onChange: onSelect,
       }),
     ),
-    React.createElement(
-      "section",
-      { className: "wizard-choice-card" },
-      React.createElement("h4", null, "Upload a new CSV"),
-      React.createElement("p", null, "The CSV remains a chart draft until the completed chart is created."),
-      React.createElement(
-        "label",
-        null,
-        "CSV file",
-        React.createElement("input", {
-          type: "file",
-          accept: ".csv,text/csv",
-          disabled,
-          onChange: (event) => onUpload(event.target.files?.[0] ?? null),
-        }),
-      ),
-      uploadError
-        ? React.createElement("p", { className: "wizard-error", role: "alert" }, uploadError)
-        : null,
-    ),
+    allowUpload
+      ? React.createElement(
+          "section",
+          { className: "wizard-choice-card" },
+          React.createElement("h4", null, "Upload a new CSV"),
+          React.createElement("p", null, "The CSV remains a chart draft until the completed chart is created."),
+          React.createElement(
+            "label",
+            null,
+            "CSV file",
+            React.createElement("input", {
+              type: "file",
+              accept: ".csv,text/csv",
+              disabled,
+              onChange: (event) => onUpload(event.target.files?.[0] ?? null),
+            }),
+          ),
+          uploadError
+            ? React.createElement("p", { className: "wizard-error", role: "alert" }, uploadError)
+            : null,
+        )
+      : null,
   );
 }
 

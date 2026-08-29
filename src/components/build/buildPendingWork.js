@@ -26,10 +26,19 @@ const DEFINITIONS = Object.freeze({
 export function selectBuildPendingWork({
   authoredDirty = {},
   coordinator = null,
+  chartOwners = [],
   parkedAuxiliaries = coordinator?.parkedAuxiliaries ?? [],
   layoutDraft = null,
   actions = {},
 } = {}) {
+  const chartSlot = coordinator?.slots?.chart;
+  const adoptedChartOwners = new Map();
+  for (const owner of [chartSlot, ...(Array.isArray(chartOwners) ? chartOwners : [])]) {
+    if (isAdoptedChartOwner(owner)) adoptedChartOwners.set(owner.draftId, owner);
+  }
+  const adoptedChartKinds = new Set(
+    [...adoptedChartOwners.values()].map(({ kind }) => kind),
+  );
   const entries = new Map();
   const upsert = (candidate, { preferResume = false } = {}) => {
     if (!candidate || !PENDING_STATES.has(candidate.state)) return;
@@ -53,6 +62,10 @@ export function selectBuildPendingWork({
 
   for (const key of AUTHORED_DIRTY_KEYS) {
     if (authoredDirty?.[key] !== true) continue;
+    if (
+      (key === "chartEditor" && adoptedChartKinds.has("chart-edit"))
+      || (key === "chartWizard" && adoptedChartKinds.has("chart-create"))
+    ) continue;
     upsert(descriptorForDefinition(DEFINITIONS[key], {
       state: "dirty",
       resume: actions.resumeByKey?.[key],
@@ -68,13 +81,19 @@ export function selectBuildPendingWork({
       actions,
     }));
   }
-  const chartSlot = coordinator?.slots?.chart;
   if (isPendingState(chartSlot?.status)) {
-    upsert(descriptorForDefinition(DEFINITIONS.chartEditor, {
-      state: chartSlot.status,
-      resume: actions.resumeByKey?.chartEditor,
-      actions,
-    }));
+    if (!isAdoptedChartOwner(chartSlot)) {
+      upsert(descriptorForDefinition(DEFINITIONS.chartEditor, {
+        state: chartSlot.status,
+        resume: actions.resumeByKey?.chartEditor,
+        actions,
+      }));
+    }
+  }
+  for (const owner of adoptedChartOwners.values()) {
+    if (isPendingState(owner.status)) {
+      upsert(descriptorForChartOwner(owner, actions));
+    }
   }
   if (isPendingState(layoutDraft?.status)) {
     upsert(descriptorForDefinition(DEFINITIONS.structure, {
@@ -101,6 +120,33 @@ export function selectBuildPendingWork({
 
   return [...entries.values()]
     .sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
+}
+
+function descriptorForChartOwner(owner, actions) {
+  const ownerActions = actions.ownerById?.[owner.draftId] ?? {};
+  const activity = owner.activity === "suspended" ? "suspended" : "active";
+  const activation = activity === "suspended" ? "resume" : "focus";
+  const descriptor = {
+    id: owner.draftId,
+    kind: owner.kind,
+    scopeId: owner.scopeId,
+    targetId: owner.targetId,
+    label: owner.kind === "chart-create" ? "New chart draft" : "Chart changes",
+    origin: owner.surface ?? owner.kind,
+    priority: owner.kind === "chart-create" ? 30 : 20,
+    state: owner.status,
+    activity,
+    surface: owner.surface ?? null,
+    restoration: owner.restoration ?? null,
+    activation,
+    resume: typeof ownerActions[activation] === "function"
+      ? ownerActions[activation]
+      : NOOP,
+    ...(owner.operation ? { operation: owner.operation } : {}),
+  };
+  if (typeof ownerActions.save === "function") descriptor.save = ownerActions.save;
+  if (typeof ownerActions.discard === "function") descriptor.discard = ownerActions.discard;
+  return descriptor;
 }
 
 function descriptorForDefinition(definition, { state, resume, actions }) {
@@ -139,6 +185,14 @@ function authoredKeyForAuxiliary(surface) {
 
 function isPendingState(state) {
   return PENDING_STATES.has(state);
+}
+
+function isAdoptedChartOwner(slot) {
+  return Boolean(
+    slot
+    && new Set(["chart-edit", "chart-create"]).has(slot.kind)
+    && slot.draftId === `${slot.kind}:${slot.scopeId}`,
+  );
 }
 
 function stateWithHigherPriority(left, right) {

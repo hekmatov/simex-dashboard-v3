@@ -25,6 +25,33 @@ test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, {
     data: { mode: "absent" },
   });
+  await page.addInitScript(() => {
+    const stringify = JSON.stringify;
+    JSON.stringify = function patchedStringify(value, ...args) {
+      if (
+        globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ === true
+        && value?.pages?.some(({ sections }) => sections?.some(({ panels }) => (
+          panels?.some((placement) => (
+            (placement.chart ?? placement)?.title === "Durable quick save"
+          ))
+        )))
+      ) {
+        globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ = false;
+        throw new Error("Dashboard persistence is temporarily unavailable.");
+      }
+      if (
+        globalThis.__SIMEX_FAIL_CHART_REMOVE_SERIALIZE_ONCE__ === true
+        && Array.isArray(value?.pages)
+        && !value.pages.some(({ sections }) => sections?.some(({ panels }) => (
+          panels?.some((placement) => placement.id === "bio_confirmed_cases")
+        )))
+      ) {
+        globalThis.__SIMEX_FAIL_CHART_REMOVE_SERIALIZE_ONCE__ = false;
+        throw new Error("Chart removal persistence is temporarily unavailable.");
+      }
+      return stringify.call(this, value, ...args);
+    };
+  });
   await page.goto("/");
   await enterAuthoredDashboard(page);
   await page.getByRole("button", { name: "Build" }).click();
@@ -59,9 +86,8 @@ test("source-first existing CSV pie authoring progressively reveals schema field
 
   await wizard.getByRole("button", { name: "Close" }).click();
   await expect(wizard).toHaveCount(0);
-  const resumeDraft = page.getByRole("button", { name: "Resume New chart draft", exact: true });
-  await expect(resumeDraft).toBeVisible();
-  await resumeDraft.click();
+  await expect(page.locator('[data-pending-work-kind="chart-create"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Add chart", exact: true }).click();
   wizard = page.getByRole("dialog", { name: "Add new chart" });
   flow = chartAuthoringWorkflow(wizard);
 
@@ -334,96 +360,68 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
   await expectStoredChart(page, "timeline", "E2E coordination timeline");
 });
 
-test("editor reset, save race, title alignment, and shared background color stay coherent", async ({
+test("full editor continues Quick state, restores suspended Full work, and saves without duplication", async ({
   page,
 }) => {
   await openBiomedicalPage(page);
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const chartCountBefore = await storedChartCount(page);
   await panel.getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.locator(".chart-editor-v3");
+  const quick = page.locator(".chart-quick-editor");
+  await quick.getByLabel("Chart title").fill("Quick continuity title");
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
 
-  await expect(editor.getByRole("button", { name: "Data", exact: true }))
+  let full = page.getByRole("dialog", { name: "Edit chart" });
+  await expect(full).toBeVisible();
+  await expect(full.getByRole("navigation", { name: "Chart editing steps" }))
     .toBeVisible();
-  await expect(editor.getByRole("button", { name: "Appearance", exact: true }))
-    .toBeVisible();
-  await expect(editor.getByRole("button", { name: "Axes", exact: true }))
-    .toBeVisible();
-  await expect(editor.getByRole("button", { name: "Interactions", exact: true }))
-    .toBeVisible();
-  await expect(editor.getByRole("button", { name: "Collection", exact: true }))
-    .toHaveCount(0);
-  await expect(editor.getByRole("button", { name: "Timeline", exact: true }))
-    .toHaveCount(0);
-  await expect(editor.getByRole("button", { name: "Map", exact: true }))
-    .toHaveCount(0);
-  await expect.poll(() => editor.locator(".chart-editor-actions button").evaluateAll(
-    (buttons) => buttons.map((button) => button.getAttribute("aria-label")),
-  )).toEqual([
-    "Save changes",
-    "Reset changes",
-    "Cancel",
-    "Remove chart",
-  ]);
-
-  await editor.getByRole("button", { name: "Appearance", exact: true })
-    .click();
-  const title = editor.getByLabel("Chart title");
-  await title.fill("Unsaved title");
-  await editor.getByRole("button", { name: "Reset changes" }).click();
-  const resetDialog = page.getByRole("dialog", {
-    name: "Discard these edits?",
+  await full.getByRole("button", { name: /^Configure\./ }).click();
+  const title = full.getByLabel("Chart title");
+  await expect(title).toHaveValue("Quick continuity title");
+  await title.fill("Full-only durable title");
+  await title.focus();
+  const fullBody = full.locator(".chart-wizard-body");
+  const fullScrollTop = await fullBody.evaluate((body) => {
+    const available = body.scrollHeight - body.clientHeight;
+    if (available < 40) throw new Error("Full editor did not provide a scrollable restoration fixture.");
+    body.scrollTop = Math.min(220, available);
+    return body.scrollTop;
   });
-  await resetDialog.getByRole("button", { name: "Keep editing" }).click();
-  await expect(title).toHaveValue("Unsaved title");
-  await editor.getByRole("button", { name: "Reset changes" }).click();
-  await resetDialog.getByRole("button", { name: "Reset changes" }).click();
-  await editor.getByRole("button", { name: "Appearance", exact: true })
-    .click();
-  await expect(title).toHaveValue("Confirmed cases");
+  expect(fullScrollTop).toBeGreaterThan(0);
 
-  await title.fill("Race-safe centered cases");
-  await editor.getByLabel("Title alignment").selectOption("center");
-  await editor.getByLabel("Background", { exact: true }).fill("#F5F8FB");
-  await expect(
-    editor.getByRole("group", { name: "Series colors" }),
-  ).toBeVisible();
-  await expect(editor.getByLabel("Line width")).toBeVisible();
-  await expect(editor.getByLabel("Bar width")).toHaveCount(0);
-  await editor.getByLabel("Line width").fill("3.5");
-  await editor.getByRole("button", { name: "Add color" }).click();
-  await editor.getByLabel("Color 1", { exact: true }).fill("#2BAA7B");
-  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expect(editor).toHaveCount(0);
-  await panel.getByRole("button", { name: "Edit chart" }).click();
-  await editor.getByRole("button", { name: "Appearance", exact: true })
-    .click();
-  await editor.getByRole("button", { name: "Reset changes" }).click();
-  await resetDialog.getByRole("button", { name: "Reset changes" }).click();
-  await editor.getByRole("button", { name: "Appearance", exact: true })
-    .click();
-  await expect(title).toHaveValue("Race-safe centered cases");
-  await expect(editor.locator('.chart-view-frame[data-title-align="center"]'))
-    .toBeVisible();
-  await expectStoredChart(page, "line", "Race-safe centered cases");
-  await expect.poll(() => page.evaluate((key) => {
-    const dashboard = JSON.parse(localStorage.getItem(key));
-    const chart = dashboard.pages
-      .flatMap(({ sections }) => sections)
-      .flatMap(({ panels }) => panels)
-      .find(({ id }) => id === "bio_confirmed_cases");
-    return {
-      align: chart.presentation.title.align,
-      background: chart.presentation.background.color,
-      series: chart.presentation.series,
-    };
-  }, STORAGE_KEY)).toEqual({
-    align: "center",
-    background: "#F5F8FB",
-    series: {
-      colors: ["#2BAA7B"],
-      lineWidth: 3.5,
-    },
-  });
+  const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-activity", "active");
+  await expect(owner).toHaveAttribute("data-pending-work-origin", "full");
+  const focusFull = owner.getByRole("button", { name: "Focus Chart changes", exact: true });
+  await focusFull.focus();
+  await focusFull.press("Enter");
+  await expect(title).toBeFocused();
+
+  await full.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(full).toHaveCount(0);
+  await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
+  await expect(owner).toHaveAttribute("data-pending-work-origin", "full");
+  await owner.getByRole("button", { name: "Resume Chart changes", exact: true }).click();
+
+  full = page.getByRole("dialog", { name: "Edit chart" });
+  await expect(full).toBeVisible();
+  await expect(full.getByLabel("Chart title")).toHaveValue("Full-only durable title");
+  await expect(full.getByLabel("Chart title")).toBeFocused();
+  await expect.poll(() => full.locator(".chart-wizard-body").evaluate(
+    (body) => body.scrollTop,
+  )).toBe(fullScrollTop);
+  await full.getByRole("button", { name: /^Review\./ }).click();
+  const save = full.getByRole("button", { name: "Save changes", exact: true });
+  await expect(save).toBeEnabled();
+  await save.click();
+
+  await expect(full).toHaveCount(0);
+  await expect(owner).toHaveCount(0);
+  await expect.poll(() => storedChartCount(page)).toBe(chartCountBefore);
+  await expect.poll(async () => (
+    await storedQuickPersistenceSnapshot(page)
+  ).targetTitle).toBe("Full-only durable title");
 });
 
 test("quick edit previews immediately while unchanged and suspended click-away sessions restore correctly", async ({
@@ -440,54 +438,11 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await editChart.click();
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
-  const addChart = page.getByRole("button", { name: "Add chart", exact: true });
-  await expect(addChart).toBeEnabled();
-  await addChart.focus();
-  await addChart.press("Enter");
-  await expect(editor).toHaveCount(0);
-  const addChartWizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expect(addChartWizard).toBeVisible();
-  const addChartFlow = chartAuthoringWorkflow(addChartWizard);
-  await addChartFlow.selectExistingSource("Biomedical mortality by age");
-  await addChartWizard.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(addChartWizard).toHaveCount(0);
-  const resumeChartDraft = page.getByRole("button", {
-    name: "Resume New chart draft",
-    exact: true,
-  });
-  await expect(resumeChartDraft).toBeVisible();
-
-  await editChart.click();
-  editor = page.locator(".chart-quick-editor");
-  await expect(editor).toBeVisible();
-  const takeoverTitle = editor.getByLabel("Chart title");
-  await takeoverTitle.fill("Blocked quick owner");
-  await resumeChartDraft.focus();
-  await resumeChartDraft.press("Enter");
-  await expect(editor).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Add new chart" })).toHaveCount(0);
-  await expect(page.getByRole("alert").filter({
-    hasText: "Resume or reset the chart changes before resuming the new chart draft.",
-  })).toBeVisible();
-
-  await editor.getByRole("button", { name: "Reset", exact: true }).click();
-  await expect(takeoverTitle).toHaveValue("Confirmed cases");
-  await resumeChartDraft.focus();
-  await resumeChartDraft.press("Enter");
-  await expect(editor).toHaveCount(0);
-  const resumedAddChartWizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expect(resumedAddChartWizard).toBeVisible();
-  await resumedAddChartWizard.getByRole("button", { name: "Discard chart draft" }).click();
-  const discardChartDraft = page.getByRole("dialog", { name: "Discard chart?" });
-  await discardChartDraft.getByRole("button", { name: "Discard", exact: true }).click();
-  await expect(resumedAddChartWizard).toHaveCount(0);
-
-  await editChart.click();
-  editor = page.locator(".chart-quick-editor");
-  await expect(editor).toBeVisible();
+  const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
+  await expect(owner).toHaveCount(0);
   await page.locator(".dashboard-header").click({ position: { x: 8, y: 8 } });
   await expect(editor).toHaveCount(0);
-  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveCount(0);
+  await expect(owner).toHaveCount(0);
   await expect(page.getByRole("button", { name: "View", exact: true })).toBeEnabled();
 
   await editChart.click();
@@ -509,15 +464,13 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   )).toBe(storedDashboardBeforeEdit);
   await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
   await expect(editor.getByRole("button", { name: "Remove chart", exact: true })).toBeEnabled();
-  await expect(editor.getByRole("button", { name: "Open full editor" })).toBeDisabled();
-  const restorationTarget = editor.locator(
-    ".control-tooltip:has(.chart-quick-editor-open-full)",
-  );
-  await expect(restorationTarget).toHaveAttribute("tabindex", "0");
-  await restorationTarget.focus();
-  await expect(restorationTarget).toBeFocused();
-  await expect(restorationTarget).toHaveAttribute("id", /.+/);
-  const restorationTargetId = await restorationTarget.getAttribute("id");
+  await expect(editor.getByRole("button", { name: "Open full editor" })).toBeEnabled();
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(owner).toHaveAttribute("data-pending-work-activity", "active");
+  await expect(owner).toHaveAttribute("data-pending-work-origin", "quick");
+  await owner.getByRole("button", { name: "Focus Chart changes", exact: true }).click();
+  await expect(title).toBeFocused();
   const quickEditorScrollTop = await page.locator(".unit-orbit-scroll").evaluate((scroller) => {
     const available = scroller.scrollHeight - scroller.clientHeight;
     if (available < 40) throw new Error("Quick editor did not provide a scrollable restoration fixture.");
@@ -525,6 +478,7 @@ test("quick edit previews immediately while unchanged and suspended click-away s
     return scroller.scrollTop;
   });
   expect(quickEditorScrollTop).toBeGreaterThan(0);
+  await title.focus();
 
   await page.locator(".dashboard-header").click({ position: { x: 8, y: 8 } });
   await expect(editor).toHaveCount(0);
@@ -536,25 +490,66 @@ test("quick edit previews immediately while unchanged and suspended click-away s
     panel.locator(".chart-echarts-view .chart-view-title--visually-hidden"),
   ).toHaveText("Live quick preview");
   await expect(editChart).toBeEnabled();
-  await expect(addChart).toBeDisabled();
-  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add chart", exact: true })).toBeDisabled();
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
+  await expect(owner).toHaveAttribute("data-pending-work-origin", "quick");
 
-  await editChart.click();
+  await owner.getByRole("button", { name: "Resume Chart changes", exact: true }).click();
   editor = page.locator(".chart-quick-editor");
   const resumedTitle = editor.getByLabel("Chart title");
   await expect(resumedTitle).toHaveValue("Live quick preview");
   await expect(editor.getByLabel("Show title")).not.toBeChecked();
-  const resumedRestorationTarget = editor.locator(
-    ".control-tooltip:has(.chart-quick-editor-open-full)",
-  );
-  await expect(resumedRestorationTarget).toHaveAttribute("id", restorationTargetId);
-  await expect(resumedRestorationTarget).toBeFocused();
+  await expect(resumedTitle).toBeFocused();
   await expect.poll(() => page.locator(".unit-orbit-scroll").evaluate(
     (scroller) => scroller.scrollTop,
   )).toBe(quickEditorScrollTop);
 });
 
-test("quick edit Save and confirmed Remove persist only the target placement", async ({
+test("suspended valid chart creation keeps one stable owner while incomplete creation stays absent", async ({
+  page,
+}) => {
+  let flow = await openChartAuthoring(page);
+  let wizard = flow.wizard;
+  const creationOwner = page.locator('[data-pending-work-kind="chart-create"]');
+  await expect(creationOwner).toHaveCount(0);
+
+  await flow.selectExistingSource("Biomedical mortality by age");
+  await expect(creationOwner).toHaveCount(0);
+  await flow.chooseChartType("pie", /^Pie\b/i);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("category", "Age group");
+  await flow.selectRole("value", "deaths");
+  await flow.goToConfigure();
+  await wizard.getByLabel("Chart title").fill("Retainable owner draft");
+  await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
+  await expect(creationOwner).toHaveCount(1);
+  const ownerId = await creationOwner.getAttribute("data-pending-work-id");
+  expect(ownerId).toMatch(/^chart-create:.+/);
+  await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
+
+  const title = wizard.getByLabel("Chart title");
+  await title.focus();
+  await wizard.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+  await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
+  await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "suspended");
+
+  await creationOwner.getByRole("button", { name: "Resume New chart draft", exact: true }).click();
+  wizard = page.getByRole("dialog", { name: "Add new chart" });
+  flow = chartAuthoringWorkflow(wizard);
+  await expect(wizard).toBeVisible();
+  await expect(wizard.getByLabel("Chart title")).toHaveValue("Retainable owner draft");
+  await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
+
+  await wizard.getByRole("button", { name: "Discard chart draft" }).click();
+  await page.getByRole("dialog", { name: "Discard chart?" })
+    .getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+  await expect(creationOwner).toHaveCount(0);
+});
+
+test("quick edit saving failure keeps one retry owner and confirmed Remove clears it", async ({
   page,
 }) => {
   await openBiomedicalPage(page);
@@ -573,9 +568,17 @@ test("quick edit Save and confirmed Remove persist only the target placement", a
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
   await editor.getByLabel("Chart title").fill("Durable quick save");
+  const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
+  await expect(owner).toHaveCount(1);
   const save = editor.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeEnabled();
   const pendingReasonEvidence = observeQuickEditorPendingReason(page);
+  const savingOwnerEvidence = observePendingOwnerState(
+    page,
+    "chart-edit:bio_confirmed_cases",
+    "saving",
+  );
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ = true; });
   await save.click();
 
   await expect(pendingReasonEvidence).resolves.toEqual({
@@ -586,8 +589,16 @@ test("quick edit Save and confirmed Remove persist only the target placement", a
     focused: true,
     reasonText: "Wait for the current chart operation to finish.",
   });
+  await expect(savingOwnerEvidence).resolves.toBe(true);
+
+  await expect(editor).toBeVisible();
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-state", "error");
+  expect(await storedQuickPersistenceSnapshot(page)).toEqual(before);
+  await owner.getByRole("button", { name: "Retry Save", exact: true }).click();
 
   await expect(editor).toHaveCount(0);
+  await expect(owner).toHaveCount(0);
   await expect.poll(async () => (
     await storedQuickPersistenceSnapshot(page)
   ).targetTitle).toBe("Durable quick save");
@@ -600,12 +611,24 @@ test("quick edit Save and confirmed Remove persist only the target placement", a
   await panel.getByRole("button", { name: "Edit chart" }).click();
   editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
+  await editor.getByLabel("Chart title").fill("Unsaved title removed with placement");
+  await expect(owner).toHaveCount(1);
   await editor.getByRole("button", { name: "Remove chart", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
   await expect(confirmation).toBeVisible();
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_CHART_REMOVE_SERIALIZE_ONCE__ = true; });
   await confirmation.getByRole("button", { name: "Remove chart", exact: true }).click();
 
+  await expect(panel).toHaveCount(1);
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-state", "error");
+  await expect(owner.getByRole("button", { name: "Retry Remove", exact: true })).toBeVisible();
+  expect(await storedQuickPersistenceSnapshot(page)).toEqual(afterSave);
+  await confirmation.getByRole("button", { name: "Keep chart", exact: true }).click();
+  await owner.getByRole("button", { name: "Retry Remove", exact: true }).click();
+
   await expect(panel).toHaveCount(0);
+  await expect(owner).toHaveCount(0);
   await expect.poll(async () => (
     await storedQuickPersistenceSnapshot(page)
   ).targetTitle).toBe(null);
@@ -787,6 +810,45 @@ async function storedQuickPersistenceSnapshot(page) {
       ),
     };
   }, STORAGE_KEY);
+}
+
+function storedChartCount(page) {
+  return page.evaluate(async (storageKey) => {
+    const storedDashboard = localStorage.getItem(storageKey);
+    const dashboard = storedDashboard
+      ? JSON.parse(storedDashboard)
+      : await fetch("/config/dashboard.json").then((response) => response.json());
+    return dashboard.pages
+      .flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .length;
+  }, STORAGE_KEY);
+}
+
+function observePendingOwnerState(page, ownerId, state) {
+  return page.evaluate(({ id, expectedState }) => new Promise((resolve) => {
+    let timeoutId;
+    const inspect = () => {
+      const owner = [...document.querySelectorAll("[data-pending-work-id]")]
+        .find((entry) => entry.dataset.pendingWorkId === id);
+      if (owner?.dataset.pendingWorkState !== expectedState) return false;
+      window.clearTimeout(timeoutId);
+      observer.disconnect();
+      resolve(true);
+      return true;
+    };
+    const observer = new MutationObserver(inspect);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    timeoutId = window.setTimeout(() => {
+      observer.disconnect();
+      resolve(false);
+    }, 5000);
+    inspect();
+  }), { id: ownerId, expectedState: state });
 }
 
 function observeQuickEditorPendingReason(page) {

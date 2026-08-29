@@ -104,8 +104,10 @@ export default function BuildWorkspace({
   onAddStaticContent,
   layoutDraft = null,
   chartSlotDraft = null,
+  chartOwners = [],
   authoredDirtyState = {},
   pendingWorkResumeActions = {},
+  pendingWorkOwnerActions = {},
   onSaveLayout,
   onDiscardLayout,
   onFinish,
@@ -428,6 +430,7 @@ export default function BuildWorkspace({
   const pendingWork = selectBuildPendingWork({
     authoredDirty: effectiveAuthoredDirtyState,
     coordinator: draftCoordinator,
+    chartOwners,
     parkedAuxiliaries,
     layoutDraft,
     actions: {
@@ -441,6 +444,7 @@ export default function BuildWorkspace({
           ?? (() => resumeAuxiliary("scene")),
       },
       resumeAuxiliary,
+      ownerById: pendingWorkOwnerActions,
       saveLayout: onSaveLayout,
       discardLayout: discardPendingLayout,
     },

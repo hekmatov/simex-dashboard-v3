@@ -204,6 +204,41 @@ test("suspend and resume restore focus, scroll, target, and reason deterministic
   assert.deepEqual(state.slots.chart.restoration, suspendedRestoration);
 });
 
+test("the chart slot preserves one scoped owner identity across surface and lifecycle updates", () => {
+  const owner = {
+    draftId: "chart-edit:placement-a",
+    kind: "chart-edit",
+    scopeId: "placement-a",
+    targetId: "placement-a",
+    status: "dirty",
+    activity: "active",
+    surface: "quick",
+    restoration: { surface: "quick", focusId: "quick-title", scrollTop: 140 },
+  };
+  let state = reduceBuildDraftCoordinator(createBuildDraftCoordinatorState(), {
+    type: "OPEN_SLOT",
+    slot: "chart",
+    draft: owner,
+  });
+  state = reduceBuildDraftCoordinator(state, {
+    type: "SYNC_SLOT",
+    slot: "chart",
+    draft: {
+      ...owner,
+      status: "error",
+      activity: "suspended",
+      surface: "full",
+      restoration: { surface: "full", focusId: "full-title", scrollTop: 510 },
+    },
+  });
+
+  assert.equal(state.slots.chart.draftId, "chart-edit:placement-a");
+  assert.equal(state.slots.chart.scopeId, "placement-a");
+  assert.equal(state.slots.chart.surface, "full");
+  assert.equal(state.slots.chart.activity, "suspended");
+  assert.equal(state.slots.chart.status, "error");
+});
+
 test("unknown actions fail exhaustively", () => {
   assert.throws(
     () => reduceBuildDraftCoordinator(createBuildDraftCoordinatorState(), { type: "SURPRISE" }),

@@ -68,6 +68,40 @@ export function isMeaningfulChartDraft(state) {
   );
 }
 
+export function projectChartCreateOwner(state, {
+  retainable = false,
+  activity = state?.suspension && state.suspension.resumed !== true
+    ? "suspended"
+    : "active",
+} = {}) {
+  if (
+    retainable !== true
+    || !state
+    || state.discarded === true
+    || state.status === "committed"
+    || typeof state.draftId !== "string"
+    || state.draftId.trim() === ""
+  ) return null;
+  const scopeId = state.draftId.trim();
+  const normalizedActivity = activity === "suspended" ? "suspended" : "active";
+  return {
+    id: `chart-create:${scopeId}`,
+    kind: "chart-create",
+    scopeId,
+    targetId: scopeId,
+    label: "New chart draft",
+    status: state.status === "committing"
+      ? "saving"
+      : new Set(["failed", "ambiguous"]).has(state.status) ? "error" : "dirty",
+    activity: normalizedActivity,
+    surface: "create",
+    restoration: state.suspension?.restoration
+      ? structuredClone(state.suspension.restoration)
+      : null,
+    activation: normalizedActivity === "suspended" ? "resume" : "focus",
+  };
+}
+
 function overwriteState(target, source) {
   if (target === source) return target;
   Object.assign(target, source);

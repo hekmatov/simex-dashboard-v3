@@ -113,6 +113,175 @@ test("clean slots are absent while paused auxiliaries remain resumable", () => {
   assert.deepEqual(log, ["aux:scene:aux-scene"]);
 });
 
+test("an adopted chart edit owner projects one stable row and bypasses both legacy chart paths", () => {
+  const log = [];
+  const actions = {
+    ...actionHarness(log),
+    ownerById: {
+      "chart-edit:panel-a": {
+        focus: () => log.push("focus:full"),
+        resume: () => log.push("resume:full"),
+        save: () => log.push("save:chart"),
+        discard: () => log.push("discard:chart"),
+      },
+    },
+  };
+  const base = {
+    draftId: "chart-edit:panel-a",
+    kind: "chart-edit",
+    scopeId: "panel-a",
+    targetId: "panel-a",
+    status: "dirty",
+    activity: "active",
+    surface: "full",
+    restoration: { surface: "full", focusId: "chart-stage-configure-chart", scrollTop: 420 },
+  };
+
+  const active = selectBuildPendingWork({
+    authoredDirty: { chartEditor: true },
+    coordinator: { slots: { chart: base } },
+    actions,
+  });
+
+  assert.equal(active.length, 1);
+  assert.deepEqual(active[0], {
+    id: "chart-edit:panel-a",
+    kind: "chart-edit",
+    scopeId: "panel-a",
+    targetId: "panel-a",
+    label: "Chart changes",
+    origin: "full",
+    priority: 20,
+    state: "dirty",
+    activity: "active",
+    surface: "full",
+    restoration: base.restoration,
+    activation: "focus",
+    resume: actions.ownerById["chart-edit:panel-a"].focus,
+    save: actions.ownerById["chart-edit:panel-a"].save,
+    discard: actions.ownerById["chart-edit:panel-a"].discard,
+  });
+  active[0].resume();
+
+  for (const status of ["saving", "error"]) {
+    const [entry] = selectBuildPendingWork({
+      authoredDirty: { chartEditor: true },
+      coordinator: {
+        slots: {
+          chart: { ...base, status, activity: "suspended" },
+        },
+      },
+      actions,
+    });
+    assert.equal(entry.id, "chart-edit:panel-a");
+    assert.equal(entry.state, status);
+    assert.equal(entry.activity, "suspended");
+    assert.equal(entry.activation, "resume");
+    assert.strictEqual(entry.resume, actions.ownerById[entry.id].resume);
+  }
+
+  assert.deepEqual(log, ["focus:full"]);
+  assert.deepEqual(selectBuildPendingWork({
+    authoredDirty: { chartEditor: false },
+    coordinator: { slots: { chart: { ...base, status: "clean" } } },
+    actions,
+  }), []);
+});
+
+test("adopted chart creation bypasses the legacy wizard key without colliding with chart edit identity", () => {
+  const create = selectBuildPendingWork({
+    authoredDirty: { chartWizard: true },
+    coordinator: {
+      slots: {
+        chart: {
+          draftId: "chart-create:draft-a",
+          kind: "chart-create",
+          scopeId: "draft-a",
+          targetId: "draft-a",
+          status: "dirty",
+          activity: "suspended",
+          surface: "create",
+          restoration: { focusId: "chart-stage-review-and-create", scrollTop: 300 },
+        },
+      },
+    },
+    actions: {
+      ...actionHarness(),
+      ownerById: { "chart-create:draft-a": { resume() {} } },
+    },
+  });
+
+  assert.deepEqual(create.map(({ id, kind }) => ({ id, kind })), [{
+    id: "chart-create:draft-a",
+    kind: "chart-create",
+  }]);
+  assert.notEqual(create[0].id, "chart-edit:draft-a");
+});
+
+test("distinct adopted chart creation and edit owners coexist without legacy duplicates", () => {
+  const edit = {
+    draftId: "chart-edit:panel-a",
+    kind: "chart-edit",
+    scopeId: "panel-a",
+    targetId: "panel-a",
+    status: "dirty",
+    activity: "active",
+    surface: "quick",
+  };
+  const create = {
+    draftId: "chart-create:draft-a",
+    kind: "chart-create",
+    scopeId: "draft-a",
+    targetId: "draft-a",
+    status: "dirty",
+    activity: "suspended",
+    surface: "create",
+  };
+
+  const pending = selectBuildPendingWork({
+    authoredDirty: { chartEditor: true, chartWizard: true },
+    coordinator: { slots: { chart: edit } },
+    chartOwners: [edit, create],
+    actions: {
+      ...actionHarness(),
+      ownerById: {
+        [edit.draftId]: { focus() {} },
+        [create.draftId]: { resume() {} },
+      },
+    },
+  });
+
+  assert.deepEqual(pending.map(({ id }) => id), [edit.draftId, create.draftId]);
+  assert.equal(new Set(pending.map(({ id }) => id)).size, 2);
+  assert.doesNotMatch(pending.map(({ id }) => id).join(" "), /chart-editor|chart-wizard/);
+});
+
+test("a failed chart removal preserves operation metadata for the exact retry action", () => {
+  const [pending] = selectBuildPendingWork({
+    coordinator: {
+      slots: {
+        chart: {
+          draftId: "chart-edit:panel-a",
+          kind: "chart-edit",
+          scopeId: "panel-a",
+          targetId: "panel-a",
+          status: "error",
+          activity: "active",
+          surface: "quick",
+          operation: "remove",
+        },
+      },
+    },
+    actions: {
+      ownerById: {
+        "chart-edit:panel-a": { save() {} },
+      },
+    },
+  });
+
+  assert.equal(pending.operation, "remove");
+});
+
 test("the conditional pending row slides in and disables motion when requested", async () => {
   const css = await readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8");
   assert.match(css, /\.build-pending-work\s*\{[^}]*animation:\s*build-pending-work-enter/s);
