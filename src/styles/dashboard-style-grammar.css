@@ -1482,7 +1482,11 @@
 
 /* Step 7 interaction contract: visual glyphs may stay compact, but every
    authoring and View action keeps a full keyboard/touch target. */
-.app-frame :is(
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit
+) :is(
   button,
   select,
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])
@@ -1490,7 +1494,11 @@
   min-block-size: var(--simex-control-min, 44px);
 }
 
-.app-frame .simex-icon-control {
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit
+) .simex-icon-control {
   block-size: var(--simex-control-min, 44px);
   inline-size: var(--simex-control-min, 44px);
   min-block-size: var(--simex-control-min, 44px);
@@ -2006,6 +2014,101 @@
   .showcase-faq summary
 ) {
   font-family: var(--simex-style-data-font);
+}
+
+/* Choice controls keep a native-size glyph while the associated label owns the
+   full touch target. This root list covers app chrome, standalone projections,
+   and generated/portal authoring surfaces without inflating the checkbox. */
+:is(
+  .unit-orbit,
+  .build-authoring-auxiliary,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root,
+  .static-content-dialog,
+  .source-content-workspace,
+  [data-dashboard-style][style]
+) {
+  font-family: var(--simex-style-body-font, Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif);
+}
+
+:is(
+  .unit-orbit,
+  .build-authoring-auxiliary,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root,
+  .static-content-dialog,
+  .source-content-workspace,
+  [data-dashboard-style][style]
+) :is(h1, h2, h3, h4, legend) {
+  font-family: var(--simex-style-heading-font, Georgia, serif);
+}
+
+:is(
+  .app-frame,
+  .unit-orbit,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root,
+  .static-content-dialog,
+  .source-content-workspace,
+  [role="dialog"],
+  [role="complementary"]
+) input:is([type="checkbox"], [type="radio"]) {
+  accent-color: var(--simex-selected);
+  block-size: 20px;
+  inline-size: 20px;
+  min-block-size: 20px;
+  min-inline-size: 20px;
+  padding: 0;
+}
+
+:is(
+  .app-frame,
+  .unit-orbit,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root,
+  .static-content-dialog,
+  .source-content-workspace,
+  [role="dialog"],
+  [role="complementary"]
+) label:has(input:is([type="checkbox"], [type="radio"])) {
+  align-items: center;
+  gap: 8px;
+  min-block-size: var(--simex-control-min, 44px);
+}
+
+/* Standard chart toggles keep their label and glyph as separate siblings.
+   Give that associated label the same 44px target and an explicit 8px
+   relationship without enlarging the native 20px checkbox. */
+:is(.app-frame, .build-authoring-auxiliary, .unit-orbit)
+  .chart-authoring-field:has(> input:is([type="checkbox"], [type="radio"])) {
+  gap: 8px;
+}
+
+:is(.app-frame, .build-authoring-auxiliary, .unit-orbit)
+  .chart-authoring-field:has(> input:is([type="checkbox"], [type="radio"])) > label {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-block-size: var(--simex-control-min, 44px);
+}
+
+:is(
+  .app-frame,
+  .unit-orbit,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root,
+  .static-content-dialog,
+  .source-content-workspace,
+  [role="dialog"],
+  [role="complementary"]
+) input:is([type="checkbox"], [type="radio"]):focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 2px;
 }
 
 .app-frame[data-dashboard-style="signal-instrument"] :is(

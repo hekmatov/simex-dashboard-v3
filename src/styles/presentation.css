@@ -195,7 +195,7 @@
 .displayed-chart-grid[data-display-surface="audience"] .displayed-chart-cell {
   background: var(--simex-surface-panel-alt);
   border: 1px solid color-mix(in srgb, var(--simex-text-strong) 8%, transparent);
-  border-radius: 16px;
+  border-radius: var(--simex-style-panel-radius);
   overflow: hidden;
   padding: 16px;
   position: relative;
@@ -241,7 +241,7 @@
 }
 
 .displayed-chart-grid[data-display-surface="audience"] .audience-static-image-cell .chart-image-viewport {
-  border-radius: 10px;
+  border-radius: var(--simex-style-control-radius);
   min-height: 0;
 }
 
@@ -326,7 +326,7 @@
 .present-scene-panel {
   background: var(--simex-surface-canvas);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--simex-style-surface-radius);
   padding: 24px;
 }
 
@@ -346,7 +346,7 @@
 }
 
 .present-catalogue-recovery h2 {
-  font-family: Georgia, Cambria, "Times New Roman", serif;
+  font-family: var(--simex-style-heading-font);
   font-size: clamp(24px, 3vw, 34px);
   line-height: 1.15;
   max-width: 680px;
@@ -400,8 +400,8 @@
   align-items: center;
   aspect-ratio: 16 / 9;
   background: var(--simex-surface-panel-alt);
-  border: 1px solid #c8d6e3;
-  border-radius: 8px;
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
   display: flex;
   justify-content: center;
   overflow: hidden;
@@ -501,8 +501,8 @@
 .presentation-date-position-stage {
   aspect-ratio: 16 / 9;
   background: var(--simex-surface-panel-alt);
-  border: 1px solid #c8d6e3;
-  border-radius: 8px;
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
   overflow: hidden;
   position: relative;
 }
@@ -572,9 +572,9 @@
 
 .present-selected-chart {
   align-items: center;
-  background: #fff;
+  background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 8px;
+  border-radius: var(--simex-style-control-radius);
   display: grid;
   gap: 12px;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -584,9 +584,9 @@
 
 .present-chart-order {
   align-items: center;
-  background: var(--simex-text-strong);
+  background: var(--simex-accent);
   border-radius: 999px;
-  color: #fff;
+  color: var(--simex-on-accent);
   display: inline-flex;
   font-weight: 700;
   height: 28px;
@@ -649,7 +649,7 @@
 
 .present-chart-group {
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 8px;
+  border-radius: var(--simex-style-panel-radius);
   display: grid;
   gap: 12px;
   padding: 12px;
@@ -887,8 +887,8 @@
 
 .audience-scene-date {
   background: color-mix(in srgb, var(--simex-surface-canvas) 92%, transparent);
-  border: 1px solid #c8d6e3;
-  border-radius: 8px;
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
   font-size: 22px;
   font-weight: 800;
   line-height: 1;
@@ -899,7 +899,7 @@
 
 .present-audience-information {
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 8px;
+  border-radius: var(--simex-style-panel-radius);
   display: grid;
   gap: 10px;
   margin: 0;

@@ -20,7 +20,7 @@
   animation: right-side-drawer-enter 180ms ease-out;
   background: var(--simex-surface-panel);
   border-left: 1px solid var(--simex-border-strong);
-  box-shadow: -18px 0 36px rgb(18 26 28 / 24%);
+  box-shadow: var(--simex-style-shell-shadow);
   color: var(--simex-text-strong);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;

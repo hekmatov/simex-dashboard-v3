@@ -742,12 +742,14 @@ export default function BuildWorkspace({
           {(activeAuxiliary === "source-content" || sourceContentOwners.length > 0) && typeof document !== "undefined" && createPortal((
             <aside
               className="build-authoring-auxiliary build-authoring-auxiliary--source-content"
-              {...dashboardThemeRootProps(themeProjection)}
+              {...dashboardThemeRootProps(
+                themeProjection,
+                activeAuxiliary !== "source-content" ? { display: "none" } : {},
+              )}
               data-authoring-surface="source-content"
               role="complementary"
               aria-label="Source content authoring"
               hidden={activeAuxiliary !== "source-content"}
-              style={activeAuxiliary !== "source-content" ? { display: "none" } : undefined}
               inert={activeAuxiliary !== "source-content" ? "" : undefined}
               onKeyDown={(event) => {
                 if (event.key !== "Escape" || sourceContentSaving) return;

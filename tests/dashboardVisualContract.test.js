@@ -95,3 +95,66 @@ test("dashboard visual contract fixes shared component tokens without changing p
   assert.match(styleGrammar, /var\(--simex-component-control-radius\)/);
   assert.match(styles, /outline:\s*var\(--simex-component-focus-width\) solid var\(--simex-component-focus\)/);
 });
+
+test("pending owners and named authoring surfaces consume semantic style and control contracts", async () => {
+  const [
+    styles,
+    modes,
+    styleGrammar,
+    staticContent,
+    sourceContent,
+    rightDrawer,
+    operationStatus,
+    sourceViewer,
+    iconGlyphs,
+    buildWorkspace,
+  ] = await Promise.all([
+    readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/dashboard-style-grammar.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/static-content.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/source-content.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/right-side-drawer.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/operation-status.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/source-viewer/sourceViewer.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/iconography/iconGlyphs.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/build/BuildWorkspace.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(styles, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);
+  assert.match(styles, /input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\),\s*select,\s*textarea/s);
+  assert.match(styleGrammar, /input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)[^{]*\{[^}]*accent-color:\s*var\(--simex-selected\)[^}]*block-size:\s*20px[^}]*inline-size:\s*20px/s);
+  assert.match(styleGrammar, /label:has\(input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*8px[^}]*min-block-size:\s*var\(--simex-control-min/s);
+  assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*8px/s);
+  assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\) > label[^}]*\{[^}]*gap:\s*8px[^}]*min-block-size:\s*var\(--simex-control-min/s);
+  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\)\s*:is\(\s*button,[^{]*\{[^}]*min-block-size:\s*var\(--simex-control-min/s);
+  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\) \.simex-icon-control[^}]*block-size:\s*var\(--simex-control-min[^}]*inline-size:\s*var\(--simex-control-min/s);
+  assert.match(styleGrammar, /build-authoring-auxiliary[^}]*\{[^}]*font-family:\s*var\(--simex-style-body-font/s);
+  assert.match(styleGrammar, /build-authoring-auxiliary[^}]*:is\(h1, h2, h3, h4, legend\)[^{]*\{[^}]*font-family:\s*var\(--simex-style-heading-font/s);
+
+  assert.match(modes, /data-pending-work-state="dirty"[^}]*background:\s*var\(--simex-warning-soft\)[^}]*var\(--simex-warning\)/s);
+  assert.match(modes, /data-pending-work-state="saving"[^}]*background:\s*var\(--simex-info-soft\)[^}]*var\(--simex-info\)/s);
+  assert.match(modes, /data-pending-work-state="error"[^}]*background:\s*var\(--simex-error-soft\)[^}]*var\(--simex-error\)/s);
+  assert.match(modes, /build-authoring-auxiliary button,[^{]*build-authoring-auxiliary input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-min/s);
+  assert.match(modes, /\.build-authoring-auxiliary\s*\{[^}]*border-radius:\s*var\(--simex-style-surface-radius\)[^}]*box-shadow:\s*var\(--simex-style-shell-shadow\)/s);
+
+  assert.doesNotMatch(staticContent, /--simex-surface-muted/);
+  assert.match(staticContent, /portable-qmd-composer__toolbar[^}]*button\[aria-pressed="true"\][^{]*\{[^}]*var\(--simex-selected-soft\)[^}]*var\(--simex-selected\)/s);
+  assert.match(staticContent, /free-text-source-editor__toolbar :is\(button, select\)[^{]*\{[^}]*min-height:\s*44px/s);
+  assert.match(staticContent, /free-text-source-editor__advanced:not\(\[hidden\]\)\s*\{[^}]*display:\s*grid[^}]*gap:\s*12px/s);
+  assert.match(staticContent, /free-text-source-editor__advanced > textarea\s*\{[^}]*min-height:\s*180px[^}]*width:\s*100%/s);
+  assert.match(staticContent, /portable-qmd-composer__announcement\[role="status"\][^{]*\{[^}]*var\(--simex-info-soft\)[^}]*var\(--simex-info\)/s);
+
+  assert.doesNotMatch(sourceContent, /--color-(?:text|border|surface)/);
+  assert.doesNotMatch(sourceContent, /var\(--simex-(?:surface|border)(?:,|\))/);
+  assert.match(rightDrawer, /box-shadow:\s*var\(--simex-style-shell-shadow\)/);
+  assert.match(operationStatus, /border-radius:\s*var\(--simex-style-surface-radius\)/);
+  assert.match(sourceViewer, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);
+  assert.match(sourceViewer, /source-viewer-theme-root :is\(button, input\)[^{]*\{[^}]*min-block-size:\s*var\(--simex-control-min/s);
+  assert.match(sourceViewer, /source-viewer-return\s*\{[^}]*background:\s*var\(--simex-surface-panel-alt[^}]*border[^}]*var\(--simex-border-strong[^}]*color:\s*var\(--simex-text-strong/s);
+  assert.match(sourceViewer, /source-viewer-return:focus-visible[^}]*\{[^}]*var\(--simex-focus/s);
+  assert.match(iconGlyphs, /font-family:var\(--simex-style-data-font\)/);
+  assert.match(buildWorkspace, /dashboardThemeRootProps\(\s*themeProjection,\s*activeAuxiliary !== "source-content"\s*\?\s*\{ display: "none" \}\s*:\s*\{\},?\s*\)/s);
+  assert.doesNotMatch(buildWorkspace, /dashboardThemeRootProps\(themeProjection\)\}[\s\S]{0,500}style=\{activeAuxiliary !== "source-content"/);
+  assert.doesNotMatch(`${styles}\n${modes}`, /--simex-shadow-(?:elevated|raised)/);
+});

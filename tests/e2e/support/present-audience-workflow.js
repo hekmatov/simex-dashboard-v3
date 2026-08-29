@@ -68,7 +68,12 @@ export async function createSavedPresentationScene(page, {
   } else if (entry !== "build-biomedical") {
     throw new Error(`Unknown presentation Scene workflow entry: ${entry}`);
   }
-  await page.locator('[data-context-shelf-entry="scene"]').click();
+  const sceneStudioEntry = page.locator('[data-context-shelf-entry="scene"]');
+  if (!await sceneStudioEntry.isVisible()) {
+    await page.getByRole("button", { name: "More", exact: true }).click();
+  }
+  await expect(sceneStudioEntry).toBeVisible();
+  await sceneStudioEntry.click();
   const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await expect(studio).toBeVisible();
   const beforeIds = await readSceneIds(page);

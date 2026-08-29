@@ -1,7 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-import { expectNoRetiredDashboardStyle } from "./support/dashboard-style-audit.js";
+import {
+  expectNoRetiredDashboardStyle,
+  observePendingOwnerStyle,
+} from "./support/dashboard-style-audit.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import {
+  createSavedPresentationScene,
+  enterPresentWithScene,
+  openAudienceSession,
+} from "./support/present-audience-workflow.js";
 
 const STYLE_OPTIONS = [
   { label: "Ledger", profile: "evidence-ledger/brighter-vellum" },
@@ -10,10 +18,10 @@ const STYLE_OPTIONS = [
 ];
 
 test("selected style owns hover, focus, disabled, generated, SVG, and portal paint", async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await openDashboardPage(page, "biomedical");
+  await expect(page.locator('[data-canonical-mode="home"]')).toBeVisible();
 
   for (const style of STYLE_OPTIONS) {
     await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
@@ -21,8 +29,9 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
     await look.getByLabel(style.label, { exact: true }).check();
     await look.locator(`[data-profile-option="${style.profile}"] input`).check();
     await page.keyboard.press("Escape");
+    await expectNoRetiredDashboardStyle(page);
 
-    for (const pageId of ["old-homepage-content", "biomedical", "socio_economic"]) {
+    for (const pageId of ["biomedical", "socio_economic"]) {
       await page.locator(`[data-dashboard-page-id="${pageId}"]`).click();
       await expectNoRetiredDashboardStyle(page);
     }
@@ -36,6 +45,8 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
     await icon.focus();
     await expectNoRetiredDashboardStyle(page);
     await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Home", exact: true }).click();
+    await expect(page.locator('[data-canonical-mode="home"]')).toBeVisible();
   }
 });
 
@@ -73,6 +84,12 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await expectNoRetiredDashboardStyle(page);
   await passport.getByRole("button", { name: "Close", exact: true }).click();
 
+  await page.getByRole("button", { name: "Source content", exact: true }).click();
+  const sourceContent = page.getByRole("complementary", { name: "Source content authoring" });
+  await expect(sourceContent).toBeVisible();
+  await expectNoRetiredDashboardStyle(page);
+  await sourceContent.getByRole("button", { name: "Close", exact: true }).click();
+
   await page.getByRole("button", { name: "Add chart", exact: true }).click();
   const wizard = page.locator(".chart-wizard");
   await expect(wizard).toBeVisible();
@@ -86,6 +103,203 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const chrono = page.getByRole("region", { name: "Chrono playback controls" });
   await chrono.getByRole("button", { name: "Show availability information" }).click();
+  await expectNoRetiredDashboardStyle(page);
+});
+
+test("one pending chart row keeps stable semantic paint through active, suspended, saving, and error", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    const stringify = JSON.stringify;
+    JSON.stringify = function patchedStringify(value, ...args) {
+      if (
+        globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ === true
+        && value?.pages?.some(({ sections }) => sections?.some(({ panels }) => (
+          panels?.some((placement) => (
+            (placement.chart ?? placement)?.title === "Durable quick save"
+          ))
+        )))
+      ) {
+        globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ = false;
+        throw new Error("Dashboard persistence is temporarily unavailable.");
+      }
+      return stringify.call(this, value, ...args);
+    };
+  });
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+
+  const ownerId = "chart-edit:bio_confirmed_cases";
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  let quick = page.locator(".chart-quick-editor");
+  await quick.getByLabel("Chart title").fill("Durable quick save");
+  const owner = page.locator(`[data-pending-work-id="${ownerId}"]`);
+  await expect(owner).toHaveCount(1);
+
+  const active = await observePendingOwnerStyle(page, ownerId, "dirty");
+  expect(active).toMatchObject({
+    count: 1,
+    state: "dirty",
+    activity: "active",
+    origin: "quick",
+    semanticStatePaint: true,
+  });
+  expect(active.actionCopy.join(" ")).toContain("Focus Chart changes");
+  await expectNoRetiredDashboardStyle(page);
+
+  await page.locator(".dashboard-header").click({ position: { x: 8, y: 8 } });
+  await expect(quick).toHaveCount(0);
+  const suspended = await observePendingOwnerStyle(page, ownerId, "dirty");
+  expect(suspended).toMatchObject({
+    count: 1,
+    nodeIdentity: active.nodeIdentity,
+    state: "dirty",
+    activity: "suspended",
+    origin: "quick",
+    semanticStatePaint: true,
+  });
+  expect(suspended.actionCopy.join(" ")).toContain("Resume Chart changes");
+  expect(suspended.geometry).toEqual(active.geometry);
+  await expectNoRetiredDashboardStyle(page);
+
+  await owner.getByRole("button", { name: "Resume Chart changes", exact: true }).click();
+  quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const full = page.getByRole("dialog", { name: "Edit chart" });
+  await full.getByRole("button", { name: /^Configure\./ }).click();
+  await expect(full.getByLabel("Chart title")).toHaveValue("Durable quick save");
+  await expect(owner).toHaveAttribute("data-pending-work-origin", "full");
+  await expectNoRetiredDashboardStyle(page);
+
+  await full.getByRole("button", { name: /^Review\./ }).click();
+  const savingProjection = observePendingOwnerStyle(page, ownerId, "saving");
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ = true; });
+  await full.getByRole("button", { name: "Save changes", exact: true }).click();
+  const saving = await savingProjection;
+  expect(saving).toMatchObject({
+    count: 1,
+    nodeIdentity: active.nodeIdentity,
+    state: "saving",
+    activity: "active",
+    origin: "full",
+    semanticStatePaint: true,
+  });
+  expect(saving.geometry).toEqual(active.geometry);
+
+  await expect(owner).toHaveAttribute("data-pending-work-state", "error");
+  const error = await observePendingOwnerStyle(page, ownerId, "error");
+  expect(error).toMatchObject({
+    count: 1,
+    nodeIdentity: active.nodeIdentity,
+    state: "error",
+    activity: "active",
+    origin: "full",
+    semanticStatePaint: true,
+  });
+  expect(error.actionCopy.join(" ")).toContain("Retry Save");
+  expect(error.geometry).toEqual(active.geometry);
+  await expectNoRetiredDashboardStyle(page);
+});
+
+test("Text/Image Composer, sanitized notice, Preview, Advanced QMD, and Panel size use semantic contracts", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+
+  const composer = wizard.getByLabel("Portable QMD Composer editing area");
+  await composer.fill("Operational response");
+  await composer.press("Control+a");
+  await wizard.getByRole("button", { name: "Bold" }).click();
+  await expect(wizard.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true");
+  await composer.evaluate((node) => {
+    const clipboardData = new DataTransfer();
+    clipboardData.setData("text/html", '<p style="color:red" onclick="window.__owned=true"><strong>Safe paste</strong><script>window.__owned=true</script></p>');
+    node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+  });
+  await expect(wizard.locator(".portable-qmd-composer__announcement"))
+    .toContainText(/unsupported paste formatting was removed/i);
+  await expect(wizard.getByRole("grid", { name: /Panel size:/ })).toBeVisible();
+  await wizard.getByRole("gridcell", { name: "Set panel size to 4 columns by 2 rows" }).click();
+  await expectNoRetiredDashboardStyle(page);
+
+  await wizard.getByRole("tab", { name: "Preview" }).click();
+  await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(/Operational response|Safe paste/);
+  await expectNoRetiredDashboardStyle(page);
+
+  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
+  const advancedSource = wizard.getByLabel("Portable QMD source");
+  const advancedHelp = wizard.getByText(/Advanced QMD preserves exact authored source/);
+  const insertImage = wizard.getByRole("button", { name: "Insert image", exact: true });
+  await expect(advancedSource).toBeVisible();
+  const advancedGeometry = await Promise.all([
+    advancedSource.boundingBox(),
+    advancedHelp.boundingBox(),
+    insertImage.boundingBox(),
+  ]);
+  expect(advancedGeometry.every(Boolean)).toBe(true);
+  const [sourceBox, helpBox, insertBox] = advancedGeometry;
+  expect(sourceBox.height).toBeGreaterThanOrEqual(180);
+  expect(helpBox.y).toBeGreaterThanOrEqual(sourceBox.y + sourceBox.height + 8);
+  expect(insertBox.y).toBeGreaterThanOrEqual(helpBox.y + helpBox.height + 8);
+  await expectNoRetiredDashboardStyle(page);
+});
+
+test("Present, Audience options, and standalone Audience use selected style", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const scene = await createSavedPresentationScene(page, { url: "/" });
+  await enterPresentWithScene(page, scene);
+  await expectNoRetiredDashboardStyle(page);
+
+  await page.getByRole("button", { name: "Audience display options", exact: true }).click();
+  const options = page.getByRole("dialog", { name: "Audience display options" });
+  await expect(options).toBeVisible();
+  await expectNoRetiredDashboardStyle(page);
+  await options.getByRole("button", { name: "Close Audience display options", exact: true }).click();
+
+  const { popup } = await openAudienceSession(page);
+  await popup.setViewportSize({ width: 1440, height: 900 });
+  await expectNoRetiredDashboardStyle(popup);
+  await popup.close();
+});
+
+test("standalone source viewer and application recovery retain dashboard style", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await panel.scrollIntoViewIfNeeded();
+
+  const popupPromise = page.waitForEvent("popup");
+  await panel.getByRole("button", { name: "View source CSV", exact: true }).click();
+  const viewer = await popupPromise;
+  await viewer.waitForLoadState("domcontentloaded");
+  await expect(viewer).toHaveURL(/\/source-viewer\.html$/);
+  await expect(viewer.locator(".source-viewer-theme-root")).toBeVisible();
+  await expect(viewer.getByText("177 of 177 rows", { exact: true })).toBeVisible();
+  await expectNoRetiredDashboardStyle(viewer);
+  await viewer.close();
+
+  await page.route("**/config/dashboard.json", (route) => route.fulfill({
+    status: 503,
+    body: "unavailable",
+  }));
+  await page.reload();
+  await expect(page.locator(".application-recovery")).toBeVisible();
+  await expect(page.getByRole("heading", {
+    name: "Dashboard couldn’t load. No valid scenario is available.",
+  })).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
 });
 

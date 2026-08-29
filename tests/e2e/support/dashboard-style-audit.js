@@ -161,12 +161,19 @@ export async function expectNoRetiredDashboardStyle(page) {
       }
       return false;
     };
-    const authoredPaint = (element) => Boolean(element.closest([
-      ".settings-color-field",
-      ".settings-color-popover",
-      ".chart-authoring-series-color",
-      "[data-color-field]",
+    const authoredPaint = (element) => element.matches([
+      ".settings-color-swatch",
+      ".settings-color-preset-grid > button",
+      ".settings-gradient-grid > button > span",
       "input[type=\"color\"]",
+      "[data-authored-color-swatch]",
+    ].join(","));
+    const authoredCodeFont = (element) => Boolean(element.closest([
+      "code",
+      "pre",
+      "kbd",
+      ".free-text-source-editor",
+      ".portable-qmd-composer__source",
     ].join(",")));
     const visible = (element, style) => {
       if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
@@ -205,7 +212,8 @@ export async function expectNoRetiredDashboardStyle(page) {
       }
       const fontFamily = String(style.fontFamily || "").trim().toLowerCase();
       const userAgentColorControl = element instanceof HTMLInputElement && element.type === "color";
-      if (!userAgentColorControl && fontFamily && approvedFonts.size > 0 && !approvedFonts.has(fontFamily)) {
+      if (!userAgentColorControl && !authoredCodeFont(element)
+        && fontFamily && approvedFonts.size > 0 && !approvedFonts.has(fontFamily)) {
         paint.fontFamily = style.fontFamily;
       }
       return Object.keys(paint).length ? [{ kind, ...identity, paint }] : [];
@@ -299,4 +307,91 @@ export async function expectNoRetiredDashboardStyle(page) {
   if (hits.length) {
     throw new Error(`Retired dashboard style reached live UI:\n${JSON.stringify(hits, null, 2)}`);
   }
+}
+
+/**
+ * Capture a pending owner's short-lived visual projection without changing the
+ * product lifecycle. The observer starts before Save so the saving projection
+ * cannot disappear between Playwright polls. Node identity is kept in a
+ * page-local WeakMap, proving that state/copy changes do not create a second
+ * row or replace the stable owner element.
+ */
+export function observePendingOwnerStyle(page, ownerId, expectedState) {
+  return page.evaluate(({ id, state }) => new Promise((resolve) => {
+    let timeoutId;
+    const ownerKeys = globalThis.__simexDashboardStyleAuditOwnerKeys
+      ??= { next: 1, values: new WeakMap() };
+    const resolveColor = (owner, variable) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${variable})`;
+      owner.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+    const inspect = () => {
+      const owners = [...document.querySelectorAll("[data-pending-work-id]")]
+        .filter((entry) => entry.dataset.pendingWorkId === id);
+      const owner = owners[0];
+      if (owners.length !== 1 || owner?.dataset.pendingWorkState !== state) return false;
+      if (!ownerKeys.values.has(owner)) {
+        ownerKeys.values.set(owner, ownerKeys.next);
+        ownerKeys.next += 1;
+      }
+      const style = getComputedStyle(owner);
+      const semanticVariables = state === "saving"
+        ? ["--simex-info", "--simex-info-soft"]
+        : state === "error"
+          ? ["--simex-error", "--simex-error-soft"]
+          : ["--simex-warning", "--simex-warning-soft"];
+      const semanticColors = semanticVariables.map((variable) => resolveColor(owner, variable));
+      const paintedColors = [
+        style.color,
+        style.backgroundColor,
+        style.borderTopColor,
+        style.borderRightColor,
+        style.borderBottomColor,
+        style.borderLeftColor,
+      ];
+      const rect = owner.getBoundingClientRect();
+      const actionCopy = [...owner.querySelectorAll("button")]
+        .filter((button) => getComputedStyle(button).display !== "none")
+        .map((button) => button.textContent.trim())
+        .filter(Boolean);
+      window.clearTimeout(timeoutId);
+      observer.disconnect();
+      resolve({
+        count: owners.length,
+        nodeIdentity: ownerKeys.values.get(owner),
+        id: owner.dataset.pendingWorkId,
+        state: owner.dataset.pendingWorkState,
+        activity: owner.dataset.pendingWorkActivity,
+        origin: owner.dataset.pendingWorkOrigin,
+        surface: owner.dataset.pendingWorkSurface,
+        actionCopy,
+        geometry: {
+          width: Math.round(rect.width * 100) / 100,
+          height: Math.round(rect.height * 100) / 100,
+        },
+        paint: {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          borderLeftColor: style.borderLeftColor,
+        },
+        semanticStatePaint: semanticColors.some((color) => paintedColors.includes(color)),
+      });
+      return true;
+    };
+    const observer = new MutationObserver(inspect);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    timeoutId = window.setTimeout(() => {
+      observer.disconnect();
+      resolve({ timedOut: true, id, state });
+    }, 5_000);
+    inspect();
+  }), { id: ownerId, state: expectedState });
 }

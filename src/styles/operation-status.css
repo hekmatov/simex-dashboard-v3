@@ -17,7 +17,7 @@
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-strong);
   border-inline-start: 5px solid var(--simex-info);
-  border-radius: var(--simex-component-surface-radius, 10px);
+  border-radius: var(--simex-style-surface-radius);
   box-shadow: var(--simex-style-panel-shadow, 0 14px 34px rgb(18 26 28 / 18%));
   color: var(--simex-text-strong);
   display: grid;

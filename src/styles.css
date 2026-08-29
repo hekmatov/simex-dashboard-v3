@@ -1,8 +1,7 @@
 :root {
   color: var(--simex-text-strong);
   background: var(--simex-surface-canvas);
-  font-family:
-    Inter, Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif;
+  font-family: var(--simex-style-body-font, Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif);
 }
 
 /* Step 7 chart creation: six stable stages with independent proof ledgers. */
@@ -705,7 +704,8 @@ button.secondary {
 }
 
 button.active {
-  background: var(--simex-text-strong);
+  background: var(--simex-accent);
+  color: var(--simex-on-accent);
 }
 
 label {
@@ -716,13 +716,13 @@ label {
   gap: 3px;
 }
 
-input,
+input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
   border: 1px solid color-mix(in srgb, var(--simex-text-strong) 20%, transparent);
-  border-radius: 10px;
+  border-radius: var(--simex-style-control-radius, var(--simex-component-control-radius));
   color: var(--simex-text-strong);
-  min-height: 32px;
+  min-height: var(--simex-control-min, 44px);
   padding: 5px 8px;
 }
 
@@ -1132,7 +1132,7 @@ th {
 }
 
 .settings-color-row input {
-  font-family: Consolas, Monaco, monospace;
+  font-family: var(--simex-style-data-font);
   min-width: 0;
   text-transform: uppercase;
 }
@@ -1151,8 +1151,8 @@ th {
 }
 
 .settings-pipette-button.active {
-  background: var(--simex-text-strong);
-  color: #ffffff;
+  background: var(--simex-accent);
+  color: var(--simex-on-accent);
 }
 
 .settings-pipette-icon {
@@ -1174,7 +1174,7 @@ th {
 .settings-color-popover {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--simex-style-panel-radius);
   box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 10px;
@@ -1188,10 +1188,10 @@ th {
 }
 
 .settings-color-tabs button {
-  background: #f3f7fb;
-  border: 1px solid #d3deea;
-  border-radius: 8px;
-  color: #38536d;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
   cursor: pointer;
   font-size: 0.72rem;
   font-weight: 750;
@@ -4630,7 +4630,7 @@ button.danger {
 .chart-wizard {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 18px;
+  border-radius: var(--simex-style-surface-radius);
   box-sizing: border-box;
   box-shadow: var(--simex-style-shell-shadow);
   display: grid;
@@ -4644,7 +4644,7 @@ button.danger {
 .chart-wizard-header,
 .chart-wizard-footer {
   align-items: center;
-  background: white;
+  background: var(--simex-surface-panel);
   display: flex;
   gap: 16px;
   justify-content: space-between;
@@ -4874,7 +4874,7 @@ button.danger {
   background: var(--simex-surface-panel, #fff);
   border: 1px solid var(--simex-border-strong, #9eb0c0);
   border-radius: var(--simex-style-control-radius, 8px);
-  box-shadow: var(--simex-shadow-elevated, 0 12px 28px color-mix(in srgb, var(--simex-text-strong) 20%, transparent));
+  box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 2px;
   left: 0;
@@ -5021,10 +5021,11 @@ button.danger {
 }
 
 .confirm-dialog {
-  background: white;
+  background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 14px;
-  box-shadow: 0 24px 64px rgb(4 24 48 / 36%);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+  color: var(--simex-text-strong);
   display: grid;
   gap: 12px;
   max-width: 460px;
@@ -5430,7 +5431,7 @@ button.danger {
 
 .delete-dashboard-content-acknowledgement {
   align-items: start;
-  background: var(--simex-surface-subtle, #f4f7fa);
+  background: var(--simex-surface-panel-alt, #f4f7fa);
   border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   display: grid;
@@ -5526,10 +5527,10 @@ button.danger {
 
 .chart-editor-v3 {
   align-self: start;
-  background: #fff;
+  background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 18px;
-  box-shadow: 0 18px 44px color-mix(in srgb, var(--simex-text-strong) 12%, transparent);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
   max-height: calc(100vh - 32px);
   min-width: 0;
   overflow: auto;
@@ -5690,7 +5691,7 @@ button.danger {
 }
 
 .chart-editor-header {
-  background: #fff;
+  background: var(--simex-surface-panel);
   border-bottom: 1px solid var(--simex-border-subtle);
   padding: 14px 20px;
 }
@@ -5704,9 +5705,9 @@ button.danger {
 }
 
 .chart-editor-preview {
-  background: #fff;
+  background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 14px;
+  border-radius: var(--simex-style-panel-radius);
   min-height: 260px;
   overflow: hidden;
   padding: 10px;
@@ -5718,9 +5719,9 @@ button.danger {
 }
 
 .chart-editor-contextual-tabs {
-  background: #fff;
+  background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  border-radius: 14px;
+  border-radius: var(--simex-style-panel-radius);
   min-width: 0;
   padding: 14px;
 }
@@ -5730,7 +5731,7 @@ button.danger {
 }
 
 .chart-editor-actions {
-  background: #fff;
+  background: var(--simex-surface-panel);
   border-top: 1px solid var(--simex-border-subtle);
   justify-content: flex-end;
   padding: 12px 20px;
@@ -5880,12 +5881,12 @@ html[data-simex-eyedropper-active="true"] body * {
 }
 
 .chart-source-popover {
-  background: var(--simex-text-strong);
-  border: 1px solid rgb(255 255 255 / 16%);
-  border-radius: 10px;
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius);
   bottom: 40px;
-  box-shadow: 0 12px 28px rgb(4 24 48 / 28%);
-  color: #fff;
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
   display: grid;
   font-size: 0.78rem;
   gap: 3px;
@@ -6013,7 +6014,7 @@ html[data-simex-eyedropper-active="true"] body * {
   border: 1px solid var(--simex-border-strong);
   border-radius: var(--simex-component-surface-radius, 8px);
   bottom: calc(100% + 8px);
-  box-shadow: var(--simex-shadow-elevated);
+  box-shadow: var(--simex-style-panel-shadow);
   color: var(--simex-text-strong);
   font-size: 0.82rem;
   left: 50%;
