@@ -13,28 +13,33 @@ export function createBuildLayoutDraft(dashboard) {
     baseline,
     value: structuredClone(baseline),
     error: null,
+    revision: 0,
   };
 }
 
 export function reorderBuildLayoutPanel(draft, sourceId, targetId) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   if (!movePanel(next.value, sourceId, targetId)) return draft;
   return markDirty(next, targetId);
 }
 
 export function reorderBuildLayoutPage(draft, pageId, targetIndex) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   if (!reorderPage(next.value, pageId, targetIndex)) return draft;
   return markDirty(next, pageId);
 }
 
 export function reorderBuildLayoutSection(draft, pageId, sectionId, targetIndex) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   if (!reorderSection(next.value, pageId, sectionId, targetIndex)) return draft;
   return markDirty(next, sectionId);
 }
 
 export function renameBuildLayoutPage(draft, pageId, label) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const page = findPage(next.value, pageId);
   const name = String(label ?? "").trim();
@@ -45,6 +50,7 @@ export function renameBuildLayoutPage(draft, pageId, label) {
 }
 
 export function addBuildLayoutPage(draft, page) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   if (!page?.id || next.value.pages.some(({ id }) => id === page.id)) {
     return failCommand(draft, "PAGE_ID_INVALID", "The new Page needs a unique stable ID.");
@@ -54,6 +60,7 @@ export function addBuildLayoutPage(draft, page) {
 }
 
 export function addBuildLayoutSection(draft, pageId, section) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const page = findPage(next.value, pageId);
   if (!page || !section?.id || next.value.pages.flatMap(({ sections = [] }) => sections).some(({ id }) => id === section.id)) {
@@ -64,6 +71,7 @@ export function addBuildLayoutSection(draft, pageId, section) {
 }
 
 export function renameBuildLayoutSection(draft, pageId, sectionId, title) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const section = findSection(next.value, pageId, sectionId);
   const name = String(title ?? "").trim();
@@ -74,6 +82,7 @@ export function renameBuildLayoutSection(draft, pageId, sectionId, title) {
 }
 
 export function renameBuildLayoutPanel(draft, placementId, title) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const placement = next.value.pages
     .flatMap(({ sections = [] }) => sections)
@@ -88,6 +97,7 @@ export function renameBuildLayoutPanel(draft, placementId, title) {
 }
 
 export function moveBuildLayoutSection(draft, pageId, sectionId, targetPageId, placement = {}) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const source = findPage(next.value, pageId);
   const target = findPage(next.value, targetPageId);
@@ -110,6 +120,7 @@ export function moveBuildLayoutSection(draft, pageId, sectionId, targetPageId, p
 }
 
 export function mergeBuildLayoutSection(draft, pageId, sectionId, targetSectionId) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const page = findPage(next.value, pageId);
   const sourceIndex = page?.sections?.findIndex(({ id }) => id === sectionId) ?? -1;
@@ -123,6 +134,7 @@ export function mergeBuildLayoutSection(draft, pageId, sectionId, targetSectionI
 }
 
 export function removeBuildLayoutSection(draft, pageId, sectionId, { disposition } = {}) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const page = findPage(next.value, pageId);
   const index = page?.sections?.findIndex(({ id }) => id === sectionId) ?? -1;
@@ -142,6 +154,7 @@ export function removeBuildLayoutSection(draft, pageId, sectionId, { disposition
 }
 
 export function mergeBuildLayoutPage(draft, pageId, targetPageId) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   const next = cloneDraft(draft);
   const sourceIndex = next.value.pages.findIndex(({ id }) => id === pageId);
   const source = next.value.pages[sourceIndex];
@@ -157,6 +170,7 @@ export function mergeBuildLayoutPage(draft, pageId, targetPageId) {
 }
 
 export function removeBuildLayoutPage(draft, pageId, { disposition, targetPageId } = {}) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
   if ((draft?.value?.pages?.length ?? 0) <= 1) return failCommand(draft, "FINAL_PAGE_PROTECTED", "The final Page cannot be removed.");
   const next = cloneDraft(draft);
   const index = next.value.pages.findIndex(({ id }) => id === pageId);
@@ -213,11 +227,18 @@ export function previewBuildStructureConsequences(dashboard, operation) {
 
 export function beginBuildLayoutSave(draft) {
   if (!draft || draft.status === "clean" || draft.status === "saving") return draft;
-  return { ...draft, status: "saving", error: null };
+  return { ...draft, status: "saving", saveRevision: draft.revision ?? 0, error: null };
 }
 
-export function failBuildLayoutSave(draft, error) {
-  return { ...draft, status: "error", error };
+export function completeBuildLayoutSave(current, saving) {
+  return isExactBuildLayoutSave(current, saving) ? null : current;
+}
+
+export function failBuildLayoutSave(current, savingOrError, nextError) {
+  const saving = nextError === undefined ? current : savingOrError;
+  const error = nextError === undefined ? savingOrError : nextError;
+  if (!isExactBuildLayoutSave(current, saving)) return current;
+  return { ...current, status: "error", saveRevision: null, error };
 }
 
 export function discardBuildLayoutDraft(draft) {
@@ -260,7 +281,22 @@ function cloneDraft(draft) {
 }
 
 function markDirty(draft, targetId) {
-  return { ...draft, targetId, status: "dirty" };
+  return { ...draft, targetId, status: "dirty", revision: (draft.revision ?? 0) + 1 };
+}
+
+function isBuildLayoutDraftMutable(draft) {
+  return Boolean(draft) && draft.status !== "saving";
+}
+
+function isExactBuildLayoutSave(current, saving) {
+  return Boolean(
+    current
+    && saving
+    && current.draftId === saving.draftId
+    && current.status === "saving"
+    && current.revision === saving.revision
+    && current.saveRevision === saving.saveRevision,
+  );
 }
 
 function failCommand(draft, code, message) {

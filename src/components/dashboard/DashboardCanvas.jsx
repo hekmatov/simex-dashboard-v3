@@ -6,6 +6,7 @@ import LandingPage, { hasLandingPresentation } from "../LandingPage.jsx";
 import LayoutGrid from "../LayoutGrid.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
 import SectionStructureCommandDialog from "../build/SectionStructureCommandDialog.jsx";
+import BuildLayoutCreateDialog from "../build/BuildLayoutCreateDialog.jsx";
 import SceneViewCompositionGrid from "../time/SceneViewCompositionGrid.jsx";
 
 export default function DashboardCanvas({
@@ -27,6 +28,19 @@ export default function DashboardCanvas({
   onStartMultiFullscreenSelection,
 }) {
   const canvasInstanceId = React.useId();
+  const [createRequest, setCreateRequest] = React.useState(null);
+  const creationDialog = <BuildLayoutCreateDialog
+    open={Boolean(createRequest)}
+    kind={createRequest?.kind ?? "page"}
+    invoker={createRequest?.invoker}
+    onCancel={() => setCreateRequest(null)}
+    onSubmit={(name) => {
+      const kind = createRequest?.kind;
+      setCreateRequest(null);
+      if (kind === "section") buildState?.onAddSection?.(name);
+      else buildState?.onAddPage?.(name);
+    }}
+  />;
   const excludedIds = new Set([
     ...excludedChartIds,
     ...(chronoSection?.chartIds ?? []),
@@ -44,7 +58,7 @@ export default function DashboardCanvas({
 
   if (!activePage) {
     if (!buildState) return null;
-    return (
+    return (<>
       <section
         className="dashboard-workspace dashboard-blank-canvas"
         data-dashboard-surface={surface}
@@ -57,18 +71,19 @@ export default function DashboardCanvas({
           <button
             type="button"
             disabled={Boolean(buildState.disabled)}
-            onClick={buildState.onAddPage}
+            onClick={(event) => setCreateRequest({ kind: "page", invoker: event.currentTarget })}
           >
             Create first Page
           </button>
         </div>
       </section>
-    );
+      {creationDialog}
+    </>);
   }
   const landingActive = hasLandingPresentation(activePage);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
 
-  return (
+  return (<>
     <section
       className="dashboard-workspace"
       data-dashboard-surface={surface}
@@ -288,7 +303,7 @@ export default function DashboardCanvas({
                   type="button"
                   className="secondary"
                   disabled={Boolean(buildState.disabled)}
-                  onClick={() => buildState.onAddSection?.()}
+                  onClick={(event) => setCreateRequest({ kind: "section", invoker: event.currentTarget })}
                 >
                   <SimExIcon iconId="addTab" size={18} />
                   <span>Add section</span>
@@ -299,7 +314,8 @@ export default function DashboardCanvas({
         )}
       </div>
     </section>
-  );
+    {creationDialog}
+  </>);
 }
 
 function BuildSectionHeader({

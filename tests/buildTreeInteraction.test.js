@@ -40,6 +40,40 @@ test("pointer drag sessions expose the typed source synchronously before a rende
   assert.equal(session.resolve(""), null);
 });
 
+test("Map drag session recognizes protected dragover and falls back to its typed source on drop", () => {
+  const source = { kind: "section", pageId: "one", sectionId: "overview" };
+  const session = interactionModule.createBuildMoveDragSession();
+
+  session.start(source);
+  assert.deepEqual(session.current(), source);
+  assert.deepEqual(session.resolve(""), source);
+});
+
+test("Move destinations keep canvas panels on the current Page and expose empty Pages to Map section moves", () => {
+  const dashboard = {
+    pages: [
+      { id: "one", label: "One", sections: [{ id: "a", title: "A", panels: [{ id: "panel-a" }] }] },
+      { id: "two", label: "Two", sections: [{ id: "b", title: "B", panels: [] }] },
+      { id: "three", label: "Three", sections: [] },
+    ],
+  };
+  const panelDestinations = interactionModule.buildMoveDestinations(
+    dashboard,
+    { kind: "panel", pageId: "one", sectionId: "a", placementId: "panel-a" },
+    { pageId: "one" },
+  );
+  assert.equal(panelDestinations.every(({ target }) => target.pageId === "one"), true);
+
+  const sectionDestinations = interactionModule.buildMoveDestinations(
+    dashboard,
+    { kind: "section", pageId: "one", sectionId: "a" },
+  );
+  assert.deepEqual(sectionDestinations.find(({ target }) => target.pageId === "three"), {
+    label: "Three — empty",
+    target: { pageId: "three", sectionId: null, index: 0 },
+  });
+});
+
 test("keyboard sibling movement uses the same canonical move contract", () => {
   const dashboard = {
     pages: [{

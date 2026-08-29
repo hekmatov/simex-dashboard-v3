@@ -44,7 +44,7 @@ function consequenceText(item) {
   const charts = (item.chartNames ?? item.chartIds ?? []).join(", ");
   if (item.type === "scene-partial-split") return `${charts} will be removed from this Scene.`;
   if (item.type === "scene-frame-source-unresolved") return `${charts} is the frame source; Frame source becomes unresolved and needs attention.`;
-  if (item.type === "scene-present-fallback") return `Present fallback: ${charts} leaves Present; layout ${item.presentLayout} will show ${(item.presentChartIds ?? []).join(", ")}.`;
+  if (item.type === "scene-present-fallback") return `Present fallback: ${charts} leaves Present; layout ${item.presentLayout} will show ${(item.presentChartNames ?? []).join(", ")}.`;
   if (item.type === "scene-page-migration") return `${charts} and the whole Scene move to the destination Page.`;
   return `${charts} changes.`;
 }

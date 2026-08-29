@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { integrateCreatedChart } from "../src/charting/config/dashboardBundleV3.js";
 
 import * as chartEditSessionModel from "../src/charting/forms/chartEditSession.js";
 import {
@@ -326,6 +327,90 @@ test("quick Save accepts section IDs repeated on different pages", () => {
     chartByPlacement(rebased.value, "placement-c").title,
     "Concurrent second Page chart",
   );
+});
+
+test("chart Create rebases the committed placement into a reordered live layout draft", () => {
+  const baseline = dashboardFixtureWithLayoutSiblings();
+  const layoutDraft = {
+    draftId: "layout-dashboard-a",
+    kind: "layout",
+    targetId: "section-b",
+    status: "dirty",
+    baseline: structuredClone(baseline),
+    value: structuredClone(baseline),
+    error: null,
+  };
+  layoutDraft.value.pages[0].sections.reverse();
+  const committed = structuredClone(baseline);
+  committed.pages[0].sections[0].panels.push({
+    id: "placement-created",
+    chart: { id: "chart-created", title: "Created chart" },
+  });
+
+  const rebased = chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft({
+    layoutDraft,
+    committedDashboard: committed,
+    intent: { kind: "create", placementId: "placement-created" },
+  });
+
+  assert.deepEqual(rebased.value.pages[0].sections.map(({ id }) => id), ["section-b", "section-a"]);
+  assert.equal(chartByPlacement(rebased.value, "placement-created").title, "Created chart");
+  assert.equal(rebased.value.pages.flatMap(({ sections }) => sections).flatMap(({ panels }) => panels)
+    .filter(({ id }) => id === "placement-created").length, 1);
+  assert.equal(rebased.status, "dirty");
+  assert.equal(rebased.targetId, "section-b");
+});
+
+test("chart Create resolves a moved Section to persisted topology and derives placement identity from the committed chart", () => {
+  const baseline = {
+    configVersion: 3,
+    id: "dashboard-a",
+    title: "Dashboard",
+    timezone: "UTC",
+    dataSources: { "source-a": { kind: "inline", rows: [{ week: "2026-W01", value: 4 }] } },
+    chronoGroups: [],
+    pages: [
+      { id: "page-a", title: "First", sections: [
+        { id: "section-a", title: "First Section", panels: [placementChartFixture("chart-a")] },
+        { id: "section-b", title: "Moved Section", panels: [placementChartFixture("chart-b")] },
+      ] },
+      { id: "page-b", title: "Second", sections: [
+        { id: "section-c", title: "Existing Section", panels: [placementChartFixture("chart-c")] },
+      ] },
+    ],
+  };
+  const layoutDraft = {
+    draftId: "layout-dashboard-a",
+    kind: "layout",
+    targetId: "section-b",
+    status: "dirty",
+    baseline: structuredClone(baseline),
+    value: structuredClone(baseline),
+    error: null,
+  };
+  const [movedSection] = layoutDraft.value.pages[0].sections.splice(1, 1);
+  layoutDraft.value.pages[1].sections.push(movedSection);
+  const reviewedTarget = { pageId: "page-b", sectionId: "section-b", relation: "append" };
+
+  const persistedTarget = chartEditSessionModel.resolveChartCreationPersistenceTarget(layoutDraft, reviewedTarget);
+  assert.deepEqual(persistedTarget, { pageId: "page-a", sectionId: "section-b", relation: "append" });
+  const payload = { chart: placementChartFixture("chart-created", "Created chart") };
+  const committed = integrateCreatedChart(baseline, payload, persistedTarget);
+  const placementId = chartEditSessionModel.createdPlacementIdFromCommittedDashboard(committed, "chart-created");
+  assert.equal(placementId, "chart-created");
+
+  const rebased = chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft({
+    layoutDraft,
+    committedDashboard: committed,
+    intent: { kind: "create", placementId },
+  });
+  assert.equal(chartByPlacement(rebased.value, placementId).title, "Created chart");
+  assert.equal(rebased.value.pages[1].sections.some(({ id }) => id === "section-b"), true);
+
+  layoutDraft.value.pages[1].sections.push({ id: "draft-only", panels: [] });
+  assert.equal(chartEditSessionModel.resolveChartCreationPersistenceTarget(layoutDraft, {
+    pageId: "page-b", sectionId: "draft-only",
+  }), null);
 });
 
 test("chart persistence rebases layout-owned reference removals with unrelated committed members", () => {
@@ -922,6 +1007,22 @@ function chartByPlacement(dashboard, placementId) {
     .flatMap(({ panels = [] }) => panels)
     .find(({ id }) => id === placementId);
   return placement?.chart ?? placement;
+}
+
+function placementChartFixture(id, title = id) {
+  return {
+    configVersion: 3,
+    id,
+    title,
+    description: `${title} description`,
+    typeId: "kpi",
+    sourceId: "source-a",
+    roles: { value: { field: "value" } },
+    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
+    presentation: { background: { color: "#FFFFFF", transparent: false }, title: { align: "left" }, collection: null },
+    interaction: { zoom: { enabled: false }, timeSync: null },
+    layout: { size: "standard" },
+  };
 }
 
 function targetChart(dashboard) {

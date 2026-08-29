@@ -266,8 +266,8 @@ export function rebaseChartPersistenceIntoLayoutDraft({
   if (!isRecord(committedDashboard)) {
     throw new TypeError("A committed dashboard is required to rebase a layout draft.");
   }
-  if (!isRecord(intent) || !new Set(["save", "remove"]).has(intent.kind)) {
-    throw new TypeError("A chart Save or Remove intent is required to rebase a layout draft.");
+  if (!isRecord(intent) || !new Set(["create", "save", "remove"]).has(intent.kind)) {
+    throw new TypeError("A chart Create, Save, or Remove intent is required to rebase a layout draft.");
   }
   const placementId = requiredPlacementId(intent.placementId);
   const baseline = structuredClone(layoutDraft.baseline);
@@ -290,7 +290,7 @@ export function rebaseChartPersistenceIntoLayoutDraft({
       "Committed chart Save",
     );
     replaceCommittedPlacementChart(value, placementId, committedPlacement);
-  } else {
+  } else if (intent.kind === "remove") {
     if (indexes.committed.placements.has(placementId)) {
       throw new Error(`Committed chart Remove still contains placement "${placementId}".`);
     }
@@ -301,6 +301,10 @@ export function rebaseChartPersistenceIntoLayoutDraft({
       placementId,
       chartFromPlacement(removedPlacement)?.id,
     );
+  } else {
+    requireUniquePlacement(indexes.committed.placements, placementId, "Committed chart Create");
+    insertCreatedPlacementIntoRebasedLayout(value, committed, placementId);
+    requireUniquePlacement(indexDashboardLayout(value, "Rebased chart Create").placements, placementId, "Rebased chart Create");
   }
 
   return {
@@ -308,6 +312,27 @@ export function rebaseChartPersistenceIntoLayoutDraft({
     baseline: committed,
     value,
   };
+}
+
+export function resolveChartCreationPersistenceTarget(layoutDraft, target) {
+  if (!isRecord(layoutDraft?.baseline) || !isRecord(layoutDraft?.value) || !isRecord(target)) return null;
+  const localPage = (layoutDraft.value.pages ?? []).find(({ id }) => id === target.pageId);
+  if (!(localPage?.sections ?? []).some(({ id }) => id === target.sectionId)) return null;
+  const baselineMatches = (layoutDraft.baseline.pages ?? []).flatMap((page) => (
+    (page.sections ?? []).filter(({ id }) => id === target.sectionId).map(() => page.id)
+  ));
+  if (baselineMatches.length !== 1) return null;
+  return { ...target, pageId: baselineMatches[0] };
+}
+
+export function createdPlacementIdFromCommittedDashboard(committedDashboard, chartId) {
+  const matches = (committedDashboard?.pages ?? []).flatMap(({ sections = [] }) => sections)
+    .flatMap(({ panels = [] }) => panels)
+    .filter((placement) => chartFromPlacement(placement)?.id === chartId);
+  if (matches.length !== 1 || typeof matches[0]?.id !== "string" || !matches[0].id) {
+    throw new Error(`Committed chart Create must contain exactly one placement for chart "${String(chartId)}".`);
+  }
+  return matches[0].id;
 }
 
 export function prepareConfirmedChartEditRemoval(state) {
@@ -852,6 +877,31 @@ function replaceCommittedPlacementChart(dashboard, placementId, committedPlaceme
   if (matches !== 1) {
     throw new Error(`Rebased chart Save requires one placement "${placementId}".`);
   }
+}
+
+function insertCreatedPlacementIntoRebasedLayout(dashboard, committedDashboard, placementId) {
+  let committedLocation = null;
+  for (const page of committedDashboard.pages ?? []) {
+    for (const section of page.sections ?? []) {
+      const index = (section.panels ?? []).findIndex((placement) => placementIdentity(placement) === placementId);
+      if (index >= 0) committedLocation = { section, index, placement: section.panels[index] };
+    }
+  }
+  if (!committedLocation) throw new Error(`Committed chart Create is missing placement "${placementId}".`);
+  const targetSections = (dashboard.pages ?? []).flatMap(({ sections = [] }) => sections)
+    .filter(({ id }) => id === committedLocation.section.id);
+  if (targetSections.length !== 1) {
+    throw new Error(`Rebased chart Create requires one destination Section "${committedLocation.section.id}".`);
+  }
+  const target = targetSections[0];
+  if ((target.panels ?? []).some((placement) => placementIdentity(placement) === placementId)) return;
+  const committedIds = committedLocation.section.panels.map(placementIdentity);
+  const previousIds = committedIds.slice(0, committedLocation.index).reverse();
+  const nextIds = committedIds.slice(committedLocation.index + 1);
+  const previousIndex = previousIds.map((id) => target.panels.findIndex((item) => placementIdentity(item) === id)).find((index) => index >= 0);
+  const nextIndex = nextIds.map((id) => target.panels.findIndex((item) => placementIdentity(item) === id)).find((index) => index >= 0);
+  const insertionIndex = previousIndex !== undefined ? previousIndex + 1 : nextIndex !== undefined ? nextIndex : target.panels.length;
+  target.panels.splice(insertionIndex, 0, structuredClone(committedLocation.placement));
 }
 
 function removePlacementFromRebasedLayout(dashboard, placementId, chartId) {

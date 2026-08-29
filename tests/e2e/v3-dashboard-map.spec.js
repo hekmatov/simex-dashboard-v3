@@ -134,13 +134,38 @@ test("create page and inline rename acquire only the dashboard layout draft", as
 
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   const tree = map.getByRole("tree");
+  const addPage = page.locator('[data-build-page-navigation="anchored"]')
+    .getByRole("button", { name: "Add page", exact: true });
+  await addPage.click();
+  let createDialog = page.getByRole("dialog", { name: "Create Page" });
+  await createDialog.getByLabel("Page name").fill("   ");
+  await createDialog.getByRole("button", { name: "Create page", exact: true }).click();
+  await expect(createDialog.getByRole("alert")).toContainText("Enter a Page name");
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
+  await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(addPage).toBeFocused();
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
+
+  await addPage.click();
+  createDialog = page.getByRole("dialog", { name: "Create Page" });
+  await createDialog.getByLabel("Page name").fill("Operations");
+  await createDialog.getByRole("button", { name: "Create page", exact: true }).click();
+  await expect(page.locator('[data-build-page-navigation="anchored"]')
+    .getByRole("button", { name: "Operations", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Add section", exact: true }).click();
+  createDialog = page.getByRole("dialog", { name: "Create Section" });
+  await createDialog.getByLabel("Section name").fill("Signals");
+  await createDialog.getByRole("button", { name: "Create section", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Edit Section title: Signals", exact: true })).toBeVisible();
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
+
   const pageItem = tree.locator('[data-build-node-kind="page"][aria-label="Socio-economic"]');
   await pageItem.focus();
   await pageItem.press("F2");
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("   ");
   await rename.press("Escape");
-  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
+  await expect(page.locator('[data-pending-work-kind="inlineRename"]')).toHaveCount(0);
 
   await pageItem.focus();
   await pageItem.press("F2");
@@ -150,16 +175,15 @@ test("create page and inline rename acquire only the dashboard layout draft", as
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
   await expect(page.locator('[data-pending-work-kind="inlineRename"]')).toHaveCount(0);
 
-  await page.locator('[data-build-page-navigation="anchored"]')
-    .getByRole("button", { name: "Add page", exact: true }).click();
-  await expect(page.locator('[data-build-page-navigation="anchored"]')
-    .getByRole("button", { name: "New page", exact: true })).toBeVisible();
   await map.getByRole("button", { name: "Structure", exact: true }).click();
-  await expect(map.getByRole("tree").locator('[data-build-node-kind="page"][aria-label="New page"]')).toBeVisible();
+  const operationsNode = map.getByRole("tree").locator('[data-build-node-kind="page"][aria-label="Operations"]');
+  await expect(operationsNode).toBeVisible();
+  await operationsNode.getByRole("button", { name: "Expand Operations", exact: true }).click();
+  await expect(map.getByRole("tree").locator('[data-build-node-kind="section"][aria-label="Signals"]')).toBeVisible();
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
 });
 
-test("keyboard move and Move panel dialog share the layout owner and restore focus", async ({ page }) => {
+test("native drag, keyboard move and Move panel dialog share the layout owner and restore focus", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
   await enterAuthoredDashboard(page);
@@ -168,14 +192,24 @@ test("keyboard move and Move panel dialog share the layout owner and restore foc
 
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   const tree = map.getByRole("tree");
+  await tree.getByRole("button", { name: "Collapse Biomedical", exact: true }).click();
+  await tree.getByRole("button", { name: "Collapse Socio-economic", exact: true }).click();
   const biomedical = tree.locator('[data-build-node-kind="page"][aria-label="Biomedical"]');
+  const mapDragHandle = tree.getByRole("button", { name: "Move page Biomedical", exact: true });
+  const socioEconomic = tree.locator('[data-build-node-kind="page"][aria-label="Socio-economic"]');
   const before = await tree.locator('[data-build-node-kind="page"]').evaluateAll((items) => items.map((item) => item.getAttribute("aria-label")));
+  const targetBox = await socioEconomic.boundingBox();
+  expect(targetBox).toBeTruthy();
+  await mapDragHandle.dragTo(socioEconomic, { targetPosition: { x: 40, y: targetBox.height - 2 } });
+  const afterDrag = await tree.locator('[data-build-node-kind="page"]').evaluateAll((items) => items.map((item) => item.getAttribute("aria-label")));
+  expect(afterDrag).not.toEqual(before);
   await biomedical.focus();
-  await biomedical.press("Alt+ArrowDown");
+  await biomedical.press("Alt+ArrowUp");
   const after = await tree.locator('[data-build-node-kind="page"]').evaluateAll((items) => items.map((item) => item.getAttribute("aria-label")));
-  expect(after).not.toEqual(before);
+  expect(after).not.toEqual(afterDrag);
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
 
+  await tree.getByRole("button", { name: "Expand Biomedical", exact: true }).click();
   const moveHandle = tree.getByRole("button", { name: /^Move panel / }).first();
   await moveHandle.click();
   const dialog = page.getByRole("dialog", { name: /^Move / });

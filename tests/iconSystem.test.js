@@ -123,8 +123,8 @@ test("interaction metadata preserves the approved accessibility and state semant
   assert.equal(getInteraction("transport.fast-forward").status, "planned");
   assert.equal(getInteraction("playback.current-time").renderMode, "text");
   assert.deepEqual(
-    pick(getInteraction("panel.move"), ["glyphId", "label", "renderMode", "status"]),
-    { glyphId: "moveFourWay", label: "Move panel", renderMode: "icon", status: "live" },
+    pick(getInteraction("panel.move"), ["glyphId", "label", "renderMode", "status", "confirmation"]),
+    { glyphId: "moveFourWay", label: "Move panel", renderMode: "icon", status: "live", confirmation: "conditional" },
   );
 });
 

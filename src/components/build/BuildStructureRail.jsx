@@ -5,6 +5,7 @@ import {
   BUILD_LAYOUT_MOVE_MIME,
   buildSiblingMove,
   canonicalMove,
+  createBuildMoveDragSession,
   createDelayedTreeActivation,
   decodeBuildMovePayload,
   encodeBuildMovePayload,
@@ -30,6 +31,8 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
   const [moveRequest, setMoveRequest] = React.useState(null);
   const [dropIndicator, setDropIndicator] = React.useState(null);
   const refs = React.useRef(new Map());
+  const dragSessionRef = React.useRef(null);
+  if (!dragSessionRef.current) dragSessionRef.current = createBuildMoveDragSession();
   const controller = React.useMemo(() => createDelayedTreeActivation({}), []);
   const nodes = visibleBuildTreeNodes(dashboard, expandedKeys);
   const selectedKey = selectionKey(selection);
@@ -147,7 +150,8 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       }}
       data-build-drop-edge={dropIndicator?.key === node.key ? dropIndicator.edge : undefined}
       onDragOver={(event) => {
-        const source = decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
+        const source = dragSessionRef.current.current()
+          ?? decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
         if (!legalDrop(source, node)) return;
         event.preventDefault();
         event.stopPropagation();
@@ -156,13 +160,14 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
         event.dataTransfer.dropEffect = "move";
       }}
       onDrop={(event) => {
-        const source = decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
+        const source = dragSessionRef.current.resolve(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
         if (!legalDrop(source, node)) return;
         event.preventDefault();
         event.stopPropagation();
         const edge = dropIndicator?.key === node.key ? dropIndicator.edge : "after";
         const move = moveForTreeDrop(dashboard, source, node, edge);
         setDropIndicator(null);
+        dragSessionRef.current.clear();
         if (move) onMove?.(move);
       }}
     >
@@ -219,10 +224,14 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
           onDoubleClick={(event) => event.stopPropagation()}
           onDragStart={(event) => {
             event.stopPropagation();
+            dragSessionRef.current.start(moveSourceForNode(node));
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData(BUILD_LAYOUT_MOVE_MIME, encodeBuildMovePayload(moveSourceForNode(node)));
           }}
-          onDragEnd={() => setDropIndicator(null)}
+          onDragEnd={() => {
+            dragSessionRef.current.clear();
+            setDropIndicator(null);
+          }}
         ><span aria-hidden="true">↕</span></button>
       </div>
       {node.hasChildren && expanded && <ul role="group" className="build-tree-group">{nodes.filter((item) => item.parentKey === node.key).map(row)}</ul>}

@@ -62,12 +62,14 @@ export function analyzeBuildLayoutMove(dashboardDraft, move) {
 
 export function applyBuildLayoutMove(layoutDraft, analysis, { confirmed = false } = {}) {
   if (!layoutDraft || analysis?.status !== "ready") return layoutDraft;
+  if (layoutDraft.status === "saving") return layoutDraft;
   if (analysis.requiresConfirmation && confirmed !== true) return layoutDraft;
   return {
     ...layoutDraft,
     value: structuredClone(analysis.value),
     targetId: analysis.targetId,
     status: "dirty",
+    revision: (layoutDraft.revision ?? 0) + 1,
     error: null,
     sceneConsequences: structuredClone(analysis.consequences),
   };
@@ -262,11 +264,23 @@ function applySceneConsequences(dashboard, { sourcePageId, destinationPageId, mo
         chartIds: [...movedIds],
         chartNames,
         presentChartIds: [...nextPresentIds],
+        presentChartNames: nextPresentIds.map((chartId) => chartNameById(dashboard, chartId)),
         presentLayout: scene.present.layout,
       });
     }
   }
   return consequences;
+}
+
+function chartNameById(dashboard, chartId) {
+  for (const page of dashboard.pages ?? []) {
+    for (const section of page.sections ?? []) {
+      for (const panel of section.panels ?? []) {
+        if (chartIdForPanel(panel) === chartId) return chartNameForPanel(panel) ?? chartId;
+      }
+    }
+  }
+  return chartId;
 }
 
 function dashboardValue(value) {

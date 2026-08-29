@@ -2,12 +2,46 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  beginBuildLayoutSave,
+  completeBuildLayoutSave,
   createBuildLayoutDraft,
   discardBuildLayoutDraft,
+  failBuildLayoutSave,
   reorderBuildLayoutPanel,
   reorderBuildLayoutSection,
   renameBuildLayoutPanel,
 } from "../src/components/build/buildLayoutDraft.js";
+
+test("deferred layout save completion is generation-safe and mutations are rejected while saving", async () => {
+  const dirty = renameBuildLayoutPanel(createBuildLayoutDraft(fixture()), "panel-a", "Ready");
+  const saving = beginBuildLayoutSave(dirty);
+  let releaseSave;
+  const deferredSave = new Promise((resolve) => { releaseSave = resolve; });
+  let current = saving;
+  const completion = deferredSave.then(() => { current = completeBuildLayoutSave(current, saving); });
+
+  assert.equal(saving.status, "saving");
+  assert.equal(saving.saveRevision, dirty.revision);
+  assert.strictEqual(reorderBuildLayoutPanel(saving, "panel-b", "panel-a"), saving);
+
+  current = {
+    ...saving,
+    status: "dirty",
+    revision: saving.revision + 1,
+    value: { ...saving.value, marker: "newer change" },
+  };
+  const newer = current;
+  releaseSave();
+  await completion;
+  assert.strictEqual(current, newer);
+  assert.strictEqual(failBuildLayoutSave(current, saving, { code: "FAILED" }), newer);
+  assert.equal(completeBuildLayoutSave(saving, saving), null);
+
+  const failed = failBuildLayoutSave(saving, saving, { code: "LAYOUT_SAVE_FAILED" });
+  assert.equal(failed.status, "error");
+  assert.deepEqual(failed.error, { code: "LAYOUT_SAVE_FAILED" });
+  assert.equal(failed.revision, saving.revision);
+});
 
 test("layout reorder previews never mutate the saved dashboard", () => {
   const saved = fixture();

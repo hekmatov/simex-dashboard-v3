@@ -108,6 +108,9 @@ test("drag and Move panel controls use the handle while the canvas article stays
   await movedHandle.click();
   const dialog = page.getByRole("dialog", { name: /^Move / });
   await expect(dialog.getByLabel("Destination")).toBeVisible();
+  const destinationLabels = await dialog.getByLabel("Destination").locator("option").allTextContents();
+  expect(destinationLabels.length).toBeGreaterThan(0);
+  expect(destinationLabels.every((label) => label.startsWith("Biomedical —"))).toBe(true);
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(movedHandle).toBeFocused();
 });

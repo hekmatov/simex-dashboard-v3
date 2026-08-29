@@ -123,6 +123,10 @@ test("partial Scene splits name every consequence and cancel is a deep atomic no
     { type: "scene-frame-source-unresolved", sceneName: "Partial Scene", chartNames: ["Chart A"] },
     { type: "scene-present-fallback", sceneName: "Partial Scene", chartNames: ["Chart A"] },
   ]);
+  assert.deepEqual(
+    analysis.consequences.find(({ type }) => type === "scene-present-fallback").presentChartNames,
+    ["Chart B"],
+  );
   assert.strictEqual(applyBuildLayoutMove(draft, analysis, { confirmed: false }), draft);
   assert.deepEqual(draft.value, dashboard);
 });

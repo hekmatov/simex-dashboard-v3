@@ -123,7 +123,7 @@ export function buildSiblingMove(dashboard, source, direction) {
   return canonicalMove(normalized, { pageId: page.id, sectionId: section.id, index: direction < 0 ? index - 1 : index + 2 });
 }
 
-export function buildMoveDestinations(dashboard, source) {
+export function buildMoveDestinations(dashboard, source, { pageId = null } = {}) {
   const normalized = normalizeMoveSource(source);
   if (!normalized) return [];
   if (normalized.kind === "page") {
@@ -133,12 +133,17 @@ export function buildMoveDestinations(dashboard, source) {
     ]);
   }
   if (normalized.kind === "section") {
-    return (dashboard.pages ?? []).filter(({ landing }) => !landing).flatMap((page) => (page.sections ?? []).flatMap((section, index) => [
-      { label: `${page.label || page.title || page.id} — before ${section.title || section.id}`, target: { pageId: page.id, sectionId: null, index } },
-      ...(index === page.sections.length - 1 ? [{ label: `${page.label || page.title || page.id} — end`, target: { pageId: page.id, sectionId: null, index: page.sections.length } }] : []),
-    ]));
+    return (dashboard.pages ?? []).filter(({ landing }) => !landing).flatMap((page) => {
+      const sections = page.sections ?? [];
+      const pageLabel = page.label || page.title || page.id;
+      if (sections.length === 0) return [{ label: `${pageLabel} — empty`, target: { pageId: page.id, sectionId: null, index: 0 } }];
+      return sections.flatMap((section, index) => [
+        { label: `${pageLabel} — before ${section.title || section.id}`, target: { pageId: page.id, sectionId: null, index } },
+        ...(index === sections.length - 1 ? [{ label: `${pageLabel} — end`, target: { pageId: page.id, sectionId: null, index: sections.length } }] : []),
+      ]);
+    });
   }
-  return (dashboard.pages ?? []).filter(({ landing }) => !landing).flatMap((page) => (page.sections ?? []).flatMap((section) => {
+  return (dashboard.pages ?? []).filter(({ landing, id }) => !landing && (!pageId || id === pageId)).flatMap((page) => (page.sections ?? []).flatMap((section) => {
     const panels = section.panels ?? [];
     const prefix = `${page.label || page.title || page.id} — ${section.title || section.id}`;
     if (panels.length === 0) return [{ label: `${prefix} — empty`, target: { pageId: page.id, sectionId: section.id, index: 0 } }];

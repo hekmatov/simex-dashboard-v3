@@ -18,8 +18,11 @@ export function trapDialogTabKey(event, container) {
   return false;
 }
 
-export default function BuildMoveDialog({ open = false, dashboard = {}, source, sourceLabel = "item", invoker = null, onMove, onCancel }) {
-  const destinations = React.useMemo(() => buildMoveDestinations(dashboard, source), [dashboard, source]);
+export default function BuildMoveDialog({ open = false, dashboard = {}, source, sourceLabel = "item", destinationPageId = null, invoker = null, onMove, onCancel }) {
+  const destinations = React.useMemo(
+    () => buildMoveDestinations(dashboard, source, { pageId: destinationPageId }),
+    [dashboard, destinationPageId, source],
+  );
   const [destinationIndex, setDestinationIndex] = React.useState("0");
   const firstControlRef = React.useRef(null);
   const dialogRef = React.useRef(null);

@@ -1616,7 +1616,7 @@ export default function App() {
         disabled={modeDisabled || buildDraftLocked}
         onSelectPage={requestPage}
         onPageReorder={(pageId, targetIndex) => dashboardRendererRef.current?.requestBuildPageReorder?.(pageId, targetIndex)}
-        onAddPage={() => dashboardRendererRef.current?.requestAddPage?.()}
+        onAddPage={(name) => dashboardRendererRef.current?.requestAddPage?.(name)}
         onPageCommand={(command) => dashboardRendererRef.current?.requestBuildPageCommand?.(command)}
       /> : null}
       onPageRequest={requestPage}

@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { analyzeBuildLayoutMove } from "../src/components/build/buildLayoutMove.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -14,10 +15,12 @@ const [
   { default: BuildStructureRail },
   moveDialogModule,
   moveConfirmationModule,
+  createDialogModule,
 ] = await Promise.all([
   vite.ssrLoadModule("/src/components/build/BuildStructureRail.jsx"),
   vite.ssrLoadModule("/src/components/build/BuildMoveDialog.jsx").catch(() => null),
   vite.ssrLoadModule("/src/components/build/BuildMoveConfirmationDialog.jsx").catch(() => null),
+  vite.ssrLoadModule("/src/components/build/BuildLayoutCreateDialog.jsx").catch(() => null),
 ]);
 await vite.close();
 
@@ -40,21 +43,36 @@ test("Structure tree exposes the selected roving item without temporal library c
 });
 
 test("Scene consequence dialog names every affected Scene, chart, unresolved frame source, and Present fallback", () => {
+  const analysis = analyzeBuildLayoutMove({
+    pages: [
+      { id: "one", sections: [{ id: "a", panels: [
+        { id: "placement-cases", chart: { id: "cases", title: "Cases" } },
+        { id: "placement-capacity", chart: { id: "capacity", title: "Capacity" } },
+      ] }] },
+      { id: "two", sections: [{ id: "b", panels: [] }] },
+    ],
+    scenes: [{
+      id: "morning",
+      name: "Morning brief",
+      pageId: "one",
+      members: [{ chartId: "cases" }, { chartId: "capacity" }],
+      frames: { mode: "source", chartId: "cases" },
+      present: { chartIds: ["cases"], layout: "single" },
+    }],
+  }, {
+    kind: "panel",
+    source: { pageId: "one", sectionId: "a", placementId: "placement-cases" },
+    target: { pageId: "two", sectionId: "b", index: 0 },
+  });
   const html = renderToStaticMarkup(React.createElement(moveConfirmationModule.default, {
-    analysis: {
-      consequences: [
-        { type: "scene-partial-split", sceneId: "one", sceneName: "Morning brief", chartNames: ["Cases"] },
-        { type: "scene-frame-source-unresolved", sceneId: "one", sceneName: "Morning brief", chartNames: ["Cases"] },
-        { type: "scene-present-fallback", sceneId: "two", sceneName: "Evening brief", chartNames: ["Cases"], presentLayout: "single", presentChartIds: ["Capacity"] },
-      ],
-    },
+    analysis,
     onCancel() {},
     onConfirm() {},
   }));
 
   assert.match(html, /Morning brief/);
-  assert.match(html, /Evening brief/);
   assert.match(html, /Cases/);
+  assert.match(html, /Capacity/);
   assert.match(html, /Frame source becomes unresolved/);
   assert.match(html, /Present fallback/);
   assert.match(html, />Confirm move</);
@@ -79,6 +97,22 @@ test("Move dialog exposes a single-pointer destination path and exact actions", 
   assert.match(html, /aria-label="Destination"/);
   assert.match(html, />Move A</);
   assert.match(html, />Move</);
+  assert.match(html, />Cancel</);
+});
+
+test("layout creation dialog keeps incomplete names local until valid submit", () => {
+  assert.equal(typeof createDialogModule?.default, "function");
+  assert.equal(createDialogModule?.validBuildLayoutCreationName("   "), false);
+  assert.equal(createDialogModule?.validBuildLayoutCreationName("Response"), true);
+  const html = renderToStaticMarkup(React.createElement(createDialogModule.default, {
+    open: true,
+    kind: "section",
+    onSubmit() {},
+    onCancel() {},
+  }));
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /aria-label="Section name"/);
+  assert.match(html, />Create section</);
   assert.match(html, />Cancel</);
 });
 
