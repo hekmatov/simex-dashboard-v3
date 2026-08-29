@@ -111,9 +111,13 @@ test("three Home styles expose materially distinct computed signatures without p
   expect(signatures["humanist-standard"].sectionShadow).not.toBe("none");
   expect(signatures["signal-instrument"].microcopyFont).toContain("Cascadia Mono");
   expect(signatures["signal-instrument"].sectionBorderLeft).toBe("4px");
+  expect(signatures["signal-instrument"].faqBorderLeft).toBe("4px");
+  expect(signatures["signal-instrument"].resourcesBorderLeft).toBe("4px");
   expect(signatures["signal-instrument"].gridGap).toBe("8px");
   expect(parseFloat(signatures["signal-instrument"].sectionPaddingTop))
     .toBeLessThan(parseFloat(signatures["humanist-standard"].sectionPaddingTop));
+  expect(signatures["signal-instrument"].faqPaddingTop).toBe("28px");
+  expect(signatures["signal-instrument"].resourcesPaddingTop).toBe("28px");
 
   await page.setViewportSize({ width: 390, height: 844 });
   for (const [label, id] of styles) {
@@ -125,6 +129,11 @@ test("three Home styles expose materially distinct computed signatures without p
     expect(await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     )).toBe(false);
+    if (id === "signal-instrument") {
+      const phoneSignature = await readHomeStyleSignature(page);
+      expect(phoneSignature.faqPaddingTop).toBe("24px");
+      expect(phoneSignature.resourcesPaddingTop).toBe("24px");
+    }
   }
 });
 
@@ -414,6 +423,8 @@ async function readHomeStyleSignature(page) {
     const heading = root.querySelector(".showcase-section h2");
     const microcopy = root.querySelector(".showcase-eyebrow");
     const grid = root.querySelector(".showcase-capability-grid");
+    const faqStyle = getComputedStyle(root.querySelector(".showcase-faq"));
+    const resourcesStyle = getComputedStyle(root.querySelector(".showcase-resources"));
     const rootStyle = getComputedStyle(root);
     const sectionStyle = getComputedStyle(section);
     const content = document.querySelector('[data-canonical-mode="home"] > .canonical-dashboard-content');
@@ -427,6 +438,10 @@ async function readHomeStyleSignature(page) {
       sectionBorderTop: sectionStyle.borderTopWidth,
       sectionBorderLeft: sectionStyle.borderLeftWidth,
       sectionPaddingTop: sectionStyle.paddingTop,
+      faqBorderLeft: faqStyle.borderLeftWidth,
+      faqPaddingTop: faqStyle.paddingTop,
+      resourcesBorderLeft: resourcesStyle.borderLeftWidth,
+      resourcesPaddingTop: resourcesStyle.paddingTop,
       cardShadow: getComputedStyle(card).boxShadow,
       headingFont: getComputedStyle(heading).fontFamily,
       microcopyFont: getComputedStyle(microcopy).fontFamily,

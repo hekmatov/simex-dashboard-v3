@@ -1956,7 +1956,11 @@
   font-size: clamp(36px, 4vw, 52px);
 }
 
-.app-frame[data-dashboard-style="signal-instrument"] .showcase-section {
+.app-frame[data-dashboard-style="signal-instrument"] :is(
+  .showcase-section,
+  .showcase-faq,
+  .showcase-resources
+) {
   border-left: 4px solid var(--simex-accent);
   border-top: 1px solid var(--simex-border-strong);
   padding: 28px 32px;
@@ -2022,7 +2026,11 @@
     padding: 28px 18px;
   }
 
-  .app-frame[data-dashboard-style="signal-instrument"] .showcase-section,
+  .app-frame[data-dashboard-style="signal-instrument"] :is(
+    .showcase-section,
+    .showcase-faq,
+    .showcase-resources
+  ),
   .app-frame[data-dashboard-style="signal-instrument"] .showcase-section + .showcase-section {
     padding: 24px 18px;
   }
