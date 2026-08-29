@@ -1,5 +1,9 @@
 import React from "react";
-import { listManageableSourceEntries } from "../../content-library/sourceEntrySchema.js";
+import {
+  listManageableSourceEntries,
+  resolveSourceEntryLabels,
+} from "../../content-library/sourceEntrySchema.js";
+import AccessibleListboxSelect from "../common/AccessibleListboxSelect.jsx";
 
 export default function DataSourcePicker({
   dashboard = {},
@@ -10,8 +14,11 @@ export default function DataSourcePicker({
   onSelect = noop,
   onUpload = noop,
 } = {}) {
-  const options = listManageableSourceEntries(
-    dashboard.contentLibrary ?? {},
+  const options = resolveSourceEntryLabels(
+    listManageableSourceEntries(
+      dashboard.contentLibrary ?? {},
+      dashboard.dataSources ?? {},
+    ),
     dashboard.dataSources ?? {},
   ).filter(({ kind, sourceId }) => (
     kind === "csv" && Array.isArray(readEntry(loadedData, sourceId))
@@ -24,25 +31,17 @@ export default function DataSourcePicker({
       "section",
       { className: "wizard-choice-card" },
       React.createElement("h4", null, "Use an existing CSV"),
-      React.createElement(
-        "label",
-        null,
-        "Managed data source",
-        React.createElement(
-          "select",
-          {
-            value: options.some(({ sourceId }) => sourceId === selectedSourceId) ? selectedSourceId : "",
-            disabled,
-            onChange: (event) => onSelect(event.target.value),
-          },
-          React.createElement("option", { value: "" }, "Choose a source"),
-          options.map(({ sourceId, displayName }) => React.createElement(
-            "option",
-            { key: sourceId, value: sourceId },
-            displayName,
-          )),
-        ),
-      ),
+      React.createElement(AccessibleListboxSelect, {
+        label: "Managed data source",
+        value: options.some(({ sourceId }) => sourceId === selectedSourceId) ? selectedSourceId : "",
+        options,
+        getLabel: ({ label }) => label,
+        getValue: ({ sourceId }) => sourceId,
+        placeholder: "Choose a source",
+        width: "24rem",
+        disabled,
+        onChange: onSelect,
+      }),
     ),
     React.createElement(
       "section",

@@ -1235,7 +1235,8 @@
 .app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) :is(
   input:not([type="checkbox"]):not([type="radio"]),
   select,
-  textarea
+  textarea,
+  .accessible-listbox-trigger
 ) {
   background: var(--simex-surface-panel);
   border-color: var(--simex-border-strong);
@@ -1252,7 +1253,8 @@
   .chart-wizard-step-button,
   .chart-editor-tab,
   .chart-type-card,
-  .wizard-choice-card
+  .wizard-choice-card,
+  .accessible-listbox-trigger
 ) {
   background: var(--simex-accent);
   border-color: var(--simex-accent);

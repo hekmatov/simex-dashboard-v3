@@ -147,6 +147,42 @@ export function listManageableSourceEntries(library, dataSources) {
   return Object.freeze(entries);
 }
 
+export function resolveSourceEntryLabels(entries, dataSources = {}) {
+  if (!Array.isArray(entries)) throw new TypeError("Source entries must be an array.");
+  record(dataSources ?? {}, "Data sources");
+  const candidates = entries.map((entry) => {
+    record(entry, "Source entry label candidate");
+    const sourceId = requiredText(entry.sourceId, "Source entry label sourceId");
+    const evidence = labelEvidence(entry, dataSources?.[sourceId], sourceId);
+    const baseLabel = evidence[0];
+    const qualifier = evidence.slice(1).find((value) => normalizedLabel(value) !== normalizedLabel(baseLabel))
+      ?? humanizeSourceId(sourceId);
+    return { entry, sourceId, baseLabel, qualifier };
+  });
+  const baseCounts = labelCounts(candidates.map(({ baseLabel }) => baseLabel));
+  const qualified = candidates.map((candidate) => ({
+    ...candidate,
+    qualifiedLabel: baseCounts.get(normalizedLabel(candidate.baseLabel)) > 1
+      ? `${candidate.baseLabel} — ${candidate.qualifier}`
+      : candidate.baseLabel,
+  }));
+  const qualifiedCounts = labelCounts(qualified.map(({ qualifiedLabel }) => qualifiedLabel));
+  const stabilized = qualified.map((candidate) => ({
+    ...candidate,
+    stabilizedLabel: qualifiedCounts.get(normalizedLabel(candidate.qualifiedLabel)) > 1
+      ? `${candidate.qualifiedLabel} — ${humanizeSourceId(candidate.sourceId)}`
+      : candidate.qualifiedLabel,
+  }));
+  const stabilizedCounts = labelCounts(stabilized.map(({ stabilizedLabel }) => stabilizedLabel));
+
+  return Object.freeze(stabilized.map(({ entry, sourceId, stabilizedLabel }) => deepFreeze({
+    ...structuredClone(entry),
+    label: stabilizedCounts.get(normalizedLabel(stabilizedLabel)) > 1
+      ? `${stabilizedLabel} (${sourceId})`
+      : stabilizedLabel,
+  })));
+}
+
 function descriptorKind(descriptor) {
   if (descriptor?.kind === "csv") return "csv";
   if (descriptor?.kind === "geojson") return "geojson";
@@ -162,6 +198,56 @@ function descriptorOrigin(descriptor) {
   if (descriptor?.browserAssetId) return "uploaded";
   if (["csv", "geojson"].includes(descriptor?.kind)) return "linked-project";
   return "packaged";
+}
+
+function labelEvidence(entry, descriptor, sourceId) {
+  const provenance = descriptor?.provenance;
+  const values = [
+    entry?.displayName,
+    descriptor?.fileName,
+    descriptorPathName(descriptor?.path),
+    typeof provenance === "string" ? provenance : null,
+    provenance?.displayName,
+    provenance?.name,
+    provenance?.label,
+    provenance?.fileName,
+    descriptorPathName(provenance?.path),
+    humanizeSourceId(sourceId),
+  ].map(optionalText).filter(Boolean);
+  return [...new Map(values.map((value) => [normalizedLabel(value), value])).values()];
+}
+
+function labelCounts(labels) {
+  const counts = new Map();
+  for (const label of labels) {
+    const key = normalizedLabel(label);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function descriptorPathName(value) {
+  const path = optionalText(value);
+  return path ? path.split(/[\\/]/).filter(Boolean).at(-1) ?? "" : "";
+}
+
+function humanizeSourceId(value) {
+  const words = requiredText(value, "Source id")
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toLocaleLowerCase("en-US");
+  return words.charAt(0).toLocaleUpperCase("en-US") + words.slice(1);
+}
+
+function normalizedLabel(value) {
+  return requiredText(value, "Source label")
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("en-US");
+}
+
+function optionalText(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
 function integrateChartWithoutDuplicateSource(dashboard, finalized, destination) {

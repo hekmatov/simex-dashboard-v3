@@ -4777,7 +4777,7 @@ button.danger {
 }
 
 .chart-wizard-data-source .chart-wizard-source-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .wizard-choice-card {
@@ -4798,6 +4798,124 @@ button.danger {
 .wizard-choice-card > label {
   display: grid;
   gap: 6px;
+}
+
+.accessible-listbox-select {
+  display: grid;
+  gap: 6px;
+  max-width: 100%;
+  position: relative;
+  width: var(--accessible-listbox-width, 24rem);
+}
+
+.accessible-listbox-label {
+  color: inherit;
+}
+
+.accessible-listbox-trigger-tooltip {
+  display: flex;
+  max-width: 100%;
+  width: 100%;
+}
+
+.accessible-listbox-trigger {
+  align-items: center;
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-strong, #9eb0c0);
+  border-radius: var(--simex-style-control-radius, 8px);
+  color: var(--simex-text-strong, #08224a);
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12px;
+  min-height: 44px;
+  padding: 9px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.accessible-listbox-trigger::after {
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  content: "";
+  height: 7px;
+  justify-self: center;
+  margin-top: -4px;
+  transform: rotate(45deg);
+  width: 7px;
+}
+
+.accessible-listbox-trigger:hover:not(:disabled) {
+  border-color: var(--simex-selected, #043bcb);
+}
+
+.accessible-listbox-trigger:focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus, #043bcb);
+  outline-offset: 2px;
+}
+
+.accessible-listbox-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.accessible-listbox-value,
+.accessible-listbox-option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accessible-listbox-value {
+  display: block;
+}
+
+.accessible-listbox-popup {
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-strong, #9eb0c0);
+  border-radius: var(--simex-style-control-radius, 8px);
+  box-shadow: var(--simex-shadow-elevated, 0 12px 28px rgb(8 34 74 / 20%));
+  display: grid;
+  gap: 2px;
+  left: 0;
+  list-style: none;
+  margin: 6px 0 0;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  position: absolute;
+  top: 100%;
+  width: 100%;
+  z-index: 1600;
+}
+
+.accessible-listbox-popup[hidden] {
+  display: none;
+}
+
+.accessible-listbox-option {
+  align-items: center;
+  border-radius: calc(var(--simex-style-control-radius, 8px) - 2px);
+  cursor: pointer;
+  display: flex;
+  min-height: 40px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.accessible-listbox-option:hover,
+.accessible-listbox-option[data-active="true"] {
+  background: var(--simex-selected-soft, #e8efff);
+  color: var(--simex-text-strong, #08224a);
+}
+
+.accessible-listbox-option[aria-selected="true"] {
+  font-weight: 700;
+}
+
+.accessible-listbox-option-label {
+  display: block;
+  width: 100%;
 }
 
 .wizard-source-profile {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -9,6 +10,9 @@ import {
   createChartSchemaRegistry,
   getChartSchema,
 } from "../src/charting/schemas/chartSchemaRegistry.js";
+import {
+  resolveSourceEntryLabels,
+} from "../src/content-library/sourceEntrySchema.js";
 
 function registryWith(...typeIds) {
   return createChartSchemaRegistry(typeIds.map((typeId) => (
@@ -105,4 +109,71 @@ test("stale or removed selected schemas are retained as Needs attention", () => 
   assert.equal(options.at(-1).id, "line");
   assert.equal(options.at(-1).compatibility, "incompatible");
   assert.match(options.at(-1).reason, /no longer|removed/i);
+});
+
+test("imported source labels follow identity evidence and qualify only collisions", () => {
+  const entries = [
+    { sourceId: "named", displayName: "Named source" },
+    { sourceId: "from_filename", displayName: "" },
+    { sourceId: "from_path", displayName: "" },
+    { sourceId: "from_provenance", displayName: "" },
+    { sourceId: "fallback_source", displayName: "" },
+    { sourceId: "north_cases", displayName: "Cases" },
+    { sourceId: "south_cases", displayName: "Cases" },
+    { sourceId: "repeat_a", displayName: "Measurements" },
+    { sourceId: "repeat_b", displayName: "Measurements" },
+  ];
+  const dataSources = {
+    named: { fileName: "ignored.csv", path: "data/ignored-path.csv", provenance: { label: "Ignored provenance" } },
+    from_filename: { fileName: "reported-cases.csv", path: "data/ignored.csv", provenance: { label: "Ignored provenance" } },
+    from_path: { path: "data/imported/hospital-occupancy.csv", provenance: { label: "Ignored provenance" } },
+    from_provenance: { provenance: { label: "Laboratory feed" } },
+    fallback_source: {},
+    north_cases: { fileName: "north.csv" },
+    south_cases: { path: "data/south.csv" },
+    repeat_a: { fileName: "shared.csv" },
+    repeat_b: { fileName: "shared.csv" },
+  };
+
+  const labels = Object.fromEntries(resolveSourceEntryLabels(entries, dataSources).map((entry) => (
+    [entry.sourceId, entry.label]
+  )));
+
+  assert.deepEqual(labels, {
+    named: "Named source",
+    from_filename: "reported-cases.csv",
+    from_path: "hospital-occupancy.csv",
+    from_provenance: "Laboratory feed",
+    fallback_source: "Fallback source",
+    north_cases: "Cases — north.csv",
+    south_cases: "Cases — south.csv",
+    repeat_a: "Measurements — shared.csv — Repeat a",
+    repeat_b: "Measurements — shared.csv — Repeat b",
+  });
+});
+
+test("shipped biomedical source names are specific in entries and provenance", () => {
+  const dashboard = JSON.parse(readFileSync(
+    new URL("../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  const expected = {
+    bio_admissions: "Biomedical admissions",
+    bio_cases: "Biomedical cases",
+    bio_healthcare_cases: "Biomedical healthcare cases",
+    bio_hospital_occupancy: "Biomedical hospital occupancy",
+    bio_icu_occupancy: "Biomedical ICU occupancy",
+    bio_mortality: "Biomedical mortality by age",
+    bio_municipal_infections: "Biomedical municipal infections",
+    bio_occupancy_gauges: "Biomedical occupancy gauges",
+    bio_province_cases: "Biomedical province cases",
+    bio_r_values: "Biomedical R values",
+    bio_testing: "Biomedical testing",
+  };
+
+  for (const [sourceId, label] of Object.entries(expected)) {
+    assert.equal(dashboard.contentLibrary.sourceEntries[sourceId].displayName, label);
+    assert.equal(dashboard.dataSources[sourceId].provenance.label, label);
+  }
+  assert.equal(new Set(Object.values(expected)).size, Object.keys(expected).length);
 });

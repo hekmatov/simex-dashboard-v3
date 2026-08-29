@@ -1346,6 +1346,10 @@ test("data-source picker lists only managed builder CSV and keeps upload chart-d
           sourceId: "managed", origin: "uploaded", ownership: "builder", displayName: "Managed cases",
           provenance: { fileName: "managed.csv" }, health: "ready",
         },
+        managed_secondary: {
+          sourceId: "managed_secondary", origin: "uploaded", ownership: "builder", displayName: "Managed cases",
+          provenance: { fileName: "secondary.csv" }, health: "ready",
+        },
         generated: {
           sourceId: "generated", origin: "generated", ownership: "dashboard", displayName: "Generated summary",
           provenance: { ownership: "dashboard", generated: true }, health: "ready",
@@ -1353,17 +1357,30 @@ test("data-source picker lists only managed builder CSV and keeps upload chart-d
       } },
       dataSources: {
         managed: { kind: "dataset", type: "uploadedCsv", fileName: "managed.csv", csvText: "region,value\nNorth,1\n" },
+        managed_secondary: { kind: "dataset", type: "uploadedCsv", fileName: "secondary.csv", csvText: "region,value\nSouth,2\n" },
         generated: { kind: "csv", path: "data/generated.csv", provenance: { ownership: "dashboard", generated: true } },
       },
     },
-    loadedData: { managed: [{ region: "North", value: 1 }], generated: [{ value: 9 }] },
+    loadedData: {
+      managed: [{ region: "North", value: 1 }],
+      managed_secondary: [{ region: "South", value: 2 }],
+      generated: [{ value: 9 }],
+    },
+    selectedSourceId: "managed",
     onSelect: (id) => calls.push(id),
     onUpload: () => {},
   }));
 
-  assert.match(html, /Managed cases/);
+  assert.match(html, /Managed cases — managed\.csv/);
+  assert.match(html, /Managed cases — secondary\.csv/);
   assert.doesNotMatch(html, /Generated summary/);
+  assert.match(html, /role="combobox"/);
+  assert.match(html, /aria-haspopup="listbox"/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /style="--accessible-listbox-width:24rem"/);
+  assert.doesNotMatch(html, /<select/);
   assert.match(html, /Upload a new CSV/);
+  assert.match(html, /accept="\.csv,text\/csv"/);
   assert.match(html, /data-draft-owner="chart"/);
   assert.deepEqual(calls, []);
 });

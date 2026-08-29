@@ -29,7 +29,7 @@
       "kind": "csv",
       "path": "data/biomedical/admissions.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical admissions"
       },
       "parsingMetadata": {
         "date": {
@@ -43,7 +43,7 @@
       "kind": "csv",
       "path": "data/biomedical/cases.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical cases"
       },
       "parsingMetadata": {
         "date": {
@@ -57,7 +57,7 @@
       "kind": "csv",
       "path": "data/biomedical/healthcare_cases.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical healthcare cases"
       },
       "parsingMetadata": {
         "Year": {
@@ -75,7 +75,7 @@
       "kind": "csv",
       "path": "data/biomedical/hospital_occupancy.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical hospital occupancy"
       },
       "parsingMetadata": {
         "date": {
@@ -89,7 +89,7 @@
       "kind": "csv",
       "path": "data/biomedical/icu_occupancy.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical ICU occupancy"
       },
       "parsingMetadata": {
         "date": {
@@ -103,7 +103,7 @@
       "kind": "csv",
       "path": "data/biomedical/mortality_by_age.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical mortality by age"
       },
       "parsingMetadata": {
         "date": {
@@ -117,7 +117,7 @@
       "kind": "csv",
       "path": "data/biomedical/municipal_infections.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical municipal infections"
       },
       "parsingMetadata": {
         "Datum": {
@@ -173,14 +173,14 @@
       "kind": "csv",
       "path": "data/biomedical/occupancy_gauges.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical occupancy gauges"
       }
     },
     "bio_province_cases": {
       "kind": "csv",
       "path": "data/biomedical/province_cases.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical province cases"
       },
       "parsingMetadata": {
         "date": {
@@ -230,7 +230,7 @@
       "kind": "csv",
       "path": "data/biomedical/r_values.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical R values"
       },
       "parsingMetadata": {
         "date": {
@@ -244,7 +244,7 @@
       "kind": "csv",
       "path": "data/biomedical/testing.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset"
+        "label": "Biomedical testing"
       },
       "parsingMetadata": {
         "date": {
@@ -3035,7 +3035,7 @@
         "sourceId": "bio_admissions",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical admissions",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3045,7 +3045,7 @@
         "sourceId": "bio_cases",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical cases",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3055,7 +3055,7 @@
         "sourceId": "bio_healthcare_cases",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical healthcare cases",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3065,7 +3065,7 @@
         "sourceId": "bio_hospital_occupancy",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical hospital occupancy",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3075,7 +3075,7 @@
         "sourceId": "bio_icu_occupancy",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical ICU occupancy",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3085,7 +3085,7 @@
         "sourceId": "bio_mortality",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical mortality by age",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3095,7 +3095,7 @@
         "sourceId": "bio_municipal_infections",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical municipal infections",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3135,7 +3135,7 @@
         "sourceId": "bio_occupancy_gauges",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical occupancy gauges",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3145,7 +3145,7 @@
         "sourceId": "bio_province_cases",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical province cases",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3175,7 +3175,7 @@
         "sourceId": "bio_r_values",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical R values",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
@@ -3185,7 +3185,7 @@
         "sourceId": "bio_testing",
         "origin": "legacy-import",
         "ownership": "builder",
-        "displayName": "Simulation exercise biomedical dataset",
+        "displayName": "Biomedical testing",
         "provenance": {
           "migratedFrom": "dashboard-v4"
         },
