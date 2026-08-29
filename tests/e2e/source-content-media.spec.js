@@ -120,7 +120,7 @@ test("Journey A — media create reuse default external import restore dependenc
     name: "qmd-cancelled-local.jpg", mimeType: "image/jpeg", buffer: JPEG,
   });
   await expect(qmdDraft.locator('[data-qmd-media-host] img')).toBeVisible();
-  await expect(qmdDraft.getByLabel("QMD-style source")).toContainText("simex-media:media-");
+  await expect(await advancedQmdSource(qmdDraft)).toContainText("simex-media:media-");
   expect(await sessionAssetIds(page)).toHaveLength(1);
   expect(await mediaInventory(page)).toEqual(beforeQmdDraft);
   await discardStaticWizard(page, qmdDraft);
@@ -140,7 +140,7 @@ test("Journey A — media create reuse default external import restore dependenc
     name: "qmd-imported-local.webp", mimeType: "image/webp", buffer: WEBP,
   });
   await expect(qmdDraft.locator('[data-qmd-media-host] img')).toBeVisible();
-  await expect(qmdDraft.getByLabel("QMD-style source")).toContainText("![External journey description](simex-media:media-");
+  await expect(await advancedQmdSource(qmdDraft)).toContainText("![External journey description](simex-media:media-");
   expect(await mediaInventory(page)).toEqual(beforeQmdDraft);
   await qmdDraft.getByRole("button", { name: "Continue" }).click();
   await qmdDraft.getByRole("button", { name: "Add", exact: true }).click();
@@ -200,7 +200,7 @@ test("Journey A — media create reuse default external import restore dependenc
   await editor.getByRole("button", { name: "Choose from media" }).click();
   await editor.getByLabel(/Journey A external map/).evaluate((node) => node.click());
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-  const discardDialog = page.getByRole("dialog", { name: "Discard static content changes?" });
+  const discardDialog = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
   await discardDialog.getByRole("button", { name: "Discard" }).click();
   await expect(editor).toHaveCount(0);
   expect(await persistedStaticMediaId(page, externalPanelId)).toBe(savedReplacementMediaId);
@@ -502,7 +502,7 @@ async function createImageFromPicker(page, { title, mediaName, expectedAlt }) {
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(title);
   await wizard.getByRole("button", { name: "Choose from media" }).click();
@@ -529,7 +529,7 @@ async function openFreeTextContentStage(page, title) {
 
 async function discardStaticWizard(page, wizard) {
   await wizard.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("dialog", { name: "Discard static content changes?" }).getByRole("button", { name: "Discard" }).click();
+  await page.getByRole("dialog", { name: "Discard Text/Image changes?" }).getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
 }
 
@@ -542,7 +542,7 @@ async function createQmdFromPicker(page, { title, mediaName, expectedAlt }) {
   await wizard.getByLabel("Panel title").fill(title);
   await wizard.getByRole("button", { name: "Insert image" }).click();
   await wizard.getByLabel(new RegExp(mediaName)).evaluate((node) => node.click());
-  await expect(wizard.getByLabel("QMD-style source")).toContainText(`![${expectedAlt}](simex-media:`);
+  await expect(await advancedQmdSource(wizard)).toContainText(`![${expectedAlt}](simex-media:`);
   await expect(wizard.getByText("Preview is up to date.")).toBeVisible();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
@@ -661,4 +661,10 @@ async function sessionAssetIds(page) {
     const key = Object.getOwnPropertySymbols(globalThis).find((symbol) => Symbol.keyFor(symbol) === "simex.session-image-assets");
     return key ? [...globalThis[key].keys()].sort() : [];
   });
+}
+
+async function advancedQmdSource(surface) {
+  const tab = surface.getByRole("tab", { name: "Advanced QMD" });
+  if (await tab.getAttribute("aria-selected") !== "true") await tab.click();
+  return surface.getByLabel("Portable QMD source");
 }

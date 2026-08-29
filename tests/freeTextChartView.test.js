@@ -493,6 +493,8 @@ test("authoring preview selects one media placement and changes only its seriali
       focusAfterEscape,
       focusAfterClose,
       focusAfterSelection,
+      imageDetails: [...target.querySelectorAll("img")].map((image) => ({ className: image.className, src: image.getAttribute("src"), parent: image.parentElement?.outerHTML })),
+      pickerOpen: target.querySelector('[aria-label="Media picker"]') !== null,
     };
     root.unmount();
     return value;
@@ -502,7 +504,7 @@ test("authoring preview selects one media placement and changes only its seriali
   assert.match(result.source, /width=33% align=center flow=block frame=none caption="Original" decorative=false/);
   assert.deepEqual(result.actions, ["open:second"]);
   assert.equal(result.libraryUnchanged, true);
-  assert.equal(result.images, 0);
+  assert.equal(result.images, 0, JSON.stringify({ imageDetails: result.imageDetails, pickerOpen: result.pickerOpen }));
   assert.equal(result.changePickerHasIntake, false);
   assert.equal(result.focusOnOpen, "second");
   assert.equal(result.pickerClosedOnEscape, true);
@@ -611,7 +613,7 @@ test("authoring edits reference, inline, and duplicate placements by their canon
 
   assert.equal(result.afterReference.includes(result.reference), false);
   assert.match(result.afterReference, /!\[Reference\]\(simex-media:first\)\{width=50% align=start/);
-  assert.equal(result.afterReference.includes(result.inline), true);
+  assert.equal(result.afterReference.includes(result.inline), true, result.afterReference);
   assert.equal(result.afterReference.includes(result.duplicate), true);
   assert.equal(result.afterReference.endsWith(result.definition), true);
   assert.match(result.afterInline, /!\[Reference\]\(simex-media:first\)\{width=50% align=start/);

@@ -17,7 +17,9 @@ test("Flow Frame Decorative local image inspector keeps responsive geometry and 
   await page.getByRole("button", { name: "Insert image" }).first().click();
   const insertPicker = page.getByRole("region", { name: "Media picker" });
   await expect(insertPicker.getByRole("heading", { name: "Insert image" })).toBeVisible();
-  await insertPicker.getByLabel(/Alternate map/).evaluate((node) => node.click());
+  const insertedAlternate = insertPicker.getByLabel(/Alternate map/);
+  await expect(insertedAlternate).toBeVisible();
+  await insertedAlternate.click();
   await expect(page.locator("#journey-qmd-source")).toHaveValue(/simex-media:alternate/);
   await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();
   await expect(page.getByRole("region", { name: "Image placement" })).toBeVisible();
@@ -60,7 +62,9 @@ test("Flow Frame Decorative local image inspector keeps responsive geometry and 
   await expect(changeImage).toBeFocused();
   await changeImage.click();
   await expect(picker.getByLabel(/Response map/)).toBeFocused();
-  await picker.getByLabel(/Alternate map/).evaluate((node) => node.click());
+  const changedAlternate = picker.getByLabel(/Alternate map/);
+  await expect(changedAlternate).toBeVisible();
+  await changedAlternate.click();
   await expect(changeImage).toBeFocused();
   await expect(page.locator("#journey-qmd-source")).toHaveValue(/simex-media:alternate/);
   await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();

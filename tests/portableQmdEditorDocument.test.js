@@ -126,6 +126,14 @@ test("literal Markdown-like text stays literal through two visual serializations
   assert.deepEqual(reparsed.document, document);
 });
 
+test("inline dollar-delimited literals stay visual and idempotent", () => {
+  assertLiteralVisualRoundTrip("Cost is $literal$ and the marker is $$literal$$.");
+});
+
+test("paragraph-leading double-dollar literals stay visual and idempotent", () => {
+  assertLiteralVisualRoundTrip("$$literal block-looking text$$");
+});
+
 test("aligned tables stay exact in Advanced QMD instead of losing alignment", () => {
   const source = [
     "| Start | Centre | End |",
@@ -137,3 +145,14 @@ test("aligned tables stay exact in Advanced QMD instead of losing alignment", ()
   assert.equal(parsed.source, source);
   assert.match(parsed.reason, /table shape/i);
 });
+
+function assertLiteralVisualRoundTrip(text) {
+  const document = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
+  const first = serializePortableQmdEditorDocument(document);
+  assert.equal(first.ok, true, JSON.stringify(first.errors));
+  const parsed = parsePortableQmdEditorDocument(first.source);
+  assert.equal(parsed.mode, "visual", parsed.reason);
+  assert.deepEqual(parsed.document, document);
+  const second = serializePortableQmdEditorDocument(parsed.document);
+  assert.deepEqual(second, first);
+}

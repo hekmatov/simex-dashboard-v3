@@ -168,22 +168,23 @@ for (const viewport of VIEWPORTS) {
     await openFreeTextEditor(panel, page, title);
     let editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await expectStaticEditorCompression(page, viewport, beforeDiscard);
-    const editorSource = editor.getByLabel("QMD-style source");
+    const editorSource = await advancedQmdSource(editor);
     await editorSource.fill(INERT_QMD);
     await expect(editor.getByRole("status")).toContainText("Preview is up to date");
     await expect(editor.getByRole("button", { name: "Continue" })).toBeEnabled();
     await expect(editor.getByRole("button", { name: "Preview & add", exact: true })).toBeEnabled();
+    await editor.getByRole("tab", { name: "Preview" }).click();
     await expectInertAuthoredSurface(editor.locator('[data-free-text-pane="preview"]'), "Cancelled copy");
     expect(await page.evaluate(() => window.authoredCodeRan)).toBeUndefined();
     expect(authoredResourceRequests).toEqual([]);
     expect((await readSavedFreeText(page, title)).source.qmd).toBe(INITIAL_QMD);
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-    let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+    let confirmation = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
     await expect(confirmation).toBeVisible();
     await confirmation.getByRole("button", { name: "Keep editing" }).click();
     await expect(editorSource).toHaveValue(/Cancelled copy/);
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-    confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+    confirmation = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
     await confirmation.getByRole("button", { name: "Discard" }).click();
     await expect(editor).toHaveCount(0);
     expect((await readSavedFreeText(page, title)).source.qmd).toBe(INITIAL_QMD);
@@ -196,7 +197,7 @@ for (const viewport of VIEWPORTS) {
     await openFreeTextEditor(panel, page, title);
     editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await expectStaticEditorCompression(page, viewport, beforeSave);
-    await editor.getByLabel("QMD-style source").fill(SAVED_QMD);
+    await (await advancedQmdSource(editor)).fill(SAVED_QMD);
     await expect(editor.getByRole("status")).toContainText("Preview is up to date");
     await editor.getByRole("button", { name: "Continue" }).click();
     await expect(editor.getByLabel("Text/Image preview")).toContainText("Updated priorities");
@@ -373,7 +374,7 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill("Boundary traversal");
-  const source = wizard.getByLabel("QMD-style source");
+  const source = await advancedQmdSource(wizard);
   await source.fill(SAFE_RECOVERY_QMD);
   await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
 
@@ -438,7 +439,7 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
   await prepareFreeTextEditorTrigger(panel, "Boundary traversal");
   await openFreeTextEditor(panel, page, "Boundary traversal");
   const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
-  const editorSource = editor.getByLabel("QMD-style source");
+  const editorSource = await advancedQmdSource(editor);
   await exerciseFreeTextBoundaries({
     page,
     surface: editor,
@@ -453,12 +454,12 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
   await editorSource.fill(cases[0].value);
   await expect(editor.locator('[data-validation-rule="source-size"]')).toBeVisible();
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-  let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+  let confirmation = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
   await confirmation.getByRole("button", { name: "Keep editing" }).click();
   await expect(editorSource).toHaveValue(cases[0].value);
   await expectBoundaryAbsentFromStorage(page, cases[0].value);
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-  confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+  confirmation = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
   await confirmation.getByRole("button", { name: "Discard" }).click();
   await expect(editor).toHaveCount(0);
   expect((await readSavedFreeText(page, "Boundary traversal")).source.qmd).toBe(SAFE_RECOVERY_QMD);
@@ -483,30 +484,36 @@ async function createFreeText(page, {
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(title);
-  const source = wizard.getByLabel("QMD-style source");
+  const source = await advancedQmdSource(wizard);
   await source.fill(qmd);
   await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
 
   const sourceEditor = wizard.locator(".free-text-source-editor");
+  await wizard.getByRole("tab", { name: "Preview" }).click();
   if (viewport.width <= 860) {
     await expect(sourceEditor).toHaveAttribute("data-layout", "tabs");
-    await expect(wizard.getByRole("tab", { name: "Source" })).toHaveAttribute("aria-selected", "true");
-    await wizard.getByRole("tab", { name: "Preview" }).click();
+    await expect(wizard.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
     await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(previewText);
-    await wizard.getByRole("tab", { name: "Source" }).click();
+    await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
     await expect(source).toBeVisible();
     await source.focus();
     await expect(source).toBeFocused();
   } else {
     await expect(sourceEditor).toHaveAttribute("data-layout", "split");
     await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(previewText);
-    await expect(wizard.getByRole("tablist", { name: "Free text editor panes" })).toBeHidden();
+    await expect(wizard.getByRole("tablist", { name: "Text/Image authoring panes" })).toBeVisible();
   }
 
   await wizard.getByRole("button", { name: "Continue" }).click();
   await expect(wizard.getByLabel("Text/Image preview")).toContainText(previewText);
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
+}
+
+async function advancedQmdSource(surface) {
+  const tab = surface.getByRole("tab", { name: "Advanced QMD" });
+  if (await tab.getAttribute("aria-selected") !== "true") await tab.click();
+  return surface.getByLabel("Portable QMD source");
 }
 
 async function expectPortableLinkCorpus(surface, panelId) {
@@ -587,8 +594,10 @@ async function exerciseFreeTextBoundaries({
     await expect(source).toHaveAttribute("aria-invalid", "true");
     await expect(surface.getByRole("button", { name: "Continue" })).toBeDisabled();
     await expect(surface.getByRole("button", { name: "Preview & add", exact: true })).toBeDisabled();
+    await surface.getByRole("tab", { name: "Preview" }).click();
     await expect(surface.getByRole("tabpanel", { name: "Preview" }))
       .toContainText("Current-session source recovered");
+    await surface.getByRole("tab", { name: "Advanced QMD" }).click();
     await assertNoDraftPersisted(boundary);
     await error.locator("a").click();
     await expect(source).toBeFocused();

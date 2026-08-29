@@ -308,7 +308,7 @@ function requireToken(token, type) {
 function escapeInlineText(value) {
   return String(value)
     .replaceAll("\\", "\\\\")
-    .replace(/([*_[\]+`~<])/g, "\\$1")
+    .replace(/([$*_[\]+`~<])/g, "\\$1")
     .replace(
       /(^|\n)( {0,3})(#{1,6}(?=\s|$)|>(?=\s|$)|-(?=\s|$)|\d+\.(?=\s|$)|---(?=\s|$))/g,
       (_match, lineStart, indent, marker) => `${lineStart}${indent}${escapeBlockMarker(marker)}`,

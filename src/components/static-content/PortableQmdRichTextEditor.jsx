@@ -34,11 +34,12 @@ const PortableMedia = Node.create({
   },
   parseHTML() { return []; },
   renderHTML({ node }) {
+    const label = node.attrs.decorative ? "Decorative image" : node.attrs.alt || "Local image";
     return ["span", {
       "data-portable-qmd-media": node.attrs.mediaId,
       "data-portable-qmd-media-alt": node.attrs.alt,
-      contenteditable: "false",
-    }, node.attrs.decorative ? "Decorative image" : node.attrs.alt || "Local image"];
+      contenteditable: "true",
+    }, ["span", { contenteditable: "false" }, label]];
   },
 });
 
@@ -126,7 +127,7 @@ export default function PortableQmdRichTextEditor({
     },
   });
 
-  React.useEffect(() => { editor?.setEditable(!disabled); }, [disabled, editor]);
+  React.useEffect(() => { editor?.setEditable(!disabled, false); }, [disabled, editor]);
   React.useEffect(() => {
     if (!editor || parsed.mode !== "visual" || source === acceptedRef.current.source) return;
     acceptedRef.current = { source, document: parsed.document };

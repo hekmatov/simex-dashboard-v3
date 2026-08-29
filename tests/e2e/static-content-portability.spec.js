@@ -400,7 +400,8 @@ async function createFreeText(page) {
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(TEXT_TITLE);
-  await wizard.getByLabel("QMD-style source").fill(TEXT_QMD);
+  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
+  await wizard.getByLabel("Portable QMD source").fill(TEXT_QMD);
   await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
@@ -415,7 +416,7 @@ async function createImage(page, {
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(title);
   await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles({

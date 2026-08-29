@@ -4,6 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { Editor } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 
 const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
 const module = await vite.ssrLoadModule("/src/components/static-content/PortableQmdRichTextEditor.jsx").catch(() => null);
@@ -55,6 +56,12 @@ test("the Tiptap extension set uses TableKit and the constrained semantic nodes"
   for (const name of ["paragraph", "heading", "lead", "caption", "bold", "italic", "underline", "link", "bulletList", "orderedList", "table", "tableRow", "tableHeader", "tableCell", "portableMedia"]) {
     assert.ok(names.includes(name), `${name}: ${names.join(", ")}`);
   }
+  const media = editor.schema.nodes.portableMedia.create({ mediaId: "map", alt: "Field map" });
+  assert.equal(media.isAtom, true);
+  assert.equal(NodeSelection.isSelectable(media), true);
+  const dom = media.type.spec.toDOM(media);
+  assert.equal(dom[2][2], "Field map");
+  assert.equal(dom[2][1].contenteditable, "false");
   editor.destroy();
 });
 
