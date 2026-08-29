@@ -574,6 +574,115 @@ test("role controls expose cardinality, axis assignment, and detected X interpre
   assert.match(interpretation, /Detected: Date or time/);
 });
 
+test("Map and prepare renders one blank required measurement row and persists only a valid column", () => {
+  const changes = [];
+  const columns = [
+    { name: "reportedAt", type: "temporal" },
+    { name: "capacity", type: "numeric" },
+  ];
+  const measurements = {
+    id: "measurements",
+    label: "Measurements",
+    control: "role",
+    path: ["roles", "measurements"],
+    value: [],
+    accepts: ["number"],
+    required: true,
+    multiple: true,
+    min: 1,
+    max: null,
+    axisOptions: ["primary", "secondary"],
+  };
+  const originalMeasurements = structuredClone(measurements);
+  const step = DataRolesStep({
+    section: {
+      id: "data",
+      label: "Data roles",
+      fields: [measurements],
+    },
+    columns,
+  });
+  const generated = findElement(
+    step,
+    (element) => element.type === GeneratedFormSection,
+  );
+  const field = generated.props.section.fields[0];
+  const schemaField = SchemaField({
+    field,
+    value: field.value,
+    columns,
+    onChange(path, value) {
+      changes.push({ path, value });
+    },
+  });
+  const role = RoleField(schemaField.props);
+  const selects = findElementsByType(role, "select");
+  const controls = findElementsByType(role, IconControl);
+  const html = render(role);
+
+  assert.equal((html.match(/chart-authoring-role-row/g) ?? []).length, 1);
+  assert.equal(selects.length, 2);
+  assert.equal(selects[0].props.value, "");
+  assert.equal(selects[1].props.disabled, true);
+  assert.equal(
+    controls.some(({ props }) => props.interactionId === "editor.add-measurement"),
+    false,
+  );
+  assert.deepEqual(changes, []);
+
+  selects[0].props.onChange({ target: { value: "" } });
+  selects[0].props.onChange({ target: { value: "reportedAt" } });
+  assert.deepEqual(changes, []);
+
+  selects[0].props.onChange({ target: { value: "capacity" } });
+  assert.deepEqual(changes, [{
+    path: ["roles", "measurements"],
+    value: [{ field: "capacity", axis: "primary" }],
+  }]);
+  assert.deepEqual(measurements, originalMeasurements);
+});
+
+test("Map and prepare seeds no other roles and does not duplicate populated measurements", () => {
+  const markup = (field) => render(React.createElement(DataRolesStep, {
+    section: {
+      id: "data",
+      label: "Data roles",
+      fields: [field],
+    },
+    columns: [{ name: "capacity", type: "numeric" }],
+    onChange() {},
+  }));
+  const rows = (html) => (html.match(/chart-authoring-role-row/g) ?? []).length;
+  const base = {
+    id: "measurements",
+    label: "Measurements",
+    control: "role",
+    path: ["roles", "measurements"],
+    value: [],
+    accepts: ["number"],
+    required: true,
+    multiple: true,
+    min: 1,
+    max: null,
+  };
+  const populated = markup({
+    ...base,
+    value: [{ field: "capacity" }],
+  });
+
+  assert.equal(rows(markup(base)), 1);
+  assert.equal(rows(markup({ ...base, min: 0, required: false })), 0);
+  assert.equal(rows(markup({ ...base, multiple: false, max: 1 })), 0);
+  assert.equal(rows(markup({
+    ...base,
+    id: "series",
+    label: "Series",
+    path: ["roles", "series"],
+  })), 0);
+  assert.equal(rows(populated), 1);
+  assert.match(populated, /option value="capacity" selected/);
+});
+
 test("filter controls select a source column and emit the curated filter contract", () => {
   let next;
   const field = {

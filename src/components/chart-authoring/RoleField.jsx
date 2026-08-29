@@ -15,7 +15,9 @@ function RoleField({
 } = {}) {
   if (!field || typeof field !== "object") return null;
   const options = acceptedColumns(columns, field.accepts);
-  const bindings = bindingList(value, field.multiple === true);
+  const persistedBindings = bindingList(value, field.multiple === true);
+  const seedBlankRow = field.seedBlankRow === true && persistedBindings.length === 0;
+  const bindings = seedBlankRow ? [{}] : persistedBindings;
   const id = fieldControlId(field);
   const describedBy = fieldDescribedBy(field);
   if (!field.multiple) {
@@ -36,16 +38,30 @@ function RoleField({
       options.map((column) => /* @__PURE__ */ React.createElement("option", { key: column.name, value: column.name }, column.name, " (", typeLabel(column.type), ")"))
     ));
   }
-  const canAdd = field.max === null || !Number.isFinite(field.max) || bindings.length < field.max;
+  const canAdd = !seedBlankRow
+    && (field.max === null || !Number.isFinite(field.max) || bindings.length < field.max);
   return /* @__PURE__ */ React.createElement(GroupShell, { field, className: "chart-authoring-role-list" }, /* @__PURE__ */ React.createElement("div", { id }, bindings.map((binding, index) => /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-role-row", key: `${binding.field ?? "binding"}-${index}` }, /* @__PURE__ */ React.createElement("label", null, "Column", /* @__PURE__ */ React.createElement(
     "select",
     {
       value: binding.field ?? "",
-      onChange: (event) => onChange(replaceBinding(
-        bindings,
-        index,
-        { ...binding, field: event.target.value }
-      ))
+      onChange: (event) => {
+        const fieldName = event.target.value;
+        if (seedBlankRow) {
+          if (!options.some(({ name }) => name === fieldName)) return;
+          onChange([{
+            field: fieldName,
+            ...Array.isArray(field.axisOptions)
+              ? { axis: field.axisOptions[0] }
+              : {},
+          }]);
+          return;
+        }
+        onChange(replaceBinding(
+          bindings,
+          index,
+          { ...binding, field: fieldName }
+        ));
+      }
     },
     /* @__PURE__ */ React.createElement("option", { value: "" }, "Select a column"),
     options.map((column) => /* @__PURE__ */ React.createElement("option", { key: column.name, value: column.name }, column.name, " (", typeLabel(column.type), ")"))
@@ -53,6 +69,7 @@ function RoleField({
     "select",
     {
       value: binding.axis ?? field.axisOptions[0],
+      disabled: seedBlankRow,
       onChange: (event) => onChange(replaceBinding(
         bindings,
         index,

@@ -253,6 +253,30 @@ test("axis measurement descriptors offer primary and secondary assignments", () 
   assert.deepEqual(measurements.axisOptions, ["primary", "secondary"]);
 });
 
+test("empty measurement descriptors remain unbound presentation input", () => {
+  const chart = lineChart({
+    roles: {
+      measurements: [],
+      observation: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+  });
+  const original = structuredClone(chart);
+  const model = buildEditorFormModel({
+    chart,
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+  });
+  const measurements = allFields(model)
+    .find(({ id }) => id === "measurements");
+
+  assert.deepEqual(measurements.value, []);
+  assert.deepEqual(chart, original);
+});
+
 test("data transformations materialize from schema capabilities", () => {
   const line = buildEditorFormModel({
     chart: lineChart(),

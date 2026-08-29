@@ -27,7 +27,7 @@ export default function DataRolesStep({
           ...context,
           section: {
             ...section,
-            fields: orderDataFields(section.fields),
+            fields: orderDataFields(section.fields).map(withPreparedDataPresentation),
           },
         })
       : null,
@@ -51,6 +51,28 @@ export function orderDataFields(fields) {
 function measurementPriority(field) {
   const identity = `${field?.id ?? ""} ${field?.label ?? ""}`;
   return /\bmeasurements?\b/i.test(identity) ? 0 : 1;
+}
+
+function withPreparedDataPresentation(field) {
+  if (
+    field?.id !== "measurements"
+    || field.multiple !== true
+    || field.min !== 1
+    || bindingCount(field.value) > 0
+  ) {
+    return field;
+  }
+  return { ...field, seedBlankRow: true };
+}
+
+function bindingCount(value) {
+  return Array.isArray(value)
+    ? value.filter((binding) => (
+        binding !== null
+        && typeof binding === "object"
+        && !Array.isArray(binding)
+      )).length
+    : 0;
 }
 
 function PrerequisiteNotice({ messages }) {
