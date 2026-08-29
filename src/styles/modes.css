@@ -1875,8 +1875,7 @@
 }
 
 .canonical-dashboard-frame .build-section-actions,
-.canonical-dashboard-frame .panel-actions,
-.canonical-dashboard-frame .build-add-section-row {
+.canonical-dashboard-frame .panel-actions {
   position: absolute;
 }
 
@@ -1892,11 +1891,6 @@
 
 .canonical-dashboard-frame .chart-panel-has-actions {
   grid-template-rows: minmax(0, 1fr);
-}
-
-.canonical-dashboard-frame .build-add-section-row {
-  bottom: 0;
-  right: 0;
 }
 
 @media (max-width: 767px) {
