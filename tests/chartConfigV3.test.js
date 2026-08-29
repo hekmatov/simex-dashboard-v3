@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
+import {
+  createChartDraft,
+  validateChartInstance,
+} from "../src/charting/config/chartConfigV3.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { validateChartDataCompatibility } from "../src/charting/data/prepareChartData.js";
 
@@ -33,4 +36,46 @@ test("direct compatibility accepts a structurally complete candidate", () => {
   assert.equal(result.ok, true);
   assert.deepEqual(result.missingColumns, []);
   assert.equal(result.prepared.status, "ready");
+});
+
+test("chart drafts preserve an optional false title visibility flag", () => {
+  const chart = createChartDraft("line", {
+    id: "hidden-title-trend",
+    title: "Hidden title trend",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: {
+        field: "date",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    presentation: { title: { visible: false } },
+  });
+
+  assert.equal(chart.presentation.title.visible, false);
+  assert.equal(validateChartInstance(chart), chart);
+});
+
+test("chart title visibility rejects non-boolean values", () => {
+  const chart = createChartDraft("line", {
+    id: "invalid-title-visibility",
+    title: "Invalid title visibility",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: {
+        field: "date",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    presentation: { title: { visible: "false" } },
+  });
+
+  assert.throws(
+    () => validateChartInstance(chart),
+    /Chart presentation title visible must be boolean\./,
+  );
 });

@@ -17,6 +17,12 @@ const STEP_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "style", label: "Style and layout" }),
 ]);
 
+const LEGEND_PRESENTATION_RENDERERS = new Set([
+  "axis",
+  "composition",
+  "relationship",
+]);
+
 const INTERPRETATION_LABELS = Object.freeze({
   any: "Automatic",
   number: "Number",
@@ -320,6 +326,13 @@ function appearanceFields({ chart, schema }) {
       required: true,
     },
     {
+      id: "titleVisible",
+      label: "Show title",
+      control: "toggle",
+      path: ["presentation", "title", "visible"],
+      value: chart.presentation?.title?.visible !== false,
+    },
+    {
       id: "description",
       label: "Description",
       control: "textarea",
@@ -352,6 +365,15 @@ function appearanceFields({ chart, schema }) {
   const series = chart.presentation?.series ?? {};
   return [
     ...common,
+    ...(LEGEND_PRESENTATION_RENDERERS.has(schema.renderer)
+      ? [{
+          id: "legendVisible",
+          label: "Show legend",
+          control: "toggle",
+          path: ["presentation", "legend", "visible"],
+          value: chart.presentation?.legend?.visible !== false,
+        }]
+      : []),
     ...schema.form.appearance.map((fieldId) => (
       seriesAppearanceField(
         fieldId,

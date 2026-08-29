@@ -359,6 +359,28 @@ test("the mounted ECharts option applies every valid title alignment and opaque 
   }
 });
 
+test("ECharts title visibility defaults on and hides without dropping structural text", () => {
+  const model = {
+    kind: "echarts",
+    option: { title: { text: "Capacity" }, series: [] },
+  };
+  const visible = applyEChartsPresentation(model, {
+    presentation: { title: { align: "left" } },
+  });
+  const hidden = applyEChartsPresentation(model, {
+    presentation: { title: { align: "left", visible: false } },
+  });
+
+  assert.deepEqual(
+    { show: visible.option.title.show, text: visible.option.title.text },
+    { show: true, text: "Capacity" },
+  );
+  assert.deepEqual(
+    { show: hidden.option.title.show, text: hidden.option.title.text },
+    { show: false, text: "Capacity" },
+  );
+});
+
 test("transparent and hostile ECharts presentation values cannot create an opaque or invalid fill", () => {
   const transparent = applyEChartsPresentation({
     kind: "echarts",

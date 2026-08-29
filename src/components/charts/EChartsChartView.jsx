@@ -3,8 +3,11 @@ import * as echarts from "echarts";
 
 import { describeAccessibilityCompanion } from "../../charting/rendering/accessibilityRows.js";
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
-import { titleContainerProps } from "./chartViewPresentation.js";
-import { chartDescriptionVisible } from "./chartViewPresentation.js";
+import {
+  chartDescriptionVisible,
+  chartTitleVisible,
+  titleContainerProps,
+} from "./chartViewPresentation.js";
 import { mapBudgetNotice, useBuildMapBudgetSlot } from "../build/BuildMapBudgetContext.jsx";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
@@ -42,6 +45,7 @@ export default function EChartsChartView({
   const descriptionId = React.useId();
   const summaryId = React.useId();
   const title = chart.title || "Chart";
+  const titleVisible = chartTitleVisible(chart);
   const description = chart.description || model.option?.aria?.description || "Interactive chart.";
   const presentedModel = React.useMemo(
     () => applyEChartsPresentation(model, chart, accessibilityEnabled, textTheme),
@@ -145,7 +149,7 @@ export default function EChartsChartView({
         role: "status",
       }, budgetNotice)
     : null,
-  accessibilityEnabled
+  accessibilityEnabled || !titleVisible
     ? React.createElement("h3", {
         id: titleId,
         className: "chart-view-title chart-view-title--visually-hidden",
@@ -179,6 +183,7 @@ export function applyEChartsPresentation(
     ...optionWithoutBackground
   } = option;
   const align = normalizedTitleAlignment(chart?.presentation?.title?.align);
+  const titleVisible = chartTitleVisible(chart);
   const textStrong = normalizedTextColor(
     textTheme?.textStrong,
     DEFAULT_CHART_TEXT_THEME.textStrong,
@@ -209,8 +214,8 @@ export function applyEChartsPresentation(
         ? {}
         : {
             title: Array.isArray(option.title)
-              ? option.title.map((title) => normalizedTitle(title, align, textStrong))
-              : normalizedTitle(option.title, align, textStrong),
+              ? option.title.map((title) => normalizedTitle(title, align, textStrong, titleVisible))
+              : normalizedTitle(option.title, align, textStrong, titleVisible),
           }),
       ...(option.legend === undefined
         ? {}
@@ -326,10 +331,11 @@ function registerMap(echartsApi, registration) {
   }
 }
 
-function normalizedTitle(value, align, textColor) {
+function normalizedTitle(value, align, textColor, visible) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? {
         ...value,
+        show: visible,
         left: align,
         top: value.top ?? 0,
         textStyle: {
@@ -339,7 +345,7 @@ function normalizedTitle(value, align, textColor) {
           color: textColor,
         },
       }
-    : { text: "", left: align, top: 0 };
+    : { text: "", show: visible, left: align, top: 0 };
 }
 
 function normalizedLegend(value, textColor) {

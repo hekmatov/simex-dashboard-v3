@@ -368,6 +368,36 @@ test("ECharts render models remain SSR-safe and describe their content", () => {
   assert.match(html, /Hold Ctrl while scrolling to zoom/);
 });
 
+test("visually hidden chart titles remain structural headings across renderers", () => {
+  const chart = {
+    title: "Structural capacity title",
+    presentation: { title: { align: "left", visible: false } },
+  };
+  const card = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart,
+    model: { items: [] },
+  }));
+  const table = renderToStaticMarkup(React.createElement(TableChartView, {
+    chart,
+    model: { columns: [], rows: [], rowMetadata: [] },
+  }));
+  const echarts = renderToStaticMarkup(React.createElement(EChartsChartView, {
+    chart,
+    model: {
+      kind: "echarts",
+      option: { title: { text: chart.title }, series: [] },
+    },
+    accessibilityEnabled: false,
+  }));
+
+  for (const html of [card, table, echarts]) {
+    assert.match(
+      html,
+      /<h3[^>]*class="chart-view-title chart-view-title--visually-hidden"[^>]*>Structural capacity title<\/h3>/,
+    );
+  }
+});
+
 test("non-zoom schema capabilities cannot be bypassed by chart-local input", () => {
   const rows = [{ category: "Hospitals", value: 4 }];
   const html = renderToStaticMarkup(React.createElement(ChartView, {

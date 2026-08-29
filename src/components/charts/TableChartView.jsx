@@ -1,6 +1,7 @@
 import React from "react";
 import {
   chartDescriptionVisible,
+  chartTitleClassName,
   titleContainerProps,
 } from "./chartViewPresentation.js";
 
@@ -21,7 +22,7 @@ export default function TableChartView({ model, chart = {}, provenance }) {
     "aria-label": title,
     ...titleContainerProps(chart),
   },
-    React.createElement("h3", { className: "chart-view-title" }, title),
+    React.createElement("h3", { className: chartTitleClassName(chart) }, title),
     chartDescriptionVisible(chart) && chart.description
       ? React.createElement("p", { className: "chart-view-description" }, chart.description)
       : null,

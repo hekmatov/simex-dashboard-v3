@@ -532,7 +532,7 @@ test("before renderer readiness only data and the required title remain editable
   assert.ok(ready.sections.some(({ id }) => id === "interactions"));
 });
 
-test("appearance begins with the required title and optional description controls", () => {
+test("appearance begins with the required title and its visibility control", () => {
   const chart = lineChart({ title: "" });
   const profile = datasetProfile();
   const model = buildEditorFormModel({
@@ -543,9 +543,19 @@ test("appearance begins with the required title and optional description control
   const appearance = model.sections.find(({ id }) => id === "appearance");
 
   assert.deepEqual(
-    appearance.fields.slice(0, 5).map(({ id, path }) => ({ id, path })),
+    appearance.fields.slice(0, 6).map(({ id, label, path, value }) => ({
+      id,
+      path,
+      ...(id === "titleVisible" ? { label, value } : {}),
+    })),
     [
       { id: "title", path: ["title"] },
+      {
+        id: "titleVisible",
+        path: ["presentation", "title", "visible"],
+        label: "Show title",
+        value: true,
+      },
       { id: "description", path: ["description"] },
       {
         id: "descriptionVisible",
@@ -560,6 +570,71 @@ test("appearance begins with the required title and optional description control
         path: ["presentation", "background", "color"],
       },
     ],
+  );
+});
+
+test("legend visibility is exposed only by renderers that consume it", () => {
+  const profile = datasetProfile();
+  const supported = [
+    { chart: lineChart(), value: true },
+    { chart: createChartDraft("pie", {
+      id: "composition-legend",
+      title: "Composition legend",
+      sourceId: "exercise-data",
+      roles: {
+        category: { field: "reportedAt", interpretation: "category" },
+        value: { field: "value" },
+      },
+      presentation: { legend: { visible: false } },
+    }), value: false },
+    { chart: createChartDraft("scatter", {
+      id: "relationship-legend",
+      title: "Relationship legend",
+      sourceId: "exercise-data",
+      roles: {
+        x: { field: "value" },
+        y: { field: "value" },
+      },
+      presentation: { legend: { visible: false } },
+    }), value: false },
+  ];
+
+  for (const { chart, value } of supported) {
+    const model = buildEditorFormModel({
+      chart,
+      profile,
+      prepared: preparedFor(chart, profile),
+    });
+    const legendVisible = model.sections
+      .find(({ id }) => id === "appearance")
+      .fields.find(({ id }) => id === "legendVisible");
+
+    assert.deepEqual(legendVisible, {
+      id: "legendVisible",
+      label: "Show legend",
+      control: "toggle",
+      path: ["presentation", "legend", "visible"],
+      value,
+    }, chart.typeId);
+  }
+
+  const unsupported = createChartDraft("kpi", {
+    id: "kpi-without-legend",
+    title: "KPI without legend",
+    sourceId: "exercise-data",
+    roles: { value: { field: "value" } },
+  });
+  const unsupportedModel = buildEditorFormModel({
+    chart: unsupported,
+    profile,
+    prepared: preparedFor(unsupported, profile),
+  });
+
+  assert.equal(
+    unsupportedModel.sections
+      .find(({ id }) => id === "appearance")
+      .fields.some(({ id }) => id === "legendVisible"),
+    false,
   );
 });
 

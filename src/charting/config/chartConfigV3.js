@@ -394,8 +394,9 @@ function validatePresentation(chart, schema) {
   checkKnownDescriptorKeys(descriptors, PRESENTATION_KEYS, "chart presentation");
   const title = requiredDescriptorValue(descriptors, "title", "Chart presentation");
   ensureObject(title, "Chart presentation title");
-  checkKnownKeys(title, new Set(["align"]), "chart presentation title");
+  checkKnownKeys(title, new Set(["align", "visible"]), "chart presentation title");
   if (!TITLE_ALIGNMENTS.has(title.align)) throw new Error("Chart presentation title alignment must be left, center, or right.");
+  if (title.visible !== undefined && typeof title.visible !== "boolean") throw new Error("Chart presentation title visible must be boolean.");
   const collection = ownEnumerableDataValue(
     presentation,
     "collection",
