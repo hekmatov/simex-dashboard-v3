@@ -13,6 +13,7 @@ import {
 import {
   resolveSourceEntryLabels,
 } from "../src/content-library/sourceEntrySchema.js";
+import { validateDatasetProfiles } from "../src/lib/loadDashboard.js";
 
 function registryWith(...typeIds) {
   return createChartSchemaRegistry(typeIds.map((typeId) => (
@@ -152,9 +153,13 @@ test("imported source labels follow identity evidence and qualify only collision
   });
 });
 
-test("shipped biomedical source names are specific in entries and provenance", () => {
+test("shipped biomedical source names are specific and runtime-compatible with dataset profiles", () => {
   const dashboard = JSON.parse(readFileSync(
     new URL("../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  const datasetProfiles = JSON.parse(readFileSync(
+    new URL("../public/config/dataset-profiles.json", import.meta.url),
     "utf8",
   ));
   const expected = {
@@ -176,4 +181,8 @@ test("shipped biomedical source names are specific in entries and provenance", (
     assert.equal(dashboard.dataSources[sourceId].provenance.label, label);
   }
   assert.equal(new Set(Object.values(expected)).size, Object.keys(expected).length);
+  assert.doesNotThrow(() => validateDatasetProfiles(
+    dashboard.dataSources,
+    datasetProfiles,
+  ));
 });

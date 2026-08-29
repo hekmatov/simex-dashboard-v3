@@ -229,7 +229,7 @@
     "kind": "csv",
     "path": "data/biomedical/admissions.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical admissions"
     },
     "rowCount": 177,
     "sourceId": "bio_admissions"
@@ -488,7 +488,7 @@
     "kind": "csv",
     "path": "data/biomedical/cases.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical cases"
     },
     "rowCount": 177,
     "sourceId": "bio_cases"
@@ -559,7 +559,7 @@
     "kind": "csv",
     "path": "data/biomedical/healthcare_cases.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical healthcare cases"
     },
     "rowCount": 96,
     "sourceId": "bio_healthcare_cases"
@@ -818,7 +818,7 @@
     "kind": "csv",
     "path": "data/biomedical/hospital_occupancy.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical hospital occupancy"
     },
     "rowCount": 177,
     "sourceId": "bio_hospital_occupancy"
@@ -1077,7 +1077,7 @@
     "kind": "csv",
     "path": "data/biomedical/icu_occupancy.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical ICU occupancy"
     },
     "rowCount": 177,
     "sourceId": "bio_icu_occupancy"
@@ -1139,7 +1139,7 @@
     "kind": "csv",
     "path": "data/biomedical/mortality_by_age.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical mortality by age"
     },
     "rowCount": 6,
     "sourceId": "bio_mortality"
@@ -148688,7 +148688,7 @@
     "kind": "csv",
     "path": "data/biomedical/municipal_infections.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical municipal infections"
     },
     "rowCount": 146910,
     "sourceId": "bio_municipal_infections"
@@ -295325,7 +295325,7 @@
     "kind": "csv",
     "path": "data/biomedical/occupancy_gauges.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical occupancy gauges"
     },
     "rowCount": 2,
     "sourceId": "bio_occupancy_gauges"
@@ -295443,7 +295443,7 @@
     "kind": "csv",
     "path": "data/biomedical/province_cases.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical province cases"
     },
     "rowCount": 36,
     "sourceId": "bio_province_cases"
@@ -295991,7 +295991,7 @@
     "kind": "csv",
     "path": "data/biomedical/r_values.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical R values"
     },
     "rowCount": 177,
     "sourceId": "bio_r_values"
@@ -296226,7 +296226,7 @@
     "kind": "csv",
     "path": "data/biomedical/testing.csv",
     "provenance": {
-      "label": "Simulation exercise biomedical dataset"
+      "label": "Biomedical testing"
     },
     "rowCount": 177,
     "sourceId": "bio_testing"
