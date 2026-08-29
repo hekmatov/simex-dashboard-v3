@@ -214,6 +214,20 @@ test("safe DOM renderer preserves supported semantic Markdown without HTML parsi
   });
 });
 
+test("trusted underline rendering creates semantic u and never an authored underline element", async () => {
+  await page.goto(`${baseURL}/tests/fixtures/portable-qmd-browser.html`);
+  const result = await page.evaluate(async () => {
+    const { compilePortableQmd } = await import("/src/static-content/qmd/compilePortableQmd.js");
+    const target = document.querySelector("#target");
+    target.replaceChildren(compilePortableQmd("Text with ++semantic underline++.", { panelId: "underline" }).fragment);
+    return {
+      underlines: [...target.querySelectorAll("u")].map((node) => node.textContent),
+      invalid: target.querySelectorAll("underline").length,
+    };
+  });
+  assert.deepEqual(result, { underlines: ["semantic underline"], invalid: 0 });
+});
+
 test("repeated footnotes keep unique occurrence links while missing definitions remain visible text", async () => {
   await page.goto(`${baseURL}/tests/fixtures/portable-qmd-browser.html`);
   const result = await page.evaluate(async () => {

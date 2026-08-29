@@ -13,6 +13,7 @@ const parser = new MarkdownIt({
 });
 parser.use(portableImageSourceOffsetsPlugin);
 parser.use(portableUnderlinePlugin);
+parser.use(portableSemanticTextBlockPlugin);
 parser.use(portableCalloutPlugin);
 parser.use(portableMathPlugin);
 parser.use(portableFootnotePlugin);
@@ -92,6 +93,35 @@ function portableUnderlinePlugin(md) {
       state.push("underline_close", "u", -1);
     }
     state.pos = close + 2;
+    return true;
+  });
+}
+
+function portableSemanticTextBlockPlugin(md) {
+  md.block.ruler.before("fence", "portable_semantic_text", (state, startLine, endLine, silent) => {
+    const start = state.bMarks[startLine] + state.tShift[startLine];
+    const opening = state.src.slice(start, state.eMarks[startLine]).trim();
+    const style = opening === "::: {.simex-text-lead}"
+      ? "lead"
+      : opening === "::: {.simex-text-caption}"
+        ? "caption"
+        : null;
+    if (!style) return false;
+    let closeLine = startLine + 1;
+    for (; closeLine < endLine; closeLine += 1) {
+      const lineStart = state.bMarks[closeLine] + state.tShift[closeLine];
+      if (state.src.slice(lineStart, state.eMarks[closeLine]).trim() === ":::") break;
+    }
+    if (closeLine >= endLine) return false;
+    if (silent) return true;
+    const open = state.push(`${style}_open`, "p", 1);
+    open.block = true;
+    open.map = [startLine, closeLine + 1];
+    state.md.block.tokenize(state, startLine + 1, closeLine);
+    const close = state.push(`${style}_close`, "p", -1);
+    close.block = true;
+    close.map = [closeLine, closeLine + 1];
+    state.line = closeLine + 1;
     return true;
   });
 }

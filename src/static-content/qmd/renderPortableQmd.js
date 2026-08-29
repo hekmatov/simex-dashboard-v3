@@ -32,6 +32,13 @@ const SIMPLE_CLOSES = new Set([
   "td_close",
 ]);
 
+const TRUSTED_INLINE_TAGS = Object.freeze({
+  strong_open: "strong",
+  em_open: "em",
+  s_open: "s",
+  underline_open: "u",
+});
+
 export function renderPortableQmd(ast, options = {}) {
   if (!ast || ast.type !== "root" || !Array.isArray(ast.tokens)) {
     throw new TypeError("A validated portable QMD AST is required.");
@@ -95,6 +102,15 @@ function renderTokens(tokens, root, environment) {
       continue;
     }
     if (token.type === "heading_close") {
+      close();
+      continue;
+    }
+    if (token.type === "lead_open" || token.type === "caption_open") {
+      const style = token.type === "lead_open" ? "lead" : "caption";
+      open(createElement(environment.document, "p", `portable-qmd-${style}`));
+      continue;
+    }
+    if (token.type === "lead_close" || token.type === "caption_close") {
       close();
       continue;
     }
@@ -178,8 +194,8 @@ function renderInlineTokens(tokens, root, environment) {
       const code = createElement(environment.document, "code");
       code.textContent = token.content;
       current().append(code);
-    } else if (token.type === "strong_open" || token.type === "em_open" || token.type === "s_open" || token.type === "underline_open") {
-      open(createElement(environment.document, token.type.replace("_open", "").replace("strong", "strong")));
+    } else if (TRUSTED_INLINE_TAGS[token.type]) {
+      open(createElement(environment.document, TRUSTED_INLINE_TAGS[token.type]));
     } else if (token.type === "strong_close" || token.type === "em_close" || token.type === "s_close" || token.type === "underline_close") {
       close();
     } else if (token.type === "link_open") {

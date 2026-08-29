@@ -436,6 +436,37 @@ export function isStaticContentDraftDirty(state) {
   return JSON.stringify(current) !== JSON.stringify(state.baseline);
 }
 
+export function projectStaticContentDraftOwner({
+  draft,
+  dirty = isStaticContentDraftDirty(draft),
+  active = true,
+  placementId = null,
+  status = "dirty",
+  surface = "composer",
+  focusId = null,
+  scrollTop = 0,
+} = {}) {
+  if (!draft || dirty !== true || !["dirty", "saving", "error"].includes(status)) return null;
+  const edit = draft.mode === "edit";
+  const scopeId = edit ? String(placementId ?? "").trim() : String(draft.draftIdentity?.panelId ?? "").trim();
+  if (!scopeId) return null;
+  const kind = edit ? "text-image-edit" : "text-image-create";
+  return Object.freeze({
+    draftId: `${kind}:${scopeId}`,
+    kind,
+    scopeId,
+    targetId: scopeId,
+    status,
+    activity: active ? "active" : "suspended",
+    surface,
+    restoration: Object.freeze({
+      surface,
+      focusId: typeof focusId === "string" && focusId ? focusId : null,
+      scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : 0,
+    }),
+  });
+}
+
 function authored(state, updates) {
   return {
     ...state,

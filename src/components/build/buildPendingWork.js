@@ -84,6 +84,7 @@ export function selectBuildPendingWork({
       (key === "chartEditor" && adoptedChartKinds.has("chart-edit"))
       || (key === "chartWizard" && adoptedChartKinds.has("chart-create"))
       || (key === "structure" && adoptedKinds.has("layout"))
+      || (key === "staticContent" && (adoptedKinds.has("text-image-create") || adoptedKinds.has("text-image-edit")))
       || (key === "chronoGroup" && adoptedKinds.has("chrono"))
       || (key === "scene" && adoptedKinds.has("scene"))
     ) continue;
@@ -274,11 +275,13 @@ function labelForOwnerKind(kind) {
     scene: "Scene Studio changes",
     "chart-create": "New chart draft",
     "chart-edit": "Chart changes",
+    "text-image-create": "New Text/Image draft",
+    "text-image-edit": "Text/Image changes",
   })[kind] ?? `${humanize(kind)} changes`;
 }
 
 function priorityForOwnerKind(kind) {
-  return ({ layout: 10, "chart-edit": 20, "chart-create": 30, chrono: 70, scene: 80 })[kind] ?? 110;
+  return ({ layout: 10, "chart-edit": 20, "chart-create": 30, "text-image-create": 40, "text-image-edit": 40, chrono: 70, scene: 80 })[kind] ?? 110;
 }
 
 function stateWithHigherPriority(left, right) {

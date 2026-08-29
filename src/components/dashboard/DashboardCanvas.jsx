@@ -284,7 +284,7 @@ export default function DashboardCanvas({
                             Add chart
                           </button>
                           <button type="button" disabled={Boolean(buildState.disabled)} onClick={() => buildState.onAddStaticContent?.(section.id)}>
-                            Add static content
+                            Add Text/Image
                           </button>
                         </div>
                       ) : (

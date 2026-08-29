@@ -368,6 +368,23 @@ test("clean Chrono and Scene owners and clean temporal auxiliary opens publish n
   }), []);
 });
 
+test("adopted Text/Image creation and edit owners bypass the legacy staticContent projection", () => {
+  const owners = [
+    { draftId: "text-image-create:draft-a", kind: "text-image-create", scopeId: "draft-a", status: "dirty", activity: "active", surface: "composer" },
+    { draftId: "text-image-edit:placement-a", kind: "text-image-edit", scopeId: "placement-a", status: "error", activity: "suspended", surface: "advanced", restoration: { focusId: "static-qmd-source", scrollTop: 390 } },
+  ];
+  const pending = selectBuildPendingWork({
+    authoredDirty: { staticContent: true },
+    owners,
+    actions: { ownerById: Object.fromEntries(owners.map((owner) => [owner.draftId, { focus() {}, resume() {}, save() {}, discard() {} }])) },
+  });
+  assert.deepEqual(pending.map(({ id, activation }) => ({ id, activation })), [
+    { id: "text-image-create:draft-a", activation: "focus" },
+    { id: "text-image-edit:placement-a", activation: "resume" },
+  ]);
+  assert.doesNotMatch(pending.map(({ id }) => id).join(" "), /(^|\s)text-image($|\s)/);
+});
+
 test("layout-owned Scene consequences publish only the layout transaction descriptor", () => {
   const layoutDraft = {
     draftId: "layout:dashboard-1",

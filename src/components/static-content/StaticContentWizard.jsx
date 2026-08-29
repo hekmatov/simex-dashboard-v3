@@ -175,8 +175,8 @@ export function StaticContentWizard({
       >
         <header>
           <div>
-            <p className="eyebrow">{editor ? "Static content editor" : "Add static content"}</p>
-            <h2 id="static-content-dialog-title">{editor ? "Edit static content" : "Add static content"}</h2>
+            <p className="eyebrow">{editor ? "Text/Image editor" : "Add Text/Image"}</p>
+            <h2 id="static-content-dialog-title">{editor ? "Edit Text/Image" : "Add Text/Image"}</h2>
           </div>
           <button type="button" className="secondary" aria-label="Close static content editor" onClick={requestClose}>Close</button>
         </header>
@@ -320,6 +320,7 @@ function FreeTextFields({ draft, dashboard, contentRenderContext, dispatch, onVa
       id="static-qmd-source"
       value={draft.source?.qmd ?? ""}
       panelId={draft.panel?.id ?? "static-text-preview"}
+      panelTitle={draft.panel?.title ?? ""}
       mediaItems={{ ...(dashboard.contentLibrary?.mediaItems ?? {}), ...(draft.pendingMediaItems ?? {}) }}
       assets={draft.assets}
       contentRenderContext={contentRenderContext}

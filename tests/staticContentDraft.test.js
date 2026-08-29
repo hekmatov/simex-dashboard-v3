@@ -1,12 +1,33 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { STATIC_CONTENT_STAGE_LABELS, STATIC_CONTENT_STAGES, createStaticContentDraft, finalizeStaticContentDraft, isStaticContentDraftDirty, reduceStaticContentDraft } from "../src/static-content/forms/staticContentDraft.js";
+import { STATIC_CONTENT_STAGE_LABELS, STATIC_CONTENT_STAGES, createStaticContentDraft, finalizeStaticContentDraft, isStaticContentDraftDirty, projectStaticContentDraftOwner, reduceStaticContentDraft } from "../src/static-content/forms/staticContentDraft.js";
 
 test("static authoring retains the exact four-stage workflow", () => {
   assert.deepEqual(STATIC_CONTENT_STAGES, ["destination", "content-type", "content", "preview-and-add"]);
   assert.deepEqual(STATIC_CONTENT_STAGE_LABELS, ["Destination", "Content type", "Content", "Preview & add"]);
   assert.equal(createStaticContentDraft().persistence, "application-session-only");
+});
+
+test("Text/Image ownership starts on the first semantic change and stays scoped to creation or placement edit", () => {
+  let creation = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+  });
+  assert.equal(projectStaticContentDraftOwner({ draft: creation, dirty: false, active: true }), null);
+  creation = reduceStaticContentDraft(creation, { type: "updateSource", updates: { qmd: "Meaningful text" } });
+  const active = projectStaticContentDraftOwner({ draft: creation, dirty: true, active: true, surface: "composer", focusId: "static-qmd-source-composer-tab", scrollTop: 240 });
+  assert.equal(active.kind, "text-image-create");
+  assert.equal(active.draftId, `text-image-create:${creation.draftIdentity.panelId}`);
+  assert.equal(active.activity, "active");
+  assert.deepEqual(active.restoration, { surface: "composer", focusId: "static-qmd-source-composer-tab", scrollTop: 240 });
+  assert.equal(projectStaticContentDraftOwner({ draft: creation, dirty: true, active: false }).draftId, active.draftId);
+
+  const edit = projectStaticContentDraftOwner({ draft: { ...creation, mode: "edit" }, dirty: true, active: false, placementId: "placement-a", status: "error" });
+  assert.equal(edit.draftId, "text-image-edit:placement-a");
+  assert.equal(edit.activity, "suspended");
+  assert.equal(edit.status, "error");
 });
 
 for (const [kind, current, expectedOrigin, staged] of [

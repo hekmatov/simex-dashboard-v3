@@ -30,20 +30,21 @@ test("StaticContentEditor mounts an existing V5 Image edit with media placement 
     mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
     assets: dashboard.assets,
   }));
-  assert.match(html, /Edit static content/);
+  assert.match(html, /Edit Text\/Image/);
   assert.match(html, /value="Response map"/);
   assert.match(html, /Alternative text/);
   assert.match(html, /data-image-media-id="media-image-source"/);
   assert.match(html, /data-image-media-revision="3"/);
 });
 
-test("Free-text authoring exposes the basic portable-QMD toolbar", () => {
+test("Free-text authoring opens the constrained visual Composer by default", () => {
   const html = renderToStaticMarkup(React.createElement(freeTextEditorModule.FreeTextSourceEditor, { value: "Brief" }));
-  assert.match(html, /role="toolbar"[^>]*aria-label="Format portable QMD"/);
-  assert.match(html, /aria-label="Font choice"/);
-  for (const label of ["Bold", "Underline", "Italics", "Bulleted list", "Insert table"]) {
+  assert.match(html, /role="toolbar"[^>]*aria-label="Composer formatting"/);
+  assert.match(html, /aria-label="Semantic text style"/);
+  for (const label of ["Bold", "Italic", "Underline", "Bullet list", "Numbered list", "Table", "Insert image"]) {
     assert.match(html, new RegExp(`aria-label="${label}"`));
   }
+  assert.match(html, />Advanced QMD</);
 });
 
 test("existing Image edit finalizes and prepares the exact atomic V5 contract", () => {
