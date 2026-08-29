@@ -9,7 +9,17 @@ export default function SceneContent({ content, onAction = () => {} }) {
         React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_EDIT", itemType: "scene", itemId: content.id }) }, "Edit"),
         React.createElement("button", { type: "button", className: "secondary", onClick: () => onAction({ type: "START_DUPLICATE", itemType: "scene", itemId: content.id }) }, "Duplicate"),
         React.createElement("button", { type: "button", className: "secondary", onClick: () => onAction({ type: "REQUEST_REMOVE", itemType: "scene", itemId: content.id }) }, "Remove"),
-        content.status === "needs-attention" ? React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_REPAIR", itemType: "scene", itemId: content.id }) }, "Repair") : null,
+        content.status === "needs-attention" ? React.createElement("button", {
+          type: "button",
+          "data-scene-workflow-id": "repair-frame-source",
+          onClick: () => onAction({
+            type: "START_REPAIR",
+            itemType: "scene",
+            itemId: content.id,
+            stage: "details",
+            focusId: "scene-frame-source",
+          }),
+        }, "Repair Frame source") : null,
         React.createElement("button", { type: "button", className: "secondary", onClick: () => onAction({ type: "RETURN_TO_STUDIO" }) }, "Back to Scene Studio"),
       ),
     ),

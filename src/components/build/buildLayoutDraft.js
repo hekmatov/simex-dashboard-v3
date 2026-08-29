@@ -3,10 +3,13 @@ import { reorderPage, reorderSection } from "./buildStructureModel.js";
 export function createBuildLayoutDraft(dashboard) {
   const baseline = structuredClone(dashboard);
   return {
-    draftId: `layout-${String(dashboard?.id ?? "dashboard")}`,
+    draftId: `layout:${String(dashboard?.id ?? "dashboard")}`,
     kind: "layout",
+    scopeId: String(dashboard?.id ?? "dashboard"),
     targetId: null,
     status: "clean",
+    activity: "active",
+    surface: "dashboard-map",
     baseline,
     value: structuredClone(baseline),
     error: null,
@@ -208,8 +211,10 @@ export function discardBuildLayoutDraft(draft) {
     ...draft,
     targetId: null,
     status: "clean",
+    activity: "active",
     value: structuredClone(draft.baseline),
     error: null,
+    sceneConsequences: [],
   };
 }
 

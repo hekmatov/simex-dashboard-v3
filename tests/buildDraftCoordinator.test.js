@@ -239,6 +239,39 @@ test("the chart slot preserves one scoped owner identity across surface and life
   assert.equal(state.slots.chart.status, "error");
 });
 
+test("layout owner identity is derived from the immutable dashboard scope instead of a mutable target label", () => {
+  const state = reduceBuildDraftCoordinator(createBuildDraftCoordinatorState(), {
+    type: "OPEN_SLOT",
+    slot: "layout",
+    draft: {
+      kind: "layout",
+      scopeId: "dashboard-1",
+      targetId: "section-a",
+      status: "dirty",
+      activity: "active",
+    },
+  });
+
+  assert.equal(state.slots.layout.draftId, "layout:dashboard-1");
+  assert.equal(state.slots.layout.scopeId, "dashboard-1");
+  assert.equal(state.slots.layout.targetId, "section-a");
+});
+
+test("the layout adapter recovers dashboard scope from an existing stable draft ID", () => {
+  const state = reduceBuildDraftCoordinator(createBuildDraftCoordinatorState(), {
+    type: "SYNC_SLOT",
+    slot: "layout",
+    draft: {
+      draftId: "layout:dashboard-1",
+      kind: "layout",
+      targetId: "section-b",
+      status: "saving",
+    },
+  });
+  assert.equal(state.slots.layout.scopeId, "dashboard-1");
+  assert.equal(state.slots.layout.draftId, "layout:dashboard-1");
+});
+
 test("unknown actions fail exhaustively", () => {
   assert.throws(
     () => reduceBuildDraftCoordinator(createBuildDraftCoordinatorState(), { type: "SURPRISE" }),

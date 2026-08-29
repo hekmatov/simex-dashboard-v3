@@ -35,6 +35,8 @@ import {
   selectChronoStudioCards,
   selectSceneContent,
   selectSceneStudioSections,
+  selectTemporalDraftOwners,
+  withTemporalOwnerScope,
 } from "../time/chronoContentState.js";
 import ChronoGroupEditor from "../time/ChronoGroupEditor.jsx";
 import {
@@ -160,6 +162,10 @@ export default function BuildWorkspace({
     chronoGroup: chronoGroupDraft,
     scene: sceneDraft,
   }), [sceneDraft, chronoGroupDraft]);
+  const temporalOwners = React.useMemo(
+    () => selectTemporalDraftOwners(localAuthoringDrafts),
+    [localAuthoringDrafts],
+  );
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
@@ -427,29 +433,6 @@ export default function BuildWorkspace({
     onDiscardLayout?.();
     revealUnitOrbitAnchor(chartEditorPlacementId);
   };
-  const pendingWork = selectBuildPendingWork({
-    authoredDirty: effectiveAuthoredDirtyState,
-    coordinator: draftCoordinator,
-    chartOwners,
-    parkedAuxiliaries,
-    layoutDraft,
-    actions: {
-      resumeByKey: {
-        ...pendingWorkResumeActions,
-        pendingContent: pendingWorkResumeActions.pendingContent
-          ?? (() => resumeAuxiliary("source-content")),
-        chronoGroup: pendingWorkResumeActions.chronoGroup
-          ?? (() => resumeAuxiliary("chrono-group")),
-        scene: pendingWorkResumeActions.scene
-          ?? (() => resumeAuxiliary("scene")),
-      },
-      resumeAuxiliary,
-      ownerById: pendingWorkOwnerActions,
-      saveLayout: onSaveLayout,
-      discardLayout: discardPendingLayout,
-    },
-  });
-
   const exportResolutionController = {
     resolve(issueId) {
       const surface = ({
@@ -576,7 +559,11 @@ export default function BuildWorkspace({
         input.group.id = stableDraftId("chrono-group");
         input.group.name = `Copy of ${input.group.name}`;
       }
-      setChronoGroupDraft(createChronoGroupDraft({ ...input, initialStage: "period" }));
+      setChronoGroupDraft(withTemporalOwnerScope(
+        createChronoGroupDraft({ ...input, initialStage: "period" }),
+        "chrono",
+        draftCoordinator.activeAuxiliary?.draftId ?? "auxiliary-chrono-group",
+      ));
     }
     if (itemType === "scene") {
       const existing = dashboard.scenes?.find(({ id }) => id === itemId);
@@ -588,9 +575,62 @@ export default function BuildWorkspace({
       }
       let nextDraft = createSceneDraft(value, sceneValidationContext(dashboard));
       if (parentChronoGroupId) nextDraft = reduceSceneDraft(nextDraft, { type: "SET_CHRONO_GROUP", chronoGroupId: parentChronoGroupId });
+      if (next.operation.stage) nextDraft = reduceSceneDraft(nextDraft, { type: "SET_STAGE", stage: next.operation.stage });
+      nextDraft = withTemporalOwnerScope(
+        {
+          ...nextDraft,
+          restoration: next.operation.focusId
+            ? { stage: next.operation.stage, focusId: next.operation.focusId, scrollTop: 0 }
+            : nextDraft.restoration,
+        },
+        "scene",
+        draftCoordinator.activeAuxiliary?.draftId ?? "auxiliary-scene",
+      );
       setSceneDraft(nextDraft);
     }
   };
+
+  const temporalOwnerActions = Object.fromEntries(temporalOwners.map((owner) => {
+    const surface = owner.kind === "chrono" ? "chrono-group" : "scene";
+    const dispatch = owner.kind === "chrono" ? dispatchChronoGroup : dispatchScene;
+    const activate = () => {
+      if (activeAuxiliary !== surface) {
+        resumeAuxiliary(surface, owner.scopeId);
+        return;
+      }
+      const focusId = owner.restoration?.focusId;
+      if (focusId) window.requestAnimationFrame(() => document.getElementById(focusId)?.focus());
+    };
+    return [owner.draftId, {
+      focus: activate,
+      resume: activate,
+      save: () => dispatch({ type: "SAVE_REQUEST" }),
+      discard: () => dispatch({ type: "DISCARD" }),
+    }];
+  }));
+  const pendingWork = selectBuildPendingWork({
+    authoredDirty: effectiveAuthoredDirtyState,
+    coordinator: draftCoordinator,
+    chartOwners,
+    owners: temporalOwners,
+    parkedAuxiliaries,
+    layoutDraft,
+    actions: {
+      resumeByKey: {
+        ...pendingWorkResumeActions,
+        pendingContent: pendingWorkResumeActions.pendingContent
+          ?? (() => resumeAuxiliary("source-content")),
+        chronoGroup: pendingWorkResumeActions.chronoGroup
+          ?? (() => resumeAuxiliary("chrono-group")),
+        scene: pendingWorkResumeActions.scene
+          ?? (() => resumeAuxiliary("scene")),
+      },
+      resumeAuxiliary,
+      ownerById: { ...pendingWorkOwnerActions, ...temporalOwnerActions },
+      saveLayout: onSaveLayout,
+      discardLayout: discardPendingLayout,
+    },
+  });
 
   const structure = (
     <BuildStructureRail

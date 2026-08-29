@@ -137,6 +137,7 @@ export function reduceChronoContent(state, action) {
         itemId: action.itemId ?? state.selectedItemId,
         parentChronoGroupId: null,
         stage: action.stage ?? null,
+        focusId: action.focusId ?? null,
       });
     case "RETURN_TO_CONTENT":
       return {
@@ -263,12 +264,46 @@ export function createRunningTemporalSnapshot({ mode, content }) {
 function requestOperation(state, operation) {
   assertItemType(operation.itemType);
   const pendingOperation = { ...operation };
-  delete pendingOperation.stage;
   const returnContext = captureContext(state);
   if (state.activeDraft?.dirty === true) {
     return { ...state, operation: null, conflict: { status: "awaiting-choice", pendingOperation, options: ["save", "discard", "stay"] }, error: null, returnContext };
   }
   return { ...state, view: "editor", operation: pendingOperation, conflict: null, error: null, returnContext };
+}
+
+export function withTemporalOwnerScope(draft, kind, localDraftId) {
+  if (!draft) return draft;
+  if (!new Set(["chrono", "scene"]).has(kind)) {
+    throw new Error(`Unknown temporal owner kind: ${String(kind)}`);
+  }
+  if (typeof localDraftId !== "string" || localDraftId.trim() === "") {
+    throw new Error("Temporal owner local draft id is required.");
+  }
+  return { ...draft, ownerKind: kind, ownerScopeId: localDraftId };
+}
+
+export function selectTemporalDraftOwners(drafts = {}) {
+  return [
+    temporalOwner(drafts.chronoGroup, "chrono", "chrono-studio"),
+    temporalOwner(drafts.scene, "scene", "scene-studio"),
+  ].filter(Boolean);
+}
+
+function temporalOwner(draft, kind, surface) {
+  if (!draft || draft.ownerKind !== kind || !draft.ownerScopeId) return null;
+  const activity = draft.status === "suspended" ? "suspended" : "active";
+  const status = draft.status === "suspended" ? draft.suspendedStatus : draft.status;
+  if (!new Set(["dirty", "saving", "error"]).has(status)) return null;
+  return {
+    draftId: `${kind}:${draft.ownerScopeId}`,
+    kind,
+    scopeId: draft.ownerScopeId,
+    targetId: draft.stage ?? draft.restoration?.stage ?? null,
+    status,
+    activity,
+    surface,
+    restoration: draft.restoration ?? null,
+  };
 }
 
 function resolveConflict(state, choice) {

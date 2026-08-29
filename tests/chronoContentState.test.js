@@ -8,6 +8,8 @@ import {
   selectChronoStudioCards,
   selectSceneContent,
   selectSceneStudioSections,
+  selectTemporalDraftOwners,
+  withTemporalOwnerScope,
 } from "../src/components/time/chronoContentState.js";
 
 const pages = [
@@ -122,4 +124,55 @@ test("initial Page context belongs only to the Studio that received it", () => {
 
   assert.equal(state.pageId, null);
   assert.deepEqual(selectChronoStudioCards(state).map(({ id }) => id), ["chrono-a"]);
+});
+
+test("temporal owner adapters use local auxiliary draft IDs and publish only meaningful pending lifecycles", () => {
+  const cleanChrono = withTemporalOwnerScope({ status: "clean" }, "chrono", "local-chrono");
+  const dirtyChrono = { ...cleanChrono, status: "dirty", stage: "period" };
+  const suspendedScene = withTemporalOwnerScope({
+    status: "suspended",
+    suspendedStatus: "error",
+    restoration: { stage: "details", focusId: "scene-frame-source", scrollTop: 420 },
+  }, "scene", "local-scene");
+
+  assert.deepEqual(selectTemporalDraftOwners({ chronoGroup: cleanChrono }), []);
+  assert.deepEqual(selectTemporalDraftOwners({ chronoGroup: dirtyChrono, scene: suspendedScene }), [{
+    draftId: "chrono:local-chrono",
+    kind: "chrono",
+    scopeId: "local-chrono",
+    targetId: "period",
+    status: "dirty",
+    activity: "active",
+    surface: "chrono-studio",
+    restoration: null,
+  }, {
+    draftId: "scene:local-scene",
+    kind: "scene",
+    scopeId: "local-scene",
+    targetId: "details",
+    status: "error",
+    activity: "suspended",
+    surface: "scene-studio",
+    restoration: { stage: "details", focusId: "scene-frame-source", scrollTop: 420 },
+  }]);
+});
+
+test("Needs attention repair retains the Frame source destination in the Scene operation", () => {
+  let state = createChronoContentState({ chronoGroups, scenes, pages, studio: "scene" });
+  state = reduceChronoContent(state, { type: "OPEN_CONTENT", itemType: "scene", itemId: "scene-a" });
+  state = reduceChronoContent(state, {
+    type: "START_REPAIR",
+    itemType: "scene",
+    itemId: "scene-a",
+    stage: "details",
+    focusId: "scene-frame-source",
+  });
+  assert.deepEqual(state.operation, {
+    intent: "repair",
+    itemType: "scene",
+    itemId: "scene-a",
+    parentChronoGroupId: null,
+    stage: "details",
+    focusId: "scene-frame-source",
+  });
 });

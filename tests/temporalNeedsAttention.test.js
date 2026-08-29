@@ -170,3 +170,34 @@ test("valid temporal objects produce no Needs attention findings", () => {
     schemaRevisions: { "chart-a": "1" },
   }), []);
 });
+
+test("an unresolved Frame source derives one repairable Frame source finding", () => {
+  const findings = deriveTemporalNeedsAttention({
+    timeZone: "UTC",
+    groups: [{
+      id: "group-1",
+      period: { startEpochMs: START, endEpochMs: END },
+      matching: "Concurrent only",
+      members: [{ chartId: "chart-b" }],
+    }],
+    scenes: [{
+      id: "scene-1",
+      chronoGroupId: "group-1",
+      pageId: "page-a",
+      period: { startEpochMs: START, endEpochMs: END },
+      chartIds: ["chart-b"],
+      frames: { mode: "unresolved", reason: "source-chart-moved", previousChartId: "chart-a" },
+      present: { chartIds: ["chart-b"], layout: "single" },
+    }],
+    charts: [{ id: "chart-b", pageId: "page-a", variables: [{ observations: [{ epochMs: START, value: 1 }] }] }],
+  });
+
+  assert.deepEqual(findings.filter(({ code }) => code === "unresolved-frame-source"), [{
+    code: "unresolved-frame-source",
+    targetType: "scene",
+    targetId: "scene-1",
+    stage: "frame-source",
+    message: 'Scene "scene-1" needs a replacement Frame source because chart "chart-a" moved.',
+  }]);
+  assert.equal(findings.some(({ code }) => code === "invalid-frame-rule"), false);
+});

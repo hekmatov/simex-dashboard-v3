@@ -163,3 +163,31 @@ test("normalization supplies deterministic Audience and small-Scene Present defa
   });
   assert.equal(input.audience, undefined);
 });
+
+test("V6 round-trips the exact unresolved Frame source union without stale selected epochs", () => {
+  const value = scene({
+    members: [{ chartId: "chart-b", width: 2 }],
+    frames: {
+      mode: "unresolved",
+      reason: "source-chart-moved",
+      previousChartId: "chart-a",
+    },
+    present: { chartIds: ["chart-b"], layout: "single" },
+  });
+  const roundTripped = JSON.parse(JSON.stringify(value));
+
+  assert.strictEqual(validateScene(roundTripped, context()), roundTripped);
+  assert.deepEqual(roundTripped.frames, {
+    mode: "unresolved",
+    reason: "source-chart-moved",
+    previousChartId: "chart-a",
+  });
+  assert.throws(() => validateScene(scene({
+    frames: {
+      mode: "unresolved",
+      reason: "source-chart-moved",
+      previousChartId: "chart-a",
+      selectedEpochs: [Date.parse(JAN_10)],
+    },
+  }), context()), /unresolved Frame source/i);
+});

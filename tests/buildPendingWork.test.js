@@ -72,7 +72,7 @@ test("layout, chart, and parked auxiliary equivalents deduplicate with correct a
     "layout",
     "chart-editor",
     "source-content",
-    "chrono-group",
+    "chrono:aux-chrono",
   ]);
   assert.equal(new Set(pending.map(({ id }) => id)).size, pending.length);
 
@@ -82,7 +82,7 @@ test("layout, chart, and parked auxiliary equivalents deduplicate with correct a
   layout.save();
   layout.discard();
   pending.find(({ id }) => id === "source-content").resume();
-  pending.find(({ id }) => id === "chrono-group").resume();
+  pending.find(({ id }) => id === "chrono:aux-chrono").resume();
   assert.deepEqual(log, [
     "save:layout",
     "discard:layout",
@@ -91,7 +91,7 @@ test("layout, chart, and parked auxiliary equivalents deduplicate with correct a
   ]);
 });
 
-test("clean slots are absent while paused auxiliaries remain resumable", () => {
+test("clean slots are absent while non-temporal paused auxiliaries remain resumable", () => {
   const log = [];
   const pending = selectBuildPendingWork({
     coordinator: {
@@ -101,16 +101,16 @@ test("clean slots are absent while paused auxiliaries remain resumable", () => {
       },
     },
     parkedAuxiliaries: [
-      { surface: "scene", draftId: "aux-scene", dirty: false },
+      { surface: "time-content", draftId: "aux-library", dirty: false },
     ],
     actions: actionHarness(log),
   });
 
   assert.deepEqual(pending.map(({ id, state }) => ({ id, state })), [
-    { id: "scene", state: "paused" },
+    { id: "auxiliary:aux-library", state: "paused" },
   ]);
   pending[0].resume();
-  assert.deepEqual(log, ["aux:scene:aux-scene"]);
+  assert.deepEqual(log, ["aux:time-content:aux-library"]);
 });
 
 test("an adopted chart edit owner projects one stable row and bypasses both legacy chart paths", () => {
@@ -280,6 +280,95 @@ test("a failed chart removal preserves operation metadata for the exact retry ac
   });
 
   assert.equal(pending.operation, "remove");
+});
+
+test("stable layout, Chrono, and Scene owners replace transitional dirty projections without duplicates", () => {
+  const log = [];
+  const owners = [{
+    draftId: "layout:dashboard-1",
+    kind: "layout",
+    scopeId: "dashboard-1",
+    status: "dirty",
+    activity: "active",
+    surface: "dashboard-map",
+    targetId: "section-a",
+  }, {
+    draftId: "chrono:local-chrono-draft",
+    kind: "chrono",
+    scopeId: "local-chrono-draft",
+    status: "error",
+    activity: "suspended",
+    surface: "chrono-studio",
+    restoration: { focusId: "chrono-period", scrollTop: 310 },
+  }, {
+    draftId: "scene:local-scene-draft",
+    kind: "scene",
+    scopeId: "local-scene-draft",
+    status: "saving",
+    activity: "active",
+    surface: "scene-studio",
+  }];
+  const actions = {
+    ...actionHarness(log),
+    ownerById: Object.fromEntries(owners.map((owner) => [owner.draftId, {
+      focus: () => log.push(`focus:${owner.draftId}`),
+      resume: () => log.push(`resume:${owner.draftId}`),
+      save: () => log.push(`save:${owner.draftId}`),
+      discard: () => log.push(`discard:${owner.draftId}`),
+    }])),
+  };
+
+  const pending = selectBuildPendingWork({
+    authoredDirty: { structure: true, chronoGroup: true, scene: true },
+    coordinator: { slots: { layout: owners[0], chart: null } },
+    owners: owners.slice(1),
+    layoutDraft: owners[0],
+    parkedAuxiliaries: [
+      { surface: "chrono-group", draftId: "local-chrono-draft", dirty: true },
+      { surface: "scene", draftId: "local-scene-draft", dirty: true },
+    ],
+    actions,
+  });
+
+  assert.deepEqual(pending.map(({ id }) => id), owners.map(({ draftId }) => draftId));
+  assert.equal(new Set(pending.map(({ id }) => id)).size, 3);
+  assert.deepEqual(pending.map(({ activation }) => activation), ["focus", "resume", "focus"]);
+  pending[0].resume();
+  pending[1].resume();
+  assert.deepEqual(log, ["focus:layout:dashboard-1", "resume:chrono:local-chrono-draft"]);
+  assert.doesNotMatch(pending.map(({ id }) => id).join(" "), /^(layout|chrono-group|scene)$/);
+});
+
+test("clean Chrono and Scene owners and clean temporal auxiliary opens publish nothing", () => {
+  const cleanOwners = [
+    { draftId: "chrono:chrono-draft", kind: "chrono", scopeId: "chrono-draft", status: "clean", activity: "active" },
+    { draftId: "scene:scene-draft", kind: "scene", scopeId: "scene-draft", status: "clean", activity: "active" },
+  ];
+  assert.deepEqual(selectBuildPendingWork({
+    owners: cleanOwners,
+    parkedAuxiliaries: [
+      { surface: "chrono-group", draftId: "chrono-draft", dirty: false, status: "clean" },
+      { surface: "scene", draftId: "scene-draft", dirty: false, status: "clean" },
+    ],
+  }), []);
+});
+
+test("layout-owned Scene consequences publish only the layout transaction descriptor", () => {
+  const layoutDraft = {
+    draftId: "layout:dashboard-1",
+    kind: "layout",
+    scopeId: "dashboard-1",
+    status: "dirty",
+    activity: "active",
+    sceneConsequences: [{ type: "scene-frame-source-unresolved", sceneId: "scene-a" }],
+  };
+  assert.deepEqual(selectBuildPendingWork({
+    layoutDraft,
+    authoredDirty: { structure: true },
+  }).map(({ id, kind }) => ({ id, kind })), [{
+    id: "layout:dashboard-1",
+    kind: "layout",
+  }]);
 });
 
 test("the conditional pending row slides in and disables motion when requested", async () => {

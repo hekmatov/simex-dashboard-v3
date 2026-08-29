@@ -116,6 +116,17 @@ test("source eligibility distinguishes valid authored sources from Needs-attenti
       sourceId: "scene-a",
     },
   });
+  assert.deepEqual(controllerModule.presentationSourceEligibility({
+    ...scene,
+    frames: { mode: "unresolved", reason: "source-chart-moved", previousChartId: "chart-old" },
+  }), {
+    status: "needs-attention",
+    reason: {
+      code: "scene_unresolved_frame_source",
+      message: "Choose and save a replacement Frame source before using this Scene in Audience output.",
+      sourceId: "scene-a",
+    },
+  });
 });
 
 test("Scene publication waits for DashboardRenderer to land the saved composition", () => {

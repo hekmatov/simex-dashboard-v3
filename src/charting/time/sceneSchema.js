@@ -136,6 +136,18 @@ export function validateScene(scene, context = {}) {
 
 function validateFrames(frames, memberIds, period) {
   requireRecord(frames, "Scene frames");
+  if (frames.mode === "unresolved") {
+    const keys = Object.keys(frames).sort();
+    if (
+      keys.join(",") !== "mode,previousChartId,reason"
+      || frames.reason !== "source-chart-moved"
+      || typeof frames.previousChartId !== "string"
+      || frames.previousChartId.trim() === ""
+    ) {
+      throw new Error("Scene unresolved Frame source must contain only mode, reason, and previousChartId.");
+    }
+    return;
+  }
   if (frames.mode === "source") {
     if (!memberIds.has(frames.chartId)) {
       throw new Error("Scene Frame source must be a participating Scene chart.");
@@ -175,7 +187,7 @@ function validateFrames(frames, memberIds, period) {
     }
     return;
   }
-  throw new Error('Scene frames mode must be "source" or "calendar".');
+  throw new Error('Scene frames mode must be "source", "calendar", or "unresolved".');
 }
 
 function validatePresent(present, memberIds) {

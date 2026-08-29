@@ -27,18 +27,35 @@ export function selectBuildPendingWork({
   authoredDirty = {},
   coordinator = null,
   chartOwners = [],
+  owners = [],
   parkedAuxiliaries = coordinator?.parkedAuxiliaries ?? [],
   layoutDraft = null,
   actions = {},
 } = {}) {
   const chartSlot = coordinator?.slots?.chart;
-  const adoptedChartOwners = new Map();
-  for (const owner of [chartSlot, ...(Array.isArray(chartOwners) ? chartOwners : [])]) {
-    if (isAdoptedChartOwner(owner)) adoptedChartOwners.set(owner.draftId, owner);
+  const adoptedOwners = new Map();
+  for (const owner of [
+    coordinator?.slots?.layout,
+    chartSlot,
+    layoutDraft,
+    ...(Array.isArray(chartOwners) ? chartOwners : []),
+    ...(Array.isArray(owners) ? owners : []),
+  ]) {
+    if (isAdoptedOwner(owner)) adoptedOwners.set(owner.draftId, owner);
   }
+  const adoptedChartOwners = new Map(
+    [...adoptedOwners].filter(([, owner]) => new Set(["chart-edit", "chart-create"]).has(owner.kind)),
+  );
   const adoptedChartKinds = new Set(
     [...adoptedChartOwners.values()].map(({ kind }) => kind),
   );
+  const adoptedKinds = new Set([...adoptedOwners.values()].map(({ kind }) => kind));
+  for (const session of parkedAuxiliaries ?? []) {
+    const temporalKind = temporalOwnerKind(session?.surface);
+    if (temporalKind && (session?.dirty === true || isPendingState(session?.status))) {
+      adoptedKinds.add(temporalKind);
+    }
+  }
   const entries = new Map();
   const upsert = (candidate, { preferResume = false } = {}) => {
     if (!candidate || !PENDING_STATES.has(candidate.state)) return;
@@ -65,6 +82,9 @@ export function selectBuildPendingWork({
     if (
       (key === "chartEditor" && adoptedChartKinds.has("chart-edit"))
       || (key === "chartWizard" && adoptedChartKinds.has("chart-create"))
+      || (key === "structure" && adoptedKinds.has("layout"))
+      || (key === "chronoGroup" && adoptedKinds.has("chrono"))
+      || (key === "scene" && adoptedKinds.has("scene"))
     ) continue;
     upsert(descriptorForDefinition(DEFINITIONS[key], {
       state: "dirty",
@@ -75,11 +95,13 @@ export function selectBuildPendingWork({
 
   const layoutSlot = coordinator?.slots?.layout;
   if (isPendingState(layoutSlot?.status)) {
-    upsert(descriptorForDefinition(DEFINITIONS.structure, {
-      state: layoutSlot.status,
-      resume: actions.resumeByKey?.structure,
-      actions,
-    }));
+    upsert(isAdoptedOwner(layoutSlot)
+      ? descriptorForOwner(layoutSlot, actions)
+      : descriptorForDefinition(DEFINITIONS.structure, {
+          state: layoutSlot.status,
+          resume: actions.resumeByKey?.structure,
+          actions,
+        }));
   }
   if (isPendingState(chartSlot?.status)) {
     if (!isAdoptedChartOwner(chartSlot)) {
@@ -95,16 +117,39 @@ export function selectBuildPendingWork({
       upsert(descriptorForChartOwner(owner, actions));
     }
   }
+  for (const owner of adoptedOwners.values()) {
+    if (!new Set(["chart-edit", "chart-create"]).has(owner.kind) && isPendingState(owner.status)) {
+      upsert(descriptorForOwner(owner, actions));
+    }
+  }
   if (isPendingState(layoutDraft?.status)) {
-    upsert(descriptorForDefinition(DEFINITIONS.structure, {
-      state: layoutDraft.status,
-      resume: actions.resumeByKey?.structure,
-      actions,
-    }));
+    upsert(isAdoptedOwner(layoutDraft)
+      ? descriptorForOwner(layoutDraft, actions)
+      : descriptorForDefinition(DEFINITIONS.structure, {
+          state: layoutDraft.status,
+          resume: actions.resumeByKey?.structure,
+          actions,
+        }));
   }
 
   for (const session of parkedAuxiliaries ?? []) {
     const key = authoredKeyForAuxiliary(session?.surface);
+    const temporalKind = temporalOwnerKind(session?.surface);
+    if (temporalKind) {
+      const id = `${temporalKind}:${session?.draftId}`;
+      if (adoptedOwners.has(id)) continue;
+      if (session?.dirty !== true && !isPendingState(session?.status)) continue;
+      upsert(descriptorForOwner({
+        draftId: id,
+        kind: temporalKind,
+        scopeId: session?.draftId,
+        status: session?.dirty === true ? "dirty" : session.status,
+        activity: "suspended",
+        surface: session.surface === "scene" ? "scene-studio" : "chrono-studio",
+        restoration: session.restoration ?? null,
+      }, actions));
+      continue;
+    }
     const definition = key ? DEFINITIONS[key] : auxiliaryDefinition(session);
     const resume = key === "structure"
       ? actions.resumeByKey?.structure
@@ -123,6 +168,10 @@ export function selectBuildPendingWork({
 }
 
 function descriptorForChartOwner(owner, actions) {
+  return descriptorForOwner(owner, actions);
+}
+
+function descriptorForOwner(owner, actions) {
   const ownerActions = actions.ownerById?.[owner.draftId] ?? {};
   const activity = owner.activity === "suspended" ? "suspended" : "active";
   const activation = activity === "suspended" ? "resume" : "focus";
@@ -131,9 +180,9 @@ function descriptorForChartOwner(owner, actions) {
     kind: owner.kind,
     scopeId: owner.scopeId,
     targetId: owner.targetId,
-    label: owner.kind === "chart-create" ? "New chart draft" : "Chart changes",
+    label: labelForOwnerKind(owner.kind),
     origin: owner.surface ?? owner.kind,
-    priority: owner.kind === "chart-create" ? 30 : 20,
+    priority: priorityForOwnerKind(owner.kind),
     state: owner.status,
     activity,
     surface: owner.surface ?? null,
@@ -141,11 +190,19 @@ function descriptorForChartOwner(owner, actions) {
     activation,
     resume: typeof ownerActions[activation] === "function"
       ? ownerActions[activation]
-      : NOOP,
+      : owner.kind === "layout" && typeof actions.resumeByKey?.structure === "function"
+        ? actions.resumeByKey.structure
+        : new Set(["chrono", "scene"]).has(owner.kind) && typeof actions.resumeAuxiliary === "function"
+          ? () => actions.resumeAuxiliary(owner.kind === "chrono" ? "chrono-group" : "scene", owner.scopeId)
+          : NOOP,
     ...(owner.operation ? { operation: owner.operation } : {}),
   };
   if (typeof ownerActions.save === "function") descriptor.save = ownerActions.save;
   if (typeof ownerActions.discard === "function") descriptor.discard = ownerActions.discard;
+  if (owner.kind === "layout") {
+    descriptor.save ??= typeof actions.saveLayout === "function" ? actions.saveLayout : NOOP;
+    descriptor.discard ??= typeof actions.discardLayout === "function" ? actions.discardLayout : NOOP;
+  }
   return descriptor;
 }
 
@@ -188,11 +245,34 @@ function isPendingState(state) {
 }
 
 function isAdoptedChartOwner(slot) {
+  return isAdoptedOwner(slot) && new Set(["chart-edit", "chart-create"]).has(slot.kind);
+}
+
+function isAdoptedOwner(owner) {
   return Boolean(
-    slot
-    && new Set(["chart-edit", "chart-create"]).has(slot.kind)
-    && slot.draftId === `${slot.kind}:${slot.scopeId}`,
+    owner
+    && typeof owner.kind === "string"
+    && typeof owner.scopeId === "string"
+    && owner.draftId === `${owner.kind}:${owner.scopeId}`,
   );
+}
+
+function temporalOwnerKind(surface) {
+  return ({ "chrono-group": "chrono", scene: "scene" })[surface] ?? null;
+}
+
+function labelForOwnerKind(kind) {
+  return ({
+    layout: "Layout changes",
+    chrono: "Chrono Studio changes",
+    scene: "Scene Studio changes",
+    "chart-create": "New chart draft",
+    "chart-edit": "Chart changes",
+  })[kind] ?? `${humanize(kind)} changes`;
+}
+
+function priorityForOwnerKind(kind) {
+  return ({ layout: 10, "chart-edit": 20, "chart-create": 30, chrono: 70, scene: 80 })[kind] ?? 110;
 }
 
 function stateWithHigherPriority(left, right) {

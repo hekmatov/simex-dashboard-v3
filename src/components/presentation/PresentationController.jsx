@@ -25,6 +25,16 @@ export function presentationSourceEligibility(scene, { compositionReady = true }
       },
     };
   }
+  if (scene?.frames?.mode === "unresolved") {
+    return {
+      status: "needs-attention",
+      reason: {
+        code: "scene_unresolved_frame_source",
+        message: "Choose and save a replacement Frame source before using this Scene in Audience output.",
+        sourceId: scene.id,
+      },
+    };
+  }
   if (scene?.present?.temporalReview?.status !== "degraded") {
     return { status: "valid", reason: null };
   }

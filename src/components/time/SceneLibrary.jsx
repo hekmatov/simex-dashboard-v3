@@ -28,10 +28,17 @@ export default function SceneLibrary({ state, sections = [], onAction = () => {}
     sections.length === 0 ? React.createElement("p", { className: "temporal-studio__empty", role: "status" }, emptyMessage) : null,
     ...sections.map((section) => React.createElement("section", { className: "scene-library__page", key: section.pageId },
       React.createElement("h3", null, section.pageLabel),
-      React.createElement("ul", { className: "temporal-studio__cards" }, section.scenes.map((scene) => React.createElement("li", { key: scene.id }, React.createElement("button", {
-        type: "button", className: "temporal-content-card", "data-action": "open-content", "data-status": scene.status,
-        onClick: () => onAction({ type: "OPEN_CONTENT", itemType: "scene", itemId: scene.id }),
-      }, React.createElement("span", { className: "temporal-content-card__type" }, "Scene"), React.createElement("strong", null, scene.name), React.createElement("span", null, scene.chronoGroupName), React.createElement("span", { className: "temporal-content-card__status" }, scene.status === "needs-attention" ? "Needs attention" : "Ready"))))),
+      React.createElement("ul", { className: "temporal-studio__cards" }, section.scenes.map((scene) => React.createElement("li", { key: scene.id },
+        React.createElement("button", {
+          type: "button", className: "temporal-content-card", "data-action": "open-content", "data-status": scene.status,
+          onClick: () => onAction({ type: "OPEN_CONTENT", itemType: "scene", itemId: scene.id }),
+        }, React.createElement("span", { className: "temporal-content-card__type" }, "Scene"), React.createElement("strong", null, scene.name), React.createElement("span", null, scene.chronoGroupName), React.createElement("span", { className: "temporal-content-card__status" }, scene.status === "needs-attention" ? "Needs attention" : "Ready")),
+        scene.status === "needs-attention" ? React.createElement("button", {
+          type: "button",
+          "data-scene-workflow-id": "repair-frame-source",
+          onClick: () => onAction({ type: "START_REPAIR", itemType: "scene", itemId: scene.id, stage: "details", focusId: "scene-frame-source" }),
+        }, "Repair Frame source") : null,
+      ))),
     )),
   );
 }

@@ -31,13 +31,16 @@ export async function load(url, context, nextLoad) {
 
 const {
   PlaybackProvider,
+  buildScenePlaybackClock,
   buildMemberTimeContexts,
   createPlaybackTimer,
   dispatchPlaybackAction,
   prefersReducedMotion,
+  selectPlayableScenes,
   useOptionalPlayback,
   usePlayback,
 } = await import("../src/components/playback/PlaybackProvider.jsx");
+
 const { default: PlaybackControls } = await import("../src/components/playback/PlaybackControls.jsx");
 const { default: PlaybackSurface } = await import("../src/components/playback/PlaybackSurface.jsx");
 const { default: PlaybackView } = await import("../src/components/playback/PlaybackView.jsx");
@@ -47,6 +50,17 @@ const { default: ChartView } = await import("../src/components/charts/ChartView.
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
+
+test("unresolved Scenes expose no playback clock until a valid Frame source is saved", () => {
+  assert.deepEqual(buildScenePlaybackClock({
+    period: { start: "2027-05-01T00:00:00.000Z", end: "2027-05-03T00:00:00.000Z" },
+    frames: { mode: "unresolved", reason: "source-chart-moved", previousChartId: "chart-old" },
+  }, [MAY_1, MAY_2, MAY_3]), []);
+  assert.deepEqual(selectPlayableScenes([
+    { id: "ready", frames: { mode: "calendar" } },
+    { id: "repair", frames: { mode: "unresolved", reason: "source-chart-moved", previousChartId: "chart-old" } },
+  ]).map(({ id }) => id), ["ready"]);
+});
 
 test("View Chrono reducer owns source, scope, trace, matching, availability, and placement", () => {
   const group = reducePlaybackState(initialPlaybackState, {

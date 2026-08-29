@@ -85,6 +85,16 @@ export function deriveTemporalNeedsAttention(input = {}) {
       ));
     }
     const group = groupsById.get(scene.chronoGroupId);
+    const unresolvedFrames = scene.frames?.mode === "unresolved" ? scene.frames : null;
+    if (unresolvedFrames) {
+      findings.push(finding(
+        "unresolved-frame-source",
+        "scene",
+        scene.id,
+        "frame-source",
+        `Scene "${scene.id}" needs a replacement Frame source because chart "${unresolvedFrames.previousChartId}" moved.`,
+      ));
+    }
     let validPeriod = true;
     try {
       assertPeriod(scene.period, `Scene "${scene.id}"`);
@@ -123,7 +133,7 @@ export function deriveTemporalNeedsAttention(input = {}) {
 
     const validTimeZone = isValidTimeZone(timeZone);
     const sourceRuleCanStillBeChecked = scene.frameRule?.type === "source";
-    if (validPeriod && (validTimeZone || sourceRuleCanStillBeChecked)) {
+    if (!unresolvedFrames && validPeriod && (validTimeZone || sourceRuleCanStillBeChecked)) {
       try {
         const ledger = buildSceneFrameLedger({
           scene,

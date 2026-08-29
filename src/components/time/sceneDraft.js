@@ -62,10 +62,8 @@ export function reduceSceneDraft(state, action) {
         };
       });
     case "SET_FRAME_SOURCE":
-      return updateFrames(state, (frames) => {
-        frames.mode = "source";
-        frames.chartId = action.chartId;
-        frames.selection ??= "all";
+      return updateFrames(state, (_frames, value) => {
+        value.frames = { mode: "source", chartId: action.chartId, selection: "all" };
       });
     case "SET_FRAME_SELECTION":
       return updateFrames(state, (frames) => {
@@ -315,7 +313,7 @@ function setFrameMode(state, mode) {
 function updateFrames(state, updater) {
   const next = update(state, (value) => {
     value.frames ??= { mode: "calendar", interval: { value: 1, unit: "day" } };
-    updater(value.frames);
+    updater(value.frames, value);
   });
   return {
     ...next,

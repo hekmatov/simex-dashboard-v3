@@ -18,7 +18,7 @@ export function reduceBuildDraftCoordinator(state, action) {
         ...state,
         slots: {
           ...state.slots,
-          [action.slot]: action.draft,
+          [action.slot]: normalizeScopedOwner(action.draft),
         },
       };
     }
@@ -27,7 +27,7 @@ export function reduceBuildDraftCoordinator(state, action) {
       assertSlot(action.slot);
       return {
         ...state,
-        slots: { ...state.slots, [action.slot]: action.draft ?? null },
+        slots: { ...state.slots, [action.slot]: normalizeScopedOwner(action.draft) },
       };
     }
 
@@ -253,4 +253,25 @@ function appendParked(parked, session) {
 function withoutTransientFields(slot) {
   const { error, attemptedResolution, statusBeforeSuspend, ...stable } = slot;
   return stable;
+}
+
+export function normalizeScopedOwner(owner) {
+  if (!owner) return null;
+  if (
+    typeof owner.kind === "string"
+    && typeof owner.scopeId === "string"
+    && owner.scopeId.trim() !== ""
+  ) {
+    return { ...owner, draftId: `${owner.kind}:${owner.scopeId}` };
+  }
+  const stablePrefix = `${owner.kind}:`;
+  if (
+    typeof owner.kind === "string"
+    && typeof owner.draftId === "string"
+    && owner.draftId.startsWith(stablePrefix)
+    && owner.draftId.length > stablePrefix.length
+  ) {
+    return { ...owner, scopeId: owner.draftId.slice(stablePrefix.length) };
+  }
+  return owner;
 }

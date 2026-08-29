@@ -32,6 +32,7 @@ export function PlaybackProvider({
   children,
 }) {
   const playbackSafetyGatesRef = React.useRef(new Map());
+  const playableScenes = React.useMemo(() => selectPlayableScenes(scenes), [scenes]);
   const activePageCharts = pageCharts ?? charts;
   const temporalContext = React.useMemo(() => ({
     charts,
@@ -56,8 +57,8 @@ export function PlaybackProvider({
     initializePlaybackState,
   );
   const activeScene = React.useMemo(
-    () => resolveActiveScene(scenes, state.activeSceneId),
-    [scenes, state.activeSceneId],
+    () => resolveActiveScene(playableScenes, state.activeSceneId),
+    [playableScenes, state.activeSceneId],
   );
   const validatedGroups = React.useMemo(() => {
     if (state.playbackView !== true) return groups;
@@ -81,12 +82,12 @@ export function PlaybackProvider({
       }
       dispatchPlaybackAction(baseDispatch, action, {
         groups: validatedGroups,
-        scenes,
+        scenes: playableScenes,
         activeGroupId: state.activeGroupId,
       });
       return true;
     },
-    [baseDispatch, scenes, state.activeGroupId, validatedGroups],
+    [baseDispatch, playableScenes, state.activeGroupId, validatedGroups],
   );
   const setPlaybackSafety = React.useCallback((owner, allowed) => {
     if (typeof owner !== "string" || owner.trim() === "") {
@@ -250,7 +251,7 @@ export function PlaybackProvider({
     playbackView: state.playbackView,
     playing,
     profiles,
-    scenes,
+    scenes: playableScenes,
     setPlaybackSafety,
     scope: state.scope,
     source: state.source,
@@ -277,7 +278,7 @@ export function PlaybackProvider({
     participatingChartIds,
     profiles,
     releasePlaybackSafety,
-    scenes,
+    playableScenes,
     setPlaybackSafety,
     state.availabilityVisible,
     state.connection,
@@ -439,6 +440,7 @@ function initializePlaybackState({
   preferredGroupId,
   timezone,
 }) {
+  scenes = selectPlayableScenes(scenes);
   const supplied = initialState && typeof initialState === "object"
     ? initialState
     : {};
@@ -516,8 +518,15 @@ function resolveActiveScene(scenes, sceneId) {
   return scenes.find((scene) => scene?.id === sceneId) ?? null;
 }
 
+export function selectPlayableScenes(scenes = []) {
+  return Object.freeze((Array.isArray(scenes) ? scenes : []).filter(
+    (scene) => scene?.frames?.mode !== "unresolved",
+  ));
+}
+
 export function buildScenePlaybackClock(scene, groupClock, options = {}) {
   if (!scene || !Array.isArray(groupClock)) return Object.freeze([]);
+  if (scene.frames?.mode === "unresolved") return Object.freeze([]);
   const start = Date.parse(scene.period?.start);
   const end = Date.parse(scene.period?.end);
   const withinPeriod = (values) => values.filter((epochMs) => (
@@ -539,9 +548,7 @@ export function buildScenePlaybackClock(scene, groupClock, options = {}) {
     });
     return ledger.frames;
   }
-  if (scene.frames?.mode !== "source") {
-    return Object.freeze(withinPeriod(groupClock));
-  }
+  if (scene.frames?.mode !== "source") return Object.freeze([]);
 
   const sourceClock = buildSceneSourceClock(scene, groupClock, options);
   const availableFrames = withinPeriod(sourceClock);
