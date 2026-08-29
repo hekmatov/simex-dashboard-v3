@@ -22,6 +22,7 @@ export async function load(url, context, nextLoad) {
 const {
   default: AccessibleListboxSelect,
   getAccessibleListboxKeyAction,
+  scrollActiveListboxOptionIntoView,
 } = await import("../src/components/common/AccessibleListboxSelect.jsx");
 
 test("select-only listbox exposes fixed-width combobox semantics and complete truncated values", () => {
@@ -118,4 +119,37 @@ test("listbox key actions support Arrow, Home, End, Enter, Space, Escape, and Ta
     activeIndex: -1,
     selectionIndex: null,
   });
+});
+
+test("open listbox scrolls the active option into view without moving DOM focus", () => {
+  assert.equal(typeof scrollActiveListboxOptionIntoView, "function");
+  const scrollCalls = [];
+  let focusCalls = 0;
+  const optionRefs = [
+    { scrollIntoView: () => scrollCalls.push("first") },
+    {
+      scrollIntoView: (options) => scrollCalls.push(options),
+      focus: () => { focusCalls += 1; },
+    },
+  ];
+
+  assert.equal(scrollActiveListboxOptionIntoView({
+    open: true,
+    activeIndex: 1,
+    optionRefs,
+  }), true);
+  assert.deepEqual(scrollCalls, [{ block: "nearest" }]);
+  assert.equal(focusCalls, 0);
+
+  assert.equal(scrollActiveListboxOptionIntoView({
+    open: false,
+    activeIndex: 0,
+    optionRefs,
+  }), false);
+  assert.equal(scrollActiveListboxOptionIntoView({
+    open: true,
+    activeIndex: 3,
+    optionRefs,
+  }), false);
+  assert.deepEqual(scrollCalls, [{ block: "nearest" }]);
 });

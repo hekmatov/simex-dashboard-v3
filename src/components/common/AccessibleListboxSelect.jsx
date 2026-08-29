@@ -21,6 +21,7 @@ export default function AccessibleListboxSelect({
   const valueId = `${baseId}-value`;
   const listboxId = `${baseId}-listbox`;
   const rootRef = React.useRef(null);
+  const optionRefs = React.useRef([]);
   const normalizedOptions = normalizeOptions(options, getLabel, getValue);
   const normalizedValue = scalarText(value);
   const selectedIndex = normalizedOptions.findIndex((option) => option.value === normalizedValue);
@@ -53,6 +54,14 @@ export default function AccessibleListboxSelect({
     document.addEventListener("pointerdown", closeOnOutsidePointer);
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
   }, [open]);
+
+  React.useEffect(() => {
+    scrollActiveListboxOptionIntoView({
+      open,
+      activeIndex,
+      optionRefs: optionRefs.current,
+    });
+  }, [activeIndex, open]);
 
   const selectedLabel = selectedIndex >= 0
     ? normalizedOptions[selectedIndex].label
@@ -148,6 +157,7 @@ export default function AccessibleListboxSelect({
       >
         {normalizedOptions.map((option, index) => (
           <li
+            ref={(node) => { optionRefs.current[index] = node; }}
             id={`${baseId}-option-${index}`}
             key={`${option.value}-${index}`}
             className="accessible-listbox-option"
@@ -224,6 +234,18 @@ export function getAccessibleListboxKeyAction({
     };
   }
   return unchanged;
+}
+
+export function scrollActiveListboxOptionIntoView({
+  open = false,
+  activeIndex = -1,
+  optionRefs = [],
+} = {}) {
+  if (!open || !Number.isInteger(activeIndex) || activeIndex < 0) return false;
+  const activeOption = Array.isArray(optionRefs) ? optionRefs[activeIndex] : null;
+  if (typeof activeOption?.scrollIntoView !== "function") return false;
+  activeOption.scrollIntoView({ block: "nearest" });
+  return true;
 }
 
 function normalizeOptions(options, getLabel, getValue) {
