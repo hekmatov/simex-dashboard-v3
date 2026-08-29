@@ -9,6 +9,7 @@ const dependencyModule = await vite.ssrLoadModule("/src/components/source-conten
 const dialogModule = await vite.ssrLoadModule("/src/components/source-content/ContentActionDialog.jsx");
 const workspaceModule = await vite.ssrLoadModule("/src/components/source-content/SourceContentWorkspace.jsx");
 const detailModule = await vite.ssrLoadModule("/src/components/source-content/ContentDetail.jsx");
+const mediaCatalogueModule = await vite.ssrLoadModule("/src/components/source-content/MediaCatalogue.jsx");
 const rendererModule = await vite.ssrLoadModule("/src/components/DashboardRenderer.jsx");
 await vite.close();
 const DependencyList = dependencyModule.default;
@@ -98,6 +99,67 @@ test("Source Content registry keeps one stable owner through saving, error, retr
     type: "STAGE",
     input: { draftId: "", kind: "manager-media-add", payload: {}, mediaIds: [], sourceIds: [] },
   })), []);
+});
+
+test("Source Content owner eligibility follows valid dirty forms without losing retry identity", () => {
+  const input = {
+    draftId: "manager-media-eligibility",
+    kind: "manager-media-add",
+    payload: { mediaId: "media-eligibility" },
+    mediaIds: ["media-eligibility"],
+    sourceIds: [],
+  };
+  let registry = reduceSourceContentOwnerRegistry(createSourceContentOwnerRegistry(), {
+    type: "STAGE", input,
+  });
+  const ownerId = selectSourceContentOwners(registry)[0].draftId;
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "ELIGIBILITY", transactionDraftId: input.draftId, eligible: false,
+  });
+  assert.deepEqual(selectSourceContentOwners(registry), []);
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "STATUS", transactionDraftId: input.draftId, status: "error", error: "retry retained",
+  });
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "ELIGIBILITY", transactionDraftId: input.draftId, eligible: true,
+  });
+  assert.equal(selectSourceContentOwners(registry)[0].draftId, ownerId);
+  assert.equal(selectSourceContentOwners(registry)[0].status, "error");
+});
+
+test("duplicate media eligibility uses the newly selected choice in the same change", () => {
+  assert.equal(mediaCatalogueModule.isManagerMediaDraftEligible({ displayName: "Duplicate", choice: null }), false);
+  assert.equal(mediaCatalogueModule.isManagerMediaDraftEligible({ displayName: "Duplicate", choice: "reuse" }), true);
+  assert.equal(mediaCatalogueModule.isManagerMediaDraftEligible({ displayName: "", choice: "separate" }), false);
+});
+
+test("valid dirty rename eligibility is adopted before submit while clean and incomplete forms stay absent", () => {
+  const item = {
+    id: "cases",
+    kind: "csv",
+    record: { displayName: "Cases", defaultDescription: "" },
+  };
+  assert.equal(workspaceModule.buildEligibleContentRenameDraft({
+    dashboard: {}, item, displayName: "Cases",
+  }), null);
+  assert.equal(workspaceModule.buildEligibleContentRenameDraft({
+    dashboard: {}, item, displayName: "   ",
+  }), null);
+  const draft = workspaceModule.buildEligibleContentRenameDraft({
+    dashboard: {}, item, displayName: "Cases reviewed",
+  });
+  assert.equal(draft.draftId, "manager-rename-csv-cases");
+  assert.equal(workspaceModule.projectSourceContentOwner(draft).draftId, "source-content-edit:cases");
+});
+
+test("Source Content actions prefer current restoration and preserve suspended drafts across remount", () => {
+  const stale = { focusIndex: 1, scrollTop: 10 };
+  const current = { focusIndex: 4, scrollTop: 260 };
+  assert.deepEqual(workspaceModule.currentSourceContentRestoration(current, { restoration: stale }), current);
+  assert.deepEqual(workspaceModule.currentSourceContentRestoration(null, { restoration: stale }), stale);
+  assert.equal(workspaceModule.shouldDiscardSourceContentDraftsOnUnmount(true, 1), true);
+  assert.equal(workspaceModule.shouldDiscardSourceContentDraftsOnUnmount(false, 1), false);
+  assert.equal(workspaceModule.shouldDiscardSourceContentDraftsOnUnmount(false, 0), true);
 });
 
 test("blocked delete is visibly disabled with inline guided navigation and no dialog", () => {

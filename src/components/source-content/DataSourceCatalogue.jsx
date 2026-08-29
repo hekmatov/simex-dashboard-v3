@@ -7,7 +7,8 @@ import GeoJsonDetail from "./GeoJsonDetail.jsx";
 
 export default function DataSourceCatalogue({
   dashboard = {}, contentDraftCoordinator, onContentDraftStage,
-  onContentDraftCommit, onContentDraftDiscard, onSelect, ...props
+  onContentDraftCommit, onContentDraftDiscard, onContentDraftEligibility,
+  preserveDraftsOnUnmount, onSelect, ...props
 }) {
   return (
     <div style={{ boxSizing: "border-box", width: "100%", height: "100%", minWidth: 0, minHeight: 0, overflow: "auto", display: "grid", alignContent: "start", gap: 12 }}>
@@ -17,6 +18,8 @@ export default function DataSourceCatalogue({
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}
         onContentDraftDiscard={onContentDraftDiscard}
+        onContentDraftEligibility={onContentDraftEligibility}
+        preserveDraftsOnUnmount={preserveDraftsOnUnmount}
         onAdded={onSelect}
       />
       <ManagerGeoJsonIntake
@@ -25,6 +28,8 @@ export default function DataSourceCatalogue({
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}
         onContentDraftDiscard={onContentDraftDiscard}
+        onContentDraftEligibility={onContentDraftEligibility}
+        preserveDraftsOnUnmount={preserveDraftsOnUnmount}
         onAdded={onSelect}
       />
       <ContentCatalogue {...props} onSelect={onSelect} label="Data source catalogue" searchLabel="Search data sources" addLabel="Catalogue" kindOptions={["csv", "geojson"]} />
@@ -34,7 +39,8 @@ export default function DataSourceCatalogue({
 
 export function ManagerGeoJsonIntake({
   dashboard = {}, contentDraftCoordinator, onContentDraftStage,
-  onContentDraftCommit, onContentDraftDiscard, onAdded,
+  onContentDraftCommit, onContentDraftDiscard, onContentDraftEligibility,
+  preserveDraftsOnUnmount = false, onAdded,
 } = {}) {
   const [open, setOpen] = React.useState(false);
   const [candidate, setCandidate] = React.useState(null);
@@ -42,11 +48,14 @@ export function ManagerGeoJsonIntake({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const draftIdRef = React.useRef(null);
+  const cleanupRef = React.useRef({ onContentDraftDiscard, preserveDraftsOnUnmount });
+  cleanupRef.current = { onContentDraftDiscard, preserveDraftsOnUnmount };
 
   React.useEffect(() => () => {
-    if (draftIdRef.current) onContentDraftDiscard?.(draftIdRef.current, "manager-geojson-unmount");
+    if (cleanupRef.current.preserveDraftsOnUnmount) return;
+    if (draftIdRef.current) cleanupRef.current.onContentDraftDiscard?.(draftIdRef.current, "manager-geojson-unmount");
     draftIdRef.current = null;
-  }, [onContentDraftDiscard]);
+  }, []);
 
   const discardCurrent = async (reason) => {
     if (draftIdRef.current) await onContentDraftDiscard?.(draftIdRef.current, reason);
@@ -112,7 +121,11 @@ export function ManagerGeoJsonIntake({
         <h3>Add GeoJSON</h3>
         <label><span>GeoJSON file</span><input type="file" accept=".geojson,application/geo+json,application/json" disabled={busy} onChange={(event) => void stageFile(event.target.files?.[0] ?? null)} /></label>
         {candidate && <>
-          <label><span>Display name</span><input value={displayName} disabled={busy} required onChange={(event) => setDisplayName(event.target.value)} /></label>
+          <label><span>Display name</span><input value={displayName} disabled={busy} required onChange={(event) => {
+            const value = event.target.value;
+            setDisplayName(value);
+            if (draftIdRef.current) onContentDraftEligibility?.(draftIdRef.current, Boolean(value.trim()));
+          }} /></label>
           <GeoJsonDetail item={{ id: candidate.sourceId, record: { displayName, origin: "uploaded", health: "ready" } }} source={candidate.source} geoData={candidate.geoJson} summary={candidate.validation.summary} />
           {candidate.validation.admission.status === "warning" && <p role="status">This source is within the measured warning range and may be added.</p>}
           <button type="button" disabled={busy || !displayName.trim()} onClick={() => void add()}>Add to dashboard</button>
@@ -126,7 +139,8 @@ export function ManagerGeoJsonIntake({
 
 export function ManagerCsvIntake({
   dashboard = {}, contentDraftCoordinator, onContentDraftStage,
-  onContentDraftCommit, onContentDraftDiscard, onAdded,
+  onContentDraftCommit, onContentDraftDiscard, onContentDraftEligibility,
+  preserveDraftsOnUnmount = false, onAdded,
 } = {}) {
   const [open, setOpen] = React.useState(false);
   const [candidate, setCandidate] = React.useState(null);
@@ -134,11 +148,14 @@ export function ManagerCsvIntake({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const draftIdRef = React.useRef(null);
+  const cleanupRef = React.useRef({ onContentDraftDiscard, preserveDraftsOnUnmount });
+  cleanupRef.current = { onContentDraftDiscard, preserveDraftsOnUnmount };
 
   React.useEffect(() => () => {
-    if (draftIdRef.current) onContentDraftDiscard?.(draftIdRef.current, "manager-csv-unmount");
+    if (cleanupRef.current.preserveDraftsOnUnmount) return;
+    if (draftIdRef.current) cleanupRef.current.onContentDraftDiscard?.(draftIdRef.current, "manager-csv-unmount");
     draftIdRef.current = null;
-  }, [onContentDraftDiscard]);
+  }, []);
 
   const stageFile = async (file) => {
     if (!file) return;
@@ -203,7 +220,11 @@ export function ManagerCsvIntake({
           <label><span>CSV file</span><input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => void stageFile(event.target.files?.[0] ?? null)} /></label>
           {candidate && (
             <>
-              <label><span>Display name</span><input value={displayName} disabled={busy} required onChange={(event) => setDisplayName(event.target.value)} /></label>
+              <label><span>Display name</span><input value={displayName} disabled={busy} required onChange={(event) => {
+                const value = event.target.value;
+                setDisplayName(value);
+                if (draftIdRef.current) onContentDraftEligibility?.(draftIdRef.current, Boolean(value.trim()));
+              }} /></label>
               <p>{candidate.profile.rowCount} rows · {candidate.profile.columns.length} columns</p>
               <CsvCandidatePreview rows={candidate.rows} columns={candidate.profile.columns.map(({ name }) => name)} />
               {duplicate && <p role="status">Matching content already exists as {duplicate.displayName}. Adding keeps a separate source identity.</p>}

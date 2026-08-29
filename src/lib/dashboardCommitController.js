@@ -54,6 +54,25 @@ export function createSerializedDashboardCommitController({
     });
   };
 
+  const runTransaction = (operation) => {
+    if (typeof operation !== "function") {
+      return Promise.reject(new TypeError("A dashboard transaction function is required."));
+    }
+    return enqueue(() => operation(Object.freeze({
+      getCurrent() {
+        return cloneDashboard(current);
+      },
+      async replaceWith(dashboard, commitOperation = commit) {
+        if (typeof commitOperation !== "function") {
+          throw new TypeError("A dashboard commit function is required.");
+        }
+        const committed = await commitOperation(cloneDashboard(dashboard));
+        current = cloneDashboard(committed);
+        return cloneDashboard(current);
+      },
+    })));
+  };
+
   return Object.freeze({
     mutate(mutator) {
       return mutateWithCommit(mutator, commit);
@@ -85,6 +104,9 @@ export function createSerializedDashboardCommitController({
     },
     commitPreparedWith(prepared, commitOperation) {
       return commitPreparedWith(prepared, commitOperation);
+    },
+    runTransaction(operation) {
+      return runTransaction(operation);
     },
     adopt(dashboard) {
       const replacement = cloneDashboard(dashboard);

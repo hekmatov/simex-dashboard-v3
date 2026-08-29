@@ -33,6 +33,8 @@ export default function SourceContentWorkspace({
   const pendingDraftIds = React.useRef(new Set());
   const rootRef = React.useRef(null);
   const lastRestorationRef = React.useRef(null);
+  const activeRef = React.useRef(active);
+  activeRef.current = active;
   const [ownerRegistry, dispatchOwnerRegistry] = React.useReducer(
     reduceSourceContentOwnerRegistry,
     undefined,
@@ -46,6 +48,10 @@ export default function SourceContentWorkspace({
   const sourceContentOwners = React.useMemo(
     () => selectSourceContentOwners(ownerRegistry),
     [ownerRegistry],
+  );
+  const preserveDraftsOnUnmount = !shouldDiscardSourceContentDraftsOnUnmount(
+    active,
+    sourceContentOwners.length,
   );
   const ownerLocked = sourceContentOwners.length > 0;
 
@@ -85,6 +91,13 @@ export default function SourceContentWorkspace({
     dispatchOwnerRegistry({ type: "DISCARD", transactionDraftId: draftId });
     return result;
   }, [onContentDraftDiscard]);
+  const setDraftEligibility = React.useCallback((draftId, eligible) => {
+    dispatchOwnerRegistry({
+      type: "ELIGIBILITY",
+      transactionDraftId: draftId,
+      eligible: eligible === true,
+    });
+  }, []);
 
   React.useEffect(() => {
     onOwnersChange?.(sourceContentOwners);
@@ -103,11 +116,17 @@ export default function SourceContentWorkspace({
     },
     resume(ownerId = null) {
       dispatchOwnerRegistry({ type: "ACTIVITY", activity: "active" });
-      restoreSourceContentFocus(rootRef.current, ownerForId(ownerRegistryRef.current, ownerId)?.restoration);
+      restoreSourceContentFocus(rootRef.current, currentSourceContentRestoration(
+        lastRestorationRef.current,
+        ownerForId(ownerRegistryRef.current, ownerId),
+      ));
       return true;
     },
     focus(ownerId = null) {
-      restoreSourceContentFocus(rootRef.current, ownerForId(ownerRegistryRef.current, ownerId)?.restoration);
+      restoreSourceContentFocus(rootRef.current, currentSourceContentRestoration(
+        lastRestorationRef.current,
+        ownerForId(ownerRegistryRef.current, ownerId),
+      ));
       return true;
     },
     async discard(ownerId) {
@@ -128,6 +147,10 @@ export default function SourceContentWorkspace({
   };
 
   React.useEffect(() => () => {
+    if (!shouldDiscardSourceContentDraftsOnUnmount(
+      activeRef.current,
+      selectSourceContentOwners(ownerRegistryRef.current).length,
+    )) return;
     for (const draftId of pendingDraftIds.current) onContentDraftDiscard?.(draftId, "manager-unmount");
     pendingDraftIds.current.clear();
   }, [onContentDraftDiscard]);
@@ -189,6 +212,29 @@ export default function SourceContentWorkspace({
     }
   };
 
+  const syncRenameDraft = (values) => {
+    if (!selected || !onContentDraftStage) return;
+    const draft = buildEligibleContentRenameDraft({ dashboard, item: selected, ...values });
+    const draftId = `manager-rename-${selected.kind}-${selected.id}`;
+    const retained = contentDraftCoordinator?.getActiveRetainers?.().records
+      ?.some(({ ownerId }) => ownerId === draftId);
+    if (!draft) {
+      if (retained) {
+        pendingDraftIds.current.delete(draftId);
+        dispatchOwnerRegistry({ type: "DISCARD", transactionDraftId: draftId });
+        void onContentDraftDiscard?.(draftId, "manager-rename-ineligible");
+      }
+      return;
+    }
+    const { buildCandidate: _buildCandidate, ...draftInput } = draft;
+    if (retained) {
+      contentDraftCoordinator?.updateDraft?.(draftId, draftInput);
+      setDraftEligibility(draftId, true);
+    } else {
+      stageDraft(draftInput);
+    }
+  };
+
   if (layout === "unsupported") return <p>Build is not available at this viewport width.</p>;
   const catalogueProps = {
     dashboard,
@@ -206,6 +252,8 @@ export default function SourceContentWorkspace({
     onContentDraftStage: stageDraft,
     onContentDraftCommit: commitDraft,
     onContentDraftDiscard: discardDraft,
+    onContentDraftEligibility: setDraftEligibility,
+    preserveDraftsOnUnmount,
   };
   const catalogue = tab === "media"
     ? <MediaCatalogue key={`media:${ownerResetGeneration}`} {...catalogueProps} />
@@ -221,12 +269,15 @@ export default function SourceContentWorkspace({
         datasetProfile={dashboard.datasetProfiles?.[selected?.id]}
         geoData={geoDataSources[selected?.id] ?? dashboard.loadedData?.[selected?.id]}
         onRename={rename}
+        onRenameDraftChange={syncRenameDraft}
         renameBusy={renameOperation.busy}
         renameError={renameOperation.error}
         onRequestClose={onRequestClose}
         onContentDraftStage={stageDraft}
         onContentDraftCommit={commitDraft}
         onContentDraftDiscard={discardDraft}
+        onContentDraftEligibility={setDraftEligibility}
+        preserveDraftsOnUnmount={preserveDraftsOnUnmount}
       />
     </section>
   );
@@ -237,8 +288,11 @@ export default function SourceContentWorkspace({
       data-manager-layout={layout}
       aria-labelledby="source-content-heading"
       aria-busy={sourceContentOwners.some(({ status }) => status === "saving") ? "true" : undefined}
-      onFocusCapture={() => {
-        lastRestorationRef.current = captureSourceContentRestoration(rootRef.current);
+      onFocusCapture={(event) => {
+        lastRestorationRef.current = captureSourceContentRestoration(rootRef.current, event.target);
+      }}
+      onBlurCapture={(event) => {
+        lastRestorationRef.current = captureSourceContentRestoration(rootRef.current, event.target);
       }}
     >
       <header className="source-content-workspace__header">
@@ -317,6 +371,12 @@ export function reduceSourceContentOwnerRegistry(registry = createSourceContentO
       ...(action.error ? { error: String(action.error) } : { error: undefined }),
     }));
   }
+  if (action.type === "ELIGIBILITY") {
+    return mapSourceContentOwners(registry, action.transactionDraftId, (owner) => ({
+      ...owner,
+      eligible: action.eligible === true,
+    }));
+  }
   if (action.type === "ACTIVITY") {
     return Object.fromEntries(Object.entries(registry).map(([id, owner]) => [id, {
       ...owner,
@@ -332,7 +392,26 @@ export function reduceSourceContentOwnerRegistry(registry = createSourceContentO
 }
 
 export function selectSourceContentOwners(registry = {}) {
-  return Object.values(registry).sort((left, right) => left.draftId.localeCompare(right.draftId));
+  return Object.values(registry)
+    .filter((owner) => owner.eligible !== false)
+    .sort((left, right) => left.draftId.localeCompare(right.draftId));
+}
+
+export function buildEligibleContentRenameDraft({ dashboard, item, displayName, defaultDescription = "" } = {}) {
+  if (!item || typeof displayName !== "string" || displayName.trim() === "") return null;
+  const currentName = String(item.record?.displayName ?? "");
+  const currentDescription = item.kind === "media" ? String(item.record?.defaultDescription ?? "") : "";
+  const nextDescription = item.kind === "media" ? String(defaultDescription ?? "") : "";
+  if (displayName.trim() === currentName && nextDescription === currentDescription) return null;
+  return buildContentRenameDraft({ dashboard, item, displayName, defaultDescription: nextDescription });
+}
+
+export function currentSourceContentRestoration(lastRestoration, owner) {
+  return lastRestoration ?? owner?.restoration ?? null;
+}
+
+export function shouldDiscardSourceContentDraftsOnUnmount(active, ownerCount = 0) {
+  return active === true || ownerCount === 0;
 }
 
 export function projectSourceContentOwner(input = {}, {
@@ -395,39 +474,59 @@ function ownerForId(registry, ownerId) {
   return selectSourceContentOwners(registry)[0] ?? null;
 }
 
-function captureSourceContentRestoration(root) {
+function captureSourceContentRestoration(root, activeElement = null) {
   if (!root || typeof document === "undefined") return null;
-  const host = root.closest('[data-authoring-surface="source-content"]') ?? root;
-  const focusable = sourceContentFocusable(root);
-  const focusIndex = focusable.indexOf(document.activeElement);
-  const active = document.activeElement;
-  const surface = active?.closest?.('[role="dialog"]')
+  const currentElement = activeElement ?? document.activeElement;
+  const focusable = sourceContentFocusable(root, { includeParkedHost: true });
+  const focusIndex = focusable.indexOf(currentElement);
+  const surface = currentElement?.closest?.('[role="dialog"]')
     ? "source-content-dialog"
-    : active?.closest?.(".source-content-detail")
+    : currentElement?.closest?.(".source-content-detail")
       ? "source-content-detail"
       : "source-content-catalogue";
+  const scrollHost = sourceContentScrollHost(root, surface);
   return {
     surface,
     focusIndex: focusIndex >= 0 ? focusIndex : 0,
-    scrollTop: Number(host.scrollTop ?? 0),
+    scrollTop: Number(scrollHost?.scrollTop ?? 0),
   };
 }
 
 function restoreSourceContentFocus(root, restoration) {
   if (!root || typeof window === "undefined") return;
   window.requestAnimationFrame(() => {
-    const host = root.closest('[data-authoring-surface="source-content"]') ?? root;
-    host.scrollTop = Number(restoration?.scrollTop ?? 0);
+    const scrollHost = sourceContentScrollHost(root, restoration?.surface);
+    if (scrollHost) scrollHost.scrollTop = Number(restoration?.scrollTop ?? 0);
     const focusable = sourceContentFocusable(root);
     const focusIndex = Number.isSafeInteger(restoration?.focusIndex) ? restoration.focusIndex : 0;
     (focusable[focusIndex] ?? root.querySelector("#source-content-heading") ?? root)?.focus?.({ preventScroll: true });
   });
 }
 
-function sourceContentFocusable(root) {
+function sourceContentScrollHost(root, surface) {
+  if (surface === "source-content-dialog") {
+    return root.querySelector('[role="dialog"]')
+      ?? root.closest('[data-authoring-surface="source-content"]')
+      ?? root;
+  }
+  if (surface === "source-content-detail") {
+    return root.querySelector(".source-content-detail")
+      ?? root.closest('[data-authoring-surface="source-content"]')
+      ?? root;
+  }
+  return root.querySelector(".source-content-catalogue")
+    ?? root.closest('[data-authoring-surface="source-content"]')
+    ?? root;
+}
+
+function sourceContentFocusable(root, { includeParkedHost = false } = {}) {
+  const authoringHost = root.closest('[data-authoring-surface="source-content"]');
   return [...root.querySelectorAll(
     'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-  )].filter((element) => !element.closest("[hidden]"));
+  )].filter((element) => {
+    const hiddenAncestor = element.closest("[hidden]");
+    return !hiddenAncestor || (includeParkedHost && hiddenAncestor === authoringHost);
+  });
 }
 
 function contentItem(dashboard, id, kind, record, dependencyState = null) {

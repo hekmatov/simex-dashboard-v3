@@ -14,6 +14,11 @@ export function StaticContentEditor({
   initialDraft,
   restoration,
   disabled,
+  contentDraftCoordinator,
+  contentRenderContext,
+  onContentDraftStage,
+  onContentDraftCommit,
+  onContentDraftDiscard,
   onDraftChange,
   onDirtyChange,
   onRestorationChange,
@@ -36,6 +41,13 @@ export function StaticContentEditor({
       open={open}
       editor
       dashboard={dashboard}
+      {...staticContentEditorWizardProps({
+        contentDraftCoordinator,
+        contentRenderContext,
+        onContentDraftStage,
+        onContentDraftCommit,
+        onContentDraftDiscard,
+      })}
       initialDraft={draft}
       restoration={restoration}
       disabled={disabled}
@@ -47,6 +59,22 @@ export function StaticContentEditor({
       onSuspend={onSuspend}
     />
   );
+}
+
+export function staticContentEditorWizardProps({
+  contentDraftCoordinator,
+  contentRenderContext,
+  onContentDraftStage,
+  onContentDraftCommit,
+  onContentDraftDiscard,
+} = {}) {
+  return {
+    contentDraftCoordinator,
+    contentRenderContext,
+    onContentDraftStage,
+    onContentDraftCommit,
+    onContentDraftDiscard,
+  };
 }
 
 export default StaticContentEditor;

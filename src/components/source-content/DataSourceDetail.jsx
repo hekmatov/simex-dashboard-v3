@@ -14,12 +14,14 @@ export default function DataSourceDetail({
   datasetProfile,
   geoData,
   onRename,
+  onRenameDraftChange,
   renameBusy = false,
   renameError = "",
   onRequestClose,
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
+  preserveDraftsOnUnmount = false,
 }) {
   const [replaceOpen, setReplaceOpen] = React.useState(false);
   const [replacementPlan, setReplacementPlan] = React.useState(null);
@@ -36,9 +38,10 @@ export default function DataSourceDetail({
     ? "Relink"
     : requiresRepair ? "Repair source" : "Replace file";
   const replacementPlanRef = React.useRef(null);
-  const lifecycleRef = React.useRef({ contentDraftCoordinator, onContentDraftDiscard });
-  lifecycleRef.current = { contentDraftCoordinator, onContentDraftDiscard };
+  const lifecycleRef = React.useRef({ contentDraftCoordinator, onContentDraftDiscard, preserveDraftsOnUnmount });
+  lifecycleRef.current = { contentDraftCoordinator, onContentDraftDiscard, preserveDraftsOnUnmount };
   React.useEffect(() => () => {
+    if (lifecycleRef.current.preserveDraftsOnUnmount) return;
     const plan = replacementPlanRef.current;
     replacementPlanRef.current = null;
     if (plan?.draft) void discardPreparedCsv(plan, "csv-replacement-unmount", lifecycleRef.current);
@@ -144,7 +147,7 @@ export default function DataSourceDetail({
           action={<button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{repairLabel}</button>}
         />}
       {item.kind === "csv" && <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{repairLabel}</button>}
-      <RenameSource item={item} onRename={onRename} busy={renameBusy} error={renameError} />
+      <RenameSource item={item} onRename={onRename} onDraftChange={onRenameDraftChange} busy={renameBusy} error={renameError} />
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
       <ContentActionDialog
         open={replaceOpen}
@@ -175,12 +178,16 @@ export default function DataSourceDetail({
   );
 }
 
-function RenameSource({ item, onRename, busy = false, error = "" }) {
+function RenameSource({ item, onRename, onDraftChange, busy = false, error = "" }) {
   const [displayName, setDisplayName] = React.useState(item.record.displayName);
   React.useEffect(() => setDisplayName(item.record.displayName), [item.id, item.record.displayName]);
   return (
     <form className="source-content-rename" aria-busy={busy ? "true" : undefined} onSubmit={(event) => { event.preventDefault(); void onRename?.({ displayName }); }}>
-      <label><span>Display name</span><input value={displayName} disabled={busy} onChange={(event) => setDisplayName(event.target.value)} required /></label>
+      <label><span>Display name</span><input value={displayName} disabled={busy} onChange={(event) => {
+        const value = event.target.value;
+        setDisplayName(value);
+        onDraftChange?.({ displayName: value });
+      }} required /></label>
       <button type="submit" className="secondary" disabled={busy || !onRename || displayName.trim() === item.record.displayName}>Save name</button>
       {error && <p role="alert">{error}</p>}
     </form>

@@ -133,6 +133,30 @@ test("nondecorative alt validation stays local and emits only serializable place
     .filter((entry) => entry.type === "change").at(-1)?.value.alt), "Updated response map");
 });
 
+test("pending invalid alt blocks unrelated placement changes until the visible value is corrected", async () => {
+  await mountInspector(page);
+  await page.getByRole("button", { name: "More image options" }).click();
+  const alt = page.getByLabel("Alternative text");
+
+  await alt.fill("");
+  await page.getByLabel("33%").click();
+  await page.getByLabel("Wrap end", { exact: true }).click();
+  await page.getByLabel("Card", { exact: true }).click();
+
+  assert.equal(await alt.inputValue(), "");
+  assert.equal(await alt.getAttribute("aria-invalid"), "true");
+  assert.match(await page.getByRole("status").textContent(), /alt text is required/i);
+  assert.deepEqual(await page.evaluate(() => window.__inspectorCalls
+    .filter((entry) => entry.type === "change")), []);
+
+  await alt.fill("Current visible alternative");
+  const changes = await page.evaluate(() => window.__inspectorCalls
+    .filter((entry) => entry.type === "change").map(({ value }) => value));
+  assert.equal(changes.length, 1);
+  assert.equal(changes[0].alt, "Current visible alternative");
+  assert.equal(JSON.stringify(changes[0]).includes("undefined"), false);
+});
+
 test("every image option has persistent visible guidance and stable descriptions", async () => {
   await mountInspector(page);
   await page.getByRole("button", { name: "More image options" }).click();

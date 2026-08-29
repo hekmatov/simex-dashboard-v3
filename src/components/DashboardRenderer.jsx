@@ -2332,6 +2332,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const selectedChartEditor = editMode && selectedPanel ? (selectedPanelIsStatic ? (
     <StaticContentEditor
       dashboard={workingDashboard}
+      contentDraftCoordinator={contentDraftCoordinator}
+      contentRenderContext={contentRenderContext}
+      onContentDraftStage={onContentDraftStage}
+      onContentDraftCommit={onContentDraftCommit}
+      onContentDraftDiscard={onContentDraftDiscard}
       destination={staticDestinationForPlacement(workingDashboard, selectedPlacement.panelId)}
       panel={selectedPanel}
       placement={workingDashboard.dataSources?.[selectedPanel.sourceId]}

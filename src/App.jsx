@@ -251,6 +251,7 @@ export default function App() {
     contentDraftCoordinatorRef.current = createContentDraftCoordinator({
       getDashboard: () => dashboardRef.current,
       commitDashboard: commitDurableContentDraftConfiguration,
+      runDashboardTransaction: runDurableContentDraftTransaction,
       assetStore: browserAuthoredAssetStore,
       readSessionAsset: readSessionImageAssetBytes,
       discardSessionAsset: discardSessionImageAsset,
@@ -1206,6 +1207,16 @@ export default function App() {
       configurationForPortableUse(nextConfig),
       createDurableContentDraftCommit(persistConfiguration, context),
     );
+  }
+
+  function runDurableContentDraftTransaction(operation) {
+    return ensureDashboardCommitController().runTransaction(({ getCurrent, replaceWith }) => operation({
+      getDashboard: getCurrent,
+      commitDashboard: (nextConfig, context = {}) => replaceWith(
+        configurationForPortableUse(nextConfig),
+        createDurableContentDraftCommit(persistConfiguration, context),
+      ),
+    }));
   }
 
   function commitImportedConfiguration(nextConfig, context = {}) {

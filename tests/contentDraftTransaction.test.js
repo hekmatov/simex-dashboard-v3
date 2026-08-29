@@ -19,6 +19,7 @@ import {
 } from "../src/static-content/forms/staticContentDraft.js";
 import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { createSerializedDashboardCommitController } from "../src/lib/dashboardCommitController.js";
 
 test("StrictMode effect replay keeps the reused content draft coordinator active until the final release", async () => {
   assert.equal(typeof contentDraftTransaction.createDeferredCoordinatorDisposal, "function");
@@ -614,6 +615,186 @@ test("asset-commit compensation marks the dashboard restoration as rollback cont
   assert.deepEqual(dashboard, makeDashboardV5());
 });
 
+test("shared dashboard transaction isolation preserves a direct commit made while asset compensation is pending", async () => {
+  let persisted = makeDashboardV5();
+  const assetCommitStarted = deferred();
+  const releaseAssetFailure = deferred();
+  const persist = async (candidate) => {
+    persisted = structuredClone(candidate);
+    return structuredClone(persisted);
+  };
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: persisted,
+    commit: persist,
+  });
+  const coordinator = createContentDraftCoordinator({
+    getDashboard: () => controller.getCurrent(),
+    commitDashboard: (candidate) => controller.replaceWith(candidate, persist),
+    runDashboardTransaction: (operation) => controller.runTransaction(({ getCurrent, replaceWith }) => operation({
+      getDashboard: getCurrent,
+      commitDashboard: (candidate) => replaceWith(candidate, persist),
+    })),
+    assetStore: {
+      snapshot: async () => new Map([["asset-race", null]]),
+      restore: async () => {},
+      stage: async () => ({ assetId: "asset-race" }),
+      commitMany: async () => {
+        assetCommitStarted.resolve();
+        await releaseAssetFailure.promise;
+        throw new Error("asset commit failed");
+      },
+      rollback: async () => {},
+    },
+    readSessionAsset: () => sessionAsset("asset-race"),
+    discardSessionAsset: () => true,
+  });
+  coordinator.stageDraft({
+    draftId: "isolated-race", owner: "manager", kind: "manager-add", payload: {},
+    assetIds: ["asset-race"], mediaIds: [], sourceIds: ["source-race"],
+  });
+
+  const failing = coordinator.commitDraft("isolated-race", {
+    buildCandidate: ({ dashboard }) => {
+      dashboard.contentLibrary.sourceEntries["source-race"] = { sourceId: "source-race" };
+      return { dashboard, commitAssetIds: ["asset-race"], discardAssetIds: [], itemIds: ["source-race"] };
+    },
+  });
+  await assetCommitStarted.promise;
+  const direct = controller.mutate((dashboard) => {
+    dashboard.directCommitSurvived = true;
+  });
+  releaseAssetFailure.resolve();
+
+  await assert.rejects(failing, /asset commit failed/);
+  await direct;
+  assert.equal(controller.getCurrent().directCommitSurvived, true);
+  assert.equal(persisted.directCommitSurvived, true);
+  assert.equal(persisted.contentLibrary.sourceEntries["source-race"], undefined);
+});
+
+test("concurrent successful content drafts rebase inside the shared dashboard transaction", async () => {
+  let persisted = makeDashboardV5();
+  const persist = async (candidate) => {
+    await Promise.resolve();
+    persisted = structuredClone(candidate);
+    return structuredClone(persisted);
+  };
+  const controller = createSerializedDashboardCommitController({ initialDashboard: persisted, commit: persist });
+  const coordinator = createContentDraftCoordinator({
+    getDashboard: () => controller.getCurrent(),
+    commitDashboard: (candidate) => controller.replaceWith(candidate, persist),
+    runDashboardTransaction: (operation) => controller.runTransaction(({ getCurrent, replaceWith }) => operation({
+      getDashboard: getCurrent,
+      commitDashboard: (candidate) => replaceWith(candidate, persist),
+    })),
+    assetStore: {
+      snapshot: async () => new Map(), restore: async () => {}, stage: async () => null,
+      commitMany: async () => {}, rollback: async () => {},
+    },
+  });
+  for (const suffix of ["a", "b"]) {
+    coordinator.stageDraft({
+      draftId: `concurrent-${suffix}`, owner: "manager", kind: "manager-add", payload: {},
+      assetIds: [], mediaIds: [], sourceIds: [`source-${suffix}`],
+    });
+  }
+  const commit = (suffix) => coordinator.commitDraft(`concurrent-${suffix}`, {
+    buildCandidate: ({ dashboard }) => {
+      dashboard.contentLibrary.sourceEntries[`source-${suffix}`] = { sourceId: `source-${suffix}` };
+      return { dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: [`source-${suffix}`] };
+    },
+  });
+
+  await Promise.all([commit("a"), commit("b")]);
+  assert.deepEqual(Object.keys(persisted.contentLibrary.sourceEntries).filter((id) => id.startsWith("source-")).sort(), ["source-a", "source-b"]);
+});
+
+test("an unexpected staged asset identity is compensated before retry keeps the expected authority", async () => {
+  let dashboard = makeDashboardV5();
+  let returnUnexpectedId = true;
+  const records = new Map();
+  const session = sessionAsset("asset-expected");
+  const coordinator = createContentDraftCoordinator({
+    getDashboard: () => dashboard,
+    commitDashboard: async (candidate) => {
+      dashboard = structuredClone(candidate);
+      return dashboard;
+    },
+    assetStore: {
+      snapshot: async (ids) => new Map(ids.map((id) => [id, records.get(id) ?? null])),
+      restore: async (snapshot) => {
+        for (const [id, value] of snapshot) value === null ? records.delete(id) : records.set(id, structuredClone(value));
+      },
+      stage: async (input) => {
+        const assetId = returnUnexpectedId ? "asset-unexpected" : input.expectedAssetId;
+        records.set(assetId, { assetId, status: "staged", bytes: new Uint8Array(input.bytes) });
+        return { assetId };
+      },
+      commitMany: async (ids) => {
+        for (const id of ids) records.set(id, { ...records.get(id), status: "durable" });
+      },
+      rollback: async (id) => { records.delete(id); },
+    },
+    readSessionAsset: (id) => id === "asset-expected" ? session : null,
+    discardSessionAsset: () => true,
+  });
+  coordinator.stageDraft({
+    draftId: "unexpected-stage-id", owner: "manager", kind: "manager-add", payload: {},
+    assetIds: ["asset-expected"], mediaIds: [], sourceIds: [],
+  });
+  const buildCandidate = ({ dashboard: current }) => {
+    current.assets["asset-expected"] = { ...manifest(), storageState: "staged" };
+    return { dashboard: current, commitAssetIds: ["asset-expected"], discardAssetIds: [], itemIds: [] };
+  };
+
+  await assert.rejects(coordinator.commitDraft("unexpected-stage-id", { buildCandidate }), /identity changed/);
+  assert.equal(records.has("asset-expected"), false);
+  assert.equal(records.has("asset-unexpected"), false);
+  assert.deepEqual(coordinator.getActiveRetainers().records.map(({ ownerId, status }) => ({ ownerId, status })), [
+    { ownerId: "unexpected-stage-id", status: "error" },
+  ]);
+  assert.deepEqual(session.bytes, new Uint8Array([1]));
+
+  returnUnexpectedId = false;
+  await coordinator.commitDraft("unexpected-stage-id", { buildCandidate });
+  assert.equal(records.get("asset-expected").status, "durable");
+  assert.deepEqual(coordinator.getActiveRetainers().records, []);
+});
+
+test("a finalized embedded-media candidate failure preserves the same payload and bytes for retry", async () => {
+  const harness = coordinatorHarness();
+  const payload = finalizeStaticContentDraft(validStaticContentState());
+  const bytes = sessionAsset("asset-candidate-retry");
+  harness.sessionAssets.set("asset-candidate-retry", bytes);
+  harness.coordinator.stageDraft({
+    draftId: "qmd-panel-candidate-retry", owner: "qmd-panel", kind: "qmd-panel-media", payload,
+    assetIds: ["asset-candidate-retry"], mediaIds: ["media-candidate-retry"], sourceIds: [payload.panel.sourceId],
+  });
+  let attempts = 0;
+  const buildCandidate = ({ dashboard, draft }) => {
+    attempts += 1;
+    assert.deepEqual(draft.payload, payload);
+    if (attempts === 1) throw new Error("candidate boundary unavailable");
+    dashboard.assets["asset-candidate-retry"] = { ...manifest(), storageState: "staged" };
+    return { dashboard, commitAssetIds: ["asset-candidate-retry"], discardAssetIds: [], itemIds: [payload.panel.id] };
+  };
+
+  await assert.rejects(
+    harness.coordinator.commitDraft("qmd-panel-candidate-retry", { buildCandidate }),
+    /candidate boundary unavailable/,
+  );
+  assert.equal(harness.sessionAssets.get("asset-candidate-retry"), bytes);
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records.map(({ ownerId, status }) => ({ ownerId, status })), [
+    { ownerId: "qmd-panel-candidate-retry", status: "error" },
+  ]);
+
+  await harness.coordinator.commitDraft("qmd-panel-candidate-retry", { buildCandidate });
+  assert.equal(attempts, 2);
+  assert.equal(harness.dashboard.assets["asset-candidate-retry"].storageState, "durable");
+  assert.equal(harness.sessionAssets.has("asset-candidate-retry"), false);
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+});
+
 function coordinatorHarness({ rejectCommit = false, rejectSessionDiscard = false } = {}) {
   let dashboard = makeDashboardV5();
   const commits = [];
@@ -664,4 +845,14 @@ function sessionAsset(assetId) {
 
 function manifest() {
   return { mediaType: "image/png", byteLength: 1, width: 1, height: 1, sha256: "a".repeat(64), storageState: "durable" };
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
 }

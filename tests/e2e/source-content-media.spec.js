@@ -74,12 +74,25 @@ test("retry and resume Source Content under one stable owner", async ({ page }) 
   const description = intake.getByLabel("Default description");
   await description.fill("Retained retry description");
   await description.focus();
+  const catalogue = manager.locator(".source-content-catalogue");
+  const catalogueScroll = await catalogue.evaluate((node) => {
+    node.style.height = "120px";
+    node.style.minHeight = "0";
+    node.style.maxHeight = "120px";
+    node.style.overflowY = "auto";
+    node.scrollTop = Math.min(140, node.scrollHeight - node.clientHeight);
+    return { maximum: node.scrollHeight - node.clientHeight, position: node.scrollTop };
+  });
+  expect(catalogueScroll.maximum).toBeGreaterThan(0);
+  expect(catalogueScroll.position).toBeGreaterThan(0);
   await closeManager(page);
   await expect(owner).toHaveAttribute("data-pending-work-id", ownerId);
   await expect(owner).toHaveAttribute("data-pending-work-state", "error");
   await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
   await owner.getByRole("button", { name: "Resume New Source Content draft" }).click();
   await expect(description).toBeFocused();
+  await expect.poll(() => catalogue.evaluate((node) => node.scrollTop))
+    .toBe(catalogueScroll.position);
   await intake.getByRole("button", { name: "Add to dashboard" }).click();
   await expect(owner).toHaveCount(0);
   await expect(manager.getByRole("region", { name: "Media catalogue" })

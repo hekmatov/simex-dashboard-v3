@@ -155,12 +155,16 @@ export function buildStaticPanelContentDraftCandidate({
 export function createContentDraftCoordinator({
   getDashboard,
   commitDashboard,
+  runDashboardTransaction,
   assetStore,
   readSessionAsset = () => null,
   discardSessionAsset = () => false,
 } = {}) {
   if (typeof getDashboard !== "function") throw new TypeError("Content draft dashboard reader is required.");
   if (typeof commitDashboard !== "function") throw new TypeError("Content draft dashboard commit is required.");
+  if (runDashboardTransaction !== undefined && typeof runDashboardTransaction !== "function") {
+    throw new TypeError("Content draft dashboard transaction must be a function.");
+  }
   if (!assetStore || typeof assetStore !== "object") throw new TypeError("Content draft asset store is required.");
 
   const drafts = new Map();
@@ -201,9 +205,12 @@ export function createContentDraftCoordinator({
       const activeCommit = activeCommits.get(draftId);
       if (activeCommit) return activeCommit;
       if (typeof buildCandidate !== "function") throw new TypeError("Content draft candidate builder is required.");
-      const committing = (async () => {
+      const committing = Promise.resolve().then(() => transactDashboard(async ({
+        getDashboard: readDashboard = getDashboard,
+        commitDashboard: writeDashboard = commitDashboard,
+      } = {}) => {
         const draft = requireDraft(draftId);
-        const previousDashboard = structuredClone(getDashboard());
+        const previousDashboard = structuredClone(readDashboard());
         const transactionId = `content-draft:${draft.draftId}`;
         let candidateResult;
         let assetSnapshot = null;
@@ -242,14 +249,17 @@ export function createContentDraftCoordinator({
               expectedAssetId: assetId,
               transactionId,
             });
+            const stagedAssetId = typeof staged?.assetId === "string" && staged.assetId.trim()
+              ? staged.assetId.trim()
+              : assetId;
+            stagedAssetIds.push(stagedAssetId);
             if (staged?.assetId !== assetId) throw new Error(`Staged content asset "${assetId}" identity changed.`);
-            stagedAssetIds.push(assetId);
           }
           const durableCandidateDashboard = promoteCommittedAssetManifests(
             candidateResult.dashboard,
             candidateResult.commitAssetIds,
           );
-          const committedDashboard = await commitDashboard(
+          const committedDashboard = await writeDashboard(
             durableCandidateDashboard,
             { transactionId },
           );
@@ -264,7 +274,7 @@ export function createContentDraftCoordinator({
           } catch (assetError) {
             const rollbackErrors = [];
             try {
-              await commitDashboard(structuredClone(previousDashboard), {
+              await writeDashboard(structuredClone(previousDashboard), {
                 transactionId: `${transactionId}:rollback`,
                 rollback: true,
               });
@@ -292,9 +302,9 @@ export function createContentDraftCoordinator({
           const cleanupErrors = [];
           if (candidateResult) {
             try {
-              const currentDashboard = structuredClone(getDashboard());
+              const currentDashboard = structuredClone(readDashboard());
               if (JSON.stringify(currentDashboard) !== JSON.stringify(previousDashboard)) {
-                await commitDashboard(structuredClone(previousDashboard), { transactionId, rollback: true });
+                await writeDashboard(structuredClone(previousDashboard), { transactionId, rollback: true });
               }
             } catch (cleanupError) {
               cleanupErrors.push(cleanupError);
@@ -305,7 +315,9 @@ export function createContentDraftCoordinator({
           } catch (cleanupError) {
             cleanupErrors.push(cleanupError);
           }
-          if (candidateResult) {
+          const retryableFinalizedDraft = finalizedDraftIds.has(draft.draftId)
+            && draft.assetIds.every((assetId) => Boolean(readSessionAsset(assetId)));
+          if (candidateResult || retryableFinalizedDraft) {
             drafts.set(draft.draftId, freezeRecord({
               ...draft,
               status: "error",
@@ -327,7 +339,7 @@ export function createContentDraftCoordinator({
           }
           throw error;
         }
-      })();
+      }));
       activeCommits.set(draftId, committing);
       committing.then(
         () => { if (activeCommits.get(draftId) === committing) activeCommits.delete(draftId); },
@@ -413,6 +425,11 @@ export function createContentDraftCoordinator({
     if (disposed) throw new Error("Content draft coordinator is disposed.");
   }
 
+  function transactDashboard(operation) {
+    if (runDashboardTransaction) return runDashboardTransaction(operation);
+    return operation({ getDashboard, commitDashboard });
+  }
+
   function requireDraft(draftId) {
     requiredText(draftId, "Content draft id");
     const draft = drafts.get(draftId);
@@ -443,11 +460,15 @@ export function createContentDraftCoordinator({
   }
 
   async function restoreAssets(snapshot, stagedAssetIds, transactionId) {
+    const restoredAssetIds = new Set();
     if (snapshot && typeof assetStore.restore === "function") {
       await assetStore.restore(snapshot);
-      return;
+      if (snapshot instanceof Map) {
+        for (const assetId of snapshot.keys()) restoredAssetIds.add(assetId);
+      }
     }
     for (const assetId of [...stagedAssetIds].reverse()) {
+      if (restoredAssetIds.has(assetId)) continue;
       await assetStore.rollback?.(assetId, { transactionId });
     }
   }

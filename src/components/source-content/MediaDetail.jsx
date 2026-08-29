@@ -12,11 +12,14 @@ export default function MediaDetail({
   dashboard,
   contentDraftCoordinator,
   onRename,
+  onRenameDraftChange,
   renameBusy = false,
   renameError = "",
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
+  onContentDraftEligibility,
+  preserveDraftsOnUnmount = false,
 }) {
   const [displayName, setDisplayName] = React.useState(item.record.displayName);
   const [defaultDescription, setDefaultDescription] = React.useState(item.record.defaultDescription);
@@ -30,8 +33,8 @@ export default function MediaDetail({
   const mountedRef = React.useRef(false);
   const prepareGenerationRef = React.useRef(0);
   const replacementPlanRef = React.useRef(null);
-  const lifecycleRef = React.useRef({ contentDraftCoordinator, onContentDraftDiscard });
-  lifecycleRef.current = { contentDraftCoordinator, onContentDraftDiscard };
+  const lifecycleRef = React.useRef({ contentDraftCoordinator, onContentDraftDiscard, preserveDraftsOnUnmount });
+  lifecycleRef.current = { contentDraftCoordinator, onContentDraftDiscard, preserveDraftsOnUnmount };
   React.useEffect(() => {
     setDisplayName(item.record.displayName);
     setDefaultDescription(item.record.defaultDescription);
@@ -41,6 +44,7 @@ export default function MediaDetail({
     return () => {
       mountedRef.current = false;
       prepareGenerationRef.current += 1;
+      if (lifecycleRef.current.preserveDraftsOnUnmount) return;
       const plan = replacementPlanRef.current;
       replacementPlanRef.current = null;
       if (plan) {
@@ -152,12 +156,22 @@ export default function MediaDetail({
             onContentDraftStage={onContentDraftStage}
             onContentDraftCommit={onContentDraftCommit}
             onContentDraftDiscard={onContentDraftDiscard}
+            onContentDraftEligibility={onContentDraftEligibility}
+            preserveDraftsOnUnmount={preserveDraftsOnUnmount}
           />
         )}
       </section>
       <form className="source-content-rename" aria-busy={renameBusy ? "true" : undefined} onSubmit={(event) => { event.preventDefault(); void onRename?.({ displayName, defaultDescription }); }}>
-        <label><span>Display name</span><input value={displayName} disabled={renameBusy} onChange={(event) => setDisplayName(event.target.value)} required /></label>
-        <label><span>Default description</span><textarea value={defaultDescription} disabled={renameBusy} onChange={(event) => setDefaultDescription(event.target.value)} /></label>
+        <label><span>Display name</span><input value={displayName} disabled={renameBusy} onChange={(event) => {
+          const value = event.target.value;
+          setDisplayName(value);
+          onRenameDraftChange?.({ displayName: value, defaultDescription });
+        }} required /></label>
+        <label><span>Default description</span><textarea value={defaultDescription} disabled={renameBusy} onChange={(event) => {
+          const value = event.target.value;
+          setDefaultDescription(value);
+          onRenameDraftChange?.({ displayName, defaultDescription: value });
+        }} /></label>
         <button type="submit" className="secondary" disabled={renameBusy || !onRename || (displayName.trim() === item.record.displayName && defaultDescription === item.record.defaultDescription)}>Save metadata</button>
         {renameError && <p role="alert">{renameError}</p>}
       </form>

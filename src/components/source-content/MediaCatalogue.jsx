@@ -7,7 +7,7 @@ import {
 } from "./MediaPicker.jsx";
 import { discardSessionImageAsset } from "../../static-content/image/imageAssetValidation.js";
 
-export default function MediaCatalogue({ dashboard, contentDraftCoordinator, onContentDraftStage, onContentDraftCommit, onContentDraftDiscard, ...props }) {
+export default function MediaCatalogue({ dashboard, contentDraftCoordinator, onContentDraftStage, onContentDraftCommit, onContentDraftDiscard, onContentDraftEligibility, preserveDraftsOnUnmount, ...props }) {
   return (
     <div>
       <ManagerMediaIntake
@@ -16,6 +16,8 @@ export default function MediaCatalogue({ dashboard, contentDraftCoordinator, onC
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}
         onContentDraftDiscard={onContentDraftDiscard}
+        onContentDraftEligibility={onContentDraftEligibility}
+        preserveDraftsOnUnmount={preserveDraftsOnUnmount}
       />
       <ContentCatalogue {...props} label="Media catalogue" searchLabel="Search media" addLabel="Catalogue" />
     </div>
@@ -29,6 +31,8 @@ export function ManagerMediaIntake({
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
+  onContentDraftEligibility,
+  preserveDraftsOnUnmount = false,
   onAdded,
 } = {}) {
   const [open, setOpen] = React.useState(false);
@@ -41,12 +45,15 @@ export function ManagerMediaIntake({
   const draftIdRef = React.useRef(null);
   const candidateRef = React.useRef(candidate);
   candidateRef.current = candidate;
+  const cleanupRef = React.useRef({ onContentDraftDiscard, preserveDraftsOnUnmount });
+  cleanupRef.current = { onContentDraftDiscard, preserveDraftsOnUnmount };
 
   React.useEffect(() => () => {
-    if (draftIdRef.current) onContentDraftDiscard?.(draftIdRef.current, "manager-intake-unmount");
+    if (cleanupRef.current.preserveDraftsOnUnmount) return;
+    if (draftIdRef.current) cleanupRef.current.onContentDraftDiscard?.(draftIdRef.current, "manager-intake-unmount");
     else if (candidateRef.current?.assetId) discardSessionImageAsset(candidateRef.current.assetId);
     draftIdRef.current = null;
-  }, [onContentDraftDiscard]);
+  }, []);
 
   const duplicate = candidate
     ? findDuplicateMedia(dashboard, candidate.assetId)
@@ -154,6 +161,12 @@ export function ManagerMediaIntake({
       draftIdRef.current = staged?.draftId ?? input.draftId;
     }
     setChoice(nextChoice);
+    if (draftIdRef.current) {
+      onContentDraftEligibility?.(draftIdRef.current, isManagerMediaDraftEligible({
+        displayName,
+        choice: nextChoice,
+      }));
+    }
   };
 
   return (
@@ -178,7 +191,14 @@ export function ManagerMediaIntake({
           {candidate?.previewUrl && <img src={candidate.previewUrl} alt="" />}
           {candidate && (
             <>
-              <label><span>Display name</span><input value={displayName} disabled={busy} onChange={(event) => setDisplayName(event.target.value)} required /></label>
+              <label><span>Display name</span><input value={displayName} disabled={busy} onChange={(event) => {
+                const value = event.target.value;
+                setDisplayName(value);
+                if (draftIdRef.current) onContentDraftEligibility?.(
+                  draftIdRef.current,
+                  isManagerMediaDraftEligible({ displayName: value, choice }),
+                );
+              }} required /></label>
               <label><span>Default description</span><textarea value={defaultDescription} disabled={busy} onChange={(event) => setDefaultDescription(event.target.value)} /></label>
               {duplicate && (
                 <fieldset disabled={busy}>
@@ -243,6 +263,10 @@ export function updateManagerMediaChoice({ contentDraftCoordinator, draftId, das
   }
   const { buildCandidate: _buildCandidate, ...patch } = buildManagerMediaDraft({ dashboard, candidate, duplicate, choice });
   return contentDraftCoordinator.updateDraft(draftId, patch);
+}
+
+export function isManagerMediaDraftEligible({ displayName, choice } = {}) {
+  return typeof displayName === "string" && displayName.trim() !== "" && Boolean(choice);
 }
 
 function findDuplicateMedia(dashboard, assetId) {

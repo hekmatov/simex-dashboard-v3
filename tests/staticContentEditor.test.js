@@ -38,6 +38,27 @@ test("StaticContentEditor mounts an existing V5 Image edit with media placement 
   assert.match(html, /data-image-media-revision="3"/);
 });
 
+test("StaticContentEditor forwards retained-media edit authority through the coordinator transaction", () => {
+  const contentDraftCoordinator = { getActiveRetainers() { return { records: [] }; } };
+  const contentRenderContext = { mediaItems: { retained: { mediaId: "retained" } } };
+  const onContentDraftStage = () => {};
+  const onContentDraftCommit = () => {};
+  const onContentDraftDiscard = () => {};
+  const props = editorModule.staticContentEditorWizardProps({
+    contentDraftCoordinator,
+    contentRenderContext,
+    onContentDraftStage,
+    onContentDraftCommit,
+    onContentDraftDiscard,
+  });
+
+  assert.equal(props.contentDraftCoordinator, contentDraftCoordinator);
+  assert.equal(props.contentRenderContext, contentRenderContext);
+  assert.equal(props.onContentDraftStage, onContentDraftStage);
+  assert.equal(props.onContentDraftCommit, onContentDraftCommit);
+  assert.equal(props.onContentDraftDiscard, onContentDraftDiscard);
+});
+
 test("Free-text authoring opens the constrained visual Composer by default", () => {
   const html = renderToStaticMarkup(React.createElement(freeTextEditorModule.FreeTextSourceEditor, { value: "Brief" }));
   assert.match(html, /role="toolbar"[^>]*aria-label="Composer formatting"/);

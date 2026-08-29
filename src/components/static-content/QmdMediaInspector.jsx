@@ -64,7 +64,7 @@ export default function QmdMediaInspector({
       flow: placement.flow ?? "block",
       frame: placement.frame ?? "none",
       caption: placement.caption ?? "",
-      alt: placement.alt ?? "",
+      alt: placement.decorative ? "" : altValue,
       decorative: placement.decorative === true,
       ...updates,
     };

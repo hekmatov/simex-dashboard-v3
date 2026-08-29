@@ -185,6 +185,81 @@ test("embedded image persists through reload and a second Text/Image creation", 
   expect(unhandledRejections).toEqual([]);
 });
 
+test("Free Text edit embedded image retries durably through reload", async ({ page }) => {
+  test.setTimeout(120_000);
+  const pageErrors = [];
+  const unhandledRejections = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.exposeFunction("__captureStaticEditUnhandled", (message) => unhandledRejections.push(message));
+  await page.addInitScript((storageKey) => {
+    addEventListener("unhandledrejection", (event) => {
+      globalThis.__captureStaticEditUnhandled?.(String(event.reason?.message ?? event.reason));
+    });
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function staticEditSetItem(key, value) {
+      if (key === storageKey && globalThis.__STATIC_EDIT_FAIL_ONCE__ === true) {
+        globalThis.__STATIC_EDIT_FAIL_ONCE__ = false;
+        throw new DOMException("Injected Free Text edit persistence failure", "QuotaExceededError");
+      }
+      return original.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  await createFreeText(page, {
+    title: "Embedded edit durability",
+    qmd: "This text must survive a failed media edit.",
+    viewport: { width: 1280, height: 800 },
+    previewText: "This text must survive a failed media edit.",
+  });
+  const before = await readSavedFreeText(page, "Embedded edit durability");
+  let panel = canonicalPanel(page, before.panel.id);
+  await panel.scrollIntoViewIfNeeded();
+  await prepareFreeTextEditorTrigger(panel, "Embedded edit durability");
+  await openFreeTextEditor(panel, page, "Embedded edit durability");
+  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+  await editor.getByRole("tab", { name: "Composer" }).click();
+  await editor.getByRole("button", { name: "Insert image" }).click();
+  await editor.getByRole("region", { name: "Media picker" })
+    .getByLabel("PNG, JPEG, or WebP file").setInputFiles({
+      name: "embedded-edit-proof.png",
+      mimeType: "image/png",
+      buffer: EMBEDDED_PNG,
+    });
+  await expect(editor.locator('[data-qmd-media-host] img[alt="embedded-edit-proof.png"]')).toBeVisible();
+  await editor.getByRole("button", { name: "Continue" }).click();
+  await page.evaluate(() => { globalThis.__STATIC_EDIT_FAIL_ONCE__ = true; });
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+
+  await expect(editor).toBeVisible();
+  await expect(editor.getByRole("alert")).toHaveText(
+    "Browser storage is full. Remove an uploaded dataset or choose a smaller CSV, then try again.",
+  );
+  await expect(editor.getByRole("button", { name: "Retry Save" })).toBeVisible();
+  expect((await readSavedFreeText(page, "Embedded edit durability")).source.qmd).toBe(before.source.qmd);
+  expect(await sessionAssetIds(page)).toHaveLength(1);
+
+  await editor.getByRole("button", { name: "Retry Save" }).click();
+  await expect(editor).toHaveCount(0);
+  const saved = await readEmbeddedPublication(page, "Embedded edit durability");
+  expect(saved).toMatchObject({ placementCount: 1, sourceKind: "staticText", mediaCount: 1, assetCount: 1, assetState: "durable" });
+  expect(saved.panelId).toBe(before.panel.id);
+  await expect.poll(() => sessionAssetIds(page)).toEqual([]);
+  panel = canonicalPanel(page, saved.panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator('img[alt="embedded-edit-proof.png"]')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  expect(await readEmbeddedPublication(page, "Embedded edit durability")).toEqual(saved);
+  panel = canonicalPanel(page, saved.panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator('img[alt="embedded-edit-proof.png"]')).toBeVisible();
+  expect(pageErrors).toEqual([]);
+  expect(unhandledRejections).toEqual([]);
+});
+
 for (const viewport of VIEWPORTS) {
   test(`Free text completes its in-session production journey at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     test.setTimeout(180_000);
