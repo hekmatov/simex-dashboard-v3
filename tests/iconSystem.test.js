@@ -309,7 +309,10 @@ test("approved compact dashboard actions are live icon-only interactions", () =>
 });
 
 test("the generated atlas binds live swatches and keeps text references glyphless", async () => {
-  const { renderIconAtlas } = await import("../scripts/build-icon-reference.mjs");
+  const {
+    renderIconAtlas,
+    renderIconSpecification,
+  } = await import("../scripts/build-icon-reference.mjs");
   const atlas = renderIconAtlas();
 
   assert.match(
@@ -334,6 +337,16 @@ test("the generated atlas binds live swatches and keeps text references glyphles
   assert.match(ctrlHintCard, />Hold Ctrl while scrolling</);
   assert.doesNotMatch(speedCard, /<svg/);
   assert.match(speedCard, />1×</);
+
+  const moveCard = interactionCardMarkup(atlas, "panel.move");
+  assert.match(moveCard, />confirmation conditional</);
+  assert.doesNotMatch(moveCard, />no confirmation</);
+
+  const specification = renderIconSpecification();
+  assert.match(
+    specification,
+    /\| `confirmation` \| `none`, `required`, or `conditional` \|/,
+  );
 });
 
 test("IconControl derives its visual and accessibility contract from metadata", () => {

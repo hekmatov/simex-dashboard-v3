@@ -33,7 +33,7 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 3. **One dashboard accent.** The base accent is selected at dashboard level; readable light and dark variants are derived to meet the approved contrast target.
 4. **Destructive actions are unmistakable.** A destructive control uses the danger red as its base while retaining the same secondary accent as the rest of the dashboard.
 5. **Selection is semantic.** Selected controls use the shared success green. Multi-fullscreen selection also carries the announced ordinal.
-6. **Confirmation is metadata.** `confirmation: required` is part of the interaction contract and must be honored by the application flow.
+6. **Confirmation is metadata.** `confirmation: none`, `required`, or `conditional` is part of the interaction contract. Required confirmation always applies; conditional confirmation is decided by the application flow from the analyzed consequences.
 7. **Geometry is immutable at render time.** Application components select registered glyph IDs; they do not patch SVG paths or load alternate icon assets.
 
 ## Catalogue summary
@@ -85,7 +85,7 @@ The base icon color is contextual: dark ink on light surfaces and light ink on d
 | `renderMode` | `icon` for icon-only controls; `text` for retained visible text/data |
 | `tone` | `standard` or `danger` |
 | `status` | `live`, `planned`, or `reference` |
-| `confirmation` | `none` or `required` |
+| `confirmation` | `none`, `required`, or `conditional` |
 | `note` | Surface-specific implementation or design guidance |
 
 ## Status meanings
