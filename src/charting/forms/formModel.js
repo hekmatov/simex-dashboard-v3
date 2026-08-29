@@ -11,8 +11,8 @@ import {
 } from "../schemas/schemaTypes.js";
 
 const STEP_DEFINITIONS = Object.freeze([
-  Object.freeze({ id: "type", label: "Chart type" }),
   Object.freeze({ id: "source", label: "Data source" }),
+  Object.freeze({ id: "type", label: "Chart type" }),
   Object.freeze({ id: "roles", label: "Data roles" }),
   Object.freeze({ id: "style", label: "Style and layout" }),
 ]);
@@ -30,6 +30,7 @@ const INTERPRETATION_LABELS = Object.freeze({
 
 export function buildWizardFormModel({
   draft,
+  sourceSelection = null,
   profile,
   prepared,
   chronoGroups,
@@ -37,7 +38,7 @@ export function buildWizardFormModel({
   geoJoinFields = [],
 } = {}) {
   const hasType = Boolean(draft?.typeId);
-  const hasSource = hasType && nonEmptyString(draft.sourceId);
+  const hasSource = nonEmptyString(sourceSelection?.sourceId ?? draft?.sourceId);
   const rolesComplete = hasSource && requiredRolesAssigned(draft);
   const previewReady = preparationMatchesDraft({
     chart: draft,
@@ -57,15 +58,15 @@ export function buildWizardFormModel({
     : null;
 
   const prerequisiteSets = {
-    type: [],
-    source: hasType ? [] : ["Choose a chart type."],
+    source: [],
+    type: hasSource ? [] : ["Choose a data source."],
     roles: [
-      ...(!hasType ? ["Choose a chart type."] : []),
       ...(!hasSource ? ["Choose a data source."] : []),
+      ...(!hasType ? ["Choose a chart type."] : []),
     ],
     style: [
-      ...(!hasType ? ["Choose a chart type."] : []),
       ...(!hasSource ? ["Choose a data source."] : []),
+      ...(!hasType ? ["Choose a chart type."] : []),
       ...(!rolesComplete ? ["Assign the required data roles."] : []),
       ...(!previewReady ? ["Prepare a valid chart preview."] : []),
       ...(previewReady && !editor?.valid

@@ -11,16 +11,16 @@ import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateChronoGroups } from "../time/chronoGroupModel.js";
 
 export const WIZARD_STEPS = Object.freeze([
-  "type",
   "source",
+  "type",
   "roles",
   "style",
 ]);
 
 export const CHART_CREATION_STAGES = Object.freeze([
   "destination",
-  "chart-type",
   "data-source",
+  "chart-type",
   "map-and-prepare-data",
   "configure-chart",
   "review-and-create",
@@ -28,11 +28,11 @@ export const CHART_CREATION_STAGES = Object.freeze([
 
 export const CHART_CREATION_STAGE_LABELS = Object.freeze([
   "Destination",
-  "Chart type",
   "Data source",
-  "Map and prepare data",
-  "Configure chart",
-  "Review and create",
+  "Chart type",
+  "Map and prepare",
+  "Configure",
+  "Review",
 ]);
 
 const CHART_CREATION_STATUSES = new Set([
@@ -59,6 +59,7 @@ export function createWizardState(options = {}) {
   if (!isRecord(options)) {
     throw new TypeError("Wizard state options must be an object.");
   }
+  const sourceSelection = initialSourceSelection(options);
   const state = {
     draftId: options.draftId ?? options.draft?.id ?? null,
     stage: CHART_CREATION_STAGES.includes(options.stage)
@@ -83,10 +84,11 @@ export function createWizardState(options = {}) {
     discarded: options.discarded === true,
     activeStep: WIZARD_STEPS.includes(options.activeStep)
       ? options.activeStep
-      : "type",
+      : "source",
     draft: options.draft ? structuredClone(options.draft) : null,
+    sourceSelection,
     source: options.source === undefined
-      ? null
+      ? cloneOptional(sourceSelection?.source)
       : structuredClone(options.source),
     chronoGroups: structuredClone(options.chronoGroups ?? []),
     chronoGroupsProvided: Object.hasOwn(options, "chronoGroups"),
@@ -323,28 +325,31 @@ export function deriveChartCreationStageStatuses(state) {
     needsAttention: errorsByStage.has("destination"),
   });
 
-  const chartTypeComplete = destinationComplete && meaningfulValue(state.chartTypeId);
-  result["chart-type"] = stageStatus(state, "chart-type", {
-    complete: chartTypeComplete,
-    waiting: !destinationComplete,
-    needsAttention: errorsByStage.has("chart-type"),
-  });
-
-  const sourceComplete = chartTypeComplete
-    && meaningfulValue(state.source)
-    && meaningfulValue(state.profileRevision);
+  const selectedSourceId = state.sourceSelection?.sourceId ?? state.draft?.sourceId;
+  const selectedProfile = state.sourceSelection?.profile
+    ?? collectionEntry(state.profiles, selectedSourceId);
+  const sourceComplete = destinationComplete
+    && meaningfulValue(selectedSourceId)
+    && meaningfulValue(selectedProfile);
   result["data-source"] = stageStatus(state, "data-source", {
     complete: sourceComplete,
-    waiting: !chartTypeComplete,
+    waiting: !destinationComplete,
     needsAttention: errorsByStage.has("data-source"),
   });
 
-  const mappingComplete = sourceComplete
+  const chartTypeComplete = sourceComplete && meaningfulValue(state.chartTypeId);
+  result["chart-type"] = stageStatus(state, "chart-type", {
+    complete: chartTypeComplete,
+    waiting: !sourceComplete,
+    needsAttention: errorsByStage.has("chart-type"),
+  });
+
+  const mappingComplete = chartTypeComplete
     && meaningfulValue(state.mapping)
     && meaningfulValue(state.preparation);
   result["map-and-prepare-data"] = stageStatus(state, "map-and-prepare-data", {
     complete: mappingComplete,
-    waiting: !sourceComplete,
+    waiting: !chartTypeComplete,
     needsAttention: errorsByStage.has("map-and-prepare-data"),
   });
 
@@ -379,21 +384,26 @@ function selectType(state, action) {
   const overrides = isRecord(action.chart) ? action.chart : {};
   const previousDraftId = state.draft?.id ?? null;
   const draftId = overrides.id ?? previousDraftId;
+  const sourceSelection = state.sourceSelection
+    ?? selectionFromDraftState(state);
+  const sourceId = sourceSelection?.sourceId ?? null;
   const groups = previousDraftId
     ? removeChartFromGroups(state.chronoGroups, previousDraftId)
     : state.chronoGroups;
   return withStageStatuses({
     ...state,
-    activeStep: "source",
-    stage: "data-source",
+    activeStep: sourceId ? "roles" : "source",
+    stage: sourceId ? "map-and-prepare-data" : "data-source",
     chartTypeId: action.typeId,
     chartTypeRevision: action.schemaRevision ?? state.chartTypeRevision ?? null,
     discarded: false,
     draft: createChartDraft(action.typeId, {
       ...overrides,
       ...(draftId ? { id: draftId } : {}),
+      ...(sourceId ? { sourceId } : {}),
     }),
-    source: null,
+    sourceSelection,
+    source: sourceSelection?.source ?? state.source,
     chronoGroups: groups,
     chronoGroupsProvided: state.chronoGroupsProvided
       || groups !== state.chronoGroups,
@@ -404,28 +414,19 @@ function selectType(state, action) {
 }
 
 function selectSource(state, action) {
-  const draft = requireDraft(state);
   if (typeof action.sourceId !== "string" || action.sourceId.trim() === "") {
     throw new Error("A data source id is required.");
   }
-  return {
-    ...state,
-    draft: {
-      ...draft,
-      sourceId: action.sourceId,
-    },
-    source: action.source === undefined
-      ? state.source
-      : structuredClone(action.source),
-    confirmation: null,
-    pendingSourceChange: null,
-  };
+  return applySourceChange(state, sourceChange(action), { clearMappings: false });
 }
 
 function requestSourceChange(state, action) {
-  const draft = requireDraft(state);
   requiredString(action.sourceId, "Data source id");
   const change = sourceChange(action);
+  const draft = state.draft;
+  if (!draft) {
+    return applySourceChange(state, change, { clearMappings: false });
+  }
   if (
     action.sourceId === draft.sourceId
     || !hasSourceMappings(draft)
@@ -598,18 +599,21 @@ function updateChronoGroups(state, action) {
 
 function confirmClearSource(state) {
   if (state.confirmation !== "clearSource") return state;
-  const draft = requireDraft(state);
-  return {
+  const draft = state.draft;
+  return withStageStatuses({
     ...state,
-    draft: {
-      ...draft,
-      sourceId: null,
-      roles: {},
-    },
+    draft: draft
+      ? {
+          ...draft,
+          sourceId: null,
+          roles: {},
+        }
+      : null,
+    sourceSelection: null,
     source: null,
     confirmation: null,
     pendingSourceChange: null,
-  };
+  });
 }
 
 function validateProposedGroups(state, groups, draft = state.draft) {
@@ -653,6 +657,7 @@ function removeChartFromGroups(groups, chartId) {
 function sourceChange(action) {
   return {
     sourceId: action.sourceId,
+    kind: nonEmptyString(action.kind) ? action.kind : null,
     source: action.source === undefined
       ? undefined
       : structuredClone(action.source),
@@ -666,22 +671,26 @@ function sourceChange(action) {
 }
 
 function applySourceChange(state, change, { clearMappings }) {
-  const draft = requireDraft(state);
-  const transformations = clearMappings
+  const draft = state.draft;
+  const transformations = clearMappings && draft
     ? {
         ...draft.transformations,
         filters: [],
         grouping: null,
       }
-    : draft.transformations;
-  return {
+    : draft?.transformations;
+  const sourceSelection = selectionFromChange(state, change);
+  return withStageStatuses({
     ...state,
-    draft: {
-      ...draft,
-      sourceId: change.sourceId,
-      roles: clearMappings ? {} : draft.roles,
-      transformations,
-    },
+    draft: draft
+      ? {
+          ...draft,
+          sourceId: change.sourceId,
+          roles: clearMappings ? {} : draft.roles,
+          transformations,
+        }
+      : null,
+    sourceSelection,
     source: change.source === undefined
       ? state.source
       : structuredClone(change.source),
@@ -693,7 +702,7 @@ function applySourceChange(state, change, { clearMappings }) {
       : collectionWithEntry(state.profiles, change.sourceId, change.profile),
     confirmation: null,
     pendingSourceChange: null,
-  };
+  });
 }
 
 function sourceMappingsAreCompatible(draft, profile) {
@@ -746,6 +755,80 @@ function assignedFilterCount(draft) {
   return Array.isArray(draft.transformations?.filters)
     ? draft.transformations.filters.length
     : 0;
+}
+
+function initialSourceSelection(options) {
+  const explicit = options.sourceSelection;
+  const sourceId = explicit?.sourceId ?? options.draft?.sourceId;
+  if (!nonEmptyString(sourceId)) return null;
+  const source = Object.hasOwn(explicit ?? {}, "source")
+    ? explicit.source
+    : options.source;
+  const rows = Object.hasOwn(explicit ?? {}, "rows")
+    ? explicit.rows
+    : collectionEntry(options.loadedData, sourceId);
+  const profile = Object.hasOwn(explicit ?? {}, "profile")
+    ? explicit.profile
+    : collectionEntry(options.profiles, sourceId);
+  return {
+    sourceId,
+    source: cloneOptional(source),
+    profile: cloneOptional(profile),
+    rows: structuredClone(Array.isArray(rows) ? rows : []),
+    kind: nonEmptyString(explicit?.kind)
+      ? explicit.kind
+      : inferSourceKind(source),
+  };
+}
+
+function selectionFromDraftState(state) {
+  const sourceId = state.draft?.sourceId;
+  if (!nonEmptyString(sourceId)) return null;
+  return {
+    sourceId,
+    source: cloneOptional(state.source),
+    profile: cloneOptional(collectionEntry(state.profiles, sourceId)),
+    rows: structuredClone(collectionEntry(state.loadedData, sourceId) ?? []),
+    kind: inferSourceKind(state.source),
+  };
+}
+
+function selectionFromChange(state, change) {
+  const current = state.sourceSelection?.sourceId === change.sourceId
+    ? state.sourceSelection
+    : null;
+  const source = change.source === undefined
+    ? current?.source ?? state.source
+    : change.source;
+  const rows = change.rows === undefined
+    ? current?.rows ?? collectionEntry(state.loadedData, change.sourceId) ?? []
+    : change.rows;
+  const profile = change.profile === undefined
+    ? current?.profile ?? collectionEntry(state.profiles, change.sourceId) ?? null
+    : change.profile;
+  return {
+    sourceId: change.sourceId,
+    source: cloneOptional(source),
+    profile: cloneOptional(profile),
+    rows: structuredClone(Array.isArray(rows) ? rows : []),
+    kind: nonEmptyString(change.kind)
+      ? change.kind
+      : nonEmptyString(current?.kind)
+        ? current.kind
+        : inferSourceKind(source),
+  };
+}
+
+function inferSourceKind(source) {
+  if (source?.kind === "inline") return "manual";
+  if (source?.type === "uploadedCsv") return "upload";
+  return "existing";
+}
+
+function collectionEntry(collection, key) {
+  if (!nonEmptyString(key)) return undefined;
+  if (collection instanceof Map) return collection.get(key);
+  return isRecord(collection) ? collection[key] : undefined;
 }
 
 function collectionWithEntry(collection, key, value) {
@@ -977,6 +1060,7 @@ function discardSessionDraft(state) {
     destination: null,
     chartTypeId: null,
     chartTypeRevision: null,
+    sourceSelection: null,
     source: null,
     profileRevision: null,
     mapping: null,

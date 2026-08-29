@@ -29,8 +29,6 @@ export default function DataSourceStep({
   onRequestClear = noop,
 } = {}) {
   const warnings = profileWarnings(profile);
-  const blocked = Array.isArray(prerequisites)
-    && prerequisites.some((value) => typeof value === "string" && value);
   return React.createElement(
     "section",
     {
@@ -49,7 +47,6 @@ export default function DataSourceStep({
         },
         loadedData,
         selectedSourceId: selectedSourceKind === "existing" ? selectedSourceId : "",
-        disabled: blocked,
         uploadError,
         onSelect: onSelectExisting,
         onUpload: onUploadCsv,
@@ -73,7 +70,6 @@ export default function DataSourceStep({
               : React.createElement(IconControl, {
                   interactionId: "wizard.enter-data-manually",
                   className: "secondary",
-                  disabled: blocked,
                   onClick: onSelectManual,
                 }),
           )
@@ -95,7 +91,6 @@ export default function DataSourceStep({
               "select",
               {
                 value: selectedGeoSourceId,
-                disabled: blocked,
                 required: true,
                 "aria-describedby": "chart-wizard-geo-source-help",
                 onChange: (event) => onGeoSourceChange(event.target.value),
@@ -126,7 +121,6 @@ export default function DataSourceStep({
             React.createElement("input", {
               type: "file",
               accept: ".geojson,application/geo+json,application/json",
-              disabled: blocked,
               onChange: (event) => onUploadGeoJson(event.target.files?.[0] ?? null),
             }),
           ),

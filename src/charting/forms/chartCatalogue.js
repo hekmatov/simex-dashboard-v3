@@ -1,4 +1,5 @@
 import { CHART_SCHEMA_VERSION } from "../schemas/chartSchemaRegistry.js";
+import { canonicalColumnType } from "../data/bindings.js";
 
 const CONFIGURATION_IDENTITY_KEYS = new Set([
   "title",
@@ -125,7 +126,7 @@ function profileCompatibility(schema, sourceProfile) {
     };
   }
   const fields = sourceProfile.fields ?? sourceProfile.columns ?? [];
-  const fieldTypes = new Set(fields.map(({ type }) => type));
+  const fieldTypes = new Set(fields.map(({ type }) => canonicalColumnType(type)));
   const missing = schema.roles.filter(({ min, accepts }) => (
     min > 0
     && !accepts.includes("any")

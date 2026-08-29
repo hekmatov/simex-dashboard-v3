@@ -297,6 +297,65 @@ test("chart types render in searchable registry purpose groups", () => {
   assert.doesNotMatch(filtered, />Bar</);
 });
 
+test("chart type guidance appears once before profiling and selected source profile drives compatibility", () => {
+  const unprofiled = render(React.createElement(ChartTypePicker, {
+    value: "",
+    query: "",
+    onChange() {},
+    onQueryChange() {},
+  }));
+  assert.equal(
+    (unprofiled.match(/Choose or profile a data source to check compatibility\./g) ?? []).length,
+    1,
+  );
+
+  const rows = [{ value: 4 }];
+  const sourceProfile = profileDataset(rows);
+  const wizard = createWizardState({
+    stage: "chart-type",
+    activeStep: "type",
+    destination: { pageId: "overview", sectionId: "response" },
+    sourceSelection: {
+      sourceId: "source-first-values",
+      source: null,
+      profile: sourceProfile,
+      rows,
+      kind: "existing",
+    },
+    loadedData: { "source-first-values": rows },
+    profiles: { "source-first-values": sourceProfile },
+  });
+  const profiled = render(React.createElement(ChartWizardV3, {
+    open: true,
+    dataSources: {
+      "source-first-values": { kind: "dataset", path: "data/values.csv" },
+    },
+    loadedData: { "source-first-values": rows },
+    datasetProfiles: { "source-first-values": sourceProfile },
+    chronoGroups: [],
+    initialDraftState: wizard,
+    onClose() {},
+    onCreate() {},
+  }));
+  assert.doesNotMatch(profiled, /Choose or profile a data source to check compatibility\./);
+  const pieLabelIndex = profiled.indexOf('aria-label="Pie.');
+  assert.ok(pieLabelIndex >= 0, "Pie compatibility card should render");
+  const pieMarkup = profiled.slice(
+    profiled.lastIndexOf("<button", pieLabelIndex),
+    profiled.indexOf("</button>", pieLabelIndex),
+  );
+  assert.match(pieMarkup, /disabled=""/);
+  assert.match(pieMarkup, /Required Category/);
+  const kpiLabelIndex = profiled.indexOf('aria-label="KPI card.');
+  assert.ok(kpiLabelIndex >= 0, "KPI compatibility card should render");
+  const kpiMarkup = profiled.slice(
+    profiled.lastIndexOf("<button", kpiLabelIndex),
+    profiled.indexOf("</button>", kpiLabelIndex),
+  );
+  assert.doesNotMatch(kpiMarkup, /disabled=""/);
+  assert.match(kpiMarkup, /profiled fields satisfy/i);
+});
+
 test("background uses the shared identified color field contract", () => {
   const html = render(React.createElement(GeneratedFormSection, {
     section: backgroundSection,
@@ -1075,11 +1134,11 @@ test("wizard exposes the exact six directly clickable stages in the approved ord
   }));
   const stages = [
     ["chart-stage-destination", "Destination"],
-    ["chart-stage-chart-type", "Chart type"],
     ["chart-stage-data-source", "Data source"],
-    ["chart-stage-map-and-prepare-data", "Map and prepare data"],
-    ["chart-stage-configure-chart", "Configure chart"],
-    ["chart-stage-review-and-create", "Review and create"],
+    ["chart-stage-chart-type", "Chart type"],
+    ["chart-stage-map-and-prepare-data", "Map and prepare"],
+    ["chart-stage-configure-chart", "Configure"],
+    ["chart-stage-review-and-create", "Review"],
   ];
   let lastIndex = -1;
   for (const [id, label] of stages) {
@@ -1137,7 +1196,7 @@ test("every wizard stage remains enabled and explains unmet prerequisites", () =
   assert.match(buttonMarkupById(html, "chart-stage-chart-type"), /Waiting on prerequisite/);
 });
 
-test("an early destination explains prerequisites without exposing crashing controls", () => {
+test("data source controls stay enabled before chart capability is known", () => {
   const html = render(React.createElement(DataSourceStep, {
     dataSources: {
       "exercise-data": { kind: "dataset" },
@@ -1146,23 +1205,13 @@ test("an early destination explains prerequisites without exposing crashing cont
       "exercise-data": [{ value: 4 }],
     },
     prerequisites: ["Choose a chart type."],
-    manualAllowed: true,
-    onSelectExisting() {
-      assert.fail("blocked source selection must not fire");
-    },
-    onSelectManual() {
-      assert.fail("blocked manual selection must not fire");
-    },
+    manualAllowed: false,
   }));
 
   assert.match(html, /Choose a chart type/);
-  assert.match(html, /<select[^>]*disabled/);
-  assert.match(html, /type="file"[^>]*disabled/);
-  assert.match(html, /Enter data manually/);
-  assert.match(
-    buttonMarkupByInteraction(html, "wizard.enter-data-manually"),
-    /disabled=""/,
-  );
+  assert.doesNotMatch(html, /<select[^>]*disabled/);
+  assert.doesNotMatch(html, /type="file"[^>]*disabled/);
+  assert.doesNotMatch(html, /Enter data manually/);
 });
 
 test("discard and source-removal confirmations call only the approved callbacks", () => {
@@ -1326,6 +1375,8 @@ test("uploaded CSV keeps its active draft when existing or uploaded source chang
 
   await harness.lifecycle.stagePendingUpload(active, chartCsvCandidate(active));
   await harness.lifecycle.adoptPending("initial-upload");
+  assert.equal(harness.dashboard.dataSources?.["upload-active"], undefined);
+  assert.equal(harness.dashboard.datasetProfiles?.["upload-active"], undefined);
   await harness.lifecycle.setPendingNonUpload("existing-managed");
   assert.deepEqual(harness.lifecycle.snapshot(), {
     activeDraftId: active.draftId,

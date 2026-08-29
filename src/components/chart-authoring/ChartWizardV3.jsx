@@ -312,7 +312,9 @@ export default function ChartWizardV3({
     }));
   const [query, setQuery] = React.useState("");
   const [localRows, setLocalRows] = React.useState({});
-  const [sourceKind, setSourceKind] = React.useState("");
+  const [sourceKind, setSourceKind] = React.useState(
+    initialDraftState?.sourceSelection?.kind ?? "",
+  );
   const [manualTable, setManualTable] = React.useState(null);
   const [manualErrors, setManualErrors] = React.useState([]);
   const [uploadError, setUploadError] = React.useState("");
@@ -505,9 +507,15 @@ export default function ChartWizardV3({
     () => mergeCollections(safeLoadedData, localRows),
     [safeLoadedData, localRows],
   );
-  const rows = readEntry(runtimeLoadedData, wizard.draft?.sourceId) ?? [];
-  const source = wizard.source
-    ?? readEntry(effectiveDataSources, wizard.draft?.sourceId);
+  const selectedSourceId = wizard.sourceSelection?.sourceId
+    ?? wizard.draft?.sourceId
+    ?? "";
+  const rows = readEntry(runtimeLoadedData, selectedSourceId)
+    ?? wizard.sourceSelection?.rows
+    ?? [];
+  const source = wizard.sourceSelection?.source
+    ?? wizard.source
+    ?? readEntry(effectiveDataSources, selectedSourceId);
   const geoData = readEntry(
     effectiveGeoDataSources,
     wizard.draft?.presentation?.map?.geoSource,
@@ -525,11 +533,14 @@ export default function ChartWizardV3({
     }), [wizard.draft, rows, geoData, authorMetadata]);
   const profiles = React.useMemo(() => {
     const cached = mergeCollections(safeDatasetProfiles, wizard.profiles);
-    const sourceId = wizard.draft?.sourceId;
-    return sourceId
-      ? { ...cached, [sourceId]: runtime.profile }
+    const selectedProfile = wizard.sourceSelection?.profile ?? runtime.profile;
+    return selectedSourceId
+      ? { ...cached, [selectedSourceId]: selectedProfile }
       : cached;
-  }, [safeDatasetProfiles, wizard.profiles, wizard.draft?.sourceId, runtime.profile]);
+  }, [safeDatasetProfiles, wizard.profiles, wizard.sourceSelection?.profile, selectedSourceId, runtime.profile]);
+  const sourceProfile = selectedSourceId
+    ? wizard.sourceSelection?.profile ?? runtime.profile
+    : null;
 
   if (!open) return null;
   const syncedWizard = {
@@ -539,7 +550,8 @@ export default function ChartWizardV3({
   };
   const form = buildWizardFormModel({
     draft: wizard.draft,
-    profile: runtime.profile,
+    sourceSelection: wizard.sourceSelection,
+    profile: sourceProfile,
     prepared: runtime.prepared,
     chronoGroups: wizard.chronoGroups,
     geoSources,
@@ -741,6 +753,7 @@ export default function ChartWizardV3({
     }
     let next = reduceWizardState(syncedWizard, {
       type: "requestSourceChange",
+      kind: nextUi.kind,
       ...action,
     });
     if (next.confirmation === "changeSource") {
@@ -940,7 +953,7 @@ export default function ChartWizardV3({
     try {
       await csvDraftLifecycle.discardAll("chart-csv-source-reset");
       dispatch({ type: "confirmClearSource" });
-      clearUploadedCsvUi(wizard.draft?.sourceId);
+      clearUploadedCsvUi(selectedSourceId);
       setSubmissionError("");
     } catch (error) {
       setSubmissionError(safeMessage(error));
@@ -1116,7 +1129,7 @@ export default function ChartWizardV3({
         if (sourceKind === "upload") {
           await csvDraftLifecycle.discardAll("chart-csv-validation-or-persistence-failure");
           setWizard((current) => clearSelectedSource(current));
-          clearUploadedCsvUi(wizard.draft?.sourceId);
+          clearUploadedCsvUi(selectedSourceId);
         }
         await discardGeoDraft("chart-geojson-validation-or-persistence-failure");
         setSubmissionError(safeMessage(error));
@@ -1322,11 +1335,9 @@ export default function ChartWizardV3({
           ? React.createElement(ChartTypePicker, {
               value: wizard.draft?.typeId ?? "",
               query,
+              sourceProfile,
               onQueryChange: setQuery,
               onChange: (typeId) => {
-                setSourceKind("");
-                setManualTable(null);
-                setManualErrors([]);
                 dispatch({
                   type: "selectType",
                   typeId,
@@ -1343,7 +1354,6 @@ export default function ChartWizardV3({
                     },
                   },
                 });
-                navigateCreationStage("data-source");
               },
             })
           : null,
@@ -1352,10 +1362,10 @@ export default function ChartWizardV3({
               dashboard,
               dataSources: effectiveDataSources,
               loadedData: safeLoadedData,
-              selectedSourceId: wizard.draft?.sourceId ?? "",
+              selectedSourceId,
               selectedSource: source,
-              selectedSourceKind: sourceKind,
-              profile: runtime.profile,
+              selectedSourceKind: sourceKind || wizard.sourceSelection?.kind || "",
+              profile: sourceProfile,
               manualAllowed: wizard.draft
                 ? manualDataAllowed(getChartSchema(wizard.draft.typeId))
                 : false,
@@ -1791,8 +1801,8 @@ function deriveVisibleStageStatuses({
   );
   const complete = {
     destination: placementProof.status === "valid",
-    "chart-type": Boolean(wizard.draft?.typeId),
     "data-source": legacyComplete.source === true,
+    "chart-type": Boolean(wizard.draft?.typeId),
     "map-and-prepare-data": legacyComplete.roles === true,
     "configure-chart": legacyComplete.style === true && renderProof.status === "valid",
     "review-and-create": canCreate
@@ -1801,9 +1811,9 @@ function deriveVisibleStageStatuses({
   };
   const prerequisites = {
     destination: true,
-    "chart-type": complete.destination,
-    "data-source": complete["chart-type"],
-    "map-and-prepare-data": complete["data-source"],
+    "data-source": complete.destination,
+    "chart-type": complete["data-source"],
+    "map-and-prepare-data": complete["chart-type"],
     "configure-chart": complete["map-and-prepare-data"],
     "review-and-create": complete["configure-chart"],
   };
@@ -1850,6 +1860,7 @@ export function isChartWizardStateDirty({
   if (!open || wizard?.closed) return false;
   return Boolean(
     wizard?.draft
+    || wizard?.sourceSelection
     || wizard?.source
     || sourceKind
     || manualTable
@@ -2037,7 +2048,7 @@ function uploadedGeoJsonDisplayName(fileName) {
 }
 
 function clearSelectedSource(wizard) {
-  if (!wizard?.draft?.sourceId) return wizard;
+  if (!wizard?.sourceSelection?.sourceId && !wizard?.draft?.sourceId) return wizard;
   return reduceWizardState({ ...wizard, confirmation: "clearSource" }, {
     type: "confirmClearSource",
   });

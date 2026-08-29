@@ -21,6 +21,7 @@ function ChartTypePicker({
     sourceProfile,
     selected: value ? { chartTypeId: value } : null,
   });
+  const compatibilityKnown = sourceProfile !== null && sourceProfile !== undefined;
   const groupLabels = new Map(registry.groups().map(({ id, label }) => [id, label]));
   const groups = [...new Set(options.map(({ category: id }) => id))].map((id) => ({
     id,
@@ -45,7 +46,11 @@ function ChartTypePicker({
     },
     /* @__PURE__ */ React.createElement("option", { value: "" }, "All purposes"),
     registry.groups().map((group) => /* @__PURE__ */ React.createElement("option", { key: group.id, value: group.id }, group.label)),
-  ), /* @__PURE__ */ React.createElement("div", { className: "chart-type-purpose-groups" }, groups.map((group) => /* @__PURE__ */ React.createElement(
+  ), !compatibilityKnown ? /* @__PURE__ */ React.createElement(
+    "p",
+    { className: "chart-type-compatibility-guidance", role: "status" },
+    "Choose or profile a data source to check compatibility.",
+  ) : null, /* @__PURE__ */ React.createElement("div", { className: "chart-type-purpose-groups" }, groups.map((group) => /* @__PURE__ */ React.createElement(
     "section",
     {
       className: "chart-type-purpose-group",
@@ -59,7 +64,7 @@ function ChartTypePicker({
         className: "simex-icon-control chart-type-card",
         key: chart.id,
         type: "button",
-        "aria-label": `${chart.label}. ${chart.description}. ${chart.reason}`,
+        "aria-label": `${chart.label}. ${chart.description}${compatibilityKnown ? `. ${chart.reason}` : ""}`,
         "aria-pressed": value === chart.id,
         disabled: chart.compatibility === "incompatible",
         onClick: () => onChange(chart.id)
@@ -69,7 +74,7 @@ function ChartTypePicker({
         size: 28
       }),
       /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-label" }, chart.label),
-      /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-reason" }, chart.reason)
+      compatibilityKnown ? /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-reason" }, chart.reason) : null
     )))
   ))), groups.length === 0 ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "chart-authoring-empty", role: "status" }, "No chart types match this search by name, purpose, or description."), safeQuery ? /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => onQueryChange("") }, "Clear search") : null) : null);
 }

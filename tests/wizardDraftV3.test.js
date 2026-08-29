@@ -49,19 +49,19 @@ const loadedRows = [
 test("Add chart retains its exact six-stage contract", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
     "destination",
-    "chart-type",
     "data-source",
+    "chart-type",
     "map-and-prepare-data",
     "configure-chart",
     "review-and-create",
   ]);
   assert.deepEqual(CHART_CREATION_STAGE_LABELS, [
     "Destination",
-    "Chart type",
     "Data source",
-    "Map and prepare data",
-    "Configure chart",
-    "Review and create",
+    "Chart type",
+    "Map and prepare",
+    "Configure",
+    "Review",
   ]);
 });
 
@@ -122,7 +122,7 @@ test("every wizard tab is directly navigable before prerequisites are complete",
   });
 
   assert.equal(next.activeStep, "style");
-  assert.equal(initial.activeStep, "type");
+  assert.equal(initial.activeStep, "source");
   assert.throws(
     () => reduceWizardState(initial, {
       type: "navigate",
@@ -132,16 +132,66 @@ test("every wizard tab is directly navigable before prerequisites are complete",
   );
 });
 
-test("choosing a chart type advances directly to data-source selection", () => {
-  const initial = createWizardState();
-  const selected = reduceWizardState(initial, {
-    type: "selectType",
-    typeId: "line",
+test("a profiled source exists before chart type and survives initial selection and retyping", () => {
+  const rows = [
+    { reportedAt: "2027-05-01", value: 10 },
+    { reportedAt: "2027-05-02", value: 12 },
+  ];
+  const sourceProfile = profileDataset(rows);
+  const source = {
+    kind: "dataset",
+    type: "uploadedCsv",
+    fileName: "observations.csv",
+    csvText: "reportedAt,value\n2027-05-01,10\n2027-05-02,12\n",
+  };
+  const initial = createWizardState({
+    destination: { pageId: "overview", sectionId: "response" },
+  });
+  const sourceSelected = reduceWizardState(initial, {
+    type: "requestSourceChange",
+    sourceId: "observations",
+    source,
+    rows,
+    profile: sourceProfile,
+    kind: "upload",
   });
 
-  assert.equal(initial.activeStep, "type");
-  assert.equal(selected.activeStep, "source");
+  assert.equal(sourceSelected.draft, null);
+  assert.equal(sourceSelected.stageStatuses["data-source"], "Complete");
+  assert.equal(
+    sourceSelected.stageStatuses["map-and-prepare-data"],
+    "Waiting on prerequisite",
+  );
+  assert.deepEqual(sourceSelected.sourceSelection, {
+    sourceId: "observations",
+    source,
+    profile: sourceProfile,
+    rows,
+    kind: "upload",
+  });
+  assert.equal(initial.sourceSelection, null);
+
+  const selected = reduceWizardState(sourceSelected, {
+    type: "selectType",
+    typeId: "line",
+    chart: { id: "observations-chart" },
+  });
+
+  assert.equal(selected.activeStep, "roles");
+  assert.equal(selected.stage, "map-and-prepare-data");
   assert.equal(selected.draft.typeId, "line");
+  assert.equal(selected.draft.sourceId, "observations");
+  assert.deepEqual(selected.sourceSelection, sourceSelected.sourceSelection);
+  assert.deepEqual(selected.loadedData.observations, rows);
+  assert.deepEqual(selected.profiles.observations, sourceProfile);
+
+  const retyped = reduceWizardState(selected, {
+    type: "selectType",
+    typeId: "bar",
+  });
+  assert.equal(retyped.draft.typeId, "bar");
+  assert.equal(retyped.draft.sourceId, "observations");
+  assert.deepEqual(retyped.sourceSelection, sourceSelected.sourceSelection);
 });
 
 test("wizard style clears delete optional leaves and prune an empty series object", () => {
@@ -487,6 +537,8 @@ test("changing chart type keeps logical identity and removes only the draft's st
   });
 
   assert.equal(state.draft.id, "changing-chart");
+  assert.equal(state.draft.sourceId, "exercise-data");
+  assert.equal(state.sourceSelection.sourceId, "exercise-data");
   assert.equal(state.draft.interaction.timeSync, null);
   assert.deepEqual(
     state.chronoGroups[0].members.map(({ chartId }) => chartId),

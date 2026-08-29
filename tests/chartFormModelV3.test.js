@@ -816,7 +816,7 @@ test("sections are contextual because only schema-declared fields materialize", 
   assert.equal(model.sections.some(({ fields }) => fields.length === 0), false);
 });
 
-test("wizard prerequisites explain incomplete destinations without disabling them", () => {
+test("wizard form keeps source first and complete before a chart draft exists", () => {
   const model = buildWizardFormModel({
     draft: null,
     profile: null,
@@ -824,11 +824,15 @@ test("wizard prerequisites explain incomplete destinations without disabling the
   });
 
   assert.deepEqual(model.steps.map(({ id }) => id), [
-    "type",
     "source",
+    "type",
     "roles",
     "style",
   ]);
+  assert.deepEqual(
+    model.steps.find(({ id }) => id === "source").prerequisites,
+    [],
+  );
   assert.match(
     model.steps
       .find(({ id }) => id === "style")
@@ -837,4 +841,26 @@ test("wizard prerequisites explain incomplete destinations without disabling the
     /Choose a chart type/,
   );
   assert.equal(model.steps.every(({ navigable }) => navigable), true);
+
+  const sourceProfile = datasetProfile();
+  const withSource = buildWizardFormModel({
+    draft: null,
+    sourceSelection: {
+      sourceId: "exercise-data",
+      source: null,
+      profile: sourceProfile,
+      rows: [{ reportedAt: "2027-05-01", value: 10 }],
+      kind: "existing",
+    },
+    profile: sourceProfile,
+    prepared: null,
+  });
+  assert.equal(
+    withSource.steps.find(({ id }) => id === "source").complete,
+    true,
+  );
+  assert.equal(
+    withSource.steps.find(({ id }) => id === "type").complete,
+    false,
+  );
 });
