@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildEditorFormModel,
   buildFormPreparationKey,
+  buildQuickEditorFormModel,
   buildWizardFormModel,
 } from "../src/charting/forms/formModel.js";
 import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
@@ -635,6 +636,58 @@ test("legend visibility is exposed only by renderers that consume it", () => {
       .find(({ id }) => id === "appearance")
       .fields.some(({ id }) => id === "legendVisible"),
     false,
+  );
+});
+
+test("quick editor fields expose only supported quick presentation controls", () => {
+  const axis = lineChart({
+    presentation: {
+      title: { align: "left", visible: false },
+      background: { color: "#FFFFFF", transparent: false },
+      legend: { visible: false },
+      series: { colors: ["#043BCB", "#36BDEB"] },
+      referenceLine: {
+        visible: true,
+        value: 12,
+        label: "Target",
+        color: "#E56B2F",
+        lineStyle: "dashed",
+      },
+    },
+  });
+  const axisModel = buildQuickEditorFormModel({ chart: axis });
+
+  assert.deepEqual(
+    axisModel.sections[0].fields.map(({ id, path }) => ({ id, path })),
+    [
+      { id: "title", path: ["title"] },
+      { id: "titleVisible", path: ["presentation", "title", "visible"] },
+      { id: "background", path: ["presentation", "background", "color"] },
+      { id: "legendVisible", path: ["presentation", "legend", "visible"] },
+      { id: "seriesColors", path: ["presentation", "series", "colors"] },
+      {
+        id: "referenceLineColor",
+        path: ["presentation", "referenceLine", "color"],
+      },
+    ],
+  );
+  assert.equal(
+    axisModel.sections[0].fields.find(({ id }) => id === "titleVisible").value,
+    false,
+  );
+  assert.equal(
+    axisModel.sections[0].fields.find(({ id }) => id === "legendVisible").value,
+    false,
+  );
+  assert.equal(
+    axisModel.sections[0].fields.find(({ id }) => id === "referenceLineColor").value,
+    "#E56B2F",
+  );
+
+  const unsupported = buildQuickEditorFormModel({ chart: kpiChart() });
+  assert.deepEqual(
+    unsupported.sections[0].fields.map(({ id }) => id),
+    ["title", "titleVisible", "background"],
   );
 });
 

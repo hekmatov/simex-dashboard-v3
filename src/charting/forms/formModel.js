@@ -23,6 +23,14 @@ const LEGEND_PRESENTATION_RENDERERS = new Set([
   "relationship",
 ]);
 
+const QUICK_PRESENTATION_FIELD_IDS = new Set([
+  "title",
+  "titleVisible",
+  "background",
+  "legendVisible",
+  "seriesColors",
+]);
+
 const INTERPRETATION_LABELS = Object.freeze({
   any: "Automatic",
   number: "Number",
@@ -147,6 +155,44 @@ export function buildEditorFormModel({
   return {
     sections,
     valid: previewReady && chartIsValid(chart, profile),
+  };
+}
+
+export function buildQuickEditorFormModel({ chart } = {}) {
+  if (!chart || typeof chart !== "object") {
+    throw new TypeError("A chart draft is required to build its quick form.");
+  }
+  const schema = getChartSchema(chart.typeId);
+  if (schema.authoringWorkflow !== "chart") {
+    throw new Error(`Chart type "${schema.typeId}" does not use chart quick editing.`);
+  }
+  const fields = appearanceFields({ chart, schema }).flatMap((field) => {
+    if (QUICK_PRESENTATION_FIELD_IDS.has(field.id)) return [field];
+    if (field.id !== "referenceLine") return [];
+    const referenceLine = chart.presentation?.referenceLine;
+    if (
+      !referenceLine
+      || typeof referenceLine !== "object"
+      || Array.isArray(referenceLine)
+    ) {
+      return [];
+    }
+    return [{
+      id: "referenceLineColor",
+      label: "Reference line color",
+      control: "color",
+      path: ["presentation", "referenceLine", "color"],
+      value: referenceLine.color ?? "",
+    }];
+  });
+  return {
+    sections: [{
+      id: "quick-appearance",
+      label: "Quick appearance",
+      fields,
+      advanced: false,
+    }],
+    valid: chartIsValid(chart),
   };
 }
 

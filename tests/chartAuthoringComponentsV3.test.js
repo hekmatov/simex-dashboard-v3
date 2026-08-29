@@ -31,6 +31,10 @@ import {
   buildWizardFormModel,
 } from "../src/charting/forms/formModel.js";
 import {
+  createChartEditSession,
+  reduceChartEditSession,
+} from "../src/charting/forms/chartEditSession.js";
+import {
   applyGeographySourceSelection,
 } from "../src/charting/forms/geographySource.js";
 import * as geographySource from "../src/charting/forms/geographySource.js";
@@ -168,6 +172,12 @@ const {
   default: EditSessionActions,
 } = await import(
   "../src/components/chart-authoring/EditSessionActions.jsx"
+);
+const { default: ChartFootprintPicker } = await import(
+  "../src/components/chart-authoring/ChartFootprintPicker.jsx"
+);
+const { default: ChartQuickEditor } = await import(
+  "../src/components/chart-authoring/ChartQuickEditor.jsx"
 );
 const { IconControl } = await import(
   "../src/components/common/SimExIcon.js"
@@ -2563,6 +2573,156 @@ test("pending chart persistence disables and guards removal", () => {
   assert.equal(remove.props.disabled, true);
   remove.props.onClick();
   assert.equal(removals, 0);
+});
+
+test("quick editor renders the complete controlled surface without full-editor ownership", () => {
+  const chart = validLineChart({
+    presentation: {
+      background: { color: "#FFFFFF", transparent: false },
+      series: { colors: ["#043BCB", "#36BDEB"] },
+      referenceLine: {
+        visible: true,
+        value: 7,
+        label: "Target",
+        color: "#E56B2F",
+        lineStyle: "dashed",
+      },
+    },
+  });
+  const session = reduceChartEditSession(
+    createChartEditSession({ placementId: "placement-line", chart }),
+    {
+      type: "CHANGE",
+      surface: "quick",
+      draft: { ...chart, title: "Locally edited title" },
+    },
+  );
+  const html = render(React.createElement(ChartQuickEditor, {
+    session,
+    onDraftChange() {},
+    onSave() {},
+    onReset() {},
+    onClose() {},
+    onRemove() {},
+    onOpenFullEditor() {},
+  }));
+
+  assert.match(html, /Quick edit/);
+  assert.match(html, /Chart title/);
+  assert.match(html, /Show title/);
+  assert.match(html, /Background/);
+  assert.match(html, /Show legend/);
+  assert.match(html, /Series colors/);
+  assert.match(html, /Reference line color/);
+  assert.match(html, /Chart size/);
+  assert.match(html, />Open full editor<\/button>/);
+  assert.match(html, /aria-label="Save"/);
+  assert.match(html, /aria-label="Reset"/);
+  assert.match(html, /aria-label="Close"/);
+  assert.match(html, /aria-label="Remove chart"/);
+  assert.doesNotMatch(html, /chart-editor-backdrop|chart-editor-preview|editor\.tab\./);
+});
+
+test("quick editor emits detached draft changes and delegates every session action", () => {
+  const chart = validLineChart();
+  const session = reduceChartEditSession(
+    createChartEditSession({
+      placementId: "placement-line",
+      chart,
+    }),
+    {
+      type: "CHANGE",
+      surface: "quick",
+      draft: { ...chart, title: "Existing quick draft" },
+    },
+  );
+  const drafts = [];
+  const actions = [];
+  let prevented = 0;
+  const tree = ChartQuickEditor({
+    session,
+    onDraftChange(nextDraft) {
+      drafts.push(nextDraft);
+    },
+    onSave() { actions.push("save"); },
+    onReset() { actions.push("reset"); },
+    onClose() { actions.push("close"); },
+    onRemove() { actions.push("remove"); },
+    onOpenFullEditor() { actions.push("full"); },
+  });
+  const quickSection = findElement(tree, (element) => (
+    element.type === GeneratedFormSection
+  ));
+  const footprint = findElement(tree, (element) => (
+    element.type === ChartFootprintPicker
+  ));
+  const editActions = findElement(tree, (element) => (
+    element.type === EditSessionActions
+  ));
+  const form = findElement(tree, (element) => element.type === "form");
+  const openFull = findElement(tree, (element) => (
+    element.type === "button" && element.props.children === "Open full editor"
+  ));
+
+  quickSection.props.onChange(["title"], "Detached title");
+  quickSection.props.onChange(
+    ["presentation", "title", "visible"],
+    false,
+  );
+  footprint.props.onChange({ columns: 3, rows: 2 });
+  form.props.onSubmit({ preventDefault() { prevented += 1; } });
+  editActions.props.onRequestReset();
+  editActions.props.onCancel();
+  editActions.props.onRemove();
+  openFull.props.onClick();
+
+  assert.equal(prevented, 1);
+  assert.deepEqual(actions, ["save", "reset", "close", "remove", "full"]);
+  assert.equal(chart.title, "Contract line");
+  assert.equal(chart.presentation.title.visible, undefined);
+  assert.equal(session.draft.presentation.title.visible, undefined);
+  assert.deepEqual(chart.layout, { size: "standard" });
+  assert.deepEqual(session.draft.layout, { size: "standard" });
+  assert.equal(drafts[0].title, "Detached title");
+  assert.equal(drafts[1].presentation.title.visible, false);
+  assert.deepEqual(drafts[2].layout, {
+    size: "standard",
+    width: 3,
+    height: 2,
+  });
+  assert.notEqual(drafts[0], session.draft);
+  assert.notEqual(drafts[1].presentation, session.draft.presentation);
+});
+
+test("quick editor keeps clean and locked saves inert while preserving full-editor access gating", () => {
+  const session = createChartEditSession({
+    placementId: "placement-line",
+    chart: validLineChart(),
+  });
+  const clean = render(React.createElement(ChartQuickEditor, { session }));
+  const cleanSave = buttonMarkupByInteraction(clean, "editor.save-changes");
+  assert.match(cleanSave, /disabled=""/);
+
+  const actions = [];
+  const lockedTree = ChartQuickEditor({
+    session,
+    disabled: true,
+    onSave() { actions.push("save"); },
+    onOpenFullEditor() { actions.push("full"); },
+  });
+  const form = findElement(lockedTree, (element) => element.type === "form");
+  const openFull = findElement(lockedTree, (element) => (
+    element.type === "button" && element.props.children === "Open full editor"
+  ));
+  const editActions = findElement(lockedTree, (element) => (
+    element.type === EditSessionActions
+  ));
+
+  form.props.onSubmit({ preventDefault() {} });
+  openFull.props.onClick();
+  assert.deepEqual(actions, []);
+  assert.equal(openFull.props.disabled, true);
+  assert.equal(editActions.props.disabled, true);
 });
 
 test("pending chart creation guards Escape, Close, and discard", () => {
