@@ -773,6 +773,53 @@ test("compatible source changes apply immediately and preserve mappings immutabl
   assert.deepEqual(state, before);
 });
 
+test("replacement source compatibility validates numeric interpretation against profile evidence", () => {
+  const currentRows = [{ metric: 4 }];
+  let state = createWizardState({
+    loadedData: { current: currentRows },
+    profiles: { current: profileDataset(currentRows) },
+  });
+  state = reduceWizardState(state, {
+    type: "selectType",
+    typeId: "kpi",
+    chart: { id: "source-switch", title: "Current metric" },
+  });
+  state = reduceWizardState(state, {
+    type: "selectSource",
+    sourceId: "current",
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "value",
+    value: { field: "metric", interpretation: "number" },
+  });
+
+  const replacement = (sourceId, type, value) => reduceWizardState(state, {
+    type: "requestSourceChange",
+    sourceId,
+    source: null,
+    rows: [{ metric: value }],
+    profile: {
+      rowCount: 1,
+      columns: [{ name: "metric", type, examples: [value] }],
+    },
+  });
+
+  const text = replacement("text-metric", "text", "not numeric");
+  assert.equal(text.confirmation, "changeSource");
+  assert.equal(text.draft, state.draft);
+
+  for (const [sourceId, type] of [
+    ["numeric-metric", "numeric"],
+    ["number-metric", "number"],
+  ]) {
+    const compatible = replacement(sourceId, type, 6);
+    assert.equal(compatible.confirmation, null);
+    assert.equal(compatible.draft.sourceId, sourceId);
+    assert.deepEqual(compatible.draft.roles, state.draft.roles);
+  }
+});
+
 test("incompatible source changes require explicit confirmation and cancellation preserves the draft", () => {
   const firstRows = [
     { period: "May", capacity: 4, region: "North" },

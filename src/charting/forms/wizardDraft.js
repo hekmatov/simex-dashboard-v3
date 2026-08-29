@@ -5,6 +5,7 @@ import {
 } from "../config/chartConfigV3.js";
 import {
   canonicalColumnType,
+  resolveBindingValue,
   resolveEffectiveBinding,
 } from "../data/bindings.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
@@ -723,8 +724,11 @@ function sourceMappingsAreCompatible(draft, profile) {
       const effectiveType = resolveEffectiveBinding(binding, column).type
         ?? canonicalColumnType(column.type);
       if (
-        !role.accepts.includes("any")
-        && !role.accepts.includes(effectiveType)
+        !bindingHasCompatibleProfileEvidence(binding, column, effectiveType)
+        || (
+          !role.accepts.includes("any")
+          && !role.accepts.includes(effectiveType)
+        )
       ) {
         return false;
       }
@@ -737,6 +741,28 @@ function sourceMappingsAreCompatible(draft, profile) {
     if (!columns.has(field)) return false;
   }
   return true;
+}
+
+function bindingHasCompatibleProfileEvidence(binding, column, effectiveType) {
+  if (!["temporal", "number", "boolean"].includes(effectiveType)) return true;
+  const values = presentProfileEvidence(column, effectiveType);
+  if (values.length === 0) return effectiveType !== "temporal";
+  return values.every((value) => resolveBindingValue(value, binding, column).ok);
+}
+
+function presentProfileEvidence(column, effectiveType) {
+  const values = Array.isArray(column.values)
+    ? column.values
+    : Array.isArray(column.examples)
+      ? column.examples
+      : effectiveType === "temporal" && Array.isArray(column.temporal?.values)
+        ? column.temporal.values
+        : [];
+  return values.filter((value) => (
+    value !== null
+    && value !== undefined
+    && !(typeof value === "string" && value.trim() === "")
+  ));
 }
 
 function hasSourceMappings(draft) {
