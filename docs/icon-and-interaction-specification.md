@@ -40,9 +40,9 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 
 | Measure | Count |
 | --- | ---: |
-| Approved glyphs | 114 |
-| Unique interaction records | 129 |
-| Surface interaction references | 140 |
+| Approved glyphs | 115 |
+| Unique interaction records | 130 |
+| Surface interaction references | 141 |
 | Surfaces | 14 |
 | Chart pictograms | 27 |
 | Visual states | 7 |
@@ -117,7 +117,7 @@ Surface ID: `refinements` · 12 references
 
 ## Dashboard shell
 
-Surface ID: `shell` · 27 references
+Surface ID: `shell` · 28 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -147,6 +147,7 @@ Surface ID: `shell` · 27 references
 | shell.report-an-issue | reportIssue | Report an issue | Report an issue | icon | standard | reference | none | — |
 | shell.contact | open | Contact | Contact | text | standard | reference | none | — |
 | shell.repository | open | Repository | Repository | text | standard | reference | none | — |
+| panel.move | moveFourWay | Move panel | Move panel | icon | standard | live | conditional | Four-arrow drag handle with keyboard and single-pointer destination alternatives |
 | shell.icon-accent | palette | Icon accent | Icon accent | icon | standard | live | none | Sets the dashboard-wide secondary icon accent |
 
 ## Synchronized playback

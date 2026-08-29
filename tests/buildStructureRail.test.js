@@ -10,9 +10,15 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const { default: BuildStructureRail } = await vite.ssrLoadModule(
-  "/src/components/build/BuildStructureRail.jsx",
-);
+const [
+  { default: BuildStructureRail },
+  moveDialogModule,
+  moveConfirmationModule,
+] = await Promise.all([
+  vite.ssrLoadModule("/src/components/build/BuildStructureRail.jsx"),
+  vite.ssrLoadModule("/src/components/build/BuildMoveDialog.jsx").catch(() => null),
+  vite.ssrLoadModule("/src/components/build/BuildMoveConfirmationDialog.jsx").catch(() => null),
+]);
 await vite.close();
 
 test("Structure tree exposes the selected roving item without temporal library content", () => {
@@ -29,4 +35,64 @@ test("Structure tree exposes the selected roving item without temporal library c
   assert.match(html, /build-tree-group/);
   assert.doesNotMatch(html, />Chrono Groups</);
   assert.doesNotMatch(html, />Period</);
+  assert.match(html, /<button(?=[^>]*aria-label="Move page One")(?=[^>]*draggable="true")[^>]*>/);
+  assert.match(html, /<button(?=[^>]*aria-label="Move section Overview")(?=[^>]*draggable="true")[^>]*>/);
+});
+
+test("Scene consequence dialog names every affected Scene, chart, unresolved frame source, and Present fallback", () => {
+  const html = renderToStaticMarkup(React.createElement(moveConfirmationModule.default, {
+    analysis: {
+      consequences: [
+        { type: "scene-partial-split", sceneId: "one", sceneName: "Morning brief", chartNames: ["Cases"] },
+        { type: "scene-frame-source-unresolved", sceneId: "one", sceneName: "Morning brief", chartNames: ["Cases"] },
+        { type: "scene-present-fallback", sceneId: "two", sceneName: "Evening brief", chartNames: ["Cases"], presentLayout: "single", presentChartIds: ["Capacity"] },
+      ],
+    },
+    onCancel() {},
+    onConfirm() {},
+  }));
+
+  assert.match(html, /Morning brief/);
+  assert.match(html, /Evening brief/);
+  assert.match(html, /Cases/);
+  assert.match(html, /Frame source becomes unresolved/);
+  assert.match(html, /Present fallback/);
+  assert.match(html, />Confirm move</);
+  assert.match(html, />Cancel</);
+});
+
+test("Move dialog exposes a single-pointer destination path and exact actions", () => {
+  assert.equal(typeof moveDialogModule?.default, "function");
+  const BuildMoveDialog = moveDialogModule.default;
+  const html = renderToStaticMarkup(React.createElement(BuildMoveDialog, {
+    open: true,
+    dashboard: {
+      pages: [{ id: "one", label: "One", sections: [{ id: "a", title: "A", panels: [] }] }, { id: "two", label: "Two", sections: [{ id: "b", title: "B", panels: [] }] }],
+    },
+    source: { kind: "section", pageId: "one", sectionId: "a" },
+    sourceLabel: "A",
+    onCancel() {},
+    onMove() {},
+  }));
+
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /aria-label="Destination"/);
+  assert.match(html, />Move A</);
+  assert.match(html, />Move</);
+  assert.match(html, />Cancel</);
+});
+
+test("Move dialogs trap Tab focus inside their active controls", () => {
+  const first = { focusCalls: 0, focus() { this.focusCalls += 1; } };
+  const last = { focusCalls: 0, focus() { this.focusCalls += 1; } };
+  const container = { querySelectorAll() { return [first, last]; } };
+  const forward = { key: "Tab", shiftKey: false, target: last, prevented: false, preventDefault() { this.prevented = true; } };
+  const backward = { key: "Tab", shiftKey: true, target: first, prevented: false, preventDefault() { this.prevented = true; } };
+
+  assert.equal(moveDialogModule.trapDialogTabKey(forward, container), true);
+  assert.equal(forward.prevented, true);
+  assert.equal(first.focusCalls, 1);
+  assert.equal(moveDialogModule.trapDialogTabKey(backward, container), true);
+  assert.equal(backward.prevented, true);
+  assert.equal(last.focusCalls, 1);
 });

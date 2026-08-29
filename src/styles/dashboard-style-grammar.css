@@ -660,7 +660,7 @@
   border: 0 !important;
   box-shadow: none;
   gap: 6px;
-  grid-template-columns: 44px 20px minmax(0, 1fr);
+  grid-template-columns: 44px 20px minmax(0, 1fr) 44px;
 }
 
 .app-frame .dashboard-map-panel .build-tree-caret {
@@ -1175,6 +1175,10 @@
   background: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-subtle);
   color: var(--simex-text-strong);
+}
+
+.app-frame .canonical-dashboard-frame .collection-display-header {
+  padding-right: 196px;
 }
 
 :is(.app-frame, .unit-orbit) :is(.chart-type-picker, .chart-authoring-preview) {

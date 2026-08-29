@@ -48,6 +48,7 @@ const glyphs = {
     closeAll: `<path d="m4 4 5 5m0-5L4 9m11-5 5 5m0-5-5 5M4 15l5 5m0-5-5 5"></path><path class="accent-stroke" d="m15 15 5 5m0-5-5 5"></path>`,
     reorderPrevious: `<circle class="soft-fill" cx="5" cy="8" r="1"></circle><circle class="soft-fill" cx="5" cy="12" r="1"></circle><circle class="soft-fill" cx="5" cy="16" r="1"></circle><path class="accent-stroke" d="m15 7-5 5 5 5"></path>`,
     reorderNext: `<circle class="soft-fill" cx="19" cy="8" r="1"></circle><circle class="soft-fill" cx="19" cy="12" r="1"></circle><circle class="soft-fill" cx="19" cy="16" r="1"></circle><path class="accent-stroke" d="m9 7 5 5-5 5"></path>`,
+    moveFourWay: `<path d="M12 3v18M3 12h18"></path><path class="accent-stroke" d="m8 7 4-4 4 4m-4 14-4-4m4 4 4-4M7 8l-4 4 4 4m14-4-4-4m4 4-4 4"></path>`,
     layoutSolo: `<rect x="5" y="4" width="14" height="16" rx="2"></rect><rect class="accent-fill" x="8" y="7" width="8" height="10" rx="1"></rect>`,
     layoutSide: `<rect x="3" y="5" width="8" height="14" rx="1.5"></rect><rect class="accent-fill" x="13" y="5" width="8" height="14" rx="1.5"></rect>`,
     layoutOver: `<rect x="4" y="3" width="16" height="8" rx="1.5"></rect><rect class="accent-fill" x="4" y="13" width="16" height="8" rx="1.5"></rect>`,

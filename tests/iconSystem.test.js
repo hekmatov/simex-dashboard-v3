@@ -60,7 +60,7 @@ test("the icon catalogue resolves every approved interaction and surface referen
         + (surface.chartTypeIds?.length ?? 0),
       0,
     ),
-    167,
+    168,
   );
   for (const duplicateId of [
     "shell.open-editable-tab.1",
@@ -122,6 +122,10 @@ test("interaction metadata preserves the approved accessibility and state semant
   assert.equal(getInteraction("chart.remove").tone, "danger");
   assert.equal(getInteraction("transport.fast-forward").status, "planned");
   assert.equal(getInteraction("playback.current-time").renderMode, "text");
+  assert.deepEqual(
+    pick(getInteraction("panel.move"), ["glyphId", "label", "renderMode", "status"]),
+    { glyphId: "moveFourWay", label: "Move panel", renderMode: "icon", status: "live" },
+  );
 });
 
 test("presentation connection interactions resolve through the canonical catalogue", () => {

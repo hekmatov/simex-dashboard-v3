@@ -8,6 +8,8 @@ import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import StaticContentEditor from "./static-content/StaticContentEditor.jsx";
 import StaticContentWizard, { cleanupImageDraftAssets } from "./static-content/StaticContentWizard.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
+import BuildMoveDialog from "./build/BuildMoveDialog.jsx";
+import BuildMoveConfirmationDialog from "./build/BuildMoveConfirmationDialog.jsx";
 import DashboardPackageExportDialog from "./build/DashboardPackageExportDialog.jsx";
 import DeleteDashboardContentDialog from "./build/DeleteDashboardContentDialog.jsx";
 import {
@@ -32,11 +34,18 @@ import {
   removeBuildLayoutPage,
   removeBuildLayoutSection,
   renameBuildLayoutPage,
+  renameBuildLayoutPanel,
   renameBuildLayoutSection,
   reorderBuildLayoutPage,
-  reorderBuildLayoutPanel,
   reorderBuildLayoutSection,
 } from "./build/buildLayoutDraft.js";
+import { analyzeBuildLayoutMove, applyBuildLayoutMove } from "./build/buildLayoutMove.js";
+import {
+  BUILD_LAYOUT_MOVE_MIME,
+  canonicalMove,
+  createBuildMoveDragSession,
+  encodeBuildMovePayload,
+} from "./build/buildTreeInteraction.js";
 
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
@@ -249,6 +258,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [focusInspectorLabelKey, setFocusInspectorLabelKey] = React.useState(0);
   const [draggingPanelId, setDraggingPanelId] = React.useState(null);
   const [dragOverPanelId, setDragOverPanelId] = React.useState(null);
+  const panelDragSessionRef = React.useRef(null);
+  if (!panelDragSessionRef.current) panelDragSessionRef.current = createBuildMoveDragSession();
+  const [moveDialogRequest, setMoveDialogRequest] = React.useState(null);
+  const [moveConfirmation, setMoveConfirmation] = React.useState(null);
   const [multiSelectMode, setMultiSelectMode] = React.useState(false);
   const [multiPanelIds, setMultiPanelIds] = React.useState([]);
   const multiPanelIdsRef = React.useRef(multiPanelIds);
@@ -276,6 +289,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   React.useEffect(() => {
     buildLayoutDraftRef.current = buildLayoutDraft;
   }, [buildLayoutDraft]);
+  React.useEffect(() => {
+    if (!buildLayoutDraftRef.current || !["dirty", "error"].includes(buildLayoutDraftRef.current.status)) return;
+    const activity = buildPanelOpen ? "active" : "suspended";
+    if (buildLayoutDraftRef.current.activity === activity) return;
+    const next = { ...buildLayoutDraftRef.current, activity };
+    buildLayoutDraftRef.current = next;
+    setBuildLayoutDraft(next);
+  }, [buildPanelOpen]);
   const pendingEditCallbacksRef = React.useRef(null);
   pendingEditCallbacksRef.current = {
     onApplyPendingEdits,
@@ -409,7 +430,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     staticContent: staticContentDirty,
     structure: layoutDraftDirty,
     scenario: localDraftKeys.has("scenario") || externalDirty.scenario,
-    inlineRename: inlineRenameDirty,
+    inlineRename: false,
     pendingContent: pendingEdits.hasPending() || hasActiveContentRetainers(contentDraftRetainers),
     chronoGroup: localDraftKeys.has("chronoGroup") || externalDirty.chronoGroup,
     scene: localDraftKeys.has("scene") || externalDirty.scene,
@@ -774,8 +795,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function handleInlineRenameDirtyChange(dirty) {
-    setInlineRenameDirty(dirty === true);
-    onInlineRenameDirtyChange?.(dirty === true);
+    // Incomplete rename input is local UI state. The layout owner is acquired
+    // only after a valid semantic rename is staged.
+    setInlineRenameDirty(false);
+    onInlineRenameDirtyChange?.(false);
   }
 
   function requestDashboardPackageImport() {
@@ -1003,47 +1026,115 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     clearModeratorError("remove-chart");
   }
 
-  function handlePanelDragStart(event, panelId) {
+  function handlePanelDragStart(event, source) {
     if (moderatorOperationGateRef.current.isActive()) {
       event.preventDefault();
       return;
     }
-    setDraggingPanelId(panelId);
+    panelDragSessionRef.current.start(source);
+    setDraggingPanelId(source.placementId);
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", panelId);
+    event.dataTransfer.setData(BUILD_LAYOUT_MOVE_MIME, encodeBuildMovePayload(source));
+    const panel = event.currentTarget.closest("article");
+    if (panel) event.dataTransfer.setDragImage(panel, Math.min(event.clientX - panel.getBoundingClientRect().left, panel.clientWidth / 2), 24);
   }
 
-  function handlePanelDragOver(event, panelId) {
+  function handlePanelDragOver(event, target) {
     if (
       moderatorOperationGateRef.current.isActive()
       || !editMode
-      || !draggingPanelId
+      || !panelDragSessionRef.current.current()
     ) {
       return;
     }
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-    if (draggingPanelId === panelId) {
+    if (panelDragSessionRef.current.current().placementId === target.placementId) {
       setDragOverPanelId(null);
       return;
     }
-    setDragOverPanelId(panelId);
+    setDragOverPanelId(target.placementId ?? `${target.sectionId}:${target.edge}`);
   }
 
-  function handlePanelDrop(event, targetPanelId) {
+  function handlePanelDrop(event, target) {
     event.preventDefault();
     if (moderatorOperationGateRef.current.isActive()) return;
-    const sourcePanelId = event.dataTransfer.getData("text/plain") || draggingPanelId;
-    setBuildLayoutDraft((current) => reorderBuildLayoutPanel(
-      current ?? createBuildLayoutDraft(dashboard),
-      sourcePanelId,
-      targetPanelId,
-    ));
-    setDraggingPanelId(null);
-    setDragOverPanelId(null);
+    const source = panelDragSessionRef.current.resolve(event.dataTransfer.getData(BUILD_LAYOUT_MOVE_MIME));
+    const move = canonicalMove(source, target);
+    if (move) stageBuildLayoutMove(move, event.currentTarget);
+    clearDragState();
+  }
+
+  function requestPanelMove(source, label, invoker) {
+    setMoveDialogRequest({ source, label, invoker });
+  }
+
+  function stageBuildLayoutMove(move, invoker = null) {
+    if (!move || moderatorOperationGateRef.current.isActive()) return false;
+    const current = buildLayoutDraftRef.current ?? createBuildLayoutDraft(dashboardStateRef.current);
+    const analysis = analyzeBuildLayoutMove(current, move);
+    if (analysis.status !== "ready") return false;
+    if (analysis.requiresConfirmation) {
+      setMoveConfirmation({ analysis, invoker });
+      return true;
+    }
+    const next = applyBuildLayoutMove(current, analysis, { confirmed: true });
+    buildLayoutDraftRef.current = next;
+    setBuildLayoutDraft(next);
+    focusMovedLayoutTarget(analysis.targetId);
+    return true;
+  }
+
+  function confirmBuildLayoutMove() {
+    const pending = moveConfirmation;
+    if (!pending) return;
+    const current = buildLayoutDraftRef.current ?? createBuildLayoutDraft(dashboardStateRef.current);
+    const latest = analyzeBuildLayoutMove(current, pending.analysis.move);
+    if (latest.status !== "ready") {
+      setMoveConfirmation(null);
+      return;
+    }
+    const next = applyBuildLayoutMove(current, latest, { confirmed: true });
+    buildLayoutDraftRef.current = next;
+    setBuildLayoutDraft(next);
+    setMoveConfirmation(null);
+    focusMovedLayoutTarget(latest.targetId);
+  }
+
+  function focusMovedLayoutTarget(targetId) {
+    if (!targetId || typeof document === "undefined") return;
+    requestAnimationFrame(() => {
+      const escaped = globalThis.CSS?.escape ? CSS.escape(targetId) : targetId.replaceAll('"', '\\"');
+      document.querySelector(`[data-build-placement-id="${escaped}"]`)?.focus?.();
+      document.querySelector(`[data-build-node-id="${escaped}"]`)?.focus?.();
+    });
+  }
+
+  function focusLayoutOwner() {
+    if (!buildPanelOpen) return resumeLayoutOwner();
+    focusLayoutMapTarget(buildLayoutDraftRef.current?.targetId);
+    return true;
+  }
+
+  function resumeLayoutOwner() {
+    onOpenBuildPanel?.();
+    requestAnimationFrame(() => {
+      document.querySelector('[data-dashboard-map-region-control="structure"]')?.click?.();
+      requestAnimationFrame(() => focusLayoutMapTarget(buildLayoutDraftRef.current?.targetId));
+    });
+    return true;
+  }
+
+  function focusLayoutMapTarget(targetId) {
+    if (!targetId || typeof document === "undefined") return;
+    const nodes = [...document.querySelectorAll("[data-build-node-id]")];
+    const node = nodes.find((element) => element.dataset.buildNodeId === targetId);
+    node?.scrollIntoView?.({ block: "nearest" });
+    node?.focus?.();
   }
 
   function clearDragState() {
+    panelDragSessionRef.current.clear();
     setDraggingPanelId(null);
     setDragOverPanelId(null);
   }
@@ -1811,34 +1902,22 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   async function renameBuildSelection(selection, value) {
     const title = value.trim();
-    if (!title || !isValidBuildSelection(dashboardStateRef.current, selection)) return false;
-    try {
-      await pendingEdits.flush();
-      if (selection.kind === "page") {
-        changePage(selection.pageId, { label: title });
-        await pendingEdits.flush();
-        return true;
-      }
-      if (selection.kind === "section") {
-        changeSectionByIds(selection.pageId, selection.sectionId, { title });
-        await pendingEdits.flush();
-        return true;
-      }
-    } catch (error) {
-      setBuildSelectionError(boundedModeratorMessage(error));
-      return false;
-    }
-    if (selection.kind !== "chart") return false;
-    const placement = findPanelPlacement(dashboardStateRef.current, selection.placementId);
-    if (!placement?.chart) return false;
-    const result = await performModeratorOperation("rename-chart", async () => {
-      await onChartSave({
-        chart: structuredClone({ ...placement.chart, title }),
-        chronoGroups: structuredClone(dashboardStateRef.current.chronoGroups ?? []),
-      });
-      return true;
-    });
-    return result === true;
+    const currentDashboard = buildLayoutDraftRef.current?.value ?? dashboardStateRef.current;
+    if (!title || !isValidBuildSelection(currentDashboard, selection)) return false;
+    const current = buildLayoutDraftRef.current ?? createBuildLayoutDraft(dashboardStateRef.current);
+    const next = selection.kind === "page"
+      ? renameBuildLayoutPage(current, selection.pageId, title)
+      : selection.kind === "section"
+        ? renameBuildLayoutSection(current, selection.pageId, selection.sectionId, title)
+        : selection.kind === "chart"
+          ? renameBuildLayoutPanel(current, selection.placementId, title)
+          : current;
+    if (next === current || next.status !== "dirty") return false;
+    buildLayoutDraftRef.current = next;
+    setBuildLayoutDraft(next);
+    setInlineRenameDirty(false);
+    onInlineRenameDirtyChange?.(false);
+    return true;
   }
 
   function openChartWizard(sectionId) {
@@ -2231,6 +2310,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onActivate={requestBuildSelection}
       onRename={renameBuildSelection}
       onInlineRenameDirtyChange={handleInlineRenameDirtyChange}
+      onLayoutMove={stageBuildLayoutMove}
       revealRequest={buildRevealRequest}
       treeResetGeneration={buildTreeResetGeneration}
       onRevealComplete={completeBuildReveal}
@@ -2250,6 +2330,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         kind: "layout",
         targetId: buildLayoutDraft.targetId,
         status: buildLayoutDraft.status,
+        activity: buildLayoutDraft.activity ?? (buildPanelOpen ? "active" : "suspended"),
+        surface: "dashboard-map",
         error: buildLayoutDraft.error,
         restoration: null,
         resolution: null,
@@ -2271,6 +2353,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboardMetadata: () => onOpenBuildPanel?.(),
       }}
       pendingWorkOwnerActions={{
+        ...(buildLayoutDraft ? {
+          [buildLayoutDraft.draftId]: {
+            focus: focusLayoutOwner,
+            resume: resumeLayoutOwner,
+            save: saveBuildLayoutChanges,
+            discard: discardBuildLayoutChanges,
+          },
+        } : {}),
         ...(chartEditOwner ? {
           [chartEditOwner.id]: {
             focus: focusChartEditOwner,
@@ -2325,6 +2415,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
            onPanelDragOver: handlePanelDragOver,
            onPanelDrop: handlePanelDrop,
            onPanelDragEnd: clearDragState,
+           onRequestPanelMove: requestPanelMove,
            onReorderSection: reorderBuildSection,
           onStructureCommand: applyBuildStructureCommand,
           onAddPage: addBuildPage,
@@ -2348,6 +2439,25 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}
         onOpenMultiFullscreen={openMultiFullscreen}
         onCancelMultiSelection={cancelMultiSelection}
+      />
+      <BuildMoveDialog
+        open={Boolean(moveDialogRequest)}
+        dashboard={workingDashboard}
+        source={moveDialogRequest?.source}
+        sourceLabel={moveDialogRequest?.label}
+        invoker={moveDialogRequest?.invoker}
+        onCancel={() => setMoveDialogRequest(null)}
+        onMove={(move) => {
+          const invoker = moveDialogRequest?.invoker ?? null;
+          setMoveDialogRequest(null);
+          stageBuildLayoutMove(move, invoker);
+        }}
+      />
+      <BuildMoveConfirmationDialog
+        analysis={moveConfirmation?.analysis}
+        invoker={moveConfirmation?.invoker}
+        onCancel={() => setMoveConfirmation(null)}
+        onConfirm={confirmBuildLayoutMove}
       />
       {editMode && <>
       <ChartWizardV3

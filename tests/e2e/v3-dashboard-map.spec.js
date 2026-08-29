@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+
 const CONTROL_URL = "http://127.0.0.1:4174";
 
 test.beforeEach(async ({ request }) => {
@@ -121,4 +123,63 @@ test("Dashboard map keeps visible disclosure arrows and caret-aligned branch gui
   await expect(expand).toBeVisible();
   const collapsedTransform = await expand.locator("span").evaluate((glyph) => getComputedStyle(glyph).transform);
   expect(collapsedTransform).not.toBe(expandedTransform);
+});
+
+test("create page and inline rename acquire only the dashboard layout draft", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterAuthoredDashboard(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const tree = map.getByRole("tree");
+  const pageItem = tree.locator('[data-build-node-kind="page"][aria-label="Socio-economic"]');
+  await pageItem.focus();
+  await pageItem.press("F2");
+  const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
+  await rename.fill("   ");
+  await rename.press("Escape");
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
+
+  await pageItem.focus();
+  await pageItem.press("F2");
+  await tree.getByRole("textbox", { name: "Rename page Socio-economic" }).fill("Community response");
+  await tree.getByRole("textbox", { name: "Rename page Socio-economic" }).press("Enter");
+  await expect(tree.locator('[data-build-node-kind="page"][aria-label="Community response"]')).toBeVisible();
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
+  await expect(page.locator('[data-pending-work-kind="inlineRename"]')).toHaveCount(0);
+
+  await page.locator('[data-build-page-navigation="anchored"]')
+    .getByRole("button", { name: "Add page", exact: true }).click();
+  await expect(page.locator('[data-build-page-navigation="anchored"]')
+    .getByRole("button", { name: "New page", exact: true })).toBeVisible();
+  await map.getByRole("button", { name: "Structure", exact: true }).click();
+  await expect(map.getByRole("tree").locator('[data-build-node-kind="page"][aria-label="New page"]')).toBeVisible();
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
+});
+
+test("keyboard move and Move panel dialog share the layout owner and restore focus", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterAuthoredDashboard(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const tree = map.getByRole("tree");
+  const biomedical = tree.locator('[data-build-node-kind="page"][aria-label="Biomedical"]');
+  const before = await tree.locator('[data-build-node-kind="page"]').evaluateAll((items) => items.map((item) => item.getAttribute("aria-label")));
+  await biomedical.focus();
+  await biomedical.press("Alt+ArrowDown");
+  const after = await tree.locator('[data-build-node-kind="page"]').evaluateAll((items) => items.map((item) => item.getAttribute("aria-label")));
+  expect(after).not.toEqual(before);
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
+
+  const moveHandle = tree.getByRole("button", { name: /^Move panel / }).first();
+  await moveHandle.click();
+  const dialog = page.getByRole("dialog", { name: /^Move / });
+  await expect(dialog.getByLabel("Destination")).toBeFocused();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(moveHandle).toBeFocused();
 });

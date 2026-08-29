@@ -46,6 +46,7 @@ function ChartPanel({
   onFullScreenHold,
   onStartMultiFullscreenSelection,
   onDisplayAction,
+  onMove,
   onDragStart,
   onDragOver,
   onDrop,
@@ -160,15 +161,27 @@ function ChartPanel({
       data-footprint={`${footprint.columns}x${footprint.rows}`}
       style={chartPanelFootprintStyle(chart.layout)}
       tabIndex={editMode && placementId ? -1 : undefined}
-      draggable={editMode && !editDisabled}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDragOverCapture={onDragOver}
+      onDropCapture={onDrop}
       onDragEnd={onDragEnd}
     >
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
+            <IconControl
+              interactionId="panel.move"
+              className="secondary panel-move-handle"
+              tooltipPlacement="below"
+              disabled={editDisabled}
+              ariaLabel={`Move panel ${chart.title}`}
+              tooltip="Move panel"
+              draggable={!editDisabled}
+              onClick={(event) => {
+                if (!editDisabled) onMove?.(event.currentTarget);
+              }}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            />
             <IconControl interactionId="shell.start-section" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onStartSection?.();
             }} ariaLabel="Start section here" tooltip="Start section here" />

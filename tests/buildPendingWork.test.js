@@ -17,9 +17,10 @@ function actionHarness(log = []) {
   };
 }
 
-test("every authored dirty key maps to one stable pending-work descriptor", () => {
+test("every adopted authored dirty key maps to one stable pending-work descriptor", () => {
   const ids = new Map();
-  for (const key of AUTHORED_DIRTY_KEYS) {
+  const projectedKeys = AUTHORED_DIRTY_KEYS.filter((key) => key !== "inlineRename");
+  for (const key of projectedKeys) {
     const log = [];
     const [entry] = selectBuildPendingWork({
       authoredDirty: { [key]: true },
@@ -42,7 +43,21 @@ test("every authored dirty key maps to one stable pending-work descriptor", () =
     entry.resume();
     assert.deepEqual(log, [`resume:${key}`]);
   }
-  assert.equal(ids.size, AUTHORED_DIRTY_KEYS.length);
+  assert.equal(ids.size, projectedKeys.length);
+});
+
+test("incomplete inline rename stays local and never publishes a duplicate global descriptor", () => {
+  assert.deepEqual(selectBuildPendingWork({ authoredDirty: { inlineRename: true } }), []);
+  assert.deepEqual(selectBuildPendingWork({
+    authoredDirty: { inlineRename: true, structure: true },
+    layoutDraft: {
+      draftId: "layout:dashboard-1",
+      kind: "layout",
+      scopeId: "dashboard-1",
+      status: "dirty",
+      activity: "active",
+    },
+  }).map(({ id }) => id), ["layout:dashboard-1"]);
 });
 
 test("layout, chart, and parked auxiliary equivalents deduplicate with correct actions", () => {

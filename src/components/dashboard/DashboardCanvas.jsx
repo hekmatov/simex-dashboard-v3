@@ -194,14 +194,45 @@ export default function DashboardCanvas({
                             onRemove={buildState
                               ? () => buildState.onRemovePanel?.(placement.id)
                               : undefined}
+                            onMove={buildState
+                              ? (invoker) => buildState.onRequestPanelMove?.({
+                                  kind: "panel",
+                                  pageId: activePage.id,
+                                  sectionId: section.id,
+                                  placementId: placement.id,
+                                }, chart.title, invoker)
+                              : undefined}
                             onDragStart={buildState
-                              ? (event) => buildState.onPanelDragStart?.(event, placement.id)
+                              ? (event) => buildState.onPanelDragStart?.(event, {
+                                  kind: "panel",
+                                  pageId: activePage.id,
+                                  sectionId: section.id,
+                                  placementId: placement.id,
+                                })
                               : undefined}
                             onDragOver={buildState
-                              ? (event) => buildState.onPanelDragOver?.(event, placement.id)
+                              ? (event) => {
+                                  const rect = event.currentTarget.getBoundingClientRect();
+                                  const after = event.clientY >= rect.top + rect.height / 2;
+                                  buildState.onPanelDragOver?.(event, {
+                                    pageId: activePage.id,
+                                    sectionId: section.id,
+                                    index: section.panels.indexOf(placement) + (after ? 1 : 0),
+                                    placementId: placement.id,
+                                    edge: after ? "after" : "before",
+                                  });
+                                }
                               : undefined}
                             onDrop={buildState
-                              ? (event) => buildState.onPanelDrop?.(event, placement.id)
+                              ? (event) => {
+                                  const rect = event.currentTarget.getBoundingClientRect();
+                                  const after = event.clientY >= rect.top + rect.height / 2;
+                                  buildState.onPanelDrop?.(event, {
+                                    pageId: activePage.id,
+                                    sectionId: section.id,
+                                    index: section.panels.indexOf(placement) + (after ? 1 : 0),
+                                  });
+                                }
                               : undefined}
                             onDragEnd={buildState?.onPanelDragEnd}
                             onDisplayAction={onDisplayAction}
@@ -215,7 +246,22 @@ export default function DashboardCanvas({
                       })}
                     </LayoutGrid>
                   ) : (
-                    <section className="dashboard-empty-section build-empty-section" aria-label={`${sectionDraft.title || "Untitled section"} empty state`}>
+                    <section
+                      className="dashboard-empty-section build-empty-section"
+                      aria-label={`${sectionDraft.title || "Untitled section"} empty state`}
+                      data-build-empty-drop-target={buildState ? "true" : undefined}
+                      onDragOver={buildState ? (event) => buildState.onPanelDragOver?.(event, {
+                        pageId: activePage.id,
+                        sectionId: section.id,
+                        index: 0,
+                        edge: "empty",
+                      }) : undefined}
+                      onDrop={buildState ? (event) => buildState.onPanelDrop?.(event, {
+                        pageId: activePage.id,
+                        sectionId: section.id,
+                        index: 0,
+                      }) : undefined}
+                    >
                       <p>This section has no panels.</p>
                       {buildState ? (
                         <div className="build-empty-section__actions">

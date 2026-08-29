@@ -79,6 +79,7 @@ export function selectBuildPendingWork({
 
   for (const key of AUTHORED_DIRTY_KEYS) {
     if (authoredDirty?.[key] !== true) continue;
+    if (key === "inlineRename") continue;
     if (
       (key === "chartEditor" && adoptedChartKinds.has("chart-edit"))
       || (key === "chartWizard" && adoptedChartKinds.has("chart-create"))

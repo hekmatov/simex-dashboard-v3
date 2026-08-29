@@ -75,6 +75,43 @@ test("layout and selected-chart drafts stay independent through layout discard",
   await expect(target).toBeInViewport();
 });
 
+test("drag and Move panel controls use the handle while the canvas article stays fixed", async ({ page }) => {
+  await openBiomedicalBuild(page);
+  const panels = page.locator('[data-build-placement-id]');
+  expect(await panels.count()).toBeGreaterThan(1);
+  const source = panels.nth(0);
+  const target = panels.nth(1);
+  const sourceId = await source.getAttribute("data-build-placement-id");
+  await expect(source).not.toHaveAttribute("draggable", "true");
+
+  const handle = source.getByRole("button", { name: /^Move panel / });
+  await expect(handle).toHaveAttribute("draggable", "true");
+  await handle.focus();
+  await expect(handle).toBeFocused();
+  const targetBox = await target.boundingBox();
+  expect(targetBox).toBeTruthy();
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  const dropSurface = target;
+  const pointer = { clientX: targetBox.x + targetBox.width / 2, clientY: targetBox.y + targetBox.height * 0.75, dataTransfer };
+  await handle.dispatchEvent("dragstart", { dataTransfer });
+  await dropSurface.dispatchEvent("dragover", pointer);
+  await dropSurface.dispatchEvent("drop", pointer);
+  await handle.dispatchEvent("dragend", { dataTransfer });
+  const reordered = await page.locator('[data-build-placement-id]').evaluateAll((items) => items.map((item) => item.dataset.buildPlacementId));
+  expect(reordered.indexOf(sourceId)).toBeGreaterThan(0);
+  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await mapToggle.click();
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
+  await mapToggle.click();
+
+  const movedHandle = page.locator(`[data-build-placement-id="${sourceId}"]`).getByRole("button", { name: /^Move panel / });
+  await movedHandle.click();
+  const dialog = page.getByRole("dialog", { name: /^Move / });
+  await expect(dialog.getByLabel("Destination")).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(movedHandle).toBeFocused();
+});
+
 test("More opens Scene Studio without losing dirty pending work", async ({ page }) => {
   await page.setViewportSize({ width: 1365, height: 900 });
   await page.goto("/");

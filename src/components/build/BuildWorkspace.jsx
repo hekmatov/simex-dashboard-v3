@@ -93,6 +93,7 @@ export default function BuildWorkspace({
   onActivate,
   onRename,
   onInlineRenameDirtyChange,
+  onLayoutMove,
   revealRequest = null,
   treeResetGeneration = 0,
   onRevealComplete,
@@ -643,6 +644,7 @@ export default function BuildWorkspace({
       onActivate={chooseSelection}
       onRename={onRename}
       onRenameDirtyChange={onInlineRenameDirtyChange}
+      onMove={onLayoutMove}
     />
   );
   const inspector = (
@@ -757,6 +759,7 @@ export default function BuildWorkspace({
                 <button
                   type="button"
                   className="secondary"
+                  data-dashboard-map-region-control="structure"
                   aria-pressed={mapRegion === "structure"}
                   disabled={locked}
                   onClick={() => setMapRegion("structure")}

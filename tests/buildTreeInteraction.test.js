@@ -11,3 +11,57 @@ test("collapsing a branch reconciles descendant focus to the nearest visible anc
   assert.equal(interactionModule.focusedTreeKeyAfterCollapse(section, section), section);
   assert.equal(interactionModule.focusedTreeKeyAfterCollapse(other, page), other);
 });
+
+test("typed layout drag payloads preserve node kind and stable source identity", () => {
+  const source = {
+    kind: "panel",
+    pageId: "biomedical",
+    sectionId: "overview",
+    placementId: "confirmed_cases_panel",
+  };
+  const encoded = interactionModule.encodeBuildMovePayload(source);
+
+  assert.equal(interactionModule.BUILD_LAYOUT_MOVE_MIME, "application/x-simex-build-layout-move+json");
+  assert.deepEqual(interactionModule.decodeBuildMovePayload(encoded), source);
+  assert.equal(interactionModule.decodeBuildMovePayload("confirmed_cases_panel"), null);
+  assert.equal(interactionModule.decodeBuildMovePayload(JSON.stringify({ kind: "chart", chartId: "confirmed_cases" })), null);
+});
+
+test("pointer drag sessions expose the typed source synchronously before a render", () => {
+  const source = { kind: "panel", pageId: "biomedical", sectionId: "overview", placementId: "confirmed_cases_panel" };
+  const session = interactionModule.createBuildMoveDragSession();
+
+  assert.deepEqual(session.start(source), source);
+  assert.deepEqual(session.current(), source);
+  assert.deepEqual(session.resolve(interactionModule.encodeBuildMovePayload(source)), source);
+  assert.deepEqual(session.resolve(""), source);
+  session.clear();
+  assert.equal(session.current(), null);
+  assert.equal(session.resolve(""), null);
+});
+
+test("keyboard sibling movement uses the same canonical move contract", () => {
+  const dashboard = {
+    pages: [{
+      id: "one",
+      sections: [{
+        id: "overview",
+        panels: [
+          { id: "first", chart: { id: "chart-a" } },
+          { id: "second", chart: { id: "chart-b" } },
+        ],
+      }],
+    }, { id: "two", sections: [{ id: "empty", panels: [] }] }],
+  };
+
+  assert.deepEqual(interactionModule.buildSiblingMove(dashboard, {
+    kind: "panel", pageId: "one", sectionId: "overview", placementId: "second",
+  }, -1), {
+    kind: "panel",
+    source: { pageId: "one", sectionId: "overview", placementId: "second" },
+    target: { pageId: "one", sectionId: "overview", index: 0 },
+  });
+  assert.equal(interactionModule.buildSiblingMove(dashboard, {
+    kind: "panel", pageId: "one", sectionId: "overview", placementId: "first",
+  }, -1), null);
+});

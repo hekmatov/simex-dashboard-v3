@@ -6,6 +6,7 @@ import {
   discardBuildLayoutDraft,
   reorderBuildLayoutPanel,
   reorderBuildLayoutSection,
+  renameBuildLayoutPanel,
 } from "../src/components/build/buildLayoutDraft.js";
 
 test("layout reorder previews never mutate the saved dashboard", () => {
@@ -19,6 +20,18 @@ test("layout reorder previews never mutate the saved dashboard", () => {
   assert.deepEqual(saved, before);
   assert.deepEqual(draft.value.pages[0].sections.map(({ id }) => id), ["section-b", "section-a"]);
   assert.deepEqual(draft.value.pages[0].sections[1].panels.map(({ id }) => id), ["panel-b", "panel-a"]);
+  assert.equal(draft.status, "dirty");
+});
+
+test("valid panel rename stages in the dashboard-scoped layout owner without mutating saved content", () => {
+  const saved = fixture();
+  saved.pages[0].sections[0].panels[0].chart = { id: "chart-a", title: "Old title" };
+  const draft = renameBuildLayoutPanel(createBuildLayoutDraft(saved), "panel-a", "New title");
+
+  assert.equal(saved.pages[0].sections[0].panels[0].chart.title, "Old title");
+  assert.equal(draft.value.pages[0].sections[0].panels[0].chart.title, "New title");
+  assert.equal(draft.draftId, "layout:dashboard");
+  assert.equal(draft.targetId, "panel-a");
   assert.equal(draft.status, "dirty");
 });
 

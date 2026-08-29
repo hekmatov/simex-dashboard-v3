@@ -1,6 +1,18 @@
 import React from "react";
 
-import { createDelayedTreeActivation, focusedTreeKeyAfterCollapse, selectionKey, visibleBuildTreeNodes } from "./buildTreeInteraction.js";
+import BuildMoveDialog from "./BuildMoveDialog.jsx";
+import {
+  BUILD_LAYOUT_MOVE_MIME,
+  buildSiblingMove,
+  canonicalMove,
+  createDelayedTreeActivation,
+  decodeBuildMovePayload,
+  encodeBuildMovePayload,
+  focusedTreeKeyAfterCollapse,
+  moveSourceForNode,
+  selectionKey,
+  visibleBuildTreeNodes,
+} from "./buildTreeInteraction.js";
 
 
 function allExpanded(dashboard) {
@@ -10,11 +22,13 @@ function allExpanded(dashboard) {
   ]));
 }
 
-export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange }) {
+export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
   const [expandedKeys, setExpandedKeys] = React.useState(() => allExpanded(dashboard));
   const [focusedKey, setFocusedKey] = React.useState(() => selectionKey(selection));
   const [renameKey, setRenameKey] = React.useState("");
   const [renameValue, setRenameValue] = React.useState("");
+  const [moveRequest, setMoveRequest] = React.useState(null);
+  const [dropIndicator, setDropIndicator] = React.useState(null);
   const refs = React.useRef(new Map());
   const controller = React.useMemo(() => createDelayedTreeActivation({}), []);
   const nodes = visibleBuildTreeNodes(dashboard, expandedKeys);
@@ -85,6 +99,15 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     const keyDown = (event) => {
       if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
       if (disabled) return;
+      if (event.altKey && ["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) {
+        const direction = ["ArrowUp", "ArrowLeft"].includes(event.key) ? -1 : 1;
+        const move = buildSiblingMove(dashboard, moveSourceForNode(node), direction);
+        if (move) {
+          event.preventDefault();
+          onMove?.(move);
+        }
+        return;
+      }
       if (event.key === "ArrowDown" && nodes[index + 1]) { event.preventDefault(); focus(nodes[index + 1].key); }
       if (event.key === "ArrowUp" && nodes[index - 1]) { event.preventDefault(); focus(nodes[index - 1].key); }
       if (event.key === "ArrowRight" && node.hasChildren) { event.preventDefault(); if (!expanded) toggle(node.key); else if (nodes[index + 1]) focus(nodes[index + 1].key); }
@@ -102,6 +125,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       role="treeitem"
       className="build-tree-item-wrap"
       data-build-node-kind={node.kind}
+      data-build-node-id={node.placementId ?? node.sectionId ?? node.pageId}
       aria-label={label}
       aria-expanded={node.hasChildren ? expanded : undefined}
       aria-selected={selected}
@@ -120,6 +144,26 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
         if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
         if (disabled || isRenaming || event.defaultPrevented) return;
         controller.doubleClick(() => void beginRename(node));
+      }}
+      data-build-drop-edge={dropIndicator?.key === node.key ? dropIndicator.edge : undefined}
+      onDragOver={(event) => {
+        const source = decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
+        if (!legalDrop(source, node)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const rect = event.currentTarget.getBoundingClientRect();
+        setDropIndicator({ key: node.key, edge: event.clientY < rect.top + rect.height / 2 ? "before" : "after" });
+        event.dataTransfer.dropEffect = "move";
+      }}
+      onDrop={(event) => {
+        const source = decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
+        if (!legalDrop(source, node)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const edge = dropIndicator?.key === node.key ? dropIndicator.edge : "after";
+        const move = moveForTreeDrop(dashboard, source, node, edge);
+        setDropIndicator(null);
+        if (move) onMove?.(move);
       }}
     >
       <div className={`build-tree-row${selected ? " is-selected" : ""}${isRenaming ? " is-renaming" : ""}`}>
@@ -162,9 +206,68 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
             }}
           />
         ) : <span className="build-tree-label">{label}</span>}
+        <button
+          type="button"
+          className="build-tree-move-handle"
+          aria-label={`Move ${node.kind === "chart" ? "panel" : node.kind} ${label}`}
+          draggable={!disabled}
+          disabled={disabled}
+          onClick={(event) => {
+            event.stopPropagation();
+            setMoveRequest({ source: moveSourceForNode(node), label, invoker: event.currentTarget });
+          }}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onDragStart={(event) => {
+            event.stopPropagation();
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData(BUILD_LAYOUT_MOVE_MIME, encodeBuildMovePayload(moveSourceForNode(node)));
+          }}
+          onDragEnd={() => setDropIndicator(null)}
+        ><span aria-hidden="true">↕</span></button>
       </div>
       {node.hasChildren && expanded && <ul role="group" className="build-tree-group">{nodes.filter((item) => item.parentKey === node.key).map(row)}</ul>}
     </li>;
   };
-  return <nav className="build-structure-rail" aria-label="Dashboard structure"><div className="build-region-heading"><p className="eyebrow">Structure</p><h2>Dashboard</h2></div><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>;
+  return <>
+    <nav className="build-structure-rail" aria-label="Dashboard structure"><div className="build-region-heading"><p className="eyebrow">Structure</p><h2>Dashboard</h2></div><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
+    <BuildMoveDialog
+      open={Boolean(moveRequest)}
+      dashboard={dashboard}
+      source={moveRequest?.source}
+      sourceLabel={moveRequest?.label}
+      invoker={moveRequest?.invoker}
+      onCancel={() => setMoveRequest(null)}
+      onMove={(move) => {
+        const invoker = moveRequest?.invoker ?? null;
+        setMoveRequest(null);
+        onMove?.(move, invoker);
+      }}
+    />
+  </>;
+}
+
+function legalDrop(source, node) {
+  if (!source || !node) return false;
+  if (source.kind === "page") return node.kind === "page";
+  if (source.kind === "section") return node.kind === "page" || node.kind === "section";
+  return node.kind === "section" || node.kind === "chart";
+}
+
+function moveForTreeDrop(dashboard, source, node, edge) {
+  if (source.kind === "page") {
+    const index = (dashboard.pages ?? []).findIndex(({ id }) => id === node.pageId);
+    return canonicalMove(source, { index: index + (edge === "after" ? 1 : 0) });
+  }
+  const page = (dashboard.pages ?? []).find(({ id }) => id === node.pageId);
+  if (source.kind === "section") {
+    const index = node.kind === "page"
+      ? (page?.sections ?? []).length
+      : (page?.sections ?? []).findIndex(({ id }) => id === node.sectionId) + (edge === "after" ? 1 : 0);
+    return canonicalMove(source, { pageId: node.pageId, sectionId: null, index });
+  }
+  const section = (page?.sections ?? []).find(({ id }) => id === node.sectionId);
+  const index = node.kind === "section"
+    ? (section?.panels ?? []).length
+    : (section?.panels ?? []).findIndex(({ id }) => id === node.placementId) + (edge === "after" ? 1 : 0);
+  return canonicalMove(source, { pageId: node.pageId, sectionId: node.sectionId, index });
 }

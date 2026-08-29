@@ -73,6 +73,20 @@ export function renameBuildLayoutSection(draft, pageId, sectionId, title) {
   return markDirty(next, sectionId);
 }
 
+export function renameBuildLayoutPanel(draft, placementId, title) {
+  const next = cloneDraft(draft);
+  const placement = next.value.pages
+    .flatMap(({ sections = [] }) => sections)
+    .flatMap(({ panels = [] }) => panels)
+    .find(({ id }) => id === placementId);
+  const name = String(title ?? "").trim();
+  if (!placement) return failCommand(draft, "PANEL_NOT_FOUND", "The panel no longer exists.");
+  if (!name) return failCommand(draft, "PANEL_NAME_REQUIRED", "Enter a panel name.");
+  if (placement.chart) placement.chart.title = name;
+  else placement.title = name;
+  return markDirty(next, placementId);
+}
+
 export function moveBuildLayoutSection(draft, pageId, sectionId, targetPageId, placement = {}) {
   const next = cloneDraft(draft);
   const source = findPage(next.value, pageId);
