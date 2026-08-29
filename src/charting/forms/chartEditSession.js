@@ -450,6 +450,7 @@ function rebaseDashboardLayoutValue({ baseline, local, committed, indexes }) {
         committedPage,
         new Set(["sections"]),
       );
+      const pageId = entityId(baselinePage);
       page.sections = rebaseTopologyCollection({
         baselineParent: baselinePage.sections,
         localParent: localPage.sections,
@@ -457,7 +458,7 @@ function rebaseDashboardLayoutValue({ baseline, local, committed, indexes }) {
         baselineGlobal: indexes.baseline.sections,
         localGlobal: indexes.local.sections,
         committedGlobal: indexes.committed.sections,
-        identity: entityId,
+        identity: (section) => pageScopedSectionKey(pageId, entityId(section)),
         merge: (baselineSection, localSection, committedSection) => {
           const section = mergeChangedRecord(
             baselineSection,
@@ -712,9 +713,20 @@ function indexDashboardLayout(dashboard, description) {
   const pages = indexEntities(dashboard.pages ?? [], entityId, `${description} Pages`);
   const sectionItems = (dashboard.pages ?? []).flatMap(({ sections = [] }) => sections);
   const placementItems = sectionItems.flatMap(({ panels = [] }) => panels);
+  const sections = new Map();
+  for (const [pageId, page] of pages) {
+    const pageSections = indexEntities(
+      page.sections ?? [],
+      entityId,
+      `${description} Page "${pageId}" Sections`,
+    );
+    for (const [sectionId, section] of pageSections) {
+      sections.set(pageScopedSectionKey(pageId, sectionId), section);
+    }
+  }
   return {
     pages,
-    sections: indexEntities(sectionItems, entityId, `${description} Sections`),
+    sections,
     placements: indexEntities(
       placementItems,
       placementIdentity,
@@ -784,6 +796,10 @@ function removePlacementFromRebasedLayout(dashboard, placementId, chartId) {
 
 function entityId(entity) {
   return entity?.id;
+}
+
+function pageScopedSectionKey(pageId, sectionId) {
+  return JSON.stringify([pageId, sectionId]);
 }
 
 function placementIdentity(placement) {

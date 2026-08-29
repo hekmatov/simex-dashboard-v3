@@ -228,6 +228,40 @@ test("quick Save rebases committed content into the live layout draft without lo
   assert.deepEqual(committed, beforeCommitted);
 });
 
+test("quick Save accepts section IDs repeated on different pages", () => {
+  const baseline = dashboardFixtureWithRepeatedPageSectionIds();
+  const layoutDraft = {
+    draftId: "layout-dashboard-a",
+    kind: "layout",
+    targetId: "page-b",
+    status: "dirty",
+    baseline: structuredClone(baseline),
+    value: structuredClone(baseline),
+    error: null,
+  };
+  layoutDraft.value.pages.reverse();
+  const committed = structuredClone(baseline);
+  chartByPlacement(committed, "placement-a").title = "Durable quick title";
+  chartByPlacement(committed, "placement-c").title = "Concurrent second Page chart";
+
+  const rebased = chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft({
+    layoutDraft,
+    committedDashboard: committed,
+    intent: { kind: "save", placementId: "placement-a" },
+  });
+
+  assert.deepEqual(rebased.value.pages.map(({ id }) => id), ["page-b", "page-a"]);
+  assert.deepEqual(
+    rebased.value.pages.map(({ sections }) => sections[0].id),
+    ["main", "main"],
+  );
+  assert.equal(chartByPlacement(rebased.value, "placement-a").title, "Durable quick title");
+  assert.equal(
+    chartByPlacement(rebased.value, "placement-c").title,
+    "Concurrent second Page chart",
+  );
+});
+
 test("chart persistence rebases layout-owned reference removals with unrelated committed members", () => {
   const baseline = dashboardFixtureWithLayoutSiblings();
   baseline.chronoGroups = [{
@@ -349,6 +383,42 @@ test("confirmed quick Remove rebases the exact deletion onto the reordered live 
   }]);
   assert.deepEqual(rebased.baseline, committed);
   assert.equal(rebased.status, "dirty");
+});
+
+test("confirmed quick Remove accepts section IDs repeated on different pages", () => {
+  const baseline = dashboardFixtureWithRepeatedPageSectionIds();
+  const layoutDraft = {
+    draftId: "layout-dashboard-a",
+    kind: "layout",
+    targetId: "page-b",
+    status: "dirty",
+    baseline: structuredClone(baseline),
+    value: structuredClone(baseline),
+    error: null,
+  };
+  layoutDraft.value.pages.reverse();
+  const committed = structuredClone(baseline);
+  committed.pages[0].sections[0].panels = committed.pages[0].sections[0].panels
+    .filter(({ id }) => id !== "placement-a");
+  chartByPlacement(committed, "placement-c").title = "Concurrent second Page chart";
+
+  const rebased = chartEditSessionModel.rebaseChartPersistenceIntoLayoutDraft({
+    layoutDraft,
+    committedDashboard: committed,
+    intent: { kind: "remove", placementId: "placement-a" },
+  });
+
+  assert.deepEqual(rebased.value.pages.map(({ id }) => id), ["page-b", "page-a"]);
+  assert.deepEqual(
+    rebased.value.pages.map(({ sections }) => sections[0].id),
+    ["main", "main"],
+  );
+  assert.equal(chartByPlacement(rebased.value, "placement-a"), undefined);
+  assert.equal(chartByPlacement(rebased.value, "placement-b").title, "Other chart");
+  assert.equal(
+    chartByPlacement(rebased.value, "placement-c").title,
+    "Concurrent second Page chart",
+  );
 });
 
 test("Reset restores the shared saved chart and Chrono baseline", () => {
@@ -689,6 +759,23 @@ function dashboardFixtureWithLayoutSiblings() {
       },
     ],
   };
+  return dashboard;
+}
+
+function dashboardFixtureWithRepeatedPageSectionIds() {
+  const dashboard = dashboardFixture();
+  dashboard.pages[0].sections[0].id = "main";
+  dashboard.pages.push({
+    id: "page-b",
+    sections: [{
+      id: "main",
+      panels: [{
+        id: "placement-c",
+        layout: { size: "compact" },
+        chart: chartFixture({ id: "chart-c", title: "Second Page chart" }),
+      }],
+    }],
+  });
   return dashboard;
 }
 
