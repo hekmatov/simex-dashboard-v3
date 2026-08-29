@@ -3,6 +3,7 @@ import {
   validateStaticSource,
 } from "../staticSourceSchema.js";
 import { createChartDraft } from "../../charting/config/chartConfigV3.js";
+import { legacySizeForFootprint, resolveChartFootprint } from "../../components/chartPanelLayout.js";
 import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../qmd/portableQmdMedia.js";
 import {
   normalizeImageTransform,
@@ -352,27 +353,10 @@ export function reduceStaticContentDraft(state, action = {}) {
         status: "editing",
         focusRequest: state.restoration.focusId,
       };
+    case "reset":
+      return restoreStaticContentBaseline(state, { status: "editing" });
     case "discard":
-      return {
-        ...state,
-        destination: clone(state.baseline.destination),
-        contentTypeId: state.baseline.contentTypeId,
-        panel: clone(state.baseline.panel),
-        source: clone(state.baseline.placement),
-        placement: clone(state.baseline.placement),
-        mediaItem: clone(state.baseline.mediaItem),
-        imageEditing: createImageEditing(state.baseline.placement),
-        assets: clone(state.baseline.assets),
-        pendingMediaItems: clone(state.baseline.pendingMediaItems ?? {}),
-        stage: state.mode === "edit" ? "content" : "destination",
-        status: "discarded",
-        confirmation: null,
-        validation: { errors: [], warnings: [] },
-        focusRequest: state.mode === "edit"
-          ? state.baselineRestoration?.focusId ?? state.baselineRestoration?.invokerId
-          : state.baselineRestoration?.invokerId,
-        baseline: clone(state.baseline),
-      };
+      return restoreStaticContentBaseline(state, { status: "discarded" });
     case "commitStarted":
       return { ...state, status: "committing", validation: { errors: [], warnings: [] } };
     case "commitFailed":
@@ -436,6 +420,29 @@ export function isStaticContentDraftDirty(state) {
   return JSON.stringify(current) !== JSON.stringify(state.baseline);
 }
 
+function restoreStaticContentBaseline(state, { status }) {
+  return {
+    ...state,
+    destination: clone(state.baseline.destination),
+    contentTypeId: state.baseline.contentTypeId,
+    panel: clone(state.baseline.panel),
+    source: clone(state.baseline.placement),
+    placement: clone(state.baseline.placement),
+    mediaItem: clone(state.baseline.mediaItem),
+    imageEditing: createImageEditing(state.baseline.placement),
+    assets: clone(state.baseline.assets),
+    pendingMediaItems: clone(state.baseline.pendingMediaItems ?? {}),
+    stage: state.mode === "edit" ? "content" : "destination",
+    status,
+    confirmation: null,
+    validation: { errors: [], warnings: [] },
+    focusRequest: state.mode === "edit"
+      ? state.baselineRestoration?.focusId ?? state.baselineRestoration?.invokerId
+      : state.baselineRestoration?.invokerId,
+    baseline: clone(state.baseline),
+  };
+}
+
 export function projectStaticContentDraftOwner({
   draft,
   dirty = isStaticContentDraftDirty(draft),
@@ -490,6 +497,7 @@ function normalizePanel(panel, contentTypeId, draftIdentity) {
     description: value.description ?? "",
     sourceId,
   });
+  const footprint = resolveChartFootprint(value.layout ?? defaults.layout);
   return {
     ...defaults,
     ...clone(value),
@@ -498,6 +506,13 @@ function normalizePanel(panel, contentTypeId, draftIdentity) {
     title: value.title ?? "",
     description: value.description ?? "",
     sourceId,
+    layout: {
+      ...(defaults.layout ?? {}),
+      ...(clone(value.layout) ?? {}),
+      size: legacySizeForFootprint(footprint),
+      width: footprint.columns,
+      height: footprint.rows,
+    },
   };
 }
 

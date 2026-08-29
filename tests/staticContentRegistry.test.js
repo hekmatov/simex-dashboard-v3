@@ -15,7 +15,7 @@ import {
   validateStaticDestination,
 } from "../src/static-content/staticPanelCapabilities.js";
 
-test("Add chart and Add static content expose disjoint registry-owned catalogues", () => {
+test("Add chart and Add Text/Image expose disjoint registry-owned catalogues", () => {
   const chartIds = listChartTypeOptions({ registry: chartSchemaRegistry })
     .map(({ id }) => id);
   const staticOptions = listStaticContentTypeOptions({ registry: chartSchemaRegistry });

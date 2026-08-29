@@ -79,6 +79,8 @@
 .qmd-media-inspector__status { margin: 0; }
 .qmd-media-inspector__primary,
 .qmd-media-inspector__more { display: grid; gap: 12px; }
+.qmd-media-inspector__guidance { display: grid; gap: 6px; padding: 12px; border-inline-start: 3px solid var(--simex-accent); background: var(--simex-surface-muted); }
+.qmd-media-inspector__guidance p { margin: 0; }
 .qmd-media-inspector fieldset { min-inline-size: 0; margin: 0; padding: 12px; border: 1px solid var(--simex-component-border); border-radius: var(--simex-component-control-radius); }
 .qmd-media-inspector__choices { display: flex; flex-wrap: wrap; gap: 8px 12px; }
 .qmd-media-inspector__choices label,
@@ -88,6 +90,9 @@
 .qmd-media-inspector input:not([type="radio"]):not([type="checkbox"]) { min-block-size: var(--simex-control-min); box-sizing: border-box; max-inline-size: 100%; }
 .qmd-media-inspector__custom-width input { inline-size: 8rem; }
 .qmd-media-inspector__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.qmd-media-inspector :is(button, input, label) { scroll-margin-block: 16px 96px; }
+.qmd-media-inspector :is(button, input):focus-visible { outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus); outline-offset: 2px; }
+.qmd-media-inspector button { min-block-size: var(--simex-control-min, 44px); }
 .qmd-media-inspector__status { min-block-size: 1.5em; color: var(--simex-error); }
 
 @container (max-width: 30rem) {

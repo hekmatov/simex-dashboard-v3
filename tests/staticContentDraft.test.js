@@ -30,6 +30,36 @@ test("Text/Image ownership starts on the first semantic change and stays scoped 
   assert.equal(edit.status, "error");
 });
 
+test("Text and Image drafts default to Standard 2x1 and persist the shared footprint model", () => {
+  for (const contentTypeId of ["freeText", "image"]) {
+    let draft = createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId,
+      stage: "content",
+    });
+    assert.deepEqual(draft.panel.layout, { size: "standard", width: 2, height: 1 });
+    draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { layout: { size: "wide", width: 4, height: 1 } } });
+    assert.deepEqual(draft.panel.layout, { size: "wide", width: 4, height: 1 });
+  }
+});
+
+test("owner-scoped reset restores the baseline without retiring the edit surface", () => {
+  let draft = createStaticContentDraft({
+    mode: "edit",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: { id: "text-panel", typeId: "freeText", sourceId: "text-source", title: "Before" },
+    placement: { kind: "staticText", qmd: "Before" },
+    restoration: { stage: "content", surface: "composer", focusId: "portable-qmd-composer-surface", scrollTop: 180 },
+  });
+  draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { title: "After" } });
+  const reset = reduceStaticContentDraft(draft, { type: "reset" });
+  assert.equal(reset.panel.title, "Before");
+  assert.equal(reset.source.qmd, "Before");
+  assert.equal(reset.status, "editing");
+  assert.equal(reset.stage, "content");
+  assert.equal(isStaticContentDraftDirty(reset), false);
+});
+
 for (const [kind, current, expectedOrigin, staged] of [
   ["upload", { kind: "asset", assetId: "asset-map" }, "uploaded", ["asset-map"]],
   ["link", { kind: "url", url: "https://example.test/map.png" }, "external", []],

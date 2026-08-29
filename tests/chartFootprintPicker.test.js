@@ -47,3 +47,17 @@ test("footprint keyboard navigation stays within the four-column two-row boundar
     { columns: 1, rows: 1 },
   );
 });
+
+test("the shared footprint picker can label Text/Image panel sizing without chart wording or id collisions", () => {
+  const html = renderToStaticMarkup(React.createElement(pickerModule.default, {
+    subject: "Panel",
+    idPrefix: "static-panel",
+    value: { columns: 2, rows: 1 },
+    onChange() {},
+  }));
+  assert.match(html, /<span class="eyebrow">Panel size<\/span>/);
+  assert.match(html, /id="static-panel-footprint-title"/);
+  assert.match(html, /aria-label="Panel size: 2 columns by 1 rows"/);
+  assert.match(html, /aria-label="Set panel size to 4 columns by 2 rows"/);
+  assert.doesNotMatch(html, /Chart size|Set chart size/);
+});

@@ -107,6 +107,7 @@ import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnload
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
 import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
+import { projectStaticContentDraftOwner } from "../static-content/forms/staticContentDraft.js";
 import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
 import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
 import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
@@ -201,6 +202,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [staticWizardTarget, setStaticWizardTarget] = React.useState(null);
   const [staticContentDraft, setStaticContentDraft] = React.useState(null);
   const [staticContentDirty, setStaticContentDirty] = React.useState(false);
+  const [staticContentRestoration, setStaticContentRestoration] = React.useState(null);
   const staticWizardInvokerRef = React.useRef(null);
   const quickChartRestorationFrameRef = React.useRef(0);
   const [localAuthoringDrafts, setLocalAuthoringDrafts] = React.useState({});
@@ -404,6 +406,22 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const selectedPanelIsStatic = selectedPanel
     ? getChartSchema(selectedPanel.typeId).authoringWorkflow === "static"
     : false;
+  const staticContentActive = staticContentDraft?.mode === "edit"
+    ? Boolean(selectedPanelIsStatic && chartEditorVisible)
+    : Boolean(staticWizardTarget);
+  const staticContentOwner = projectStaticContentDraftOwner({
+    draft: staticContentDraft,
+    dirty: staticContentDirty,
+    active: staticContentActive,
+    placementId: staticContentDraft?.mode === "edit" ? chartEditorPlacementId : null,
+    status: staticContentDraft?.status === "failed"
+      ? "error"
+      : staticContentDraft?.status === "committing" ? "saving" : "dirty",
+    surface: staticContentRestoration?.surface
+      ?? (staticContentDraft?.contentTypeId === "image" ? "image" : "composer"),
+    focusId: staticContentRestoration?.focusId ?? null,
+    scrollTop: staticContentRestoration?.scrollTop ?? 0,
+  });
   const chartAuthoringActive = Boolean(
     chartWizardTarget
       || staticWizardTarget
@@ -431,7 +449,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     ...createBuildDirtyState(),
     chartEditor: chartEditOwner ? false : chartEditorDirty,
     chartWizard: false,
-    staticContent: staticContentDirty,
+    staticContent: staticContentOwner ? false : staticContentDirty,
     structure: layoutDraftDirty,
     scenario: localDraftKeys.has("scenario") || externalDirty.scenario,
     inlineRename: false,
@@ -938,11 +956,68 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function resumeStaticContentWork() {
-    if (chartEditorPlacementId && selectedPanelIsStatic) {
+    if (staticContentDraft?.mode === "edit" && chartEditorPlacementId) {
       setChartEditorVisible(true);
+      restoreStaticContentOwnerFocus();
+      return;
+    }
+    if (staticContentDraft?.mode === "create") {
+      setStaticWizardTarget(staticContentDraft.destination);
+      restoreStaticContentOwnerFocus();
       return;
     }
     if (!staticWizardTarget) openStaticContentWizard();
+  }
+
+  function restoreStaticContentOwnerFocus() {
+    if (typeof window === "undefined") return false;
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const root = document.querySelector(".static-content-dialog");
+      const body = root?.querySelector(".static-content-dialog__body");
+      if (body && Number.isFinite(staticContentRestoration?.scrollTop)) {
+        body.scrollTop = staticContentRestoration.scrollTop;
+      }
+      const restored = staticContentRestoration?.focusId
+        ? document.getElementById(staticContentRestoration.focusId)
+        : null;
+      const surface = staticContentRestoration?.surface ?? "composer";
+      const surfaceTarget = surface === "advanced"
+        ? root?.querySelector("#static-qmd-source")
+        : surface === "preview"
+          ? root?.querySelector('[data-free-text-pane="preview"] button, [data-free-text-pane="preview"] [tabindex="0"]')
+          : surface === "image"
+            ? root?.querySelector("[data-image-media-id] input:not(:disabled), [data-image-media-id] button:not(:disabled)")
+            : root?.querySelector("#portable-qmd-composer-surface");
+      const target = restored && root?.contains(restored)
+        ? restored
+        : surfaceTarget ?? root?.querySelector('[data-static-initial-focus="true"], input:not(:disabled), select:not(:disabled), button:not(:disabled)');
+      target?.focus?.({ preventScroll: true });
+    }));
+    return true;
+  }
+
+  function suspendStaticContentOwner({ draft, restoration } = {}) {
+    if (draft) setStaticContentDraft(draft);
+    setStaticContentRestoration(restoration ?? null);
+    if ((draft ?? staticContentDraft)?.mode === "edit") setChartEditorVisible(false);
+    else setStaticWizardTarget(null);
+    const invoker = staticWizardInvokerRef.current;
+    window.requestAnimationFrame(() => invoker?.isConnected && invoker.focus({ preventScroll: true }));
+  }
+
+  function discardStaticContentOwner() {
+    cleanupImageDraftAssets(staticContentDraft, dashboardStateRef.current);
+    if (staticContentDraft?.mode === "edit") {
+      setChartEditorVisible(false);
+      setChartEditorPlacementId(null);
+    } else {
+      setStaticWizardTarget(null);
+    }
+    setStaticContentDraft(null);
+    setStaticContentDirty(false);
+    setStaticContentRestoration(null);
+    restoreStaticWizardFocus();
+    return true;
   }
 
   function resumeInlineRenameWork() {
@@ -1630,6 +1705,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartEditorDirty(false);
     setStaticContentDraft(null);
     setStaticContentDirty(false);
+    setStaticContentRestoration(null);
   }
 
   function dismissSelectedPanel() {
@@ -1969,6 +2045,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function openStaticContentWizard(sectionId) {
     if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
+    if (staticContentOwner?.activity === "suspended") {
+      resumeStaticContentWork();
+      return;
+    }
     const section = sectionId
       ? activePage?.sections?.find(({ id }) => id === sectionId)
       : buildSelection?.kind === "section"
@@ -1979,6 +2059,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     staticWizardInvokerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    setStaticContentRestoration(null);
     setStaticWizardTarget({ pageId: activePage.id, sectionId: section.id });
   }
 
@@ -2254,6 +2335,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       ]}
       assets={workingDashboard.assets ?? {}}
       initialDraft={staticContentDraft}
+      restoration={staticContentRestoration}
       disabled={moderatorMutationLocked}
       onDraftChange={setStaticContentDraft}
       onDirtyChange={setStaticContentDirty}
@@ -2274,8 +2356,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartEditorPlacementId(null);
         setStaticContentDraft(null);
         setStaticContentDirty(false);
+        setStaticContentRestoration(null);
       }}
       onCancel={cancelSelectedPanel}
+      onSuspend={suspendStaticContentOwner}
     />
   ) : (
     <ChartQuickEditor
@@ -2359,6 +2443,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       } : null}
       chartSlotDraft={chartOwnerSlot}
       chartOwners={chartOwnerSlots}
+      owners={staticContentOwner ? [staticContentOwner] : []}
       authoredDirtyState={authoredDirtyState}
       pendingWorkResumeActions={{
         structure: () => onOpenBuildPanel?.(),
@@ -2396,6 +2481,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           [chartCreateOwner.id]: {
             focus: focusChartCreateOwner,
             resume: resumeChartWizardWork,
+          },
+        } : {}),
+        ...(staticContentOwner ? {
+          [staticContentOwner.draftId]: {
+            focus: restoreStaticContentOwnerFocus,
+            resume: resumeStaticContentWork,
+            discard: discardStaticContentOwner,
           },
         } : {}),
       }}
@@ -2602,13 +2694,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onContentDraftDiscard={onContentDraftDiscard}
         destination={staticWizardTarget}
         initialDraft={staticContentDraft}
+        restoration={staticContentRestoration}
         disabled={moderatorMutationLocked}
         onDraftChange={setStaticContentDraft}
         onDirtyChange={setStaticContentDirty}
+        onSuspend={suspendStaticContentOwner}
         onClose={() => {
           setStaticWizardTarget(null);
           setStaticContentDraft(null);
           setStaticContentDirty(false);
+          setStaticContentRestoration(null);
           restoreStaticWizardFocus();
         }}
         onCreate={async ({ destination, panel, placement, mediaItem, assets, stagedAssetIds }) => {
@@ -2627,6 +2722,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setStaticWizardTarget(null);
           setStaticContentDraft(null);
           setStaticContentDirty(false);
+          setStaticContentRestoration(null);
           restoreStaticWizardFocus();
         }}
       />}

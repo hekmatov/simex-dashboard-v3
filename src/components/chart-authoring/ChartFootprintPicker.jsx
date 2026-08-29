@@ -12,6 +12,8 @@ const CELLS = Object.freeze([
 ]);
 
 export default function ChartFootprintPicker({
+  subject = "Chart",
+  idPrefix = "chart",
   value,
   disabled = false,
   onChange,
@@ -20,6 +22,9 @@ export default function ChartFootprintPicker({
   const [preview, setPreview] = React.useState(null);
   const gridRef = React.useRef(null);
   const shown = preview ?? current;
+  const subjectLabel = String(subject || "Chart");
+  const subjectLower = subjectLabel.toLocaleLowerCase();
+  const titleId = `${idPrefix}-footprint-title`;
 
   const focusCell = (next) => {
     gridRef.current
@@ -33,11 +38,11 @@ export default function ChartFootprintPicker({
   };
 
   return (
-    <section className="chart-footprint-control" aria-labelledby="chart-footprint-title">
+    <section className="chart-footprint-control" aria-labelledby={titleId}>
       <div className="chart-footprint-heading">
         <div>
-          <span className="eyebrow">Chart size</span>
-          <h3 id="chart-footprint-title">Footprint</h3>
+          <span className="eyebrow">{subjectLabel} size</span>
+          <h3 id={titleId}>Footprint</h3>
         </div>
         <span className="chart-footprint-limit">4-column grid</span>
       </div>
@@ -53,7 +58,7 @@ export default function ChartFootprintPicker({
           ref={gridRef}
           className="chart-footprint-grid"
           role="grid"
-          aria-label={`Chart size: ${current.columns} columns by ${current.rows} rows`}
+          aria-label={`${subjectLabel} size: ${current.columns} columns by ${current.rows} rows`}
           data-previewing={preview ? "true" : "false"}
           onMouseLeave={() => setPreview(null)}
           onBlur={clearPreview}
@@ -70,7 +75,7 @@ export default function ChartFootprintPicker({
                 data-columns={cell.columns}
                 data-rows={cell.rows}
                 data-included={included ? "true" : "false"}
-                aria-label={`Set chart size to ${cell.columns} column${cell.columns === 1 ? "" : "s"} by ${cell.rows} row${cell.rows === 1 ? "" : "s"}`}
+                aria-label={`Set ${subjectLower} size to ${cell.columns} column${cell.columns === 1 ? "" : "s"} by ${cell.rows} row${cell.rows === 1 ? "" : "s"}`}
                 aria-pressed={selected}
                 tabIndex={selected ? 0 : -1}
                 disabled={disabled}

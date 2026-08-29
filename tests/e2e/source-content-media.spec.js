@@ -126,7 +126,7 @@ test("Journey A — media create reuse default external import restore dependenc
   await discardStaticWizard(page, qmdDraft);
   await expect.poll(() => sessionAssetIds(page)).toEqual([]);
   expect(await mediaInventory(page)).toEqual(beforeQmdDraft);
-  await expect(page.getByRole("button", { name: "Add static content", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Add Text/Image", exact: true })).toBeFocused();
 
   qmdDraft = await openFreeTextContentStage(page, "Journey A imported QMD");
   await qmdDraft.getByRole("button", { name: "Insert image" }).click();
@@ -178,7 +178,7 @@ test("Journey A — media create reuse default external import restore dependenc
   const imagePanel = page.locator(`[data-panel-id="${externalPanelId}"]`);
   await imagePanel.scrollIntoViewIfNeeded();
   await imagePanel.getByLabel("Journey A external image actions").getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
   await editor.getByRole("button", { name: "Choose from media" }).click();
   await editor.getByLabel(/Journey A separate item/).evaluate((node) => node.click());
   await expect(editor.getByText("Replacement selected. Save, discard, or restore the previous image.")).toBeVisible();
@@ -499,8 +499,8 @@ async function selectMediaRow(manager, name) {
 }
 
 async function createImageFromPicker(page, { title, mediaName, expectedAlt }) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Image").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -518,8 +518,8 @@ async function createImageFromPicker(page, { title, mediaName, expectedAlt }) {
 }
 
 async function openFreeTextContentStage(page, title) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -534,8 +534,8 @@ async function discardStaticWizard(page, wizard) {
 }
 
 async function createQmdFromPicker(page, { title, mediaName, expectedAlt }) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();

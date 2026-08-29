@@ -59,7 +59,7 @@ for (const viewport of VIEWPORTS) {
 
     const beforeDiscard = await inspectBuildImageState(page, panel);
     await openImageEditor(panel, page, title);
-    let editor = page.getByRole("dialog", { name: "Edit static content" });
+    let editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await expectStaticEditorCompression(page, viewport, beforeDiscard);
     await editor.getByLabel("Alternative text").fill("Unsaved alternative text");
     await editor.getByLabel("Crop width").fill("700");
@@ -83,7 +83,7 @@ for (const viewport of VIEWPORTS) {
     await panel.scrollIntoViewIfNeeded();
     const beforeSave = await inspectBuildImageState(page, panel);
     await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit static content" });
+    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await expectStaticEditorCompression(page, viewport, beforeSave);
     await expect(editor.getByLabel("Crop x")).toHaveValue("200");
     await editor.locator("#static-image-file").setInputFiles({
@@ -115,7 +115,7 @@ for (const viewport of VIEWPORTS) {
     });
     expect(focusIsUnobscured).toBe(true);
     await editor.getByRole("button", { name: "Continue" }).click();
-    await expect(editor.getByLabel("Canonical static content preview").locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
+    await expect(editor.getByLabel("Text/Image preview").locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
     await editor.getByRole("button", { name: "Save" }).click();
     await expect(editor).toHaveCount(0);
     await expectBuildImageRestored(page, panelId, beforeSave, { preserveViewer: false });
@@ -176,7 +176,7 @@ for (const viewport of VIEWPORTS) {
     expect(Math.abs(transformComposition.actualScale - transformComposition.expectedCoverScale)).toBeLessThan(0.01);
 
     await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit static content" });
+    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await editor.getByLabel("Fit", { exact: true }).selectOption("contain");
     await editor.getByRole("button", { name: "Continue" }).click();
     await editor.getByRole("button", { name: "Save" }).click();
@@ -196,7 +196,7 @@ for (const viewport of VIEWPORTS) {
     expect(Math.abs(containComposition.actualScale - containComposition.expectedContainScale)).toBeLessThan(0.01);
 
     await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit static content" });
+    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await editor.locator("#static-image-file").setInputFiles({
       name: "cancelled-replacement.png",
       mimeType: "image/png",
@@ -314,7 +314,7 @@ for (const viewport of VIEWPORTS) {
     panel = canonicalPanel(page, panelId);
     await panel.scrollIntoViewIfNeeded();
     await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit static content" });
+    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await editor.getByLabel("Image origin").selectOption("url");
     await editor.getByLabel("HTTPS image URL").fill("https://example.test/unavailable.png");
     await editor.getByLabel("HTTPS image URL").blur();
@@ -336,7 +336,7 @@ for (const viewport of VIEWPORTS) {
     await panel.getByRole("button", { name: "Retry" }).click();
     await expect(panel.locator('[data-static-failure="image-load-failed"]')).toBeVisible();
     await panel.getByRole("button", { name: "Replace" }).click();
-    editor = page.getByRole("dialog", { name: "Edit static content" });
+    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await expect(editor).toBeVisible();
     await expect(editor.getByLabel("HTTPS image URL")).toHaveValue("https://example.test/unavailable.png");
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -377,10 +377,10 @@ test("IM-02 live intake classifies every rejection and accepts real PNG JPEG Web
   await installControllableStorageQuota(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openBiomedicalBuild(page);
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  let wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  let wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill("Intake boundary corpus");
   const input = wizard.getByLabel("PNG, JPEG, or WebP file");
@@ -486,10 +486,10 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   expect(await page.evaluate((key) => Boolean(
     JSON.parse(localStorage.getItem(key)).assets["asset-budget-fixture"],
   ), STORAGE_KEY)).toBe(true);
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  let wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  let wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill("Rejected near-budget create");
   await wizard.locator("#static-image-file").setInputFiles(upload("budget.png", "image/png", PNG));
@@ -508,7 +508,7 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   saved = await readSavedImage(page, "Intake budget corpus");
   await scrollPanelIntoView(page, saved.panel.id);
   await openImageEditor(canonicalPanel(page, saved.panel.id), page, "Intake budget corpus");
-  wizard = page.getByRole("dialog", { name: "Edit static content" });
+  wizard = page.getByRole("dialog", { name: "Edit Text/Image" });
   await setStorageQuotaMode(page, "insufficient");
   await wizard.locator("#static-image-file").setInputFiles(upload("quota.webp", "image/webp", WEBP));
   await expect(wizard.locator('[data-validation-code="browser-quota"]'))
@@ -537,7 +537,7 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   const panel = canonicalPanel(page, panelId);
   await panel.scrollIntoViewIfNeeded();
   await openImageEditor(panel, page, "Dirty selection image");
-  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
   await installObjectUrlRevocationObserver(page);
   await editor.locator("#static-image-file").setInputFiles({
     name: "dirty-local-replacement.png",
@@ -641,12 +641,12 @@ test("packaged Image source appears in the real guided crop preview", async ({ p
     body: PNG,
   }));
   await page.reload();
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   const panel = canonicalPanel(page, panelId);
   await panel.scrollIntoViewIfNeeded();
   await openImageEditor(panel, page, "Packaged crop preview");
-  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
   const preview = editor.locator('[data-image-crop-preview] img');
   await expect(preview).toHaveAttribute("src", packagedPath);
   await expect(preview).toBeVisible();
@@ -657,10 +657,10 @@ test(`IM-08 guided crop remains operable with keyboard and pointer at actual 200
   test.setTimeout(150_000);
   await page.setViewportSize(viewport);
   await openBiomedicalBuild(page);
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(`Zoomed crop proof ${viewport.width}`);
   await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles(
@@ -742,10 +742,10 @@ async function openBiomedicalBuild(page) {
 }
 
 async function createImage(page, title) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(title);
   await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
@@ -764,7 +764,7 @@ async function createImage(page, title) {
   await expect(wizard.locator("[data-image-crop-preview]")).toBeVisible();
   await expect(wizard).not.toContainText(/Choose dataset|Time field|Chrono Group|Scene/i);
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await expect(wizard.getByLabel("Canonical static content preview").locator('img[alt="Clinic readiness by district"]')).toBeVisible();
+  await expect(wizard.getByLabel("Text/Image preview").locator('img[alt="Clinic readiness by district"]')).toBeVisible();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   const panel = page.getByLabel(`${title} actions`).locator("..");
@@ -924,7 +924,7 @@ async function scrollPanelIntoView(page, panelId) {
 async function openImageEditor(panel, page, title) {
   await panel.hover();
   await panel.getByLabel(`${title} actions`).getByRole("button", { name: "Edit chart" }).click();
-  await expect(page.getByRole("dialog", { name: "Edit static content" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Edit Text/Image" })).toBeVisible();
 }
 
 async function inspectBuildImageState(page, panel) {

@@ -14,6 +14,7 @@ const NARROW_EDITOR_QUERY = "(max-width: 860px)";
 
 export function FreeTextSourceEditor({
   id = "static-qmd-source", value = "", panelId = "static-text-preview", panelTitle = "",
+  initialSurface = "composer",
   disabled = false, mediaItems = {}, assets = {}, contentRenderContext = {},
   onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem,
 } = {}) {
@@ -22,7 +23,9 @@ export function FreeTextSourceEditor({
   const [analysis, setAnalysis] = React.useState(initial);
   const [lastValidSource, setLastValidSource] = React.useState(initial.ok ? value : null);
   const [pending, setPending] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState(initialEditorDocument.mode === "advanced" ? "advanced" : "composer");
+  const [activeTab, setActiveTab] = React.useState(() => initialEditorDocument.mode === "advanced"
+    ? "advanced"
+    : ["composer", "preview", "advanced"].includes(initialSurface) ? initialSurface : "composer");
   const [narrow, setNarrow] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [pickerMode, setPickerMode] = React.useState("insert");

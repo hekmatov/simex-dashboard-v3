@@ -114,10 +114,27 @@ test("custom width accepts only integer percentages from 10 through 100", async 
   assert.match(await page.getByRole("status").textContent(), /whole percentage from 10 through 100/i);
 });
 
+test("every image option has persistent visible guidance and stable descriptions", async () => {
+  await mountInspector(page);
+  await page.getByRole("button", { name: "More image options" }).click();
+  const result = await page.evaluate(() => ({
+    guidance: document.querySelector('[data-qmd-media-guidance]')?.textContent.replace(/\s+/g, " ").trim(),
+    described: [...document.querySelectorAll('[data-qmd-media-inspector] fieldset, [data-qmd-media-inspector] input[name="qmd-media-caption"], [data-qmd-media-inspector] input[name="qmd-media-alt"], [data-qmd-media-inspector] input[name="qmd-media-decorative"]')]
+      .every((node) => Boolean(node.getAttribute("aria-describedby"))),
+  }));
+  for (const text of [
+    "25%, 33%, 50%, 66%, 75%, or 100%", "Custom widths use a whole percentage from 10 through 100",
+    "Start, Centre, or End", "Block, Wrap start, or Wrap end", "None, Subtle outline, or Card",
+    "Caption", "Alternative text", "assistive technology", "clears alternative text",
+  ]) assert.match(result.guidance, new RegExp(text, "i"));
+  assert.equal(result.described, true);
+});
+
 async function mountInspector(targetPage) {
   return targetPage.evaluate(async () => {
-    const { default: React } = await import("/node_modules/.vite/deps/react.js");
-    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: React } = await import("/@id/react");
+    const ReactDOMModule = await import("/@id/react-dom/client");
+    const ReactDOMClient = ReactDOMModule.default ?? ReactDOMModule;
     const { default: QmdMediaInspector } = await import("/src/components/static-content/QmdMediaInspector.jsx");
     const target = document.querySelector("#target");
     window.__inspectorCalls = [];

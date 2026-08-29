@@ -22,12 +22,15 @@ import {
   resolveSessionImageAsset,
 } from "../../static-content/image/imageAssetValidation.js";
 import { buildStaticPanelContentDraftCandidate } from "../../content-library/contentDraftTransaction.js";
+import ChartFootprintPicker from "../chart-authoring/ChartFootprintPicker.jsx";
+import { legacySizeForFootprint, resolveChartFootprint } from "../chartPanelLayout.js";
 
 export function StaticContentWizard({
   open = false,
   dashboard = {},
   destination,
   initialDraft,
+  restoration = null,
   editor = false,
   disabled = false,
   contentDraftCoordinator = null,
@@ -39,6 +42,7 @@ export function StaticContentWizard({
   onDirtyChange,
   onCreate,
   onClose,
+  onSuspend,
 } = {}) {
   const [draft, dispatch] = React.useReducer(
     reduceStaticContentDraft,
@@ -105,7 +109,18 @@ export function StaticContentWizard({
       void discardActiveContentDraft("static-content-close").finally(() => onClose?.({ discarded: false, draft }));
       return;
     }
-    dispatch({ type: "requestCancel", restoration: focusRestoration(draft.stage) });
+    const restoration = focusRestoration(draft.stage);
+    if (onSuspend) {
+      onSuspend({ draft, restoration });
+      return;
+    }
+    dispatch({ type: "requestCancel", restoration });
+  };
+  const requestDiscard = () => dispatch({ type: "requestCancel", restoration: focusRestoration(draft.stage) });
+  const reset = async () => {
+    cleanupImageDraftAssets(draft, dashboard);
+    await discardActiveContentDraft("static-content-reset");
+    dispatch({ type: "reset" });
   };
   const submit = async (event) => {
     event.preventDefault();
@@ -119,6 +134,7 @@ export function StaticContentWizard({
       }
       validateCompiledFreeText(draft);
       const result = finalizeStaticContentDraft(draft);
+      dispatch({ type: "commitStarted" });
       if (contentDraftIdRef.current && contentDraftCoordinator?.updateDraft && onContentDraftCommit) {
         const draftId = contentDraftIdRef.current;
         committingDraftId = draftId;
@@ -157,6 +173,7 @@ export function StaticContentWizard({
         retainedMediaIdsRef.current.clear();
       }
       setSubmitError(error?.message ?? "Static content could not be saved.");
+      if (draft.stage === "preview-and-add") dispatch({ type: "commitFailed", error });
     }
   };
 
@@ -178,9 +195,9 @@ export function StaticContentWizard({
             <p className="eyebrow">{editor ? "Text/Image editor" : "Add Text/Image"}</p>
             <h2 id="static-content-dialog-title">{editor ? "Edit Text/Image" : "Add Text/Image"}</h2>
           </div>
-          <button type="button" className="secondary" aria-label="Close static content editor" onClick={requestClose}>Close</button>
+          <button type="button" className="secondary" aria-label="Close Text/Image editor" onClick={requestClose}>Close</button>
         </header>
-        <nav aria-label="Static content stages">
+        <nav aria-label="Text/Image stages">
           {(editor ? STATIC_CONTENT_STAGES.slice(2) : STATIC_CONTENT_STAGES).map((stage) => {
             const index = STATIC_CONTENT_STAGES.indexOf(stage);
             return (
@@ -210,6 +227,7 @@ export function StaticContentWizard({
               contentRenderContext={contentRenderContext}
               dispatch={dispatch}
               onFreeTextValidation={setFreeTextValidation}
+              restoration={restoration}
               onRetainMedia={retainMedia}
               onRestorePreviousImage={() => void discardActiveContentDraft("restore-previous-image")}
             />
@@ -219,7 +237,8 @@ export function StaticContentWizard({
 
         {submitError && <p className="form-error" role="alert">{submitError}</p>}
         <footer>
-          <button type="button" className="secondary" onClick={requestClose}>Cancel</button>
+          <button type="button" className="secondary" onClick={requestDiscard}>Cancel</button>
+          {editor && dirty && <button type="button" className="secondary" onClick={() => void reset()}>Reset</button>}
           {stageIndex > (editor ? 2 : 0) && <button type="button" className="secondary" onClick={() => dispatch({ type: "previous" })}>Back</button>}
           <button type="submit" disabled={disabled || freeTextInvalid}>
             {draft.stage === "preview-and-add" ? (editor ? "Save" : "Add") : "Continue"}
@@ -228,8 +247,8 @@ export function StaticContentWizard({
       </ModalFocusScope>
       <ConfirmDialog
         open={draft.confirmation === "discard"}
-        title="Discard static content changes?"
-        message="Your unsaved static content changes last only for this application session."
+        title="Discard Text/Image changes?"
+        message="Your unsaved Text/Image changes last only for this application session."
         cancelLabel="Keep editing"
         confirmLabel="Discard"
         onCancel={() => dispatch({ type: "keepEditing" })}
@@ -297,7 +316,7 @@ function ContentTypeFields({ draft, dispatch }) {
   );
 }
 
-export function StaticContentFields({ draft, dashboard = {}, contentRenderContext = {}, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage }) {
+export function StaticContentFields({ draft, dashboard = {}, contentRenderContext = {}, restoration, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage }) {
   return (
     <div>
       <label htmlFor="static-panel-title">Panel title</label>
@@ -307,20 +326,37 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
         value={draft.panel?.title ?? ""}
         onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
       />
+      <ChartFootprintPicker
+        subject="Panel"
+        idPrefix={`static-panel-${draft.draftIdentity?.panelId ?? "draft"}`}
+        value={resolveChartFootprint(draft.panel?.layout)}
+        onChange={({ columns, rows }) => dispatch({
+          type: "setPanel",
+          updates: {
+            layout: {
+              ...(draft.panel?.layout ?? {}),
+              size: legacySizeForFootprint({ columns, rows }),
+              width: columns,
+              height: rows,
+            },
+          },
+        })}
+      />
       {draft.contentTypeId === "freeText"
-        ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} />
+        ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} restoration={restoration} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} />
         : <ImageFields draft={draft} dashboard={dashboard} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
     </div>
   );
 }
 
-function FreeTextFields({ draft, dashboard, contentRenderContext, dispatch, onValidationChange, onRetainMedia }) {
+function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, dispatch, onValidationChange, onRetainMedia }) {
   return (
     <FreeTextSourceEditor
       id="static-qmd-source"
       value={draft.source?.qmd ?? ""}
       panelId={draft.panel?.id ?? "static-text-preview"}
       panelTitle={draft.panel?.title ?? ""}
+      initialSurface={restoration?.surface}
       mediaItems={{ ...(dashboard.contentLibrary?.mediaItems ?? {}), ...(draft.pendingMediaItems ?? {}) }}
       assets={draft.assets}
       contentRenderContext={contentRenderContext}
@@ -400,8 +436,8 @@ function StaticPreview({ draft, contentRenderContext = {} }) {
     assets: { ...(contentRenderContext.assets ?? {}), ...(draft.assets ?? {}) },
   };
   return (
-    <section aria-label="Canonical static content preview">
-      <h3>Preview &amp; add</h3>
+    <section className="static-content-dialog__preview" aria-label="Text/Image preview">
+      <h3>{draft.panel?.title?.trim() || "Preview"}</h3>
       <StaticContentStateBoundary state={{ status: "ready" }} surface="build">
         {draft.contentTypeId === "freeText" ? (
           <div data-static-preview-type="freeText">
@@ -422,7 +458,7 @@ function StaticPreview({ draft, contentRenderContext = {} }) {
           </div>
         )}
       </StaticContentStateBoundary>
-      <p>Static content has no CSV, Chrono Group, Scene, or time controls.</p>
+      <p>Text/Image panels have no CSV, Chrono Group, Scene, or time controls.</p>
     </section>
   );
 }
@@ -453,10 +489,21 @@ export function cleanupImageDraftAssets(draft, dashboard, committed = null) {
 
 function focusRestoration(stage) {
   const active = typeof document === "undefined" ? null : document.activeElement;
+  const pane = active?.closest?.("[data-free-text-pane]")?.getAttribute("data-free-text-pane");
+  const controlledPane = active?.getAttribute?.("aria-controls")?.match(/-(composer|preview|advanced)-pane$/)?.[1];
+  const editor = typeof document === "undefined" ? null : document.querySelector(".free-text-source-editor");
+  const editorSurface = editor?.getAttribute("data-active-tab");
+  const surface = pane || controlledPane || editorSurface
+    || (typeof document !== "undefined" && document.querySelector("[data-image-media-id]") ? "image" : "composer");
+  const activeInsideEditor = Boolean(active && editor?.contains(active));
+  const selectedTabId = editor?.querySelector('[role="tab"][aria-selected="true"]')?.id || null;
+  const body = typeof document === "undefined" ? null : document.querySelector(".static-content-dialog__body");
   return {
     stage,
-    focusId: active?.id || null,
+    surface,
+    focusId: activeInsideEditor ? active?.id || selectedTabId : selectedTabId,
     invokerId: active?.id || null,
+    scrollTop: Number.isFinite(body?.scrollTop) ? body.scrollTop : 0,
   };
 }
 

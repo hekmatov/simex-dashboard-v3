@@ -12,11 +12,13 @@ export function StaticContentEditor({
   mediaItem,
   assets,
   initialDraft,
+  restoration,
   disabled,
   onDraftChange,
   onDirtyChange,
   onSave,
   onCancel,
+  onSuspend,
 } = {}) {
   const draft = React.useMemo(() => initialDraft ?? createStaticContentDraft({
     mode: "edit",
@@ -34,11 +36,13 @@ export function StaticContentEditor({
       editor
       dashboard={dashboard}
       initialDraft={draft}
+      restoration={restoration}
       disabled={disabled}
       onDraftChange={onDraftChange}
       onDirtyChange={onDirtyChange}
       onCreate={onSave}
       onClose={onCancel}
+      onSuspend={onSuspend}
     />
   );
 }

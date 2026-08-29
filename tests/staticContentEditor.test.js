@@ -47,6 +47,16 @@ test("Free-text authoring opens the constrained visual Composer by default", () 
   assert.match(html, />Advanced QMD</);
 });
 
+test("Free-text authoring restores the saved Preview or Advanced QMD surface", () => {
+  for (const surface of ["preview", "advanced"]) {
+    const html = renderToStaticMarkup(React.createElement(freeTextEditorModule.FreeTextSourceEditor, {
+      value: "Brief",
+      initialSurface: surface,
+    }));
+    assert.match(html, new RegExp(`id="static-qmd-source-${surface}-tab"[^>]*aria-selected="true"`));
+  }
+});
+
 test("existing Image edit finalizes and prepares the exact atomic V5 contract", () => {
   const dashboard = makeDashboardV5();
   let draft = createStaticContentDraft({

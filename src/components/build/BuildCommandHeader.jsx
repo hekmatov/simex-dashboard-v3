@@ -131,9 +131,9 @@ function BuildPendingWorkRail({ pendingWork }) {
       <ul className="build-pending-work__list">
         {pendingWork.map((work) => {
           const actionsDisabled = work.state === "saving";
-          const chartOwner = work.kind === "chart-edit" || work.kind === "chart-create";
+          const actionOwner = new Set(["chart-edit", "chart-create", "text-image-create", "text-image-edit"]).has(work.kind);
           const pendingReason = actionsDisabled
-            ? "Wait for the current chart operation to finish."
+            ? "Wait for the current authoring operation to finish."
             : "";
           return (
             <li
@@ -160,7 +160,7 @@ function BuildPendingWorkRail({ pendingWork }) {
                       Discard Layout Changes
                     </button>
                   </>
-                ) : chartOwner ? (
+                ) : actionOwner ? (
                   <>
                     <ControlTooltip disabled={actionsDisabled} reason={pendingReason}>
                       <button

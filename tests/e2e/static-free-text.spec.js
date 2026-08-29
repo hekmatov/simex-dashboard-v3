@@ -95,8 +95,8 @@ test.beforeEach(async ({ request }) => {
 
 test("Free-text toolbar authors portable font, emphasis, lists, and tables", async ({ page }) => {
   await openBiomedicalBuild(page);
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -167,7 +167,7 @@ for (const viewport of VIEWPORTS) {
     const beforeDiscard = await inspectBuildStaticState(page, panel);
 
     await openFreeTextEditor(panel, page, title);
-    let editor = page.getByRole("dialog", { name: "Edit static content" });
+    let editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await expectStaticEditorCompression(page, viewport, beforeDiscard);
     const editorSource = editor.getByLabel("QMD-style source");
     await editorSource.fill(INERT_QMD);
@@ -195,12 +195,12 @@ for (const viewport of VIEWPORTS) {
     await prepareFreeTextEditorTrigger(panel, title);
     const beforeSave = await inspectBuildStaticState(page, panel);
     await openFreeTextEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit static content" });
+    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
     await expectStaticEditorCompression(page, viewport, beforeSave);
     await editor.getByLabel("QMD-style source").fill(SAVED_QMD);
     await expect(editor.getByRole("status")).toContainText("Preview is up to date");
     await editor.getByRole("button", { name: "Continue" }).click();
-    await expect(editor.getByLabel("Canonical static content preview")).toContainText("Updated priorities");
+    await expect(editor.getByLabel("Text/Image preview")).toContainText("Updated priorities");
     await editor.getByRole("button", { name: "Save" }).click();
     await expect(editor).toHaveCount(0);
     await expectBuildStaticRestored(page, saved.panel.id, beforeSave, { preserveContentScroll: false });
@@ -368,8 +368,8 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openBiomedicalBuild(page);
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -438,7 +438,7 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
   await panel.scrollIntoViewIfNeeded();
   await prepareFreeTextEditorTrigger(panel, "Boundary traversal");
   await openFreeTextEditor(panel, page, "Boundary traversal");
-  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
   const editorSource = editor.getByLabel("QMD-style source");
   await exerciseFreeTextBoundaries({
     page,
@@ -478,8 +478,8 @@ async function createFreeText(page, {
   viewport,
   previewText = "Operational priorities",
 }) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -505,7 +505,7 @@ async function createFreeText(page, {
   }
 
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await expect(wizard.getByLabel("Canonical static content preview")).toContainText(previewText);
+  await expect(wizard.getByLabel("Text/Image preview")).toContainText(previewText);
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
 }
@@ -642,7 +642,7 @@ function canonicalPanel(page, panelId) {
 async function openFreeTextEditor(panel, page, title) {
   await panel.getByLabel(`${title} actions`)
     .getByRole("button", { name: "Edit chart" }).click();
-  await expect(page.getByRole("dialog", { name: "Edit static content" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Edit Text/Image" })).toBeVisible();
 }
 
 async function prepareFreeTextEditorTrigger(panel, title) {

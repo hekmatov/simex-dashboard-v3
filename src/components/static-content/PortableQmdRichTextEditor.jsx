@@ -1,6 +1,6 @@
 import React from "react";
 import { Node } from "@tiptap/core";
-import { Fragment } from "@tiptap/pm/model";
+import { Fragment, Slice } from "@tiptap/pm/model";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -71,6 +71,7 @@ export default function PortableQmdRichTextEditor({
     content: parsed.mode === "visual" ? parsed.document : { type: "doc", content: [{ type: "paragraph" }] },
     editorProps: {
       attributes: {
+        id: "portable-qmd-composer-surface",
         "aria-label": "Portable QMD Composer editing area",
         class: "portable-qmd-composer__surface",
       },
@@ -80,7 +81,8 @@ export default function PortableQmdRichTextEditor({
         event.preventDefault();
         const imported = sanitizePortableQmdHtmlPaste(html);
         const nodes = imported.document.content.map((node) => view.state.schema.nodeFromJSON(node));
-        view.dispatch(view.state.tr.replaceSelection(Fragment.fromArray(nodes)).scrollIntoView());
+        const slice = new Slice(Fragment.fromArray(nodes), 0, 0);
+        view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView());
         setAnnouncement(imported.removed.length
           ? "Some unsupported paste formatting was removed; the visible text was kept where possible."
           : "Formatted content pasted.");

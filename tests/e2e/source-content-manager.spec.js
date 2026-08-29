@@ -32,9 +32,9 @@ test("compact Build content commands preserve six/four stage contracts", async (
   await chartWizard.getByRole("button", { name: "Close", exact: true }).click();
 
   await commands.getByRole("button", { name: "Add Text/Image" }).click();
-  const staticWizard = page.getByRole("dialog", { name: "Add static content" });
-  await expect(staticWizard.getByRole("navigation", { name: "Static content stages" }).getByRole("button")).toHaveCount(4);
-  await staticWizard.getByRole("button", { name: "Close static content editor" }).click();
+  const staticWizard = page.getByRole("dialog", { name: "Add Text/Image" });
+  await expect(staticWizard.getByRole("navigation", { name: "Text/Image stages" }).getByRole("button")).toHaveCount(4);
+  await staticWizard.getByRole("button", { name: "Close Text/Image editor" }).click();
 });
 
 test("non-modal manager restores canvas selection scroll and focus", async ({ page }) => {

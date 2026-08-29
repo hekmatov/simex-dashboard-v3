@@ -268,7 +268,7 @@ test("Image replacement and panel removal retain reusable durable media bytes", 
   await firstPanel.hover();
   await firstPanel.getByLabel(`${firstTitle} actions`)
     .getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
   await editor.locator("#static-image-file").setInputFiles({
     name: "replacement.png",
     mimeType: "image/png",
@@ -394,8 +394,8 @@ async function openBiomedical(page) {
 }
 
 async function createFreeText(page) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -412,8 +412,8 @@ async function createImage(page, {
   alt = IMAGE_ALT,
   buffer = PNG,
 } = {}) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Image").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -426,7 +426,7 @@ async function createImage(page, {
   await expect(wizard.getByText(/portable\.png is ready/)).toBeVisible();
   await wizard.getByLabel("Alternative text").fill(alt);
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await expect(wizard.getByLabel("Canonical static content preview")
+  await expect(wizard.getByLabel("Text/Image preview")
     .locator(`img[alt="${alt}"]`)).toBeVisible();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);

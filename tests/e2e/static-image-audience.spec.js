@@ -184,8 +184,8 @@ async function openBiomedical(page) {
 }
 
 async function createFreeText(page) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -201,8 +201,8 @@ async function createFreeText(page) {
 }
 
 async function createImage(page) {
-  await page.getByRole("button", { name: "Add static content", exact: true }).click();
-  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Image").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -215,7 +215,7 @@ async function createImage(page) {
   await expect(wizard.getByText(/audience-readiness\.png is ready/)).toBeVisible();
   await wizard.getByLabel("Alternative text").fill(IMAGE_ALT);
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await expect(wizard.getByLabel("Canonical static content preview").locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
+  await expect(wizard.getByLabel("Text/Image preview").locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   await expect.poll(() => panelIdByTitle(page, IMAGE_TITLE)).not.toBeNull();

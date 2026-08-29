@@ -108,6 +108,7 @@ export default function BuildWorkspace({
   layoutDraft = null,
   chartSlotDraft = null,
   chartOwners = [],
+  owners = [],
   authoredDirtyState = {},
   pendingWorkResumeActions = {},
   pendingWorkOwnerActions = {},
@@ -615,7 +616,7 @@ export default function BuildWorkspace({
     authoredDirty: effectiveAuthoredDirtyState,
     coordinator: draftCoordinator,
     chartOwners,
-    owners: temporalOwners,
+    owners: [...temporalOwners, ...(Array.isArray(owners) ? owners : [])],
     parkedAuxiliaries,
     layoutDraft,
     actions: {

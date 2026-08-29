@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const HARNESS_URL = "http://127.0.0.1:4175/tests/fixtures/portable-qmd-browser.html";
 
-test("Journey C — QMD media controls responsive RTL geometry and request authority", async ({ page }) => {
+test("Flow Frame Decorative local image inspector keeps responsive geometry and request authority", async ({ page }) => {
   test.setTimeout(90_000);
   const requests = [];
   const pageErrors = [];
@@ -21,7 +21,7 @@ test("Journey C — QMD media controls responsive RTL geometry and request autho
   await expect(inspector).toBeVisible();
   for (const label of ["25%", "33%", "50%", "66%", "75%", "100%"] ) {
     await inspector.getByLabel(label).check();
-    await expect(page.getByLabel("QMD-style source")).toContainText(`width=${label}`);
+    await expect(page.locator("#journey-qmd-source")).toHaveValue(new RegExp(`width=${label.replace("%", "\\%")}`));
     await expect(page.locator("#journey-qmd-source-status")).toHaveText("Preview is up to date.");
     if (label === "75%") expect(await geometry(page)).toMatchObject({
       surface: "build", authoredFlow: "wrap-start", computedFloat: "inline-start", widthRatio: 0.5, horizontalOverflow: false,
@@ -29,7 +29,7 @@ test("Journey C — QMD media controls responsive RTL geometry and request autho
   }
   await inspector.getByLabel("Custom width percentage").fill("37");
   await inspector.getByLabel("Custom width percentage").blur();
-  await expect(page.getByLabel("QMD-style source")).toContainText("width=37%");
+  await expect(page.locator("#journey-qmd-source")).toHaveValue(/width=37%/);
   await inspector.getByLabel("End", { exact: true }).check();
   await inspector.getByLabel("Wrap start", { exact: true }).check();
   const moreOptions = inspector.getByRole("button", { name: "More image options" });
@@ -54,7 +54,7 @@ test("Journey C — QMD media controls responsive RTL geometry and request autho
   await expect(picker.getByLabel(/Response map/)).toBeFocused();
   await picker.getByLabel(/Alternate map/).evaluate((node) => node.click());
   await expect(changeImage).toBeFocused();
-  await expect(page.getByLabel("QMD-style source")).toContainText("simex-media:alternate");
+  await expect(page.locator("#journey-qmd-source")).toHaveValue(/simex-media:alternate/);
   await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();
   const alternateMore = page.getByRole("button", { name: "More image options" });
   if (await alternateMore.getAttribute("aria-expanded") === "false") await alternateMore.click();
@@ -105,8 +105,9 @@ async function mountJourney(page, surface, contentWidth, options = {}) {
   await page.evaluate(async ({ surface, contentWidth, options }) => {
     await import("/src/styles/tokens.css");
     await import("/src/styles/source-content.css");
-    const { default: React } = await import("/node_modules/.vite/deps/react.js");
-    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: React } = await import("/@id/react");
+    const ReactDOMModule = await import("/@id/react-dom/client");
+    const ReactDOMClient = ReactDOMModule.default ?? ReactDOMModule;
     const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
     const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
     window.__journeyRoot?.unmount();
