@@ -9,22 +9,26 @@ import {
 import ChartFootprintPicker from "./ChartFootprintPicker.jsx";
 import EditSessionActions from "./EditSessionActions.jsx";
 import GeneratedFormSection from "./GeneratedFormSection.jsx";
+import ControlTooltip from "../common/ControlTooltip.js";
 
 const DANGEROUS_PATH_SEGMENTS = new Set([
   "__proto__",
   "prototype",
   "constructor",
 ]);
+const SAVE_UNAVAILABLE_REASON = "Saving is unavailable for this chart session.";
+const REMOVE_UNAVAILABLE_REASON = "Removing is unavailable for this chart session.";
+const FULL_EDITOR_UNAVAILABLE_REASON = "Full editing is unavailable for this chart session.";
 
 export default function ChartQuickEditor({
   session,
   disabled = false,
   onDraftChange = noop,
-  onSave = noop,
+  onSave,
   onReset = noop,
   onClose = noop,
-  onRemove = noop,
-  onOpenFullEditor = noop,
+  onRemove,
+  onOpenFullEditor,
 } = {}) {
   if (session?.activeSurface !== "quick") return null;
 
@@ -33,17 +37,20 @@ export default function ChartQuickEditor({
   const dirty = isChartEditSessionDirty(session);
   const saving = session.status === "saving";
   const locked = disabled || saving;
+  const saveAvailable = typeof onSave === "function";
+  const removeAvailable = typeof onRemove === "function";
+  const fullEditorAvailable = typeof onOpenFullEditor === "function";
   const changeDraft = (path, value) => {
     if (locked) return;
     onDraftChange(updateQuickChartDraft(chart, path, value));
   };
   const submit = (event) => {
     event?.preventDefault?.();
-    if (locked || !dirty || !model.valid) return;
+    if (locked || !saveAvailable || !dirty || !model.valid) return;
     return onSave();
   };
   const invokeWhileUnlocked = (callback) => () => {
-    if (!locked) callback();
+    if (!locked) callback?.();
   };
 
   return React.createElement(
@@ -52,13 +59,19 @@ export default function ChartQuickEditor({
     React.createElement(
       "aside",
       {
+        ref: (root) => assignQuickEditorControlIds(root, session.placementId),
         className: "chart-editor-v3 chart-quick-editor",
         "aria-labelledby": "chart-quick-editor-title",
         "aria-busy": locked ? "true" : undefined,
         "aria-disabled": locked ? "true" : undefined,
         inert: locked ? "" : undefined,
+        "data-chart-quick-placement-id": session.placementId,
         "data-chart-edit-status": session.status,
         "data-chart-edit-dirty": dirty ? "true" : "false",
+        onFocusCapture: (event) => assignQuickEditorControlIds(
+          event.currentTarget,
+          session.placementId,
+        ),
       },
       React.createElement(
         "form",
@@ -111,14 +124,21 @@ export default function ChartQuickEditor({
             }),
           ),
           React.createElement(
-            "button",
+            ControlTooltip,
             {
-              type: "button",
-              className: "secondary chart-quick-editor-open-full",
-              disabled: locked,
-              onClick: invokeWhileUnlocked(onOpenFullEditor),
+              disabled: !fullEditorAvailable,
+              reason: FULL_EDITOR_UNAVAILABLE_REASON,
             },
-            "Open full editor",
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                className: "secondary chart-quick-editor-open-full",
+                disabled: locked || !fullEditorAvailable,
+                onClick: invokeWhileUnlocked(onOpenFullEditor),
+              },
+              "Open full editor",
+            ),
           ),
         ),
         session.error
@@ -132,6 +152,10 @@ export default function ChartQuickEditor({
           valid: model.valid && dirty,
           submitting: saving,
           disabled,
+          saveDisabled: !saveAvailable,
+          saveDisabledReason: SAVE_UNAVAILABLE_REASON,
+          removeDisabled: !removeAvailable,
+          removeDisabledReason: REMOVE_UNAVAILABLE_REASON,
           saveLabel: "Save",
           resetLabel: "Reset",
           cancelLabel: "Close",
@@ -142,6 +166,26 @@ export default function ChartQuickEditor({
       ),
     ),
   );
+}
+
+export function assignQuickEditorControlIds(root, placementId) {
+  if (!root?.querySelectorAll) return root;
+  const documentRef = root.ownerDocument;
+  const prefix = `chart-quick-${safeControlId(placementId || "chart")}`;
+  for (const control of root.querySelectorAll(
+    "button, input, select, textarea, [data-control-tooltip-anchor='true'][tabindex='0']",
+  )) {
+    if (control.id) continue;
+    const semantic = quickControlSemanticId(control);
+    let candidate = `${prefix}-${semantic}`;
+    let suffix = 2;
+    while (documentRef?.getElementById(candidate) && documentRef.getElementById(candidate) !== control) {
+      candidate = `${prefix}-${semantic}-${suffix}`;
+      suffix += 1;
+    }
+    control.id = candidate;
+  }
+  return root;
 }
 
 export function updateQuickChartDraft(chart, path, value) {
@@ -194,6 +238,43 @@ export function updateQuickChartDraft(chart, path, value) {
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function quickControlSemanticId(control) {
+  if (control.dataset?.controlTooltipAnchor === "true") {
+    const ownedControl = control.querySelector?.(
+      "[data-icon-control], .chart-quick-editor-open-full",
+    );
+    const ownedId = ownedControl?.dataset?.iconControl
+      || (ownedControl?.classList?.contains("chart-quick-editor-open-full")
+        ? "open-full-editor"
+        : "disabled-control");
+    return `${safeControlId(ownedId)}-reason`;
+  }
+  if (control.dataset?.iconControl) return safeControlId(control.dataset.iconControl);
+  if (control.classList?.contains("chart-quick-editor-open-full")) return "open-full-editor";
+  if (control.matches?.("[role='gridcell'][data-columns][data-rows]")) {
+    return `footprint-${control.dataset.columns}x${control.dataset.rows}`;
+  }
+  const colorField = control.closest?.("[data-color-field]");
+  const colorPrefix = colorField?.dataset?.colorField
+    ? `${safeControlId(colorField.dataset.colorField)}-`
+    : "";
+  const label = control.getAttribute?.("aria-label")
+    || control.closest?.("label")?.textContent
+    || control.getAttribute?.("name")
+    || control.getAttribute?.("type")
+    || control.textContent
+    || control.tagName;
+  return `${colorPrefix}${safeControlId(label || "control")}`;
+}
+
+function safeControlId(value) {
+  return String(value ?? "control")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "control";
 }
 
 function noop() {}

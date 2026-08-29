@@ -426,6 +426,117 @@ test("editor reset, save race, title alignment, and shared background color stay
   });
 });
 
+test("quick edit previews immediately while unchanged and suspended click-away sessions restore correctly", async ({
+  page,
+}) => {
+  await openBiomedicalPage(page);
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const editChart = panel.getByRole("button", { name: "Edit chart" });
+  const storedDashboardBeforeEdit = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    STORAGE_KEY,
+  );
+
+  await editChart.click();
+  let editor = page.locator(".chart-quick-editor");
+  await expect(editor).toBeVisible();
+  const addChart = page.getByRole("button", { name: "Add chart", exact: true });
+  await expect(addChart).toBeEnabled();
+  await addChart.focus();
+  await addChart.press("Enter");
+  await expect(editor).toHaveCount(0);
+  const addChartWizard = page.getByRole("dialog", { name: "Add new chart" });
+  await expect(addChartWizard).toBeVisible();
+  const addChartFlow = chartAuthoringWorkflow(addChartWizard);
+  await addChartFlow.selectExistingSource("Biomedical mortality by age");
+  await addChartWizard.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(addChartWizard).toHaveCount(0);
+
+  await editChart.click();
+  editor = page.locator(".chart-quick-editor");
+  await expect(editor).toBeVisible();
+  await addChart.focus();
+  await addChart.press("Enter");
+  await expect(editor).toHaveCount(0);
+  const resumedAddChartWizard = page.getByRole("dialog", { name: "Add new chart" });
+  await expect(resumedAddChartWizard).toBeVisible();
+  await resumedAddChartWizard.getByRole("button", { name: "Discard chart draft" }).click();
+  const discardChartDraft = page.getByRole("dialog", { name: "Discard chart?" });
+  await discardChartDraft.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(resumedAddChartWizard).toHaveCount(0);
+
+  await editChart.click();
+  editor = page.locator(".chart-quick-editor");
+  await expect(editor).toBeVisible();
+  await page.locator(".dashboard-header").click({ position: { x: 8, y: 8 } });
+  await expect(editor).toHaveCount(0);
+  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "View", exact: true })).toBeEnabled();
+
+  await editChart.click();
+  editor = page.locator(".chart-quick-editor");
+  const title = editor.getByLabel("Chart title");
+  await title.fill("Live quick preview");
+  await editor.getByLabel("Background", { exact: true }).fill("#123456");
+  await editor.getByLabel("Show title").uncheck();
+  await expect(panel.locator(".chart-view-frame")).toHaveCSS(
+    "background-color",
+    "rgb(18, 52, 86)",
+  );
+  await expect(
+    panel.locator(".chart-echarts-view .chart-view-title--visually-hidden"),
+  ).toHaveText("Live quick preview");
+  await expect.poll(() => page.evaluate(
+    (key) => localStorage.getItem(key),
+    STORAGE_KEY,
+  )).toBe(storedDashboardBeforeEdit);
+  await expect(editor.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+  await expect(editor.getByRole("button", { name: "Remove chart", exact: true })).toBeDisabled();
+  await expect(editor.getByRole("button", { name: "Open full editor" })).toBeDisabled();
+  const restorationTarget = editor.locator(
+    ".control-tooltip:has(.chart-quick-editor-open-full)",
+  );
+  await expect(restorationTarget).toHaveAttribute("tabindex", "0");
+  await restorationTarget.focus();
+  await expect(restorationTarget).toBeFocused();
+  await expect(restorationTarget).toHaveAttribute("id", /.+/);
+  const restorationTargetId = await restorationTarget.getAttribute("id");
+  const quickEditorScrollTop = await page.locator(".unit-orbit-scroll").evaluate((scroller) => {
+    const available = scroller.scrollHeight - scroller.clientHeight;
+    if (available < 40) throw new Error("Quick editor did not provide a scrollable restoration fixture.");
+    scroller.scrollTop = Math.min(160, available);
+    return scroller.scrollTop;
+  });
+  expect(quickEditorScrollTop).toBeGreaterThan(0);
+
+  await page.locator(".dashboard-header").click({ position: { x: 8, y: 8 } });
+  await expect(editor).toHaveCount(0);
+  await expect(panel.locator(".chart-view-frame")).toHaveCSS(
+    "background-color",
+    "rgb(18, 52, 86)",
+  );
+  await expect(
+    panel.locator(".chart-echarts-view .chart-view-title--visually-hidden"),
+  ).toHaveText("Live quick preview");
+  await expect(editChart).toBeEnabled();
+  await expect(addChart).toBeDisabled();
+  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveCount(0);
+
+  await editChart.click();
+  editor = page.locator(".chart-quick-editor");
+  const resumedTitle = editor.getByLabel("Chart title");
+  await expect(resumedTitle).toHaveValue("Live quick preview");
+  await expect(editor.getByLabel("Show title")).not.toBeChecked();
+  const resumedRestorationTarget = editor.locator(
+    ".control-tooltip:has(.chart-quick-editor-open-full)",
+  );
+  await expect(resumedRestorationTarget).toHaveAttribute("id", restorationTargetId);
+  await expect(resumedRestorationTarget).toBeFocused();
+  await expect.poll(() => page.locator(".unit-orbit-scroll").evaluate(
+    (scroller) => scroller.scrollTop,
+  )).toBe(quickEditorScrollTop);
+});
+
 test("editor chart conversion supports compatible changes and recoverable remapping", async ({
   page,
 }) => {

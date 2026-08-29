@@ -3,6 +3,7 @@
 import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
 import { useOperationStatus } from "./app-shell/OperationStatusProvider.jsx";
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
+import ChartQuickEditor from "./chart-authoring/ChartQuickEditor.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import StaticContentEditor from "./static-content/StaticContentEditor.jsx";
 import StaticContentWizard, { cleanupImageDraftAssets } from "./static-content/StaticContentWizard.jsx";
@@ -76,6 +77,13 @@ import {
   createChartDraftSessionStore,
   isMeaningfulChartDraft,
 } from "../charting/forms/chartDraftSession.js";
+import {
+  createChartEditSession,
+  dismissChartEditSession,
+  isChartEditSessionDirty,
+  projectChartEditSessionDashboard,
+  reduceChartEditSession,
+} from "../charting/forms/chartEditSession.js";
 import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnloadGuard.js";
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
@@ -164,6 +172,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [chartEditorPlacementId, setChartEditorPlacementId] = React.useState(null);
   const [chartEditorVisible, setChartEditorVisible] = React.useState(false);
   const [chartEditorDirty, setChartEditorDirty] = React.useState(false);
+  const [chartEditSession, setChartEditSession] = React.useState(null);
   const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
   const [chartWizardSuspended, setChartWizardSuspended] = React.useState(false);
   const [chartWizardSuspendedTarget, setChartWizardSuspendedTarget] = React.useState(null);
@@ -171,6 +180,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [staticContentDraft, setStaticContentDraft] = React.useState(null);
   const [staticContentDirty, setStaticContentDirty] = React.useState(false);
   const staticWizardInvokerRef = React.useRef(null);
+  const quickChartRestorationFrameRef = React.useRef(0);
   const [localAuthoringDrafts, setLocalAuthoringDrafts] = React.useState({});
   const [contentDraftRetainers, setContentDraftRetainers] = React.useState(() => (
     contentDraftCoordinator?.getActiveRetainers?.() ?? null
@@ -301,12 +311,23 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const workingDashboard = editMode && buildLayoutDraft?.value
     ? buildLayoutDraft.value
     : dashboard;
+  const quickChartEditDirty = Boolean(
+    chartEditSession && isChartEditSessionDirty(chartEditSession),
+  );
+  const renderingDashboard = React.useMemo(
+    () => chartEditSession
+      ? projectChartEditSessionDashboard(workingDashboard, chartEditSession)
+      : workingDashboard,
+    [chartEditSession, workingDashboard],
+  );
 
   React.useEffect(() => {
     onBuildStructureProjectionChange?.(editMode ? workingDashboard : null);
   }, [editMode, onBuildStructureProjectionChange, workingDashboard]);
   const activePage =
     workingDashboard.pages.find((page) => page.id === activePageId) ?? workingDashboard.pages[0];
+  const renderingActivePage =
+    renderingDashboard.pages.find((page) => page.id === activePageId) ?? renderingDashboard.pages[0];
   const presentableItemIndex = React.useMemo(
     () => buildPresentableItemIndex(dashboard),
     [dashboard],
@@ -343,12 +364,22 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     ? getChartSchema(selectedPanel.typeId).authoringWorkflow === "static"
     : false;
   const chartAuthoringActive = Boolean(
-    chartWizardTarget || staticWizardTarget || (editMode && selectedPanel),
+    chartWizardTarget
+      || staticWizardTarget
+      || (editMode && selectedPanel && (
+        selectedPanelIsStatic
+          ? chartEditorVisible
+          : quickChartEditDirty
+      )),
   );
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
-  const buildDraftLocked = Boolean(chartEditorDirty || staticContentDirty || localAuthoringEditing);
-  const selectedEditorDirty = Boolean(chartEditorDirty || staticContentDirty);
+  const buildDraftLocked = Boolean(
+    quickChartEditDirty || chartEditorDirty || staticContentDirty || localAuthoringEditing,
+  );
+  const selectedEditorDirty = Boolean(
+    quickChartEditDirty || chartEditorDirty || staticContentDirty,
+  );
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const layoutDraftDirty = ["dirty", "saving", "error", "suspended"].includes(buildLayoutDraft?.status);
   const localDraftKeys = new Set(
@@ -449,6 +480,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditorVisible(false);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
+      setChartEditSession(null);
       setChartWizardTarget(null);
       setChartWizardDirty(false);
       chartDraftSessionStore.clear(chartDraftSessionKey);
@@ -475,20 +507,24 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     },
     requestAddPage() {
       if (!buildMode || chartAuthoringActive) return;
+      releaseCleanQuickChartEditSession();
       addBuildPage();
     },
     requestBuildPageReorder(pageId, targetIndex) {
       if (!buildMode || chartAuthoringActive) return;
+      releaseCleanQuickChartEditSession();
       reorderBuildPage(pageId, targetIndex);
     },
     requestBuildPageCommand(command) {
       if (!buildMode || chartAuthoringActive) return;
+      releaseCleanQuickChartEditSession();
       applyBuildStructureCommand(command);
     },
     requestChronoGroupAuthoring() {
       if (!buildMode || chartAuthoringActive) return;
       const group = dashboardStateRef.current.chronoGroups?.[0];
       if (!group) return;
+      releaseCleanQuickChartEditSession();
       const selection = { kind: "chronoGroup", chronoGroupId: group.id };
       const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
       void activate?.(selection, { intent: "activate" });
@@ -572,7 +608,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     },
   }), [buildMode, buildDraftLocked, chartAuthoringActive, chartDraftSessionKey,
     chartDraftSessionStore, chartEditorDirty, chartWizardDirty, chartWizardTarget,
-    externalDirty, inlineRenameDirty, layoutDraftDirty, localAuthoringDrafts,
+    chartEditSession, externalDirty, inlineRenameDirty, layoutDraftDirty, localAuthoringDrafts,
     moderatorOperation.kind, multiSelectMode, onCommitPendingConfiguration,
     onExportConfig, onInlineRenameDirtyChange, pendingEdits, resetExternalDirty,
     setAuthoredDirtyFlag]);
@@ -591,6 +627,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditorPlacementId(null);
       setChartEditorVisible(false);
       setChartEditorDirty(false);
+      setChartEditSession(null);
       setChartEditBaseline(null);
     }
   }, [editMode]);
@@ -775,7 +812,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function collectCurrentPackageExportIssues() {
     return collectDashboardPackageExportIssues({
-      chartEditor: chartEditorDirty,
+      chartEditor: quickChartEditDirty || chartEditorDirty,
       chartWizard: chartWizardDirty || isMeaningfulChartDraft(
         chartDraftSessionStore.get(chartDraftSessionKey),
       ),
@@ -792,7 +829,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function resolvePackageExportIssue(issueId) {
     setPackageExportIssues([]);
     if (issueId === "chart-editor") {
-      setChartEditorVisible(Boolean(chartEditorPlacementId));
+      if (!resumeQuickChartEditSession()) {
+        setChartEditorVisible(Boolean(chartEditorPlacementId));
+      }
       return;
     }
     if (issueId === "chart-wizard") {
@@ -854,6 +893,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await pendingEdits.flush();
       await onPanelRemove(panelId);
       setChartEditBaseline(null);
+      setChartEditSession(null);
       setChartEditorVisible(false);
       setChartEditorPlacementId((current) => (current === panelId ? null : current));
       setSelectedPanelId((current) => (current === panelId ? null : current));
@@ -1077,6 +1117,109 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setBuildLayoutDraft(null);
   }
 
+  function captureQuickChartEditRestoration(surface = "quick") {
+    if (typeof document === "undefined") {
+      return { surface, focusId: null, scrollTop: 0 };
+    }
+    const root = findQuickChartEditRoot(chartEditSession?.placementId);
+    const scroller = root?.closest(".unit-orbit-scroll");
+    let focusTarget = root?.contains(document.activeElement)
+      ? document.activeElement
+      : null;
+    if (focusTarget?.closest?.(".settings-color-popover")) {
+      focusTarget = focusTarget
+        .closest("[data-color-field]")
+        ?.querySelector("input[id], button[id]") ?? null;
+    }
+    return {
+      surface,
+      focusId: focusTarget?.id || null,
+      scrollTop: scroller?.scrollTop ?? 0,
+    };
+  }
+
+  function findQuickChartEditRoot(placementId) {
+    if (typeof document === "undefined" || !placementId) return null;
+    return [...document.querySelectorAll("[data-chart-quick-placement-id]")]
+      .find((element) => element.dataset.chartQuickPlacementId === placementId) ?? null;
+  }
+
+  function cancelQuickChartEditRestoration() {
+    if (typeof window === "undefined" || !quickChartRestorationFrameRef.current) return;
+    window.cancelAnimationFrame(quickChartRestorationFrameRef.current);
+    quickChartRestorationFrameRef.current = 0;
+  }
+
+  function releaseCleanQuickChartEditSession() {
+    if (
+      chartEditSession?.activeSurface !== "quick"
+      || isChartEditSessionDirty(chartEditSession)
+    ) return false;
+    cancelQuickChartEditRestoration();
+    setChartEditSession(null);
+    setChartEditorPlacementId(null);
+    setChartEditorVisible(false);
+    setChartEditBaseline(null);
+    setChartEditorDirty(false);
+    return true;
+  }
+
+  function restoreQuickChartEditSession(restoration, placementId) {
+    if (!restoration || typeof window === "undefined") return;
+    cancelQuickChartEditRestoration();
+    let attempts = 0;
+    const restore = () => {
+      attempts += 1;
+      const root = findQuickChartEditRoot(placementId);
+      const orbit = root?.closest(".unit-orbit");
+      const scroller = root?.closest(".unit-orbit-scroll");
+      if (root && orbit && !orbit.hidden && scroller && root.contains(document.activeElement)) {
+        scroller.scrollTop = Number.isFinite(restoration.scrollTop)
+          ? restoration.scrollTop
+          : 0;
+        const focusTarget = restoration.focusId
+          ? document.getElementById(restoration.focusId)
+          : null;
+        if (focusTarget && root.contains(focusTarget)) {
+          focusTarget.focus({ preventScroll: true });
+        }
+        quickChartRestorationFrameRef.current = 0;
+        return;
+      }
+      if (attempts >= 12) {
+        quickChartRestorationFrameRef.current = 0;
+        return;
+      }
+      quickChartRestorationFrameRef.current = window.requestAnimationFrame(restore);
+    };
+    quickChartRestorationFrameRef.current = window.requestAnimationFrame(restore);
+  }
+
+  function changeQuickChartDraft(draft) {
+    setChartEditSession((current) => current
+      ? reduceChartEditSession(current, {
+          type: "CHANGE",
+          surface: "quick",
+          draft,
+        })
+      : current);
+  }
+
+  function resetQuickChartDraft() {
+    setChartEditSession((current) => current
+      ? reduceChartEditSession(current, { type: "RESET" })
+      : current);
+  }
+
+  function resumeQuickChartEditSession() {
+    if (!chartEditSession) return false;
+    const resumed = reduceChartEditSession(chartEditSession, { type: "RESUME" });
+    setChartEditSession(resumed);
+    setChartEditorVisible(true);
+    restoreQuickChartEditSession(resumed.restoration, resumed.placementId);
+    return true;
+  }
+
   function saveSelectedChartV3(payload) {
     if (moderatorOperationGateRef.current.isActive()) {
       return Promise.reject(new Error("Wait for the current dashboard operation to finish."));
@@ -1086,6 +1229,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       commit: () => onChartSave(payload),
       onCommitted: () => {
         setChartEditBaseline(null);
+        setChartEditSession(null);
         setChartEditorVisible(false);
         setChartEditorPlacementId(null);
         setChartEditorDirty(false);
@@ -1100,6 +1244,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onPanelEditCancel(chartEditBaseline);
     }
     setChartEditBaseline(null);
+    setChartEditSession(null);
     setChartEditorVisible(false);
     setChartEditorPlacementId(null);
     setChartEditorDirty(false);
@@ -1109,6 +1254,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function dismissSelectedPanel() {
     if (moderatorOperationGateRef.current.isActive()) return;
+    if (chartEditSession?.activeSurface === "quick") {
+      cancelQuickChartEditRestoration();
+      const next = dismissChartEditSession(chartEditSession, {
+        surface: "quick",
+        restoration: captureQuickChartEditRestoration("quick"),
+      });
+      setChartEditSession(next);
+      setChartEditorVisible(false);
+      if (next === null) {
+        setChartEditorPlacementId(null);
+        setChartEditBaseline(null);
+        setChartEditorDirty(false);
+      }
+      return;
+    }
     setChartEditorVisible(false);
   }
 
@@ -1289,13 +1449,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditorVisible(false);
       return Promise.resolve(false);
     }
+    if (quickChartEditDirty && !reactivatingCurrentChart) {
+      setBuildSelectionError("Resume or reset the suspended chart changes before changing selection.");
+      return Promise.resolve(false);
+    }
     if (chartEditorDirty && !reactivatingCurrentChart) {
       setBuildSelectionError("Finish or cancel the open chart editor before changing Page.");
       return Promise.resolve(false);
     }
     setBuildSelectionError("");
     if (reactivatingCurrentChart) {
-      setChartEditorVisible(true);
+      if (!resumeQuickChartEditSession()) setChartEditorVisible(true);
       return Promise.resolve(true);
     }
     if (chartEditorPlacementId) {
@@ -1303,6 +1467,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditorPlacementId(null);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
+      setChartEditSession(null);
       setStaticContentDraft(null);
       setStaticContentDirty(false);
     }
@@ -1340,15 +1505,30 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (pendingBuildSelection?.requestId !== requestId) return;
     const { selection, intent } = pendingBuildSelection;
     if (selection.kind === "chart" && intent === "activate") {
-      setChartEditBaseline(dashboardWithCurrentDrafts());
+      const placement = findPanelPlacement(workingDashboard, selection.placementId);
+      const chart = placement?.chart ?? null;
+      const staticChart = chart
+        ? getChartSchema(chart.typeId).authoringWorkflow === "static"
+        : false;
+      setChartEditBaseline(null);
       setChartEditorPlacementId(selection.placementId);
       setChartEditorVisible(true);
       setChartEditorDirty(false);
+      setChartEditSession(chart && !staticChart
+        ? createChartEditSession({
+            placementId: selection.placementId,
+            chart,
+            chronoGroups: workingDashboard.chronoGroups ?? [],
+            activeSurface: "quick",
+            restoration: captureQuickChartEditRestoration("quick"),
+          })
+        : null);
     } else {
       setChartEditorVisible(false);
       setChartEditorPlacementId(null);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
+      setChartEditSession(null);
     }
     buildRevealResolversRef.current.get(requestId)?.(true);
     buildRevealResolversRef.current.delete(requestId);
@@ -1391,6 +1571,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function openChartWizard(sectionId) {
     if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
     if (chartWizardSuspended && chartWizardSuspendedTarget) {
+      releaseCleanQuickChartEditSession();
       setChartWizardTarget(chartWizardSuspendedTarget);
       setChartWizardSuspended(false);
       return;
@@ -1401,6 +1582,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       ? activePage?.sections?.find(({ id }) => id === buildSelection.sectionId)
       : activePage?.sections?.[0];
     if (!activePage || !section) return;
+    releaseCleanQuickChartEditSession();
     setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
     setChartWizardSuspended(false);
   }
@@ -1423,6 +1605,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       ? activePage?.sections?.find(({ id }) => id === buildSelection.sectionId)
       : activePage?.sections?.[0];
     if (!activePage || !section) return;
+    releaseCleanQuickChartEditSession();
     staticWizardInvokerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
@@ -1498,6 +1681,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setSectionDrafts({});
         setBuildLayoutDraft(null);
         setChartEditBaseline(null);
+        setChartEditSession(null);
+        setChartEditorPlacementId(null);
+        setChartEditorVisible(false);
+        setChartEditorDirty(false);
         chartDraftSessionStore.clear(chartDraftSessionKey);
         setChartWizardTarget(null);
         setChartWizardDirty(false);
@@ -1538,6 +1725,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartEditorVisible(false);
         setChartEditBaseline(null);
         setChartEditorDirty(false);
+        setChartEditSession(null);
         setChartWizardTarget(null);
         setChartWizardDirty(false);
         chartDraftSessionStore.clear(chartDraftSessionKey);
@@ -1718,26 +1906,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onCancel={cancelSelectedPanel}
     />
   ) : (
-    <ChartEditorV3
-      surface="inspector"
+    <ChartQuickEditor
+      session={chartEditSession}
       disabled={moderatorMutationLocked}
-      chart={selectedPanel}
-      chronoGroups={dashboard.chronoGroups ?? []}
-      existingCharts={configuredCharts(dashboard)}
-      rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
-      geoData={geoDataSources[selectedPanel.presentation?.map?.geoSource]}
-      geoDataSources={geoDataSources}
-      dataSources={dashboard.dataSources ?? {}}
-      profile={dashboard.datasetProfiles?.[selectedPanel.sourceId]}
-      loadedData={dashboard.loadedData ?? {}}
-      profiles={dashboard.datasetProfiles ?? {}}
-      parsingMetadata={dashboard.dataSources?.[selectedPanel.sourceId]?.parsingMetadata ?? {}}
-      timezone={dashboard.timezone ?? "UTC"}
-      onSave={saveSelectedChartV3}
-      onApplyCitationToSourceCharts={onApplyCitationToSourceCharts}
-      onCancel={cancelSelectedPanel}
-      onDirtyChange={setChartEditorDirty}
-      onRemove={() => removePanel(selectedPlacement.panelId)}
+      onDraftChange={changeQuickChartDraft}
+      onReset={resetQuickChartDraft}
+      onClose={dismissSelectedPanel}
     />
   )) : null;
   const buildWorkspace = editMode ? (
@@ -1759,9 +1933,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       sectionDrafts={sectionDrafts}
       chartEditor={selectedChartEditor}
       chartEditorPlacementId={chartEditorPlacementId}
-      chartEditorOpen={chartEditorVisible}
+      chartEditorOpen={selectedPanelIsStatic
+        ? chartEditorVisible
+        : chartEditSession?.activeSurface === "quick"}
       onCloseChartEditor={dismissSelectedPanel}
-      onResumeChartEditor={() => setChartEditorVisible(Boolean(chartEditorPlacementId))}
+      onResumeChartEditor={() => {
+        if (!resumeQuickChartEditSession()) {
+          setChartEditorVisible(Boolean(chartEditorPlacementId));
+        }
+      }}
       chartDraftOpen={chartAuthoringActive}
       chartDraftDirty={selectedEditorDirty}
       mutationsDisabled={moderatorMutationLocked}
@@ -1808,7 +1988,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       authoredDirtyState={authoredDirtyState}
       pendingWorkResumeActions={{
         structure: () => onOpenBuildPanel?.(),
-        chartEditor: () => setChartEditorVisible(Boolean(chartEditorPlacementId)),
+        chartEditor: () => {
+          if (!resumeQuickChartEditSession()) {
+            setChartEditorVisible(Boolean(chartEditorPlacementId));
+          }
+        },
         chartWizard: resumeChartWizardWork,
         staticContent: resumeStaticContentWork,
         inlineRename: resumeInlineRenameWork,
@@ -1830,9 +2014,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     <>
       <DashboardModeWorkspace
         mode={editMode ? "build" : "view"}
-        activePage={activePage}
+        activePage={renderingActivePage}
         pageType={landingActive ? "landing" : "analytical"}
-        dashboard={workingDashboard}
+        dashboard={renderingDashboard}
         contentDraftCoordinator={contentDraftCoordinator}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}

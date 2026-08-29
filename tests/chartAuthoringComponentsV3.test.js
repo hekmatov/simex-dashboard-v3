@@ -2725,6 +2725,36 @@ test("quick editor keeps clean and locked saves inert while preserving full-edit
   assert.equal(editActions.props.disabled, true);
 });
 
+test("quick editor fails closed when durable and full-editor authorities are absent", () => {
+  const chart = validLineChart();
+  const session = reduceChartEditSession(
+    createChartEditSession({ placementId: "placement-line", chart }),
+    {
+      type: "CHANGE",
+      surface: "quick",
+      draft: { ...chart, title: "Unsaved quick title" },
+    },
+  );
+  const tree = ChartQuickEditor({ session });
+  const openFull = findElement(tree, (element) => (
+    element.type === "button" && element.props.children === "Open full editor"
+  ));
+  const editActions = findElement(tree, (element) => (
+    element.type === EditSessionActions
+  ));
+
+  assert.equal(openFull.props.disabled, true);
+  assert.equal(editActions.props.saveDisabled, true);
+  assert.equal(editActions.props.removeDisabled, true);
+  assert.match(editActions.props.saveDisabledReason, /unavailable/i);
+  assert.match(editActions.props.removeDisabledReason, /unavailable/i);
+
+  const html = render(React.createElement(ChartQuickEditor, { session }));
+  assert.match(buttonMarkupByInteraction(html, "editor.save-changes"), /disabled=""/);
+  assert.match(buttonMarkupByInteraction(html, "chart.remove"), /disabled=""/);
+  assert.match(html, /Full editing is unavailable for this chart session\./);
+});
+
 test("pending chart creation guards Escape, Close, and discard", () => {
   const calls = [];
   const controls = createWizardCloseHandlers({

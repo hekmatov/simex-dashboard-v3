@@ -7,6 +7,10 @@ export default function EditSessionActions({
   valid = false,
   submitting = false,
   disabled = false,
+  saveDisabled = false,
+  saveDisabledReason = "",
+  removeDisabled = false,
+  removeDisabledReason = "",
   saveLabel = "Save changes",
   savingLabel = "Saving changes",
   resetLabel = "Reset changes",
@@ -30,7 +34,8 @@ export default function EditSessionActions({
         type: "submit",
         ariaLabel: submitting ? savingLabel : saveLabel,
         tooltip: submitting ? savingLabel : saveLabel,
-        disabled: disabled || !valid || submitting,
+        disabled: disabled || saveDisabled || !valid || submitting,
+        disabledReason: saveDisabled ? saveDisabledReason : "",
         onClick: onSave,
       }),
       React.createElement(IconControl, {
@@ -53,9 +58,10 @@ export default function EditSessionActions({
         ? React.createElement(IconControl, {
             interactionId: "chart.remove",
             className: "chart-editor-remove",
-            disabled: disabled || submitting,
+            disabled: disabled || removeDisabled || submitting,
+            disabledReason: removeDisabled ? removeDisabledReason : "",
             onClick: () => {
-              if (!disabled && !submitting) onRemove();
+              if (!disabled && !removeDisabled && !submitting) onRemove();
             },
           })
         : null,

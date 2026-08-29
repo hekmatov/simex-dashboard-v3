@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   chartEditSessionPendingSurface,
   createChartEditSession,
+  dismissChartEditSession,
   isChartEditSessionDirty,
   materializeChartEditSessionSave,
   prepareChartEditSessionSave,
@@ -11,6 +12,37 @@ import {
   projectChartEditSessionDashboard,
   reduceChartEditSession,
 } from "../src/charting/forms/chartEditSession.js";
+
+test("parent dismissal releases a clean session and retains a changed session", () => {
+  const clean = createSession();
+  assert.equal(dismissChartEditSession(clean, {
+    surface: "quick",
+    restoration: {
+      surface: "quick",
+      focusId: "edit-placement-a",
+      scrollTop: 180,
+    },
+  }), null);
+
+  const changed = changeChart(clean, "quick", { title: "Admissions now" });
+  const retained = dismissChartEditSession(changed, {
+    surface: "quick",
+    restoration: {
+      surface: "quick",
+      focusId: "chart-field-title",
+      scrollTop: 324,
+    },
+  });
+
+  assert.equal(retained.activeSurface, null);
+  assert.equal(retained.suspended, true);
+  assert.equal(retained.draft.title, "Admissions now");
+  assert.deepEqual(retained.restoration, {
+    surface: "quick",
+    focusId: "chart-field-title",
+    scrollTop: 324,
+  });
+});
 
 test("clean click-away dismissal creates no suspended or pending chart work", () => {
   const session = createSession();

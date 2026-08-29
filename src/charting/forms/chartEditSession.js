@@ -82,6 +82,18 @@ export function chartEditSessionPendingSurface(state) {
   return state.activeSurface ?? state.restoration.surface;
 }
 
+export function dismissChartEditSession(state, {
+  surface = state?.activeSurface,
+  restoration,
+} = {}) {
+  const suspended = reduceChartEditSession(state, {
+    type: "SUSPEND",
+    surface,
+    restoration,
+  });
+  return isChartEditSessionDirty(suspended) ? suspended : null;
+}
+
 export function projectChartEditSessionDashboard(dashboard, state) {
   assertSession(state);
   if (!isRecord(dashboard)) {
