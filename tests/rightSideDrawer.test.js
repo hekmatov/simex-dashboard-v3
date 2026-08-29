@@ -100,4 +100,31 @@ test("one crown-bottom calculation positions every drawer and status notices res
     }),
     400,
   );
+  assert.equal(
+    statusModule.measureOperationStatusDrawerOffset({
+      viewportWidth: 1440,
+      drawer: {
+        dataset: { rightSideDrawer: "look-drawer" },
+        offsetWidth: 400,
+        getBoundingClientRect() {
+          return { left: 1064, right: 1464, width: 400 };
+        },
+      },
+    }),
+    400,
+    "the opening translate must not reduce the settled shared-drawer clearance",
+  );
+  assert.equal(
+    statusModule.measureOperationStatusDrawerOffset({
+      viewportWidth: 1440,
+      drawer: {
+        offsetWidth: 400,
+        getBoundingClientRect() {
+          return { left: 1040, right: 1440, width: 400 };
+        },
+      },
+    }),
+    400,
+    "legacy surfaces must retain rectangle-based clearance",
+  );
 });

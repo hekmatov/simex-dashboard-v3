@@ -49,7 +49,7 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
       setActiveDrawerId(drawer?.dataset?.rightSideDrawer ?? rightDrawer ?? null);
       setDrawerOffset(measureOperationStatusDrawerOffset({
         viewportWidth: window.innerWidth,
-        drawerRect: drawer?.getBoundingClientRect(),
+        drawer,
       }));
     };
     const schedule = () => {
@@ -149,8 +149,19 @@ function legacyRightSideDrawer(ownerDocument, rightDrawer) {
   return drawerSelector ? ownerDocument?.querySelector?.(drawerSelector) : null;
 }
 
-export function measureOperationStatusDrawerOffset({ viewportWidth, drawerRect } = {}) {
-  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0 || !drawerRect) return 0;
+export function measureOperationStatusDrawerOffset({
+  viewportWidth,
+  drawer = null,
+  drawerRect = drawer?.getBoundingClientRect?.(),
+} = {}) {
+  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return 0;
+  const sharedDrawerWidth = typeof drawer?.dataset?.rightSideDrawer === "string"
+    ? Number(drawer.offsetWidth)
+    : 0;
+  if (Number.isFinite(sharedDrawerWidth) && sharedDrawerWidth > 0) {
+    return Math.ceil(Math.min(viewportWidth, sharedDrawerWidth));
+  }
+  if (!drawerRect) return 0;
   const left = Number(drawerRect.left);
   const right = Number(drawerRect.right);
   if (!Number.isFinite(left) || !Number.isFinite(right)) return 0;
