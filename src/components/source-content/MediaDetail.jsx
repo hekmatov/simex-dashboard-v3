@@ -12,6 +12,8 @@ export default function MediaDetail({
   dashboard,
   contentDraftCoordinator,
   onRename,
+  renameBusy = false,
+  renameError = "",
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
@@ -120,9 +122,6 @@ export default function MediaDetail({
       setReplacementLabel("");
       setReplaceOpen(false);
     } catch (error) {
-      replacementPlanRef.current = null;
-      setReplacementPlan(null);
-      setReplacementLabel("");
       setReplacementError(error?.message ?? "The media replacement failed. The previous revision remains active.");
     } finally {
       setReplacementBusy(false);
@@ -156,10 +155,11 @@ export default function MediaDetail({
           />
         )}
       </section>
-      <form className="source-content-rename" onSubmit={(event) => { event.preventDefault(); onRename?.({ displayName, defaultDescription }); }}>
-        <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required /></label>
-        <label><span>Default description</span><textarea value={defaultDescription} onChange={(event) => setDefaultDescription(event.target.value)} /></label>
-        <button type="submit" className="secondary" disabled={!onRename || (displayName.trim() === item.record.displayName && defaultDescription === item.record.defaultDescription)}>Save metadata</button>
+      <form className="source-content-rename" aria-busy={renameBusy ? "true" : undefined} onSubmit={(event) => { event.preventDefault(); void onRename?.({ displayName, defaultDescription }); }}>
+        <label><span>Display name</span><input value={displayName} disabled={renameBusy} onChange={(event) => setDisplayName(event.target.value)} required /></label>
+        <label><span>Default description</span><textarea value={defaultDescription} disabled={renameBusy} onChange={(event) => setDefaultDescription(event.target.value)} /></label>
+        <button type="submit" className="secondary" disabled={renameBusy || !onRename || (displayName.trim() === item.record.displayName && defaultDescription === item.record.defaultDescription)}>Save metadata</button>
+        {renameError && <p role="alert">{renameError}</p>}
       </form>
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
       <ContentActionDialog
@@ -187,6 +187,6 @@ async function discardPreparedReplacement(plan, reason, { contentDraftCoordinato
     discardSessionImageAsset(plan.newAssetId);
     return false;
   }
-  if (record.status !== "staged") return false;
+  if (!new Set(["staged", "error"]).has(record.status)) return false;
   return onContentDraftDiscard?.(draftId, reason) ?? false;
 }

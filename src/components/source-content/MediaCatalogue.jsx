@@ -5,6 +5,7 @@ import {
   importExternalMediaFile,
   stageLocalMediaFile,
 } from "./MediaPicker.jsx";
+import { discardSessionImageAsset } from "../../static-content/image/imageAssetValidation.js";
 
 export default function MediaCatalogue({ dashboard, contentDraftCoordinator, onContentDraftStage, onContentDraftCommit, onContentDraftDiscard, ...props }) {
   return (
@@ -38,9 +39,12 @@ export function ManagerMediaIntake({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const draftIdRef = React.useRef(null);
+  const candidateRef = React.useRef(candidate);
+  candidateRef.current = candidate;
 
   React.useEffect(() => () => {
     if (draftIdRef.current) onContentDraftDiscard?.(draftIdRef.current, "manager-intake-unmount");
+    else if (candidateRef.current?.assetId) discardSessionImageAsset(candidateRef.current.assetId);
     draftIdRef.current = null;
   }, [onContentDraftDiscard]);
 
@@ -56,6 +60,8 @@ export function ManagerMediaIntake({
       if (draftIdRef.current) {
         await onContentDraftDiscard?.(draftIdRef.current, "manager-intake-replaced");
         draftIdRef.current = null;
+      } else if (candidateRef.current?.assetId) {
+        discardSessionImageAsset(candidateRef.current.assetId);
       }
       const next = await stageLocalMediaFile({
         file,
@@ -63,14 +69,17 @@ export function ManagerMediaIntake({
         displayName: file.name || externalItem?.displayName || "New media",
         defaultDescription: externalItem?.defaultDescription ?? "",
       });
-      const stagedInput = buildManagerMediaDraft({ dashboard, candidate: next, duplicate: findDuplicateMedia(dashboard, next.assetId), choice: "separate" });
-      const { buildCandidate: _buildCandidate, ...input } = stagedInput;
-      const staged = onContentDraftStage?.(input);
-      draftIdRef.current = staged?.draftId ?? input.draftId;
+      const nextDuplicate = findDuplicateMedia(dashboard, next.assetId);
+      if (!nextDuplicate) {
+        const stagedInput = buildManagerMediaDraft({ dashboard, candidate: next, duplicate: null, choice: "separate" });
+        const { buildCandidate: _buildCandidate, ...input } = stagedInput;
+        const staged = onContentDraftStage?.(input);
+        draftIdRef.current = staged?.draftId ?? input.draftId;
+      }
       setCandidate(next);
       setDisplayName(file.name || externalItem?.displayName || "New media");
       setDefaultDescription(externalItem?.defaultDescription ?? "");
-      setChoice(findDuplicateMedia(dashboard, next.assetId) ? null : "separate");
+      setChoice(nextDuplicate ? null : "separate");
     } catch (caught) {
       setError(caught?.message ?? "The image could not be added.");
     } finally {
@@ -91,6 +100,7 @@ export function ManagerMediaIntake({
 
   const cancel = async () => {
     if (draftIdRef.current) await onContentDraftDiscard?.(draftIdRef.current, "manager-explicit-cancel");
+    else if (candidate?.assetId) discardSessionImageAsset(candidate.assetId);
     draftIdRef.current = null;
     setCandidate(null);
     setChoice(null);
@@ -117,27 +127,37 @@ export function ManagerMediaIntake({
       setOpen(false);
       onAdded?.(result?.itemIds?.[0] ?? input.mediaIds[0]);
     } catch (caught) {
-      draftIdRef.current = null;
       setError(caught?.message ?? "Media could not be added to the dashboard.");
     } finally {
       setBusy(false);
     }
   };
   const changeChoice = (nextChoice) => {
-    if (!candidate || !duplicate || !draftIdRef.current) return;
-    updateManagerMediaChoice({
-      contentDraftCoordinator,
-      draftId: draftIdRef.current,
-      dashboard,
-      candidate,
-      duplicate,
-      choice: nextChoice,
-    });
+    if (!candidate || !duplicate) return;
+    if (draftIdRef.current) {
+      updateManagerMediaChoice({
+        contentDraftCoordinator,
+        draftId: draftIdRef.current,
+        dashboard,
+        candidate,
+        duplicate,
+        choice: nextChoice,
+      });
+    } else {
+      const { buildCandidate: _buildCandidate, ...input } = buildManagerMediaDraft({
+        dashboard,
+        candidate,
+        duplicate,
+        choice: nextChoice,
+      });
+      const staged = onContentDraftStage?.(input);
+      draftIdRef.current = staged?.draftId ?? input.draftId;
+    }
     setChoice(nextChoice);
   };
 
   return (
-    <section aria-label={externalItem ? `Import ${externalItem.displayName} as local media` : "Add media to dashboard"}>
+    <section aria-label={externalItem ? `Import ${externalItem.displayName} as local media` : "Add media to dashboard"} aria-busy={busy ? "true" : undefined}>
       {!open && (
         <button type="button" className="secondary" onClick={() => setOpen(true)}>
           {externalItem ? "Import as local media" : "Add media"}
@@ -158,10 +178,10 @@ export function ManagerMediaIntake({
           {candidate?.previewUrl && <img src={candidate.previewUrl} alt="" />}
           {candidate && (
             <>
-              <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required /></label>
-              <label><span>Default description</span><textarea value={defaultDescription} onChange={(event) => setDefaultDescription(event.target.value)} /></label>
+              <label><span>Display name</span><input value={displayName} disabled={busy} onChange={(event) => setDisplayName(event.target.value)} required /></label>
+              <label><span>Default description</span><textarea value={defaultDescription} disabled={busy} onChange={(event) => setDefaultDescription(event.target.value)} /></label>
               {duplicate && (
-                <fieldset>
+                <fieldset disabled={busy}>
                   <legend>Identical image already exists</legend>
                   <p>The stored bytes match {duplicate.displayName}. Choose whether to reuse its logical identity or create a separate item.</p>
                   <label><input type="radio" name={`duplicate-${candidate.mediaItem.mediaId}`} checked={choice === "reuse"} onChange={() => changeChoice("reuse")} /> Reuse existing</label>

@@ -11,8 +11,11 @@ export default function SourceContentWorkspace({
   contentDraftCoordinator = null,
   geoDataSources = {},
   viewportWidth,
+  active = true,
   initialSelectedId = null,
   viewState = null,
+  ownerControllerRef = null,
+  onOwnersChange,
   onViewStateChange,
   onRequestClose,
   onContentDraftStage,
@@ -28,24 +31,93 @@ export default function SourceContentWorkspace({
   const browseState = viewState ?? localViewState;
   const { tab, queries, filters: filterState, selections, tabletDetailOpen } = browseState;
   const pendingDraftIds = React.useRef(new Set());
+  const rootRef = React.useRef(null);
+  const lastRestorationRef = React.useRef(null);
+  const [ownerRegistry, dispatchOwnerRegistry] = React.useReducer(
+    reduceSourceContentOwnerRegistry,
+    undefined,
+    createSourceContentOwnerRegistry,
+  );
+  const ownerRegistryRef = React.useRef(ownerRegistry);
+  ownerRegistryRef.current = ownerRegistry;
+  const [ownerResetGeneration, setOwnerResetGeneration] = React.useState(0);
+  const [renameOperation, setRenameOperation] = React.useState({ busy: false, error: "" });
+  const renamePromiseRef = React.useRef(null);
+  const sourceContentOwners = React.useMemo(
+    () => selectSourceContentOwners(ownerRegistry),
+    [ownerRegistry],
+  );
+  const ownerLocked = sourceContentOwners.length > 0;
 
   const stageDraft = React.useCallback((input) => {
     const staged = onContentDraftStage?.(input);
     const draftId = staged?.draftId ?? input.draftId;
-    if (draftId) pendingDraftIds.current.add(draftId);
+    if (draftId) {
+      pendingDraftIds.current.add(draftId);
+      dispatchOwnerRegistry({
+        type: "STAGE",
+        input: { ...input, draftId },
+        activity: active ? "active" : "suspended",
+      });
+    }
     return staged;
-  }, [onContentDraftStage]);
+  }, [active, onContentDraftStage]);
   const commitDraft = React.useCallback(async (draftId, buildCandidate) => {
+    dispatchOwnerRegistry({ type: "STATUS", transactionDraftId: draftId, status: "saving" });
     try {
-      return await onContentDraftCommit?.(draftId, buildCandidate);
-    } finally {
+      const result = await onContentDraftCommit?.(draftId, buildCandidate);
       pendingDraftIds.current.delete(draftId);
+      dispatchOwnerRegistry({ type: "SUCCEEDED", transactionDraftId: draftId });
+      return result;
+    } catch (error) {
+      dispatchOwnerRegistry({
+        type: "STATUS",
+        transactionDraftId: draftId,
+        status: "error",
+        error: error?.message ?? "Source Content could not be saved.",
+      });
+      throw error;
     }
   }, [onContentDraftCommit]);
-  const discardDraft = React.useCallback((draftId, reason) => {
+  const discardDraft = React.useCallback(async (draftId, reason) => {
+    const result = await onContentDraftDiscard?.(draftId, reason);
     pendingDraftIds.current.delete(draftId);
-    return onContentDraftDiscard?.(draftId, reason);
+    dispatchOwnerRegistry({ type: "DISCARD", transactionDraftId: draftId });
+    return result;
   }, [onContentDraftDiscard]);
+
+  React.useEffect(() => {
+    onOwnersChange?.(sourceContentOwners);
+  }, [onOwnersChange, sourceContentOwners]);
+
+  React.useImperativeHandle(ownerControllerRef, () => ({
+    suspend() {
+      const activeElement = typeof document === "undefined" ? null : document.activeElement;
+      const activeInsideWorkspace = rootRef.current?.contains?.(activeElement) === true;
+      const restoration = activeInsideWorkspace
+        ? captureSourceContentRestoration(rootRef.current)
+        : lastRestorationRef.current ?? captureSourceContentRestoration(rootRef.current);
+      lastRestorationRef.current = restoration;
+      dispatchOwnerRegistry({ type: "ACTIVITY", activity: "suspended", restoration });
+      return restoration;
+    },
+    resume(ownerId = null) {
+      dispatchOwnerRegistry({ type: "ACTIVITY", activity: "active" });
+      restoreSourceContentFocus(rootRef.current, ownerForId(ownerRegistryRef.current, ownerId)?.restoration);
+      return true;
+    },
+    focus(ownerId = null) {
+      restoreSourceContentFocus(rootRef.current, ownerForId(ownerRegistryRef.current, ownerId)?.restoration);
+      return true;
+    },
+    async discard(ownerId) {
+      const owner = ownerForId(ownerRegistryRef.current, ownerId);
+      if (!owner) return false;
+      const result = await discardDraft(owner.transactionDraftId, "source-content-owner-discard");
+      setOwnerResetGeneration((current) => current + 1);
+      return result;
+    },
+  }), [discardDraft, ownerControllerRef]);
 
   const updateViewState = (updater) => {
     const next = createSourceContentViewState(
@@ -67,6 +139,7 @@ export default function SourceContentWorkspace({
     ?? (layout === "desktop" ? items[0] ?? null : null);
 
   const selectItem = (id) => {
+    if (ownerLocked) return;
     updateViewState((current) => ({
       ...current,
       selections: { ...current.selections, [tab]: id },
@@ -75,16 +148,44 @@ export default function SourceContentWorkspace({
   };
 
   const rename = async (values) => {
-    if (!selected || !onContentDraftStage || !onContentDraftCommit) return;
-    const { buildCandidate, ...draftInput } = buildContentRenameDraft({ dashboard, item: selected, ...values });
-    const staged = stageDraft(draftInput);
-    const draftId = staged?.draftId ?? draftInput.draftId;
-    pendingDraftIds.current.add(draftId);
+    if (!selected || !onContentDraftStage || !onContentDraftCommit || renamePromiseRef.current) {
+      return renamePromiseRef.current;
+    }
+    const operation = (async () => {
+      setRenameOperation({ busy: true, error: "" });
+      const { buildCandidate, ...draftInput } = buildContentRenameDraft({ dashboard, item: selected, ...values });
+      const existing = selectSourceContentOwners(ownerRegistryRef.current)
+        .find(({ kind, scopeId }) => kind === "source-content-edit" && scopeId === selected.id);
+      let draftId;
+      if (existing) {
+        draftId = existing.transactionDraftId;
+        contentDraftCoordinator?.updateDraft?.(draftId, {
+          payload: draftInput.payload,
+          assetIds: draftInput.assetIds,
+          mediaIds: draftInput.mediaIds,
+          sourceIds: draftInput.sourceIds,
+        });
+      } else {
+        const staged = stageDraft(draftInput);
+        draftId = staged?.draftId ?? draftInput.draftId;
+      }
+      try {
+        await commitDraft(draftId, buildCandidate);
+        setRenameOperation({ busy: false, error: "" });
+        return true;
+      } catch (error) {
+        setRenameOperation({
+          busy: false,
+          error: error?.message ?? "Source Content metadata could not be saved.",
+        });
+        return false;
+      }
+    })();
+    renamePromiseRef.current = operation;
     try {
-      await commitDraft(draftId, buildCandidate);
-      pendingDraftIds.current.delete(draftId);
-    } catch (error) {
-      throw error;
+      return await operation;
+    } finally {
+      renamePromiseRef.current = null;
     }
   };
 
@@ -106,17 +207,22 @@ export default function SourceContentWorkspace({
     onContentDraftCommit: commitDraft,
     onContentDraftDiscard: discardDraft,
   };
-  const catalogue = tab === "media" ? <MediaCatalogue {...catalogueProps} /> : <DataSourceCatalogue {...catalogueProps} />;
+  const catalogue = tab === "media"
+    ? <MediaCatalogue key={`media:${ownerResetGeneration}`} {...catalogueProps} />
+    : <DataSourceCatalogue key={`sources:${ownerResetGeneration}`} {...catalogueProps} />;
   const detail = (
     <section className="source-content-detail" aria-label="Content detail">
-      {layout === "tablet" && <button type="button" className="secondary source-content-back" onClick={() => updateViewState((current) => ({ ...current, tabletDetailOpen: false }))}>Back</button>}
+      {layout === "tablet" && <button type="button" className="secondary source-content-back" disabled={ownerLocked} onClick={() => updateViewState((current) => ({ ...current, tabletDetailOpen: false }))}>Back</button>}
       <ContentDetail
+        key={`${selected?.kind ?? "empty"}:${selected?.id ?? "none"}:${ownerResetGeneration}`}
         item={selected}
         dashboard={dashboard}
         contentDraftCoordinator={contentDraftCoordinator}
         datasetProfile={dashboard.datasetProfiles?.[selected?.id]}
         geoData={geoDataSources[selected?.id] ?? dashboard.loadedData?.[selected?.id]}
         onRename={rename}
+        renameBusy={renameOperation.busy}
+        renameError={renameOperation.error}
         onRequestClose={onRequestClose}
         onContentDraftStage={stageDraft}
         onContentDraftCommit={commitDraft}
@@ -125,14 +231,23 @@ export default function SourceContentWorkspace({
     </section>
   );
   return (
-    <section className="source-content-workspace" data-manager-layout={layout} aria-labelledby="source-content-heading">
+    <section
+      ref={rootRef}
+      className="source-content-workspace"
+      data-manager-layout={layout}
+      aria-labelledby="source-content-heading"
+      aria-busy={sourceContentOwners.some(({ status }) => status === "saving") ? "true" : undefined}
+      onFocusCapture={() => {
+        lastRestorationRef.current = captureSourceContentRestoration(rootRef.current);
+      }}
+    >
       <header className="source-content-workspace__header">
         <div><p className="eyebrow">Build</p><h2 id="source-content-heading">Source content</h2></div>
         <p>Manage reusable media and dashboard data sources without leaving the canvas.</p>
       </header>
       <div className="source-content-tabs" role="tablist" aria-label="Source content categories">
-        <button type="button" role="tab" aria-selected={tab === "media"} onClick={() => updateViewState((current) => ({ ...current, tab: "media", tabletDetailOpen: false }))}>Media</button>
-        <button type="button" role="tab" aria-selected={tab === "sources"} onClick={() => updateViewState((current) => ({ ...current, tab: "sources", tabletDetailOpen: false }))}>Data sources</button>
+        <button type="button" role="tab" aria-selected={tab === "media"} disabled={ownerLocked} onClick={() => updateViewState((current) => ({ ...current, tab: "media", tabletDetailOpen: false }))}>Media</button>
+        <button type="button" role="tab" aria-selected={tab === "sources"} disabled={ownerLocked} onClick={() => updateViewState((current) => ({ ...current, tab: "sources", tabletDetailOpen: false }))}>Data sources</button>
       </div>
       <div className="source-content-composition">
         {(layout === "desktop" || !tabletDetailOpen) && catalogue}
@@ -184,6 +299,135 @@ export function visibleManagerItems(dashboard = {}, tab = "media", filters = {})
     && (!filters.usage || filters.usage === "all" || (filters.usage === "used" ? item.usageCount > 0 : item.usageCount === 0))
     && (!filters.kind || filters.kind === "all" || item.kind === filters.kind)
   )).sort((left, right) => left.record.displayName.localeCompare(right.record.displayName));
+}
+
+export function createSourceContentOwnerRegistry() {
+  return {};
+}
+
+export function reduceSourceContentOwnerRegistry(registry = createSourceContentOwnerRegistry(), action = {}) {
+  if (action.type === "STAGE") {
+    const owner = projectSourceContentOwner(action.input, action);
+    return owner ? { ...registry, [owner.draftId]: owner } : registry;
+  }
+  if (action.type === "STATUS") {
+    return mapSourceContentOwners(registry, action.transactionDraftId, (owner) => ({
+      ...owner,
+      status: action.status,
+      ...(action.error ? { error: String(action.error) } : { error: undefined }),
+    }));
+  }
+  if (action.type === "ACTIVITY") {
+    return Object.fromEntries(Object.entries(registry).map(([id, owner]) => [id, {
+      ...owner,
+      activity: action.activity === "suspended" ? "suspended" : "active",
+      restoration: action.restoration ?? owner.restoration ?? null,
+    }]));
+  }
+  if (action.type === "SUCCEEDED" || action.type === "DISCARD") {
+    return Object.fromEntries(Object.entries(registry)
+      .filter(([, owner]) => owner.transactionDraftId !== action.transactionDraftId));
+  }
+  return registry;
+}
+
+export function selectSourceContentOwners(registry = {}) {
+  return Object.values(registry).sort((left, right) => left.draftId.localeCompare(right.draftId));
+}
+
+export function projectSourceContentOwner(input = {}, {
+  activity = "active",
+  restoration = null,
+} = {}) {
+  const transactionDraftId = optionalId(input.draftId);
+  const edit = new Set([
+    "manager-rename",
+    "media-replacement",
+    "csv-replacement",
+    "geojson-replacement",
+  ]).has(input.kind);
+  const create = new Set([
+    "manager-media-add",
+    "manager-media-deduplicate",
+    "manager-csv-add",
+    "manager-geojson-add",
+  ]).has(input.kind);
+  if (!transactionDraftId || (!edit && !create)) return null;
+  const scopeId = edit
+    ? optionalId(input.payload?.itemId)
+      ?? optionalId(input.payload?.mediaId)
+      ?? optionalId(input.payload?.sourceId)
+      ?? optionalId(input.mediaIds?.[0])
+      ?? optionalId(input.sourceIds?.[0])
+    : transactionDraftId;
+  if (!scopeId) return null;
+  const kind = edit ? "source-content-edit" : "source-content-create";
+  return {
+    draftId: `${kind}:${scopeId}`,
+    kind,
+    scopeId,
+    targetId: scopeId,
+    transactionDraftId,
+    status: "dirty",
+    activity: activity === "suspended" ? "suspended" : "active",
+    surface: sourceContentSurface(input.kind),
+    restoration,
+  };
+}
+
+function mapSourceContentOwners(registry, transactionDraftId, update) {
+  return Object.fromEntries(Object.entries(registry).map(([id, owner]) => [
+    id,
+    owner.transactionDraftId === transactionDraftId ? update(owner) : owner,
+  ]));
+}
+
+function sourceContentSurface(kind) {
+  if (new Set(["media-replacement", "csv-replacement", "geojson-replacement"]).has(kind)) {
+    return "source-content-dialog";
+  }
+  if (kind === "manager-rename") return "source-content-detail";
+  return "source-content-catalogue";
+}
+
+function ownerForId(registry, ownerId) {
+  if (ownerId && registry[ownerId]) return registry[ownerId];
+  return selectSourceContentOwners(registry)[0] ?? null;
+}
+
+function captureSourceContentRestoration(root) {
+  if (!root || typeof document === "undefined") return null;
+  const host = root.closest('[data-authoring-surface="source-content"]') ?? root;
+  const focusable = sourceContentFocusable(root);
+  const focusIndex = focusable.indexOf(document.activeElement);
+  const active = document.activeElement;
+  const surface = active?.closest?.('[role="dialog"]')
+    ? "source-content-dialog"
+    : active?.closest?.(".source-content-detail")
+      ? "source-content-detail"
+      : "source-content-catalogue";
+  return {
+    surface,
+    focusIndex: focusIndex >= 0 ? focusIndex : 0,
+    scrollTop: Number(host.scrollTop ?? 0),
+  };
+}
+
+function restoreSourceContentFocus(root, restoration) {
+  if (!root || typeof window === "undefined") return;
+  window.requestAnimationFrame(() => {
+    const host = root.closest('[data-authoring-surface="source-content"]') ?? root;
+    host.scrollTop = Number(restoration?.scrollTop ?? 0);
+    const focusable = sourceContentFocusable(root);
+    const focusIndex = Number.isSafeInteger(restoration?.focusIndex) ? restoration.focusIndex : 0;
+    (focusable[focusIndex] ?? root.querySelector("#source-content-heading") ?? root)?.focus?.({ preventScroll: true });
+  });
+}
+
+function sourceContentFocusable(root) {
+  return [...root.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  )].filter((element) => !element.closest("[hidden]"));
 }
 
 function contentItem(dashboard, id, kind, record, dependencyState = null) {

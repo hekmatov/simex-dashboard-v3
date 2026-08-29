@@ -229,15 +229,20 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [contentDraftCoordinator],
   );
   const onContentDraftCommit = React.useCallback(
-    async (draftId, buildCandidate) => {
+    async (draftId, buildCandidate, {
+      operationKey = "source-content-save",
+      operationLabel = "Saving source content",
+      successMessage = "Source content saved.",
+    } = {}) => {
       if (!contentDraftCoordinator) return undefined;
       const status = beginOperation({
-        key: "source-content-save",
-        label: "Saving source content",
+        key: operationKey,
+        label: operationLabel,
       });
       try {
+        await pendingEditsRef.current?.flush();
         const result = await contentDraftCoordinator.commitDraft(draftId, { buildCandidate });
-        status.succeed("Source content saved.");
+        status.succeed(successMessage);
         return result;
       } catch (error) {
         status.fail(error);

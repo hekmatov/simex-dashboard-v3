@@ -114,6 +114,25 @@ test("custom width accepts only integer percentages from 10 through 100", async 
   assert.match(await page.getByRole("status").textContent(), /whole percentage from 10 through 100/i);
 });
 
+test("nondecorative alt validation stays local and emits only serializable placements", async () => {
+  await mountInspector(page);
+  await page.getByRole("button", { name: "More image options" }).click();
+  const alt = page.getByLabel("Alternative text");
+
+  await alt.fill("");
+  assert.equal(await alt.inputValue(), "");
+  assert.equal(await alt.getAttribute("aria-invalid"), "true");
+  assert.match(await page.getByRole("status").textContent(), /alt text is required/i);
+  assert.deepEqual(await page.evaluate(() => window.__inspectorCalls
+    .filter((entry) => entry.type === "change")), []);
+
+  await alt.fill("Updated response map");
+  assert.equal(await alt.getAttribute("aria-invalid"), null);
+  assert.equal(await page.getByRole("status").textContent(), "");
+  assert.equal(await page.evaluate(() => window.__inspectorCalls
+    .filter((entry) => entry.type === "change").at(-1)?.value.alt), "Updated response map");
+});
+
 test("every image option has persistent visible guidance and stable descriptions", async () => {
   await mountInspector(page);
   await page.getByRole("button", { name: "More image options" }).click();

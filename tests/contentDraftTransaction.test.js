@@ -212,7 +212,7 @@ test("QMD panel draft publishes its new local media and panel in one coordinator
     mediaId: "media-local", revision: 1, current: { kind: "asset", assetId: "asset-local" },
     origin: "uploaded", health: "ready", dimensions: { width: 1, height: 1 }, byteLength: 1,
   });
-  const manifestEntry = manifest();
+  const manifestEntry = { ...manifest(), storageState: "staged" };
   const result = buildStaticPanelContentDraftCandidate({
     dashboard,
     draft: { owner: "qmd-panel", payload },
@@ -223,6 +223,137 @@ test("QMD panel draft publishes its new local media and panel in one coordinator
   assert.equal(result.dashboard.dataSources["qmd-local-source"].qmd.includes("media-local"), true);
   assert.deepEqual(result.commitAssetIds, ["asset-local"]);
   assert.deepEqual(result.itemIds, ["media-local", "qmd-local"]);
+});
+
+test("QMD candidate does not recommit a reused durable media asset", () => {
+  const dashboard = makeDashboardV5();
+  let state = createStaticContentDraft({
+    stage: "content",
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    panel: {
+      ...dashboard.pages[0].sections[0].panels[0].chart,
+      id: "qmd-reused",
+      typeId: "freeText",
+      title: "Reused durable media",
+      sourceId: "qmd-reused-source",
+    },
+    placement: { kind: "staticText", qmd: "![Existing map](simex-media:media-image-source)" },
+  });
+  state = reduceStaticContentDraft(state, { type: "setStage", stage: "preview-and-add" });
+  const result = buildStaticPanelContentDraftCandidate({
+    dashboard,
+    draft: { owner: "qmd-panel", payload: finalizeStaticContentDraft(state) },
+    pendingMediaItems: {
+      "media-image-source": dashboard.contentLibrary.mediaItems["media-image-source"],
+    },
+    pendingAssets: { "asset-map": dashboard.assets["asset-map"] },
+  });
+
+  assert.deepEqual(result.commitAssetIds, []);
+  assert.equal(result.dashboard.assets["asset-map"].storageState, "durable");
+});
+
+test("embedded QMD publication retains one recoverable transaction through failure, retry, and duplicate Add", async () => {
+  let rejectPersistence = true;
+  const harness = coordinatorHarness({ rejectCommit: () => rejectPersistence });
+  let state = createStaticContentDraft({
+    stage: "content",
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    panel: {
+      ...harness.dashboard.pages[0].sections[0].panels[0].chart,
+      id: "qmd-retry",
+      typeId: "freeText",
+      title: "Recoverable local media",
+      sourceId: "qmd-retry-source",
+    },
+    placement: { kind: "staticText", qmd: "![Local map](simex-media:media-retry)" },
+  });
+  state = reduceStaticContentDraft(state, { type: "setStage", stage: "preview-and-add" });
+  const payload = finalizeStaticContentDraft(state);
+  const mediaItem = makeMediaItem({
+    mediaId: "media-retry",
+    revision: 1,
+    current: { kind: "asset", assetId: "asset-retry" },
+    origin: "uploaded",
+    health: "ready",
+    dimensions: { width: 1, height: 1 },
+    byteLength: 1,
+  });
+  const pendingAssets = { "asset-retry": { ...manifest(), storageState: "staged" } };
+  const buildCandidate = ({ dashboard, draft }) => buildStaticPanelContentDraftCandidate({
+    dashboard,
+    draft,
+    pendingMediaItems: { "media-retry": mediaItem },
+    pendingAssets,
+  });
+  harness.sessionAssets.set("asset-retry", sessionAsset("asset-retry"));
+  harness.coordinator.stageDraft({
+    draftId: "qmd-panel-qmd-retry",
+    owner: "qmd-panel",
+    kind: "qmd-panel-media",
+    payload,
+    assetIds: ["asset-retry"],
+    mediaIds: ["media-retry"],
+    sourceIds: [],
+  });
+
+  await assert.rejects(
+    harness.coordinator.commitDraft("qmd-panel-qmd-retry", { buildCandidate }),
+    /persistence failed/,
+  );
+  assert.equal(harness.sessionAssets.has("asset-retry"), true);
+  assert.deepEqual(harness.assetRecords, new Map());
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, [{
+    ownerId: "qmd-panel-qmd-retry",
+    kind: "qmd-panel-media",
+    status: "error",
+    assetIds: ["asset-retry"],
+    mediaIds: ["media-retry"],
+    sourceIds: [],
+  }]);
+
+  rejectPersistence = false;
+  const [first, duplicate] = await Promise.all([
+    harness.coordinator.commitDraft("qmd-panel-qmd-retry", { buildCandidate }),
+    harness.coordinator.commitDraft("qmd-panel-qmd-retry", { buildCandidate }),
+  ]);
+  assert.deepEqual(duplicate, first);
+  assert.equal(harness.commits.length, 2);
+  assert.equal(harness.dashboard.pages[0].sections[0].panels
+    .filter(({ chart }) => chart.id === "qmd-retry").length, 1);
+  assert.equal(harness.dashboard.dataSources["qmd-retry-source"].qmd, payload.placement.qmd);
+  assert.equal(harness.dashboard.contentLibrary.mediaItems["media-retry"].mediaId, "media-retry");
+  assert.equal(harness.dashboard.assets["asset-retry"].storageState, "durable");
+  assert.equal(harness.assetRecords.get("asset-retry").status, "durable");
+  assert.equal(harness.sessionAssets.has("asset-retry"), false);
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+
+  const reloaded = structuredClone(harness.dashboard);
+  let secondState = createStaticContentDraft({
+    stage: "content",
+    destination: payload.destination,
+    contentTypeId: "freeText",
+    panel: { ...payload.panel, id: "qmd-second", title: "Second panel", sourceId: "qmd-second-source" },
+    placement: { kind: "staticText", qmd: "Second creation" },
+  });
+  secondState = reduceStaticContentDraft(secondState, { type: "setStage", stage: "preview-and-add" });
+  const secondPayload = finalizeStaticContentDraft(secondState);
+  harness.coordinator.stageDraft({
+    draftId: "qmd-panel-qmd-second",
+    owner: "qmd-panel",
+    kind: "qmd-panel-media",
+    payload: secondPayload,
+    assetIds: [],
+    mediaIds: [],
+    sourceIds: [],
+  });
+  await harness.coordinator.commitDraft("qmd-panel-qmd-second", {
+    buildCandidate: ({ dashboard, draft }) => buildStaticPanelContentDraftCandidate({ dashboard, draft }),
+  });
+  assert.equal(reloaded.pages[0].sections[0].panels.some(({ chart }) => chart.id === "qmd-retry"), true);
+  assert.equal(harness.dashboard.pages[0].sections[0].panels.some(({ chart }) => chart.id === "qmd-second"), true);
 });
 
 test("authoring owners cannot publish until their existing finalizer result is staged", async () => {
@@ -336,7 +467,10 @@ test("unrelated public transactions survive draft success and failure", async ()
       buildCandidate: ({ dashboard }) => ({ dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: [] }),
     });
     if (rejectCommit) await assert.rejects(commit, /persistence failed/); else await commit;
-    assert.deepEqual(harness.coordinator.getActiveRetainers().records.map(({ ownerId }) => ownerId), ["public"]);
+    assert.deepEqual(
+      harness.coordinator.getActiveRetainers().records.map(({ ownerId }) => ownerId),
+      rejectCommit ? ["draft-true", "public"] : ["public"],
+    );
   }
 });
 
@@ -344,6 +478,7 @@ test("explicit Cancel, owner departure, and dispose remove only session drafts",
   const harness = coordinatorHarness();
   for (const [draftId, owner, assetId] of [
     ["qmd-a", "qmd", "asset-qmd"],
+    ["qmd-panel-a", "qmd-panel", "asset-qmd-panel"],
     ["chart-a", "chart", "asset-chart"],
     ["manager-a", "manager", "asset-manager"],
   ]) {
@@ -351,6 +486,7 @@ test("explicit Cancel, owner departure, and dispose remove only session drafts",
     harness.coordinator.stageDraft({ draftId, owner, kind: `${owner}-add`, payload: {}, assetIds: [assetId], mediaIds: [], sourceIds: [] });
   }
   await harness.coordinator.discardDraft("qmd-a", { reason: "explicit-cancel" });
+  await harness.coordinator.discardOwner("qmd-panel", { reason: "mode-departure" });
   await harness.coordinator.discardOwner("chart", { reason: "mode-departure" });
   assert.deepEqual(harness.coordinator.getActiveRetainers().records.map(({ ownerId }) => ownerId), ["manager-a"]);
   await harness.coordinator.dispose();
@@ -392,7 +528,7 @@ test("manager Close, Escape, mode departure, unmount, and disposal leave exact e
   assert.deepEqual(harness.dashboard, makeDashboardV5());
 });
 
-test("validation and persistence failures publish no durable item and restore byte state", async () => {
+test("invalid candidates clean up while persistence failures retain retry authority without publication", async () => {
   for (const failure of ["validation", "persistence"]) {
     const harness = coordinatorHarness({ rejectCommit: failure === "persistence" });
     harness.sessionAssets.set("asset-failed", sessionAsset("asset-failed"));
@@ -410,8 +546,22 @@ test("validation and persistence failures publish no durable item and restore by
     }), failure === "validation" ? /candidate invalid/ : /persistence failed/);
     assert.deepEqual(harness.dashboard, makeDashboardV5());
     assert.deepEqual(harness.assetRecords, new Map());
-    assert.equal(harness.sessionAssets.has("asset-failed"), false);
-    assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+    if (failure === "validation") {
+      assert.equal(harness.sessionAssets.has("asset-failed"), false);
+      assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+    } else {
+      assert.equal(harness.sessionAssets.has("asset-failed"), true);
+      assert.deepEqual(harness.coordinator.getActiveRetainers().records, [{
+        ownerId: "failed-persistence",
+        kind: "chart",
+        status: "error",
+        assetIds: ["asset-failed"],
+        mediaIds: [],
+        sourceIds: ["source-failed"],
+      }]);
+      await harness.coordinator.discardDraft("failed-persistence", { reason: "explicit-discard" });
+      assert.equal(harness.sessionAssets.has("asset-failed"), false);
+    }
   }
 });
 
@@ -489,7 +639,9 @@ function coordinatorHarness({ rejectCommit = false, rejectSessionDiscard = false
     getDashboard: () => dashboard,
     async commitDashboard(candidate, options) {
       commits.push({ candidate: structuredClone(candidate), options: structuredClone(options) });
-      if (rejectCommit) throw new Error("persistence failed");
+      if (typeof rejectCommit === "function" ? rejectCommit(commits.length) : rejectCommit) {
+        throw new Error("persistence failed");
+      }
       dashboard = structuredClone(candidate);
       return dashboard;
     },

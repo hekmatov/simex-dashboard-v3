@@ -1,6 +1,7 @@
 import React from "react";
 
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
+import ControlTooltip from "../common/ControlTooltip.jsx";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
 import {
   STATIC_CONTENT_STAGES,
@@ -24,6 +25,26 @@ import {
 import { buildStaticPanelContentDraftCandidate } from "../../content-library/contentDraftTransaction.js";
 import ChartFootprintPicker from "../chart-authoring/ChartFootprintPicker.jsx";
 import { legacySizeForFootprint, resolveChartFootprint } from "../chartPanelLayout.js";
+
+const STATIC_CONTENT_PENDING_REASON = "Text/Image authoring is unavailable while this draft action is pending.";
+
+export function getStaticContentSubmissionState({
+  draft,
+  editor = false,
+  disabled = false,
+  freeTextInvalid = false,
+} = {}) {
+  const busy = draft?.status === "committing";
+  const retrying = draft?.status === "failed";
+  const finalStage = draft?.stage === "preview-and-add";
+  return {
+    busy,
+    disabled: disabled || busy || freeTextInvalid,
+    label: finalStage
+      ? retrying ? (editor ? "Retry Save" : "Retry Add") : (editor ? "Save" : "Add")
+      : "Continue",
+  };
+}
 
 export function StaticContentWizard({
   open = false,
@@ -58,9 +79,15 @@ export function StaticContentWizard({
   );
   const [submitError, setSubmitError] = React.useState("");
   const [freeTextValidation, setFreeTextValidation] = React.useState(null);
-  const contentDraftIdRef = React.useRef(null);
-  const retainedAssetIdsRef = React.useRef(new Set());
-  const retainedMediaIdsRef = React.useRef(new Set());
+  const recoveredContentDraft = React.useMemo(
+    () => recoverContentDraftAuthority(contentDraftCoordinator, initialDraft),
+    [contentDraftCoordinator, initialDraft],
+  );
+  const contentDraftIdRef = React.useRef(recoveredContentDraft?.ownerId ?? null);
+  const retainedAssetIdsRef = React.useRef(new Set(recoveredContentDraft?.assetIds ?? []));
+  const retainedMediaIdsRef = React.useRef(new Set(recoveredContentDraft?.mediaIds ?? []));
+  const submitPromiseRef = React.useRef(null);
+  const suspendedRef = React.useRef(false);
   const dirty = isStaticContentDraftDirty(draft);
   const freeTextRequiresValidation = draft.contentTypeId === "freeText"
     && (draft.stage === "content" || draft.stage === "preview-and-add");
@@ -68,9 +95,13 @@ export function StaticContentWizard({
       freeTextValidation,
       draft.source?.qmd ?? "",
     );
+  const submissionState = getStaticContentSubmissionState({ draft, editor, disabled, freeTextInvalid });
+  const submitting = submissionState.busy;
+  const workflowDisabled = disabled || submitting;
   React.useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   React.useEffect(() => () => {
+    if (suspendedRef.current) return;
     if (contentDraftIdRef.current) onContentDraftDiscard?.(contentDraftIdRef.current, "static-content-unmount");
     contentDraftIdRef.current = null;
   }, [onContentDraftDiscard]);
@@ -106,30 +137,36 @@ export function StaticContentWizard({
     contentDraftIdRef.current = staged?.draftId ?? input.draftId;
   };
   const requestClose = () => {
+    if (workflowDisabled) return;
     if (!dirty) {
       void discardActiveContentDraft("static-content-close").finally(() => onClose?.({ discarded: false, draft }));
       return;
     }
     const restoration = focusRestoration(draft.stage);
     if (onSuspend) {
+      suspendedRef.current = true;
       onSuspend({ draft, restoration });
       return;
     }
     dispatch({ type: "requestCancel", restoration });
   };
-  const requestDiscard = () => dispatch({ type: "requestCancel", restoration: focusRestoration(draft.stage) });
+  const requestDiscard = () => {
+    if (workflowDisabled) return;
+    dispatch({ type: "requestCancel", restoration: focusRestoration(draft.stage) });
+  };
   const reportSurface = React.useCallback((surface) => {
     onRestorationChange?.({ ...focusRestoration(draft.stage), surface });
   }, [draft.stage, onRestorationChange]);
   const reset = async () => {
+    if (workflowDisabled) return;
     cleanupImageDraftAssets(draft, dashboard);
     await discardActiveContentDraft("static-content-reset");
     dispatch({ type: "reset" });
   };
   const submit = async (event) => {
     event.preventDefault();
+    if (disabled || submitPromiseRef.current) return;
     setSubmitError("");
-    let committingDraftId = null;
     try {
       if (draft.stage !== "preview-and-add") {
         if (freeTextInvalid) throw new Error("Wait for the Free-text preview to finish validating before continuing.");
@@ -139,45 +176,57 @@ export function StaticContentWizard({
       validateCompiledFreeText(draft);
       const result = finalizeStaticContentDraft(draft);
       dispatch({ type: "commitStarted" });
-      if (contentDraftIdRef.current && contentDraftCoordinator?.updateDraft && onContentDraftCommit) {
-        const draftId = contentDraftIdRef.current;
-        committingDraftId = draftId;
-        contentDraftCoordinator.updateDraft(draftId, {
-          payload: result,
-          assetIds: [...retainedAssetIdsRef.current],
-          mediaIds: [...retainedMediaIdsRef.current],
-        });
-        const pendingMediaItems = structuredClone(draft.pendingMediaItems ?? {});
-        const pendingAssets = Object.fromEntries(Object.values(pendingMediaItems)
-          .filter((item) => item.current?.kind === "asset")
-          .map((item) => [item.current.assetId, structuredClone(draft.assets[item.current.assetId])]));
-        await onContentDraftCommit(draftId, ({ dashboard: currentDashboard, draft: coordinatorDraft }) => (
-          buildStaticPanelContentDraftCandidate({
-            dashboard: currentDashboard,
-            draft: coordinatorDraft,
-            operation: editor ? "update" : "create",
-            panelId: editor ? result.panel.id : undefined,
-            pendingMediaItems,
-            pendingAssets,
-          })
-        ));
-        contentDraftIdRef.current = null;
-        retainedAssetIdsRef.current.clear();
-        retainedMediaIdsRef.current.clear();
-        onClose?.({ committed: true, draft, result });
-      } else {
+      const commitPromise = (async () => {
+        if (contentDraftIdRef.current && contentDraftCoordinator?.updateDraft && onContentDraftCommit) {
+          const draftId = ensureContentDraftAuthority({
+            contentDraftCoordinator,
+            draftId: contentDraftIdRef.current,
+            draft,
+            result,
+            assetIds: [...retainedAssetIdsRef.current],
+            mediaIds: [...retainedMediaIdsRef.current],
+            onContentDraftStage,
+          });
+          contentDraftIdRef.current = draftId;
+          const pendingMediaItems = structuredClone(draft.pendingMediaItems ?? {});
+          const pendingAssets = Object.fromEntries(Object.values(pendingMediaItems)
+            .filter((item) => item.current?.kind === "asset" && draft.assets?.[item.current.assetId])
+            .map((item) => [item.current.assetId, structuredClone(draft.assets[item.current.assetId])]));
+          await onContentDraftCommit(
+            draftId,
+            ({ dashboard: currentDashboard, draft: coordinatorDraft }) => (
+              buildStaticPanelContentDraftCandidate({
+                dashboard: currentDashboard,
+                draft: coordinatorDraft,
+                operation: editor ? "update" : "create",
+                panelId: editor ? result.panel.id : undefined,
+                pendingMediaItems,
+                pendingAssets,
+              })
+            ),
+            {
+              operationKey: "static-content-save",
+              operationLabel: editor ? "Saving Text/Image changes" : "Adding Text/Image",
+              successMessage: editor ? "Text/Image changes saved." : "Text/Image added.",
+            },
+          );
+          contentDraftIdRef.current = null;
+          retainedAssetIdsRef.current.clear();
+          retainedMediaIdsRef.current.clear();
+          onClose?.({ committed: true, draft, result });
+          return;
+        }
         await onCreate?.(result);
-      }
+      })();
+      submitPromiseRef.current = commitPromise;
+      await commitPromise;
       cleanupImageDraftAssets(draft, dashboard, result);
       dispatch({ type: "committed" });
     } catch (error) {
-      if (committingDraftId) {
-        contentDraftIdRef.current = null;
-        retainedAssetIdsRef.current.clear();
-        retainedMediaIdsRef.current.clear();
-      }
       setSubmitError(error?.message ?? "Static content could not be saved.");
       if (draft.stage === "preview-and-add") dispatch({ type: "commitFailed", error });
+    } finally {
+      submitPromiseRef.current = null;
     }
   };
 
@@ -190,8 +239,9 @@ export function StaticContentWizard({
         role="dialog"
         aria-modal="true"
         aria-labelledby="static-content-dialog-title"
+        aria-busy={submitting ? "true" : undefined}
         initialFocusSelector={'[data-static-initial-focus="true"]'}
-        onEscape={requestClose}
+        onEscape={workflowDisabled ? undefined : requestClose}
         onSubmit={submit}
       >
         <header>
@@ -199,8 +249,11 @@ export function StaticContentWizard({
             <p className="eyebrow">{editor ? "Text/Image editor" : "Add Text/Image"}</p>
             <h2 id="static-content-dialog-title">{editor ? "Edit Text/Image" : "Add Text/Image"}</h2>
           </div>
-          <button type="button" className="secondary" aria-label="Close Text/Image editor" onClick={requestClose}>Close</button>
+          <ControlTooltip disabled={workflowDisabled} reason={STATIC_CONTENT_PENDING_REASON}>
+            <button type="button" className="secondary" aria-label="Close Text/Image editor" disabled={workflowDisabled} onClick={requestClose}>Close</button>
+          </ControlTooltip>
         </header>
+        {workflowDisabled && <p id="static-content-workflow-status" role="status">{STATIC_CONTENT_PENDING_REASON}</p>}
         <nav aria-label="Text/Image stages">
           {(editor ? STATIC_CONTENT_STAGES.slice(2) : STATIC_CONTENT_STAGES).map((stage) => {
             const index = STATIC_CONTENT_STAGES.indexOf(stage);
@@ -210,7 +263,7 @@ export function StaticContentWizard({
                 type="button"
                 className="secondary"
                 aria-current={draft.stage === stage ? "step" : undefined}
-                disabled={disabled
+                disabled={workflowDisabled
                   || (!editor && index > stageIndex + 1)
                   || (stage === "preview-and-add" && freeTextInvalid)}
                 onClick={() => dispatch({ type: "setStage", stage })}
@@ -227,14 +280,14 @@ export function StaticContentWizard({
           onFocusCapture={() => onRestorationChange?.(focusRestoration(draft.stage))}
           onScroll={() => onRestorationChange?.(focusRestoration(draft.stage))}
         >
-          {draft.stage === "destination" && <DestinationFields dashboard={dashboard} draft={draft} dispatch={dispatch} disabled={disabled} />}
-          {draft.stage === "content-type" && <ContentTypeFields draft={draft} dispatch={dispatch} disabled={disabled} />}
+          {draft.stage === "destination" && <DestinationFields dashboard={dashboard} draft={draft} dispatch={dispatch} disabled={workflowDisabled} />}
+          {draft.stage === "content-type" && <ContentTypeFields draft={draft} dispatch={dispatch} disabled={workflowDisabled} />}
           {draft.stage === "content" && (
             <StaticContentFields
               draft={draft}
               dashboard={dashboard}
               contentRenderContext={contentRenderContext}
-              disabled={disabled}
+              disabled={workflowDisabled}
               dispatch={dispatch}
               onFreeTextValidation={setFreeTextValidation}
               restoration={restoration}
@@ -248,12 +301,12 @@ export function StaticContentWizard({
 
         {submitError && <p className="form-error" role="alert">{submitError}</p>}
         <footer>
-          <button type="button" className="secondary" onClick={requestDiscard}>Cancel</button>
-          {editor && dirty && <button type="button" className="secondary" onClick={() => void reset()}>Reset</button>}
-          {stageIndex > (editor ? 2 : 0) && <button type="button" className="secondary" onClick={() => dispatch({ type: "previous" })}>Back</button>}
-          <button type="submit" disabled={disabled || freeTextInvalid}>
-            {draft.stage === "preview-and-add" ? (editor ? "Save" : "Add") : "Continue"}
-          </button>
+          <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={requestDiscard}>Cancel</button></PendingAction>
+          {editor && dirty && <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={() => void reset()}>Reset</button></PendingAction>}
+          {stageIndex > (editor ? 2 : 0) && <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={() => dispatch({ type: "previous" })}>Back</button></PendingAction>}
+          <PendingAction disabled={workflowDisabled}>
+            <button type="submit" disabled={submissionState.disabled}>{submissionState.label}</button>
+          </PendingAction>
         </footer>
       </ModalFocusScope>
       <ConfirmDialog
@@ -262,6 +315,7 @@ export function StaticContentWizard({
         message="Your unsaved Text/Image changes last only for this application session."
         cancelLabel="Keep editing"
         confirmLabel="Discard"
+        disabled={workflowDisabled}
         onCancel={() => dispatch({ type: "keepEditing" })}
         onConfirm={async () => {
           cleanupImageDraftAssets(draft, dashboard);
@@ -545,6 +599,51 @@ function validateCompiledFreeText(draft) {
   if (compiled.ok) return;
   const first = compiled.errors[0];
   throw new Error(`${first.message} Line ${first.location.line}, column ${first.location.column}. ${first.guidance}`);
+}
+
+function PendingAction({ disabled, children }) {
+  return <ControlTooltip disabled={disabled} reason={STATIC_CONTENT_PENDING_REASON}>{children}</ControlTooltip>;
+}
+
+function recoverContentDraftAuthority(coordinator, draft) {
+  if (!coordinator?.getActiveRetainers || !draft?.draftIdentity?.panelId) return null;
+  const owner = staticContentMediaOwner(draft);
+  const ownerId = `${owner}-${draft.draftIdentity.panelId}`;
+  return coordinator.getActiveRetainers().records?.find((record) => record.ownerId === ownerId) ?? null;
+}
+
+function ensureContentDraftAuthority({
+  contentDraftCoordinator,
+  draftId,
+  draft,
+  result,
+  assetIds,
+  mediaIds,
+  onContentDraftStage,
+}) {
+  const owner = staticContentMediaOwner(draft);
+  const input = {
+    draftId,
+    owner,
+    kind: owner === "qmd-panel" ? "qmd-panel-media" : "image-panel-media",
+    payload: result,
+    assetIds,
+    mediaIds,
+    sourceIds: [result.panel.sourceId],
+  };
+  const retained = contentDraftCoordinator.getActiveRetainers().records
+    .some((record) => record.ownerId === draftId);
+  if (retained) {
+    contentDraftCoordinator.updateDraft(draftId, input);
+    return draftId;
+  }
+  const staged = onContentDraftStage?.(input);
+  if (!staged) throw new Error("The Text/Image media transaction is no longer available. Choose the image again and retry.");
+  return staged.draftId ?? draftId;
+}
+
+function staticContentMediaOwner(draft) {
+  return draft?.contentTypeId === "freeText" ? "qmd-panel" : "image";
 }
 
 export default StaticContentWizard;

@@ -8,12 +8,97 @@ const vite = await createServer({ root: process.cwd(), appType: "custom", logLev
 const dependencyModule = await vite.ssrLoadModule("/src/components/source-content/DependencyList.jsx");
 const dialogModule = await vite.ssrLoadModule("/src/components/source-content/ContentActionDialog.jsx");
 const workspaceModule = await vite.ssrLoadModule("/src/components/source-content/SourceContentWorkspace.jsx");
+const detailModule = await vite.ssrLoadModule("/src/components/source-content/ContentDetail.jsx");
 const rendererModule = await vite.ssrLoadModule("/src/components/DashboardRenderer.jsx");
 await vite.close();
 const DependencyList = dependencyModule.default;
 const ContentActionDialog = dialogModule.default;
-const { visibleManagerItems } = workspaceModule;
+const {
+  createSourceContentOwnerRegistry,
+  reduceSourceContentOwnerRegistry,
+  selectSourceContentOwners,
+  visibleManagerItems,
+} = workspaceModule;
 const { projectContentManagerDependencies } = rendererModule;
+
+test("Source Content rename retries reuse one deterministic edit transaction identity", () => {
+  const input = {
+    dashboard: {},
+    item: { id: "cases", kind: "csv" },
+    displayName: "Cases updated",
+  };
+  const first = detailModule.buildContentRenameDraft(input);
+  const retry = detailModule.buildContentRenameDraft(input);
+  assert.equal(first.draftId, "manager-rename-csv-cases");
+  assert.equal(retry.draftId, first.draftId);
+  assert.equal(workspaceModule.projectSourceContentOwner(first).draftId, "source-content-edit:cases");
+});
+
+test("Source Content registry keeps one stable owner through saving, error, retry, and suspension", () => {
+  let registry = createSourceContentOwnerRegistry();
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "STAGE",
+    input: {
+      draftId: "manager-media-local",
+      kind: "manager-media-add",
+      payload: { mediaId: "media-local" },
+      mediaIds: ["media-local"],
+      sourceIds: [],
+    },
+  });
+  const [created] = selectSourceContentOwners(registry);
+  assert.equal(created.draftId, "source-content-create:manager-media-local");
+  assert.equal(created.status, "dirty");
+
+  for (const status of ["saving", "error", "saving"]) {
+    registry = reduceSourceContentOwnerRegistry(registry, {
+      type: "STATUS",
+      transactionDraftId: "manager-media-local",
+      status,
+      error: status === "error" ? "Persistence failed" : null,
+    });
+    const [same] = selectSourceContentOwners(registry);
+    assert.equal(same.draftId, created.draftId);
+    assert.equal(same.status, status);
+  }
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "ACTIVITY",
+    activity: "suspended",
+    restoration: { surface: "source-content-dialog", focusIndex: 3, scrollTop: 240 },
+  });
+  assert.deepEqual(selectSourceContentOwners(registry)[0].restoration, {
+    surface: "source-content-dialog",
+    focusIndex: 3,
+    scrollTop: 240,
+  });
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "SUCCEEDED",
+    transactionDraftId: "manager-media-local",
+  });
+  assert.deepEqual(selectSourceContentOwners(registry), []);
+
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "STAGE",
+    input: {
+      draftId: "manager-rename-csv-cases-123",
+      kind: "manager-rename",
+      payload: { itemId: "cases", itemKind: "csv", displayName: "Cases updated" },
+      mediaIds: [],
+      sourceIds: ["cases"],
+    },
+  });
+  assert.equal(selectSourceContentOwners(registry)[0].draftId, "source-content-edit:cases");
+  registry = reduceSourceContentOwnerRegistry(registry, {
+    type: "DISCARD",
+    transactionDraftId: "manager-rename-csv-cases-123",
+  });
+  assert.deepEqual(selectSourceContentOwners(registry), []);
+
+  assert.deepEqual(selectSourceContentOwners(reduceSourceContentOwnerRegistry(registry, {
+    type: "STAGE",
+    input: { draftId: "", kind: "manager-media-add", payload: {}, mediaIds: [], sourceIds: [] },
+  })), []);
+});
 
 test("blocked delete is visibly disabled with inline guided navigation and no dialog", () => {
   const html = renderToStaticMarkup(React.createElement(DependencyList, {
@@ -57,6 +142,23 @@ test("media replacement renders only the focused non-destructive replacement act
   assert.match(html, />Cancel<\/button>/);
   assert.match(html, />Replace everywhere<\/button>/);
   assert.doesNotMatch(html, /Delete|Relink|Undo|Redo/);
+});
+
+test("a saving Source Content dialog is busy and disables every exit, input, and navigation action", () => {
+  const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "replace-csv",
+    itemLabel: "Cases",
+    busy: true,
+    replacementReady: true,
+    remapTargets: [{ id: "map", pageLabel: "Overview", sectionLabel: "Response", panelLabel: "Cases map" }],
+    onNavigate() {},
+  }));
+  assert.match(html, /role="dialog"[^>]*aria-busy="true"/);
+  assert.match(html, /<input[^>]*type="file"[^>]*disabled/);
+  assert.match(html, /<button[^>]*disabled[^>]*>Cancel<\/button>/);
+  assert.match(html, /<button[^>]*class="source-content-breadcrumb"[^>]*disabled/);
+  assert.match(html, /<button[^>]*disabled[^>]*>Replacing…<\/button>/);
 });
 
 test("blocked CSV replacement exposes a typed reason, import-as-new, and guided remap targets", () => {

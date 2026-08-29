@@ -151,7 +151,7 @@ test("same-revision current manifest hash drift rejects before durable writes", 
 });
 
 for (const failure of ["write", "dashboard", "publish"]) {
-  test(`${failure} failure compensates dashboard, bytes, session state, and replacement retainers`, async () => {
+  test(`${failure} failure compensates publication while retaining explicit replacement retry authority`, async () => {
     const harness = replacementHarness({ failure });
     const before = structuredClone(harness.dashboard);
     const bytesBefore = structuredClone(harness.assetRecords);
@@ -164,6 +164,12 @@ for (const failure of ["write", "dashboard", "publish"]) {
 
     assert.deepEqual(harness.dashboard, before);
     assert.deepEqual(harness.assetRecords, bytesBefore);
+    assert.deepEqual(harness.coordinator.getActiveRetainers().records.map(({ ownerId, status }) => ({ ownerId, status })), [{
+      ownerId: plan.draft.draftId,
+      status: "error",
+    }]);
+    assert.notEqual(readSessionImageAssetBytes(plan.newAssetId), null);
+    await harness.coordinator.discardDraft(plan.draft.draftId, { reason: "explicit-replacement-discard" });
     assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
     assert.equal(readSessionImageAssetBytes(plan.newAssetId), null);
   });

@@ -1100,7 +1100,7 @@ export default function App() {
           setBlockedReason(reason);
           return { ok: false, mode, reason };
         }
-        for (const owner of ["manager", "qmd", "image", "chart"]) {
+        for (const owner of ["manager", "qmd", "qmd-panel", "image", "chart"]) {
           await contentDraftCoordinator.discardOwner(owner, { reason: "mode-departure" });
         }
         setEditBaseline(null);

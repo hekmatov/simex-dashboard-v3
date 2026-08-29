@@ -178,6 +178,40 @@ test("live Build keeps distinct suspended creation and dirty edit owners visible
   assert.doesNotMatch(html, /data-pending-work-id="chart-editor"|data-pending-work-id="chart-wizard"/);
 });
 
+test("a saving Source Content owner keeps its exact row while activation and discard are disabled", () => {
+  const page = { id: "page-a", label: "Page A", sections: [{ id: "section-a", title: "Section A", panels: [] }] };
+  const owner = {
+    draftId: "source-content-edit:cases",
+    kind: "source-content-edit",
+    scopeId: "cases",
+    targetId: "cases",
+    status: "saving",
+    activity: "suspended",
+    surface: "source-content-dialog",
+  };
+  const html = renderToStaticMarkup(React.createElement(BuildWorkspace, {
+    dashboard: { id: "dashboard", title: "Dashboard", pages: [page], chronoGroups: [], dataSources: {} },
+    activePage: page,
+    pageType: "analytical",
+    selection: { kind: "page", pageId: "page-a" },
+    dashboardDraft: {},
+    pageDrafts: {},
+    sectionDrafts: {},
+    deviceLayout: "desktop",
+    owners: [owner],
+    authoredDirtyState: { pendingContent: true },
+    pendingWorkOwnerActions: {
+      [owner.draftId]: { resume() {}, discard() {} },
+    },
+  }));
+
+  assert.equal((html.match(/data-pending-work-kind="source-content-edit"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-pending-work-id="source-content"/);
+  assert.match(html, /data-pending-work-state="saving"/);
+  assert.match(html, /<button[^>]*disabled[^>]*>Resume Source Content changes<\/button>/);
+  assert.match(html, /<button[^>]*disabled[^>]*>Discard changes<\/button>/);
+});
+
 test("empty Build state omits the pending-work row from DOM and accessibility trees", () => {
   const page = { id: "page-a", label: "Page A", sections: [{ id: "section-a", title: "Section A", panels: [] }] };
   const html = renderToStaticMarkup(React.createElement(BuildWorkspace, {

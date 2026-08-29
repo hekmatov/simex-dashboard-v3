@@ -11,7 +11,7 @@ import {
   reduceStaticContentDraft,
 } from "../src/static-content/forms/staticContentDraft.js";
 import { prepareStaticPanelTransaction } from "../src/static-content/staticPanelTransaction.js";
-import { makeDashboardV5 } from "./helpers/contentLibraryFixtures.js";
+import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
 
 const vite = await createServer({
   root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true },
@@ -84,6 +84,70 @@ test("workflow pending disables every current Text and Image mutating field", ()
       assert.match(html, /class="image-crop-selection"[^>]*aria-disabled="true"/);
     }
   }
+});
+
+test("Text/Image submission exposes one busy status and disables every exit or mutation control", () => {
+  let contentDraft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "busy-panel", title: "Busy panel", sourceId: "busy-source" },
+    placement: { kind: "staticText", qmd: "Busy content" },
+  });
+  contentDraft = reduceStaticContentDraft(contentDraft, { type: "commitStarted" });
+  const contentHtml = renderToStaticMarkup(React.createElement(wizardModule.StaticContentWizard, {
+    open: true,
+    dashboard: makeDashboardV5(),
+    initialDraft: contentDraft,
+  }));
+  assert.match(contentHtml, /<form[^>]*aria-busy="true"/);
+  assert.match(contentHtml, /role="status"[^>]*>Text\/Image authoring is unavailable while this draft action is pending\./);
+  assert.match(contentHtml, /<button[^>]*aria-label="Close Text\/Image editor"[^>]*disabled/);
+  assert.match(contentHtml, /<input[^>]*id="static-panel-title"[^>]*disabled/);
+  assert.match(contentHtml, /<button[^>]*disabled[^>]*>Cancel<\/button>/);
+  assert.match(contentHtml, /<button[^>]*disabled[^>]*>Back<\/button>/);
+  assert.match(contentHtml, /<button[^>]*disabled[^>]*>Continue<\/button>/);
+
+  let finalDraft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "busy-final", title: "Busy final", sourceId: "busy-final-source" },
+    placement: { kind: "staticText", qmd: "Ready to add" },
+  });
+  finalDraft = reduceStaticContentDraft(finalDraft, { type: "setStage", stage: "preview-and-add" });
+  finalDraft = reduceStaticContentDraft(finalDraft, { type: "commitStarted" });
+  assert.deepEqual(wizardModule.getStaticContentSubmissionState({ draft: finalDraft }), {
+    busy: true,
+    disabled: true,
+    label: "Add",
+  });
+});
+
+test("embedded QMD media uses displayName as the initial nondecorative alt fallback", () => {
+  const dashboard = makeDashboardV5();
+  const mediaItem = makeMediaItem({
+    mediaId: "media-fallback",
+    displayName: "Response overview map",
+    defaultDescription: "",
+  });
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    assets: dashboard.assets,
+  });
+  draft = reduceStaticContentDraft(draft, { type: "insertQmdMedia", mediaItem });
+  assert.match(draft.source.qmd, /^!\[Response overview map\]\(simex-media:media-fallback\)/);
+
+  let imageDraft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "image",
+    stage: "content",
+    assets: dashboard.assets,
+  });
+  imageDraft = reduceStaticContentDraft(imageDraft, { type: "selectMediaItem", mediaItem });
+  assert.equal(imageDraft.source.alt, "Response overview map");
 });
 
 test("existing Image edit finalizes and prepares the exact atomic V5 contract", () => {

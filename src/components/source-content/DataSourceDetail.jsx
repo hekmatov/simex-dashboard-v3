@@ -14,6 +14,8 @@ export default function DataSourceDetail({
   datasetProfile,
   geoData,
   onRename,
+  renameBusy = false,
+  renameError = "",
   onRequestClose,
   onContentDraftStage,
   onContentDraftCommit,
@@ -65,7 +67,7 @@ export default function DataSourceDetail({
           file,
           parseCandidate: (candidateFile) => parseUploadedCsvFile(candidateFile, dashboard.dataSources ?? {}),
         });
-      if (plan.draft) await onContentDraftStage?.(plan.draft);
+      if (plan.draft && plan.status !== "blocked") await onContentDraftStage?.(plan.draft);
       replacementPlanRef.current = plan;
       setReplacementPlan(plan);
       setReplacementLabel(file.name || (isGeoJson ? "Replacement GeoJSON" : "Replacement CSV"));
@@ -125,8 +127,6 @@ export default function DataSourceDetail({
         setReplaceOpen(false);
       }
     } catch (error) {
-      replacementPlanRef.current = null;
-      setReplacementPlan(null);
       setReplacementError(error?.message ?? `The ${isGeoJson ? "GeoJSON" : "CSV"} replacement failed. The previous source remains active.`);
     } finally {
       setReplacementBusy(false);
@@ -144,7 +144,7 @@ export default function DataSourceDetail({
           action={<button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{repairLabel}</button>}
         />}
       {item.kind === "csv" && <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{repairLabel}</button>}
-      <RenameSource item={item} onRename={onRename} />
+      <RenameSource item={item} onRename={onRename} busy={renameBusy} error={renameError} />
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
       <ContentActionDialog
         open={replaceOpen}
@@ -175,13 +175,14 @@ export default function DataSourceDetail({
   );
 }
 
-function RenameSource({ item, onRename }) {
+function RenameSource({ item, onRename, busy = false, error = "" }) {
   const [displayName, setDisplayName] = React.useState(item.record.displayName);
   React.useEffect(() => setDisplayName(item.record.displayName), [item.id, item.record.displayName]);
   return (
-    <form className="source-content-rename" onSubmit={(event) => { event.preventDefault(); onRename?.({ displayName }); }}>
-      <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required /></label>
-      <button type="submit" className="secondary" disabled={!onRename || displayName.trim() === item.record.displayName}>Save name</button>
+    <form className="source-content-rename" aria-busy={busy ? "true" : undefined} onSubmit={(event) => { event.preventDefault(); void onRename?.({ displayName }); }}>
+      <label><span>Display name</span><input value={displayName} disabled={busy} onChange={(event) => setDisplayName(event.target.value)} required /></label>
+      <button type="submit" className="secondary" disabled={busy || !onRename || displayName.trim() === item.record.displayName}>Save name</button>
+      {error && <p role="alert">{error}</p>}
     </form>
   );
 }
@@ -190,6 +191,6 @@ async function discardPreparedCsv(plan, reason, { contentDraftCoordinator, onCon
   const draftId = plan?.draft?.draftId;
   if (!draftId) return false;
   const record = contentDraftCoordinator?.getActiveRetainers?.().records?.find(({ ownerId }) => ownerId === draftId);
-  if (!record || record.status !== "staged") return false;
+  if (!record || !new Set(["staged", "error"]).has(record.status)) return false;
   return onContentDraftDiscard?.(draftId, reason) ?? false;
 }

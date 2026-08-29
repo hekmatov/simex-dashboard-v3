@@ -99,12 +99,6 @@ export function ManagerGeoJsonIntake({
       setOpen(false);
       onAdded?.(result?.itemIds?.[0] ?? candidate.sourceId);
     } catch (caught) {
-      try {
-        await onContentDraftDiscard?.(draftId, "manager-geojson-persistence-failure");
-      } catch {
-        // Preserve the original persistence failure for the user.
-      }
-      draftIdRef.current = null;
       setError(caught?.message ?? "The GeoJSON could not be added to the dashboard.");
     } finally {
       setBusy(false);
@@ -112,13 +106,13 @@ export function ManagerGeoJsonIntake({
   };
 
   return (
-    <section aria-label="Add GeoJSON to dashboard" data-draft-owner="manager">
+    <section aria-label="Add GeoJSON to dashboard" data-draft-owner="manager" aria-busy={busy ? "true" : undefined}>
       {!open && <button type="button" className="secondary" onClick={() => setOpen(true)}>Add GeoJSON</button>}
       {open && <div>
         <h3>Add GeoJSON</h3>
         <label><span>GeoJSON file</span><input type="file" accept=".geojson,application/geo+json,application/json" disabled={busy} onChange={(event) => void stageFile(event.target.files?.[0] ?? null)} /></label>
         {candidate && <>
-          <label><span>Display name</span><input value={displayName} required onChange={(event) => setDisplayName(event.target.value)} /></label>
+          <label><span>Display name</span><input value={displayName} disabled={busy} required onChange={(event) => setDisplayName(event.target.value)} /></label>
           <GeoJsonDetail item={{ id: candidate.sourceId, record: { displayName, origin: "uploaded", health: "ready" } }} source={candidate.source} geoData={candidate.geoJson} summary={candidate.validation.summary} />
           {candidate.validation.admission.status === "warning" && <p role="status">This source is within the measured warning range and may be added.</p>}
           <button type="button" disabled={busy || !displayName.trim()} onClick={() => void add()}>Add to dashboard</button>
@@ -193,7 +187,6 @@ export function ManagerCsvIntake({
       setOpen(false);
       onAdded?.(result?.itemIds?.[0] ?? candidate.sourceId);
     } catch (caught) {
-      draftIdRef.current = null;
       setError(caught?.message ?? "The CSV could not be added to the dashboard.");
     } finally {
       setBusy(false);
@@ -202,7 +195,7 @@ export function ManagerCsvIntake({
 
   const duplicate = candidate ? matchingCsv(dashboard, candidate.profile.fingerprint) : null;
   return (
-    <section aria-label="Add CSV to dashboard" data-draft-owner="manager">
+    <section aria-label="Add CSV to dashboard" data-draft-owner="manager" aria-busy={busy ? "true" : undefined}>
       {!open && <button type="button" className="secondary" onClick={() => setOpen(true)}>Add CSV</button>}
       {open && (
         <div>
@@ -210,7 +203,7 @@ export function ManagerCsvIntake({
           <label><span>CSV file</span><input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => void stageFile(event.target.files?.[0] ?? null)} /></label>
           {candidate && (
             <>
-              <label><span>Display name</span><input value={displayName} required onChange={(event) => setDisplayName(event.target.value)} /></label>
+              <label><span>Display name</span><input value={displayName} disabled={busy} required onChange={(event) => setDisplayName(event.target.value)} /></label>
               <p>{candidate.profile.rowCount} rows · {candidate.profile.columns.length} columns</p>
               <CsvCandidatePreview rows={candidate.rows} columns={candidate.profile.columns.map(({ name }) => name)} />
               {duplicate && <p role="status">Matching content already exists as {duplicate.displayName}. Adding keeps a separate source identity.</p>}

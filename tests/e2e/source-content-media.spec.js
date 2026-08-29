@@ -16,6 +16,80 @@ test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
 });
 
+test("retry and resume Source Content under one stable owner", async ({ page }) => {
+  test.setTimeout(120_000);
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript((storageKey) => {
+    globalThis.__SOURCE_CONTENT_UNHANDLED__ = [];
+    addEventListener("unhandledrejection", (event) => {
+      globalThis.__SOURCE_CONTENT_UNHANDLED__.push(String(event.reason?.message ?? event.reason));
+    });
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function sourceContentSetItem(key, value) {
+      if (key === storageKey && globalThis.__SOURCE_CONTENT_FAIL_ONCE__ === true) {
+        globalThis.__SOURCE_CONTENT_FAIL_ONCE__ = false;
+        throw new DOMException("Injected Source Content persistence failure", "QuotaExceededError");
+      }
+      return original.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+
+  await openBiomedicalBuild(page, { width: 1440, height: 900 });
+  await persistDefaultDashboard(page);
+  await page.reload();
+  await openBiomedicalBuild(page, { width: 1440, height: 900 });
+  const initial = await mediaInventory(page);
+  let manager = await openManager(page);
+  const intake = await stageManagerFile(manager, "recoverable-source-content.png");
+  const displayName = intake.getByLabel("Display name");
+  await displayName.fill("Recoverable Source Content map");
+  const sourceSurface = page.locator('aside[data-authoring-surface="source-content"]');
+  await displayName.press("Escape");
+  expect(pageErrors).toEqual([]);
+  await expect(sourceSurface).toHaveAttribute("hidden", "");
+  await expect(sourceSurface).toBeHidden();
+  await expect(page.getByRole("complementary", { name: "Source content authoring" })).toHaveCount(0);
+  expect(await sessionAssetIds(page)).toHaveLength(1);
+
+  const owner = page.locator('[data-pending-work-kind="source-content-create"]');
+  await expect(owner).toHaveCount(1);
+  const ownerId = await owner.getAttribute("data-pending-work-id");
+  await expect(owner).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
+  await owner.getByRole("button", { name: "Resume New Source Content draft" }).click();
+  manager = page.locator(".source-content-workspace");
+  await expect(manager).toBeVisible();
+  await expect(manager.getByLabel("Display name")).toBeFocused();
+
+  await page.evaluate(() => { globalThis.__SOURCE_CONTENT_FAIL_ONCE__ = true; });
+  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  await expect(intake.getByRole("alert")).toBeVisible();
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-id", ownerId);
+  await expect(owner).toHaveAttribute("data-pending-work-state", "error");
+  expect(await mediaInventory(page)).toEqual(initial);
+  expect(await sessionAssetIds(page)).toHaveLength(1);
+
+  const description = intake.getByLabel("Default description");
+  await description.fill("Retained retry description");
+  await description.focus();
+  await closeManager(page);
+  await expect(owner).toHaveAttribute("data-pending-work-id", ownerId);
+  await expect(owner).toHaveAttribute("data-pending-work-state", "error");
+  await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
+  await owner.getByRole("button", { name: "Resume New Source Content draft" }).click();
+  await expect(description).toBeFocused();
+  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  await expect(owner).toHaveCount(0);
+  await expect(manager.getByRole("region", { name: "Media catalogue" })
+    .getByText("Recoverable Source Content map", { exact: true })).toBeVisible();
+  await expect.poll(() => sessionAssetIds(page)).toEqual([]);
+  expect((await mediaInventory(page)).logicalIds).toHaveLength(initial.logicalIds.length + 1);
+  expect(pageErrors).toEqual([]);
+  expect(await page.evaluate(() => globalThis.__SOURCE_CONTENT_UNHANDLED__)).toEqual([]);
+});
+
 test("Journey A — media create reuse default external import restore dependencies delete", async ({ page }) => {
   test.setTimeout(180_000);
   const externalRequests = [];
@@ -51,16 +125,25 @@ test("Journey A — media create reuse default external import restore dependenc
   expect(await mediaInventory(page)).toEqual(initial);
 
   intake = await stageManagerFile(manager, "escape.png");
-  await intake.getByLabel("Display name").focus();
-  await page.keyboard.press("Escape");
+  await intake.getByLabel("Display name").press("Escape");
   await expect(page.getByRole("complementary", { name: "Source content authoring" })).toHaveCount(0);
-  await expect.poll(() => sessionAssetIds(page)).toEqual([]);
+  expect(await sessionAssetIds(page)).toHaveLength(1);
   expect(await mediaInventory(page)).toEqual(initial);
-  await expect(page.getByRole("button", { name: "Source content", exact: true })).toBeFocused();
+  let suspendedOwner = page.locator('[data-pending-work-kind="source-content-create"]');
+  await expect(suspendedOwner).toHaveCount(1);
+  await suspendedOwner.getByRole("button", { name: "Resume New Source Content draft" }).click();
+  await expect(intake.getByLabel("Display name")).toBeFocused();
+  await intake.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect.poll(() => sessionAssetIds(page)).toEqual([]);
 
   manager = await openManager(page);
-  await stageManagerFile(manager, "close.png");
+  intake = await stageManagerFile(manager, "close.png");
   await closeManager(page);
+  expect(await sessionAssetIds(page)).toHaveLength(1);
+  suspendedOwner = page.locator('[data-pending-work-kind="source-content-create"]');
+  await expect(suspendedOwner).toHaveCount(1);
+  await suspendedOwner.getByRole("button", { name: "Resume New Source Content draft" }).click();
+  await intake.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect.poll(() => sessionAssetIds(page)).toEqual([]);
   expect(await mediaInventory(page)).toEqual(initial);
 
@@ -612,6 +695,19 @@ async function addExternalFixture(page) {
     validateConfigurationForPersistence(dashboard, profiles);
     localStorage.setItem(key, JSON.stringify(dashboard));
   }, { key: STORAGE_KEY, mediaId: EXTERNAL_ID });
+}
+
+async function persistDefaultDashboard(page) {
+  await page.evaluate(async (key) => {
+    if (localStorage.getItem(key) !== null) return;
+    const input = await fetch("/config/dashboard.json").then((response) => response.json());
+    const profiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
+    const { normalizeDashboardSource } = await import("/src/lib/loadDashboard.js");
+    const dashboard = normalizeDashboardSource(input, profiles);
+    const { validateConfigurationForPersistence } = await import("/src/lib/dashboardPersistenceValidation.js");
+    validateConfigurationForPersistence(dashboard, profiles);
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, STORAGE_KEY);
 }
 
 async function mediaInventory(page) {

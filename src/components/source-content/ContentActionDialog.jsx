@@ -41,6 +41,7 @@ export default function ContentActionDialog({
         className="confirm-dialog-backdrop"
         role="dialog"
         aria-modal="true"
+        aria-busy={busy ? "true" : undefined}
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-message`}
         tabIndex={-1}
@@ -62,7 +63,7 @@ export default function ContentActionDialog({
             <section aria-label="Affected panels">
               <h3>Affected panels</h3>
               <ul>{remapTargets.map((target) => <li key={target.id}>
-                {typeof onNavigate === "function" ? <button type="button" className="source-content-breadcrumb" onClick={() => onNavigate(target)}><RemapBreadcrumb target={target} /></button> : <span><RemapBreadcrumb target={target} /></span>}
+                {typeof onNavigate === "function" ? <button type="button" className="source-content-breadcrumb" disabled={busy} onClick={() => onNavigate(target)}><RemapBreadcrumb target={target} /></button> : <span><RemapBreadcrumb target={target} /></span>}
               </li>)}</ul>
             </section>
           )}
@@ -98,6 +99,7 @@ export default function ContentActionDialog({
         className="confirm-dialog-backdrop"
         role="dialog"
         aria-modal="true"
+        aria-busy={busy ? "true" : undefined}
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-message`}
         tabIndex={-1}

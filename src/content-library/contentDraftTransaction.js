@@ -138,7 +138,7 @@ export function buildStaticPanelContentDraftCandidate({
     ...(payload.stagedAssetIds ?? []),
     ...Object.values(pendingMediaItems)
       .map((item) => item?.current?.kind === "asset" ? item.current.assetId : null)
-      .filter(Boolean),
+      .filter((assetId) => assetId && pendingAssets[assetId]?.storageState === "staged"),
   ]);
   return freezeRecord({
     dashboard: prepared.candidateDashboard,
@@ -166,6 +166,7 @@ export function createContentDraftCoordinator({
   const drafts = new Map();
   const transactions = new Map();
   const finalizedDraftIds = new Set();
+  const activeCommits = new Map();
   const listeners = new Set();
   let disposed = false;
 
@@ -195,134 +196,144 @@ export function createContentDraftCoordinator({
       emit();
       return updated;
     },
-    async commitDraft(draftId, { buildCandidate } = {}) {
+    commitDraft(draftId, { buildCandidate } = {}) {
       assertActive();
+      const activeCommit = activeCommits.get(draftId);
+      if (activeCommit) return activeCommit;
       if (typeof buildCandidate !== "function") throw new TypeError("Content draft candidate builder is required.");
-      const draft = requireDraft(draftId);
-      const previousDashboard = structuredClone(getDashboard());
-      const transactionId = `content-draft:${draft.draftId}`;
-      let candidateResult;
-      let assetSnapshot = null;
-      let internalTransactionStarted = false;
-      const stagedAssetIds = [];
-      try {
-        assertDraftReadyForCommit(draft, finalizedDraftIds);
-        if (transactions.has(transactionId)) {
-          throw new Error(`Content transaction "${transactionId}" already exists.`);
-        }
-        candidateResult = normalizeCandidateResult(buildCandidate({
-          dashboard: structuredClone(previousDashboard),
-          draft: structuredClone(draft),
-        }));
-        coordinator.beginTransaction({
-          transactionId,
-          kind: draft.kind,
-          assetIds: uniqueSorted([
-            ...draft.assetIds,
-            ...candidateResult.commitAssetIds,
-            ...candidateResult.discardAssetIds,
-          ]),
-          mediaIds: draft.mediaIds,
-          sourceIds: draft.sourceIds,
-        });
-        internalTransactionStarted = true;
-        drafts.set(draft.draftId, freezeRecord({ ...draft, status: "committing" }));
-        emit();
-        assetSnapshot = await assetStore.snapshot?.(candidateResult.commitAssetIds) ?? null;
-        for (const assetId of candidateResult.commitAssetIds) {
-          const sessionAsset = readSessionAsset(assetId);
-          if (!sessionAsset) throw new Error(`Staged content asset "${assetId}" is missing.`);
-          const staged = await assetStore.stage({
-            ...structuredClone(sessionAsset),
-            assetId,
-            expectedAssetId: assetId,
-            transactionId,
-          });
-          if (staged?.assetId !== assetId) throw new Error(`Staged content asset "${assetId}" identity changed.`);
-          stagedAssetIds.push(assetId);
-        }
-        const durableCandidateDashboard = promoteCommittedAssetManifests(
-          candidateResult.dashboard,
-          candidateResult.commitAssetIds,
-        );
-        const committedDashboard = await commitDashboard(
-          durableCandidateDashboard,
-          { transactionId },
-        );
+      const committing = (async () => {
+        const draft = requireDraft(draftId);
+        const previousDashboard = structuredClone(getDashboard());
+        const transactionId = `content-draft:${draft.draftId}`;
+        let candidateResult;
+        let assetSnapshot = null;
+        let internalTransactionStarted = false;
+        const stagedAssetIds = [];
         try {
-          if (typeof assetStore.commitMany === "function") {
-            await assetStore.commitMany(candidateResult.commitAssetIds, { transactionId });
-          } else {
-            for (const assetId of candidateResult.commitAssetIds) {
-              await assetStore.commit(assetId, { transactionId });
-            }
+          assertDraftReadyForCommit(draft, finalizedDraftIds);
+          if (transactions.has(transactionId)) {
+            throw new Error(`Content transaction "${transactionId}" already exists.`);
           }
-        } catch (assetError) {
-          const rollbackErrors = [];
-          try {
-            await commitDashboard(structuredClone(previousDashboard), {
-              transactionId: `${transactionId}:rollback`,
-              rollback: true,
+          candidateResult = normalizeCandidateResult(buildCandidate({
+            dashboard: structuredClone(previousDashboard),
+            draft: structuredClone(draft),
+          }));
+          coordinator.beginTransaction({
+            transactionId,
+            kind: draft.kind,
+            assetIds: uniqueSorted([
+              ...draft.assetIds,
+              ...candidateResult.commitAssetIds,
+              ...candidateResult.discardAssetIds,
+            ]),
+            mediaIds: draft.mediaIds,
+            sourceIds: draft.sourceIds,
+          });
+          internalTransactionStarted = true;
+          drafts.set(draft.draftId, freezeRecord({ ...draft, status: "committing" }));
+          emit();
+          assetSnapshot = await assetStore.snapshot?.(candidateResult.commitAssetIds) ?? null;
+          for (const assetId of candidateResult.commitAssetIds) {
+            const sessionAsset = readSessionAsset(assetId);
+            if (!sessionAsset) throw new Error(`Staged content asset "${assetId}" is missing.`);
+            const staged = await assetStore.stage({
+              ...structuredClone(sessionAsset),
+              assetId,
+              expectedAssetId: assetId,
+              transactionId,
             });
-          } catch (error) {
-            rollbackErrors.push(error);
+            if (staged?.assetId !== assetId) throw new Error(`Staged content asset "${assetId}" identity changed.`);
+            stagedAssetIds.push(assetId);
+          }
+          const durableCandidateDashboard = promoteCommittedAssetManifests(
+            candidateResult.dashboard,
+            candidateResult.commitAssetIds,
+          );
+          const committedDashboard = await commitDashboard(
+            durableCandidateDashboard,
+            { transactionId },
+          );
+          try {
+            if (typeof assetStore.commitMany === "function") {
+              await assetStore.commitMany(candidateResult.commitAssetIds, { transactionId });
+            } else {
+              for (const assetId of candidateResult.commitAssetIds) {
+                await assetStore.commit(assetId, { transactionId });
+              }
+            }
+          } catch (assetError) {
+            const rollbackErrors = [];
+            try {
+              await commitDashboard(structuredClone(previousDashboard), {
+                transactionId: `${transactionId}:rollback`,
+                rollback: true,
+              });
+            } catch (error) {
+              rollbackErrors.push(error);
+            }
+            try {
+              await restoreAssets(assetSnapshot, stagedAssetIds, transactionId);
+            } catch (error) {
+              rollbackErrors.push(error);
+            }
+            if (rollbackErrors.length > 0) {
+              throw new AggregateError([assetError, ...rollbackErrors], "Content draft commit and compensation failed.");
+            }
+            throw assetError;
+          }
+          const cleanup = clearCompleted(draft, transactionId, candidateResult);
+          coordinator.completeTransaction(transactionId);
+          return freezeRecord({
+            dashboard: structuredClone(committedDashboard ?? durableCandidateDashboard),
+            itemIds: candidateResult.itemIds,
+            cleanup,
+          });
+        } catch (error) {
+          const cleanupErrors = [];
+          if (candidateResult) {
+            try {
+              const currentDashboard = structuredClone(getDashboard());
+              if (JSON.stringify(currentDashboard) !== JSON.stringify(previousDashboard)) {
+                await commitDashboard(structuredClone(previousDashboard), { transactionId, rollback: true });
+              }
+            } catch (cleanupError) {
+              cleanupErrors.push(cleanupError);
+            }
           }
           try {
             await restoreAssets(assetSnapshot, stagedAssetIds, transactionId);
-          } catch (error) {
-            rollbackErrors.push(error);
+          } catch (cleanupError) {
+            cleanupErrors.push(cleanupError);
           }
-          if (rollbackErrors.length > 0) {
-            throw new AggregateError([assetError, ...rollbackErrors], "Content draft commit and compensation failed.");
-          }
-          throw assetError;
-        }
-        const cleanup = clearCompleted(draft, transactionId, candidateResult);
-        coordinator.completeTransaction(transactionId);
-        return freezeRecord({
-          dashboard: structuredClone(committedDashboard ?? durableCandidateDashboard),
-          itemIds: candidateResult.itemIds,
-          cleanup,
-        });
-      } catch (error) {
-        const cleanupErrors = [];
-        if (candidateResult) {
-          try {
-            const currentDashboard = structuredClone(getDashboard());
-            if (JSON.stringify(currentDashboard) !== JSON.stringify(previousDashboard)) {
-              await commitDashboard(structuredClone(previousDashboard), { transactionId, rollback: true });
+          if (candidateResult) {
+            drafts.set(draft.draftId, freezeRecord({
+              ...draft,
+              status: "error",
+              error: error?.message ?? String(error),
+            }));
+          } else {
+            try {
+              discardSessionIds(draft.assetIds);
+            } catch (cleanupError) {
+              cleanupErrors.push(cleanupError);
             }
-          } catch (cleanupError) {
-            cleanupErrors.push(cleanupError);
+            drafts.delete(draft.draftId);
+            finalizedDraftIds.delete(draft.draftId);
           }
-        }
-        try {
-          await restoreAssets(assetSnapshot, stagedAssetIds, transactionId);
-        } catch (cleanupError) {
-          cleanupErrors.push(cleanupError);
-        }
-        try {
-          discardSessionIds(candidateResult
-            ? [...candidateResult.commitAssetIds, ...candidateResult.discardAssetIds]
-            : draft.assetIds);
-        } catch (cleanupError) {
-          cleanupErrors.push(cleanupError);
-        }
-        drafts.delete(draft.draftId);
-        finalizedDraftIds.delete(draft.draftId);
-        if (internalTransactionStarted) {
-          try {
-            await coordinator.failTransaction(transactionId, error);
-          } catch (cleanupError) {
-            cleanupErrors.push(cleanupError);
+          if (internalTransactionStarted) coordinator.completeTransaction(transactionId);
+          else emit();
+          if (cleanupErrors.length > 0) {
+            throw new AggregateError([error, ...cleanupErrors], "Content draft failed and rollback did not complete.");
           }
+          throw error;
         }
-        emit();
-        if (cleanupErrors.length > 0) {
-          throw new AggregateError([error, ...cleanupErrors], "Content draft failed and cleanup did not complete.");
-        }
-        throw error;
-      }
+      })();
+      activeCommits.set(draftId, committing);
+      committing.then(
+        () => { if (activeCommits.get(draftId) === committing) activeCommits.delete(draftId); },
+        () => { if (activeCommits.get(draftId) === committing) activeCommits.delete(draftId); },
+      );
+      return committing;
     },
     async discardDraft(draftId, { reason = "discarded" } = {}) {
       const draft = requireDraft(draftId);

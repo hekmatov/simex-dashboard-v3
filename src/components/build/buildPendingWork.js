@@ -85,6 +85,7 @@ export function selectBuildPendingWork({
       || (key === "chartWizard" && adoptedChartKinds.has("chart-create"))
       || (key === "structure" && adoptedKinds.has("layout"))
       || (key === "staticContent" && (adoptedKinds.has("text-image-create") || adoptedKinds.has("text-image-edit")))
+      || (key === "pendingContent" && (adoptedKinds.has("source-content-create") || adoptedKinds.has("source-content-edit")))
       || (key === "chronoGroup" && adoptedKinds.has("chrono"))
       || (key === "scene" && adoptedKinds.has("scene"))
     ) continue;
@@ -141,6 +142,10 @@ export function selectBuildPendingWork({
 
   for (const session of parkedAuxiliaries ?? []) {
     const key = authoredKeyForAuxiliary(session?.surface);
+    if (
+      key === "pendingContent"
+      && (adoptedKinds.has("source-content-create") || adoptedKinds.has("source-content-edit"))
+    ) continue;
     const temporalKind = temporalOwnerKind(session?.surface);
     if (temporalKind) {
       const id = `${temporalKind}:${session?.draftId}`;
@@ -277,11 +282,23 @@ function labelForOwnerKind(kind) {
     "chart-edit": "Chart changes",
     "text-image-create": "New Text/Image draft",
     "text-image-edit": "Text/Image changes",
+    "source-content-create": "New Source Content draft",
+    "source-content-edit": "Source Content changes",
   })[kind] ?? `${humanize(kind)} changes`;
 }
 
 function priorityForOwnerKind(kind) {
-  return ({ layout: 10, "chart-edit": 20, "chart-create": 30, "text-image-create": 40, "text-image-edit": 40, chrono: 70, scene: 80 })[kind] ?? 110;
+  return ({
+    layout: 10,
+    "chart-edit": 20,
+    "chart-create": 30,
+    "text-image-create": 40,
+    "text-image-edit": 40,
+    "source-content-create": 60,
+    "source-content-edit": 60,
+    chrono: 70,
+    scene: 80,
+  })[kind] ?? 110;
 }
 
 function stateWithHigherPriority(left, right) {

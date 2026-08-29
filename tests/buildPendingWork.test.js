@@ -385,6 +385,74 @@ test("adopted Text/Image creation and edit owners bypass the legacy staticConten
   assert.doesNotMatch(pending.map(({ id }) => id).join(" "), /(^|\s)text-image($|\s)/);
 });
 
+test("Source Content owners keep exact create/edit identities and bypass pendingContent projections", () => {
+  const log = [];
+  const create = {
+    draftId: "source-content-create:manager-media-local",
+    kind: "source-content-create",
+    scopeId: "manager-media-local",
+    status: "dirty",
+    activity: "active",
+    surface: "source-content-catalogue",
+  };
+  const edit = {
+    draftId: "source-content-edit:cases",
+    kind: "source-content-edit",
+    scopeId: "cases",
+    status: "error",
+    activity: "suspended",
+    surface: "source-content-dialog",
+    restoration: { focusIndex: 4, scrollTop: 260 },
+  };
+  const actions = {
+    ...actionHarness(log),
+    ownerById: {
+      [create.draftId]: {
+        focus: () => log.push(`focus:${create.draftId}`),
+        discard: () => log.push(`discard:${create.draftId}`),
+      },
+      [edit.draftId]: {
+        resume: () => log.push(`resume:${edit.draftId}`),
+        discard: () => log.push(`discard:${edit.draftId}`),
+      },
+    },
+  };
+
+  const pending = selectBuildPendingWork({
+    authoredDirty: { pendingContent: true },
+    owners: [create, edit],
+    parkedAuxiliaries: [{
+      surface: "source-content",
+      draftId: "auxiliary-source-content",
+      dirty: true,
+      status: "suspended",
+    }],
+    actions,
+  });
+
+  assert.deepEqual(pending.map(({ id, label, activation }) => ({ id, label, activation })), [{
+    id: create.draftId,
+    label: "New Source Content draft",
+    activation: "focus",
+  }, {
+    id: edit.draftId,
+    label: "Source Content changes",
+    activation: "resume",
+  }]);
+  assert.equal(typeof pending[0].discard, "function");
+  assert.equal(typeof pending[1].discard, "function");
+  pending[0].resume();
+  pending[1].resume();
+  assert.deepEqual(log, [`focus:${create.draftId}`, `resume:${edit.draftId}`]);
+
+  for (const status of ["saving", "error", "dirty"]) {
+    const [same] = selectBuildPendingWork({ owners: [{ ...create, status }], actions });
+    assert.equal(same.id, create.draftId);
+    assert.equal(same.state, status);
+  }
+  assert.deepEqual(selectBuildPendingWork({ owners: [{ ...create, status: "clean" }], actions }), []);
+});
+
 test("layout-owned Scene consequences publish only the layout transaction descriptor", () => {
   const layoutDraft = {
     draftId: "layout:dashboard-1",

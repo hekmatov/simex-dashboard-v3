@@ -188,7 +188,7 @@ export function reduceStaticContentDraft(state, action = {}) {
       const isNewPlacement = state.mode === "create"
         && (!state.baseline?.mediaItem || state.baseline.mediaItem.health === "needs-relink");
       const preservedAlt = isNewPlacement
-        ? mediaItem.defaultDescription
+        ? initialNonDecorativeAlt(mediaItem)
         : state.source.decorative ? "" : state.source.alt;
       const placement = normalizeStaticSource({
         ...state.source,
@@ -227,7 +227,7 @@ export function reduceStaticContentDraft(state, action = {}) {
       }
       const reference = serializePortableMediaReference({
         mediaId: mediaItem.mediaId,
-        alt: mediaItem.defaultDescription,
+        alt: initialNonDecorativeAlt(mediaItem),
       });
       const separator = state.source.qmd.trim() ? "\n\n" : "";
       const source = normalizeStaticSource({ ...state.source, qmd: `${state.source.qmd}${separator}${reference}` });
@@ -689,6 +689,14 @@ function createImageEditing(source) {
     altReviewRequired: false,
     replacementUndo: null,
   };
+}
+
+function initialNonDecorativeAlt(mediaItem) {
+  const description = typeof mediaItem?.defaultDescription === "string"
+    ? mediaItem.defaultDescription.trim()
+    : "";
+  if (description) return description;
+  return typeof mediaItem?.displayName === "string" ? mediaItem.displayName.trim() : "";
 }
 
 function requiredText(value, description) {

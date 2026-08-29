@@ -135,6 +135,8 @@ export default function BuildWorkspace({
   const activeAuxiliary = draftCoordinator.activeAuxiliary?.surface ?? null;
   const parkedAuxiliaries = draftCoordinator.parkedAuxiliaries;
   const [sourceContentViewState, setSourceContentViewState] = React.useState(() => createSourceContentViewState());
+  const [sourceContentOwners, setSourceContentOwners] = React.useState([]);
+  const sourceContentControllerRef = React.useRef(null);
   const [chronoGroupDraft, setChronoGroupDraft] = React.useState(null);
   const [sceneDraft, setSceneDraft] = React.useState(null);
   const [chronoContentState, setChronoContentState] = React.useState(null);
@@ -143,6 +145,7 @@ export default function BuildWorkspace({
   const renderedAuxiliary = temporalSurfaceActive
     ? (chronoContentState?.studio === "scene" ? "scene" : "chrono-group")
     : activeAuxiliary;
+  const sourceContentSaving = sourceContentOwners.some(({ status }) => status === "saving");
   const temporalCharts = React.useMemo(
     () => temporalSurfaceActive ? temporalAuthoringCharts(dashboard) : [],
     [dashboard, temporalSurfaceActive],
@@ -362,6 +365,15 @@ export default function BuildWorkspace({
 
   const openAuxiliary = (surface) => {
     if (auxiliaryLocked || activeAuxiliary === surface) return;
+    if (surface === "source-content" && sourceContentOwners.length > 0) {
+      const parked = parkedAuxiliaries.find((entry) => entry.surface === surface);
+      if (parked) {
+        initializeAuxiliary(surface);
+        dispatchDraftCoordinator({ type: "RESUME_AUXILIARY", session: parked });
+        sourceContentControllerRef.current?.resume(sourceContentOwners[0]?.draftId);
+        return;
+      }
+    }
     initializeAuxiliary(surface);
     const restoration = captureRestoration();
     dispatchDraftCoordinator({
@@ -388,6 +400,7 @@ export default function BuildWorkspace({
   };
 
   const closeAuxiliary = () => {
+    if (renderedAuxiliary === "source-content" && sourceContentSaving) return;
     const restoration = captureRestoration();
     if (renderedAuxiliary === "chrono-group" && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft })) {
       setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
@@ -402,6 +415,20 @@ export default function BuildWorkspace({
       }));
     }
     const currentSession = draftCoordinator.activeAuxiliary;
+    if (renderedAuxiliary === "source-content" && currentSession && sourceContentOwners.length > 0) {
+      const sourceRestoration = sourceContentControllerRef.current?.suspend() ?? restoration;
+      dispatchDraftCoordinator({
+        type: "PARK_AUXILIARY",
+        session: {
+          ...currentSession,
+          dirty: true,
+          status: "suspended",
+          restoration: sourceRestoration,
+        },
+      });
+      restoreCanvas(currentSession.restoration ?? restoration);
+      return;
+    }
     if (currentSession) dispatchDraftCoordinator({
       type: "CLOSE_AUXILIARY",
       draftId: currentSession.draftId,
@@ -421,6 +448,9 @@ export default function BuildWorkspace({
     }
     initializeAuxiliary(surface);
     dispatchDraftCoordinator({ type: "RESUME_AUXILIARY", session: parked });
+    if (surface === "source-content") {
+      sourceContentControllerRef.current?.resume(sourceContentOwners[0]?.draftId);
+    }
     restoreCanvas(parked.restoration);
   };
 
@@ -612,11 +642,32 @@ export default function BuildWorkspace({
       discard: () => dispatch({ type: "DISCARD" }),
     }];
   }));
+  const sourceContentOwnerActions = Object.fromEntries(sourceContentOwners.map((owner) => [owner.draftId, {
+    focus: () => sourceContentControllerRef.current?.focus(owner.draftId),
+    resume: () => {
+      resumeAuxiliary("source-content");
+      sourceContentControllerRef.current?.resume(owner.draftId);
+    },
+    discard: async () => {
+      const result = await sourceContentControllerRef.current?.discard(owner.draftId);
+      if (sourceContentOwners.length === 1) {
+        const session = draftCoordinator.activeAuxiliary?.surface === "source-content"
+          ? draftCoordinator.activeAuxiliary
+          : parkedAuxiliaries.find((entry) => entry.surface === "source-content");
+        if (session) dispatchDraftCoordinator({
+          type: "CLOSE_AUXILIARY",
+          draftId: session.draftId,
+          choice: "discard",
+        });
+      }
+      return result;
+    },
+  }]));
   const pendingWork = selectBuildPendingWork({
     authoredDirty: effectiveAuthoredDirtyState,
     coordinator: draftCoordinator,
     chartOwners,
-    owners: [...temporalOwners, ...(Array.isArray(owners) ? owners : [])],
+    owners: [...temporalOwners, ...sourceContentOwners, ...(Array.isArray(owners) ? owners : [])],
     parkedAuxiliaries,
     layoutDraft,
     actions: {
@@ -630,7 +681,7 @@ export default function BuildWorkspace({
           ?? (() => resumeAuxiliary("scene")),
       },
       resumeAuxiliary,
-      ownerById: { ...pendingWorkOwnerActions, ...temporalOwnerActions },
+      ownerById: { ...pendingWorkOwnerActions, ...temporalOwnerActions, ...sourceContentOwnerActions },
       saveLayout: onSaveLayout,
       discardLayout: discardPendingLayout,
     },
@@ -686,13 +737,55 @@ export default function BuildWorkspace({
             onAccessibilityChange={onAccessibilityChange}
             onOpenAuxiliary={openAuxiliary}
           />
-          {activeAuxiliary && typeof document !== "undefined" && createPortal((
+          {(activeAuxiliary === "source-content" || sourceContentOwners.length > 0) && typeof document !== "undefined" && createPortal((
             <aside
-              className={`build-authoring-auxiliary${renderedAuxiliary === "source-content" ? " build-authoring-auxiliary--source-content" : ""}`}
+              className="build-authoring-auxiliary build-authoring-auxiliary--source-content"
+              {...dashboardThemeRootProps(themeProjection)}
+              data-authoring-surface="source-content"
+              role="complementary"
+              aria-label="Source content authoring"
+              hidden={activeAuxiliary !== "source-content"}
+              style={activeAuxiliary !== "source-content" ? { display: "none" } : undefined}
+              inert={activeAuxiliary !== "source-content" ? "" : undefined}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape" || sourceContentSaving) return;
+                event.preventDefault();
+                event.stopPropagation();
+                closeAuxiliary();
+              }}
+            >
+              <button
+                type="button"
+                className="secondary build-auxiliary-close"
+                disabled={sourceContentSaving}
+                title={sourceContentSaving ? "Wait for the current Source Content operation to finish." : undefined}
+                onClick={closeAuxiliary}
+              >
+                Close
+              </button>
+              <SourceContentWorkspace
+                dashboard={dashboard}
+                geoDataSources={geoDataSources}
+                contentDraftCoordinator={contentDraftCoordinator}
+                active={activeAuxiliary === "source-content"}
+                ownerControllerRef={sourceContentControllerRef}
+                viewState={sourceContentViewState}
+                onOwnersChange={setSourceContentOwners}
+                onViewStateChange={setSourceContentViewState}
+                onRequestClose={closeAuxiliary}
+                onContentDraftStage={onContentDraftStage}
+                onContentDraftCommit={onContentDraftCommit}
+                onContentDraftDiscard={onContentDraftDiscard}
+              />
+            </aside>
+          ), document.body)}
+          {activeAuxiliary && activeAuxiliary !== "source-content" && typeof document !== "undefined" && createPortal((
+            <aside
+              className="build-authoring-auxiliary"
               {...dashboardThemeRootProps(themeProjection)}
               data-authoring-surface={renderedAuxiliary}
-              role={renderedAuxiliary === "source-content" ? "complementary" : "dialog"}
-              aria-modal={renderedAuxiliary === "source-content" ? undefined : "false"}
+              role="dialog"
+              aria-modal="false"
               aria-label={`${auxiliaryLabel(renderedAuxiliary)} authoring`}
               onKeyDown={(event) => {
                 if (event.key !== "Escape") return;
@@ -702,19 +795,6 @@ export default function BuildWorkspace({
               }}
             >
               <button type="button" className="secondary build-auxiliary-close" onClick={closeAuxiliary}>Close</button>
-              {renderedAuxiliary === "source-content" && (
-                <SourceContentWorkspace
-                  dashboard={dashboard}
-                  geoDataSources={geoDataSources}
-                  contentDraftCoordinator={contentDraftCoordinator}
-                  viewState={sourceContentViewState}
-                  onViewStateChange={setSourceContentViewState}
-                  onRequestClose={closeAuxiliary}
-                  onContentDraftStage={onContentDraftStage}
-                  onContentDraftCommit={onContentDraftCommit}
-                  onContentDraftDiscard={onContentDraftDiscard}
-                />
-              )}
               {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "library" && (
                 <ChronoStudio state={chronoContentState} cards={selectChronoStudioCards(chronoContentState)} onAction={dispatchChronoContent} />
               )}

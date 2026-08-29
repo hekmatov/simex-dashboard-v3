@@ -241,6 +241,14 @@ test("repeat temporal confirmation unions sorted sourceIds and persistence failu
     contentDraftCoordinator: failing.coordinator,
   }), /persistence failed/);
   assert.deepEqual(failing.dashboard, before);
+  assert.deepEqual(failing.coordinator.getActiveRetainers().records.map(({ ownerId, status }) => ({ ownerId, status })), [{
+    ownerId: failingPlan.draft.draftId,
+    status: "error",
+  }]);
+  await commitCsvReplacement(failingPlan, {
+    confirmTemporalReview: true,
+    contentDraftCoordinator: failing.coordinator,
+  });
   assert.deepEqual(failing.coordinator.getActiveRetainers().records, []);
 });
 
@@ -255,7 +263,13 @@ test("injected persistence failure rolls back descriptor, profile, entry, rows, 
   }), /persistence failed/);
 
   assert.deepEqual(harness.dashboard, before);
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records.map(({ ownerId, status }) => ({ ownerId, status })), [{
+    ownerId: plan.draft.draftId,
+    status: "error",
+  }]);
+  await commitCsvReplacement(plan, { contentDraftCoordinator: harness.coordinator });
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+  assert.equal(harness.dashboard.contentLibrary.sourceEntries.cases.health, "ready");
 });
 
 async function preparePlan(dashboard, rows) {

@@ -215,7 +215,13 @@ test("expected-current drift and persistence failure preserve the latest exact a
   const plan = await preparePlan(failing.dashboard, collection([point({ code: "A" }, 7, 53), point({ code: "B" }, 8, 53)]));
   await assert.rejects(commitGeoJsonReplacement(plan, { confirmWarnings: true, contentDraftCoordinator: failing.coordinator }), /persistence failed/);
   assert.deepEqual(failing.dashboard, before);
+  assert.deepEqual(failing.coordinator.getActiveRetainers().records.map(({ ownerId, status }) => ({ ownerId, status })), [{
+    ownerId: plan.draft.draftId,
+    status: "error",
+  }]);
+  await commitGeoJsonReplacement(plan, { confirmWarnings: true, contentDraftCoordinator: failing.coordinator });
   assert.deepEqual(failing.coordinator.getActiveRetainers().records, []);
+  assert.equal(failing.dashboard.contentLibrary.sourceEntries.boundaries.health, "ready");
 });
 
 async function preparePlan(dashboard, geoJson) {

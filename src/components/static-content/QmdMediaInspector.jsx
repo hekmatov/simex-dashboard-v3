@@ -1,6 +1,9 @@
 import React from "react";
 
-import { validatePortableMediaAttributes } from "../../static-content/qmd/portableQmdMedia.js";
+import {
+  serializePortableMediaReference,
+  validatePortableMediaAttributes,
+} from "../../static-content/qmd/portableQmdMedia.js";
 
 const WIDTH_PRESETS = Object.freeze(["25%", "33%", "50%", "66%", "75%", "100%"]);
 const ALIGNMENTS = Object.freeze([
@@ -39,14 +42,21 @@ export default function QmdMediaInspector({
   const [moreOpen, setMoreOpen] = React.useState(false);
   const [customWidth, setCustomWidth] = React.useState(customPercentage(placement.width));
   const [widthError, setWidthError] = React.useState("");
+  const [altError, setAltError] = React.useState("");
+  const [altValue, setAltValue] = React.useState(placement.decorative ? "" : placement.alt ?? "");
   const selectedWidth = WIDTH_PRESETS.includes(placement.width) ? placement.width : "custom";
 
   React.useEffect(() => {
     setCustomWidth(customPercentage(placement.width));
     setWidthError("");
   }, [placement.width]);
+  React.useEffect(() => {
+    setAltValue(placement.decorative ? "" : placement.alt ?? "");
+    setAltError("");
+  }, [placement.alt, placement.decorative, placement.mediaId]);
 
   const change = (updates) => {
+    if (Object.hasOwn(updates, "alt")) setAltValue(updates.alt);
     const candidate = {
       mediaId: placement.mediaId,
       width: placement.width ?? "100%",
@@ -61,7 +71,15 @@ export default function QmdMediaInspector({
     if (candidate.decorative) candidate.alt = "";
     const validated = validatePortableMediaAttributes(candidateAttributes(candidate));
     if (!validated.ok) return;
-    onChange?.({ ...candidate, ...validated.attributes });
+    const serializable = { ...candidate, ...validated.attributes };
+    try {
+      serializePortableMediaReference(serializable);
+      setAltError("");
+    } catch (error) {
+      setAltError(error?.message ?? "Contextual alt text is required unless the image is decorative.");
+      return;
+    }
+    onChange?.(serializable);
   };
   const commitCustomWidth = () => {
     const percentage = Number(customWidth);
@@ -164,8 +182,9 @@ export default function QmdMediaInspector({
             <span>Alternative text</span>
             <input
               name="qmd-media-alt"
-              aria-describedby={GUIDANCE_IDS.alt}
-              value={placement.decorative ? "" : placement.alt ?? ""}
+              aria-describedby={`${GUIDANCE_IDS.alt}${altError ? " qmd-media-alt-error" : ""}`}
+              aria-invalid={altError ? "true" : undefined}
+              value={placement.decorative ? "" : altValue}
               disabled={disabled || placement.decorative === true}
               onChange={(event) => change({ alt: event.target.value })}
             />
@@ -199,7 +218,7 @@ export default function QmdMediaInspector({
           </div>
         </div>
       )}
-      <p className="qmd-media-inspector__status" role="status" aria-live="polite">{widthError}</p>
+      <p id={altError ? "qmd-media-alt-error" : undefined} className="qmd-media-inspector__status" role="status" aria-live="polite">{widthError || altError}</p>
     </section>
   );
 }
