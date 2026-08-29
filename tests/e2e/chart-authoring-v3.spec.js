@@ -59,7 +59,7 @@ test("source-first existing CSV pie authoring progressively reveals schema field
 
   await wizard.getByRole("button", { name: "Close" }).click();
   await expect(wizard).toHaveCount(0);
-  const resumeDraft = page.getByRole("button", { name: "Resume chart draft" });
+  const resumeDraft = page.getByRole("button", { name: "Resume New chart draft", exact: true });
   await expect(resumeDraft).toBeVisible();
   await resumeDraft.click();
   wizard = page.getByRole("dialog", { name: "Add new chart" });
