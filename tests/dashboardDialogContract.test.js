@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const DIALOG_SURFACES = [];
@@ -23,6 +23,8 @@ test("dashboard dialog contract exposes every semantic variant using dashboard t
     ".dashboard-dialog--utility",
     ".dashboard-dialog--danger",
     ".dashboard-dialog__header",
+    ".dashboard-dialog__eyebrow",
+    ".dashboard-dialog__title",
     ".dashboard-dialog__progress",
     ".dashboard-dialog__body",
     ".dashboard-dialog__footer",
@@ -42,4 +44,15 @@ test("dashboard dialog contract exposes every semantic variant using dashboard t
     "--simex-control-min",
   ]) assert.match(css, new RegExp(`var\\(${token}`));
   assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i);
+});
+
+test("every registered dialog surface adopts a dashboard dialog variant", async () => {
+  for (const path of DIALOG_SURFACES) {
+    const source = await read(path);
+    assert.match(
+      source,
+      /dashboard-dialog--(?:wizard|workspace|utility|danger)/,
+      `${path} must opt into a dashboard dialog variant`,
+    );
+  }
 });

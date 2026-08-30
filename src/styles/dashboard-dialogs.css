@@ -55,6 +55,24 @@
   font-family: var(--simex-style-heading-font);
 }
 
+.dashboard-dialog__eyebrow {
+  margin: 0;
+  color: var(--simex-accent);
+  font-family: var(--simex-style-data-font);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.dashboard-dialog__title {
+  margin: 0;
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-heading-font);
+  font-weight: var(--simex-style-heading-weight);
+  letter-spacing: var(--simex-style-heading-tracking);
+}
+
 .dashboard-dialog__description { color: var(--simex-text-muted); }
 
 .dashboard-dialog__progress {
