@@ -1,58 +1,12 @@
 @import "katex/dist/katex.min.css";
 
 /* Static-content authoring and rendering are intentionally isolated here. */
-.static-content-dialog-backdrop {
-  align-items: center;
-  background: rgb(15 35 54 / 58%);
-  display: flex;
-  inset: 0;
-  justify-content: center;
-  padding: clamp(12px, 3vw, 32px);
-  position: fixed;
-  z-index: 80;
+.static-content-dialog.dashboard-dialog {
+  inline-size: min(1120px, 100%);
 }
 
-.static-content-dialog {
-  background: var(--simex-surface-panel, #fff);
-  border: 1px solid var(--simex-border-subtle);
-  border-radius: var(--simex-style-surface-radius);
-  box-shadow: var(--simex-style-shell-shadow);
-  color: var(--simex-text-strong);
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  max-height: min(860px, calc(100dvh - 24px));
-  max-width: 1180px;
-  min-width: 0;
-  overflow: hidden;
-  width: 100%;
-}
-
-.static-content-dialog > header,
-.static-content-dialog > footer,
-.static-content-dialog > nav {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  padding: 14px 18px;
-}
-
-.static-content-dialog > nav {
-  border-block: 1px solid var(--simex-border-subtle);
-  justify-content: flex-start;
-  overflow-x: auto;
-}
-
-.static-content-dialog > footer {
-  background: var(--simex-surface-panel, #fff);
-  border-top: 1px solid var(--simex-border-subtle);
-  justify-content: flex-end;
-}
-
-.static-content-dialog__body {
-  min-height: 0;
-  overflow: auto;
-  padding: 18px;
+.static-content-dialog__body.dashboard-dialog__body {
+  min-block-size: 0;
   scroll-padding-block: 16px 88px;
 }
 
@@ -66,7 +20,6 @@
   max-width: 100%;
 }
 
-.static-content-dialog :is(button, input, select, textarea, a):focus-visible,
 .free-text-chart-view :is(a, [tabindex="0"]):focus-visible,
 .chart-image-view :is(button, [tabindex="0"]):focus-visible,
 .image-transform-editor :is(button, input, select, [tabindex="0"]):focus-visible {
@@ -840,17 +793,6 @@ pre.portable-qmd-math-fallback {
 }
 
 @media (max-width: 860px) {
-  .static-content-dialog {
-    max-height: calc(100dvh - 16px);
-  }
-
-  .static-content-dialog > header,
-  .static-content-dialog > footer,
-  .static-content-dialog > nav,
-  .static-content-dialog__body {
-    padding-inline: 12px;
-  }
-
   .free-text-source-editor__tabs {
     display: flex;
   }

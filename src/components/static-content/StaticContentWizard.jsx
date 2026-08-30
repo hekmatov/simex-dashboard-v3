@@ -241,11 +241,11 @@ export function StaticContentWizard({
   };
 
   return (
-    <div className="static-content-dialog-backdrop">
+    <div className="static-content-dialog-backdrop dashboard-dialog-backdrop">
       <ModalFocusScope
         as="form"
         open={open}
-        className="static-content-dialog"
+        className="static-content-dialog dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide"
         role="dialog"
         aria-modal="true"
         aria-labelledby="static-content-dialog-title"
@@ -254,7 +254,7 @@ export function StaticContentWizard({
         onEscape={workflowDisabled ? undefined : requestClose}
         onSubmit={submit}
       >
-        <header>
+        <header className="dashboard-dialog__header">
           <div>
             <p className="eyebrow">{editor ? "Text/Image editor" : "Add Text/Image"}</p>
             <h2 id="static-content-dialog-title">{editor ? "Edit Text/Image" : "Add Text/Image"}</h2>
@@ -264,7 +264,7 @@ export function StaticContentWizard({
           </ControlTooltip>
         </header>
         {workflowDisabled && <p id="static-content-workflow-status" role="status">{STATIC_CONTENT_PENDING_REASON}</p>}
-        <nav aria-label="Text/Image stages">
+        <nav className="dashboard-dialog__progress" aria-label="Text/Image stages">
           {(editor ? STATIC_CONTENT_STAGES.slice(2) : STATIC_CONTENT_STAGES).map((stage) => {
             const index = STATIC_CONTENT_STAGES.indexOf(stage);
             return (
@@ -285,7 +285,7 @@ export function StaticContentWizard({
         </nav>
 
         <section
-          className="static-content-dialog__body"
+          className="static-content-dialog__body dashboard-dialog__body"
           data-static-content-stage={draft.stage}
           onFocusCapture={() => onRestorationChange?.(focusRestoration(draft.stage))}
           onScroll={() => onRestorationChange?.(focusRestoration(draft.stage))}
@@ -310,7 +310,7 @@ export function StaticContentWizard({
         </section>
 
         {submitError && <p className="form-error" role="alert">{submitError}</p>}
-        <footer>
+        <footer className="dashboard-dialog__footer dashboard-dialog__actions">
           <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={requestDiscard}>Cancel</button></PendingAction>
           {editor && dirty && <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={() => void reset()}>Reset</button></PendingAction>}
           {stageIndex > (editor ? 2 : 0) && <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={() => dispatch({ type: "previous" })}>Back</button></PendingAction>}

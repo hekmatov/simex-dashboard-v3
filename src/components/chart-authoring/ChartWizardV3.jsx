@@ -1289,12 +1289,12 @@ export default function ChartWizardV3({
   return React.createElement(
     "div",
     {
-      className: "chart-wizard-backdrop",
+      className: "chart-wizard-backdrop dashboard-dialog-backdrop",
     },
     React.createElement(
       "section",
       {
-        className: "chart-wizard chart-wizard-v3",
+        className: "chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide",
         role: "dialog",
         "aria-modal": "true",
         "aria-labelledby": "chart-wizard-title",
@@ -1320,7 +1320,7 @@ export default function ChartWizardV3({
       },
       React.createElement(
         "header",
-        { className: "chart-wizard-header" },
+        { className: "chart-wizard-header dashboard-dialog__header" },
         React.createElement(
           "div",
           null,
@@ -1340,7 +1340,7 @@ export default function ChartWizardV3({
       React.createElement(
         "nav",
         {
-          className: "chart-wizard-step-tabs",
+          className: "chart-wizard-step-tabs dashboard-dialog__progress",
           "aria-label": editMode ? "Chart editing steps" : "Chart creation steps",
         },
         CHART_CREATION_STAGES.map((stage) => React.createElement("button", {
@@ -1364,7 +1364,7 @@ export default function ChartWizardV3({
         { className: "chart-wizard-workbench" },
         React.createElement(
           "div",
-          { className: "chart-wizard-body", ref: wizardBodyRef },
+          { className: "chart-wizard-body dashboard-dialog__body", ref: wizardBodyRef },
         wizard.stage === "destination"
           ? React.createElement(
               "section",
@@ -1616,7 +1616,7 @@ export default function ChartWizardV3({
       ),
       React.createElement(
         "footer",
-        { className: "chart-wizard-footer" },
+        { className: "chart-wizard-footer dashboard-dialog__footer" },
         React.createElement(
           "span",
           { role: "status" },
@@ -1624,7 +1624,7 @@ export default function ChartWizardV3({
         ),
         React.createElement(
           "div",
-          { className: "chart-wizard-footer-actions" },
+          { className: "chart-wizard-footer-actions dashboard-dialog__actions" },
           React.createElement(IconControl, {
             interactionId: "collection.previous-page",
             ariaLabel: "Previous step",

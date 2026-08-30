@@ -10,7 +10,7 @@ export default function ChartEditorModal({
   return React.createElement(
     ModalFocusScope,
     {
-      className: "chart-editor-backdrop",
+      className: "chart-editor-backdrop dashboard-dialog-backdrop",
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": titleId,

@@ -46,7 +46,6 @@
   .present-status-strip,
   .present-context-panel,
   .present-scene-panel,
-  .chart-wizard,
   .chart-editor-v3
 ) {
   background-color: var(--simex-surface-panel);
@@ -1087,8 +1086,8 @@
   color: var(--simex-text-strong);
 }
 
-/* Chart creation, conversion, and edit surfaces use one semantic ledger. */
-.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) {
+/* Chart editor and confirmation surfaces retain their pre-contract shell paint. */
+.app-frame :is(.chart-editor-v3, .confirm-dialog) {
   background: var(--simex-surface-panel);
   border-color: var(--simex-border-strong);
   border-radius: var(--simex-style-surface-radius);
@@ -1096,22 +1095,22 @@
   color: var(--simex-text-strong);
 }
 
-.app-frame :is(.chart-wizard-backdrop, .chart-editor-backdrop, .confirm-dialog-backdrop) {
+.app-frame :is(.chart-editor-backdrop, .confirm-dialog-backdrop) {
   background: color-mix(in srgb, var(--simex-surface-outer) 72%, transparent);
 }
 
-.app-frame :is(.chart-wizard-header, .chart-wizard-footer, .chart-editor-header) {
+.app-frame .chart-editor-header {
   background: var(--simex-surface-panel);
   border-color: var(--simex-border-subtle);
   color: var(--simex-text-strong);
 }
 
-.app-frame :is(.chart-wizard-body, .chart-editor-layout, .chart-editor-inspector) {
+.app-frame :is(.chart-editor-layout, .chart-editor-inspector) {
   background: var(--simex-surface-panel-alt);
   color: var(--simex-text-strong);
 }
 
-.app-frame :is(.chart-wizard-step-tabs, .chart-wizard-steps, .chart-editor-tab-list) {
+.app-frame :is(.chart-wizard-steps, .chart-editor-tab-list) {
   background: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-subtle);
 }
@@ -1281,7 +1280,7 @@
   color: var(--simex-text-strong);
 }
 
-.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) :is(button, input, select, textarea):focus-visible {
+.app-frame :is(.chart-editor-v3, .confirm-dialog) :is(button, input, select, textarea):focus-visible {
   outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
   outline-offset: 2px;
 }
@@ -1548,6 +1547,12 @@
   max-height: calc(100dvh - 48px);
 }
 
+.chart-wizard.dashboard-dialog {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  inline-size: min(1180px, 100%);
+}
+
 .app-frame .chart-wizard-header {
   min-height: 58px;
   padding: 10px 16px;
@@ -1580,6 +1585,8 @@
   min-height: 0;
   overflow: hidden;
 }
+
+.chart-wizard-workbench { min-block-size: 0; }
 
 .app-frame .chart-wizard-workbench > .chart-wizard-body {
   min-height: 0;
