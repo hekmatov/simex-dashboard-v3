@@ -1505,6 +1505,18 @@
   min-inline-size: var(--simex-control-min, 44px);
 }
 
+/* Chart choices are content cards, not square glyph-only controls. */
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit
+) .chart-type-card.simex-icon-control {
+  block-size: auto;
+  inline-size: 100%;
+  min-block-size: 56px;
+  min-inline-size: 0;
+}
+
 /* Viewport tooltips replace the retired pseudo-element bubble. The layer is
    portalled to body so chart-panel clipping never hides explanatory text. */
 .simex-icon-control[data-icon-tooltip]::after {

@@ -78,7 +78,9 @@ test("source-first existing CSV pie authoring progressively reveals schema field
     .toHaveAttribute("data-status", "Waiting on prerequisite");
 
   await flow.selectExistingSource("Biomedical mortality by age");
-  await flow.chooseChartType("pie", /^Pie\b/i);
+  await flow.goToChartType();
+  await expectChartTypeCardsAligned(wizard, "creation");
+  await wizard.getByRole("button", { name: /^Pie\b/i }).click();
   await flow.goToConfigure();
   await expect(wizard.getByLabel("Chart title")).toBeVisible();
   await expect(wizard.getByLabel("Title alignment")).toHaveCount(0);
@@ -375,6 +377,8 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   await expect(full).toBeVisible();
   await expect(full.getByRole("navigation", { name: "Chart editing steps" }))
     .toBeVisible();
+  await full.getByRole("button", { name: /^Chart type\./ }).click();
+  await expectChartTypeCardsAligned(full, "full-editor");
   await full.getByRole("button", { name: /^Configure\./ }).click();
   const title = full.getByLabel("Chart title");
   await expect(title).toHaveValue("Quick continuity title");
@@ -756,6 +760,51 @@ function sourceLabel(sourceId) {
     socio_behaviour: "Simulation exercise socio-economic behaviour dataset",
     bio_province_deltas: "Simulation exercise biomedical derived province changes",
   }[sourceId];
+}
+
+async function expectChartTypeCardsAligned(surface, surfaceName) {
+  const cards = surface.locator(".chart-type-card");
+  await expect(cards.first()).toBeVisible();
+  const genericCompatibleReason = surface.locator(".chart-type-card-reason", {
+    hasText: "The profiled fields satisfy this chart type's required roles.",
+  });
+  await expect(genericCompatibleReason).toHaveCount(0);
+
+  const metrics = await cards.evaluateAll((elements) => elements.map((card) => {
+    const cardRect = card.getBoundingClientRect();
+    const iconRect = card.querySelector(".simex-icon")?.getBoundingClientRect();
+    const style = getComputedStyle(card);
+    const textRects = [...card.querySelectorAll(".chart-type-card-copy > span")]
+      .filter((element) => getComputedStyle(element).display !== "none")
+      .map((element) => element.getBoundingClientRect());
+    return {
+      width: cardRect.width,
+      height: cardRect.height,
+      iconWidth: iconRect?.width ?? 0,
+      minBlockSize: Number.parseFloat(style.minBlockSize),
+      textInside: textRects.every((rect) => (
+        rect.left >= cardRect.left - 0.5
+        && rect.right <= cardRect.right + 0.5
+        && rect.top >= cardRect.top - 0.5
+        && rect.bottom <= cardRect.bottom + 0.5
+      )),
+    };
+  }));
+
+  expect(metrics.length).toBeGreaterThan(0);
+  for (const metric of metrics) {
+    expect(metric.width).toBeGreaterThan(metric.iconWidth + 80);
+    expect(metric.width).toBeGreaterThan(metric.height * 2);
+    expect(metric.minBlockSize).toBeGreaterThanOrEqual(44);
+    expect(metric.textInside).toBe(true);
+  }
+  const widths = metrics.map(({ width }) => width);
+  const heights = metrics.map(({ height }) => height);
+  console.log(
+    `chart-type-card geometry (${surfaceName}): count=${metrics.length}, `
+      + `width=${Math.min(...widths).toFixed(1)}-${Math.max(...widths).toFixed(1)}px, `
+      + `height=${Math.min(...heights).toFixed(1)}-${Math.max(...heights).toFixed(1)}px`,
+  );
 }
 
 async function storedQuickPersistenceSnapshot(page) {

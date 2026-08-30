@@ -360,7 +360,12 @@ test("chart type guidance appears once before profiling and selected source prof
     profiled.indexOf("</button>", pieLabelIndex),
   );
   assert.match(pieMarkup, /disabled=""/);
-  assert.match(pieMarkup, /Required Category/);
+  assert.match(pieMarkup, /aria-label="[^"]*Required Category/);
+  assert.match(
+    pieMarkup,
+    /class="chart-type-card-reason">Required Category/,
+    "an incompatible card should keep its actionable reason visible",
+  );
   const kpiLabelIndex = profiled.indexOf('aria-label="KPI card.');
   assert.ok(kpiLabelIndex >= 0, "KPI compatibility card should render");
   const kpiMarkup = profiled.slice(
@@ -368,7 +373,16 @@ test("chart type guidance appears once before profiling and selected source prof
     profiled.indexOf("</button>", kpiLabelIndex),
   );
   assert.doesNotMatch(kpiMarkup, /disabled=""/);
-  assert.match(kpiMarkup, /profiled fields satisfy/i);
+  assert.match(
+    kpiMarkup,
+    /aria-label="[^"]*profiled fields satisfy/i,
+    "a compatible card should expose useful compatibility state in its accessible name",
+  );
+  assert.doesNotMatch(
+    profiled,
+    /class="chart-type-card-reason">The profiled fields satisfy this chart type(?:&#x27;|')s required roles\.<\/span>/,
+    "the generic compatible success sentence should not be repeated as visible card copy",
+  );
 });
 
 test("background uses the shared identified color field contract", () => {

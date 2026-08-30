@@ -73,8 +73,12 @@ function ChartTypePicker({
         iconId: CHART_TYPE_GLYPHS[chart.id],
         size: 28
       }),
-      /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-label" }, chart.label),
-      compatibilityKnown ? /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-reason" }, chart.reason) : null
+      /* @__PURE__ */ React.createElement(
+        "div",
+        { className: "chart-type-card-copy" },
+        /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-label" }, chart.label),
+        compatibilityKnown && chart.compatibility === "incompatible" ? /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-reason" }, chart.reason) : null
+      )
     )))
   ))), groups.length === 0 ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "chart-authoring-empty", role: "status" }, "No chart types match this search by name, purpose, or description."), safeQuery ? /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => onQueryChange("") }, "Clear search") : null) : null);
 }

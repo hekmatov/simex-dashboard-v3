@@ -5351,6 +5351,22 @@ button.danger {
   width: 100%;
 }
 
+.chart-type-card > .simex-icon {
+  flex: 0 0 auto;
+}
+
+.chart-type-card-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 3px;
+  min-width: 0;
+}
+
+.chart-type-card-copy > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .chart-type-card-label {
   color: currentColor !important;
   font-size: 0.88rem !important;
