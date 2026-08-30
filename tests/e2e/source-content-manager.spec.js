@@ -90,7 +90,7 @@ test("desktop composition keeps canvas and catalogue state without overflow", as
   await expect(nameField).toHaveValue(`${originalName} managed`);
   await expect(manager.getByRole("region", { name: "Data source catalogue" })).toContainText(`${originalName} managed`);
   const sourceSearch = manager.getByLabel("Search data sources");
-  await sourceSearch.fill("Generated");
+  await sourceSearch.fill(originalName);
   await manager.getByLabel("Filter by origin").selectOption("legacy-import");
   await manager.getByLabel("Filter by status").selectOption("ready");
   await manager.getByLabel("Filter by usage").selectOption("used");
@@ -115,7 +115,7 @@ test("desktop composition keeps canvas and catalogue state without overflow", as
   await expect(manager.getByLabel("Filter by status")).toHaveValue("ready");
   await expect(manager.getByLabel("Filter by usage")).toHaveValue("unused");
   await manager.getByRole("tab", { name: "Data sources" }).click();
-  await expect(manager.getByLabel("Search data sources")).toHaveValue("Generated");
+  await expect(manager.getByLabel("Search data sources")).toHaveValue(originalName);
   await expect(manager.getByLabel("Filter by origin")).toHaveValue("legacy-import");
   await expect(manager.getByLabel("Filter by status")).toHaveValue("ready");
   await expect(manager.getByLabel("Filter by usage")).toHaveValue("used");
