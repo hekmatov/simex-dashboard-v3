@@ -24,7 +24,8 @@ test("canonical Home orientation content belongs to application source", () => {
 test("dashboard package contains only the Home preference and ordinary Pages", () => {
   assert.deepEqual(dashboard.home, { enabled: true });
   assert.equal(dashboard.pages.some(({ id }) => id === "home"), false);
-  assert.equal(dashboard.pages[0]?.id, "old-homepage-content");
+  assert.equal(dashboard.pages.some(({ id }) => id === "old-homepage-content"), false);
+  assert.equal(dashboard.pages[0]?.id, "biomedical");
 });
 
 test("the builder FAQ provides practical first-time orientation", () => {

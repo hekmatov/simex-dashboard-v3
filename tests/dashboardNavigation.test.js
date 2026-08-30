@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
 
 import {
   parseDashboardEntry,
@@ -19,10 +20,12 @@ const [
   { default: ModeSwitcher },
   { default: DashboardIdentityRow },
   { default: AppFrame },
+  { default: OperationStatusProvider },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/components/app-shell/ModeSwitcher.jsx"),
   vite.ssrLoadModule("/src/components/app-shell/DashboardIdentityRow.jsx"),
   vite.ssrLoadModule("/src/components/app-shell/AppFrame.jsx"),
+  vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
 ]);
 await vite.close();
 
@@ -73,7 +76,7 @@ test("Home identity row omits package Page navigation while retaining pinned act
 });
 
 test("Home shell carries availability through the crown and exposes Home context", () => {
-  const html = renderToStaticMarkup(React.createElement(AppFrame, {
+  const html = renderAppFrame({
     mode: "home",
     availableModes: ["home", "view", "build", "present"],
     showPageNavigation: false,
@@ -83,9 +86,23 @@ test("Home shell carries availability through the crown and exposes Home context
     contextNode: React.createElement("span", null, "Welcome home"),
     onModeRequest() {},
     children: React.createElement("main", null, "Home content"),
-  }));
+  });
 
   assert.match(html, /Home[\s\S]*View[\s\S]*Build[\s\S]*Present/);
   assert.match(html, /aria-label="Home context"/);
   assert.doesNotMatch(html, /Dashboard pages|Ordinary Page/);
 });
+
+function renderAppFrame(props) {
+  const queue = createOperationStatusQueue({ scheduler: staticScheduler });
+  return renderToStaticMarkup(React.createElement(
+    OperationStatusProvider,
+    { queue },
+    React.createElement(AppFrame, props),
+  ));
+}
+
+const staticScheduler = {
+  setTimeout: () => 1,
+  clearTimeout: () => {},
+};

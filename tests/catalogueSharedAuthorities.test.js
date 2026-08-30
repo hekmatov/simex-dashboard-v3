@@ -213,11 +213,11 @@ test("KPI to Bullet remains declared-compatible while exposing required target b
   assert.deepEqual(plan.requiredRoles.map(({ id }) => id), ["actual"]);
 });
 
-test("the configured operational-pressure KPI yields the same KPI to Bullet plan from catalogue rules", async () => {
+test("the configured current-cases KPI yields the same KPI to Bullet plan from catalogue rules", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const chart = configuredChart(
     dashboard,
-    "home_operational_pressure_kpis",
+    "bio_current_cases_kpi",
   );
   const plan = planChartConversion(chart, "bullet");
   const bullet = listChartSchemas().find(
@@ -234,7 +234,7 @@ test("the configured operational-pressure KPI yields the same KPI to Bullet plan
     EXPECTED_CONVERSION_RULES,
   );
   assert.equal(plan.kind, "compatible");
-  assert.deepEqual(Object.keys(plan.preservedRoles), ["entity"]);
+  assert.deepEqual(Object.keys(plan.preservedRoles), ["label", "time"]);
   assert.deepEqual(plan.requiredRoles.map(({ id }) => id), [
     "actual",
     "target",

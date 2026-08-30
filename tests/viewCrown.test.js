@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -10,10 +11,16 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [{ default: AppFrame }, { default: ViewShell }, { PlaybackProvider }] = await Promise.all([
+const [
+  { default: AppFrame },
+  { default: ViewShell },
+  { PlaybackProvider },
+  { default: OperationStatusProvider },
+] = await Promise.all([
   vite.ssrLoadModule("/src/components/app-shell/AppFrame.jsx"),
   vite.ssrLoadModule("/src/components/view/ViewShell.jsx"),
   vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx"),
+  vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
 ]);
 await vite.close();
 
@@ -37,8 +44,7 @@ const dashboard = {
 };
 
 test("AppFrame crown owns page location without a duplicate View-local row", () => {
-  const html = withBrowserGlobals(() => renderToStaticMarkup(
-    React.createElement(AppFrame, {
+  const html = withBrowserGlobals(() => renderAppFrame({
       mode: "view",
       dashboardIdentity: dashboard,
       activePage: dashboard.pages[0],
@@ -61,8 +67,7 @@ test("AppFrame crown owns page location without a duplicate View-local row", () 
           onDisplayAction: () => {},
         }),
       ),
-    }),
-  ));
+    }));
 
   assert.equal((html.match(/data-command-crown-layer="location"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /class="dashboard-location-row"/);
@@ -70,7 +75,7 @@ test("AppFrame crown owns page location without a duplicate View-local row", () 
 });
 
 test("unsupported phone modes expose one persistent Switch to View action", () => {
-  const build = renderToStaticMarkup(React.createElement(AppFrame, {
+  const build = renderAppFrame({
     mode: "build",
     density: "compact",
     onModeRequest: () => {},
@@ -79,13 +84,13 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
     pages: [{ id: "biomedical", label: "Biomedical" }],
     onPageRequest: () => {},
     children: React.createElement("div", null, "Build workspace"),
-  }));
-  const view = renderToStaticMarkup(React.createElement(AppFrame, {
+  });
+  const view = renderAppFrame({
     mode: "view",
     density: "comfortable",
     onModeRequest: () => {},
     children: React.createElement("div", null, "View workspace"),
-  }));
+  });
 
   assert.match(build, /class="phone-mode-banner"/);
   assert.match(build, />Switch to View<\/button>/);
@@ -96,7 +101,7 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
 
 test("best-effort phone notices preserve mounted Build and Present workspaces", () => {
   for (const [mode, label] of [["build", "Build"], ["present", "Present"]]) {
-    const html = renderToStaticMarkup(React.createElement(AppFrame, {
+    const html = renderAppFrame({
       mode,
       density: "compact",
       onModeRequest: () => {},
@@ -105,7 +110,7 @@ test("best-effort phone notices preserve mounted Build and Present workspaces", 
       pages: [{ id: "biomedical", label: "Biomedical" }],
       onPageRequest: () => {},
       children: React.createElement("main", { className: `${mode}-workspace` }, `${label} workspace`),
-    }));
+    });
     const notice = html.match(new RegExp(`<section[^>]*data-phone-mode-notice="${mode}"[\\s\\S]*?<\\/section>`))?.[0];
 
     assert.ok(notice, `${label} renders its persistent phone notice`);
@@ -119,11 +124,11 @@ test("best-effort phone notices preserve mounted Build and Present workspaces", 
     );
   }
 
-  const view = renderToStaticMarkup(React.createElement(AppFrame, {
+  const view = renderAppFrame({
     mode: "view",
     onModeRequest: () => {},
     children: React.createElement("div", null, "View workspace"),
-  }));
+  });
   assert.doesNotMatch(view, /data-phone-mode-notice=/);
 });
 
@@ -162,6 +167,20 @@ test("ordinary View preserves an empty Section and routes its exact recovery act
   assert.match(html, /This section has no panels\./);
   assert.match(html, />Add Panel to Section<\/button>/);
 });
+
+function renderAppFrame(props) {
+  const queue = createOperationStatusQueue({ scheduler: staticScheduler });
+  return renderToStaticMarkup(React.createElement(
+    OperationStatusProvider,
+    { queue },
+    React.createElement(AppFrame, props),
+  ));
+}
+
+const staticScheduler = {
+  setTimeout: () => 1,
+  clearTimeout: () => {},
+};
 
 function withBrowserGlobals(run) {
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");

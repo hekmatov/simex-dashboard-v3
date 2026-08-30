@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
 
 let storageModule = {};
 try {
@@ -17,7 +18,13 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const { default: App } = await vite.ssrLoadModule("/src/App.jsx");
+const [
+  { default: App },
+  { default: OperationStatusProvider },
+] = await Promise.all([
+  vite.ssrLoadModule("/src/App.jsx"),
+  vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
+]);
 await vite.close();
 
 test("safe browser storage treats denied access as unavailable", () => {
@@ -41,10 +48,24 @@ test("App reaches its loading interface when localStorage access is denied", () 
   });
 
   try {
-    const html = renderToStaticMarkup(React.createElement(App));
+    const html = renderWithOperationStatus(React.createElement(App));
     assert.match(html, /Loading dashboard/);
   } finally {
     if (original) Object.defineProperty(globalThis, "localStorage", original);
     else delete globalThis.localStorage;
   }
 });
+
+function renderWithOperationStatus(child) {
+  const queue = createOperationStatusQueue({ scheduler: staticScheduler });
+  return renderToStaticMarkup(React.createElement(
+    OperationStatusProvider,
+    { queue },
+    child,
+  ));
+}
+
+const staticScheduler = {
+  setTimeout: () => 1,
+  clearTimeout: () => {},
+};

@@ -22,7 +22,10 @@ export async function replacementHarness({ deferCommit = false } = {}) {
   const assetStore = {
     async snapshot(ids) { return new Map(ids.map((id) => [id, records.has(id) ? structuredClone(records.get(id)) : null])); },
     async restore(snapshot) { for (const [id, record] of snapshot) record === null ? records.delete(id) : records.set(id, structuredClone(record)); },
-    async stage(input) { records.set(input.expectedAssetId, { status: "staged", bytes: new Uint8Array(input.bytes) }); },
+    async stage(input) {
+      records.set(input.expectedAssetId, { status: "staged", bytes: new Uint8Array(input.bytes) });
+      return { assetId: input.expectedAssetId };
+    },
     async commitMany(ids) { for (const id of ids) records.set(id, { ...records.get(id), status: "durable" }); },
     async rollback(id) { if (records.get(id)?.status !== "durable") records.delete(id); },
   };

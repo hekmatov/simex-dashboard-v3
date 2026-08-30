@@ -18,8 +18,8 @@ await vite.close();
 
 const STAGES = [
   "destination",
-  "chart-type",
   "data-source",
+  "chart-type",
   "map-and-prepare-data",
   "configure-chart",
   "review-and-create",

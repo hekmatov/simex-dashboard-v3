@@ -14,24 +14,24 @@ import { isMeaningfulChartDraft } from "../src/charting/forms/chartDraftSession.
 test("chart creation exposes exactly six stable stages and labels with no proof stage", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
     "destination",
-    "chart-type",
     "data-source",
+    "chart-type",
     "map-and-prepare-data",
     "configure-chart",
     "review-and-create",
   ]);
   assert.deepEqual(CHART_CREATION_STAGE_LABELS, [
     "Destination",
-    "Chart type",
     "Data source",
-    "Map and prepare data",
-    "Configure chart",
-    "Review and create",
+    "Chart type",
+    "Map and prepare",
+    "Configure",
+    "Review",
   ]);
   assert.equal(CHART_CREATION_STAGES.includes("proof"), false);
 
   // Existing mounted wizard consumers keep their compatible four-step API.
-  assert.deepEqual(WIZARD_STEPS, ["type", "source", "roles", "style"]);
+  assert.deepEqual(WIZARD_STEPS, ["source", "type", "roles", "style"]);
 });
 
 test("new wizard state has the exact session fields and starts in Destination", () => {
@@ -46,6 +46,7 @@ test("new wizard state has the exact session fields and starts in Destination", 
     "status",
     "destination",
     "chartTypeId",
+    "sourceSelection",
     "source",
     "profileRevision",
     "mapping",
@@ -75,17 +76,24 @@ test("stage access is non-linear and dependency-aware without clearing compatibl
     destination: { pageId: "page-a", sectionId: "section-a" },
   });
   state = reduceWizardState(state, {
+    type: "requestSourceChange",
+    sourceId: "source-a",
+    source: { kind: "dataset", url: "source-a.csv" },
+    rows: [{ date: "2026-08-29", value: 1 }],
+    profile: {
+      revision: "profile-r1",
+      rowCount: 1,
+      columns: [
+        { name: "date", type: "temporal" },
+        { name: "value", type: "numeric" },
+      ],
+    },
+    kind: "existing",
+  });
+  state = reduceWizardState(state, {
     type: "setChartType",
     chartTypeId: "line-basic",
     schemaRevision: "schema-r1",
-  });
-  state = reduceWizardState(state, {
-    type: "setSource",
-    source: { id: "source-a", kind: "existing" },
-  });
-  state = reduceWizardState(state, {
-    type: "profileSucceeded",
-    profile: { revision: "profile-r1" },
   });
   state = reduceWizardState(state, {
     type: "setMapping",
