@@ -41,23 +41,24 @@ test("the Composer keeps its familiar format rail commands in accessible groups"
   }
 });
 
-test("representable source opens Composer with the trimmed panel title in Preview", () => {
+test("representable source uses the single-card writer layout without authoring tabs or a status panel", () => {
   const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, {
     value: "Ordinary **formatted** text.",
     panelTitle: "  Situation note  ",
   }));
-  assert.match(html, /role="tab"[^>]*aria-selected="true"[^>]*>Composer</);
-  assert.match(html, />Advanced QMD</);
-  assert.match(html, /<h3>Situation note<\/h3>/);
-  assert.doesNotMatch(html, /Canonical preview/);
+  assert.match(html, />Write a text post</);
+  assert.match(html, />Rendered preview</);
+  assert.match(html, />Portable Markdown</);
+  assert.doesNotMatch(html, /role="tab"/);
+  assert.doesNotMatch(html, /Preview is up to date\./);
 });
 
-test("unsupported valid source opens non-destructive Advanced QMD with the exact source", () => {
+test("unsupported valid source remains visible in the Portable Markdown card without restoring authoring tabs", () => {
   const source = "```js\nconst exact = true;\n```";
   const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, { value: source }));
-  assert.match(html, /role="tab"[^>]*aria-selected="true"[^>]*>Advanced QMD</);
-  assert.match(html, /Advanced QMD is required/);
-  assert.match(html, /<textarea[^>]*>```js\nconst exact = true;\n```<\/textarea>/);
+  assert.match(html, />Portable Markdown</);
+  assert.match(html, /```js\nconst exact = true;\n```/);
+  assert.doesNotMatch(html, /role="tab"/);
 });
 
 test("the Tiptap extension set uses TableKit and the constrained semantic nodes", () => {

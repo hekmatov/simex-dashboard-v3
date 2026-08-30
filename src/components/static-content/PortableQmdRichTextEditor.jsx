@@ -166,6 +166,7 @@ export default function PortableQmdRichTextEditor({
   const standardState = portableQmdComposerControlState({ disabled, editor });
   const undoState = portableQmdComposerControlState({ disabled, editor, action: "undo" });
   const redoState = portableQmdComposerControlState({ disabled, editor, action: "redo" });
+  const wordCount = countWords(source);
 
   return (
     <section
@@ -242,6 +243,7 @@ export default function PortableQmdRichTextEditor({
       )}
       {disabled && <p id="portable-qmd-pending-reason" className="visually-hidden">{PENDING_REASON}</p>}
       <EditorContent editor={editor} />
+      <footer className="portable-qmd-composer__footer"><span>Saved as draft</span><span>{wordCount} {wordCount === 1 ? "word" : "words"}</span></footer>
       <p className="portable-qmd-composer__announcement" role={announcement.kind === "error" ? "alert" : "status"} aria-live={announcement.kind === "error" ? "assertive" : "polite"} aria-atomic="true">{announcement.message}</p>
     </section>
   );
@@ -259,9 +261,32 @@ function ComposerButton({ label, pressed, disabled, reason, onClick }) {
         title={label}
         onMouseDown={(event) => event.preventDefault()}
         onClick={onClick}
-      >{label}</button>
+      ><span aria-hidden="true" className={`portable-qmd-composer__icon portable-qmd-composer__icon--${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{composerGlyph(label)}</span></button>
     </ControlTooltip>
   );
+}
+
+function composerGlyph(label) {
+  return ({
+    Bold: "B",
+    Italic: "I",
+    Underline: "U",
+    Link: "↗",
+    "Clear formatting": "Tx",
+    "Bullet list": "•≡",
+    "Numbered list": "1≡",
+    Table: "▦",
+    "Insert image": "▧",
+    Undo: "↶",
+    Redo: "↷",
+    "Apply link": "✓",
+    "Remove link": "×",
+  })[label] ?? label;
+}
+
+function countWords(source) {
+  const text = String(source ?? "").replace(/[`*_+\[\]<>#|]/g, " ").trim();
+  return text ? text.split(/\s+/).length : 0;
 }
 
 export function reconcilePortableQmdEditorUpdate({ editor, accepted, onSourceChange } = {}) {

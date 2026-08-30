@@ -1,33 +1,23 @@
 import React from "react";
 
-import ControlTooltip from "../common/ControlTooltip.jsx";
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
 import { parsePortableQmdEditorDocument } from "../../static-content/qmd/portableQmdEditorDocument.js";
 import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../../static-content/qmd/portableQmdMedia.js";
-import { applyQmdToolbarCommand } from "../../static-content/qmd/sourceToolbarCommands.js";
 import MediaPicker from "../source-content/MediaPicker.jsx";
 import PortableQmdRichTextEditor from "./PortableQmdRichTextEditor.jsx";
 import QmdMediaInspector from "./QmdMediaInspector.jsx";
 
-const NARROW_EDITOR_QUERY = "(max-width: 860px)";
-
 export function FreeTextSourceEditor({
   id = "static-qmd-source", value = "", panelId = "static-text-preview", panelTitle = "",
-  initialSurface = "composer",
   disabled = false, mediaItems = {}, assets = {}, contentRenderContext = {},
   onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem, onSurfaceChange,
 } = {}) {
   const initial = React.useMemo(() => analyze(value, panelId), []);
-  const initialEditorDocument = React.useMemo(() => parsePortableQmdEditorDocument(value), []);
   const [analysis, setAnalysis] = React.useState(initial);
   const [lastValidSource, setLastValidSource] = React.useState(initial.ok ? value : null);
   const [pending, setPending] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState(() => initialEditorDocument.mode === "advanced"
-    ? "advanced"
-    : ["composer", "preview", "advanced"].includes(initialSurface) ? initialSurface : "composer");
-  const [narrow, setNarrow] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [pickerMode, setPickerMode] = React.useState("insert");
   const [selectedMediaIdentity, setSelectedMediaIdentity] = React.useState(null);
@@ -35,10 +25,7 @@ export function FreeTextSourceEditor({
   const lastValidRevision = React.useRef(initial.ok ? 0 : null);
   const observedSource = React.useRef(value);
   const analysisCache = React.useRef(new Map([[value, initial]]));
-  const panesRef = React.useRef({});
-  const lastFocused = React.useRef({ composer: null, preview: null, advanced: null });
   const editorRef = React.useRef(null);
-  const sourceInputRef = React.useRef(null);
   const changeTriggerRef = React.useRef(null);
   const editorDocument = React.useMemo(() => parsePortableQmdEditorDocument(value), [value]);
   const previewRenderContext = React.useMemo(() => ({
@@ -50,14 +37,13 @@ export function FreeTextSourceEditor({
   React.useEffect(() => {
     onValidationChange?.({ ...initial, pending: false, source: value, sourceRevision: 0, previewRevision: lastValidRevision.current });
   }, []);
-  React.useEffect(() => { onSurfaceChange?.(activeTab); }, [activeTab, onSurfaceChange]);
+  React.useEffect(() => { onSurfaceChange?.("composer"); }, [onSurfaceChange]);
   React.useEffect(() => { if (disabled) setPickerOpen(false); }, [disabled]);
 
   React.useEffect(() => {
     if (value === observedSource.current) return undefined;
     observedSource.current = value;
     revision.current += 1;
-    if (editorDocument.mode === "advanced") setActiveTab("advanced");
     const cached = analysisCache.current.get(value);
     if (cached) {
       applyAnalysis(cached, value, revision.current);
@@ -72,21 +58,6 @@ export function FreeTextSourceEditor({
     }, 200);
     return () => clearTimeout(timer);
   }, [editorDocument.mode, onValidationChange, panelId, value]);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
-    const media = window.matchMedia(NARROW_EDITOR_QUERY);
-    const apply = (matches) => {
-      const focusOwner = Object.entries(panesRef.current).find(([, pane]) => pane?.contains(document.activeElement))?.[0];
-      setNarrow(matches);
-      if (matches && focusOwner) setActiveTab(focusOwner);
-      if (focusOwner) window.requestAnimationFrame(() => lastFocused.current[focusOwner]?.focus({ preventScroll: true }));
-    };
-    apply(media.matches);
-    const listener = (event) => apply(event.matches);
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
-  }, []);
 
   function applyAnalysis(next, source, sourceRevision) {
     setAnalysis(next);
@@ -124,62 +95,31 @@ export function FreeTextSourceEditor({
       (trigger?.isConnected ? trigger : editorRef.current?.querySelector('[aria-label="Insert image"]'))?.focus({ preventScroll: true });
     });
   };
-  const applyToolbarCommand = (command) => {
-    const input = sourceInputRef.current;
-    if (!input || disabled) return;
-    const result = applyQmdToolbarCommand(value, input.selectionStart, input.selectionEnd, command);
-    changeSource(result.source);
-    window.requestAnimationFrame(() => { input.focus({ preventScroll: true }); input.setSelectionRange(result.selectionStart, result.selectionEnd); });
-  };
-  const recordFocus = (pane) => (event) => { lastFocused.current[pane] = event.target; };
-  const selectTabFromKeyboard = (tab, event) => {
-    const order = ["composer", "preview", "advanced"];
-    const index = order.indexOf(tab);
-    const next = event.key === "Home" ? order[0] : event.key === "End" ? order.at(-1) : event.key === "ArrowRight" ? order[(index + 1) % order.length] : event.key === "ArrowLeft" ? order[(index - 1 + order.length) % order.length] : null;
-    if (!next) return;
-    event.preventDefault(); setActiveTab(next);
-    window.requestAnimationFrame(() => document.getElementById(`${id}-${next}-tab`)?.focus());
-  };
-  const hidden = (pane) => narrow ? activeTab !== pane : activeTab === "advanced" ? pane !== "advanced" : pane === "advanced";
-  const stale = !pending && !analysis.ok && lastValidSource !== null;
-  const status = pending ? "Updating preview…" : analysis.ok ? "Preview is up to date." : `${analysis.errors.length} blocking ${analysis.errors.length === 1 ? "error" : "errors"}. The last valid preview is unchanged.`;
-
   return (
-    <section ref={editorRef} className="free-text-source-editor" data-layout={narrow ? "tabs" : "split"} data-active-tab={activeTab} data-source-revision={revision.current} data-preview-revision={lastValidRevision.current ?? "none"}>
-      <div className="free-text-source-editor__tabs" role="tablist" aria-label="Text/Image authoring panes">
-        {[["composer", "Composer"], ["preview", "Preview"], ["advanced", "Advanced QMD"]].map(([tab, label]) => <button key={tab} type="button" role="tab" id={`${id}-${tab}-tab`} aria-controls={`${id}-${tab}-pane`} aria-selected={activeTab === tab} tabIndex={activeTab === tab ? 0 : -1} onClick={() => setActiveTab(tab)} onKeyDown={(event) => selectTabFromKeyboard(tab, event)}>{label}</button>)}
-      </div>
-      <div className="free-text-source-editor__panes">
-        <section ref={(node) => { panesRef.current.composer = node; }} id={`${id}-composer-pane`} className="free-text-source-editor__pane free-text-source-editor__source" data-free-text-pane="composer" role="tabpanel" aria-labelledby={`${id}-composer-tab`} hidden={hidden("composer")} onFocusCapture={recordFocus("composer")}>
-          {editorDocument.mode === "visual" ? <PortableQmdRichTextEditor source={value} disabled={disabled} mediaItems={mediaItems} assets={assets} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} /> : <div className="free-text-advanced-required" role="note"><h3>Advanced QMD required</h3><p>{editorDocument.reason}</p><button type="button" className="secondary" onClick={() => setActiveTab("advanced")}>Open Advanced QMD</button></div>}
-        </section>
-        <section ref={(node) => { panesRef.current.preview = node; }} id={`${id}-preview-pane`} className="free-text-source-editor__pane free-text-source-editor__preview" data-free-text-pane="preview" role="tabpanel" aria-labelledby={`${id}-preview-tab`} hidden={hidden("preview")} onFocusCapture={recordFocus("preview")}>
-          <header className="free-text-source-editor__preview-header"><h3>{panelTitle.trim() || "Preview"}</h3>{stale && <span className="free-text-preview-stale">Preview is stale</span>}</header>
+    <section ref={editorRef} className="free-text-source-editor" data-source-revision={revision.current} data-preview-revision={lastValidRevision.current ?? "none"}>
+      <section className="free-text-source-editor__writer-card" aria-label="Text post editor">
+        <header className="free-text-source-editor__writer-header">
+          <div><h3>Write a text post</h3><p>Formatting stays active until you turn it off.</p></div>
+          <p className="free-text-source-editor__shortcuts"><kbd>Ctrl</kbd> + <kbd>B</kbd> / <kbd>I</kbd> also work</p>
+        </header>
+        {editorDocument.mode === "visual"
+          ? <PortableQmdRichTextEditor source={value} disabled={disabled} mediaItems={mediaItems} assets={assets} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} />
+          : <div className="free-text-advanced-required" role="note"><h4>Visual editing is unavailable for this content</h4><p>{editorDocument.reason}</p></div>}
+      </section>
+      <div className="free-text-source-editor__reference-cards">
+        <section className="free-text-source-editor__reference-card free-text-source-editor__preview" aria-label="Rendered preview">
+          <header><h3>Rendered preview</h3><p>what readers see</p></header>
           {lastValidSource !== null && typeof document !== "undefined" ? <FreeTextChartView model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }} chart={{ id: panelId, title: panelTitle.trim() || "Preview" }} contentRenderContext={previewRenderContext} onMediaActivate={({ mediaNodeIndex, sourceStart, sourceEnd }) => setSelectedMediaIdentity({ mediaNodeIndex, sourceStart, sourceEnd })} /> : lastValidSource !== null ? <p className="static-content-state">Preview is available in the browser.</p> : <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>}
         </section>
-        <section ref={(node) => { panesRef.current.advanced = node; }} id={`${id}-advanced-pane`} className="free-text-source-editor__pane free-text-source-editor__advanced" data-free-text-pane="advanced" role="tabpanel" aria-labelledby={`${id}-advanced-tab`} hidden={hidden("advanced")} onFocusCapture={recordFocus("advanced")}>
-          <h3>Advanced QMD</h3>
-          {editorDocument.mode === "advanced" && <p className="free-text-advanced-reason" role="note">{editorDocument.reason}</p>}
-          <div role="toolbar" aria-label="Format Advanced QMD" className="free-text-source-editor__toolbar">
-            <ToolbarButton label="Bold" command={{ type: "wrap", before: "**", after: "**", placeholder: "bold text" }} onCommand={applyToolbarCommand} disabled={disabled} />
-            <ToolbarButton label="Underline" command={{ type: "wrap", before: "++", after: "++", placeholder: "underlined text" }} onCommand={applyToolbarCommand} disabled={disabled} />
-            <ToolbarButton label="Italics" command={{ type: "wrap", before: "*", after: "*", placeholder: "italic text" }} onCommand={applyToolbarCommand} disabled={disabled} />
-            <ToolbarButton label="Bulleted list" command={{ type: "line-prefix", prefix: "- " }} onCommand={applyToolbarCommand} disabled={disabled} />
-            <ToolbarButton label="Insert table" command={{ type: "table" }} onCommand={applyToolbarCommand} disabled={disabled} />
-          </div>
-          <label htmlFor={id}>Portable QMD source</label>
-          <textarea ref={sourceInputRef} id={id} value={value} disabled={disabled} aria-describedby={`${id}-advanced-help ${id}-status`} aria-invalid={!pending && !analysis.ok ? "true" : undefined} onChange={(event) => changeSource(event.target.value)} />
-          <small id={`${id}-advanced-help`}>Advanced QMD preserves exact authored source. Preview rendering remains local and inert.</small>
-          <ControlTooltip disabled={disabled} reason={PENDING_REASON}>
-            <button type="button" className="secondary" disabled={disabled} onClick={() => { setPickerMode("insert"); setPickerOpen(true); }}>Insert image</button>
-          </ControlTooltip>
-          {!pending && analysis.errors.length > 0 && <ValidationErrors id={id} value={value} errors={analysis.errors} />}
+        <section className="free-text-source-editor__reference-card free-text-source-editor__markdown" aria-label="Portable Markdown">
+          <header><h3>Portable Markdown</h3><p>what is stored</p></header>
+          <pre>{value}</pre>
         </section>
       </div>
       {pickerOpen && pickerMode === "change" && <ChangeMediaPicker mediaItems={mediaItems} selectedMediaId={selectedPlacement?.mediaId} onSelect={chooseMedia} onCancel={closeChangePicker} />}
       {pickerOpen && pickerMode === "insert" && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" onSelect={chooseMedia} onCreateLocal={async (candidate, context) => { await onMediaCreate?.(candidate, context); setPickerOpen(false); }} onCancel={() => setPickerOpen(false)} />}
       {selectedPlacement && <QmdMediaInspector placement={selectedPlacement} mediaItem={valueForId(mediaItems, selectedPlacement.mediaId)} disabled={disabled} onChange={updateSelectedPlacement} onChangeImage={(_mediaId, { trigger } = {}) => { changeTriggerRef.current = trigger ?? null; setPickerMode("change"); setPickerOpen(true); }} onOpenMediaItem={(mediaId) => (onOpenMediaItem ?? contentRenderContext.openMediaItem)?.(mediaId)} />}
-      <p id={`${id}-status`} className="free-text-source-editor__status" role="status" aria-live="polite" aria-atomic="true">{status}</p>
+      {!pending && analysis.errors.length > 0 && <ValidationErrors id={id} value={value} errors={analysis.errors} />}
     </section>
   );
 }
@@ -189,8 +129,6 @@ function ValidationErrors({ id, value, errors }) {
 }
 
 function pendingValidation(source, sourceRevision, previewRevision) { return { ok: false, pending: true, errors: [], warnings: [], source, sourceRevision, previewRevision }; }
-const PENDING_REASON = "Text/Image authoring is unavailable while this draft action is pending.";
-function ToolbarButton({ label, command, onCommand, disabled }) { return <ControlTooltip disabled={disabled} reason={PENDING_REASON}><button type="button" aria-label={label} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => onCommand(command)}>{label}</button></ControlTooltip>; }
 
 function ChangeMediaPicker({ mediaItems, selectedMediaId, onSelect, onCancel }) {
   const eligible = collectionValues(mediaItems).filter((item) => item?.health === "ready" && ["asset", "package"].includes(item?.current?.kind)).sort((left, right) => left.mediaId.localeCompare(right.mediaId));
