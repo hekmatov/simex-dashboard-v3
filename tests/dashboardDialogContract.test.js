@@ -174,7 +174,8 @@ test("display, temporal, and drawer dialog surfaces retain local scroll geometry
   assert.match(immersive, /\.multi-fullscreen-panel\.dashboard-dialog\s*\{[^}]*block-size:\s*calc\(100dvh - 24px\);/s);
   assert.match(immersive, /\.multi-fullscreen-panel\.dashboard-dialog \.multi-fullscreen-grid\s*\{[^}]*block-size:\s*100%;/s);
   assert.match(dialogs, /\.scene-observation-dialog > \.dashboard-dialog\s*\{[^}]*inline-size:\s*min\(100%, 520px\);[^}]*overflow:\s*hidden;[^}]*padding:\s*0;/s);
-  assert.match(drawer, /\.right-side-drawer\.dashboard-dialog\s*\{[^}]*block-size:\s*100%;[^}]*max-block-size:\s*none;/s);
+  assert.match(drawer, /\.right-side-drawer\.dashboard-dialog\s*\{[^}]*max-block-size:\s*none;/s);
+  assert.doesNotMatch(drawer, /\.right-side-drawer\.dashboard-dialog\s*\{[^}]*\n\s*block-size:/s);
 });
 
 test("every explicit first-party dialog role is registered", async () => {

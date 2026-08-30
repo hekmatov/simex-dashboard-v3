@@ -22,6 +22,10 @@ const drawerSource = await readFile(
   new URL("../src/components/common/RightSideDrawer.jsx", import.meta.url),
   "utf8",
 );
+const drawerStyles = await readFile(
+  new URL("../src/styles/right-side-drawer.css", import.meta.url),
+  "utf8",
+);
 
 const Drawer = drawerModule.default;
 
@@ -126,5 +130,20 @@ test("one crown-bottom calculation positions every drawer and status notices res
     }),
     400,
     "legacy surfaces must retain rectangle-based clearance",
+  );
+});
+
+test("dialog drawer sizing leaves crown-relative height to top and bottom", () => {
+  assert.match(
+    drawerStyles,
+    /\.right-side-drawer\s*\{[^}]*bottom:\s*0;[^}]*top:\s*var\(--right-side-drawer-top\);/s,
+  );
+  assert.match(
+    drawerStyles,
+    /\.right-side-drawer\.dashboard-dialog\s*\{[^}]*max-block-size:\s*none;/s,
+  );
+  assert.doesNotMatch(
+    drawerStyles,
+    /\.right-side-drawer\.dashboard-dialog\s*\{[^}]*\n\s*block-size:/s,
   );
 });
