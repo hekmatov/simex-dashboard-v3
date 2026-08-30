@@ -89,7 +89,7 @@ test("catalogue v2 covers every registered type and configured chart", async () 
     configured.map(({ chart }) => chart.id).toSorted(),
   );
   assert.equal(catalogue.chart_types.length, 27);
-  assert.equal(catalogue.charts.length, 40);
+  assert.equal(catalogue.charts.length, 38);
   assert.ok(catalogue.charts.some(({ type_id }) => type_id === "pie"));
   assert.ok(
     catalogue.charts.some(

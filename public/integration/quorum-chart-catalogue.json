@@ -4242,62 +4242,6 @@
       ]
     },
     {
-      "chart_id": "home_case_map",
-      "type_id": "mapScatter",
-      "title": "Wastewater early-warning preview",
-      "description": "Latest wastewater virus-particle signal by province for an immediate geographic overview.",
-      "page_id": "old-homepage-content",
-      "section_id": "home_overview",
-      "aliases": [
-        "wastewater early-warning preview"
-      ],
-      "keywords": [
-        "case",
-        "home",
-        "map",
-        "mapScatter"
-      ],
-      "role_ids": [
-        "geography",
-        "time",
-        "value"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "home_operational_pressure_kpis",
-      "type_id": "kpi",
-      "title": "Operational pressure at a glance",
-      "description": "Current ICU and hospital occupancy percentages for rapid orientation.",
-      "page_id": "old-homepage-content",
-      "section_id": "home_overview",
-      "aliases": [
-        "operational pressure at a glance"
-      ],
-      "keywords": [
-        "home",
-        "kpi",
-        "kpis",
-        "operational",
-        "pressure"
-      ],
-      "role_ids": [
-        "entity",
-        "value"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
       "chart_id": "socio_adherence",
       "type_id": "stackedBar",
       "title": "Adherence to public-health measures",
@@ -4709,6 +4653,6 @@
       ]
     }
   ],
-  "dashboard_semantic_digest": "6d7928a6e0f053abe51e6ee7ad9f4a2ab31244c2eae677848a526fbfe7df5f4a",
-  "digest": "8b4ca31062ace4491bbe59ea4341f186eca6b2424bf6bc19473503975b7664aa"
+  "dashboard_semantic_digest": "8285387945718c930d576d3921ce5e814d02f1d6b07510c0bf775a20f29803f3",
+  "digest": "df5525f7d7815b11256f1b0f14b298563ea6873d55b58539c07ff03b8ef6955b"
 }
