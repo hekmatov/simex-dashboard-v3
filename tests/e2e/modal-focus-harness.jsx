@@ -82,6 +82,7 @@ const conversion = {
     targetLabel: "Observation time",
   },
 };
+const dashboard = { dataSources: {} };
 
 function Harness() {
   const [wizardOpen, setWizardOpen] = React.useState(false);
@@ -146,7 +147,8 @@ function Harness() {
         sectionId: "response",
         relation: "append",
       },
-      dataSources: {},
+      dashboard,
+      dataSources: dashboard.dataSources,
       loadedData: {},
       chronoGroups: [],
       existingCharts: [],

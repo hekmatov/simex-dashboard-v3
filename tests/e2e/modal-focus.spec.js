@@ -19,7 +19,7 @@ test("wizard traps both Tab directions and explicit discard restores its trigger
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
   const flow = chartAuthoringWorkflow(wizard);
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByRole("heading", { name: "Choose a data source" })).toBeVisible();
+  await expect(wizard.getByRole("heading", { name: "Select data source" })).toBeVisible();
   await expect(flow.stageButton("dataSource")).toBeFocused();
   const enabledButtons = wizard.locator("button:not([disabled])");
   const first = enabledButtons.first();
@@ -123,7 +123,7 @@ test("reopened wizard focuses the reset selected step rather than stale state", 
   }).click();
   await wizard.getByRole("button", { name: "Next step", exact: true }).click();
   const flow = chartAuthoringWorkflow(wizard);
-  await expect(wizard.getByRole("heading", { name: "Choose a data source" })).toBeVisible();
+  await expect(wizard.getByRole("heading", { name: "Select data source" })).toBeVisible();
   await expect(flow.stageButton("dataSource")).toBeFocused();
   await wizard.getByRole("button", { name: "Discard chart draft" })
     .evaluate((button) => button.click());

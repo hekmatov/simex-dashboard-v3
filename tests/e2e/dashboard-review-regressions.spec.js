@@ -281,9 +281,12 @@ test("removing a page also removes its synchronized chart memberships", async ({
   await orbit.getByRole("button", { name: "Remove Page", exact: true }).click();
   await orbit.getByLabel("I understand these named consequences.").check();
   await orbit.getByRole("button", { name: "Confirm", exact: true }).click();
-  const saveLayout = page.getByRole("button", { name: "Save Layout Changes", exact: true });
-  await saveLayout.click();
-  await expect(saveLayout).toBeDisabled();
+  const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
+  await layoutOwner.getByRole("button", {
+    name: "Save Layout Changes",
+    exact: true,
+  }).click();
+  await expect(layoutOwner).toHaveCount(0);
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
   await expect(page.getByRole("heading", {
@@ -300,7 +303,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
       groups: stored.chronoGroups,
     };
   }, STORAGE_KEY)).toEqual({
-    pages: ["old-homepage-content", "socio_economic"],
+    pages: ["socio_economic"],
     groups: [],
   });
 });
