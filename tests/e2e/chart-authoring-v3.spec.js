@@ -163,8 +163,9 @@ test("wizard eyedropper reveals the dashboard and Escape preserves the draft", a
     "data-simex-eyedropper-active",
     "true",
   );
-  await expect(wizard).toHaveCSS("opacity", "0");
-  await expect(wizard).toHaveCSS("pointer-events", "none");
+  const backdrop = page.locator(".chart-wizard-backdrop").filter({ has: wizard });
+  await expect(backdrop).toHaveCSS("opacity", "0");
+  await expect(backdrop).toHaveCSS("pointer-events", "none");
 
   await page.keyboard.press("Escape");
 
