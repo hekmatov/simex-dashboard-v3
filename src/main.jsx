@@ -9,6 +9,7 @@ import "./styles.css";
 import "./styles/modes.css";
 import "./styles/presentation.css";
 import "./styles/dashboard-style-grammar.css";
+import "./styles/dashboard-dialogs.css";
 import "./styles/chart-data-state.css";
 import "./styles/static-content.css";
 import "./styles/source-content.css";

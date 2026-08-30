@@ -1,0 +1,128 @@
+.dashboard-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 32px);
+  overflow: auto;
+  background: color-mix(in srgb, var(--simex-text-strong) 38%, transparent);
+}
+
+.dashboard-dialog {
+  display: flex;
+  flex-direction: column;
+  inline-size: min(100%, 720px);
+  max-block-size: calc(100dvh - clamp(24px, 6vw, 64px));
+  overflow: hidden;
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-body-font);
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+}
+
+.dashboard-dialog--compact { inline-size: min(100%, 520px); }
+.dashboard-dialog--standard { inline-size: min(100%, 720px); }
+.dashboard-dialog--wide { inline-size: min(100%, 1120px); }
+.dashboard-dialog--fullscreen { inline-size: 100%; min-block-size: calc(100dvh - 24px); }
+.dashboard-dialog--wizard { background: var(--simex-surface-panel); }
+.dashboard-dialog--workspace { background: var(--simex-surface-canvas); }
+.dashboard-dialog--utility { background: var(--simex-surface-panel); }
+.dashboard-dialog--danger { border-color: var(--simex-error); }
+
+.dashboard-dialog__header,
+.dashboard-dialog__progress,
+.dashboard-dialog__footer {
+  flex: 0 0 auto;
+  padding: 16px 20px;
+  background: var(--simex-surface-panel-alt);
+}
+
+.dashboard-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-block-end: 1px solid var(--simex-border-subtle);
+}
+
+.dashboard-dialog__header h2,
+.dashboard-dialog__header h3 {
+  margin: 0;
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-heading-font);
+}
+
+.dashboard-dialog__description { color: var(--simex-text-muted); }
+
+.dashboard-dialog__progress {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  border-block-end: 1px solid var(--simex-border-subtle);
+}
+
+.dashboard-dialog__progress [aria-current="step"],
+.dashboard-dialog__progress [aria-selected="true"] {
+  color: var(--simex-selected);
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+}
+
+.dashboard-dialog__body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  padding: 20px;
+  overflow: auto;
+  color: var(--simex-text-strong);
+  background: var(--simex-surface-canvas);
+}
+
+.dashboard-dialog__section {
+  padding: 16px;
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
+
+.dashboard-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-block-start: 1px solid var(--simex-border-subtle);
+}
+
+.dashboard-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dashboard-dialog :where(button, input, select, textarea, [role="button"]):focus-visible {
+  outline: var(--simex-component-focus-width) solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.dashboard-dialog :where(button, select, input:not([type="checkbox"]):not([type="radio"])) {
+  min-block-size: var(--simex-control-min);
+  border-radius: var(--simex-style-control-radius);
+}
+
+@media (max-width: 720px) {
+  .dashboard-dialog-backdrop { padding: 8px; place-items: stretch; }
+  .dashboard-dialog { max-block-size: calc(100dvh - 16px); }
+  .dashboard-dialog__header,
+  .dashboard-dialog__progress,
+  .dashboard-dialog__body,
+  .dashboard-dialog__footer { padding: 12px; }
+  .dashboard-dialog__footer { flex-wrap: wrap; }
+  .dashboard-dialog__footer > * { flex: 1 1 160px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-dialog, .dashboard-dialog * { scroll-behavior: auto; }
+}
