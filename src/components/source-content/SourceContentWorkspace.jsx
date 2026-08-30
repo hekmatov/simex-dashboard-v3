@@ -297,7 +297,7 @@ export default function SourceContentWorkspace({
   return (
     <section
       ref={rootRef}
-      className="source-content-workspace"
+      className="source-content-workspace dashboard-dialog dashboard-dialog--workspace dashboard-dialog--wide"
       data-manager-layout={layout}
       aria-labelledby="source-content-heading"
       aria-busy={sourceContentOwners.some(({ status }) => status === "saving") ? "true" : undefined}
@@ -308,15 +308,15 @@ export default function SourceContentWorkspace({
         lastRestorationRef.current = captureSourceContentRestoration(rootRef.current, event.target);
       }}
     >
-      <header className="source-content-workspace__header">
+      <header className="source-content-workspace__header dashboard-dialog__header">
         <div><p className="eyebrow">Build</p><h2 id="source-content-heading">Source content</h2></div>
         <p>Manage reusable media and dashboard data sources without leaving the canvas.</p>
       </header>
-      <div className="source-content-tabs" role="tablist" aria-label="Source content categories">
+      <div className="source-content-tabs dashboard-dialog__progress" role="tablist" aria-label="Source content categories">
         <button type="button" role="tab" aria-selected={tab === "media"} disabled={ownerLocked} onClick={() => updateViewState((current) => ({ ...current, tab: "media", tabletDetailOpen: false }))}>Media</button>
         <button type="button" role="tab" aria-selected={tab === "sources"} disabled={ownerLocked} onClick={() => updateViewState((current) => ({ ...current, tab: "sources", tabletDetailOpen: false }))}>Data sources</button>
       </div>
-      <div className="source-content-composition">
+      <div className="source-content-composition dashboard-dialog__body">
         {(layout === "desktop" || !tabletDetailOpen) && catalogue}
         {(layout === "desktop" || tabletDetailOpen) && detail}
       </div>

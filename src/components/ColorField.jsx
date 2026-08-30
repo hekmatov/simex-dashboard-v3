@@ -206,7 +206,7 @@ function ColorPalettePanel({
   return React.createElement(
     "div",
     {
-      className: "settings-color-popover",
+      className: "settings-color-popover dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact",
       id,
       role: "dialog",
       "aria-label": `${label} color options`,

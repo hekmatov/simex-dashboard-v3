@@ -30,7 +30,7 @@ export default function SourceViewer({
       open,
       initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
       onEscape: () => dismiss("escape"),
-      className: "source-viewer-backdrop",
+      className: "source-viewer-backdrop dashboard-dialog-backdrop",
       onPointerDown: (event) => event.stopPropagation(),
       role: "dialog",
       "aria-modal": "true",
@@ -40,10 +40,10 @@ export default function SourceViewer({
     },
     React.createElement(
       "section",
-      { className: "source-viewer-panel" },
+      { className: "source-viewer-panel dashboard-dialog dashboard-dialog--workspace dashboard-dialog--wide" },
       React.createElement(
         "header",
-        { className: "source-viewer-panel-header" },
+        { className: "source-viewer-panel-header dashboard-dialog__header" },
         React.createElement(
           "div",
           null,

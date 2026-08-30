@@ -32,6 +32,15 @@
 .dashboard-dialog--utility { background: var(--simex-surface-panel); }
 .dashboard-dialog--danger { border-color: var(--simex-error); }
 
+.source-content-workspace.dashboard-dialog { block-size: min(820px, calc(100dvh - 32px)); }
+.source-viewer-panel.dashboard-dialog { block-size: min(760px, calc(100dvh - 32px)); }
+.settings-color-popover.dashboard-dialog {
+  position: absolute;
+  z-index: 2;
+  inline-size: min(360px, calc(100vw - 24px));
+  max-block-size: min(520px, calc(100dvh - 24px));
+}
+
 .dashboard-dialog__header,
 .dashboard-dialog__progress,
 .dashboard-dialog__footer {

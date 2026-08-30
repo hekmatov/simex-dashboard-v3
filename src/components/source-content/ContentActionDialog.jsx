@@ -38,7 +38,7 @@ export default function ContentActionDialog({
         open
         initialFocusSelector={'[data-modal-initial-focus="true"]'}
         onEscape={busy ? undefined : onCancel}
-        className="confirm-dialog-backdrop"
+        className="confirm-dialog-backdrop dashboard-dialog-backdrop"
         role="dialog"
         aria-modal="true"
         aria-busy={busy ? "true" : undefined}
@@ -46,7 +46,7 @@ export default function ContentActionDialog({
         aria-describedby={`${id}-message`}
         tabIndex={-1}
       >
-        <section className="confirm-dialog">
+        <section className="confirm-dialog dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact">
           <h2 id={`${id}-title`}>{relinkCsv ? `Relink ${itemLabel}?` : `Replace ${itemLabel} file?`}</h2>
           <p id={`${id}-message`}>Choose a {geoJson ? "GeoJSON" : "CSV"} file. The current source identity is retained only when every directly dependent {geoJson ? "map" : "chart"} remains structurally valid.</p>
           <label><span>{relinkCsv ? "Relink CSV" : `Replacement ${geoJson ? "GeoJSON" : "CSV"}`}</span><input data-modal-initial-focus="true" type="file" accept={geoJson ? ".geojson,.json,application/geo+json,application/json" : ".csv,text/csv"} disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
@@ -76,7 +76,7 @@ export default function ContentActionDialog({
             </section>
           )}
           {importedSourceLabel && <p role="status">Imported as {importedSourceLabel}. Choose an affected panel to remap it.</p>}
-          <div className="confirm-dialog-actions">
+          <div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             {canImportAsNew && <button type="button" className="secondary" disabled={busy} onClick={onImportAsNew}>Import as new source</button>}
             <button type="button" disabled={busy || !replacementReady || nonCommittable} onClick={onConfirm}>
@@ -96,7 +96,7 @@ export default function ContentActionDialog({
         open
         initialFocusSelector={'[data-modal-initial-focus="true"]'}
         onEscape={busy ? undefined : onCancel}
-        className="confirm-dialog-backdrop"
+        className="confirm-dialog-backdrop dashboard-dialog-backdrop"
         role="dialog"
         aria-modal="true"
         aria-busy={busy ? "true" : undefined}
@@ -104,7 +104,7 @@ export default function ContentActionDialog({
         aria-describedby={`${id}-message`}
         tabIndex={-1}
       >
-        <section className="confirm-dialog">
+        <section className="confirm-dialog dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact">
           <h2 id={`${id}-title`}>Replace {itemLabel} everywhere?</h2>
           <p id={`${id}-message`}>Choose a validated PNG, JPEG, or WebP file. Every QMD and Image use updates to the next revision while its placement settings stay unchanged.</p>
           <label>
@@ -119,7 +119,7 @@ export default function ContentActionDialog({
           </label>
           {replacementLabel && <p role="status">Ready: {replacementLabel}</p>}
           {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
-          <div className="confirm-dialog-actions">
+          <div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             <button type="button" disabled={busy || !replacementReady} onClick={onConfirm}>{busy ? "Replacing…" : "Replace everywhere"}</button>
           </div>

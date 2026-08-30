@@ -1,6 +1,5 @@
 .source-viewer-backdrop {
   align-items: stretch;
-  background: color-mix(in srgb, #071015 44%, transparent);
   display: flex;
   inset: 0;
   justify-content: flex-end;
@@ -9,9 +8,6 @@
 }
 
 .source-viewer-panel {
-  background: var(--simex-surface-panel);
-  border-left: 1px solid var(--simex-border-strong);
-  box-shadow: -18px 0 48px rgb(0 0 0 / 18%);
   display: grid;
   gap: 18px;
   grid-auto-rows: max-content;

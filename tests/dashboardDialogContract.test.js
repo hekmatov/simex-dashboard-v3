@@ -9,6 +9,13 @@ const DIALOG_SURFACES = [
   ["src/components/chart-authoring/ChartEditorModal.jsx", "dashboard-dialog-backdrop"],
 ];
 
+DIALOG_SURFACES.push(
+  ["src/components/source-content/SourceContentWorkspace.jsx", "dashboard-dialog--workspace"],
+  ["src/components/source-content/ContentActionDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/SourceViewer.jsx", "dashboard-dialog--workspace"],
+  ["src/components/ColorField.jsx", "dashboard-dialog--compact"],
+);
+
 test("dashboard dialog contract loads after the base dashboard grammar", async () => {
   const main = await read("src/main.jsx");
   assert.ok(
