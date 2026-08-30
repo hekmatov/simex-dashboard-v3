@@ -24,9 +24,12 @@ test("playback entry preserves editor and wizard authoring until each workflow i
 
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.locator(".chart-editor-v3");
-  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
-  const editorTitle = editor.getByLabel("Chart title");
+  let quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  let editor = page.getByRole("dialog", { name: "Edit chart" });
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  let editorTitle = editor.getByLabel("Chart title");
   await editorTitle.fill("Playback-safe unsaved editor title");
 
   await expect(viewMode).toBeDisabled();
@@ -37,16 +40,25 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await expect(editor).toBeVisible();
   await expect(editorTitle).toHaveValue("Playback-safe unsaved editor title");
 
-  await editor.getByRole("button", { name: "Reset changes" }).click();
-  let reset = page.getByRole("dialog", { name: "Discard these edits?" });
-  await reset.getByRole("button", { name: "Keep editing" }).click();
+  await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
+  let reset = page.getByRole("dialog", { name: "Discard changes?" });
+  await reset.getByRole("button", { name: "Continue editing", exact: true }).click();
   await expect(editorTitle).toHaveValue("Playback-safe unsaved editor title");
-  await editor.getByRole("button", { name: "Reset changes" }).click();
-  reset = page.getByRole("dialog", { name: "Discard these edits?" });
-  await reset.getByRole("button", { name: "Reset changes" }).click();
-  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
+  reset = page.getByRole("dialog", { name: "Discard changes?" });
+  await reset.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(viewMode).toBeEnabled();
+
+  await panel.getByRole("button", { name: "Edit chart" }).click();
+  quick = page.locator(".chart-quick-editor");
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  editor = page.getByRole("dialog", { name: "Edit chart" });
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  editorTitle = editor.getByLabel("Chart title");
   await expect(editorTitle).toHaveValue("Confirmed cases");
   await editorTitle.fill("Playback-safe saved editor title");
+  await editor.getByRole("button", { name: /^Review\./ }).click();
   await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await expect(viewMode).toBeEnabled();
@@ -67,7 +79,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await expect(wizard).toBeHidden();
   await expect(viewMode).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Resume chart draft" }).click();
+  await page.getByRole("button", { name: "Resume New chart draft", exact: true }).click();
   await expect(wizard).toBeVisible();
   await expect(wizardTitle).toHaveValue("Playback-safe unsaved wizard title");
 

@@ -46,6 +46,11 @@ export function getStaticContentSubmissionState({
   };
 }
 
+export function getStaticContentDiscardAction({ dirty = false, disabled = false } = {}) {
+  if (disabled) return "ignore";
+  return dirty ? "confirm" : "close";
+}
+
 export function StaticContentWizard({
   open = false,
   dashboard = {},
@@ -151,7 +156,12 @@ export function StaticContentWizard({
     dispatch({ type: "requestCancel", restoration });
   };
   const requestDiscard = () => {
-    if (workflowDisabled) return;
+    const action = getStaticContentDiscardAction({ dirty, disabled: workflowDisabled });
+    if (action === "ignore") return;
+    if (action === "close") {
+      requestClose();
+      return;
+    }
     dispatch({ type: "requestCancel", restoration: focusRestoration(draft.stage) });
   };
   const reportSurface = React.useCallback((surface) => {

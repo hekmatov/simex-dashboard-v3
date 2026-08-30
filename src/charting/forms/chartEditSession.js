@@ -154,6 +154,11 @@ export function projectChartEditSessionDashboard(dashboard, state) {
       });
     }
   }
+  const committedRemovalAwaitingOwnerCleanup = matches === 0
+    && state.status === "saving"
+    && state.pendingOperation?.kind === "remove"
+    && state.pendingOperation.intent?.placementId === state.placementId;
+  if (committedRemovalAwaitingOwnerCleanup) return preview;
   if (matches !== 1) {
     throw new Error(
       matches === 0

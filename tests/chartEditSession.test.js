@@ -610,6 +610,31 @@ test("confirmed Remove immediately yields only the placement deletion intent", (
   assert.equal(changed.draft.title, "Unsaved title that must not be saved first");
 });
 
+test("saving Remove renders the committed dashboard before owner cleanup", () => {
+  const dirty = changeChart(createSession(), "quick", { title: "Unsaved title to remove" });
+  const request = prepareConfirmedChartEditRemoval(dirty);
+  const committed = dashboardFixture();
+  committed.pages[0].sections[0].panels = committed.pages[0].sections[0].panels
+    .filter(({ id }) => id !== request.intent.placementId);
+  committed.chronoGroups = [];
+
+  const projected = projectChartEditSessionDashboard(committed, request.session);
+
+  assert.deepEqual(projected, committed);
+  assert.notStrictEqual(projected, committed);
+  assert.throws(
+    () => projectChartEditSessionDashboard(committed, dirty),
+    /Chart placement "placement-a" does not exist/,
+  );
+  assert.throws(
+    () => projectChartEditSessionDashboard(committed, reduceChartEditSession(
+      request.session,
+      { type: "PERSISTENCE_FAILED", error: new Error("Remove failed") },
+    )),
+    /Chart placement "placement-a" does not exist/,
+  );
+});
+
 test("clean and dirty Remove retain one operation-scoped owner for exact retry", () => {
   for (const seed of [
     createSession(),

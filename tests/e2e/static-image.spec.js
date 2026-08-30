@@ -101,12 +101,12 @@ for (const viewport of VIEWPORTS) {
     await expect(editor.getByLabel("Crop width")).toHaveValue("1000");
     await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-    let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+    let confirmation = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
     await confirmation.getByRole("button", { name: "Keep editing" }).click();
     await expect(editor.getByLabel("Alternative text")).toHaveValue("Unsaved alternative text");
     await expect(editor.getByLabel("Crop width")).toHaveValue("1000");
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-    confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+    confirmation = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
     await confirmation.getByRole("button", { name: "Discard" }).click();
     await expect(editor).toHaveCount(0);
     panel = canonicalPanel(page, panelId);
@@ -239,7 +239,7 @@ for (const viewport of VIEWPORTS) {
     await expect(editor.getByText(/cancelled-replacement\.png is ready/)).toBeVisible();
     expect(await sessionAssetIds(page)).toHaveLength(1);
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-    confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+    confirmation = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
     await confirmation.getByRole("button", { name: "Discard" }).click();
     await expect.poll(() => sessionAssetIds(page)).toEqual([]);
     panel = canonicalPanel(page, panelId);
@@ -530,7 +530,7 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   await expect(wizard.locator('[data-validation-code="product-budget"]'))
     .toHaveText("The image would exceed the dashboard's 200 MiB authored-asset budget.");
   await wizard.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("dialog", { name: "Discard static content changes?" })
+  await page.getByRole("dialog", { name: "Discard Text/Image changes?" })
     .getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
   expect(await sessionAssetIds(page)).toEqual([]);
@@ -815,6 +815,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
   await flow.goToMapAndPrepare();
   await flow.selectRole("measurements", "national_total_cases");
   await wizard.getByLabel("Observation / X-axis").selectOption("date");
+  await flow.goToConfigure();
   await flow.createChart(title);
   expect((await readSavedImage(page, imageTitle)).source.crop.x).toBe(200);
 
@@ -828,11 +829,16 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
   await panel.scrollIntoViewIfNeeded();
   await panel.hover();
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
-  const editor = page.locator(".chart-editor-v3");
-  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
-  await editor.getByLabel("Chart title").fill(`${title} updated`);
-  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expect(editor).toHaveCount(0);
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const full = page.getByRole("dialog", { name: "Edit chart" });
+  await expect(full).toBeVisible();
+  await full.getByRole("button", { name: /^Configure\./ }).click();
+  await full.getByLabel("Chart title").fill(`${title} updated`);
+  await full.getByRole("button", { name: /^Review\./ }).click();
+  await full.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(full).toHaveCount(0);
   expect((await readSavedImage(page, imageTitle)).source.crop.x).toBe(200);
   await expect.poll(() => findPersistedChartId(page, `${title} updated`)).toBe(chartId);
   const durableShape = await page.evaluate((key) => {

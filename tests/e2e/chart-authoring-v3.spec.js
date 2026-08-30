@@ -710,44 +710,59 @@ test("editor chart conversion supports compatible changes and recoverable remapp
 }) => {
   await openBiomedicalPage(page);
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
-  await panel.getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.locator(".chart-editor-v3");
-  const type = editor.getByLabel("Chart type");
+  let full = await openFullChartEditor(page, panel);
 
-  await type.selectOption("bar");
-  let conversion = page.getByRole("dialog", { name: "Compatible change" });
-  await expect(conversion).toBeVisible();
-  await conversion.getByRole("button", { name: "Apply chart type change" })
-    .click();
-  await expect(type).toHaveValue("bar");
-  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expectStoredChart(page, "bar", "Confirmed cases");
-  await panel.getByRole("button", { name: "Edit chart" }).click();
-
-  await type.selectOption("scatter");
-  conversion = page.getByRole("dialog", { name: "Role remapping required" });
-  await expect(conversion).toBeVisible();
-  await conversion.getByRole("button", { name: "Cancel" }).click();
-  await expect(type).toHaveValue("bar");
-
-  await type.selectOption("scatter");
-  conversion = page.getByRole("dialog", { name: "Role remapping required" });
-  await conversion.locator('[data-field-id="x"] select')
-    .selectOption("total_deaths");
-  await conversion.locator('[data-field-id="y"] select')
+  await full.getByRole("button", { name: /^Chart type\./ }).click();
+  await full.getByRole("button", { name: /^Bar\b/i }).click();
+  await full.locator('[data-field-id="measurements"] select').first()
     .selectOption("national_total_cases");
-  await expect(conversion.getByRole("button", {
-    name: "Apply chart type change",
-  })).toBeEnabled();
-  await conversion.getByRole("button", { name: "Apply chart type change" })
-    .click();
-  await expect(type).toHaveValue("scatter");
-  await expect(editor.getByLabel("Duplicate observations")).toBeVisible();
-  await editor.getByLabel("Duplicate observations").selectOption("last");
-  await expect(editor.locator(".chart-authoring-preview-ready")).toBeVisible();
-  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
+  await full.locator('[data-field-id="observation"] select').first()
+    .selectOption("date");
+  await full.getByRole("button", { name: /^Configure\./ }).click();
+  await full.getByLabel("Chart title").fill("Confirmed cases");
+  await full.getByRole("button", { name: /^Review\./ }).click();
+  await full.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(full).toHaveCount(0);
+  await expectStoredChart(page, "bar", "Confirmed cases");
+
+  full = await openFullChartEditor(page, panel);
+  await full.getByRole("button", { name: /^Chart type\./ }).click();
+  await full.getByRole("button", { name: /^Scatter\b/i }).click();
+  await full.getByRole("button", { name: "Discard changes", exact: true }).click();
+  let discard = page.getByRole("dialog", { name: "Discard changes?" });
+  await discard.getByRole("button", { name: "Continue editing", exact: true }).click();
+  await expect(full.locator('[data-field-id="x"] select').first()).toBeVisible();
+  await full.getByRole("button", { name: "Discard changes", exact: true }).click();
+  discard = page.getByRole("dialog", { name: "Discard changes?" });
+  await discard.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(full).toHaveCount(0);
+  await expectStoredChart(page, "bar", "Confirmed cases");
+
+  full = await openFullChartEditor(page, panel);
+  await full.getByRole("button", { name: /^Chart type\./ }).click();
+  await full.getByRole("button", { name: /^Scatter\b/i }).click();
+  await full.locator('[data-field-id="x"] select').first().selectOption("total_deaths");
+  await full.locator('[data-field-id="y"] select').first()
+    .selectOption("national_total_cases");
+  await full.getByLabel("Duplicate observations").selectOption("last");
+  await full.getByRole("button", { name: /^Configure\./ }).click();
+  await full.getByLabel("Chart title").fill("Confirmed cases");
+  await expect(full.locator(".chart-authoring-preview-ready")).toBeVisible();
+  await full.getByRole("button", { name: /^Review\./ }).click();
+  await full.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(full).toHaveCount(0);
   await expectStoredChart(page, "scatter", "Confirmed cases");
 });
+
+async function openFullChartEditor(page, panel) {
+  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const full = page.getByRole("dialog", { name: "Edit chart" });
+  await expect(full).toBeVisible();
+  return full;
+}
 
 async function openBiomedicalPage(page) {
   await page.getByRole("navigation", { name: "Dashboard pages" })

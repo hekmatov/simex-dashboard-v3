@@ -41,10 +41,35 @@ async function openDashboardEditMode(page) {
   await page.getByRole("button", { name: "Build" }).click();
 }
 
-async function openFirstChartEditor(page) {
+async function openFirstQuickChartEditor(page) {
   await openDashboardEditMode(page);
   await page.locator(".chart-panel").first()
     .getByRole("button", { name: "Edit chart" }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  return quick;
+}
+
+async function openFullChartEditorForPanel(page, panel) {
+  await panel.getByRole("button", { name: "Edit chart" }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const full = page.getByRole("dialog", { name: "Edit chart" });
+  await expect(full).toBeVisible();
+  return full;
+}
+
+async function openFirstFullChartEditor(page) {
+  await openDashboardEditMode(page);
+  return openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
+}
+
+async function discardFullChartEditor(page, full) {
+  await full.getByRole("button", { name: "Discard changes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Discard changes?" })
+    .getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(full).toHaveCount(0);
 }
 
 async function storedDashboard(page) {
@@ -218,7 +243,7 @@ async function armPendingChartDismissal(page, dismissal) {
         10_000,
       );
       const inspect = () => {
-        const editor = document.querySelector(".chart-editor-v3");
+        const editor = document.querySelector(".chart-wizard-v3");
         const saving = editor?.querySelector('button[aria-label="Saving changes"]');
         if (!saving) return;
         clearTimeout(timeoutId);
@@ -230,13 +255,13 @@ async function armPendingChartDismissal(page, dismissal) {
             key: "Escape",
           }));
         } else {
-          document.querySelector(".chart-editor-backdrop")?.dispatchEvent(
+          document.querySelector(".chart-wizard-backdrop")?.dispatchEvent(
             new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
           );
         }
         resolve({
           editorConnected: editor.isConnected
-            && document.querySelector(".chart-editor-v3") === editor,
+            && document.querySelector(".chart-wizard-v3") === editor,
           savingDisabled: saving.matches(":disabled"),
         });
       };
@@ -373,13 +398,13 @@ test("pending reset locks the edit mutation surface", async ({ page }) => {
 });
 
 test("chart save preserves session work when browser storage is full", async ({ page }) => {
-  await openFirstChartEditor(page);
+  const editor = await openFirstFullChartEditor(page);
   const title = "Session fallback chart title";
-  const editor = page.locator(".chart-editor-v3");
-  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
   await editor.getByLabel("Chart title").fill(title);
+  await editor.getByRole("button", { name: /^Review\./ }).click();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await editor.getByRole("button", { name: "Save changes" }).click();
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(editor).toBeHidden();
   await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
     .toBeVisible();
@@ -395,11 +420,13 @@ test("chart save preserves session work when browser storage is full", async ({ 
 for (const dismissal of ["Escape", "backdrop"]) {
   test(`chart modal ignores ${dismissal} while save is pending`, async ({ page }) => {
     test.setTimeout(90_000);
-    await openFirstChartEditor(page);
-    const editor = page.locator(".chart-editor-v3");
+    const editor = await openFirstFullChartEditor(page);
+    await editor.getByRole("button", { name: /^Configure\./ }).click();
+    await editor.getByLabel("Chart title").fill(`Pending ${dismissal} save`);
+    await editor.getByRole("button", { name: /^Review\./ }).click();
     await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
     await armPendingChartDismissal(page, dismissal);
-    await editor.getByRole("button", { name: "Save changes" }).click();
+    await editor.getByRole("button", { name: "Save changes", exact: true }).click();
     expect(await page.evaluate(() => globalThis.__SIMEX_PENDING_DISMISSAL__)).toEqual({
       editorConnected: true,
       savingDisabled: true,
@@ -413,18 +440,18 @@ for (const dismissal of ["Escape", "backdrop"]) {
 
 test("chart removal preserves session work when browser storage is full", async ({ page }) => {
   test.setTimeout(120_000);
-  await openFirstChartEditor(page);
+  const quick = await openFirstQuickChartEditor(page);
   const removedPanelId = await page.locator(".chart-panel").first()
     .getAttribute("data-panel-id");
   const durableBefore = await storedDashboard(page);
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Remove chart" }).click();
+  await quick.getByRole("button", { name: "Remove chart" }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
   await expect(confirmation).toBeVisible();
 
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
   await confirmation.getByRole("button", { name: "Remove chart" }).click();
   await expect(confirmation).toBeHidden();
-  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect(quick).toBeHidden();
   await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
     .toBeVisible();
   await expect(page.locator(`[data-panel-id="${removedPanelId}"]`)).toHaveCount(0);
@@ -437,17 +464,17 @@ test("chart removal preserves session work when browser storage is full", async 
 
 test("non-quota chart removal preserves session work with a bounded fallback", async ({ page }) => {
   test.setTimeout(120_000);
-  await openFirstChartEditor(page);
+  const quick = await openFirstQuickChartEditor(page);
   const removedPanelId = await page.locator(".chart-panel").first()
     .getAttribute("data-panel-id");
   const durableBefore = await storedDashboard(page);
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Remove chart" }).click();
+  await quick.getByRole("button", { name: "Remove chart" }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_NON_QUOTA__ = true; });
   await confirmation.getByRole("button", { name: "Remove chart" }).click();
 
   await expect(confirmation).toBeHidden();
-  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect(quick).toBeHidden();
   await expect(page.getByRole("status").filter({
     hasText: "Dashboard changes are applied for this session but cannot be retained after reload.",
   })).toBeVisible();
@@ -481,45 +508,47 @@ test("timer-owned pending edit uses the bounded session fallback", async ({ page
     .toBeGreaterThan(0);
 });
 
-test("cancelled panel baseline uses the bounded session fallback", async ({ page }) => {
-  await openFirstChartEditor(page);
+test("clean Full discard publishes neither persistence nor fallback", async ({ page }) => {
+  const editor = await openFirstFullChartEditor(page);
   const durableBefore = await storedDashboard(page);
+  const attemptsBeforeDiscard = await page.evaluate(() => (
+    globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
+  ));
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_NON_QUOTA__ = true; });
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
+  await discardFullChartEditor(page, editor);
 
-  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect(editor).toBeHidden();
   await expect(page.getByRole("status").filter({
     hasText: "Dashboard changes are applied for this session but cannot be retained after reload.",
-  })).toBeVisible();
+  })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Dashboard configuration error" }))
     .toHaveCount(0);
   expect(await storedDashboard(page)).toEqual(durableBefore);
   expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))
-    .toBeGreaterThan(0);
+    .toBe(attemptsBeforeDiscard);
 });
 
-test("removal followed by another editor cancel does not resurrect the chart", async ({ page }) => {
+test("removal followed by another clean Full discard does not resurrect the chart", async ({ page }) => {
   test.setTimeout(120_000);
-  await openFirstChartEditor(page);
+  const quick = await openFirstQuickChartEditor(page);
   const removedPanelId = await page.locator(".chart-panel").first()
     .getAttribute("data-panel-id");
   const initialPanelCount = await page.locator(".chart-panel").count();
 
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Remove chart" }).click();
+  await quick.getByRole("button", { name: "Remove chart" }).click();
   await page.getByRole("dialog", { name: "Remove this chart?" })
     .getByRole("button", { name: "Remove chart" }).click();
-  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect(quick).toBeHidden();
   await expect(page.locator(".chart-panel")).toHaveCount(initialPanelCount - 1);
 
-  await page.locator(".chart-panel").first()
-    .getByRole("button", { name: "Edit chart" }).click();
-  const attemptsBeforeCancel = await page.evaluate(() => (
+  const editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
+  const attemptsBeforeDiscard = await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
   ));
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
-  await expect.poll(() => page.evaluate(() => (
+  await discardFullChartEditor(page, editor);
+  expect(await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
-  )), { timeout: 60_000 }).toBeGreaterThan(attemptsBeforeCancel);
+  ))).toBe(attemptsBeforeDiscard);
 
   const saved = await storedDashboard(page);
   const panelIds = saved.pages.flatMap(({ sections }) => (
@@ -565,7 +594,7 @@ test("reset completes with session fallback when browser storage is full", async
   expect(await storedDashboard(page)).toEqual(durableBefore);
 });
 
-test("successful reset clears renderer drafts and chart baseline", async ({ page }) => {
+test("successful reset clears renderer drafts and preserves the chart baseline", async ({ page }) => {
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
@@ -582,10 +611,13 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
     sectionTitle: await sectionTitleInput.inputValue(),
   };
   await sectionTitleInput.fill("Reset-only section draft");
-  await page.locator(".chart-panel").first()
-    .getByRole("button", { name: "Edit chart" }).click();
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
-  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  let editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  const chartTitle = editor.getByLabel("Chart title");
+  const baselineChartTitle = await chartTitle.inputValue();
+  await discardFullChartEditor(page, editor);
+  await expect(page.getByRole("navigation", { name: "Pending Build work" })
+    .getByText("Chart changes", { exact: true })).toHaveCount(0);
 
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
@@ -597,15 +629,17 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
     .toBeVisible();
 
   await page.getByRole("button", { name: "Build" }).click();
-  const attemptsBeforeCancel = await page.evaluate(() => (
+  await expect(page.getByRole("navigation", { name: "Pending Build work" })).toHaveCount(0);
+  const attemptsBeforeDiscard = await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
   ));
-  await page.locator(".chart-panel").first()
-    .getByRole("button", { name: "Edit chart" }).click();
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
-  await expect.poll(() => page.evaluate(() => (
+  editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  await expect(editor.getByLabel("Chart title")).toHaveValue(baselineChartTitle);
+  await discardFullChartEditor(page, editor);
+  expect(await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
-  )), { timeout: 60_000 }).toBeGreaterThan(attemptsBeforeCancel);
+  ))).toBe(attemptsBeforeDiscard);
 
   await page.reload();
   await openDashboardPage(page, "biomedical");
@@ -617,6 +651,10 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
     exact: true,
   }))
     .toBeVisible();
+  editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  await expect(editor.getByLabel("Chart title")).toHaveValue(baselineChartTitle);
+  await discardFullChartEditor(page, editor);
 });
 
 test("wizard create transaction coalesces, locks dismissal, and preserves session work when storage is full", async ({ page }) => {
@@ -696,18 +734,19 @@ test("edit-session save and reset use session fallback when storage is full", as
     .toBeVisible();
 });
 
-test("final Build remains locked until chart edit context closes", async ({ page }) => {
-  await openFirstChartEditor(page);
-  const editor = page.locator(".chart-editor-v3");
+test("final Build remains locked until dirty chart edit context resolves", async ({ page }) => {
+  const editor = await openFirstFullChartEditor(page);
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  await editor.getByLabel("Chart title").fill("Finish-locked chart draft");
   const finishBuild = page.getByRole("button", { name: "Finish Build", exact: true });
   await expect(finishBuild).toBeDisabled();
   await expect(editor).toBeVisible();
-  await expect(editor.getByRole("button", { name: "Cancel" })).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Discard changes", exact: true })).toBeVisible();
 
-  const attemptsBeforeCancel = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
-  await editor.getByRole("button", { name: "Cancel" }).click();
+  const attemptsBeforeDiscard = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
+  await discardFullChartEditor(page, editor);
   await expect(editor).toBeHidden();
   await expect(finishBuild).toBeEnabled();
-  await expect.poll(() => page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__), { timeout: 5_000 })
-    .toBe(attemptsBeforeCancel + 1);
+  expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))
+    .toBe(attemptsBeforeDiscard);
 });

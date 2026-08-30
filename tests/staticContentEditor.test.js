@@ -145,6 +145,12 @@ test("Text/Image submission exposes one busy status and disables every exit or m
   });
 });
 
+test("Text/Image footer Cancel closes a clean editor and confirms only dirty work", () => {
+  assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: false }), "close");
+  assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: true }), "confirm");
+  assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: true, disabled: true }), "ignore");
+});
+
 test("embedded QMD media uses displayName as the initial nondecorative alt fallback", () => {
   const dashboard = makeDashboardV5();
   const mediaItem = makeMediaItem({

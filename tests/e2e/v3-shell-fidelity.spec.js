@@ -1,6 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
 
+async function openFullChartEditor(page, panel) {
+  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const full = page.getByRole("dialog", { name: "Edit chart" });
+  await expect(full).toBeVisible();
+  return full;
+}
+
 const CONTROL_URL = "http://127.0.0.1:4174";
 
 async function readCanvasState(page) {
@@ -89,11 +99,6 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
     localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
   ))).toBe(savedLayout);
 
-  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
-  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
-  await expect(target).toHaveClass(/selected/);
-  await expect(page.locator(".chart-editor-v3")).toBeVisible();
-
   const clearance = await page.evaluate(() => {
     const chart = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
     const panel = document.querySelector("#dashboard-map-panel").getBoundingClientRect();
@@ -116,6 +121,11 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
   expect(await page.evaluate(() => (
     localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
   ))).toBe(savedLayout);
+
+  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  const full = await openFullChartEditor(page, target);
+  await expect(target).toHaveClass(/selected/);
+  await expect(full.getByRole("navigation", { name: "Chart editing steps" })).toBeVisible();
 });
 
 test("Build Structure double click navigates, highlights, and focuses section rename", async ({ page }) => {
@@ -155,8 +165,10 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   await editChart.focus();
   await page.keyboard.press("Enter");
 
-  const editor = page.locator(".chart-editor-v3");
-  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "Edit chart" });
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
   const title = editor.getByLabel("Chart title");
   await title.fill("Draft survives crown navigation");
 
@@ -166,11 +178,12 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   await expect(editor).toHaveCount(1);
   await expect(title).toHaveValue("Draft survives crown navigation");
 
-  await editChart.focus();
-  await page.keyboard.press("Enter");
   await expect(editor).toBeVisible();
   await expect(title).toHaveValue("Draft survives crown navigation");
-  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(title).toBeFocused();
+  await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Discard changes?" })
+    .getByRole("button", { name: "Discard", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await expect(blockedPage).toBeEnabled();
   await blockedPage.click();
@@ -509,14 +522,16 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await expect(editChart).toBeFocused();
   await page.keyboard.press("Enter");
 
-  const editor = page.locator(".chart-editor-v3");
-  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "Edit chart" });
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
   const chartDraft = editor.getByLabel("Chart title");
-  const saveChanges = editor.getByRole("button", { name: "Save changes", exact: true });
+  const discardChanges = editor.getByRole("button", { name: "Discard changes", exact: true });
   await chartDraft.fill("Phone-preserved confirmed cases");
   await chartDraft.click();
   await expect(chartDraft).toBeFocused();
-  await expect(saveChanges).toBeEnabled();
+  await expect(discardChanges).toBeEnabled();
 
   const before = await page.evaluate(() => {
     const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
@@ -535,7 +550,7 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await expect(workspace).toHaveCount(1);
   await expect(workspace).toBeVisible();
   await expect(chartDraft).toBeVisible();
-  await expect(saveChanges).toBeVisible();
+  await expect(discardChanges).toBeVisible();
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
   await expect(page.locator(
     '.build-tree-item-wrap[aria-label="Phone-preserved Biomedical layout"] > .build-tree-row .build-tree-label',
@@ -570,18 +585,20 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   expect(switchTarget.height).toBeGreaterThanOrEqual(44);
   await switchToView.click();
   await expect(appFrame).toHaveAttribute("data-dashboard-mode", "build");
-  await expect(page.getByRole("alert")).toHaveText(
+  await expect(buildNotice.getByRole("alert")).toHaveText(
     "Finish or cancel the open chart editor before leaving Build.",
   );
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
 
   await page.setViewportSize({ width: 1200, height: 900 });
   await expect(workspace).toBeVisible();
-  await editChart.focus();
-  await page.keyboard.press("Enter");
+  await chartDraft.click();
   await expect(editor).toBeVisible();
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
-  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(chartDraft).toBeFocused();
+  await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Discard changes?" })
+    .getByRole("button", { name: "Discard", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await renamedPage.getByRole("button", { name: `Collapse ${layoutDraftValue}`, exact: true }).click();
   await expect(renamedPage).toHaveAttribute("aria-expanded", "false");
