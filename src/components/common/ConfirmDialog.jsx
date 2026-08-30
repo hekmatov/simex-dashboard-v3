@@ -28,7 +28,7 @@ export default function ConfirmDialog({
       open,
       initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
       onEscape: dismiss,
-      className: "confirm-dialog-backdrop",
+      className: "confirm-dialog-backdrop dashboard-dialog-backdrop",
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": `${id}-title`,
@@ -37,25 +37,33 @@ export default function ConfirmDialog({
     },
     React.createElement(
       "section",
-      { className: "confirm-dialog" },
-      React.createElement("h2", { id: `${id}-title` }, title),
-      message
-        ? React.createElement("p", { id: `${id}-message` }, message)
-        : null,
-      error
-        ? React.createElement(
-            "p",
-            {
-              id: `${id}-error`,
-              className: "confirm-dialog-error",
-              role: "alert",
-            },
-            error,
-          )
-        : null,
+      { className: "confirm-dialog dashboard-dialog dashboard-dialog--danger dashboard-dialog--compact" },
+      React.createElement(
+        "header",
+        { className: "dashboard-dialog__header" },
+        React.createElement("h2", { id: `${id}-title` }, title),
+      ),
       React.createElement(
         "div",
-        { className: "confirm-dialog-actions" },
+        { className: "confirm-dialog-body dashboard-dialog__body" },
+        message
+          ? React.createElement("p", { id: `${id}-message` }, message)
+          : null,
+        error
+          ? React.createElement(
+              "p",
+              {
+                id: `${id}-error`,
+                className: "confirm-dialog-error",
+                role: "alert",
+              },
+              error,
+            )
+          : null,
+      ),
+      React.createElement(
+        "div",
+        { className: "confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions" },
         React.createElement(
           "button",
           {

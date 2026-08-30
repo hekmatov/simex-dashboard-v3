@@ -42,7 +42,7 @@ export default function ChartConversionDialog({
   return React.createElement(
     "div",
     {
-      className: "confirm-dialog-backdrop chart-conversion-backdrop",
+      className: "confirm-dialog-backdrop chart-conversion-backdrop dashboard-dialog-backdrop",
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": "chart-conversion-title",
@@ -54,25 +54,32 @@ export default function ChartConversionDialog({
     },
     React.createElement(
       "section",
-      { className: "confirm-dialog chart-conversion-dialog" },
+      { className: "confirm-dialog chart-conversion-dialog dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact" },
       React.createElement(
         "header",
-        null,
-        React.createElement("p", { className: "eyebrow" }, "Change chart type"),
+        { className: "dashboard-dialog__header" },
         React.createElement(
-          "h2",
-          { id: "chart-conversion-title" },
-          plan.kind === "compatible"
-            ? "Compatible change"
-            : "Role remapping required",
+          "div",
+          null,
+          React.createElement("p", { className: "eyebrow" }, "Change chart type"),
+          React.createElement(
+            "h2",
+            { id: "chart-conversion-title" },
+            plan.kind === "compatible"
+              ? "Compatible change"
+              : "Role remapping required",
+          ),
         ),
       ),
       React.createElement(
-        "p",
-        { id: "chart-conversion-consequences" },
-        `Convert ${plan.sourceTypeId} to ${plan.targetTypeId}. Review what is kept and removed before applying this change.`,
-      ),
-      preserved.length > 0
+        "div",
+        { className: "confirm-dialog-body dashboard-dialog__body" },
+        React.createElement(
+          "p",
+          { id: "chart-conversion-consequences" },
+          `Convert ${plan.sourceTypeId} to ${plan.targetTypeId}. Review what is kept and removed before applying this change.`,
+        ),
+        preserved.length > 0
         ? React.createElement(
             "section",
             { className: "chart-conversion-summary" },
@@ -210,16 +217,17 @@ export default function ChartConversionDialog({
             error,
           )
         : null,
-      requiredRolesBlocked
-        ? React.createElement(
-            "p",
-            { className: "wizard-error", role: "alert" },
-            "Complete every required data role before applying this change.",
-          )
-        : null,
+        requiredRolesBlocked
+          ? React.createElement(
+              "p",
+              { className: "wizard-error", role: "alert" },
+              "Complete every required data role before applying this change.",
+            )
+          : null,
+      ),
       React.createElement(
         "div",
-        { className: "confirm-dialog-actions" },
+        { className: "confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions" },
         React.createElement(
           "button",
           {

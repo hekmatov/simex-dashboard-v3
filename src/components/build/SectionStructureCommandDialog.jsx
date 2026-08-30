@@ -26,9 +26,9 @@ export default function SectionStructureCommandDialog({ command, dashboard, page
 
   const targetPage = destinations.find(({ id }) => id === destinationId);
   return (
-    <aside className="section-structure-command-dialog" role="dialog" aria-modal="false" aria-label={`${command} ${section.title}`}>
+    <aside className="section-structure-command-dialog dashboard-dialog dashboard-dialog--utility dashboard-dialog--standard" role="dialog" aria-modal="false" aria-label={`${command} ${section.title}`}>
       <form onSubmit={submit}>
-        <header><div><span className="eyebrow">Section command</span><h3>{command === "move" ? "Move to Page" : command === "merge" ? "Merge Section" : "Remove Section"}</h3></div><button type="button" className="secondary" onClick={onCancel}>Close</button></header>
+        <header className="dashboard-dialog__header"><div><span className="eyebrow">Section command</span><h3>{command === "move" ? "Move to Page" : command === "merge" ? "Merge Section" : "Remove Section"}</h3></div><button type="button" className="secondary" onClick={onCancel}>Close</button></header>
         {command === "move" && <>
           <label>Destination Page<select value={destinationId} onChange={(event) => { setDestinationId(event.target.value); setPlacement("first"); }}>{destinations.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.label ?? candidate.title}</option>)}</select></label>
           <label>Placement<select value={placement} onChange={(event) => setPlacement(event.target.value)}><option value="first">First Section</option>{(targetPage?.sections ?? []).map((candidate) => <option key={candidate.id} value={`after:${candidate.id}`}>After {candidate.title}</option>)}</select></label>
@@ -37,7 +37,7 @@ export default function SectionStructureCommandDialog({ command, dashboard, page
         {command === "remove" && <label>Content disposition<select value={disposition} onChange={(event) => setDisposition(event.target.value)}><option value="delete-charts">Delete placed charts</option><option value="merge-above" disabled={page.sections[0]?.id === section.id}>Merge into Section above</option><option value="merge-below" disabled={page.sections.at(-1)?.id === section.id}>Merge into Section below</option></select></label>}
         <section className="structure-named-proof" aria-label="Named consequences"><strong>Affected charts</strong><p>{proof.charts.join(", ") || "None"}</p><strong>Chrono Groups</strong><p>{proof.chronoGroups.join(", ") || "None"}</p><strong>Scenes</strong><p>{proof.scenes.join(", ") || "None"}</p><p>{proof.summary}</p></section>
         {requiresAcknowledgement && <label className="structure-confirm-check"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />I understand these named consequences.</label>}
-        <footer><button type="submit" disabled={(requiresAcknowledgement && !acknowledged) || (command === "move" && !destinationId) || (command === "merge" && !mergeTargetId)}>Confirm</button><button type="button" className="secondary" onClick={onCancel}>Cancel</button></footer>
+        <footer className="dashboard-dialog__footer dashboard-dialog__actions"><button type="submit" disabled={(requiresAcknowledgement && !acknowledged) || (command === "move" && !destinationId) || (command === "merge" && !mergeTargetId)}>Confirm</button><button type="button" className="secondary" onClick={onCancel}>Cancel</button></footer>
       </form>
     </aside>
   );

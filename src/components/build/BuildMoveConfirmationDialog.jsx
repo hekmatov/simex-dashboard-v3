@@ -13,8 +13,8 @@ export default function BuildMoveConfirmationDialog({ analysis, invoker = null, 
   if (!analysis) return null;
   const consequences = analysis.consequences ?? [];
   return (
-    <div className="build-move-dialog-backdrop" role="presentation">
-      <section ref={dialogRef} className="build-move-dialog" role="alertdialog" aria-modal="true" aria-labelledby="build-move-confirm-title" aria-describedby="build-move-confirm-description" onKeyDown={(event) => {
+    <div className="build-move-dialog-backdrop dashboard-dialog-backdrop" role="presentation">
+      <section ref={dialogRef} className="build-move-dialog dashboard-dialog dashboard-dialog--danger dashboard-dialog--compact" role="alertdialog" aria-modal="true" aria-labelledby="build-move-confirm-title" aria-describedby="build-move-confirm-description" onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
           onCancel?.();
@@ -22,16 +22,20 @@ export default function BuildMoveConfirmationDialog({ analysis, invoker = null, 
         }
         trapDialogTabKey(event, dialogRef.current);
       }}>
-        <h2 id="build-move-confirm-title">Move panels across Pages?</h2>
-        <p id="build-move-confirm-description">This move changes the following named Scenes. No layout or Scene mutation occurs until you confirm.</p>
-        <ul>
-          {consequences.map((item, index) => (
-            <li key={`${item.type}:${item.sceneId}:${index}`}>
-              <strong>{item.sceneName}</strong>: {consequenceText(item)}
-            </li>
-          ))}
-        </ul>
-        <div className="dialog-actions">
+        <header className="dashboard-dialog__header">
+          <h2 id="build-move-confirm-title">Move panels across Pages?</h2>
+        </header>
+        <div className="dashboard-dialog__body">
+          <p id="build-move-confirm-description">This move changes the following named Scenes. No layout or Scene mutation occurs until you confirm.</p>
+          <ul>
+            {consequences.map((item, index) => (
+              <li key={`${item.type}:${item.sceneId}:${index}`}>
+                <strong>{item.sceneName}</strong>: {consequenceText(item)}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
           <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
           <button ref={confirmRef} type="button" onClick={onConfirm}>Confirm move</button>
         </div>

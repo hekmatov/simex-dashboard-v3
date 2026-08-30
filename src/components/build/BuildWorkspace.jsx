@@ -786,7 +786,7 @@ export default function BuildWorkspace({
           ), document.body)}
           {activeAuxiliary && activeAuxiliary !== "source-content" && typeof document !== "undefined" && createPortal((
             <aside
-              className="build-authoring-auxiliary"
+              className="build-authoring-auxiliary dashboard-dialog dashboard-dialog--workspace dashboard-dialog--wide"
               {...dashboardThemeRootProps(themeProjection)}
               data-authoring-surface={renderedAuxiliary}
               role="dialog"

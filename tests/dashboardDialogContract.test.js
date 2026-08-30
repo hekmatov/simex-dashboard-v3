@@ -16,6 +16,21 @@ DIALOG_SURFACES.push(
   ["src/components/ColorField.jsx", "dashboard-dialog--compact"],
 );
 
+DIALOG_SURFACES.push(
+  ["src/components/common/ConfirmDialog.jsx", "dashboard-dialog--danger"],
+  ["src/components/chart-authoring/ChartConversionDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/build/BuildLayoutCreateDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/build/BuildMoveConfirmationDialog.jsx", "dashboard-dialog--danger"],
+  ["src/components/build/BuildMoveDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/build/DashboardPackageExportDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/build/DashboardPackageReviewDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/build/DeleteDashboardContentDialog.jsx", "dashboard-dialog--danger"],
+  ["src/components/build/SectionStructureCommandDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/build/BuildWorkspace.jsx", "dashboard-dialog--workspace"],
+  ["src/components/app-shell/ApplicationRecovery.jsx", "dashboard-dialog--utility"],
+  ["src/components/app-shell/RestoreOnlineDashboardDialog.jsx", "dashboard-dialog--danger"],
+);
+
 test("dashboard dialog contract loads after the base dashboard grammar", async () => {
   const main = await read("src/main.jsx");
   assert.ok(

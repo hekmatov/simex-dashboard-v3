@@ -32,6 +32,19 @@
 .dashboard-dialog--utility { background: var(--simex-surface-panel); }
 .dashboard-dialog--danger { border-color: var(--simex-error); }
 
+.confirm-dialog.dashboard-dialog,
+.build-move-dialog.dashboard-dialog {
+  gap: 0;
+  padding: 0;
+}
+
+.dashboard-dialog__form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
+}
+
 .source-content-workspace.dashboard-dialog { block-size: min(820px, calc(100dvh - 32px)); }
 .source-viewer-panel.dashboard-dialog { block-size: min(760px, calc(100dvh - 32px)); }
 .settings-color-popover.dashboard-dialog {
@@ -127,6 +140,58 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.dashboard-dialog--utility > :where(p, ul, dl),
+.dashboard-dialog--danger > :where(p, ul, dl) {
+  margin-inline: 20px;
+}
+
+.dashboard-dialog--danger {
+  box-shadow: inset 4px 0 0 var(--simex-error), var(--simex-style-shell-shadow);
+}
+
+.dashboard-dialog--danger .dashboard-dialog__header .eyebrow,
+.dashboard-dialog--danger > .eyebrow {
+  color: var(--simex-error);
+}
+
+.dashboard-dialog--danger button.danger {
+  color: var(--simex-on-accent);
+  background: var(--simex-error);
+  border-color: var(--simex-error);
+}
+
+/* Build owns the portal and anchored placement for these non-modal surfaces. */
+.build-authoring-auxiliary.dashboard-dialog {
+  display: grid;
+  inline-size: clamp(380px, 28vw, 480px);
+  max-block-size: calc(100vh - 198px);
+  margin: 0;
+  overflow: auto;
+}
+
+.build-authoring-auxiliary.dashboard-dialog:is(
+  [data-authoring-surface="chrono-group"],
+  [data-authoring-surface="scene"]
+) {
+  inline-size: min(980px, calc(100vw - 428px));
+}
+
+.build-authoring-auxiliary.dashboard-dialog[data-authoring-surface="scene"] {
+  inline-size: auto;
+}
+
+.build-authoring-auxiliary.dashboard-dialog[data-authoring-surface="chrono-group"] {
+  block-size: calc(100dvh - 198px);
+  overflow: hidden;
+}
+
+.section-structure-command-dialog.dashboard-dialog {
+  inline-size: min(420px, calc(100vw - 32px));
+  max-block-size: calc(100vh - 164px);
+  margin: 0;
+  overflow: auto;
 }
 
 .dashboard-dialog :where(button, input, select, textarea, [role="button"]):focus-visible {

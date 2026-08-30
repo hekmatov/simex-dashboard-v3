@@ -20,23 +20,27 @@ export default function RestoreOnlineDashboardDialog({
       open
       initialFocusSelector='[data-modal-initial-focus="true"]'
       onEscape={dismiss}
-      className="confirm-dialog-backdrop"
+      className="confirm-dialog-backdrop dashboard-dialog-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="restore-online-dashboard-title"
       aria-describedby="restore-online-dashboard-warning restore-online-dashboard-download-advice"
       tabIndex={-1}
     >
-      <section className="confirm-dialog restore-online-dashboard-dialog">
-        <h2 id="restore-online-dashboard-title">Restore online dashboard?</h2>
-        <p id="restore-online-dashboard-warning">
-          Restoring replaces your local dashboard with the online dashboard served by this SimEx deployment.
-        </p>
-        <p id="restore-online-dashboard-download-advice">
-          Download a dashboard package first if you want to preserve your local work.
-        </p>
-        {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
-        <div className="confirm-dialog-actions">
+      <section className="confirm-dialog restore-online-dashboard-dialog dashboard-dialog dashboard-dialog--danger dashboard-dialog--compact">
+        <header className="dashboard-dialog__header">
+          <h2 id="restore-online-dashboard-title">Restore online dashboard?</h2>
+        </header>
+        <div className="confirm-dialog-body dashboard-dialog__body">
+          <p id="restore-online-dashboard-warning">
+            Restoring replaces your local dashboard with the online dashboard served by this SimEx deployment.
+          </p>
+          <p id="restore-online-dashboard-download-advice">
+            Download a dashboard package first if you want to preserve your local work.
+          </p>
+          {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
+        </div>
+        <div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
           <button
             type="button"
             className="secondary"

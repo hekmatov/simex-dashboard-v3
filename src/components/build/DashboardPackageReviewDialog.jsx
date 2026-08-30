@@ -14,7 +14,7 @@ export default function DashboardPackageReviewDialog({
     <ModalFocusScope
       as="div"
       open
-      className="confirm-dialog-backdrop dashboard-package-review-backdrop"
+      className="confirm-dialog-backdrop dashboard-package-review-backdrop dashboard-dialog-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dashboard-package-review-title"
@@ -23,18 +23,23 @@ export default function DashboardPackageReviewDialog({
       onEscape={busy ? noop : onCancel}
       tabIndex={-1}
     >
-      <section className="confirm-dialog dashboard-package-review">
-        <p className="eyebrow">Dashboard package</p>
-        <h2 id="dashboard-package-review-title">Review package contents</h2>
-        <p id="dashboard-package-review-description">
-          Created{" "}
-          <time dateTime={candidate.exportedAt ?? undefined}>
-            {candidate.exportedAt
-              ? formatPackageTimestamp(candidate.exportedAt)
-              : "Creation date unavailable"}
-          </time>
-        </p>
-        <ul className="dashboard-package-manifest">
+      <section className="confirm-dialog dashboard-package-review dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact">
+        <header className="dashboard-dialog__header">
+          <div>
+            <p className="eyebrow">Dashboard package</p>
+            <h2 id="dashboard-package-review-title">Review package contents</h2>
+          </div>
+        </header>
+        <div className="confirm-dialog-body dashboard-dialog__body">
+          <p id="dashboard-package-review-description">
+            Created{" "}
+            <time dateTime={candidate.exportedAt ?? undefined}>
+              {candidate.exportedAt
+                ? formatPackageTimestamp(candidate.exportedAt)
+                : "Creation date unavailable"}
+            </time>
+          </p>
+          <ul className="dashboard-package-manifest">
           {candidate.summary.pages.map((page) => (
             <li key={page.id}>
               <span><strong>Page:</strong> {page.name}</span>
@@ -54,9 +59,10 @@ export default function DashboardPackageReviewDialog({
               </ul>
             </li>
           ))}
-        </ul>
-        {error ? <p className="confirm-dialog-error" role="alert">{error}</p> : null}
-        <div className="confirm-dialog-actions">
+          </ul>
+          {error ? <p className="confirm-dialog-error" role="alert">{error}</p> : null}
+        </div>
+        <div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
           <button
             type="button"
             className="secondary"

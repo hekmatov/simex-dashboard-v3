@@ -42,10 +42,10 @@ export default function BuildMoveDialog({ open = false, dashboard = {}, source, 
     if (move) onMove?.(move);
   };
   return (
-    <div className="build-move-dialog-backdrop" role="presentation" onMouseDown={(event) => {
+    <div className="build-move-dialog-backdrop dashboard-dialog-backdrop" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onCancel?.();
     }}>
-      <section ref={dialogRef} className="build-move-dialog" role="dialog" aria-modal="true" aria-labelledby="build-move-dialog-title" onKeyDown={(event) => {
+      <section ref={dialogRef} className="build-move-dialog dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact" role="dialog" aria-modal="true" aria-labelledby="build-move-dialog-title" onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
           onCancel?.();
@@ -53,15 +53,19 @@ export default function BuildMoveDialog({ open = false, dashboard = {}, source, 
         }
         trapDialogTabKey(event, dialogRef.current);
       }}>
-        <form onSubmit={submit}>
-          <h2 id="build-move-dialog-title">Move {sourceLabel}</h2>
-          <label>
-            Destination
-            <select ref={firstControlRef} aria-label="Destination" value={destinationIndex} onChange={(event) => setDestinationIndex(event.target.value)}>
-              {destinations.map((destination, index) => <option value={String(index)} key={`${destination.label}:${index}`}>{destination.label}</option>)}
-            </select>
-          </label>
-          <div className="dialog-actions">
+        <form className="dashboard-dialog__form" onSubmit={submit}>
+          <header className="dashboard-dialog__header">
+            <h2 id="build-move-dialog-title">Move {sourceLabel}</h2>
+          </header>
+          <div className="dashboard-dialog__body">
+            <label>
+              Destination
+              <select ref={firstControlRef} aria-label="Destination" value={destinationIndex} onChange={(event) => setDestinationIndex(event.target.value)}>
+                {destinations.map((destination, index) => <option value={String(index)} key={`${destination.label}:${index}`}>{destination.label}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
             <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
             <button type="submit" disabled={destinations.length === 0}>Move</button>
           </div>

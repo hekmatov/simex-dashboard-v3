@@ -72,24 +72,30 @@ export default function ApplicationRecovery({
         <ModalFocusScope
           as="div"
           open
-          className="confirm-dialog-backdrop"
+          className="confirm-dialog-backdrop dashboard-dialog-backdrop"
           role="dialog"
           aria-modal="true"
           aria-labelledby="recovery-package-review-title"
           initialFocusSelector={'[data-modal-initial-focus="true"]'}
           onEscape={busy ? undefined : closeReview}
         >
-          <section className="confirm-dialog application-recovery-review">
-            <p className="eyebrow">Dashboard package</p>
-            <h2 id="recovery-package-review-title">Replace the unavailable dashboard?</h2>
-            <p>Review the complete dashboard identity before importing it.</p>
-            <dl>
-              <div><dt>Program</dt><dd>{candidate.summary.program}</dd></div>
-              <div><dt>Scenario</dt><dd>{candidate.summary.scenario}</dd></div>
-              <div><dt>Pages</dt><dd>{candidate.summary.pages}</dd></div>
-              <div><dt>Charts</dt><dd>{candidate.summary.charts}</dd></div>
-            </dl>
-            <div className="confirm-dialog-actions">
+          <section className="confirm-dialog application-recovery-review dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact">
+            <header className="dashboard-dialog__header">
+              <div>
+                <p className="eyebrow">Dashboard package</p>
+                <h2 id="recovery-package-review-title">Replace the unavailable dashboard?</h2>
+              </div>
+            </header>
+            <div className="confirm-dialog-body dashboard-dialog__body">
+              <p>Review the complete dashboard identity before importing it.</p>
+              <dl>
+                <div><dt>Program</dt><dd>{candidate.summary.program}</dd></div>
+                <div><dt>Scenario</dt><dd>{candidate.summary.scenario}</dd></div>
+                <div><dt>Pages</dt><dd>{candidate.summary.pages}</dd></div>
+                <div><dt>Charts</dt><dd>{candidate.summary.charts}</dd></div>
+              </dl>
+            </div>
+            <div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
               <button
                 type="button"
                 className="secondary"
