@@ -24,7 +24,7 @@ export default function AudienceSnapshotMonitor({
   contentRenderContext,
 }) {
   const [imageUrl, setImageUrl] = React.useState("");
-  const [captureSource, setCaptureSource] = React.useState(null);
+  const [captureNonce, setCaptureNonce] = React.useState(0);
   const [captureUnavailable, setCaptureUnavailable] = React.useState(false);
   const sourceRef = React.useRef(null);
   const timerRef = React.useRef(null);
@@ -46,11 +46,7 @@ export default function AudienceSnapshotMonitor({
     }
     captureRunningRef.current = true;
     pendingCaptureRef.current = false;
-    setCaptureSource({
-      dashboard: latestRef.current.dashboard,
-      presentationState: latestRef.current.presentationState,
-      themeProjection: latestRef.current.themeProjection,
-    });
+    setCaptureNonce((current) => current + 1);
   }, []);
 
   const requestCapture = React.useCallback((delay, { urgent = false } = {}) => {
@@ -84,14 +80,14 @@ export default function AudienceSnapshotMonitor({
   }, [playing, requestCapture, timeKey]);
 
   React.useEffect(() => {
-    if (!captureSource) return undefined;
+    if (captureNonce === 0) return undefined;
     let cancelled = false;
     const settleTimer = window.setTimeout(async () => {
       try {
         const { default: html2canvas } = await import("html2canvas");
         if (cancelled || !sourceRef.current) return;
         const canvas = await html2canvas(sourceRef.current, {
-          backgroundColor: captureSource.themeProjection.cssVariables["--simex-surface-canvas"] ?? "#f4f5f5",
+          backgroundColor: latestRef.current.themeProjection.cssVariables["--simex-surface-canvas"] ?? "#f4f5f5",
           height: 720,
           logging: false,
           scale: 0.75,
@@ -110,7 +106,6 @@ export default function AudienceSnapshotMonitor({
         if (!cancelled) {
           lastCaptureAtRef.current = Date.now();
           captureRunningRef.current = false;
-          setCaptureSource(null);
           if (pendingCaptureRef.current && timerRef.current === null) {
             const delay = latestRef.current.playing
               ? PLAYING_CAPTURE_INTERVAL_MS
@@ -125,7 +120,21 @@ export default function AudienceSnapshotMonitor({
       cancelled = true;
       window.clearTimeout(settleTimer);
     };
-  }, [captureSource, requestCapture]);
+  }, [captureNonce, requestCapture]);
+
+  React.useEffect(() => {
+    if (!sourceRef.current) return undefined;
+    const observer = new MutationObserver(() => {
+      requestCapture(IDLE_DEBOUNCE_MS);
+    });
+    observer.observe(sourceRef.current, {
+      attributes: true,
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+    return () => observer.disconnect();
+  }, [requestCapture]);
 
   React.useEffect(() => () => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
@@ -144,23 +153,27 @@ export default function AudienceSnapshotMonitor({
           <p>{captureUnavailable ? "Preview unavailable" : "Preparing preview"}</p>
         )}
       </div>
-      {captureSource && createPortal(
+      {createPortal(
         <div
           ref={sourceRef}
           className="audience-snapshot-source"
           aria-hidden="true"
           inert
-          data-dashboard-style={captureSource.themeProjection.dashboardStyle}
-          data-dashboard-color-profile={captureSource.themeProjection.dashboardColorProfile}
-          data-resolved-appearance={captureSource.themeProjection.resolvedAppearance}
-          style={captureSource.themeProjection.cssVariables}
         >
-          <AudienceDisplay
-            dashboard={captureSource.dashboard}
-            connectionStatus="connected"
-            projection={projectPresentationState(captureSource.presentationState)}
-            contentRenderContext={contentRenderContext}
-          />
+          <div
+            className="audience-theme-root"
+            data-dashboard-style={themeProjection.dashboardStyle}
+            data-dashboard-color-profile={themeProjection.dashboardColorProfile}
+            data-resolved-appearance={themeProjection.resolvedAppearance}
+            style={themeProjection.cssVariables}
+          >
+            <AudienceDisplay
+              dashboard={dashboard}
+              connectionStatus="connected"
+              projection={projectPresentationState(presentationState)}
+              contentRenderContext={contentRenderContext}
+            />
+          </div>
         </div>,
         document.body,
       )}

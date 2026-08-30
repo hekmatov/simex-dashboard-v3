@@ -456,6 +456,28 @@ test("Present orders monitor, displayed charts, then options and captures a shar
     .toEqual([960, 540]);
 });
 
+test("Present keeps a live themed audience mirror for monitor captures", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Present", exact: true }).click();
+  const choices = page.locator(".present-chart-choice");
+  await expect(choices.nth(1)).toBeVisible();
+  await choices.nth(0).getByRole("checkbox").check();
+  await choices.nth(1).getByRole("checkbox").check();
+
+  const preview = page.locator('.audience-snapshot-frame img[alt="Current audience scene"]');
+  await expect(preview).toBeVisible();
+
+  const mirror = page.locator(".audience-snapshot-source .audience-theme-root .audience-display");
+  await expect(mirror).toBeAttached();
+  await expect(mirror.locator(".displayed-chart-grid")).toHaveClass(/displayed-count-2/);
+  await expect.poll(() => mirror.evaluate((scene) => ({
+    width: scene.getBoundingClientRect().width,
+    height: scene.getBoundingClientRect().height,
+  }))).toEqual({ width: 1280, height: 720 });
+});
+
 test("selected dashboard style reaches crown, Build authoring, and Present chrome", async ({ page }) => {
   for (const style of NATIVE_STYLES) {
     await openBiomedicalLook(page);

@@ -431,7 +431,8 @@
   z-index: -1;
 }
 
-.audience-snapshot-source > .audience-display {
+.audience-snapshot-source > .audience-theme-root,
+.audience-snapshot-source > .audience-theme-root > .audience-display {
   height: 720px;
   max-height: 720px;
   min-height: 720px;
