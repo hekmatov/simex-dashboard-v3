@@ -28,7 +28,7 @@ test("ordinary chart evidence action opens the dedicated viewer and returns to i
   await sourceAction.click();
   const viewer = await popupPromise;
   await viewer.waitForLoadState("domcontentloaded");
-  await expect(viewer.getByRole("heading", { name: "Simulation exercise biomedical dataset" })).toBeVisible();
+  await expect(viewer.getByRole("heading", { name: "Biomedical cases", exact: true })).toBeVisible();
   const provenance = viewer.getByRole("definition");
   await expect(viewer.getByText("Invoking chart", { exact: true })).toBeVisible();
   await expect(provenance).toContainText(["Confirmed cases", "national_total_cases", "bio_cases", "data/biomedical/cases.csv"]);

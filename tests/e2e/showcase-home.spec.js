@@ -180,7 +180,10 @@ test("Home exposes the exact public beta orientation contract", async ({ page })
 test("hero action focus remains visible against the default hero surface", async ({ page }) => {
   await openLanding(page);
   const action = page.locator(".showcase-actions button").first();
+  await page.keyboard.press("Tab");
   await action.focus();
+  await expect(action).toBeFocused();
+  expect(await action.evaluate((button) => button.matches(":focus-visible"))).toBe(true);
   const focus = await action.evaluate((button) => {
     const hero = button.closest(".showcase-hero");
     const toRgb = (value) => value.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number);

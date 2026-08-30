@@ -199,7 +199,9 @@ test("chart accessibility is off by default and controlled from edit mode", asyn
   await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Build" }).click();
-  const toggle = page.getByRole("checkbox", {
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  const toggle = more.getByRole("checkbox", {
     name: /Chart accessibility/,
   });
   await expect(toggle).not.toBeChecked();
@@ -243,9 +245,9 @@ test("priority collections remain independent while Chrono advances", async ({
   const locked = page.locator('[data-panel-id="e2e_priority_locked"]');
   await reranked.scrollIntoViewIfNeeded();
   await expect(firstCollectionItem(reranked))
-    .toHaveAttribute("data-collection-entity-id", "A");
+    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
   await expect(firstCollectionItem(locked))
-    .toHaveAttribute("data-collection-entity-id", "A");
+    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
 
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
@@ -256,9 +258,9 @@ test("priority collections remain independent while Chrono advances", async ({
     '[data-chrono-section="national_outbreak"] [data-panel-id="e2e_priority_rerank"]',
   )).toHaveCount(0);
   await expect(firstCollectionItem(reranked))
-    .toHaveAttribute("data-collection-entity-id", "A");
+    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
   await expect(firstCollectionItem(locked))
-    .toHaveAttribute("data-collection-entity-id", "A");
+    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
 });
 
 test("fixed, scrollable, carousel, and priority collection modes share one live display contract", async ({
@@ -368,7 +370,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   await priority.scrollIntoViewIfNeeded();
   await expect(firstCollectionItem(priority)).toHaveAttribute(
     "data-collection-entity-id",
-    "Bravo",
+    'target:"Bravo"',
   );
 });
 
@@ -388,9 +390,11 @@ test("collection carousels remain independent while Chrono plays", async ({
   await expect(pauses).toHaveAttribute("data-collection-rotation-paused", "false");
   await independentPanel.scrollIntoViewIfNeeded();
   expect(await independent.getAttribute("data-collection-pause-on-playback")).toBeNull();
+  const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
+  await chronoButton.hover();
   await expect(independent).toHaveAttribute("data-collection-rotation-paused", "false");
 
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  await chronoButton.click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
   await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
   await controls.getByLabel("Playback frame")
@@ -499,7 +503,7 @@ function addPriorityPlaybackScenarios(dashboard) {
       "2027-02-21,B,5",
     ].join("\n"),
   );
-  const kpiChart = findChart(dashboard, "home_operational_pressure_kpis");
+  const kpiChart = findChart(dashboard, "bio_occupancy_collection");
   const section = biomedicalSection(dashboard);
   for (const [id, rerank] of [
     ["e2e_priority_rerank", true],
@@ -545,7 +549,7 @@ function addCollectionScenarios(dashboard) {
     ].join("\n"),
     {},
   );
-  const template = findChart(dashboard, "home_operational_pressure_kpis");
+  const template = findChart(dashboard, "bio_occupancy_collection");
   const section = biomedicalSection(dashboard);
   const scenarios = [
     {
@@ -623,7 +627,7 @@ function addPlaybackCarouselScenarios(dashboard) {
       "2027-02-21,B,5",
     ].join("\n"),
   );
-  const template = findChart(dashboard, "home_operational_pressure_kpis");
+  const template = findChart(dashboard, "bio_occupancy_collection");
   const section = biomedicalSection(dashboard);
   for (const [id, pauseCarousel] of [
     ["e2e_carousel_pause", true],

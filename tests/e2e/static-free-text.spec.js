@@ -118,7 +118,8 @@ test("Free-text toolbar authors portable semantic styles, emphasis, lists, and t
   await composer.fill("");
   await wizard.getByRole("button", { name: "Table" }).click();
   await expect(composer.locator("table")).toBeVisible();
-  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+  await expect(wizard.locator("#static-qmd-source-status"))
+    .toContainText("Preview is up to date.");
 });
 
 test("embedded image persists through reload and a second Text/Image creation", async ({ page }) => {

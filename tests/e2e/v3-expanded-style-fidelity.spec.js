@@ -17,6 +17,8 @@ const STYLE_OPTIONS = [
   { label: "Instrument", profile: "signal-instrument/calibrated-steel" },
 ];
 
+test.use({ serviceWorkers: "block" });
+
 async function captureStyleAuditFailure(page) {
   try {
     await expectNoRetiredDashboardStyle(page);
@@ -199,10 +201,10 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   await expectNoRetiredDashboardStyle(page);
 
   await full.getByRole("button", { name: /^Review\./ }).click();
-  const savingProjection = observePendingOwnerStyle(page, ownerId, "saving");
+  await installPendingOwnerStyleEvidence(page, ownerId, "saving");
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ = true; });
   await full.getByRole("button", { name: "Save changes", exact: true }).click();
-  const saving = await savingProjection;
+  const saving = await readPendingOwnerStyleEvidence(page);
   expect(saving).toMatchObject({
     count: 1,
     nodeIdentity: active.nodeIdentity,
@@ -340,3 +342,88 @@ test("phone View remains selected-style clean", async ({ page }) => {
   await expect(page.locator(".app-frame")).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
 });
+
+function installPendingOwnerStyleEvidence(page, ownerId, expectedState) {
+  return page.evaluate(({ id, state }) => {
+    globalThis.__SIMEX_PENDING_OWNER_STYLE_OBSERVER__?.disconnect();
+    globalThis.__SIMEX_PENDING_OWNER_STYLE_EVIDENCE__ = null;
+    const ownerKeys = globalThis.__simexDashboardStyleAuditOwnerKeys
+      ??= { next: 1, values: new WeakMap() };
+    const resolveColor = (owner, variable) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${variable})`;
+      owner.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+    const inspect = () => {
+      const owners = [...document.querySelectorAll("[data-pending-work-id]")]
+        .filter((entry) => entry.dataset.pendingWorkId === id);
+      const owner = owners[0];
+      if (owners.length !== 1 || owner?.dataset.pendingWorkState !== state) return;
+      if (!ownerKeys.values.has(owner)) {
+        ownerKeys.values.set(owner, ownerKeys.next);
+        ownerKeys.next += 1;
+      }
+      const style = getComputedStyle(owner);
+      const semanticVariables = state === "saving"
+        ? ["--simex-info", "--simex-info-soft"]
+        : state === "error"
+          ? ["--simex-error", "--simex-error-soft"]
+          : ["--simex-warning", "--simex-warning-soft"];
+      const semanticColors = semanticVariables.map((variable) => resolveColor(owner, variable));
+      const paintedColors = [
+        style.color,
+        style.backgroundColor,
+        style.borderTopColor,
+        style.borderRightColor,
+        style.borderBottomColor,
+        style.borderLeftColor,
+      ];
+      const rect = owner.getBoundingClientRect();
+      globalThis.__SIMEX_PENDING_OWNER_STYLE_EVIDENCE__ = {
+        count: owners.length,
+        nodeIdentity: ownerKeys.values.get(owner),
+        id: owner.dataset.pendingWorkId,
+        state: owner.dataset.pendingWorkState,
+        activity: owner.dataset.pendingWorkActivity,
+        origin: owner.dataset.pendingWorkOrigin,
+        surface: owner.dataset.pendingWorkSurface,
+        actionCopy: [...owner.querySelectorAll("button")]
+          .filter((button) => getComputedStyle(button).display !== "none")
+          .map((button) => button.textContent.trim())
+          .filter(Boolean),
+        geometry: {
+          width: Math.round(rect.width * 100) / 100,
+          height: Math.round(rect.height * 100) / 100,
+        },
+        paint: {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          borderLeftColor: style.borderLeftColor,
+        },
+        semanticStatePaint: semanticColors.some((color) => paintedColors.includes(color)),
+      };
+      globalThis.__SIMEX_PENDING_OWNER_STYLE_OBSERVER__?.disconnect();
+    };
+    const observer = new MutationObserver(inspect);
+    globalThis.__SIMEX_PENDING_OWNER_STYLE_OBSERVER__ = observer;
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    inspect();
+  }, { id: ownerId, state: expectedState });
+}
+
+function readPendingOwnerStyleEvidence(page) {
+  return page.evaluate(() => {
+    globalThis.__SIMEX_PENDING_OWNER_STYLE_OBSERVER__?.disconnect();
+    const evidence = globalThis.__SIMEX_PENDING_OWNER_STYLE_EVIDENCE__;
+    delete globalThis.__SIMEX_PENDING_OWNER_STYLE_OBSERVER__;
+    delete globalThis.__SIMEX_PENDING_OWNER_STYLE_EVIDENCE__;
+    return evidence;
+  });
+}
