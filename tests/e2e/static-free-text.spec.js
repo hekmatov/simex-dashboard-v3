@@ -415,7 +415,8 @@ test(
       viewport: { width: 1024, height: 768 },
     });
     await page.reload();
-    await page.locator('[data-dashboard-page-id="biomedical"]').click();
+    await page.getByRole("navigation", { name: "Dashboard pages" })
+      .getByRole("button", { name: "Biomedical", exact: true }).click();
     const reloaded = await readSavedFreeText(page, "Reload handoff field guide");
     expect(reloaded.source.qmd).toBe(INITIAL_QMD);
     expect(reloaded.source.revision).toBe(1);

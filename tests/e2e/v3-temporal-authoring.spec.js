@@ -57,8 +57,7 @@ test("Chrono Studio and Scene Studio navigate through content before editing and
   await expect(auxiliary.getByRole("heading", { name: "E2E national playback" })).toBeVisible();
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
-  auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  auxiliary = await openSceneStudio(page);
   await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
   const sceneName = auxiliary.getByLabel("Scene name");
   await sceneName.fill("E2E response scene");
@@ -81,8 +80,7 @@ test("Studios open unfiltered from Home and a newly saved Scene remains visible"
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
 
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
-  let auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  let auxiliary = await openSceneStudio(page);
   await expect(auxiliary.getByLabel("Page")).toHaveValue("");
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
 
@@ -92,8 +90,7 @@ test("Studios open unfiltered from Home and a newly saved Scene remains visible"
   await expect(chronoAuxiliary.locator("[data-action='open-content']").first()).toBeVisible();
   await chronoAuxiliary.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
-  auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  auxiliary = await openSceneStudio(page);
   await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
   await expect(auxiliary.getByLabel("Owning page")).toHaveValue("biomedical");
 
@@ -103,9 +100,15 @@ test("Studios open unfiltered from Home and a newly saved Scene remains visible"
   await expect(auxiliary.getByRole("heading", { name: sceneName })).toBeVisible();
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
-  auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  auxiliary = await openSceneStudio(page);
   await expect(auxiliary.getByLabel("Page")).toHaveValue("biomedical");
   await expect(auxiliary.getByRole("button", { name: new RegExp(sceneName) })).toBeVisible();
   await expect(auxiliary.getByText("Showing 1 of 1", { exact: true })).toBeVisible();
 });
+
+async function openSceneStudio(page) {
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  return page.getByRole("dialog", { name: "Scene Studio authoring" });
+}

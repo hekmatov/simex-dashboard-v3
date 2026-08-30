@@ -138,8 +138,7 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   await expect.poll(async () => (await temporalReviewSnapshot(page, target)).groupReview).toBeNull();
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
-  auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  auxiliary = await openSceneStudio(page);
   await auxiliary.getByRole("button", { name: target.sceneName, exact: false }).click();
   await expect(auxiliary.getByText("Needs attention", { exact: true })).toBeVisible();
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
@@ -211,13 +210,28 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await flow.goToDestination();
   await flow.uploadCsv(CHART_CSV);
   await flow.chooseChartType(null, /^Line\./);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("measurements", "cases");
+  await wizard.getByLabel("Observation / X-axis").selectOption("date");
+  await flow.goToConfigure();
+  await wizard.getByLabel("Chart title").fill("Journey D CSV chart");
+  await flow.goToReview();
+  await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
+  await flow.goToDataSource();
   expect(await csvInventory(page)).toEqual(afterManagerAdd);
   await wizard.getByRole("button", { name: "Close", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   expect(await csvInventory(page)).toEqual(afterManagerAdd);
-  await page.getByRole("button", { name: "Resume chart draft" }).click();
+  const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
+  const createOwner = pendingWork.locator('[data-pending-work-kind="chart-create"]');
+  await expect(createOwner).toHaveCount(1);
+  await createOwner.getByRole("button", {
+    name: "Resume New chart draft",
+    exact: true,
+  }).click();
   wizard = page.getByRole("dialog", { name: "Add new chart" });
   flow = chartAuthoringWorkflow(wizard);
+  await expect(flow.stageButton("dataSource")).toHaveAttribute("aria-current", "step");
   await flow.goToDataSource();
   await expect(wizard.getByLabel("CSV file")).toBeVisible();
   await expect(wizard.getByRole("region", { name: "Selected source profile" })).toContainText("cases");
@@ -356,6 +370,13 @@ async function openDataSourceManager(page) {
   await expect(manager).toBeVisible();
   await manager.getByRole("tab", { name: "Data sources", exact: true }).click();
   return manager;
+}
+
+async function openSceneStudio(page) {
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  return page.getByRole("dialog", { name: "Scene Studio authoring" });
 }
 
 async function closeManager(page) {

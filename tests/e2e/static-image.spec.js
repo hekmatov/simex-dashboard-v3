@@ -399,7 +399,8 @@ test("IM-06 reload continuation restores the original asset and saved transform"
   await createImage(page, "Reload image checkpoint");
   const before = await readSavedImage(page, "Reload image checkpoint");
   await page.reload();
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
   const after = await readSavedImage(page, "Reload image checkpoint");
   expect(after.source).toEqual(before.source);
   await scrollPanelIntoView(page, after.panel.id);
@@ -514,7 +515,8 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   await createImage(page, "Intake budget corpus");
   await addDashboardBudgetFixture(page);
   await page.reload();
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   let saved = await readSavedImage(page, "Intake budget corpus");
   expect(await page.evaluate((key) => Boolean(
@@ -537,7 +539,8 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
 
   await removeDashboardBudgetFixture(page);
   await page.reload();
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   saved = await readSavedImage(page, "Intake budget corpus");
   await scrollPanelIntoView(page, saved.panel.id);

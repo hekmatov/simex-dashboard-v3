@@ -26,12 +26,25 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   await flow.chooseChartType(null, /^Line\./);
   await expect(wizard).toHaveAccessibleName("Add new chart");
   await expect(flow.stageButton("mapAndPrepare")).toHaveAttribute("aria-current", "step");
+  await flow.selectRole("measurements", "national_total_cases");
+  await flow.selectRole("observation", "date");
+  await flow.goToConfigure();
+  await wizard.getByLabel("Chart title").fill("E2E atomic Step 7 chart");
+  await flow.goToReview();
+  await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
+  await flow.goToMapAndPrepare();
   await wizard.getByRole("button", { name: "Close" }).click();
   await expect(wizard).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Resume chart draft" })).toBeVisible();
-  await page.getByRole("button", { name: "Resume chart draft" }).click();
+  const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
+  const createOwner = pendingWork.locator('[data-pending-work-kind="chart-create"]');
+  await expect(createOwner).toHaveCount(1);
+  await createOwner.getByRole("button", {
+    name: "Resume New chart draft",
+    exact: true,
+  }).click();
   wizard = page.getByRole("dialog");
   flow = chartAuthoringWorkflow(wizard);
+  await expect(flow.stageButton("mapAndPrepare")).toHaveAttribute("aria-current", "step");
 
   await flow.goToMapAndPrepare();
   await flow.selectRole("measurements", "national_total_cases");

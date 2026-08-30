@@ -294,7 +294,8 @@ test("cross-page tree selection reveals the canonical target before opening Unit
   const section = page.locator('[data-canonical-section-id="public_response"]');
   await expect(section).toBeInViewport();
 
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
 
   await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).click();

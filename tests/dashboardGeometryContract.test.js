@@ -108,3 +108,19 @@ test("Look, Map, More, and Audience share one measured crown-bottom drawer coord
     "Dashboard Map must not reflow the compact command bar",
   );
 });
+
+test("Dashboard Map preserves its header and first tree row at narrow zoomed viewports", async () => {
+  const modes = await source(sources.modes);
+  const narrowMapRule = modes.match(
+    /@media \(max-width: 899px\)\s*\{[\s\S]*?\.right-side-drawer\.dashboard-map-panel\s*\{(?<rule>[^}]*)\}/,
+  );
+
+  assert.ok(narrowMapRule, "the narrow Dashboard Map must have a drawer-specific geometry rule");
+  assert.match(narrowMapRule.groups.rule, /left:\s*12px;/);
+  assert.match(narrowMapRule.groups.rule, /right:\s*12px;/);
+  assert.match(narrowMapRule.groups.rule, /width:\s*auto;/);
+  assert.match(
+    narrowMapRule.groups.rule,
+    /top:\s*min\(var\(--right-side-drawer-top\),\s*calc\(100dvh - 220px\)\);/,
+  );
+});

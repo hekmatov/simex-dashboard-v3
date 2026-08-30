@@ -1938,6 +1938,13 @@
 }
 
 @media (max-width: 899px) {
+  .right-side-drawer.dashboard-map-panel {
+    left: 12px;
+    right: 12px;
+    top: min(var(--right-side-drawer-top), calc(100dvh - 220px));
+    width: auto;
+  }
+
   .dashboard-map-header {
     align-items: center;
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);

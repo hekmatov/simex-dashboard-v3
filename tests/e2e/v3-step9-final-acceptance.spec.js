@@ -164,7 +164,7 @@ test("keyboard and screen-reader journey exposes truthful mode and Dashboard map
   expect(snapshot).toContain("Build");
   expect(snapshot).toContain("Dashboard map");
   expect(snapshot).toContain("Dashboard structure");
-  expect(snapshot).toContain('treeitem "Old Homepage Content" [expanded] [selected]');
+  expect(snapshot).toContain('treeitem "Biomedical" [expanded] [selected]');
   await testInfo.attach("step9-screen-reader-journey.yml", {
     body: snapshot,
     contentType: "text/yaml",
@@ -247,6 +247,7 @@ test("1920 Audience preserves room-distance composition through the public workf
   test.setTimeout(150_000);
   const scene = await createSavedPresentationScene(page, {
     sceneName: "Room-distance presentation fixture",
+    url: "/",
   });
   const savedChartIds = scene.present.chartIds;
   expect(savedChartIds.length).toBeGreaterThan(0);

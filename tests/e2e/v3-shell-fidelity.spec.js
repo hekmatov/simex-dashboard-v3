@@ -223,6 +223,9 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
   await expect(page.getByRole("group", { name: "Choose a layout for this device" })).toHaveCount(0);
 
   await anchoredPages.getByRole("button", { name: "Add page", exact: true }).click();
+  const createDialog = page.getByRole("dialog", { name: "Create Page" });
+  await createDialog.getByLabel("Page name").fill("New page");
+  await createDialog.getByRole("button", { name: "Create page", exact: true }).click();
   await expect(page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "New page", exact: true }))
     .toHaveCount(1);
@@ -240,12 +243,18 @@ test("repeated public Add Page requests use current dashboard state and unique I
     .getByRole("button", { name: "Add page", exact: true });
   const frame = page.locator(".canonical-dashboard-frame");
   const crownPages = page.locator(".dashboard-command-page-scroller");
+  const createNewPage = async () => {
+    await addPage.click();
+    const createDialog = page.getByRole("dialog", { name: "Create Page" });
+    await createDialog.getByLabel("Page name").fill("New page");
+    await createDialog.getByRole("button", { name: "Create page", exact: true }).click();
+  };
 
-  await addPage.click();
+  await createNewPage();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "new_page");
   await expect(addPage).toBeEnabled();
 
-  await addPage.click();
+  await createNewPage();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "new_page_2");
   await expect(crownPages.getByRole("button", { name: "New page", exact: true }))
     .toHaveCount(2);
@@ -288,15 +297,15 @@ test("live Build Structure tree exposes a 44px caret and visible 3px focus", asy
 
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
-  const home = structure.getByRole("treeitem", { name: "Old Homepage Content", exact: true });
-  const caret = home.getByRole("button", { name: "Collapse Old Homepage Content", exact: true });
+  const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
+  const caret = biomedical.getByRole("button", { name: "Collapse Biomedical", exact: true });
   const target = await caret.boundingBox();
   expect(target?.width).toBeGreaterThanOrEqual(44);
   expect(target?.height).toBeGreaterThanOrEqual(44);
 
-  await home.focus();
-  await expect(home).toBeFocused();
-  const focus = await home.locator(":scope > .build-tree-row").evaluate((element) => {
+  await biomedical.focus();
+  await expect(biomedical).toBeFocused();
+  const focus = await biomedical.locator(":scope > .build-tree-row").evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       outlineStyle: style.outlineStyle,
@@ -334,7 +343,8 @@ test("canonical View and Build frames project analytical Page metadata", async (
     return [style.paddingTop, style.paddingRight];
   })).toEqual(["12px", "20px"]);
 
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(frame).toHaveAttribute("data-page-type", "analytical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "View", exact: true })
@@ -463,13 +473,20 @@ test("denied dashboard writes remain usable with session-only feedback", async (
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
-  const home = structure.getByRole("treeitem", { name: "Old Homepage Content", exact: true });
-  await home.locator(":scope > .build-tree-row .build-tree-label").dblclick();
-  const rename = structure.getByRole("textbox", { name: "Rename page Old Homepage Content" });
+  const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
+  await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();
+  const rename = structure.getByRole("textbox", { name: "Rename page Biomedical" });
   await rename.fill("Session-only Home");
   await rename.press("Enter");
-  await expect(page.locator(".dashboard-command-page-scroller")
-    .getByRole("button", { name: "Session-only Home", exact: true })).toBeVisible();
+  const renamedPage = page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Session-only Home", exact: true });
+  await expect(renamedPage).toBeVisible();
+  const layoutOwner = page.getByRole("navigation", { name: "Pending Build work" })
+    .locator('[data-pending-work-kind="layout"]');
+  await expect(layoutOwner).toHaveCount(1);
+  await layoutOwner.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
+  await expect(layoutOwner).toHaveCount(0);
+  await expect(renamedPage).toBeVisible();
   await expect(page.locator(".app-persistence-notice")).toContainText(
     "Dashboard changes are applied for this session but cannot be retained after reload.",
   );

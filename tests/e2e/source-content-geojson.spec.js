@@ -92,11 +92,28 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await wizard.getByLabel("Upload GeoJSON").setInputFiles({ ...GEOJSON_FILE, name: "journey-i-staged-close.geojson" });
   const stagedGeoSourceId = await wizard.getByLabel("GeoJSON source").inputValue();
   expect(stagedGeoSourceId).toContain("journey-i-staged-close");
+  await flow.goToMapAndPrepare();
+  await wizard.locator('[data-field-id="geography"] select').selectOption("province");
+  await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles");
+  await wizard.locator('[data-field-id="time"] select').selectOption("date");
+  await flow.goToConfigure();
+  await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
+  await wizard.getByLabel("Chart title").fill("Journey I staged map draft");
+  await flow.goToReview();
+  await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
+  await flow.goToDataSource();
   await page.keyboard.press("Escape");
   await expect(wizard).toHaveCount(0);
-  await page.getByRole("button", { name: "Resume chart draft", exact: true }).click();
+  const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
+  const createOwner = pendingWork.locator('[data-pending-work-kind="chart-create"]');
+  await expect(createOwner).toHaveCount(1);
+  await createOwner.getByRole("button", {
+    name: "Resume New chart draft",
+    exact: true,
+  }).click();
   await expect(wizard).toBeVisible();
   flow = chartAuthoringWorkflow(wizard);
+  await expect(flow.stageButton("dataSource")).toHaveAttribute("aria-current", "step");
   await flow.goToDataSource();
   await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(1);
   await expect(wizard.getByLabel("GeoJSON source")).toHaveValue(stagedGeoSourceId);
@@ -117,7 +134,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await seedMapBudgetCopies(page);
   await page.reload();
   await openBuild(page, { width: 1440, height: 900 });
-  await page.locator('[data-dashboard-page-id="biomedical"]').click();
+  await openTargetPage(page, target);
   const seededMaps = page.locator('[data-canonical-section-id="outbreak_dynamics"] [data-panel-id^="journey-i-map-"]');
   await expect(seededMaps).toHaveCount(4);
   for (let index = 0; index < 3; index += 1) {
