@@ -1,18 +1,15 @@
 .fullscreen-backdrop--immersive {
-  background: var(--simex-surface-outer, #e9eef2);
-  padding: 0;
   z-index: 1200;
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-panel {
-  background: var(--simex-surface-canvas, #f8f7f2);
-  border-radius: 0;
   display: block;
-  height: 100vh;
-  height: 100dvh;
-  padding: 0;
   position: relative;
-  width: 100vw;
+  inline-size: 100%;
+}
+
+.multi-fullscreen-panel.dashboard-dialog {
+  block-size: calc(100dvh - 24px);
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-controls {
@@ -57,6 +54,10 @@
   height: 100vh;
   height: 100dvh;
   padding: 6px;
+}
+
+.multi-fullscreen-panel.dashboard-dialog .multi-fullscreen-grid {
+  block-size: 100%;
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-cell {
@@ -138,6 +139,12 @@
   .multi-select-dock {
     bottom: 8px;
     max-width: calc(100vw - 16px);
+  }
+}
+
+@media (max-width: 720px) {
+  .multi-fullscreen-panel.dashboard-dialog {
+    min-block-size: calc(100dvh - 16px);
   }
 }
 

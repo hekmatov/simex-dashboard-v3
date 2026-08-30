@@ -126,7 +126,7 @@ export default function FullscreenDisplay({
   return (
     <ModalFocusScope
       as="div"
-      className="fullscreen-backdrop fullscreen-backdrop--immersive"
+      className="fullscreen-backdrop fullscreen-backdrop--immersive dashboard-dialog-backdrop"
       role="dialog"
       aria-modal="true"
       aria-label={isComparison ? "Chart comparison" : "Focused chart"}
@@ -134,11 +134,11 @@ export default function FullscreenDisplay({
       onEscape={closeAll}
     >
       <article
-        className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout}`}
+        className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout} dashboard-dialog dashboard-dialog--workspace dashboard-dialog--fullscreen`}
         data-display-mode={isComparison ? "comparison" : "focus"}
       >
         <div
-          className="multi-fullscreen-controls"
+          className="multi-fullscreen-controls dashboard-dialog__header"
           aria-label={isComparison ? "Comparison layout and exit" : "Focus exit"}
         >
           {isComparison && layoutOptions.map((option) => (

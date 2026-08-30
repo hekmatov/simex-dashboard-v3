@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const DIALOG_SURFACES = [
@@ -30,6 +30,22 @@ DIALOG_SURFACES.push(
   ["src/components/app-shell/ApplicationRecovery.jsx", "dashboard-dialog--utility"],
   ["src/components/app-shell/RestoreOnlineDashboardDialog.jsx", "dashboard-dialog--danger"],
 );
+
+DIALOG_SURFACES.push(
+  ["src/components/FullscreenDisplay.jsx", "dashboard-dialog--fullscreen"],
+  ["src/components/time/SceneEditor.jsx", "dashboard-dialog--utility"],
+  ["src/components/common/RightSideDrawer.jsx", "dashboard-dialog--workspace"],
+);
+
+async function jsxFiles(directoryUrl) {
+  const entries = await readdir(directoryUrl, { withFileTypes: true });
+  const files = await Promise.all(entries.map((entry) => {
+    const url = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, directoryUrl);
+    if (entry.isDirectory()) return jsxFiles(url);
+    return entry.name.endsWith(".jsx") ? [url] : [];
+  }));
+  return files.flat();
+}
 
 test("dashboard dialog contract loads after the base dashboard grammar", async () => {
   const main = await read("src/main.jsx");
@@ -140,5 +156,35 @@ test("every registered dialog surface adopts its dashboard contract class", asyn
       new RegExp(contractClass),
       `${path} must opt into ${contractClass}`,
     );
+  }
+});
+
+test("right drawer preserves complementary mode while styling dialog mode", async () => {
+  const source = await read("src/components/common/RightSideDrawer.jsx");
+  assert.match(source, /modality === "dialog"[\s\S]*?dashboard-dialog--workspace/);
+  assert.match(source, /role: modality/);
+});
+
+test("display, temporal, and drawer dialog surfaces retain local scroll geometry", async () => {
+  const [immersive, dialogs, drawer] = await Promise.all([
+    read("src/styles/immersive-display.css"),
+    read("src/styles/dashboard-dialogs.css"),
+    read("src/styles/right-side-drawer.css"),
+  ]);
+  assert.match(immersive, /\.multi-fullscreen-panel\.dashboard-dialog\s*\{[^}]*block-size:\s*calc\(100dvh - 24px\);/s);
+  assert.match(immersive, /\.multi-fullscreen-panel\.dashboard-dialog \.multi-fullscreen-grid\s*\{[^}]*block-size:\s*100%;/s);
+  assert.match(dialogs, /\.scene-observation-dialog > \.dashboard-dialog\s*\{[^}]*inline-size:\s*min\(100%, 520px\);[^}]*overflow:\s*hidden;[^}]*padding:\s*0;/s);
+  assert.match(drawer, /\.right-side-drawer\.dashboard-dialog\s*\{[^}]*block-size:\s*100%;[^}]*max-block-size:\s*none;/s);
+});
+
+test("every explicit first-party dialog role is registered", async () => {
+  const registered = new Set(DIALOG_SURFACES.map(([path]) => path.replaceAll("\\", "/")));
+  const files = await jsxFiles(new URL("../src/", import.meta.url));
+  for (const url of files) {
+    const source = await readFile(url, "utf8");
+    const hasExplicitDialogRole = /<[A-Za-z][^>]*\brole\s*=\s*["'](?:alert)?dialog["']/.test(source);
+    if (!hasExplicitDialogRole) continue;
+    const path = `src/${url.pathname.split("/src/")[1]}`;
+    assert.ok(registered.has(path), `${path} must register a dashboard dialog contract`);
   }
 });

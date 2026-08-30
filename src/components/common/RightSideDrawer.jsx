@@ -71,10 +71,22 @@ export default function RightSideDrawer({
 
   const titleId = `${id}-title`;
   const descriptionId = description ? `${id}-description` : undefined;
-  const drawerClassName = joinClasses("right-side-drawer", className);
+  const drawerClassName = joinClasses(
+    "right-side-drawer",
+    modality === "dialog" && "dashboard-dialog dashboard-dialog--workspace dashboard-dialog--wide",
+    className,
+  );
   const layerClasses = joinClasses("right-side-drawer-layer", layerClassName);
-  const headerClasses = joinClasses("right-side-drawer__header", headerClassName);
-  const contentClasses = joinClasses("right-side-drawer__content", contentClassName);
+  const headerClasses = joinClasses(
+    "right-side-drawer__header",
+    modality === "dialog" && "dashboard-dialog__header",
+    headerClassName,
+  );
+  const contentClasses = joinClasses(
+    "right-side-drawer__content",
+    modality === "dialog" && "dashboard-dialog__body",
+    contentClassName,
+  );
   const controlledPanelProps = {
     ...panelProps,
     id,

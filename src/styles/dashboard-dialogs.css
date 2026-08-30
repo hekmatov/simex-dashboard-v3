@@ -47,6 +47,12 @@
 
 .source-content-workspace.dashboard-dialog { block-size: min(820px, calc(100dvh - 32px)); }
 .source-viewer-panel.dashboard-dialog { block-size: min(760px, calc(100dvh - 32px)); }
+.scene-observation-dialog > .dashboard-dialog {
+  max-block-size: min(720px, calc(100dvh - 24px));
+  inline-size: min(100%, 520px);
+  overflow: hidden;
+  padding: 0;
+}
 .settings-color-popover.dashboard-dialog {
   position: absolute;
   z-index: 2;
