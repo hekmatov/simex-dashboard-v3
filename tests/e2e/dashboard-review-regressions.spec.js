@@ -40,14 +40,22 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
 
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
-  const panel = page.locator('[data-panel-id="bio_current_cases_kpi"]');
-  await expect(panel).toBeVisible();
+  const renderedPanel = page.locator('[data-panel-id="bio_current_cases_kpi"]');
+  await expect(renderedPanel).toBeVisible();
 
   await page.getByRole("button", { name: "Build" }).click();
+  const panel = page.locator(
+    '[data-build-placement-id="current-cases-placement"]',
+  );
+  await expect(panel).toHaveAttribute("data-panel-id", "bio_current_cases_kpi");
+  await panel.scrollIntoViewIfNeeded();
+  await panel.hover();
   await panel.getByRole("button", { name: "Edit chart" }).click();
-  await page.getByRole("button", { name: "Appearance", exact: true }).click();
-  await page.getByLabel("Chart title").fill("Updated wrapped KPI");
-  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  const quickEditor = page.locator(".chart-quick-editor");
+  await expect(quickEditor).toBeVisible();
+  await quickEditor.getByLabel("Chart title").fill("Updated wrapped KPI");
+  await quickEditor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(quickEditor).toHaveCount(0);
 
   await expect.poll(() => page.evaluate((key) => {
     const stored = JSON.parse(localStorage.getItem(key));
@@ -66,6 +74,8 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
     title: "Updated wrapped KPI",
   });
 
+  await panel.scrollIntoViewIfNeeded();
+  await panel.hover();
   await panel.getByRole("button", { name: "Remove chart" }).click();
   await page.getByRole("dialog", { name: "Remove this chart?" })
     .getByRole("button", { name: "Remove chart" }).click();
