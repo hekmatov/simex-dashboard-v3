@@ -157,23 +157,38 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full can
 
 test("edit-mode panel drag reorders through the memoized chart boundary", async ({ page }) => {
   await openDashboardEditMode(page);
-  const panels = page.locator(".chart-panel");
+  const panels = page.locator("[data-build-placement-id]");
   const initial = await panels.evaluateAll((items) => items.slice(0, 2).map((item) => (
-    item.getAttribute("data-panel-id")
+    item.getAttribute("data-build-placement-id")
   )));
+  const source = page.locator(`[data-build-placement-id="${initial[0]}"]`);
+  const target = page.locator(`[data-build-placement-id="${initial[1]}"]`);
+  await expect(source).not.toHaveAttribute("draggable", "true");
+  const moveHandle = source.locator("button.panel-move-handle");
+  await expect(moveHandle).toHaveAttribute("draggable", "true");
+  const targetBox = await target.boundingBox();
+  expect(targetBox).toBeTruthy();
 
   const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
-  await panels.nth(1).dispatchEvent("dragstart", { dataTransfer });
-  expect(await dataTransfer.evaluate((transfer) => transfer.getData("text/plain")))
-    .not.toBe("");
-  await expect(panels.nth(1)).toHaveClass(/\bdragging\b/);
-  await panels.nth(0).dispatchEvent("dragover", { dataTransfer });
-  await expect(panels.nth(0)).toHaveClass(/\bdrag-target\b/);
-  await panels.nth(0).dispatchEvent("drop", { dataTransfer });
-  await panels.nth(1).dispatchEvent("dragend", { dataTransfer });
+  await moveHandle.dispatchEvent("dragstart", { dataTransfer });
+  const payload = await dataTransfer.evaluate((transfer) => (
+    transfer.getData("application/x-simex-build-layout-move+json")
+  ));
+  expect(payload).not.toBe("");
+  expect(() => JSON.parse(payload)).not.toThrow();
+  await expect(source).toHaveClass(/\bdragging\b/);
+  const pointer = {
+    clientX: targetBox.x + targetBox.width / 2,
+    clientY: targetBox.y + targetBox.height * 0.75,
+    dataTransfer,
+  };
+  await target.dispatchEvent("dragover", pointer);
+  await expect(target).toHaveClass(/\bdrag-target\b/);
+  await target.dispatchEvent("drop", pointer);
+  await moveHandle.dispatchEvent("dragend", { dataTransfer });
 
   await expect.poll(() => panels.evaluateAll((items) => items.slice(0, 2).map((item) => (
-    item.getAttribute("data-panel-id")
+    item.getAttribute("data-build-placement-id")
   )))).toEqual([initial[1], initial[0]]);
 });
 
@@ -334,16 +349,22 @@ async function preparePieWizard(page, title) {
 test("queued dashboard mutation survives final edit-session save", async ({ page }) => {
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
+  await page.getByRole("button", { name: "Add page", exact: true }).click();
+  const createDialog = page.getByRole("dialog", { name: "Create Page" });
+  await createDialog.getByLabel("Page name").fill("New page");
   const actionState = await page.evaluate(() => {
     const buttons = [...document.querySelectorAll("button")];
     const addPage = buttons.find((button) => button.textContent?.trim() === "Add page");
+    const createPage = buttons.find((button) => button.textContent?.trim() === "Create page");
     const finish = buttons.find((button) => button.textContent?.trim() === "Finish Build");
-    addPage.click();
-    finish.click();
-    return {
+    const state = {
       addDisabled: addPage.matches(":disabled"),
+      createDisabled: createPage.matches(":disabled"),
       finishDisabled: finish.matches(":disabled"),
     };
+    createPage.click();
+    finish.click();
+    return state;
   });
   await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
 
@@ -352,6 +373,7 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
   expect({ actionState, attempts }).toEqual({
     actionState: {
       addDisabled: false,
+      createDisabled: false,
       finishDisabled: false,
     },
     attempts: 1,
