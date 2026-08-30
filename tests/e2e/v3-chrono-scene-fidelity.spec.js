@@ -119,7 +119,10 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 test("006-scene-authoring amendment: three full-width stages and Unit Orbit are live", async ({ page }) => {
   test.setTimeout(120_000);
   const sceneName = "Runtime composition fidelity scene";
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("dialog", { name: "More Build commands" })
+    .getByRole("button", { name: "Scene Studio", exact: true }).click();
   const auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
 
@@ -308,7 +311,10 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
 
 test("012-temporal-content: libraries filter, open read-first pages, and restore context", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("dialog", { name: "More Build commands" })
+    .getByRole("button", { name: "Scene Studio", exact: true }).click();
   let auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await expect(auxiliary.getByLabel("Search")).toBeVisible();
   await expect(auxiliary.getByLabel("Status")).toBeVisible();
@@ -358,8 +364,8 @@ test("012-temporal-content: libraries filter, open read-first pages, and restore
   await expect(sceneAuxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
   await sceneAuxiliary.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("button", { name: "Dashboard look", exact: true })).toBeEnabled();
-  const pausedWork = page.getByRole("navigation", { name: "Paused Build work" });
-  const resumeScene = pausedWork.getByRole("button", { name: "Resume Scene draft", exact: true });
+  const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
+  const resumeScene = pendingWork.getByRole("button", { name: "Resume Scene Studio changes", exact: true });
   await expect(resumeScene).toBeVisible();
   await resumeScene.click();
   await expect(sceneAuxiliary).toBeVisible();
