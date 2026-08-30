@@ -72,6 +72,16 @@ test("Text/Image and chart authoring expose dashboard wizard regions", async () 
   assert.match(editorHost, /chart-editor-backdrop dashboard-dialog-backdrop/);
 });
 
+test("source action dialog branches provide an internal body before the action footer", async () => {
+  const source = await read("src/components/source-content/ContentActionDialog.jsx");
+  assert.equal((source.match(/confirm-dialog-body dashboard-dialog__body/g) ?? []).length, 2);
+  assert.equal((source.match(/confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions/g) ?? []).length, 2);
+  assert.match(
+    source,
+    /confirm-dialog-body dashboard-dialog__body[\s\S]*?<\/div>\s*<div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions"/,
+  );
+});
+
 test("every registered dialog surface adopts its dashboard contract class", async () => {
   for (const [path, contractClass] of DIALOG_SURFACES) {
     const source = await read(path);

@@ -215,6 +215,22 @@ test("media replacement renders only the focused non-destructive replacement act
   assert.doesNotMatch(html, /Delete|Relink|Undo|Redo/);
 });
 
+test("replacement action dialog branches keep a scrollable body before their footer", () => {
+  for (const action of ["replace-csv", "replace"]) {
+    const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+      open: true,
+      action,
+      itemLabel: "Shared cases",
+      replacementReady: true,
+    }));
+    assert.match(html, /class="confirm-dialog-body dashboard-dialog__body"/u);
+    assert.match(
+      html,
+      /class="confirm-dialog-body dashboard-dialog__body"[\s\S]*<\/div><div class="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions"/u,
+    );
+  }
+});
+
 test("a saving Source Content dialog is busy and disables every exit, input, and navigation action", () => {
   const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
     open: true,

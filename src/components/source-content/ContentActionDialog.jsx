@@ -47,35 +47,37 @@ export default function ContentActionDialog({
         tabIndex={-1}
       >
         <section className="confirm-dialog dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact">
-          <h2 id={`${id}-title`}>{relinkCsv ? `Relink ${itemLabel}?` : `Replace ${itemLabel} file?`}</h2>
-          <p id={`${id}-message`}>Choose a {geoJson ? "GeoJSON" : "CSV"} file. The current source identity is retained only when every directly dependent {geoJson ? "map" : "chart"} remains structurally valid.</p>
-          <label><span>{relinkCsv ? "Relink CSV" : `Replacement ${geoJson ? "GeoJSON" : "CSV"}`}</span><input data-modal-initial-focus="true" type="file" accept={geoJson ? ".geojson,.json,application/geo+json,application/json" : ".csv,text/csv"} disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
-          {replacementLabel && <p role="status">Prepared: {replacementLabel}</p>}
-          {(blocked || requiresTemporalReview) && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
-          {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
-          {requiresGeoJsonConfirmation && replacementWarnings.length > 0 && (
-            <section aria-label="GeoJSON replacement warnings">
-              <h3>Confirm changed map facts</h3>
-              <ul>{replacementWarnings.map((warning) => <li key={`${warning.code}:${warning.chartId ?? "source"}`} data-replacement-warning={warning.code}>{warning.message}</li>)}</ul>
-            </section>
-          )}
-          {remapTargets.length > 0 && (
-            <section aria-label="Affected panels">
-              <h3>Affected panels</h3>
-              <ul>{remapTargets.map((target) => <li key={target.id}>
-                {typeof onNavigate === "function" ? <button type="button" className="source-content-breadcrumb" disabled={busy} onClick={() => onNavigate(target)}><RemapBreadcrumb target={target} /></button> : <span><RemapBreadcrumb target={target} /></span>}
-              </li>)}</ul>
-            </section>
-          )}
-          {requiresTemporalReview && impactContexts.length > 0 && (
-            <section aria-label="Affected temporal content">
-              <h3>Affected temporal content</h3>
-              <ul>{impactContexts.map((impact) => (
-                <li key={`${impact.kind}:${impact.id}`}>{temporalImpactLabel(impact.kind)}: {impact.label ?? impact.id}</li>
-              ))}</ul>
-            </section>
-          )}
-          {importedSourceLabel && <p role="status">Imported as {importedSourceLabel}. Choose an affected panel to remap it.</p>}
+          <div className="confirm-dialog-body dashboard-dialog__body">
+            <h2 id={`${id}-title`}>{relinkCsv ? `Relink ${itemLabel}?` : `Replace ${itemLabel} file?`}</h2>
+            <p id={`${id}-message`}>Choose a {geoJson ? "GeoJSON" : "CSV"} file. The current source identity is retained only when every directly dependent {geoJson ? "map" : "chart"} remains structurally valid.</p>
+            <label><span>{relinkCsv ? "Relink CSV" : `Replacement ${geoJson ? "GeoJSON" : "CSV"}`}</span><input data-modal-initial-focus="true" type="file" accept={geoJson ? ".geojson,.json,application/geo+json,application/json" : ".csv,text/csv"} disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
+            {replacementLabel && <p role="status">Prepared: {replacementLabel}</p>}
+            {(blocked || requiresTemporalReview) && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
+            {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
+            {requiresGeoJsonConfirmation && replacementWarnings.length > 0 && (
+              <section aria-label="GeoJSON replacement warnings">
+                <h3>Confirm changed map facts</h3>
+                <ul>{replacementWarnings.map((warning) => <li key={`${warning.code}:${warning.chartId ?? "source"}`} data-replacement-warning={warning.code}>{warning.message}</li>)}</ul>
+              </section>
+            )}
+            {remapTargets.length > 0 && (
+              <section aria-label="Affected panels">
+                <h3>Affected panels</h3>
+                <ul>{remapTargets.map((target) => <li key={target.id}>
+                  {typeof onNavigate === "function" ? <button type="button" className="source-content-breadcrumb" disabled={busy} onClick={() => onNavigate(target)}><RemapBreadcrumb target={target} /></button> : <span><RemapBreadcrumb target={target} /></span>}
+                </li>)}</ul>
+              </section>
+            )}
+            {requiresTemporalReview && impactContexts.length > 0 && (
+              <section aria-label="Affected temporal content">
+                <h3>Affected temporal content</h3>
+                <ul>{impactContexts.map((impact) => (
+                  <li key={`${impact.kind}:${impact.id}`}>{temporalImpactLabel(impact.kind)}: {impact.label ?? impact.id}</li>
+                ))}</ul>
+              </section>
+            )}
+            {importedSourceLabel && <p role="status">Imported as {importedSourceLabel}. Choose an affected panel to remap it.</p>}
+          </div>
           <div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             {canImportAsNew && <button type="button" className="secondary" disabled={busy} onClick={onImportAsNew}>Import as new source</button>}
@@ -105,20 +107,22 @@ export default function ContentActionDialog({
         tabIndex={-1}
       >
         <section className="confirm-dialog dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact">
-          <h2 id={`${id}-title`}>Replace {itemLabel} everywhere?</h2>
-          <p id={`${id}-message`}>Choose a validated PNG, JPEG, or WebP file. Every QMD and Image use updates to the next revision while its placement settings stay unchanged.</p>
-          <label>
-            <span>Replacement image</span>
-            <input
-              data-modal-initial-focus="true"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              disabled={busy}
-              onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)}
-            />
-          </label>
-          {replacementLabel && <p role="status">Ready: {replacementLabel}</p>}
-          {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
+          <div className="confirm-dialog-body dashboard-dialog__body">
+            <h2 id={`${id}-title`}>Replace {itemLabel} everywhere?</h2>
+            <p id={`${id}-message`}>Choose a validated PNG, JPEG, or WebP file. Every QMD and Image use updates to the next revision while its placement settings stay unchanged.</p>
+            <label>
+              <span>Replacement image</span>
+              <input
+                data-modal-initial-focus="true"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={busy}
+                onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            {replacementLabel && <p role="status">Ready: {replacementLabel}</p>}
+            {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
+          </div>
           <div className="confirm-dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             <button type="button" disabled={busy || !replacementReady} onClick={onConfirm}>{busy ? "Replacing…" : "Replace everywhere"}</button>
