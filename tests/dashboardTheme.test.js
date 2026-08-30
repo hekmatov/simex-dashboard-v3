@@ -301,10 +301,11 @@ test("standalone Audience and its snapshot portal project active theme metadata 
   assert.match(app, /data-dashboard-color-profile=\{dashboardTheme\.dashboardColorProfile\}/);
   assert.match(app, /data-resolved-appearance=\{dashboardTheme\.resolvedAppearance\}/);
   assert.match(app, /style=\{\{ \.\.\.dashboardTheme\.cssVariables, \.\.\.dashboardTheme\.styleVariables \}\}/);
-  assert.match(snapshot, /data-dashboard-style=\{captureSource\.themeProjection\.dashboardStyle\}/);
-  assert.match(snapshot, /data-dashboard-color-profile=\{captureSource\.themeProjection\.dashboardColorProfile\}/);
-  assert.match(snapshot, /data-resolved-appearance=\{captureSource\.themeProjection\.resolvedAppearance\}/);
-  assert.match(snapshot, /style=\{captureSource\.themeProjection\.cssVariables\}/);
+  assert.match(snapshot, /\{typeof document !== "undefined" && createPortal\(/);
+  assert.match(snapshot, /data-dashboard-style=\{themeProjection\.dashboardStyle\}/);
+  assert.match(snapshot, /data-dashboard-color-profile=\{themeProjection\.dashboardColorProfile\}/);
+  assert.match(snapshot, /data-resolved-appearance=\{themeProjection\.resolvedAppearance\}/);
+  assert.match(snapshot, /style=\{themeProjection\.cssVariables\}/);
   assert.match(snapshot, /themeProjection\.key/);
   assert.doesNotMatch(snapshot, /getComputedStyle|querySelector\("\.app-frame"\)/);
 });

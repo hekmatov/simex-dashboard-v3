@@ -156,7 +156,7 @@ export default function AudienceSnapshotMonitor({
           <p>{captureUnavailable ? "Preview unavailable" : "Preparing preview"}</p>
         )}
       </div>
-      {createPortal(
+      {typeof document !== "undefined" && createPortal(
         <div
           ref={sourceRef}
           className="audience-snapshot-source"
