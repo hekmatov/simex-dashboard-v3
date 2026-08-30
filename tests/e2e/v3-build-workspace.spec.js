@@ -19,6 +19,10 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
   const saved = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
   const toggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   await toggle.click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await expect(map).toBeVisible();
+  await toggle.click();
+  await expect(map).toBeHidden();
 
   const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
@@ -38,7 +42,6 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
   await expect(target).toHaveAttribute("data-build-placement-id", selectedBefore);
 
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(saved);
-  await toggle.click();
   expect(await canvasIdentity(page)).toEqual(baseline);
 });
 

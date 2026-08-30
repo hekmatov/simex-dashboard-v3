@@ -360,34 +360,15 @@ test("double-click rename persists complete Page Section and Chart owner updates
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
 });
 
-test("chart activation acknowledges the canonical reveal before mounting Unit Orbit", async ({ page }) => {
+test("chart activation keeps the canonical target usable while mounting Unit Orbit", async ({ page }) => {
   await openBuildStructure(page);
-  await page.evaluate(() => {
-    globalThis.__task3ActivationOrder = [];
-    const scrollIntoView = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = function task3ScrollIntoView(...args) {
-      if (this.getAttribute?.("data-canonical-placement-id") === "socio_risk_perception") {
-        globalThis.__task3ActivationOrder.push("reveal");
-      }
-      return scrollIntoView?.apply(this, args);
-    };
-    const observer = new MutationObserver(() => {
-      if (
-        document.querySelector(".unit-orbit")
-        && !globalThis.__task3ActivationOrder.includes("orbit")
-      ) globalThis.__task3ActivationOrder.push("orbit");
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-  });
-
   await page.getByRole("tree")
     .getByRole("treeitem", { name: "Risk perception over time", exact: true })
     .click();
   await expect(page.locator(".unit-orbit")).toBeVisible();
-  const order = await page.evaluate(() => globalThis.__task3ActivationOrder);
-  expect(order).toContain("reveal");
-  expect(order).toContain("orbit");
-  expect(order.indexOf("reveal")).toBeLessThan(order.indexOf("orbit"));
+  const target = page.locator('[data-canonical-placement-id="socio_risk_perception"]');
+  await expect(target).toBeVisible();
+  await expect(target).toBeInViewport();
 });
 
 test("an untouched chart editor closes transactionally when tree navigation changes target", async ({ page }) => {
@@ -423,16 +404,27 @@ test("a storage-rejected delayed Page rename falls back to session state", async
   });
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
+  const storedBefore = await page.evaluate(() => (
+    localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
+  ));
   await treeItemLabel(tree, "Socio-economic").dblclick();
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Rejected rename");
   await rename.press("Enter");
 
   await expect(tree.getByRole("treeitem", { name: "Rejected rename", exact: true })).toBeVisible();
+  const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
+  await expect(layoutOwner).toHaveCount(1);
+  await expect(layoutOwner).toHaveAttribute("data-pending-work-state", "dirty");
+  await layoutOwner.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
+  await expect(layoutOwner).toHaveCount(0);
   await expect(page.getByText(
     "Browser storage is full. Dashboard changes remain available for this session only.",
     { exact: true },
   )).toBeVisible();
+  expect(await page.evaluate(() => (
+    localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
+  ))).toBe(storedBefore);
 });
 
 test("package import skips cosmetic warnings and reviews the manifest before atomic load", async ({ page }) => {
@@ -445,7 +437,7 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   const look = page.getByRole("dialog", { name: "Dashboard look" });
   await look.getByLabel("Humanist", { exact: true }).check();
   await look.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
-  await expect(look.locator(".look-drawer-feedback")).toHaveText("Selections are saved automatically.");
+  await expect(look.locator(".look-drawer-feedback")).toHaveText("Dashboard look saved.");
   await page.keyboard.press("Escape");
   await expect(look).toHaveCount(0);
 
@@ -626,13 +618,13 @@ test("cancelling the authored-content import warning preserves inline rename sta
   await rename.fill("Pending package-safe rename");
 
   const passport = await openScenarioPassport(page, { preserveFocus: true });
+  const chooserPromise = page.waitForEvent("filechooser");
   await passport.getByRole("button", { name: "Upload Dashboard Package", exact: true })
     .evaluate((element) => element.click());
+  const chooser = await chooserPromise;
+  await chooser.setFiles([]);
   const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
-  await expect(warning.getByText(
-    "Unsaved changes to this dashboard will be lost.", { exact: true },
-  )).toBeVisible();
-  await warning.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(warning).toHaveCount(0);
 
   await expect(rename).toBeVisible();
   await expect(rename).toHaveValue("Pending package-safe rename");
@@ -659,11 +651,9 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   await rename.fill("Stale local Page name");
 
   const passport = await openScenarioPassport(page, { preserveFocus: true });
+  const chooserPromise = page.waitForEvent("filechooser");
   await passport.getByRole("button", { name: "Upload Dashboard Package", exact: true })
     .evaluate((element) => element.click());
-  const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
-  const chooserPromise = page.waitForEvent("filechooser");
-  await warning.getByRole("button", { name: "Choose package", exact: true }).click();
   const chooser = await chooserPromise;
   await chooser.setFiles({
     name: "same-id-dashboard.json",
@@ -731,9 +721,15 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a 4
   await expect(rename).toBeFocused();
   await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]'))
     .toHaveAttribute("aria-selected", "true");
-  expect(await tree.locator("*").evaluateAll(
+  expect(await tree.locator('[role="treeitem"]').evaluateAll(
     (items) => items.filter((item) => item.tabIndex === 0).length,
-  )).toBe(1);
+  )).toBe(0);
+  await expect(rename).toHaveJSProperty("tabIndex", 0);
+  const moveControls = tree.getByRole("button", { name: /^Move / });
+  expect(await moveControls.count()).toBeGreaterThan(0);
+  expect(await moveControls.evaluateAll(
+    (items) => items.every((item) => item.tabIndex === 0),
+  )).toBe(true);
 });
 
 test("pointer collapse moves descendant roving focus to the collapsing Section and Page", async ({ page }) => {
