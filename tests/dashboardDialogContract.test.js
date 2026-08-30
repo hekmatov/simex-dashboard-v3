@@ -97,6 +97,41 @@ test("source action dialog branches provide an internal body before the action f
   );
 });
 
+test("danger dialogs retain error paint inside the AppFrame cascade", async () => {
+  const css = await read("src/styles/dashboard-dialogs.css");
+  assert.match(
+    css,
+    /\.app-frame \.confirm-dialog\.dashboard-dialog--danger\s*\{[^}]*border-color:\s*var\(--simex-error\);[^}]*box-shadow:[^}]*var\(--simex-error\)/s,
+  );
+  assert.match(
+    css,
+    /\.app-frame \.confirm-dialog\.dashboard-dialog--danger button\.danger\s*\{[^}]*background:\s*var\(--simex-error\);[^}]*border-color:\s*var\(--simex-error\)/s,
+  );
+  assert.match(
+    css,
+    /\.app-frame \.confirm-dialog\.dashboard-dialog--danger button\.danger:hover:not\(:disabled\)\s*\{[^}]*background:\s*var\(--simex-error-soft\);[^}]*border-color:\s*var\(--simex-error\)/s,
+  );
+});
+
+test("Build auxiliary compatibility sizing preserves the narrow viewport contract", async () => {
+  const [css, modes] = await Promise.all([
+    read("src/styles/dashboard-dialogs.css"),
+    read("src/styles/modes.css"),
+  ]);
+  assert.match(
+    css,
+    /@media \(min-width:\s*900px\)\s*\{[\s\S]*?\.build-authoring-auxiliary\.dashboard-dialog:is\([\s\S]*?inline-size:\s*min\(980px, calc\(100vw - 428px\)\);[\s\S]*?\}/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*899px\)\s*\{[\s\S]*?\.build-authoring-auxiliary\.dashboard-dialog\s*\{[^}]*inline-size:\s*min\(440px, calc\(100vw - 32px\)\);[\s\S]*?\.build-authoring-auxiliary\.dashboard-dialog:is\([\s\S]*?inline-size:\s*min\(720px, calc\(100vw - 32px\)\);/,
+  );
+  assert.match(
+    modes,
+    /@media \(max-width:\s*899px\)\s*\{[\s\S]*?\.build-authoring-auxiliary\s*\{[^}]*width:\s*min\(440px, calc\(100vw - 32px\)\);[\s\S]*?\.build-authoring-auxiliary:is\([\s\S]*?width:\s*min\(720px, calc\(100vw - 32px\)\);/,
+  );
+});
+
 test("every registered dialog surface adopts its dashboard contract class", async () => {
   for (const [path, contractClass] of DIALOG_SURFACES) {
     const source = await read(path);

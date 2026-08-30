@@ -148,6 +148,12 @@
 }
 
 .dashboard-dialog--danger {
+  border-color: var(--simex-error);
+  box-shadow: inset 4px 0 0 var(--simex-error), var(--simex-style-shell-shadow);
+}
+
+.app-frame .confirm-dialog.dashboard-dialog--danger {
+  border-color: var(--simex-error);
   box-shadow: inset 4px 0 0 var(--simex-error), var(--simex-style-shell-shadow);
 }
 
@@ -162,6 +168,19 @@
   border-color: var(--simex-error);
 }
 
+.app-frame .confirm-dialog.dashboard-dialog--danger button.danger {
+  color: var(--simex-on-accent);
+  background: var(--simex-error);
+  border-color: var(--simex-error);
+}
+
+.dashboard-dialog--danger button.danger:hover:not(:disabled),
+.app-frame .confirm-dialog.dashboard-dialog--danger button.danger:hover:not(:disabled) {
+  color: var(--simex-error);
+  background: var(--simex-error-soft);
+  border-color: var(--simex-error);
+}
+
 /* Build owns the portal and anchored placement for these non-modal surfaces. */
 .build-authoring-auxiliary.dashboard-dialog {
   display: grid;
@@ -171,15 +190,17 @@
   overflow: auto;
 }
 
-.build-authoring-auxiliary.dashboard-dialog:is(
-  [data-authoring-surface="chrono-group"],
-  [data-authoring-surface="scene"]
-) {
-  inline-size: min(980px, calc(100vw - 428px));
-}
+@media (min-width: 900px) {
+  .build-authoring-auxiliary.dashboard-dialog:is(
+    [data-authoring-surface="chrono-group"],
+    [data-authoring-surface="scene"]
+  ) {
+    inline-size: min(980px, calc(100vw - 428px));
+  }
 
-.build-authoring-auxiliary.dashboard-dialog[data-authoring-surface="scene"] {
-  inline-size: auto;
+  .build-authoring-auxiliary.dashboard-dialog[data-authoring-surface="scene"] {
+    inline-size: auto;
+  }
 }
 
 .build-authoring-auxiliary.dashboard-dialog[data-authoring-surface="chrono-group"] {
@@ -192,6 +213,23 @@
   max-block-size: calc(100vh - 164px);
   margin: 0;
   overflow: auto;
+}
+
+@media (max-width: 899px) {
+  .build-authoring-auxiliary.dashboard-dialog {
+    inline-size: min(440px, calc(100vw - 32px));
+  }
+
+  .build-authoring-auxiliary.dashboard-dialog:is(
+    [data-authoring-surface="chrono-group"],
+    [data-authoring-surface="scene"]
+  ) {
+    inline-size: min(720px, calc(100vw - 32px));
+  }
+
+  .build-authoring-auxiliary.dashboard-dialog[data-authoring-surface="scene"] {
+    inline-size: auto;
+  }
 }
 
 .dashboard-dialog :where(button, input, select, textarea, [role="button"]):focus-visible {
