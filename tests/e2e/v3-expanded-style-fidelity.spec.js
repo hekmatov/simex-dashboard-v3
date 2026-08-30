@@ -216,6 +216,13 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   expect(saving.geometry).toEqual(active.geometry);
 
   await expect(owner).toHaveAttribute("data-pending-work-state", "error");
+  await expect(full).toBeVisible();
+  await expect(owner.getByRole("button", { name: "Retry Save", exact: true })).toBeVisible();
+  const failedNotice = page.locator('[data-operation-status="failed"]')
+    .filter({ hasText: "Dashboard persistence is temporarily unavailable." });
+  await expect(failedNotice).toBeVisible();
+  await expect(failedNotice.locator("p"))
+    .toHaveText("Dashboard persistence is temporarily unavailable.");
   const error = await observePendingOwnerStyle(page, ownerId, "error");
   expect(error).toMatchObject({
     count: 1,
