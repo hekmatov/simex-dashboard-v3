@@ -63,7 +63,7 @@ test("a dismissed operation handle cannot mutate a later operation that reuses i
   assert.equal(queue.getSnapshot().notices[0].message, "Second package imported");
 });
 
-test("visible success is polite for four seconds while fast hidden success never flashes", () => {
+test("success is polite for four seconds while fast work skips only the working state", () => {
   const clock = fakeClock();
   const queue = createOperationStatusQueue({ scheduler: clock });
   const visible = queue.beginOperation({ key: "layout", label: "Saving layout", blocking: true });
@@ -83,7 +83,73 @@ test("visible success is polite for four seconds while fast hidden success never
 
   const fast = queue.beginOperation({ key: "fast", label: "Fast save" });
   fast.succeed("Fast save completed");
-  clock.advance(5000);
+  assert.deepEqual(queue.getSnapshot().notices.map(pickNotice), [{
+    key: "fast",
+    label: "Fast save",
+    status: "completed",
+    message: "Fast save completed",
+  }]);
+  clock.advance(4000);
+  assert.deepEqual(queue.getSnapshot().notices, []);
+});
+
+test("elapsed wall-clock time makes a completed operation visible when its delay timer was starved", () => {
+  const clock = fakeClock();
+  const queue = createOperationStatusQueue({ scheduler: clock });
+  const operation = queue.beginOperation({
+    key: "layout",
+    label: "Saving layout",
+    reportCompletion: false,
+  });
+
+  clock.elapseWithoutTimers(3_000);
+  operation.succeed("Layout saved");
+
+  assert.deepEqual(queue.getSnapshot().notices.map(pickNotice), [{
+    key: "layout",
+    label: "Saving layout",
+    status: "completed",
+    message: "Layout saved",
+  }]);
+  clock.advance(4_000);
+  assert.deepEqual(queue.getSnapshot().notices, []);
+});
+
+test("an explicitly quiet fast operation remains hidden until its wall-clock threshold", () => {
+  const clock = fakeClock();
+  const queue = createOperationStatusQueue({ scheduler: clock });
+  const operation = queue.beginOperation({
+    key: "prefetch",
+    label: "Prefetching",
+    reportCompletion: false,
+  });
+
+  operation.succeed("Prefetched");
+  assert.deepEqual(queue.getSnapshot().notices, []);
+});
+
+test("semantic activity appears immediately and stable keys coalesce repeated draft updates", () => {
+  const clock = fakeClock();
+  const queue = createOperationStatusQueue({ scheduler: clock });
+
+  queue.reportActivity({
+    key: "chart-draft:update",
+    label: "Chart draft",
+    message: "Updating chart draft.",
+  });
+  queue.reportActivity({
+    key: "chart-draft:update",
+    label: "Chart draft",
+    message: "Chart draft updated: title changed.",
+  });
+
+  assert.deepEqual(queue.getSnapshot().notices.map(pickNotice), [{
+    key: "chart-draft:update",
+    label: "Chart draft",
+    status: "completed",
+    message: "Chart draft updated: title changed.",
+  }]);
+  clock.advance(4_000);
   assert.deepEqual(queue.getSnapshot().notices, []);
 });
 
@@ -160,6 +226,12 @@ function fakeClock() {
     },
     clearTimeout(id) {
       timers.delete(id);
+    },
+    now() {
+      return now;
+    },
+    elapseWithoutTimers(milliseconds) {
+      now += milliseconds;
     },
     advance(milliseconds) {
       now += milliseconds;

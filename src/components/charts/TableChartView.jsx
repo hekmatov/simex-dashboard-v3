@@ -11,6 +11,9 @@ export default function TableChartView({ model, chart = {}, provenance }) {
   const rows = Array.isArray(model.rows) ? model.rows : [];
   const metadata = Array.isArray(model.rowMetadata) ? model.rowMetadata : [];
   const title = chart.title || "Table";
+  const rowDistribution = chart.presentation?.table?.rowDistribution === "fill"
+    ? "fill"
+    : "regular";
   const table = React.createElement("table", null,
     React.createElement("caption", {
       className: chartTitleVisible(chart)
@@ -23,7 +26,7 @@ export default function TableChartView({ model, chart = {}, provenance }) {
       "aria-label": metadata[index]?.time ? `Observed ${metadata[index].time}` : undefined,
     }, columns.map((column) => React.createElement("td", { key: column.key }, formatValue(row?.[column.key])))))));
   return React.createElement("section", {
-    className: "chart-table-view",
+    className: `chart-table-view chart-table-view--${rowDistribution}`,
     "aria-label": title,
     ...titleContainerProps(chart),
   },

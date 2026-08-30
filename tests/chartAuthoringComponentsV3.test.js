@@ -138,10 +138,12 @@ const {
   default: ChartWizardV3,
   applyWizardMembership,
   buildChartWizardEditCommitPayload,
+  chartDestinationForType,
   createChartWizardEditState,
   createChartCsvDraftLifecycle,
   createChartWizardState,
   createWizardCloseHandlers,
+  discardConfirmationRequired,
   createWizardPreparation,
   isChartWizardStateDirty,
   parseUploadedCsvFile,
@@ -3081,6 +3083,22 @@ test("pending chart creation guards Escape, Close, and discard", () => {
   assert.equal(controls.requestClose(), false);
   assert.equal(controls.confirmClose(), false);
   assert.deepEqual(calls, []);
+});
+
+test("full editor discard confirms only when the edit session is dirty", () => {
+  assert.equal(discardConfirmationRequired({ editMode: true, editDirty: false }), false);
+  assert.equal(discardConfirmationRequired({ editMode: true, editDirty: true }), true);
+  assert.equal(discardConfirmationRequired({ editMode: false, editDirty: false }), true);
+});
+
+test("Gauge creation carries a full-row footprint into reviewed persistence", () => {
+  const destination = { pageId: "overview", sectionId: "status", footprint: { columns: 2, rows: 2 } };
+  assert.deepEqual(chartDestinationForType(destination, "gauge"), {
+    pageId: "overview",
+    sectionId: "status",
+    footprint: { columns: 4, rows: 1 },
+  });
+  assert.equal(chartDestinationForType(destination, "kpi"), destination);
 });
 
 test("editor state isolates mutation and same-authority rerenders preserve the draft", () => {

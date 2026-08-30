@@ -17,12 +17,14 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
   let announcementRevision = 0;
   let announcement = null;
   let snapshot = freezeSnapshot([], announcement);
+  const readNow = monotonicNow(scheduler);
 
   function beginOperation({
     key,
     label,
     delayMs = DEFAULT_DELAY_MS,
     blocking = false,
+    reportCompletion = true,
     intent = "info",
   } = {}) {
     const normalizedKey = requiredText(key, "Operation key");
@@ -45,6 +47,9 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
       order: ++sequence,
       generation,
       scheduler,
+      startedAt: readNow(),
+      delayMs,
+      reportCompletion: reportCompletion !== false,
       progressTimer: null,
       dismissTimer: null,
     };
@@ -69,11 +74,13 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
         const current = currentRecord(normalizedKey, generation);
         if (!current) return false;
         clearTimer(current, "progressTimer");
-        if (!current.visible) {
+        const elapsedDelay = elapsedMilliseconds(current.startedAt, readNow()) >= current.delayMs;
+        if (!current.visible && !elapsedDelay && !current.reportCompletion) {
           removeRecord(normalizedKey, generation);
           publish();
           return true;
         }
+        current.visible = true;
         current.status = "completed";
         current.intent = "success";
         current.message = optionalText(message) ?? `${current.label} completed.`;
@@ -101,6 +108,54 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
         publish();
         return true;
       },
+      dismiss() {
+        return dismissOperation(normalizedKey, generation);
+      },
+    });
+  }
+
+  function reportActivity({
+    key,
+    label,
+    message,
+    intent = "info",
+    dismissMs = SUCCESS_DISMISS_MS,
+  } = {}) {
+    const normalizedKey = requiredText(key, "Activity key");
+    const normalizedMessage = requiredText(message, "Activity message");
+    const normalizedLabel = optionalText(label) ?? normalizedMessage;
+    if (!Number.isFinite(dismissMs) || dismissMs < 0) {
+      throw new RangeError("Activity dismiss delay must be non-negative.");
+    }
+    const previous = records.get(normalizedKey);
+    clearRecordTimers(previous);
+    const generation = ++operationGeneration;
+    const record = {
+      key: normalizedKey,
+      label: normalizedLabel,
+      status: "completed",
+      message: normalizedMessage,
+      intent: requiredText(intent, "Activity intent"),
+      blocking: false,
+      visible: true,
+      order: ++sequence,
+      generation,
+      scheduler,
+      startedAt: readNow(),
+      delayMs: 0,
+      progressTimer: null,
+      dismissTimer: null,
+    };
+    records.set(normalizedKey, record);
+    announce(record, "polite");
+    publish();
+    record.dismissTimer = scheduler.setTimeout(() => {
+      const latest = currentRecord(normalizedKey, generation);
+      if (!latest) return;
+      removeRecord(normalizedKey, generation);
+      publish();
+    }, dismissMs);
+    return Object.freeze({
       dismiss() {
         return dismissOperation(normalizedKey, generation);
       },
@@ -154,6 +209,7 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
 
   return Object.freeze({
     beginOperation,
+    reportActivity,
     dismissOperation,
     getSnapshot() {
       return snapshot;
@@ -173,6 +229,22 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
       snapshot = freezeSnapshot([], null);
     },
   });
+}
+
+function monotonicNow(scheduler) {
+  if (typeof scheduler?.now === "function") return () => scheduler.now();
+  if (typeof scheduler?.performance?.now === "function") {
+    return () => scheduler.performance.now();
+  }
+  if (typeof globalThis.performance?.now === "function") {
+    return () => globalThis.performance.now();
+  }
+  return () => Date.now();
+}
+
+function elapsedMilliseconds(startedAt, completedAt) {
+  const elapsed = completedAt - startedAt;
+  return Number.isFinite(elapsed) && elapsed >= 0 ? elapsed : 0;
 }
 
 function publicNotice(record) {

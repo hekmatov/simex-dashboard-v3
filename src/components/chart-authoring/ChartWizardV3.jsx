@@ -265,6 +265,18 @@ export function createWizardCloseHandlers({
   });
 }
 
+export function discardConfirmationRequired({ editMode = false, editDirty = false } = {}) {
+  return !editMode || editDirty;
+}
+
+export function chartDestinationForType(destination, typeId) {
+  if (typeId !== "gauge") return destination;
+  return {
+    ...(destination ?? {}),
+    footprint: { columns: 4, rows: 1 },
+  };
+}
+
 /**
  * Schema-generated chart authoring flow.
  *
@@ -658,7 +670,11 @@ export default function ChartWizardV3({
     preparedData: runtime.prepared,
   });
   const destinationChoices = editableDestinationChoices(dashboard, wizard.destination);
-  const destinationFootprint = wizard.destination?.footprint
+  const reviewedDestination = chartDestinationForType(
+    wizard.destination ?? destination,
+    wizard.draft?.typeId,
+  );
+  const destinationFootprint = reviewedDestination?.footprint
     ?? resolveChartFootprint(wizard.draft?.layout);
   const destinationResolution = hasDashboardPages(dashboard)
     ? resolveDestination(wizard.destination ?? {}, dashboard)
@@ -1124,7 +1140,7 @@ export default function ChartWizardV3({
               finalized,
               runtimeArtifact,
             }),
-            reviewedPlacement: wizard.destination ?? destination,
+            reviewedPlacement: reviewedDestination,
             onSaveChanges,
             onCreate,
           });
@@ -1144,7 +1160,7 @@ export default function ChartWizardV3({
           transactionId: transactionIdRef.current,
           draftId: wizard.draftId ?? finalized.chart.id,
           finalized: finalizedWithRuntime,
-          destination: wizard.destination ?? destination,
+          destination: reviewedDestination,
           dashboardRevision: wizard.dashboardRevision ?? dashboardRevision,
           permissionRevision: "chart-create-current",
           schemaRevision: wizard.chartTypeRevision
@@ -1277,6 +1293,10 @@ export default function ChartWizardV3({
     void csvDraftLifecycle.discardAll("chart-csv-cancel");
     void discardGeoDraft("chart-geojson-cancel");
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
+    finishDiscard(closed);
+  }
+
+  function finishDiscard(closed) {
     setWizard(closed);
     onDraftStateChange(closed);
     if (closed.closed) {
@@ -1284,6 +1304,18 @@ export default function ChartWizardV3({
       onDiscardChanges();
       if (typeof onClose === "function") onClose();
     }
+  }
+
+  function requestDiscard() {
+    if (operationLocked()) return false;
+    if (discardConfirmationRequired({ editMode, editDirty })) {
+      dispatch({ type: "requestClose" });
+      return true;
+    }
+    void csvDraftLifecycle.discardAll("chart-csv-cancel");
+    void discardGeoDraft("chart-geojson-cancel");
+    finishDiscard({ ...wizard, confirmation: null, closed: true });
+    return true;
   }
 
   return React.createElement(
@@ -1474,7 +1506,7 @@ export default function ChartWizardV3({
                 { fallback: React.createElement("p", { role: "status" }, "Loading chart size options…") },
                 React.createElement(ChartFootprintPicker, {
                   value: destinationFootprint,
-                  disabled: disabled || submitting,
+                  disabled: disabled || submitting || wizard.draft?.typeId === "gauge",
                   onChange: (footprint) => updateDestination({ footprint }),
                 }),
               ),
@@ -1645,7 +1677,7 @@ export default function ChartWizardV3({
               type: "button",
               className: "secondary chart-wizard-discard",
               disabled: disabled || submitting,
-              onClick: () => dispatch({ type: "requestClose" }),
+              onClick: requestDiscard,
             },
             editMode ? "Discard changes" : "Discard chart draft",
           ),

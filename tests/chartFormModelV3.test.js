@@ -33,6 +33,29 @@ function lineChart(overrides = {}) {
   });
 }
 
+test("table row distribution is available in both quick and full appearance forms", () => {
+  const chart = createChartDraft("table", {
+    id: "exercise-table",
+    title: "Exercise table",
+    sourceId: "exercise-data",
+    roles: { columns: [{ field: "score" }] },
+    presentation: { table: { rowDistribution: "fill" } },
+  });
+  const profile = profileDataset([{ score: 4 }]);
+  const full = buildEditorFormModel({
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile),
+  });
+  const quick = buildQuickEditorFormModel({ chart });
+  const fullField = full.sections.flatMap(({ fields }) => fields).find(({ id }) => id === "tableRowDistribution");
+  const quickField = quick.sections.flatMap(({ fields }) => fields).find(({ id }) => id === "tableRowDistribution");
+
+  assert.equal(fullField?.value, "fill");
+  assert.deepEqual(fullField?.options.map(({ value }) => value), ["regular", "fill"]);
+  assert.equal(quickField?.value, "fill");
+});
+
 function deltaChart() {
   return createChartDraft("deltaCard", {
     id: "exercise-delta",

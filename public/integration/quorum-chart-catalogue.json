@@ -1421,7 +1421,6 @@
       },
       "conversion": {
         "compatible_type_ids": [
-          "bullet",
           "kpi"
         ],
         "rules": {
@@ -2205,7 +2204,6 @@
       },
       "conversion": {
         "compatible_type_ids": [
-          "bullet",
           "deltaCard",
           "gauge"
         ],
@@ -4654,5 +4652,5 @@
     }
   ],
   "dashboard_semantic_digest": "8285387945718c930d576d3921ce5e814d02f1d6b07510c0bf775a20f29803f3",
-  "digest": "df5525f7d7815b11256f1b0f14b298563ea6873d55b58539c07ff03b8ef6955b"
+  "digest": "9d2fa7b06ffcdb87c855e3d88c4bed316e122b350c1b7a8c509446adc5ebaa6c"
 }

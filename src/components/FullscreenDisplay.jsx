@@ -160,14 +160,14 @@ export default function FullscreenDisplay({
               title={option.label}
             />
           ))}
-          <button
-            type="button"
-            className="secondary fullscreen-exit-button"
+          <IconControl
+            interactionId="fullscreen.close-chart"
+            className="secondary fullscreen-toolbar-close"
+            ariaLabel={isComparison ? "Exit comparison" : "Exit fullscreen"}
+            tooltip={isComparison ? "Exit comparison" : "Exit fullscreen"}
             data-fullscreen-exit
             onClick={closeAll}
-          >
-            {isComparison ? "Exit comparison" : "Exit focus"}
-          </button>
+          />
         </div>
         <DisplayedChartGrid
           dashboard={dashboard}

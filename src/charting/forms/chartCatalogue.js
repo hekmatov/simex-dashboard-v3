@@ -8,6 +8,11 @@ const CONFIGURATION_IDENTITY_KEYS = new Set([
   "showDescription",
   "accessibilityLabel",
 ]);
+const RETIRED_AUTHORING_TYPES = new Set(["bullet"]);
+
+export function isChartTypeAuthorable(typeId) {
+  return !RETIRED_AUTHORING_TYPES.has(typeId);
+}
 
 export function listChartTypeOptions({
   registry,
@@ -25,6 +30,7 @@ export function listChartTypeOptions({
   const categoryId = String(category).trim();
   const options = schemas.flatMap((schema) => {
     if (schema.authoringWorkflow !== authoringWorkflow) return [];
+    if (!isChartTypeAuthorable(schema.typeId) && selected?.chartTypeId !== schema.typeId) return [];
     const purpose = schema.semantics?.purpose ?? groupLabels.get(schema.group) ?? schema.group;
     const haystack = `${schema.label} ${purpose} ${schema.description}`.toLocaleLowerCase();
     if (categoryId && schema.group !== categoryId) return [];

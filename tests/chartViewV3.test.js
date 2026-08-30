@@ -289,6 +289,21 @@ test("table values render non-finite values as unavailable", () => {
   assert.doesNotMatch(html, /Infinity/);
 });
 
+test("table charts expose regular and fill-height row distribution classes", () => {
+  const model = { columns: [{ key: "score", label: "Score" }], rows: [{ score: 4 }] };
+  const regular = renderToStaticMarkup(React.createElement(TableChartView, {
+    chart: { title: "Scores" },
+    model,
+  }));
+  const fill = renderToStaticMarkup(React.createElement(TableChartView, {
+    chart: { title: "Scores", presentation: { table: { rowDistribution: "fill" } } },
+    model,
+  }));
+
+  assert.match(regular, /chart-table-view--regular/);
+  assert.match(fill, /chart-table-view--fill/);
+});
+
 test("legacy image render models discover intrinsic geometry before applying saved fit", () => {
   const imageRows = [{ src: "/maps/readiness.png", alt: "Readiness map", fit: "cover" }];
   const image = renderToStaticMarkup(React.createElement(ChartView, {
@@ -471,7 +486,7 @@ test("custom DOM chart families apply aligned titles and normalized backgrounds"
   assert.match(opaqueCard, /class="chart-view-frame"[^>]*data-title-align="right"[^>]*style="text-align:right;background-color:#A1B2C3"/);
   assert.match(opaqueCard, /class="chart-card-view"[^>]*data-title-align="right"[^>]*style="text-align:right"/);
   assert.match(transparentTable, /class="chart-view-frame"[^>]*data-title-align="center"[^>]*style="text-align:center;background-color:transparent"/);
-  assert.match(transparentTable, /class="chart-table-view"[^>]*data-title-align="center"[^>]*style="text-align:center"/);
+  assert.match(transparentTable, /class="chart-table-view chart-table-view--regular"[^>]*data-title-align="center"[^>]*style="text-align:center"/);
   assert.match(image, /class="chart-view-frame"[^>]*data-title-align="left"[^>]*style="text-align:left;background-color:#DDEEFF"/);
   assert.match(image, /class="chart-image-view"[^>]*data-title-align="left"[^>]*style="text-align:left"/);
 });

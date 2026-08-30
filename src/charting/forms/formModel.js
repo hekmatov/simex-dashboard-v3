@@ -29,6 +29,7 @@ const QUICK_PRESENTATION_FIELD_IDS = new Set([
   "background",
   "legendVisible",
   "seriesColors",
+  "tableRowDistribution",
 ]);
 
 const INTERPRETATION_LABELS = Object.freeze({
@@ -418,6 +419,20 @@ function appearanceFields({ chart, schema }) {
           control: "toggle",
           path: ["presentation", "legend", "visible"],
           value: chart.presentation?.legend?.visible !== false,
+        }]
+      : []),
+    ...(schema.typeId === "table"
+      ? [{
+          id: "tableRowDistribution",
+          label: "Table row spacing",
+          control: "select",
+          path: ["presentation", "table", "rowDistribution"],
+          value: chart.presentation?.table?.rowDistribution ?? "regular",
+          options: [
+            { value: "regular", label: "Regular spacing" },
+            { value: "fill", label: "Fill available height" },
+          ],
+          help: "Use regular spacing for compact rows, or distribute rows to occupy the chart height.",
         }]
       : []),
     ...schema.form.appearance.map((fieldId) => (

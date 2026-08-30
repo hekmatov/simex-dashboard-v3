@@ -33,6 +33,18 @@ test("catalogue is driven by zero, one, or many live registry entries", () => {
   );
 });
 
+test("Bullet remains readable for existing dashboards but is retired from new authoring", () => {
+  const registry = registryWith("kpi", "gauge", "bullet");
+  assert.deepEqual(
+    listChartTypeOptions({ registry }).map(({ id }) => id),
+    ["kpi", "gauge"],
+  );
+  assert.deepEqual(
+    listChartTypeOptions({ registry, selected: { chartTypeId: "bullet" } }).map(({ id }) => id),
+    ["kpi", "gauge", "bullet"],
+  );
+});
+
 test("catalogue search covers chart name, purpose, and description without hiding reasons", () => {
   const registry = registryWith("bar", "line", "pie");
   assert.deepEqual(

@@ -2666,6 +2666,8 @@ button.danger {
 .chart-card-view,
 .chart-target-collection-view,
 .chart-table-view {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   margin: 0;
   min-height: 0;
@@ -3090,6 +3092,20 @@ button.danger {
 .chart-table-scroll {
   margin-top: 12px;
   overflow-x: auto;
+}
+
+.chart-table-view--fill .chart-table-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.chart-table-view--fill table {
+  height: 100%;
+}
+
+.chart-table-view--fill tbody tr {
+  height: 1%;
 }
 
 .chart-table-view table {
@@ -5534,6 +5550,18 @@ button.danger {
   align-items: center;
   display: flex;
   gap: 8px;
+}
+
+.chart-quick-editor-actions {
+  border-bottom: 1px solid var(--simex-border-subtle);
+  border-top: 0;
+  justify-content: flex-end;
+  padding: 10px 20px;
+}
+
+.chart-quick-editor-actions .chart-editor-remove {
+  margin-right: auto;
+  position: static;
 }
 
 .header-edit-primary-actions .header-edit-floating-button.secondary {

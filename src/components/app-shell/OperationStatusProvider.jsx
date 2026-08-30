@@ -33,6 +33,7 @@ export default function OperationStatusProvider({ children, queue: suppliedQueue
   );
   const value = React.useMemo(() => Object.freeze({
     beginOperation: queue.beginOperation,
+    reportActivity: queue.reportActivity,
     dismissOperation: queue.dismissOperation,
     snapshot,
   }), [queue, snapshot]);

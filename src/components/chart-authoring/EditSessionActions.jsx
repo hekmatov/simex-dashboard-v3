@@ -6,6 +6,7 @@ import { IconControl } from "../common/SimExIcon.js";
 const PERSISTENCE_PENDING_REASON = "Wait for the current chart operation to finish.";
 
 export default function EditSessionActions({
+  className = "",
   valid = false,
   submitting = false,
   disabled = false,
@@ -30,7 +31,7 @@ export default function EditSessionActions({
     null,
     React.createElement(
       "div",
-      { className: "chart-editor-actions" },
+      { className: ["chart-editor-actions", className].filter(Boolean).join(" ") },
       React.createElement(IconControl, {
         interactionId: "editor.save-changes",
         type: "submit",

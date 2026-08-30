@@ -90,12 +90,28 @@ export default function ChartQuickEditor({
             ),
           ),
         ),
+        React.createElement(EditSessionActions, {
+          className: "chart-quick-editor-actions",
+          valid: model.valid && dirty,
+          submitting: saving,
+          disabled,
+          saveDisabled: !saveAvailable,
+          saveDisabledReason: SAVE_UNAVAILABLE_REASON,
+          removeDisabled: !removeAvailable,
+          removeDisabledReason: REMOVE_UNAVAILABLE_REASON,
+          saveLabel: "Save",
+          resetLabel: "Reset",
+          cancelLabel: "Close",
+          onRequestReset: invokeWhileUnlocked(onReset),
+          onCancel: invokeWhileUnlocked(onClose),
+          onRemove: invokeWhileUnlocked(onRemove),
+        }),
         React.createElement(
           "div",
           { className: "chart-editor-layout chart-quick-editor-layout" },
           React.createElement(ChartFootprintPicker, {
             value: resolveChartFootprint(chart.layout),
-            disabled: locked,
+            disabled: locked || chart.typeId === "gauge",
             onChange: ({ columns, rows }) => changeDraft(
               ["layout"],
               {
@@ -148,21 +164,6 @@ export default function ChartQuickEditor({
               session.error.message,
             )
           : null,
-        React.createElement(EditSessionActions, {
-          valid: model.valid && dirty,
-          submitting: saving,
-          disabled,
-          saveDisabled: !saveAvailable,
-          saveDisabledReason: SAVE_UNAVAILABLE_REASON,
-          removeDisabled: !removeAvailable,
-          removeDisabledReason: REMOVE_UNAVAILABLE_REASON,
-          saveLabel: "Save",
-          resetLabel: "Reset",
-          cancelLabel: "Close",
-          onRequestReset: invokeWhileUnlocked(onReset),
-          onCancel: invokeWhileUnlocked(onClose),
-          onRemove: invokeWhileUnlocked(onRemove),
-        }),
       ),
     ),
   );

@@ -27,6 +27,7 @@ import {
   applyChartConversion,
   planChartConversion,
 } from "../../charting/forms/chartConversion.js";
+import { isChartTypeAuthorable } from "../../charting/forms/chartCatalogue.js";
 import {
   getChartSchema,
   listChartSchemas,
@@ -577,7 +578,9 @@ export default function ChartEditorV3({
                   }
                 },
               },
-              listChartSchemas().map((schema) => React.createElement(
+              listChartSchemas()
+                .filter((schema) => isChartTypeAuthorable(schema.typeId) || schema.typeId === state.draft.typeId)
+                .map((schema) => React.createElement(
                 "option",
                 { key: schema.typeId, value: schema.typeId },
                 schema.label,
@@ -586,7 +589,7 @@ export default function ChartEditorV3({
           ),
           React.createElement(ChartFootprintPicker, {
             value: resolveChartFootprint(state.draft.layout),
-            disabled: disabled || submitting,
+            disabled: disabled || submitting || state.draft.typeId === "gauge",
             onChange: ({ columns, rows }) => updateChartPath(
               ["layout"],
               {

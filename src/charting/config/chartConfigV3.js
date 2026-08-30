@@ -20,7 +20,7 @@ export const CHART_CONFIG_VERSION = 3;
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
 const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
 const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
-const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine"]);
+const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "table", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
 const LAYOUT_SIZES = new Set(["compact", "standard", "wide", "full"]);
@@ -408,6 +408,7 @@ function validatePresentation(chart, schema) {
   validateTargets(descriptors.targets?.value);
   validateMap(descriptors.map?.value);
   validateTimeline(descriptors.timeline?.value);
+  validateTable(descriptors.table?.value, schema);
   validateBackground(descriptors.background?.value);
   validateLegend(descriptors.legend?.value);
   validateAccessibility(descriptors.accessibility?.value);
@@ -420,6 +421,20 @@ function validatePresentation(chart, schema) {
       descriptors.series.value,
       schema.form.appearance,
     );
+  }
+}
+
+function validateTable(table, schema) {
+  optionalObject(table, "Chart presentation table", new Set(["rowDistribution"]));
+  if (table === undefined || table === null) return;
+  if (schema.typeId !== "table") {
+    throw new Error(`Chart type "${schema.typeId}" does not support table presentation.`);
+  }
+  if (
+    table.rowDistribution !== undefined
+    && !["regular", "fill"].includes(table.rowDistribution)
+  ) {
+    throw new Error("Chart presentation table row distribution must be regular or fill.");
   }
 }
 
@@ -657,6 +672,9 @@ export function normalizeChartInstance(chart) {
   }
   if (seriesProperty.present) {
     normalized.presentation.series = normalizedSeries;
+  }
+  if (normalized.typeId === "gauge") {
+    normalized.layout = { size: "wide", width: 4, height: 1 };
   }
   return normalized;
 }

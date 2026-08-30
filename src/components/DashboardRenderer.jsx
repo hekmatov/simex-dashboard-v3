@@ -2,6 +2,10 @@
 
 import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
 import { useOperationStatus } from "./app-shell/OperationStatusProvider.jsx";
+import {
+  beginDashboardContentOperation,
+  reportDashboardContentActivity,
+} from "../lib/dashboardContentActivity.js";
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartQuickEditor from "./chart-authoring/ChartQuickEditor.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
@@ -185,7 +189,23 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   operationError = "",
   themeProjection,
 }, ref) {
-  const { beginOperation } = useOperationStatus();
+  const { beginOperation, reportActivity } = useOperationStatus();
+  const reportContentActivity = React.useCallback(
+    (actionId, options) => reportDashboardContentActivity(
+      reportActivity,
+      actionId,
+      options,
+    ),
+    [reportActivity],
+  );
+  const beginContentOperation = React.useCallback(
+    (actionId, options) => beginDashboardContentOperation(
+      beginOperation,
+      actionId,
+      options,
+    ),
+    [beginOperation],
+  );
   const playback = usePlayback();
   const buildMode = mode === "build";
   const editMode = buildMode;
@@ -225,8 +245,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     return contentDraftCoordinator.subscribe(setContentDraftRetainers);
   }, [contentDraftCoordinator]);
   const onContentDraftStage = React.useCallback(
-    (input) => contentDraftCoordinator?.stageDraft(input),
-    [contentDraftCoordinator],
+    (input) => {
+      const staged = contentDraftCoordinator?.stageDraft(input);
+      if (staged) {
+        reportContentActivity("source.draft.created", {
+          subject: input?.displayName ?? input?.sourceId ?? input?.draftId,
+          key: `content:source.draft:${staged.draftId ?? input?.draftId ?? "active"}`,
+        });
+      }
+      return staged;
+    },
+    [contentDraftCoordinator, reportContentActivity],
   );
   const onContentDraftCommit = React.useCallback(
     async (draftId, buildCandidate, {
@@ -256,9 +285,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       if (!contentDraftCoordinator) return undefined;
       const active = contentDraftCoordinator.getActiveRetainers().records
         .some((record) => record.ownerId === draftId && record.status !== "active");
-      return active ? contentDraftCoordinator.discardDraft(draftId, { reason }) : false;
+      if (!active) return false;
+      const discarded = contentDraftCoordinator.discardDraft(draftId, { reason });
+      void Promise.resolve(discarded).then(() => {
+        reportContentActivity("source.draft.discarded", {
+          subject: draftId,
+          key: `content:source.draft:${draftId}`,
+        });
+      }, () => undefined);
+      return discarded;
     },
-    [contentDraftCoordinator],
+    [contentDraftCoordinator, reportContentActivity],
   );
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
   const [pendingStaticBuildSelection, setPendingStaticBuildSelection] = React.useState(null);
@@ -952,6 +989,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       activity: "active",
       activation: "focus",
     } : current);
+    reportContentActivity("chart.draft.resumed", {
+      subject: chartWizardSuspendedTarget?.sectionId,
+      key: "content:chart.draft:create",
+    });
     return true;
   }
 
@@ -972,6 +1013,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       return;
     }
     if (!staticWizardTarget) openStaticContentWizard();
+    reportContentActivity("static.draft.resumed", {
+      subject: staticContentDraft?.title ?? staticContentDraft?.mode,
+      key: "content:static.draft:active",
+    });
   }
 
   function restoreStaticContentOwnerFocus() {
@@ -1008,6 +1053,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     else setStaticWizardTarget(null);
     const invoker = staticWizardInvokerRef.current;
     window.requestAnimationFrame(() => invoker?.isConnected && invoker.focus({ preventScroll: true }));
+    reportContentActivity("static.draft.suspended", {
+      subject: (draft ?? staticContentDraft)?.title ?? (draft ?? staticContentDraft)?.mode,
+      key: "content:static.draft:active",
+    });
   }
 
   function discardStaticContentOwner() {
@@ -1022,6 +1071,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setStaticContentDirty(false);
     setStaticContentRestoration(null);
     restoreStaticWizardFocus();
+    reportContentActivity("static.draft.discarded", {
+      subject: staticContentDraft?.title ?? staticContentDraft?.mode,
+      key: "content:static.draft:active",
+    });
     return true;
   }
 
@@ -1167,6 +1220,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     buildLayoutDraftRef.current = next;
     setBuildLayoutDraft(next);
     focusMovedLayoutTarget(analysis.targetId);
+    reportContentActivity("panel.moved", {
+      subject: analysis.move?.source?.label ?? analysis.move?.source?.placementId,
+      key: `content:panel.move:${analysis.move?.source?.placementId ?? "active"}`,
+    });
     return true;
   }
 
@@ -1184,6 +1241,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setBuildLayoutDraft(next);
     setMoveConfirmation(null);
     focusMovedLayoutTarget(latest.targetId);
+    reportContentActivity("panel.moved", {
+      subject: latest.move?.source?.label ?? latest.move?.source?.placementId,
+      key: `content:panel.move:${latest.move?.source?.placementId ?? "active"}`,
+    });
   }
 
   function focusMovedLayoutTarget(targetId) {
@@ -1299,6 +1360,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     onActivePageChange(pageId);
     setBuildSelection({ kind: "page", pageId });
     requestAnimationFrame(() => focusMovedLayoutTarget(pageId));
+    reportContentActivity("page.created", { subject: label, key: `content:page:${pageId}` });
     return true;
   }
 
@@ -1309,6 +1371,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     buildLayoutDraftRef.current = next;
     setBuildLayoutDraft(next);
     setBuildSelection({ kind: "page", pageId });
+    reportContentActivity("page.reordered", {
+      subject: pageId,
+      detail: `Moved to position ${targetIndex + 1}.`,
+      key: `content:page:${pageId}:order`,
+    });
   }
 
   function reorderBuildSection(sectionId, targetIndex) {
@@ -1322,6 +1389,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         ? current
         : { kind: "page", pageId: activePage.id }
     ));
+    reportContentActivity("section.reordered", {
+      subject: sectionId,
+      detail: `Moved to position ${targetIndex + 1}.`,
+      key: `content:section:${sectionId}:order`,
+    });
   }
 
   function applyBuildStructureCommand(command) {
@@ -1349,6 +1421,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     })();
     buildLayoutDraftRef.current = next;
     setBuildLayoutDraft(next);
+    const activityId = command.type.includes("page")
+      ? (["merge-page", "remove-page"].includes(command.type) ? "page.deleted" : "page.updated")
+      : (["merge-section", "remove-section"].includes(command.type)
+          ? "section.deleted"
+          : command.type === "move-section" ? "section.reordered" : "section.updated");
+    const subject = command.label ?? command.title ?? command.pageId ?? command.sectionId;
+    reportContentActivity(activityId, {
+      subject,
+      key: `content:${command.type}:${command.pageId ?? "page"}:${command.sectionId ?? "section"}`,
+    });
     if (["merge-page", "remove-page"].includes(command.type) && command.pageId === activePageId) {
       const nextPageId = command.targetPageId
         ?? workingDashboard.pages.find(({ id, landing }) => id !== command.pageId && !landing)?.id
@@ -1398,6 +1480,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (buildLayoutDraft?.status === "saving") return;
     buildLayoutDraftRef.current = null;
     setBuildLayoutDraft(null);
+    reportContentActivity("layout.discarded", { key: "content:layout:draft" });
   }
 
   function captureQuickChartEditRestoration(surface = "quick") {
@@ -1492,6 +1575,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           draft,
         })
       : current);
+    reportContentActivity("chart.draft.updated", {
+      subject: draft?.title ?? chartEditSession?.placementId,
+      key: `content:chart.draft:${chartEditSession?.placementId ?? "active"}`,
+    });
   }
 
   const changeFullChartDraft = React.useCallback(({ draft, chronoGroups }) => {
@@ -1503,7 +1590,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           chronoGroups,
         })
       : current);
-  }, []);
+    reportContentActivity("chart.draft.updated", {
+      subject: draft?.title ?? chartEditSession?.placementId,
+      key: `content:chart.draft:${chartEditSession?.placementId ?? "active"}`,
+    });
+  }, [chartEditSession?.placementId, reportContentActivity]);
 
   const recordFullChartRestoration = React.useCallback((restoration) => {
     setChartEditSession((current) => current?.activeSurface === "full"
@@ -1541,6 +1632,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartEditSession((current) => current
       ? reduceChartEditSession(current, { type: "RESET" })
       : current);
+    reportContentActivity("chart.draft.reset", {
+      subject: chartEditSession?.draft?.title ?? chartEditSession?.placementId,
+      key: `content:chart.draft:${chartEditSession?.placementId ?? "active"}`,
+    });
   }
 
   function saveChartEditSession(fullValue = null) {
@@ -1612,6 +1707,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (resumed.activeSurface === "quick") {
       restoreQuickChartEditSession(resumed.restoration, resumed.placementId);
     }
+    reportContentActivity("chart.draft.resumed", {
+      subject: resumed.draft?.title ?? resumed.placementId,
+      key: `content:chart.draft:${resumed.placementId}`,
+    });
     return true;
   }
 
@@ -1628,6 +1727,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditBaseline(null);
       setChartEditorDirty(false);
     }
+    if (next !== null) reportContentActivity("chart.draft.suspended", {
+      subject: next.draft?.title ?? next.placementId,
+      key: `content:chart.draft:${next.placementId}`,
+    });
     return true;
   }
 
@@ -1639,6 +1742,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartEditorPlacementId(null);
     setChartEditBaseline(null);
     setChartEditorDirty(false);
+    reportContentActivity("chart.draft.discarded", {
+      subject: chartEditSession?.draft?.title ?? chartEditSession?.placementId,
+      key: `content:chart.draft:${chartEditSession?.placementId ?? "active"}`,
+    });
     return true;
   }
 
@@ -1746,6 +1853,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       pageId,
       updates: nextDraft,
     });
+    reportContentActivity("page.updated", {
+      subject: dashboard.pages.find((page) => page.id === pageId)?.label ?? pageId,
+      key: `content:page:${pageId}:draft`,
+    });
   }
 
   function changeDashboardText(updates) {
@@ -1755,6 +1866,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     pendingEdits.schedule("dashboard", {
       type: "dashboard",
       updates: nextDraft,
+    });
+    reportContentActivity("dashboard.settings.updated", {
+      detail: "Dashboard text changed.",
+      key: "content:dashboard:settings",
     });
   }
 
@@ -1769,9 +1884,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (moderatorOperationGateRef.current.isActive()) {
       return Promise.reject(new Error("Wait for the current dashboard operation to finish."));
     }
+    const scene = dashboardStateRef.current.scenes?.find(({ id }) => id === sceneId);
+    const status = beginContentOperation("scene.saved", {
+      subject: scene?.name ?? sceneId,
+      workingLabel: `Saving Scene “${scene?.name ?? sceneId}”`,
+      key: `content:scene:${sceneId}:date-position`,
+    });
     return runModeratorTransaction({
       flush: () => pendingEdits.flush(),
       commit: () => onSaveSceneDatePosition?.(sceneId, datePosition),
+    }).then((result) => {
+      status.succeed();
+      return result;
+    }, (error) => {
+      status.fail(error);
+      throw error;
     });
   }
 
@@ -1792,6 +1919,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       sectionId: section.id,
       updates: nextDraft,
     });
+    reportContentActivity("section.updated", {
+      subject: section.title ?? section.id,
+      key: `content:section:${section.id}:draft`,
+    });
   }
 
   function changeSection(section, updates) {
@@ -1810,6 +1941,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         },
       },
     });
+    reportContentActivity("dashboard.settings.updated", {
+      detail: "Panel colors changed.",
+      key: "content:dashboard:panel-colors",
+    });
   }
 
   function changeAccessibilityEnabled(enabled) {
@@ -1820,6 +1955,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         ...(dashboard.globalStyles ?? {}),
         accessibility: { enabled },
       },
+    });
+    reportContentActivity("dashboard.settings.updated", {
+      detail: `Accessibility mode ${enabled ? "enabled" : "disabled"}.`,
+      key: "content:dashboard:accessibility",
     });
   }
 
@@ -1835,6 +1974,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       id: `${section.id}_${Date.now()}`,
       title,
       description,
+    });
+    reportContentActivity("section.created", {
+      subject: title,
+      key: `content:section:${activePage.id}:${title}`,
     });
   }
 
@@ -1857,6 +2000,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setBuildLayoutDraft(next);
     setBuildSelection({ kind: "section", pageId: activePage.id, sectionId });
     requestAnimationFrame(() => focusMovedLayoutTarget(sectionId));
+    reportContentActivity("section.created", { subject: title, key: `content:section:${sectionId}` });
     return true;
   }
 
@@ -1864,6 +2008,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (moderatorOperationGateRef.current.isActive()) return;
     flushPendingEditsInBackground();
     onSectionChange(activePage.id, section.id, { title: "", description: "" });
+    reportContentActivity("section.updated", {
+      subject: section.title ?? section.id,
+      detail: "Title and description removed.",
+      key: `content:section:${section.id}:draft`,
+    });
   }
 
   function removeActivePage(pageId = activePage?.id) {
@@ -2019,6 +2168,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setBuildLayoutDraft(next);
     setInlineRenameDirty(false);
     onInlineRenameDirtyChange?.(false);
+    reportContentActivity(selection.kind === "page"
+      ? "page.updated"
+      : selection.kind === "section" ? "section.updated" : "layout.draft.updated", {
+      subject: title,
+      key: `content:${selection.kind}:${selection.pageId ?? selection.placementId}:${selection.sectionId ?? "title"}`,
+    });
     return true;
   }
 
@@ -2036,6 +2191,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartCreateOwner(null);
     setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
     setChartWizardSuspended(false);
+    reportContentActivity("chart.draft.created", {
+      subject: section.title ?? section.id,
+      detail: "Authoring started.",
+      key: "content:chart.draft:create",
+    });
   }
 
   function discardStaticDraftAndSelect() {
@@ -2045,6 +2205,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setPendingStaticBuildSelection(null);
     setStaticContentDraft(null);
     setStaticContentDirty(false);
+    reportContentActivity("static.draft.discarded", {
+      subject: staticContentDraft?.title ?? staticContentDraft?.mode,
+      key: "content:static.draft:active",
+    });
     void requestBuildSelection(pending.selection, { ...pending, discardStaticDraft: true });
   }
 
@@ -2066,6 +2230,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       : null;
     setStaticContentRestoration(null);
     setStaticWizardTarget({ pageId: activePage.id, sectionId: section.id });
+    reportContentActivity("static.draft.created", {
+      subject: section.title ?? section.id,
+      detail: "Authoring started.",
+      key: "content:static.draft:active",
+    });
   }
 
   function restoreStaticWizardFocus() {
@@ -2117,6 +2286,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         ...(dashboard.globalStyles ?? {}),
         iconAccent: nextAccent,
       },
+    });
+    reportContentActivity("dashboard.settings.updated", {
+      detail: "Icon accent changed.",
+      key: "content:dashboard:icon-accent",
     });
   }
 
@@ -2347,7 +2520,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       initialDraft={staticContentDraft}
       restoration={staticContentRestoration}
       disabled={moderatorMutationLocked}
-      onDraftChange={setStaticContentDraft}
+      onDraftChange={(draft) => {
+        setStaticContentDraft(draft);
+        reportContentActivity("static.draft.updated", {
+          subject: draft?.title ?? draft?.mode,
+          key: "content:static.draft:active",
+        });
+      }}
       onDirtyChange={setStaticContentDirty}
       onRestorationChange={setStaticContentRestoration}
       onSave={async ({ panel, placement, mediaItem, assets, stagedAssetIds }) => {
@@ -2395,6 +2574,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onContentDraftStage={onContentDraftStage}
       onContentDraftCommit={onContentDraftCommit}
       onContentDraftDiscard={onContentDraftDiscard}
+      onReportContentActivity={reportContentActivity}
+      onBeginContentOperation={beginContentOperation}
       activePage={activePage}
       pageType={landingActive ? "landing" : "analytical"}
       buildPanelOpen={buildPanelOpen}
@@ -2616,6 +2797,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               restoration,
               activation: "resume",
             } : current);
+            reportContentActivity("chart.draft.suspended", {
+              subject: chartWizardTarget?.sectionId,
+              key: "content:chart.draft:create",
+            });
           }
         }}
         onClose={() => {
@@ -2659,6 +2844,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setChartWizardSuspended(false);
           setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);
+          reportContentActivity("chart.created", {
+            subject: chartCreateOwner?.label ?? chartWizardTarget?.sectionId,
+            key: "content:chart:create",
+          });
         }}
         onDiscardChanges={() => {
           chartDraftSessionStore.clear(chartDraftSessionKey);
@@ -2667,6 +2856,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setChartWizardDirty(false);
           setChartWizardSuspended(false);
           setChartWizardSuspendedTarget(null);
+          reportContentActivity("chart.draft.discarded", {
+            subject: chartWizardTarget?.sectionId,
+            key: "content:chart.draft:create",
+          });
         }}
       />
       {chartEditSession && (
@@ -2707,7 +2900,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         initialDraft={staticContentDraft}
         restoration={staticContentRestoration}
         disabled={moderatorMutationLocked}
-        onDraftChange={setStaticContentDraft}
+        onDraftChange={(draft) => {
+          setStaticContentDraft(draft);
+          reportContentActivity("static.draft.updated", {
+            subject: draft?.title ?? draft?.mode,
+            key: "content:static.draft:active",
+          });
+        }}
         onDirtyChange={setStaticContentDirty}
         onRestorationChange={setStaticContentRestoration}
         onSuspend={suspendStaticContentOwner}

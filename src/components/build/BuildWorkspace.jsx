@@ -70,6 +70,8 @@ export default function BuildWorkspace({
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
+  onReportContentActivity = () => {},
+  onBeginContentOperation = () => ({ succeed() {}, fail() {}, dismiss() {} }),
   activePage,
   buildPanelOpen = false,
   onCloseDashboardMap,
@@ -335,6 +337,10 @@ export default function BuildWorkspace({
       setChronoGroupDraft((current) => current?.status === "suspended"
         ? reduceChronoGroupDraft(current, { type: "RESUME" })
         : current);
+      if (resumingDraft) onReportContentActivity("chrono.draft.resumed", {
+        subject: chronoGroupDraft?.value?.name ?? chronoGroupDraft?.group?.name,
+        key: `content:chrono.draft:${chronoGroupDraft?.value?.id ?? chronoGroupDraft?.group?.id ?? "active"}`,
+      });
       if (!resumingDraft) setChronoContentState((current) => current
         ? reduceChronoContent(current, { type: "SET_STUDIO", studio: "chrono" })
         : createChronoContentState({
@@ -351,6 +357,10 @@ export default function BuildWorkspace({
       setSceneDraft((current) => current?.status === "suspended"
         ? reduceSceneDraft(current, { type: "RESUME" })
         : current);
+      if (resumingDraft) onReportContentActivity("scene.draft.resumed", {
+        subject: sceneDraft?.value?.name,
+        key: `content:scene.draft:${sceneDraft?.value?.id ?? "active"}`,
+      });
       if (!resumingDraft) setChronoContentState((current) => current
         ? reduceChronoContent(current, { type: "SET_STUDIO", studio: "scene" })
         : createChronoContentState({
@@ -408,12 +418,20 @@ export default function BuildWorkspace({
         type: "SUSPEND",
         restoration: { ...restoration, stage: current.stage },
       }));
+      onReportContentActivity("chrono.draft.suspended", {
+        subject: chronoGroupDraft?.value?.name ?? chronoGroupDraft?.group?.name,
+        key: `content:chrono.draft:${chronoGroupDraft?.value?.id ?? chronoGroupDraft?.group?.id ?? "active"}`,
+      });
     }
     if (renderedAuxiliary === "scene" && hasActiveLocalAuthoringDrafts({ scene: sceneDraft })) {
       setSceneDraft((current) => reduceSceneDraft(current, {
         type: "SUSPEND",
         restoration: { ...restoration, stage: current.stage },
       }));
+      onReportContentActivity("scene.draft.suspended", {
+        subject: sceneDraft?.value?.name,
+        key: `content:scene.draft:${sceneDraft?.value?.id ?? "active"}`,
+      });
     }
     const currentSession = draftCoordinator.activeAuxiliary;
     if (renderedAuxiliary === "source-content" && currentSession && sourceContentOwners.length > 0) {
@@ -503,6 +521,11 @@ export default function BuildWorkspace({
       setChronoGroupDraft(saving);
       if (saving.status !== "saving") return;
       const savedGroup = clearChronoGroupReviewForSave(toSavedChronoGroup(saving));
+      const status = onBeginContentOperation("chrono.saved", {
+        subject: savedGroup.name,
+        workingLabel: `Saving Chrono Group “${savedGroup.name}”`,
+        key: `content:chrono:${savedGroup.id}:save`,
+      });
       const chronoGroups = mergeChronoGroup(dashboard.chronoGroups ?? [], savedGroup, temporalCharts);
       const duplicateSourceId = chronoContentState?.operation?.intent === "duplicate"
         ? chronoContentState.operation.itemId
@@ -520,19 +543,31 @@ export default function BuildWorkspace({
         .then(() => {
           setChronoGroupDraft((current) => reduceChronoGroupDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedGroup }));
           setChronoContentState((current) => completeContentOperation(current, { chronoGroups, scenes }, "chronoGroup", savedGroup.id));
+          status.succeed();
         })
-        .catch((error) => setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
-          type: "SAVE_FAILED",
-          error: storageFacingError(error, "CHRONO_GROUP_SAVE_FAILED"),
-        })));
+        .catch((error) => {
+          status.fail(error);
+          setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
+            type: "SAVE_FAILED",
+            error: storageFacingError(error, "CHRONO_GROUP_SAVE_FAILED"),
+          }));
+        });
       return;
     }
     if (action.type === "DISCARD") {
       setChronoGroupDraft((current) => reduceChronoGroupDraft(current, action));
       setChronoContentState((current) => reduceChronoContent(current, { type: "RETURN_TO_CONTENT" }));
+      onReportContentActivity("chrono.draft.discarded", {
+        subject: chronoGroupDraft?.value?.name ?? chronoGroupDraft?.group?.name,
+        key: `content:chrono.draft:${chronoGroupDraft?.value?.id ?? chronoGroupDraft?.group?.id ?? "active"}`,
+      });
       return;
     }
     setChronoGroupDraft((current) => reduceChronoGroupDraft(current, action));
+    onReportContentActivity("chrono.draft.updated", {
+      subject: chronoGroupDraft?.value?.name ?? chronoGroupDraft?.group?.name,
+      key: `content:chrono.draft:${chronoGroupDraft?.value?.id ?? chronoGroupDraft?.group?.id ?? "active"}`,
+    });
   };
 
   const dispatchScene = (action) => {
@@ -541,24 +576,41 @@ export default function BuildWorkspace({
       setSceneDraft(saving);
       if (saving.status !== "saving") return;
       const savedScene = clearSceneReviewForSave(saving.value);
+      const status = onBeginContentOperation("scene.saved", {
+        subject: savedScene.name,
+        workingLabel: `Saving Scene “${savedScene.name}”`,
+        key: `content:scene:${savedScene.id}:save`,
+      });
       const scenes = mergeScene(dashboard.scenes ?? [], savedScene);
       Promise.resolve(commitTemporalContent({ scenes }))
         .then(() => {
           setSceneDraft((current) => reduceSceneDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedScene }));
           setChronoContentState((current) => completeContentOperation(current, { scenes }, "scene", savedScene.id));
+          status.succeed();
         })
-        .catch((error) => setSceneDraft((current) => reduceSceneDraft(current, {
-          type: "SAVE_FAILED",
-          error: storageFacingError(error, "SCENE_SAVE_FAILED"),
-        })));
+        .catch((error) => {
+          status.fail(error);
+          setSceneDraft((current) => reduceSceneDraft(current, {
+            type: "SAVE_FAILED",
+            error: storageFacingError(error, "SCENE_SAVE_FAILED"),
+          }));
+        });
       return;
     }
     if (action.type === "DISCARD") {
       setSceneDraft((current) => reduceSceneDraft(current, action));
       setChronoContentState((current) => reduceChronoContent(current, { type: "RETURN_TO_CONTENT" }));
+      onReportContentActivity("scene.draft.discarded", {
+        subject: sceneDraft?.value?.name,
+        key: `content:scene.draft:${sceneDraft?.value?.id ?? "active"}`,
+      });
       return;
     }
     setSceneDraft((current) => reduceSceneDraft(current, action));
+    onReportContentActivity("scene.draft.updated", {
+      subject: sceneDraft?.value?.name,
+      key: `content:scene.draft:${sceneDraft?.value?.id ?? "active"}`,
+    });
   };
 
   const dispatchChronoContent = (action) => {
@@ -574,10 +626,27 @@ export default function BuildWorkspace({
       const scenes = itemType === "chronoGroup"
         ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId !== itemId)
         : (dashboard.scenes ?? []).filter(({ id }) => id !== itemId);
+      const subject = itemType === "chronoGroup"
+        ? dashboard.chronoGroups?.find(({ id }) => id === itemId)?.name ?? itemId
+        : dashboard.scenes?.find(({ id }) => id === itemId)?.name ?? itemId;
+      const status = onBeginContentOperation(
+        itemType === "chronoGroup" ? "chrono.deleted" : "scene.deleted",
+        {
+          subject,
+          workingLabel: `Deleting ${itemType === "chronoGroup" ? "Chrono Group" : "Scene"} “${subject}”`,
+          key: `content:${itemType}:${itemId}:delete`,
+        },
+      );
       setChronoContentState((current) => ({ ...current, operation: { intent: "remove", itemType, itemId, status: "saving" }, error: null }));
       Promise.resolve(commitTemporalContent({ chronoGroups, scenes }))
-        .then(() => setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_SUCCEEDED", chronoGroups, scenes, returnToContent: false })))
-        .catch((error) => setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_FAILED", error: storageFacingError(error, "TEMPORAL_REMOVE_FAILED") })));
+        .then(() => {
+          status.succeed();
+          setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_SUCCEEDED", chronoGroups, scenes, returnToContent: false }));
+        })
+        .catch((error) => {
+          status.fail(error);
+          setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_FAILED", error: storageFacingError(error, "TEMPORAL_REMOVE_FAILED") }));
+        });
       return;
     }
     const next = reduceChronoContent(chronoContentState, action);
@@ -598,6 +667,11 @@ export default function BuildWorkspace({
         draftCoordinator.activeAuxiliary?.draftId ?? "auxiliary-chrono-group",
         { intent },
       ));
+      onReportContentActivity("chrono.draft.created", {
+        subject: input.group.name,
+        detail: intent === "duplicate" ? "Duplicate draft prepared." : `${intent === "create" ? "New" : "Edit"} draft opened.`,
+        key: `content:chrono.draft:${input.group.id}`,
+      });
     }
     if (itemType === "scene") {
       const existing = dashboard.scenes?.find(({ id }) => id === itemId);
@@ -622,6 +696,11 @@ export default function BuildWorkspace({
         { intent },
       );
       setSceneDraft(nextDraft);
+      onReportContentActivity("scene.draft.created", {
+        subject: value.name,
+        detail: intent === "duplicate" ? "Duplicate draft prepared." : `${intent === "create" ? "New" : "Edit"} draft opened.`,
+        key: `content:scene.draft:${value.id}`,
+      });
     }
   };
 

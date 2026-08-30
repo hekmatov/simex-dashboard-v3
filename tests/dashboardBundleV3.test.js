@@ -53,6 +53,19 @@ function lineChart(overrides = {}) {
   };
 }
 
+test("Gauge charts normalize to a full-width single-row footprint", () => {
+  const draft = createChartDraft("gauge", {
+    layout: { size: "compact", width: 1, height: 2 },
+  });
+  assert.deepEqual(draft.layout, { size: "wide", width: 4, height: 1 });
+
+  const normalized = normalizeChartInstance({
+    ...draft,
+    layout: { size: "standard", width: 2, height: 2 },
+  });
+  assert.deepEqual(normalized.layout, { size: "wide", width: 4, height: 1 });
+});
+
 function version3Dashboard() {
   return {
     configVersion: 3,

@@ -114,7 +114,9 @@ test("fullscreen comparison preserves ordered charts in a labeled focus-scoped d
   assert.match(html, /aria-label="Move Chart A previous"/);
   assert.match(html, /aria-label="Chart comparison"/);
   assert.match(html, /tabindex="-1"/);
-  assert.match(html, />Exit comparison<\/button>/);
+  assert.match(html, /data-fullscreen-exit="true"[^>]*aria-label="Exit comparison"/);
+  assert.doesNotMatch(html, />Exit comparison<\/button>/);
+  assert.match(html, /data-icon-id="close"/);
   assert.match(html, /layout-sideBySide/);
   assert.match(html, /data-display-mode="comparison"/);
 });
