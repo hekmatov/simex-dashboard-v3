@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { normalizeStoredDashboardConfig } from "../../src/charting/config/dashboardBundleV3.js";
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -18,29 +19,33 @@ test("Build commands stay available while Dashboard map controls only structure 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 
   const commands = page.getByRole("region", { name: "Build commands" });
+  const toolbar = commands.getByRole("toolbar", { name: "Primary Build commands" });
+  const actions = toolbar.locator("[data-build-command-action]");
   const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   await expect(commands).toBeVisible();
-  await expect(page.getByRole("button", { name: "Chrono Groups", exact: true })).toHaveCount(0);
+  await expect(toolbar).toBeVisible();
+  await expect(actions).toHaveCount(7);
+  expect(await actions.evaluateAll((items) => items.map((item) => item.dataset.buildCommandAction))).toEqual([
+    "add-chart",
+    "add-text-image",
+    "source-content",
+    "chrono-studio",
+    "discard-build-changes",
+    "finish-build",
+    "more",
+  ]);
   await expect(mapToggle).toHaveAttribute("aria-controls", "dashboard-map-panel");
-  const commandGeometry = await commands.locator("[data-build-command-group]").evaluateAll((groups) => groups.map((group) => {
-    const rect = group.getBoundingClientRect();
+  const commandGeometry = await actions.evaluateAll((items) => items.map((item) => {
+    const rect = item.getBoundingClientRect();
     return {
-      name: group.dataset.buildCommandGroup,
+      name: item.dataset.buildCommandAction,
       top: rect.top,
       right: rect.right,
       bottom: rect.bottom,
       left: rect.left,
     };
   }));
-  const contentGroup = commandGeometry.find(({ name }) => name === "content");
-  const structureGroup = commandGeometry.find(({ name }) => name === "structure");
-  const timeCommands = commandGeometry.find(({ name }) => name === "time");
-  const packageGroup = commandGeometry.find(({ name }) => name === "package");
-  const sessionGroup = commandGeometry.find(({ name }) => name === "session");
-  const layoutGroup = commandGeometry.find(({ name }) => name === "layout");
-  const primaryGroups = [contentGroup, structureGroup, timeCommands, packageGroup, sessionGroup];
-  expect(primaryGroups.every(Boolean)).toBe(true);
-  const overlaps = primaryGroups.flatMap((group, index) => primaryGroups.slice(index + 1)
+  const overlaps = commandGeometry.flatMap((group, index) => commandGeometry.slice(index + 1)
     .filter((candidate) => (
       group.left < candidate.right
       && group.right > candidate.left
@@ -49,7 +54,11 @@ test("Build commands stay available while Dashboard map controls only structure 
     ))
     .map((candidate) => `${group.name}:${candidate.name}`));
   expect(overlaps).toEqual([]);
-  expect(layoutGroup.top).toBeGreaterThanOrEqual(Math.max(...primaryGroups.map(({ bottom }) => bottom)));
+  const toolbarGeometry = await toolbar.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(toolbarGeometry.scrollWidth).toBeLessThanOrEqual(toolbarGeometry.clientWidth);
 
   await mapToggle.click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
@@ -73,11 +82,11 @@ test("Dashboard map keeps visible disclosure arrows and caret-aligned branch gui
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  const home = map.getByRole("treeitem", { name: "Home", exact: true });
-  const collapse = home.getByRole("button", { name: "Collapse Home", exact: true });
+  const biomedical = map.getByRole("treeitem", { name: "Biomedical", exact: true });
+  const collapse = biomedical.getByRole("button", { name: "Collapse Biomedical", exact: true });
   await expect(collapse).toBeVisible();
 
-  const expandedEvidence = await home.evaluate((item) => {
+  const expandedEvidence = await biomedical.evaluate((item) => {
     const row = item.querySelector(":scope > .build-tree-row");
     const caret = row.querySelector(".build-tree-caret");
     const glyph = caret.querySelector("span");
@@ -120,7 +129,7 @@ test("Dashboard map keeps visible disclosure arrows and caret-aligned branch gui
 
   const expandedTransform = await collapse.locator("span").evaluate((glyph) => getComputedStyle(glyph).transform);
   await collapse.click();
-  const expand = home.getByRole("button", { name: "Expand Home", exact: true });
+  const expand = biomedical.getByRole("button", { name: "Expand Biomedical", exact: true });
   await expect(expand).toBeVisible();
   const collapsedTransform = await expand.locator("span").evaluate((glyph) => getComputedStyle(glyph).transform);
   expect(collapsedTransform).not.toBe(expandedTransform);
@@ -333,45 +342,48 @@ async function selectSocioDestination(page) {
 }
 
 async function seedSceneMoveFixture(page) {
-  await page.evaluate(async (key) => {
+  const { dashboard, profiles } = await page.evaluate(async (key) => {
     const stored = localStorage.getItem(key);
     const dashboard = stored
       ? JSON.parse(stored)
       : await fetch("/config/dashboard.json").then((response) => response.json());
-    dashboard.scenes = [
-      ...(dashboard.scenes ?? []).filter(({ id }) => ![
-        "stage12-whole-scene",
-        "stage12-partial-scene",
-      ].includes(id)),
-      {
-        id: "stage12-whole-scene",
-        name: "Stage 12 whole Scene",
-        pageId: "biomedical",
-        chronoGroupId: "national_outbreak",
-        period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
-        frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
-        members: [{ chartId: "bio_confirmed_cases", width: 4 }],
-        present: { chartIds: ["bio_confirmed_cases"], layout: "single" },
-        audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
-      },
-      {
-        id: "stage12-partial-scene",
-        name: "Stage 12 partial Scene",
-        pageId: "biomedical",
-        chronoGroupId: "national_outbreak",
-        period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
-        frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
-        members: [
-          { chartId: "bio_confirmed_cases", width: 2 },
-          { chartId: "bio_daily_cases_bar", width: 2 },
-        ],
-        present: { chartIds: ["bio_confirmed_cases", "bio_daily_cases_bar"], layout: "horizontal-divider" },
-        audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
-      },
-    ];
-    const { normalizeStoredDashboardConfig } = await import("/src/charting/config/dashboardBundleV3.js");
     const profiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
-    normalizeStoredDashboardConfig(dashboard, { profiles });
-    localStorage.setItem(key, JSON.stringify(dashboard));
+    return { dashboard, profiles };
   }, STORAGE_KEY);
+  dashboard.scenes = [
+    ...(dashboard.scenes ?? []).filter(({ id }) => ![
+      "stage12-whole-scene",
+      "stage12-partial-scene",
+    ].includes(id)),
+    {
+      id: "stage12-whole-scene",
+      name: "Stage 12 whole Scene",
+      pageId: "biomedical",
+      chronoGroupId: "national_outbreak",
+      period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
+      frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
+      members: [{ chartId: "bio_confirmed_cases", width: 4 }],
+      present: { chartIds: ["bio_confirmed_cases"], layout: "single" },
+      audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+    },
+    {
+      id: "stage12-partial-scene",
+      name: "Stage 12 partial Scene",
+      pageId: "biomedical",
+      chronoGroupId: "national_outbreak",
+      period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
+      frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
+      members: [
+        { chartId: "bio_confirmed_cases", width: 2 },
+        { chartId: "bio_daily_cases_bar", width: 2 },
+      ],
+      present: { chartIds: ["bio_confirmed_cases", "bio_daily_cases_bar"], layout: "horizontal-divider" },
+      audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+    },
+  ];
+  const normalized = normalizeStoredDashboardConfig(dashboard, { profiles });
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, value), {
+    key: STORAGE_KEY,
+    value: JSON.stringify(normalized),
+  });
 }

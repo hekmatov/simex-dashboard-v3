@@ -152,16 +152,28 @@ test("expanded Orbit starts below the live command crown", async ({ page }) => {
 
   const geometry = await page.evaluate(() => {
     const crown = document.querySelector(".dashboard-command-crown").getBoundingClientRect();
-    const editor = document.querySelector(".unit-orbit").getBoundingClientRect();
+    const orbit = document.querySelector(".unit-orbit");
+    const editor = orbit.getBoundingClientRect();
+    const scroller = orbit.querySelector(".unit-orbit-scroll");
     return {
       crownBottom: crown.bottom,
       orbitTop: editor.top,
+      orbitBottom: editor.bottom,
       orbitHeight: editor.height,
+      scrollerClientHeight: scroller.clientHeight,
+      scrollerScrollHeight: scroller.scrollHeight,
+      scrollerOverflowY: getComputedStyle(scroller).overflowY,
+      viewportHeight: window.innerHeight,
     };
   });
 
-  expect(geometry.orbitTop).toBeGreaterThanOrEqual(geometry.crownBottom + 12);
-  expect(geometry.orbitHeight).toBeGreaterThanOrEqual(600);
+  expect(geometry.orbitTop).toBeGreaterThanOrEqual(Math.max(12, geometry.crownBottom + 12));
+  expect(geometry.orbitBottom).toBeLessThanOrEqual(geometry.viewportHeight - 12);
+  expect(geometry.orbitHeight).toBeGreaterThanOrEqual(280);
+  expect(geometry.scrollerClientHeight).toBeGreaterThan(0);
+  expect(geometry.scrollerScrollHeight).toBeGreaterThanOrEqual(geometry.scrollerClientHeight);
+  expect(geometry.scrollerOverflowY).toBe("auto");
+  await expect(orbit.locator(".unit-orbit-scroll > *").first()).toBeVisible();
 });
 
 test("native style signatures resolve real shell, section, panel, and control paint", async ({ page }) => {
@@ -343,7 +355,7 @@ test("Dashboard map clears actionable Build controls without command overflow an
   await expect(drawer).toBeVisible();
   await expect.poll(() => page.evaluate(() => {
     const map = document.querySelector(".dashboard-map-panel")?.getBoundingClientRect();
-    const commandGrid = document.querySelector(".build-command-groups");
+    const commandGrid = document.querySelector(".build-command-main-row");
     const commandHeader = document.querySelector(".build-command-header");
     if (!map || !commandGrid || !commandHeader) return null;
     const actionable = [...document.querySelectorAll(
@@ -389,7 +401,8 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
     "Ledger",
     "evidence-ledger/brighter-vellum",
   );
-  await look.getByRole("button", { name: "Close", exact: true }).click();
+  await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+  await expect(look).toBeHidden();
 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
@@ -399,7 +412,7 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
 
   const buildPaint = await page.evaluate(() => ({
     headerEyebrow: getComputedStyle(document.querySelector(".canonical-dashboard-frame .dashboard-header .eyebrow")).color,
-    workspaceEyebrow: getComputedStyle(document.querySelector(".build-command-group__label")).color,
+    primaryCommand: getComputedStyle(document.querySelector('[data-build-command-action="add-chart"]')).backgroundColor,
     structureEyebrow: getComputedStyle(document.querySelector(".dashboard-map-panel .build-region-heading .eyebrow")).color,
     structureButton: getComputedStyle(document.querySelector('.dashboard-map-region-switch button[aria-pressed="true"]')).backgroundColor,
     railButton: getComputedStyle(document.querySelector(".build-structure-list .build-tree-caret")).backgroundColor,
@@ -407,7 +420,7 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
   }));
   expect(buildPaint).toEqual({
     headerEyebrow: "rgb(85, 90, 85)",
-    workspaceEyebrow: "rgb(85, 90, 85)",
+    primaryCommand: "rgb(250, 246, 236)",
     structureEyebrow: "rgb(85, 90, 85)",
     structureButton: "rgb(44, 56, 61)",
     railButton: "rgba(0, 0, 0, 0)",
@@ -447,7 +460,8 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
   for (const style of NATIVE_STYLES) {
     await openBiomedicalLook(page);
     const look = await selectAutoSavedLook(page, style.label, style.profile);
-    await look.getByRole("button", { name: "Close", exact: true }).click();
+    await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+    await expect(look).toBeHidden();
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "View", exact: true }).click();
     await expect(page.locator(".view-shell")).toBeVisible();
@@ -576,6 +590,9 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       borderTopColor: style.borderPaint,
       color: style.textPaint,
     });
+    await page.getByLabel("Dashboard mode")
+      .getByRole("button", { name: "View", exact: true }).click();
+    await expect(page.locator(".view-shell")).toBeVisible();
   }
 });
 

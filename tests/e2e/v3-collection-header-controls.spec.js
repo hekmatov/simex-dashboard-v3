@@ -30,11 +30,11 @@ test("multi-page Collection transport stays in the header and leaves Build Edit 
 
   const viewHeaderHeight = await header.evaluate((element) => element.getBoundingClientRect().height);
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await expect(page.locator('[data-dashboard-mode="build"]')).toBeVisible();
+  await expect(page.locator('.app-frame[data-dashboard-mode="build"]')).toBeVisible();
   await panel.scrollIntoViewIfNeeded();
   const actions = panel.locator(".panel-actions button");
-  await expect(actions).toHaveCount(3);
-  await expect(actions.nth(2)).toHaveAttribute("aria-label", "Edit chart");
+  await expect(actions).toHaveCount(4);
+  await expect(actions.last()).toHaveAttribute("aria-label", "Edit chart");
   const geometry = await panel.evaluate((element) => {
     const headerElement = element.querySelector(".collection-display-header");
     const transportElement = headerElement.querySelector('[data-collection-header-transport="true"]');
