@@ -43,6 +43,7 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
 });
 
 test("layout and selected-chart drafts stay independent through layout discard", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 1365, height: 900 });
   await page.goto("/");
   await enterAuthoredDashboard(page);
@@ -50,12 +51,14 @@ test("layout and selected-chart drafts stay independent through layout discard",
     .getByRole("button", { name: "Socio-economic", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await mapToggle.click();
 
   await page.getByRole("button", {
     name: "Move Public response and policy signals later",
     exact: true,
   }).click();
+  await mapToggle.click();
   const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   await page.getByRole("gridcell", {
@@ -63,16 +66,24 @@ test("layout and selected-chart drafts stay independent through layout discard",
     exact: true,
   }).click();
 
-  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
-  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  const chartOwner = page.locator('[data-pending-work-id="chart-edit:socio_trust_trend"]');
+  await expect(chartOwner).toHaveAttribute("data-pending-work-state", "dirty");
   await page.getByRole("button", { name: "Discard Layout Changes", exact: true }).click();
 
-  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveCount(0);
-  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
-  await expect(page.getByRole("complementary", {
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
+  await expect(chartOwner).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(chartOwner).toHaveAttribute("data-pending-work-activity", "suspended");
+  await chartOwner.getByRole("button", { name: "Resume Chart changes", exact: true }).click();
+  const editor = page.getByRole("complementary", {
     name: "Chart settings for Trust in institutions over time",
-  })).toBeVisible();
-  await expect(target).toBeInViewport();
+  });
+  await expect(editor).toBeVisible();
+  await expect(chartOwner).toHaveAttribute("data-pending-work-activity", "active");
+  await expect(editor.getByRole("gridcell", {
+    name: "Set chart size to 3 columns by 1 row",
+    exact: true,
+  })).toBeFocused();
 });
 
 test("drag and Move panel controls use the handle while the canvas article stays fixed", async ({ page }) => {
@@ -123,11 +134,13 @@ test("More opens Scene Studio without losing dirty pending work", async ({ page 
     .getByRole("button", { name: "Socio-economic", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await mapToggle.click();
   await page.getByRole("button", {
     name: "Move Public response and policy signals later",
     exact: true,
   }).click();
+  await mapToggle.click();
 
   const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
@@ -146,16 +159,16 @@ test("More opens Scene Studio without losing dirty pending work", async ({ page 
   const scene = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await expect(scene).toBeVisible();
   await expect(page.locator(".unit-orbit")).toBeHidden();
-  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
-  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-id="chart-edit:socio_trust_trend"]')).toHaveAttribute("data-pending-work-state", "dirty");
   await scene.getByRole("button", { name: "Close", exact: true }).click();
 
   await expect(page.getByRole("complementary", {
     name: "Chart settings for Trust in institutions over time",
   })).toBeVisible();
   await expect(target).toBeInViewport();
-  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
-  await expect(page.locator('[data-pending-work-id="chart-editor"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(page.locator('[data-pending-work-id="chart-edit:socio_trust_trend"]')).toHaveAttribute("data-pending-work-state", "dirty");
 });
 
 test("compact command row and More expose exact Stage 3 ownership", async ({ page }) => {

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -217,3 +218,160 @@ test("native drag, keyboard move and Move panel dialog share the layout owner an
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(moveHandle).toBeFocused();
 });
+
+test("whole-Scene migration and partial split confirmation preserve explicit Needs attention and playback exclusion", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await seedSceneMoveFixture(page);
+  await page.reload();
+  await enterAuthoredDashboard(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const tree = map.getByRole("tree");
+  const moveConfirmedCases = tree.getByRole("button", { name: "Move panel Confirmed cases", exact: true });
+  const before = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+
+  await moveConfirmedCases.click();
+  await selectSocioDestination(page);
+  let consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
+  await expect(consequences).toContainText("Stage 12 whole Scene");
+  await expect(consequences).toContainText("Stage 12 partial Scene");
+  await expect(consequences).toContainText("Confirmed cases");
+  await expect(consequences).toContainText("Frame source becomes unresolved");
+  await expect(consequences).toContainText("Present fallback");
+  await consequences.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(consequences).toHaveCount(0);
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(before);
+
+  await moveConfirmedCases.click();
+  await selectSocioDestination(page);
+  consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
+  await consequences.getByRole("button", { name: "Confirm move", exact: true }).click();
+  const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
+  await expect(layoutOwner).toHaveCount(1);
+  await expect(layoutOwner).toHaveAttribute("data-pending-work-state", "dirty");
+  await layoutOwner.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
+  await expect(layoutOwner).toHaveCount(0);
+
+  const today = await page.evaluate(() => {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 10);
+  });
+  await expect.poll(() => page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const whole = dashboard.scenes.find(({ id }) => id === "stage12-whole-scene");
+    const partial = dashboard.scenes.find(({ id }) => id === "stage12-partial-scene");
+    const movedPage = dashboard.pages.find(({ sections }) => sections.some(({ panels }) => (
+      panels.some((placement) => placement.id === "bio_confirmed_cases")
+    )));
+    return {
+      movedPageId: movedPage?.id,
+      wholePageId: whole?.pageId,
+      wholeMembers: whole?.members.map(({ chartId }) => chartId),
+      wholeFrameSource: whole?.frames?.chartId,
+      wholePresent: whole?.present?.chartIds,
+      partialPageId: partial?.pageId,
+      partialMembers: partial?.members.map(({ chartId }) => chartId),
+      partialFrames: partial?.frames,
+      partialPresent: partial?.present,
+      updated: dashboard.lastUpdated,
+    };
+  }, STORAGE_KEY)).toEqual({
+    movedPageId: "socio_economic",
+    wholePageId: "socio_economic",
+    wholeMembers: ["bio_confirmed_cases"],
+    wholeFrameSource: "bio_confirmed_cases",
+    wholePresent: ["bio_confirmed_cases"],
+    partialPageId: "biomedical",
+    partialMembers: ["bio_daily_cases_bar"],
+    partialFrames: {
+      mode: "unresolved",
+      reason: "source-chart-moved",
+      previousChartId: "bio_confirmed_cases",
+    },
+    partialPresent: { chartIds: ["bio_daily_cases_bar"], layout: "single" },
+    updated: today,
+  });
+
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const more = page.getByRole("dialog", { name: "More Build commands" });
+  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await studio.getByLabel("Search").fill("Stage 12 partial Scene");
+  await expect(studio.locator('[data-action="open-content"][data-status="needs-attention"]'))
+    .toContainText("Stage 12 partial Scene");
+  await studio.getByRole("button", { name: "Repair Frame source", exact: true }).click();
+  await expect(studio.getByRole("combobox", { name: /^Frame source/ })).toBeFocused();
+  await studio.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  const chronoSource = page.getByRole("region", { name: "Chrono playback controls" })
+    .getByLabel("Chrono source");
+  await expect(chronoSource.locator('option[value="scene:stage12-partial-scene"]')).toHaveCount(0);
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await expect(page.getByLabel("Presentation source")
+    .locator('option[value="scene:stage12-partial-scene"]')).toHaveCount(0);
+});
+
+async function selectSocioDestination(page) {
+  const dialog = page.getByRole("dialog", { name: "Move Confirmed cases" });
+  const destination = dialog.getByLabel("Destination");
+  const option = await destination.locator("option").evaluateAll((options) => (
+    options.map(({ textContent, value }) => ({ label: textContent, value }))
+      .find(({ label }) => label.startsWith("Socio-economic — Public response and policy signals"))
+  ));
+  expect(option, "the shipped Socio-economic Page must expose an ordinary target Section").toBeTruthy();
+  await destination.selectOption(option.value);
+  await dialog.getByRole("button", { name: "Move", exact: true }).click();
+}
+
+async function seedSceneMoveFixture(page) {
+  await page.evaluate(async (key) => {
+    const stored = localStorage.getItem(key);
+    const dashboard = stored
+      ? JSON.parse(stored)
+      : await fetch("/config/dashboard.json").then((response) => response.json());
+    dashboard.scenes = [
+      ...(dashboard.scenes ?? []).filter(({ id }) => ![
+        "stage12-whole-scene",
+        "stage12-partial-scene",
+      ].includes(id)),
+      {
+        id: "stage12-whole-scene",
+        name: "Stage 12 whole Scene",
+        pageId: "biomedical",
+        chronoGroupId: "national_outbreak",
+        period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
+        frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
+        members: [{ chartId: "bio_confirmed_cases", width: 4 }],
+        present: { chartIds: ["bio_confirmed_cases"], layout: "single" },
+        audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+      },
+      {
+        id: "stage12-partial-scene",
+        name: "Stage 12 partial Scene",
+        pageId: "biomedical",
+        chronoGroupId: "national_outbreak",
+        period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
+        frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
+        members: [
+          { chartId: "bio_confirmed_cases", width: 2 },
+          { chartId: "bio_daily_cases_bar", width: 2 },
+        ],
+        present: { chartIds: ["bio_confirmed_cases", "bio_daily_cases_bar"], layout: "horizontal-divider" },
+        audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+      },
+    ];
+    const { normalizeStoredDashboardConfig } = await import("/src/charting/config/dashboardBundleV3.js");
+    const profiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
+    normalizeStoredDashboardConfig(dashboard, { profiles });
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, STORAGE_KEY);
+}

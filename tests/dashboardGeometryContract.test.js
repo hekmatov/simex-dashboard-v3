@@ -28,7 +28,10 @@ test("View and Build route the same saved Page through one persistent canonical 
     source(sources.canvas),
   ]);
 
-  assert.match(renderer, /<DashboardModeWorkspace[\s\S]*?activePage=\{activePage\}[\s\S]*?dashboard=\{dashboard\}/);
+  assert.match(
+    renderer,
+    /<DashboardModeWorkspace[\s\S]*?activePage=\{renderingActivePage\}[\s\S]*?dashboard=\{renderingDashboard\}/,
+  );
   assert.match(modeWorkspace, /<CanonicalDashboardFrame/);
   assert.match(modeWorkspace, /<DashboardCanvas/);
   assert.match(modeWorkspace, /mode=\{mode\}/);

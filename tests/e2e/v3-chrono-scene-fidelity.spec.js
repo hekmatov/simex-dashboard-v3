@@ -101,8 +101,8 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
   await expect(auxiliary).toBeHidden();
-  const pausedWork = page.getByRole("navigation", { name: "Paused Build work" });
-  const resumeDraft = pausedWork.getByRole("button", { name: "Resume Chrono Group draft", exact: true });
+  const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
+  const resumeDraft = pendingWork.getByRole("button", { name: "Resume Chrono Studio changes", exact: true });
   await expect(resumeDraft).toBeVisible();
 
   const pageNavigation = page.locator(".dashboard-command-page-scroller");

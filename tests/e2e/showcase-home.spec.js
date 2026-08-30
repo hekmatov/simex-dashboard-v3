@@ -126,9 +126,39 @@ test("three Home styles expose materially distinct computed signatures without p
     await look.getByLabel(label, { exact: true }).check();
     await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", id);
     await page.keyboard.press("Escape");
-    expect(await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    )).toBe(false);
+    const phoneGeometry = await page.evaluate(() => {
+      const controls = [
+        ...document.querySelectorAll(
+          '[aria-label="Dashboard mode"] button, [aria-label="Dashboard pages"] button',
+        ),
+      ].filter((control) => {
+        const style = getComputedStyle(control);
+        return style.display !== "none" && style.visibility !== "hidden";
+      });
+      const rects = controls.map((control) => control.getBoundingClientRect());
+      return {
+        viewportWidth: window.innerWidth,
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+        controlCount: controls.length,
+        minimumLeft: Math.min(...rects.map(({ left }) => left)),
+        maximumRight: Math.max(...rects.map(({ right }) => right)),
+        controlsReachable: rects.every(({ left, right, width, height }) => (
+          left >= 0
+          && right <= window.innerWidth
+          && width > 0
+          && height > 0
+        )),
+      };
+    });
+    console.log("stage12-390-home-geometry", JSON.stringify({ style: id, ...phoneGeometry }));
+    expect(phoneGeometry).toMatchObject({
+      viewportWidth: 390,
+      clientWidth: 390,
+      scrollWidth: 390,
+      controlsReachable: true,
+    });
+    expect(phoneGeometry.controlCount).toBeGreaterThanOrEqual(6);
     if (id === "signal-instrument") {
       const phoneSignature = await readHomeStyleSignature(page);
       expect(phoneSignature.faqPaddingTop).toBe("24px");

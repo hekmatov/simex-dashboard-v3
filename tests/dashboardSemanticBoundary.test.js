@@ -150,8 +150,8 @@ test("every packaged dashboard structure family participates in the digest and s
       pageById(value.dashboard, "biomedical").pageType = "dashboard";
     },
     "page order": (value) => {
-      [value.dashboard.pages[1], value.dashboard.pages[2]] =
-        [value.dashboard.pages[2], value.dashboard.pages[1]];
+      [value.dashboard.pages[0], value.dashboard.pages[1]] =
+        [value.dashboard.pages[1], value.dashboard.pages[0]];
     },
     "section identity": (value) => {
       pageById(value.dashboard, "biomedical").sections[0].id += "_alternate";
@@ -320,7 +320,7 @@ test("the producer rejects duplicate structural identities and broken landing re
   addAuthoredLandingFixture(dashboard);
   const cases = {
     "duplicate page ID": (value) => {
-      value.pages[2].id = value.pages[1].id;
+      value.pages[1].id = value.pages[0].id;
     },
     "duplicate section ID in a page": (value) => {
       value.pages[1].sections[1].id = value.pages[1].sections[0].id;
@@ -364,7 +364,7 @@ test("bundle validation and runtime loading enforce the same dashboard structure
     },
     "duplicate page ID": {
       mutate(value) {
-        value.pages[2].id = value.pages[1].id;
+        value.pages[1].id = value.pages[0].id;
       },
       error: /Duplicate dashboard page id "biomedical"\./,
     },
@@ -372,7 +372,7 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       mutate(value) {
         landing(value).hero.primaryAction.pageId = "missing-page";
       },
-      error: /Landing primary action for page "old-homepage-content" references unknown page "missing-page"\./,
+      error: /Landing primary action for page "socio_economic" references unknown page "missing-page"\./,
     },
     "cyclic landing data": {
       mutate(value) {
@@ -524,7 +524,7 @@ function pageById(dashboard, pageId) {
 }
 
 function addAuthoredLandingFixture(dashboard) {
-  const page = pageById(dashboard, "old-homepage-content");
+  const page = pageById(dashboard, "socio_economic");
   page.pageType = "landing";
   page.landing = {
     capabilities: [{

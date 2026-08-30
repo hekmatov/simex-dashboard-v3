@@ -173,7 +173,9 @@ test("Stage 1 lifecycle owners use the consolidated operation-status queue", asy
     assert.match(app, new RegExp(`key:\\s*["']${key}["']`));
   }
   assert.match(renderer, /useOperationStatus/);
-  for (const key of ["source-content-save", "layout-save", "finish-build"]) {
+  assert.match(renderer, /operationKey\s*=\s*["']source-content-save["']/);
+  assert.match(renderer, /beginOperation\(\{[\s\S]*?key:\s*operationKey/);
+  for (const key of ["layout-save", "finish-build"]) {
     assert.match(renderer, new RegExp(`key:\\s*["']${key}["']`));
   }
   assert.doesNotMatch(app, /DashboardLookPersistenceFlash|lookPersistenceFlash/);
@@ -481,9 +483,13 @@ test("tracked descriptors and profiles round-trip through the portable V6 bundle
   const parsed = parseDashboardBundle(JSON.stringify(bundle));
 
   assert.equal(parsed.configVersion, 6);
-  assert.equal(parsed.pages.flatMap(({ sections }) => (
+  const configuredPanels = dashboard.pages.flatMap(({ sections }) => (
     sections.flatMap(({ panels }) => panels)
-  )).length, 40);
+  ));
+  const roundTrippedPanels = parsed.pages.flatMap(({ sections }) => (
+    sections.flatMap(({ panels }) => panels)
+  ));
+  assert.equal(roundTrippedPanels.length, configuredPanels.length);
   assert.equal(parsed.dataSources.bio_cases.kind, "csv");
   assert.equal(parsed.datasetProfiles.bio_cases.sourceId, "bio_cases");
 });

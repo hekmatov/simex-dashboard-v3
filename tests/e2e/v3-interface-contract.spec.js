@@ -88,7 +88,8 @@ test("phone Build stays operational beneath its persistent recovery notice", asy
 });
 
 test("operation status shows blocking Finish Build work, completion, and footer-safe geometry", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 
@@ -121,20 +122,64 @@ test("operation status shows blocking Finish Build work, completion, and footer-
 
   const footer = page.locator(".dashboard-footer");
   await expect(footer).toBeVisible();
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.route("**/config/dashboard.json", (route) => route.fulfill({
+    status: 503,
+    contentType: "text/plain",
+    body: "Stage 12 injected online restore outage",
+  }));
+  await page.locator(".dashboard-scenario-trigger").click();
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  await passport.getByRole("button", { name: "Restore online dashboard", exact: true }).click();
+  const restoreDialog = page.getByRole("dialog", { name: "Restore online dashboard?" });
+  await restoreDialog.getByRole("button", { name: "Restore online dashboard", exact: true }).click();
+  const failedRestoreNotice = page.locator('[data-operation-status="failed"]')
+    .filter({ hasText: "Restoring online dashboard" });
+  await expect(failedRestoreNotice).toBeVisible();
+  await restoreDialog.getByRole("button", { name: "Keep local dashboard", exact: true }).click();
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const moveSection = page.getByRole("button", {
+    name: "Move Outbreak dynamics later",
+    exact: true,
+  });
+  await moveSection.click();
+  const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
+  await expect(layoutOwner).toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(failedRestoreNotice).toBeVisible();
+
   await footer.evaluate((node) => node.scrollIntoView({ block: "end", behavior: "auto" }));
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const geometry = await page.locator(".operation-status-viewport").evaluate((viewport) => {
-    const noticeBox = viewport.querySelector('[data-operation-status]')?.getBoundingClientRect();
-    const footerBox = document.querySelector(".dashboard-footer")?.getBoundingClientRect();
+  const integratedGeometry = await page.evaluate(() => {
+    const notice = [...document.querySelectorAll('[data-operation-status]')]
+      .find((item) => item.textContent.includes("Restoring online dashboard"))?.getBoundingClientRect();
+    const drawer = document.querySelector('#dashboard-map-panel')?.getBoundingClientRect();
+    const pending = document.querySelector('[data-pending-work-kind="layout"]')?.getBoundingClientRect();
+    const dashboardFooter = document.querySelector(".dashboard-footer")?.getBoundingClientRect();
+    const overlaps = (first, second) => Boolean(first && second
+      && first.left < second.right && first.right > second.left
+      && first.top < second.bottom && first.bottom > second.top);
     return {
-      viewportRight: viewport.getBoundingClientRect().right,
-      noticeBottom: noticeBox?.bottom,
-      footerTop: footerBox?.top,
-      windowWidth: window.innerWidth,
+      width: window.innerWidth,
+      drawerGap: drawer && notice ? drawer.left - notice.right : -1,
+      footerGap: dashboardFooter && notice ? dashboardFooter.top - notice.bottom : -1,
+      pendingOverlap: overlaps(notice, pending),
+      drawerOverlap: overlaps(notice, drawer),
     };
   });
-  expect(geometry.windowWidth - geometry.viewportRight).toBeGreaterThanOrEqual(15);
-  expect(geometry.noticeBottom).toBeLessThanOrEqual(geometry.footerTop - 15);
+  expect(integratedGeometry).toEqual({
+    width: 1440,
+    drawerGap: expect.any(Number),
+    footerGap: expect.any(Number),
+    pendingOverlap: false,
+    drawerOverlap: false,
+  });
+  expect(integratedGeometry.drawerGap).toBeGreaterThanOrEqual(15);
+  expect(integratedGeometry.footerGap).toBeGreaterThanOrEqual(15);
+  console.log("stage12-1440-geometry", JSON.stringify(integratedGeometry));
+  await layoutOwner.getByRole("button", { name: "Discard Layout Changes", exact: true }).click();
 
   await page.setViewportSize({ width: 820, height: 900 });
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();

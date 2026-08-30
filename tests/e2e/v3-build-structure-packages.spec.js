@@ -60,7 +60,7 @@ test("Clear dashboard in Scenario Passport preserves canonical Home identity and
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
-  await expect(page.locator('[aria-label="Dashboard pages"]')).toHaveCount(0);
+  await expect(page.locator('[aria-label="Dashboard pages"] [data-dashboard-page-id]')).toHaveCount(0);
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem(
     "simex-dashboard-config-v3-three-mode-v1",
   )));
@@ -444,8 +444,9 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   const look = page.getByRole("dialog", { name: "Dashboard look" });
   await look.getByLabel("Humanist", { exact: true }).check();
   await look.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
-  await expect(look.locator(".look-drawer-feedback")).toHaveText("Dashboard look saved.");
-  await look.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(look.locator(".look-drawer-feedback")).toHaveText("Selections are saved automatically.");
+  await page.keyboard.press("Escape");
+  await expect(look).toHaveCount(0);
 
   const passport = await openScenarioPassport(page);
   const chooserPromise = page.waitForEvent("filechooser");
@@ -579,6 +580,41 @@ test("package export resolves drafts and round-trips a self-contained source", a
   expect(persistedSource).not.toHaveProperty("csvText");
   await page.reload();
   await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
+});
+
+test("package export activates the scoped layout owner when unfinished layout work is reviewed", async ({ page }) => {
+  test.setTimeout(60_000);
+  await openBuildStructure(page);
+
+  await page.getByRole("button", {
+    name: "Move Outbreak dynamics later",
+    exact: true,
+  }).click();
+  const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
+  await expect(layoutOwner).toHaveCount(1);
+  await expect(layoutOwner).toHaveAttribute("data-pending-work-id", /^layout:/);
+  await expect(layoutOwner).toHaveAttribute("data-pending-work-state", "dirty");
+
+  const passport = await openScenarioPassport(page);
+  await passport.getByRole("button", {
+    name: "Download Dashboard Package",
+    exact: true,
+  }).click();
+  const readiness = page.getByRole("dialog", {
+    name: "Finish unfinished work before download",
+  });
+  await expect(readiness).toContainText("Layout changes");
+  await readiness.getByRole("button", {
+    name: "Review layout changes",
+    exact: true,
+  }).click();
+
+  await expect(readiness).toHaveCount(0);
+  await expect(layoutOwner).toHaveCount(1);
+  await expect(layoutOwner.getByRole("button", {
+    name: "Save Layout Changes",
+    exact: true,
+  })).toBeFocused();
 });
 
 test("cancelling the authored-content import warning preserves inline rename state", async ({ page }) => {

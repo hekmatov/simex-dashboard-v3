@@ -923,11 +923,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       return;
     }
     if (issueId === "layout") {
-      document.querySelector('[data-pending-work-id="layout"]')?.scrollIntoView({
+      document.querySelector('[data-pending-work-kind="layout"]')?.scrollIntoView({
         block: "nearest",
         behavior: "auto",
       });
-      document.querySelector('[data-pending-work-id="layout"] button:not(:disabled)')?.focus();
+      document.querySelector('[data-pending-work-kind="layout"] button:not(:disabled)')?.focus();
       return;
     }
     if (issueId === "inline-rename") {

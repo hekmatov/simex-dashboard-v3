@@ -11,7 +11,7 @@ test.beforeEach(async ({ page, request }) => {
   await page.goto("/");
   await enterAuthoredDashboard(page);
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await expect(page.locator('[data-dashboard-mode="build"]')).toBeVisible();
+  await expect(page.locator('button[data-dashboard-mode="build"]')).toBeVisible();
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
   await expect(navigation).toBeVisible();
   await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
@@ -36,7 +36,8 @@ test("anchored Page and Section commands preview and discard through the live la
 
   await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toHaveCount(0);
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  await expect(page.getByLabel("Build draft status")).toContainText("Layout changesdirty");
+  await expect(page.locator('[data-pending-work-kind="layout"]'))
+    .toHaveAttribute("data-pending-work-state", "dirty");
   await page.getByRole("button", { name: "Discard Layout Changes" }).click();
   await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toBeVisible();
   await navigation.getByRole("button", { name: "Socio-economic", exact: true }).click();

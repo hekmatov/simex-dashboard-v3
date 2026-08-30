@@ -572,16 +572,15 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   await expect(owner).toHaveCount(1);
   const save = editor.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeEnabled();
-  const pendingReasonEvidence = observeQuickEditorPendingReason(page);
-  const savingOwnerEvidence = observePendingOwnerState(
-    page,
-    "chart-edit:bio_confirmed_cases",
-    "saving",
-  );
+  await installQuickEditorSavingEvidence(page, "chart-edit:bio_confirmed_cases");
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ = true; });
   await save.click();
 
-  await expect(pendingReasonEvidence).resolves.toEqual({
+  await expect(editor).toBeVisible();
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-state", "error");
+  const savingEvidence = await readQuickEditorSavingEvidence(page);
+  expect(savingEvidence.pendingReason).toEqual({
     editorInert: false,
     buttonDisabled: true,
     buttonDescribedBy: null,
@@ -589,11 +588,8 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
     focused: true,
     reasonText: "Wait for the current chart operation to finish.",
   });
-  await expect(savingOwnerEvidence).resolves.toBe(true);
+  expect(savingEvidence.ownerSaving).toBe(true);
 
-  await expect(editor).toBeVisible();
-  await expect(owner).toHaveCount(1);
-  await expect(owner).toHaveAttribute("data-pending-work-state", "error");
   expect(await storedQuickPersistenceSnapshot(page)).toEqual(before);
   await owner.getByRole("button", { name: "Retry Save", exact: true }).click();
 
@@ -655,7 +651,7 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
     name: "Move Public response and policy signals later",
     exact: true,
   }).click();
-  await expect(page.locator('[data-pending-work-id="layout"]'))
+  await expect(page.locator('[data-pending-work-kind="layout"]'))
     .toHaveAttribute("data-pending-work-state", "dirty");
 
   const dashboardMap = page.getByRole("button", { name: "Dashboard map", exact: true });
@@ -679,7 +675,7 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
     exact: true,
   });
   await saveLayout.click();
-  await expect(page.locator('[data-pending-work-id="layout"]')).toHaveCount(0);
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
 
   await expect.poll(() => page.evaluate(({ key, pageId, chartId }) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
@@ -825,47 +821,28 @@ function storedChartCount(page) {
   }, STORAGE_KEY);
 }
 
-function observePendingOwnerState(page, ownerId, state) {
-  return page.evaluate(({ id, expectedState }) => new Promise((resolve) => {
-    let timeoutId;
+function installQuickEditorSavingEvidence(page, ownerId) {
+  return page.evaluate(({ id }) => {
+    globalThis.__SIMEX_CHART_SAVING_OBSERVER__?.disconnect();
+    globalThis.__SIMEX_CHART_SAVING_EVIDENCE__ = {
+      ownerSaving: false,
+      pendingReason: null,
+    };
     const inspect = () => {
       const owner = [...document.querySelectorAll("[data-pending-work-id]")]
         .find((entry) => entry.dataset.pendingWorkId === id);
-      if (owner?.dataset.pendingWorkState !== expectedState) return false;
-      window.clearTimeout(timeoutId);
-      observer.disconnect();
-      resolve(true);
-      return true;
-    };
-    const observer = new MutationObserver(inspect);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-    });
-    timeoutId = window.setTimeout(() => {
-      observer.disconnect();
-      resolve(false);
-    }, 5000);
-    inspect();
-  }), { id: ownerId, expectedState: state });
-}
-
-function observeQuickEditorPendingReason(page) {
-  return page.evaluate(() => new Promise((resolve) => {
-    let timeoutId;
-    const inspect = () => {
+      if (owner?.dataset.pendingWorkState === "saving") {
+        globalThis.__SIMEX_CHART_SAVING_EVIDENCE__.ownerSaving = true;
+      }
       const editor = document.querySelector(
         '.chart-quick-editor[data-chart-edit-status="saving"]',
       );
       const button = editor?.querySelector('button[aria-label="Saving changes"]');
       const anchor = button?.closest('[data-control-tooltip-anchor="true"]');
-      if (!editor || !button || !anchor) return false;
+      if (!editor || !button || !anchor) return;
       const reasonId = anchor.getAttribute("aria-describedby");
       anchor.focus();
-      window.clearTimeout(timeoutId);
-      observer.disconnect();
-      resolve({
+      globalThis.__SIMEX_CHART_SAVING_EVIDENCE__.pendingReason = {
         editorInert: editor.hasAttribute("inert"),
         buttonDisabled: button.disabled,
         buttonDescribedBy: button.getAttribute("aria-describedby"),
@@ -874,21 +851,27 @@ function observeQuickEditorPendingReason(page) {
         reasonText: reasonId
           ? document.getElementById(reasonId)?.textContent?.trim() ?? null
           : null,
-      });
-      return true;
+      };
     };
     const observer = new MutationObserver(inspect);
+    globalThis.__SIMEX_CHART_SAVING_OBSERVER__ = observer;
     observer.observe(document.documentElement, {
       attributes: true,
       childList: true,
       subtree: true,
     });
-    timeoutId = window.setTimeout(() => {
-      observer.disconnect();
-      resolve({ timedOut: true });
-    }, 5000);
     inspect();
-  }));
+  }, { id: ownerId });
+}
+
+function readQuickEditorSavingEvidence(page) {
+  return page.evaluate(() => {
+    globalThis.__SIMEX_CHART_SAVING_OBSERVER__?.disconnect();
+    const evidence = globalThis.__SIMEX_CHART_SAVING_EVIDENCE__;
+    delete globalThis.__SIMEX_CHART_SAVING_OBSERVER__;
+    delete globalThis.__SIMEX_CHART_SAVING_EVIDENCE__;
+    return evidence;
+  });
 }
 
 function storedPageSectionIds(page, pageId) {
