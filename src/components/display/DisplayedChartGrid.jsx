@@ -17,6 +17,7 @@ export default function DisplayedChartGrid({
   renderCellControls,
   staticAssetReadiness = new Map(),
   contentRenderContext = {},
+  onVisualChange,
 }) {
   const presentationItems = items ?? chartIds.map(
     (chartId) => ({ kind: "chart", chart_id: chartId }),
@@ -87,6 +88,7 @@ export default function DisplayedChartGrid({
               timeContextAuthority={timeContextAuthority}
               interactionMode={surface === "audience" ? "passive" : "active"}
               surface={surface}
+              onVisualChange={onVisualChange}
             />
           </section>
         );

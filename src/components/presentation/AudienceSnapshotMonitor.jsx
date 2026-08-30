@@ -58,6 +58,9 @@ export default function AudienceSnapshotMonitor({
     timerKindRef.current = urgent ? "urgent" : "time";
     timerRef.current = window.setTimeout(startCapture, Math.max(0, delay));
   }, [startCapture]);
+  const handleVisualChange = React.useCallback(() => {
+    requestCapture(IDLE_DEBOUNCE_MS);
+  }, [requestCapture]);
 
   const structureKey = React.useMemo(() => JSON.stringify({
     activePageId: presentationState.active_page_id,
@@ -172,6 +175,7 @@ export default function AudienceSnapshotMonitor({
               connectionStatus="connected"
               projection={projectPresentationState(presentationState)}
               contentRenderContext={contentRenderContext}
+              onVisualChange={handleVisualChange}
             />
           </div>
         </div>,

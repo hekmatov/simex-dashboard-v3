@@ -11,6 +11,7 @@ import {
 import { mapBudgetNotice, useBuildMapBudgetSlot } from "../build/BuildMapBudgetContext.jsx";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
+const NOOP = () => {};
 const DEFAULT_CHART_TEXT_THEME = Object.freeze({
   textStrong: "#18334E",
   textMuted: "#49627A",
@@ -36,6 +37,7 @@ export default function EChartsChartView({
   accessibilityEnabled = false,
   runtimeError: suppliedRuntimeError = null,
   mapBudgetRequest = null,
+  onVisualChange,
 }) {
   const hostRef = React.useRef(null);
   const lifecycleRef = React.useRef(null);
@@ -93,6 +95,7 @@ export default function EChartsChartView({
       onError(error) {
         setRuntimeError(boundedRuntimeError(error));
       },
+      onRender: onVisualChange,
     });
     lifecycleRef.current = lifecycle;
     lifecycle.mount(host);
@@ -100,7 +103,7 @@ export default function EChartsChartView({
       lifecycle.dispose();
       if (lifecycleRef.current === lifecycle) lifecycleRef.current = null;
     };
-  }, [mapAllocated]);
+  }, [mapAllocated, onVisualChange]);
 
   React.useEffect(() => {
     if (!mapAllocated || !lifecycleRef.current) return;
@@ -262,21 +265,25 @@ export function createEChartsLifecycle({
   echartsApi = echarts,
   windowTarget = typeof window === "undefined" ? null : window,
   ResizeObserverCtor = typeof ResizeObserver === "undefined" ? null : ResizeObserver,
-  onError = () => {},
+  onError = NOOP,
+  onRender = NOOP,
 } = {}) {
   let instance = null;
   let observer = null;
   let resizeListener = null;
+  let finishedListener = null;
 
   function cleanup(nextInstance = instance) {
     observer?.disconnect?.();
     if (resizeListener) windowTarget?.removeEventListener?.("resize", resizeListener);
+    if (finishedListener) nextInstance?.off?.("finished", finishedListener);
     try {
       nextInstance?.dispose?.();
     } catch {}
     instance = null;
     observer = null;
     resizeListener = null;
+    finishedListener = null;
   }
 
   function fail(error, nextInstance = instance) {
@@ -301,6 +308,8 @@ export function createEChartsLifecycle({
         windowTarget?.addEventListener?.("resize", resizeListener);
         observer = ResizeObserverCtor ? new ResizeObserverCtor(resizeListener) : null;
         observer?.observe(host);
+        finishedListener = () => onRender();
+        nextInstance?.on?.("finished", finishedListener);
         instance = nextInstance;
       } catch (error) {
         fail(error, nextInstance);

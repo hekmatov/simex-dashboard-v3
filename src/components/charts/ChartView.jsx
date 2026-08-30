@@ -70,6 +70,7 @@ export function renderChartContent(props, interactionMode) {
       zoomEnabled,
       accessibilityEnabled: props.accessibilityEnabled === true,
       mapBudgetRequest: props.mapBudgetRequest,
+      onVisualChange: props.onVisualChange,
     });
     else if (model.kind === "cards") view = React.createElement(CardChartView, { model, chart: props.chart, provenance, interactionMode });
     else if (model.kind === "targetCollection") view = React.createElement(TargetCollectionChartView, {

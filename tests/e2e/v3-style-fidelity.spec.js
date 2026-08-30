@@ -461,13 +461,14 @@ test("Present keeps a live themed audience mirror for monitor captures", async (
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Present", exact: true }).click();
+  const preview = page.locator('.audience-snapshot-frame img[alt="Current audience scene"]');
+  await expect(preview).toBeVisible();
+  const holdingPreviewSrc = await preview.getAttribute("src");
   const choices = page.locator(".present-chart-choice");
   await expect(choices.nth(1)).toBeVisible();
   await choices.nth(0).getByRole("checkbox").check();
   await choices.nth(1).getByRole("checkbox").check();
-
-  const preview = page.locator('.audience-snapshot-frame img[alt="Current audience scene"]');
-  await expect(preview).toBeVisible();
+  await expect.poll(() => preview.getAttribute("src")).not.toBe(holdingPreviewSrc);
 
   const mirror = page.locator(".audience-snapshot-source .audience-theme-root .audience-display");
   await expect(mirror).toBeAttached();

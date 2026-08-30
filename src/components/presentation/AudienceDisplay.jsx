@@ -59,6 +59,7 @@ export function AudienceProjectionSurface({
   connectionStatus,
   projection,
   contentRenderContext,
+  onVisualChange,
   renderStatus = "current",
 }) {
   const items = projection?.kind === "output" ? projection.payload.items : [];
@@ -138,6 +139,7 @@ export function AudienceProjectionSurface({
           }}
           timeContextForChart={(chartId) => memberTimeContexts[chartId] ?? null}
           surface="audience"
+          onVisualChange={onVisualChange}
         />
       )}
       {sceneDate && (

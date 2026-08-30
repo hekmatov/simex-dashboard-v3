@@ -628,9 +628,14 @@ test("repeated Gauge and Bullet charts keep shared title visibility independent 
 
 test("ECharts lifecycle initializes once, updates in place, registers maps before options, resizes, and cleans up", () => {
   const calls = [];
+  let finishedListener;
   const instance = {
     setOption(option) { calls.push(`option:${option.id}`); },
     resize() { calls.push("resize"); },
+    on(event, listener) { if (event === "finished") finishedListener = listener; },
+    off(event, listener) {
+      if (event === "finished" && listener === finishedListener) calls.push("remove-finished");
+    },
     dispose() { calls.push("dispose"); },
   };
   let resizeListener;
@@ -650,16 +655,18 @@ test("ECharts lifecycle initializes once, updates in place, registers maps befor
       observe() { calls.push("observe"); }
       disconnect() { calls.push("disconnect"); }
     },
+    onRender() { calls.push("finished"); },
   });
 
   lifecycle.mount({});
   lifecycle.update({ mapRegistration: { name: "regions", geoJson: { features: [{}] } }, option: { id: "first" } });
   lifecycle.update({ mapRegistration: { name: "empty-regions", geoJson: { type: "FeatureCollection", features: [] } }, option: { id: "second" } });
+  finishedListener();
   resizeListener();
   observer.callback();
   lifecycle.dispose();
 
-  assert.deepEqual(calls, ["init", "observe", "map:regions", "option:first", "map:empty-regions", "option:second", "resize", "resize", "disconnect", "remove-resize", "dispose"]);
+  assert.deepEqual(calls, ["init", "observe", "map:regions", "option:first", "map:empty-regions", "option:second", "finished", "resize", "resize", "disconnect", "remove-resize", "remove-finished", "dispose"]);
 });
 
 test("ECharts lifecycle disposes a partially initialized instance when setup fails", () => {
