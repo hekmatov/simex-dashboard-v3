@@ -464,6 +464,7 @@ test("authoring preview selects one media placement and changes only its seriali
     const focusOnOpen = document.activeElement?.value;
     target.querySelector('[aria-label="Media picker"]')?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     for (let index = 0; index < 50 && target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     const pickerClosedOnEscape = target.querySelector('[aria-label="Media picker"]') === null;
     const focusAfterEscape = document.activeElement === changeTrigger;
     changeTrigger?.click();

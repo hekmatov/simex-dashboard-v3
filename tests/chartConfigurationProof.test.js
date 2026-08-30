@@ -121,8 +121,8 @@ test("render and placement proofs remain independent and must both be current", 
 test("proofs are validations inside exactly six stages", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
     "destination",
-    "chart-type",
     "data-source",
+    "chart-type",
     "map-and-prepare-data",
     "configure-chart",
     "review-and-create",
