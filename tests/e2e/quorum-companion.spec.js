@@ -160,9 +160,11 @@ test("comparison selection caps at four charts and Escape cancels selection", as
   await fifth.getByRole("button", {
     name: "Add chart to comparison",
   }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "Maximum 4 charts allowed",
-  );
+  const limitAlert = page.getByRole("alert").filter({
+    hasText: "Maximum 4 charts allowed",
+  });
+  await expect(limitAlert).toBeVisible();
+  await expect(limitAlert).toHaveText("Maximum 4 charts allowed");
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", {
