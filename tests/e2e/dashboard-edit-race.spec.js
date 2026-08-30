@@ -32,12 +32,11 @@ test("a pending header edit and immediate chart save commit in order", async ({
     .fill("Race-safe exercise");
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Edit chart" }).first().click();
-  await page.getByRole("button", {
-    name: "Appearance",
-    exact: true,
-  }).click();
-  await page.getByLabel("Chart title").fill("Race-safe chart title");
-  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByLabel("Chart title").fill("Race-safe chart title");
+  await quick.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(quick).toHaveCount(0);
 
   await expect.poll(() => page.evaluate((key) => {
     const config = JSON.parse(localStorage.getItem(key));
