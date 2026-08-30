@@ -1,7 +1,7 @@
 import React from "react";
 import { Node } from "@tiptap/core";
 import { Fragment, Slice } from "@tiptap/pm/model";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -134,6 +134,20 @@ export default function PortableQmdRichTextEditor({
     editor.commands.setContent(parsed.document, { emitUpdate: false });
   }, [editor, parsed, source]);
 
+  const toolbarState = useEditorState({
+    editor,
+    selector: ({ editor: current }) => ({
+      semanticStyle: currentSemanticStyle(current),
+      bold: current?.isActive("bold") ?? false,
+      italic: current?.isActive("italic") ?? false,
+      underline: current?.isActive("underline") ?? false,
+      bulletList: current?.isActive("bulletList") ?? false,
+      orderedList: current?.isActive("orderedList") ?? false,
+      link: current?.isActive("link") ?? false,
+      table: current?.isActive("table") ?? false,
+    }),
+  });
+
   const command = (callback) => {
     if (disabled || !editor) return;
     callback(editor.chain().focus()).run();
@@ -166,38 +180,48 @@ export default function PortableQmdRichTextEditor({
         }
       }}
     >
-      <div role="toolbar" aria-label="Composer formatting" className="portable-qmd-composer__toolbar">
-        <ControlTooltip disabled={standardState.disabled} reason={standardState.reason}>
-          <label>
-            <span>Semantic text style</span>
-            <select
-              id="portable-qmd-semantic-style"
-              aria-label="Semantic text style"
-              disabled={standardState.disabled}
-              value={currentSemanticStyle(editor)}
-              onChange={(event) => { if (!disabledRef.current) applySemanticStyle(editor, event.target.value); }}
-            >
-              <option value="paragraph">Paragraph</option>
-              <option value="lead">Lead</option>
-              <option value="heading">Heading</option>
-              <option value="subheading">Subheading</option>
-              <option value="caption">Caption</option>
-            </select>
-          </label>
-        </ControlTooltip>
-        <ComposerButton label="Bold" pressed={editor?.isActive("bold")} {...standardState} onClick={() => command((chain) => chain.toggleBold())} />
-        <ComposerButton label="Italic" pressed={editor?.isActive("italic")} {...standardState} onClick={() => command((chain) => chain.toggleItalic())} />
-        <ComposerButton label="Underline" pressed={editor?.isActive("underline")} {...standardState} onClick={() => command((chain) => chain.toggleUnderline())} />
-        <ComposerButton label="Bullet list" pressed={editor?.isActive("bulletList")} {...standardState} onClick={() => command((chain) => chain.toggleBulletList())} />
-        <ComposerButton label="Numbered list" pressed={editor?.isActive("orderedList")} {...standardState} onClick={() => command((chain) => chain.toggleOrderedList())} />
-        <ComposerButton label="Link" pressed={editor?.isActive("link")} {...standardState} onClick={() => {
-          setLinkValue(editor?.getAttributes("link")?.href ?? ""); setLinkError(""); setLinkOpen(true);
-        }} />
-        <ComposerButton label="Table" {...standardState} onClick={() => command((chain) => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))} />
-        <ComposerButton label="Insert image" disabled={disabled} reason={disabled ? PENDING_REASON : ""} onClick={() => onMediaSelect?.()} />
-        <ComposerButton label="Clear formatting" {...standardState} onClick={() => command((chain) => chain.unsetAllMarks().clearNodes())} />
-        <ComposerButton label="Undo" {...undoState} onClick={() => command((chain) => chain.undo())} />
-        <ComposerButton label="Redo" {...redoState} onClick={() => command((chain) => chain.redo())} />
+      <div role="toolbar" aria-label="Composer formatting" className="portable-qmd-composer__toolbar" data-qmd-format-rail="true">
+        <div className="portable-qmd-composer__toolbar-group" role="group" aria-label="Text style">
+          <ControlTooltip disabled={standardState.disabled} reason={standardState.reason}>
+            <label>
+              <span>Semantic text style</span>
+              <select
+                id="portable-qmd-semantic-style"
+                aria-label="Semantic text style"
+                disabled={standardState.disabled}
+                value={toolbarState.semanticStyle}
+                onChange={(event) => { if (!disabledRef.current) applySemanticStyle(editor, event.target.value); }}
+              >
+                <option value="paragraph">Paragraph</option>
+                <option value="lead">Lead</option>
+                <option value="heading">Heading</option>
+                <option value="subheading">Subheading</option>
+                <option value="caption">Caption</option>
+              </select>
+            </label>
+          </ControlTooltip>
+        </div>
+        <div className="portable-qmd-composer__toolbar-group" role="group" aria-label="Inline formatting">
+          <ComposerButton label="Bold" pressed={toolbarState.bold} {...standardState} onClick={() => command((chain) => chain.toggleBold())} />
+          <ComposerButton label="Italic" pressed={toolbarState.italic} {...standardState} onClick={() => command((chain) => chain.toggleItalic())} />
+          <ComposerButton label="Underline" pressed={toolbarState.underline} {...standardState} onClick={() => command((chain) => chain.toggleUnderline())} />
+          <ComposerButton label="Link" pressed={toolbarState.link} {...standardState} onClick={() => {
+            setLinkValue(editor?.getAttributes("link")?.href ?? ""); setLinkError(""); setLinkOpen(true);
+          }} />
+          <ComposerButton label="Clear formatting" {...standardState} onClick={() => command((chain) => chain.unsetAllMarks().clearNodes())} />
+        </div>
+        <div className="portable-qmd-composer__toolbar-group" role="group" aria-label="Block formatting">
+          <ComposerButton label="Bullet list" pressed={toolbarState.bulletList} {...standardState} onClick={() => command((chain) => chain.toggleBulletList())} />
+          <ComposerButton label="Numbered list" pressed={toolbarState.orderedList} {...standardState} onClick={() => command((chain) => chain.toggleOrderedList())} />
+          <ComposerButton label="Table" pressed={toolbarState.table} {...standardState} onClick={() => command((chain) => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))} />
+        </div>
+        <div className="portable-qmd-composer__toolbar-group" role="group" aria-label="Insert content">
+          <ComposerButton label="Insert image" disabled={disabled} reason={disabled ? PENDING_REASON : ""} onClick={() => onMediaSelect?.()} />
+        </div>
+        <div className="portable-qmd-composer__toolbar-group" role="group" aria-label="History">
+          <ComposerButton label="Undo" {...undoState} onClick={() => command((chain) => chain.undo())} />
+          <ComposerButton label="Redo" {...redoState} onClick={() => command((chain) => chain.redo())} />
+        </div>
       </div>
       {linkOpen && (
         <div className="portable-qmd-composer__link-editor" role="group" aria-label="Link editor">
@@ -232,6 +256,7 @@ function ComposerButton({ label, pressed, disabled, reason, onClick }) {
         aria-label={label}
         aria-pressed={pressed === undefined ? undefined : Boolean(pressed)}
         disabled={disabled}
+        title={label}
         onMouseDown={(event) => event.preventDefault()}
         onClick={onClick}
       >{label}</button>

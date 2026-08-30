@@ -158,10 +158,30 @@
 }
 
 .portable-qmd-composer__toolbar {
-  align-items: end;
+  align-items: center;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 2px;
+  padding: 6px;
+}
+
+.portable-qmd-composer__toolbar-group {
+  align-items: center;
+  border-inline-end: 1px solid var(--simex-border-subtle);
+  display: flex;
+  gap: 2px;
+  padding-inline: 4px;
+}
+
+.portable-qmd-composer__toolbar-group:first-child {
+  padding-inline-start: 0;
+}
+
+.portable-qmd-composer__toolbar-group:last-child {
+  border-inline-end: 0;
 }
 
 .portable-qmd-composer__toolbar label,
@@ -175,6 +195,15 @@
 .portable-qmd-composer__toolbar :is(button, select),
 .portable-qmd-composer__link-editor :is(button, input) {
   min-height: 44px;
+}
+
+.portable-qmd-composer__toolbar button {
+  min-width: 44px;
+  padding-inline: 9px;
+}
+
+.portable-qmd-composer__toolbar select {
+  min-width: 128px;
 }
 
 .portable-qmd-composer__link-editor {
@@ -206,6 +235,18 @@
   border-color: var(--simex-selected);
   color: var(--simex-text-strong);
   box-shadow: inset 0 -3px 0 var(--simex-selected);
+}
+
+@media (max-width: 620px) {
+  .portable-qmd-composer__toolbar-group {
+    border-block-end: 1px solid var(--simex-border-subtle);
+    border-inline-end: 0;
+    padding-block: 2px;
+  }
+
+  .portable-qmd-composer__toolbar-group:last-child {
+    border-block-end: 0;
+  }
 }
 
 .portable-qmd-composer__toolbar button:focus-visible,

@@ -29,6 +29,18 @@ test("the constrained Composer exposes every visible labelled authoring command"
   assert.match(html, /aria-live="polite"/);
 });
 
+test("the Composer keeps its familiar format rail commands in accessible groups", () => {
+  const html = renderToStaticMarkup(React.createElement(module.default, {
+    source: "Composer text",
+    onSourceChange() {},
+    onMediaSelect() {},
+  }));
+  assert.match(html, /data-qmd-format-rail="true"/);
+  for (const label of ["Text style", "Inline formatting", "Block formatting", "Insert content", "History"]) {
+    assert.match(html, new RegExp(`role="group"[^>]*aria-label="${label}"`), label);
+  }
+});
+
 test("representable source opens Composer with the trimmed panel title in Preview", () => {
   const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, {
     value: "Ordinary **formatted** text.",
