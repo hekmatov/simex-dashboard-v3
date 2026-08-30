@@ -76,6 +76,8 @@ export function FreeTextSourceEditor({
   const mediaNodes = React.useMemo(() => parsePortableQmdWithMedia(value).ast?.mediaNodes ?? [], [value]);
   const selectedMediaNode = Number.isInteger(selectedMediaIdentity?.mediaNodeIndex) ? mediaNodes[selectedMediaIdentity.mediaNodeIndex] : null;
   const selectedPlacement = selectedMediaNode ? { mediaId: selectedMediaNode.mediaId, alt: selectedMediaNode.alt, ...selectedMediaNode.attributes } : null;
+  const hasValidationErrors = !pending && analysis.errors.length > 0;
+  const validationTarget = validationTargetId(editorDocument.mode, id);
   const updateSelectedPlacement = (placement) => {
     if (disabled) return;
     if (!selectedMediaNode || !Number.isInteger(selectedMediaNode.sourceStart) || !Number.isInteger(selectedMediaNode.sourceEnd)) return;
@@ -103,7 +105,7 @@ export function FreeTextSourceEditor({
           <p className="free-text-source-editor__shortcuts"><kbd>Ctrl</kbd> + <kbd>B</kbd> / <kbd>I</kbd> also work</p>
         </header>
         {editorDocument.mode === "visual"
-          ? <PortableQmdRichTextEditor source={value} disabled={disabled} mediaItems={mediaItems} assets={assets} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} />
+          ? <div id="portable-qmd-composer-focus-target" data-qmd-editor-focus-target="true"><PortableQmdRichTextEditor source={value} disabled={disabled} mediaItems={mediaItems} assets={assets} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} /></div>
           : <div className="free-text-advanced-required" role="note"><h4>Visual editing is unavailable for this content</h4><p>{editorDocument.reason}</p></div>}
       </section>
       <div className="free-text-source-editor__reference-cards">
@@ -113,19 +115,32 @@ export function FreeTextSourceEditor({
         </section>
         <section className="free-text-source-editor__reference-card free-text-source-editor__markdown" aria-label="Portable Markdown">
           <header><h3>Portable Markdown</h3><p>what is stored</p></header>
-          <pre>{value}</pre>
+          {editorDocument.mode === "visual"
+            ? <pre>{value}</pre>
+            : <div className="free-text-source-editor__source-repair"><p id={`${id}-help`}>{editorDocument.reason} Edit the stored source here to repair it or preserve the construct exactly.</p><textarea id={id} aria-label="Portable QMD source" aria-invalid={hasValidationErrors ? "true" : undefined} aria-describedby={[`${id}-help`, hasValidationErrors ? `${id}-errors-title` : ""].filter(Boolean).join(" ")} disabled={disabled} value={value} onChange={(event) => changeSource(event.target.value)} /></div>}
         </section>
       </div>
       {pickerOpen && pickerMode === "change" && <ChangeMediaPicker mediaItems={mediaItems} selectedMediaId={selectedPlacement?.mediaId} onSelect={chooseMedia} onCancel={closeChangePicker} />}
       {pickerOpen && pickerMode === "insert" && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" onSelect={chooseMedia} onCreateLocal={async (candidate, context) => { await onMediaCreate?.(candidate, context); setPickerOpen(false); }} onCancel={() => setPickerOpen(false)} />}
       {selectedPlacement && <QmdMediaInspector placement={selectedPlacement} mediaItem={valueForId(mediaItems, selectedPlacement.mediaId)} disabled={disabled} onChange={updateSelectedPlacement} onChangeImage={(_mediaId, { trigger } = {}) => { changeTriggerRef.current = trigger ?? null; setPickerMode("change"); setPickerOpen(true); }} onOpenMediaItem={(mediaId) => (onOpenMediaItem ?? contentRenderContext.openMediaItem)?.(mediaId)} />}
-      {!pending && analysis.errors.length > 0 && <ValidationErrors id={id} value={value} errors={analysis.errors} />}
+      {hasValidationErrors && <ValidationErrors id={validationTarget} errorId={`${id}-errors-title`} value={value} errors={analysis.errors} />}
     </section>
   );
 }
 
-function ValidationErrors({ id, value, errors }) {
-  return <div className="free-text-validation-errors" aria-labelledby={`${id}-errors-title`}><h3 id={`${id}-errors-title`}>Fix before continuing</h3><ol>{errors.map((error, index) => <li key={`${error.rule}-${index}`} data-validation-rule={error.rule}><a href={`#${id}`} onClick={(event) => { event.preventDefault(); const input = document.getElementById(id); input?.focus(); const offset = sourceOffset(value, error.location); input?.setSelectionRange(offset, offset); }}>Line {error.location.line}, column {error.location.column}: {error.message}</a><span>{error.guidance}</span></li>)}</ol></div>;
+function ValidationErrors({ id, errorId, value, errors }) {
+  return <div className="free-text-validation-errors" aria-labelledby={errorId}><h3 id={errorId}>Fix before continuing</h3><ol>{errors.map((error, index) => <li key={`${error.rule}-${index}`} data-validation-rule={error.rule}><a href={`#${id}`} onClick={(event) => { event.preventDefault(); focusValidationTarget(document.getElementById(id), sourceOffset(value, error.location)); }}>Line {error.location.line}, column {error.location.column}: {error.message}</a><span>{error.guidance}</span></li>)}</ol></div>;
+}
+
+export function validationTargetId(mode, id) {
+  return mode === "visual" ? "portable-qmd-composer-focus-target" : id;
+}
+
+export function focusValidationTarget(target, offset) {
+  const input = target?.matches?.("textarea, input") ? target : target?.querySelector?.('[contenteditable="true"]');
+  input?.focus?.();
+  input?.setSelectionRange?.(offset, offset);
+  return input ?? null;
 }
 
 function pendingValidation(source, sourceRevision, previewRevision) { return { ok: false, pending: true, errors: [], warnings: [], source, sourceRevision, previewRevision }; }

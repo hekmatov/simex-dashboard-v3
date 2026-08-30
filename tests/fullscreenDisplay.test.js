@@ -81,6 +81,16 @@ test("fullscreen display component is available", () => {
   );
 });
 
+test("fullscreen CSS fits the panel inside its padded backdrop without backdrop scrolling", async () => {
+  const css = await import("node:fs/promises").then(({ readFile }) => readFile(
+    new URL("../src/styles/immersive-display.css", import.meta.url),
+    "utf8",
+  ));
+  assert.match(css, /\.fullscreen-backdrop--immersive\s*\{[^}]*padding:\s*12px;[^}]*overflow:\s*hidden;/s);
+  assert.match(css, /\.multi-fullscreen-panel\.dashboard-dialog\s*\{[^}]*inline-size:\s*100%;[^}]*block-size:\s*100%;[^}]*max-block-size:\s*none;/s);
+  assert.match(css, /\.fullscreen-backdrop--immersive \.multi-fullscreen-grid\s*\{[^}]*height:\s*100%;/s);
+});
+
 test("fullscreen comparison preserves ordered charts in a labeled focus-scoped dialog", () => {
   assert.ok(displayModule, "fullscreen display must be implemented");
   const html = renderToStaticMarkup(

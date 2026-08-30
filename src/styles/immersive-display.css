@@ -1,5 +1,7 @@
 .fullscreen-backdrop--immersive {
   z-index: 1200;
+  padding: 12px;
+  overflow: hidden;
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-panel {
@@ -9,7 +11,10 @@
 }
 
 .multi-fullscreen-panel.dashboard-dialog {
-  block-size: calc(100dvh - 24px);
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  max-block-size: none;
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-controls {
@@ -51,8 +56,7 @@
 
 .fullscreen-backdrop--immersive .multi-fullscreen-grid {
   gap: 6px;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   padding: 6px;
 }
 
@@ -139,12 +143,6 @@
   .multi-select-dock {
     bottom: 8px;
     max-width: calc(100vw - 16px);
-  }
-}
-
-@media (max-width: 720px) {
-  .multi-fullscreen-panel.dashboard-dialog {
-    min-block-size: calc(100dvh - 16px);
   }
 }
 

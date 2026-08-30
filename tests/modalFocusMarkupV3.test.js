@@ -27,6 +27,10 @@ const { default: ChartConversionDialog } = await import(
 const { default: ChartWizardV3 } = await import(
   "../src/components/chart-authoring/ChartWizardV3.jsx"
 );
+const sceneSource = await import("node:fs/promises").then(({ readFile }) => readFile(
+  new URL("../src/components/time/SceneEditor.jsx", import.meta.url),
+  "utf8",
+));
 
 test("modal containers remain programmatically focusable and confirmations mark the safe action", () => {
   const confirmation = renderToStaticMarkup(React.createElement(
@@ -71,4 +75,11 @@ test("modal containers remain programmatically focusable and confirmations mark 
     wizard,
     /data-modal-initial-focus="true"[^>]*aria-current="step"/,
   );
+});
+
+test("Scene observation modal delegates Escape, containment, and focus restoration to ModalFocusScope", () => {
+  assert.match(sceneSource, /function ObservationChecklist[\s\S]*?<ModalFocusScope/);
+  assert.match(sceneSource, /initialFocusSelector="\[data-scene-observation-close\]"/);
+  assert.match(sceneSource, /onEscape=\{onClose\}/);
+  assert.match(sceneSource, /data-modal-initial-focus="true"/);
 });

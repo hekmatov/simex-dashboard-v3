@@ -28,7 +28,7 @@ const vite = await createServer({
   logLevel: "silent",
 });
 after(() => vite.close());
-const { default: SceneEditor } = await vite.ssrLoadModule("/src/components/time/SceneEditor.jsx");
+const { default: SceneEditor, ObservationChecklist } = await vite.ssrLoadModule("/src/components/time/SceneEditor.jsx");
 
 const scene = { id: "scene-a", name: "Admission reveal", status: "ready", chronoGroupName: "Municipal outbreak playback", members: [{ chartId: "chart-a" }] };
 
@@ -149,4 +149,21 @@ test("an unresolved Scene opens the Frame source repair without exposing Calenda
   assert.match(html, /id="scene-frame-source"/);
   assert.match(html, /Choose replacement/);
   assert.doesNotMatch(html, /Calendar interval value/);
+});
+
+test("the observation checklist uses the shared modal focus boundary and a safe close target", () => {
+  const chart = {
+    id: "chart-a",
+    title: "Admissions",
+    variables: [{ id: "value", observations: [{ epochMs: Date.UTC(2027, 4, 1) }] }],
+  };
+  const html = renderToStaticMarkup(React.createElement(ObservationChecklist, {
+    chart,
+    selectedEpochs: [],
+    onAction() {},
+    onClose() {},
+  }));
+  assert.match(html, /role="dialog"[^>]*aria-modal="true"[^>]*tabindex="-1"/);
+  assert.match(html, /data-scene-observation-close="true"[^>]*data-modal-initial-focus="true"/);
+  assert.match(html, /class="scene-observation-dialog dashboard-dialog-backdrop"/);
 });

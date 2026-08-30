@@ -14,6 +14,10 @@ const root = createRoot(document.querySelector("#root"));
 function EditorHarness({ initialSource }) {
   const [source, setSource] = React.useState(initialSource);
   const [validation, setValidation] = React.useState(null);
+  React.useEffect(() => {
+    window.setFreeTextEditorSource = setSource;
+    return () => { delete window.setFreeTextEditorSource; };
+  }, []);
   return (
     <form onSubmit={(event) => event.preventDefault()}>
       <FreeTextSourceEditor

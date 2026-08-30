@@ -59,23 +59,30 @@ test("StaticContentEditor forwards retained-media edit authority through the coo
   assert.equal(props.onContentDraftDiscard, onContentDraftDiscard);
 });
 
-test("Free-text authoring opens the constrained visual Composer by default", () => {
+test("Free-text authoring exposes the writer, rendered preview, and portable source together", () => {
   const html = renderToStaticMarkup(React.createElement(freeTextEditorModule.FreeTextSourceEditor, { value: "Brief" }));
+  assert.match(html, /aria-label="Text post editor"/);
   assert.match(html, /role="toolbar"[^>]*aria-label="Composer formatting"/);
   assert.match(html, /aria-label="Semantic text style"/);
   for (const label of ["Bold", "Italic", "Underline", "Bullet list", "Numbered list", "Table", "Insert image"]) {
     assert.match(html, new RegExp(`aria-label="${label}"`));
   }
-  assert.match(html, />Advanced QMD</);
+  assert.match(html, /aria-label="Rendered preview"/);
+  assert.match(html, /aria-label="Portable Markdown"/);
+  assert.doesNotMatch(html, /role="tab"/);
+  assert.doesNotMatch(html, />Advanced QMD</);
+  assert.doesNotMatch(html, /Preview is up to date\./);
 });
 
-test("Free-text authoring restores the saved Preview or Advanced QMD surface", () => {
-  for (const surface of ["preview", "advanced"]) {
+test("Free-text authoring restores saved source into the always-visible content stage", () => {
+  for (const source of ["Restored plain text", "## Restored heading\n\nRestored body."]) {
     const html = renderToStaticMarkup(React.createElement(freeTextEditorModule.FreeTextSourceEditor, {
-      value: "Brief",
-      initialSurface: surface,
+      value: source,
     }));
-    assert.match(html, new RegExp(`id="static-qmd-source-${surface}-tab"[^>]*aria-selected="true"`));
+    assert.match(html, /aria-label="Text post editor"/);
+    assert.match(html, /aria-label="Rendered preview"/);
+    assert.match(html, /aria-label="Portable Markdown"/);
+    assert.ok(html.includes(source));
   }
 });
 
@@ -97,7 +104,9 @@ test("workflow pending disables every current Text and Image mutating field", ()
     assert.match(html, /role="gridcell"[^>]*disabled/);
     if (contentTypeId === "freeText") {
       assert.match(html, /<select[^>]*id="portable-qmd-semantic-style"[^>]*disabled/);
-      assert.match(html, /<textarea[^>]*id="static-qmd-source"[^>]*disabled/);
+      for (const label of ["Bold", "Italic", "Insert image"]) {
+        assert.match(html, new RegExp(`<button[^>]*aria-label="${label}"[^>]*disabled`), label);
+      }
     } else {
       for (const id of ["static-image-origin-kind", "static-image-file", "static-image-alt", "static-image-crop-x", "static-image-fit"]) {
         assert.match(html, new RegExp(`<[^>]+id="${id}"[^>]*disabled`), id);

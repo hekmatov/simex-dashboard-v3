@@ -32,9 +32,7 @@ after(async () => {
   await vite.close();
 });
 
-async function advancedQmdSource(scope = page) {
-  const tab = scope.getByRole("tab", { name: "Advanced QMD" });
-  if (await tab.getAttribute("aria-selected") !== "true") await tab.click();
+async function portableQmdRepairSource(scope = page) {
   return scope.getByLabel("Portable QMD source");
 }
 
@@ -630,43 +628,41 @@ test("authoring edits reference, inline, and duplicate placements by their canon
 test("editor debounces parsing, keeps the last valid preview stale on a complexity error, and recovers without losing source", async () => {
   const initial = "## Situation\n\nInitial valid preview.";
   await page.evaluate((source) => window.mountFreeTextEditor(source), initial);
-  const preview = page.locator('[data-free-text-pane="preview"]');
+  const preview = page.getByLabel("Rendered preview");
   await preview.getByText("Initial valid preview.").waitFor();
-  const editor = await advancedQmdSource();
   assert.equal(await page.locator('[data-validation-ok="true"]').textContent(), "0 blocking errors");
 
   const blocked = `${"> ".repeat(7)}too deeply nested`;
-  await editor.fill(blocked);
-  assert.match(await page.locator("#harness-qmd-status").textContent(), /Updating preview/i);
+  await page.evaluate((source) => window.setFreeTextEditorSource(source), blocked);
+  assert.equal(await page.locator("output[data-validation-ok]").getAttribute("data-validation-pending"), "true");
   await page.waitForTimeout(240);
-  assert.match(await page.locator("#harness-qmd-status").textContent(), /1 blocking error|blocking errors/i);
-  assert.equal(await page.locator(".free-text-preview-stale").textContent(), "Preview is stale");
+  assert.match(await page.locator("output[data-validation-ok]").textContent(), /1 blocking error|blocking errors/i);
   assert.equal(await preview.getByText("Initial valid preview.").count(), 1);
+  const editor = await portableQmdRepairSource();
   assert.equal(await editor.inputValue(), blocked);
   const errorLink = page.locator(".free-text-validation-errors a").first();
   assert.match(await errorLink.textContent(), /line 1/i);
   await errorLink.click();
   assert.equal(await page.evaluate(() => document.activeElement?.id), "harness-qmd");
+  assert.equal(await editor.evaluate((element) => element.selectionStart), 0);
 
   await editor.fill("## Situation\n\nRecovered preview.");
   await page.waitForTimeout(240);
-  await page.getByRole("tab", { name: "Preview" }).click();
   await preview.getByText("Recovered preview.").waitFor();
-  assert.equal(await page.locator(".free-text-preview-stale").count(), 0);
   assert.equal(await page.locator('[data-validation-ok="true"]').textContent(), "0 blocking errors");
 });
 
 test("routed controls wait for analysis, accept arbitrary inert text, and still block a complexity breach", async () => {
-  const initial = "# Situation\n\nInitial valid preview.";
+  const initial = "```text\nInitial exact source.\n```";
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.evaluate((source) => window.mountFreeTextWizard(source), initial);
   const wizard = page.getByRole("dialog", { name: "Edit Text/Image" });
-  const source = await advancedQmdSource(wizard);
+  const source = await portableQmdRepairSource(wizard);
   const continueButton = wizard.getByRole("button", { name: "Continue" });
   const previewRail = wizard.getByRole("button", { name: "Preview & add", exact: true });
   await expect(continueButton).toBeEnabled();
-  assert.match(await wizard.locator("#static-qmd-source-advanced-help").textContent(), /preserves exact authored source/i);
+  assert.match(await wizard.locator("#static-qmd-source-help").textContent(), /preserve the construct exactly/i);
 
   const arbitrary = [
     "# Situation",
@@ -677,18 +673,17 @@ test("routed controls wait for analysis, accept arbitrary inert text, and still 
   await source.fill(arbitrary);
   assert.equal(await continueButton.isDisabled(), true);
   assert.equal(await previewRail.isDisabled(), true);
-  assert.match(await wizard.getByRole("status").textContent(), /Updating preview/i);
-  await page.waitForFunction(() => /Preview is up to date/i.test(document.querySelector("#static-qmd-source-status")?.textContent ?? ""));
+  await page.waitForTimeout(240);
   assert.equal(await continueButton.isDisabled(), false);
   assert.equal(await previewRail.isDisabled(), false);
-  assert.equal(await wizard.locator('[data-free-text-pane="preview"] script, [data-free-text-pane="preview"] iframe').count(), 0);
-  assert.equal(await wizard.locator('[data-free-text-pane="preview"]').getByText(/<script>window\.authoredCodeRan/).count(), 1);
+  assert.equal(await wizard.getByLabel("Rendered preview").locator("script, iframe").count(), 0);
+  assert.equal(await wizard.getByLabel("Rendered preview").getByText(/<script>window\.authoredCodeRan/).count(), 1);
   assert.equal(await page.evaluate(() => window.authoredCodeRan), undefined);
 
   await source.fill(`${"> ".repeat(7)}too deeply nested`);
   assert.equal(await continueButton.isDisabled(), true);
   assert.equal(await previewRail.isDisabled(), true);
-  await page.waitForFunction(() => /blocking error/i.test(document.querySelector("#static-qmd-source-status")?.textContent ?? ""));
+  await page.waitForTimeout(240);
   assert.equal(await continueButton.isDisabled(), true);
   assert.equal(await previewRail.isDisabled(), true);
   assert.equal(await wizard.locator('[data-static-content-stage="content"]').count(), 1);
@@ -699,12 +694,11 @@ test("change then rapid revert restores cached validation and matching source/pr
   const initial = "## Situation\n\nInitial valid preview.";
   await page.evaluate((source) => window.mountFreeTextEditor(source), initial);
   const output = page.locator("output[data-validation-ok]");
-  await page.locator('[data-free-text-pane="preview"]').getByText("Initial valid preview.").waitFor();
-  const editor = await advancedQmdSource();
+  await page.getByLabel("Rendered preview").getByText("Initial valid preview.").waitFor();
 
-  await editor.fill("# Changed\n\nValid but not yet evaluated.");
+  await page.evaluate((source) => window.setFreeTextEditorSource(source), "# Changed\n\nValid but not yet evaluated.");
   assert.equal(await output.getAttribute("data-validation-pending"), "true");
-  await editor.fill(initial);
+  await page.evaluate((source) => window.setFreeTextEditorSource(source), initial);
   await page.waitForFunction(() => document.querySelector('output[data-validation-ok]')?.getAttribute("data-validation-pending") === "false");
 
   assert.equal(await output.getAttribute("data-validation-ok"), "true");
@@ -712,43 +706,31 @@ test("change then rapid revert restores cached validation and matching source/pr
   const sourceRevision = await output.getAttribute("data-source-revision");
   assert.equal(await output.getAttribute("data-preview-revision"), sourceRevision);
   assert.ok(Number(sourceRevision) >= 2);
-  assert.match(await page.locator("#harness-qmd-status").textContent(), /Preview is up to date/i);
-  assert.equal(await page.locator('[data-free-text-pane="preview"]').getByText("Initial valid preview.").count(), 1);
+  assert.equal(await page.getByLabel("Rendered preview").getByText("Initial valid preview.").count(), 1);
 });
 
-test("responsive Advanced QMD and Preview tabs preserve selected pane and logical focus across layout changes", async () => {
+test("responsive writer, preview, and Portable Markdown cards remain visible and keep editor focus", async () => {
   await page.evaluate(() => window.mountFreeTextEditor("## Situation\n\nResponsive content."));
-  const sourcePane = page.locator('[data-free-text-pane="advanced"]');
-  const previewPane = page.locator('[data-free-text-pane="preview"]');
-  await previewPane.getByText("Responsive content.").waitFor();
-  assert.equal(await sourcePane.isVisible(), false);
-  assert.equal(await previewPane.isVisible(), true);
-
-  const editor = await advancedQmdSource();
-  assert.equal(await sourcePane.isVisible(), true);
-  assert.equal(await previewPane.isVisible(), false);
+  const writer = page.getByLabel("Text post editor");
+  const preview = page.getByLabel("Rendered preview");
+  const markdown = page.getByLabel("Portable Markdown");
+  await preview.getByText("Responsive content.").waitFor();
+  const editor = page.getByLabel("Portable QMD Composer editing area");
+  assert.equal(await page.locator("#portable-qmd-composer-surface").count(), 1);
+  assert.equal(await page.locator("#portable-qmd-composer-focus-target").count(), 1);
   await editor.focus();
   await page.setViewportSize({ width: 768, height: 900 });
   await page.waitForTimeout(50);
-  assert.equal(await page.getByRole("tab", { name: "Advanced QMD" }).getAttribute("aria-selected"), "true");
-  assert.equal(await sourcePane.isVisible(), true);
-  assert.equal(await previewPane.isVisible(), false);
-  assert.equal(await page.evaluate(() => document.activeElement?.id), "harness-qmd");
-
-  const sourceTab = page.getByRole("tab", { name: "Advanced QMD" });
-  const previewTab = page.getByRole("tab", { name: "Preview" });
-  await sourceTab.focus();
-  await sourceTab.press("ArrowLeft");
-  assert.equal(await previewTab.getAttribute("aria-selected"), "true");
-  await page.waitForFunction(() => document.activeElement?.textContent === "Preview");
-  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Preview");
-  assert.equal(await sourcePane.isVisible(), false);
-  assert.equal(await previewPane.isVisible(), true);
+  assert.equal(await writer.isVisible(), true);
+  assert.equal(await preview.isVisible(), true);
+  assert.equal(await markdown.isVisible(), true);
+  assert.equal(await page.getByRole("tab").count(), 0);
+  assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Portable QMD Composer editing area");
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.waitForTimeout(50);
-  assert.equal(await sourcePane.isVisible(), false);
-  assert.equal(await previewPane.isVisible(), true);
-  assert.equal(await page.locator('[role="tab"]').filter({ hasText: "Preview" }).getAttribute("aria-selected"), "true");
+  assert.equal(await writer.isVisible(), true);
+  assert.equal(await preview.isVisible(), true);
+  assert.equal(await markdown.isVisible(), true);
 });
 
 test("panel, table, and code own their bounded overflow without growing the document", async () => {
@@ -794,12 +776,11 @@ test("canonical renderer and editor reject one-token math expansion before mount
   assert.deepEqual(pageErrors, []);
 
   await page.evaluate((qmd) => window.mountFreeTextEditor(qmd), "## Safe\n\nLast valid preview.");
-  await page.locator('[data-free-text-pane="preview"]').getByText("Last valid preview.").waitFor();
-  const editor = await advancedQmdSource();
-  await editor.fill(source);
-  await page.waitForFunction(() => /blocking error/i.test(document.querySelector("#harness-qmd-status")?.textContent ?? ""));
-  assert.match(await page.locator("#harness-qmd-status").textContent(), /blocking error/i);
+  await page.getByLabel("Rendered preview").getByText("Last valid preview.").waitFor();
+  await page.evaluate((qmd) => window.setFreeTextEditorSource(qmd), source);
+  await page.waitForFunction(() => /blocking error/i.test(document.querySelector("output[data-validation-ok]")?.textContent ?? ""));
+  assert.match(await page.locator("output[data-validation-ok]").textContent(), /blocking error/i);
   assert.match(await page.locator(".free-text-validation-errors").textContent(), /DOM nodes.*5000/i);
-  assert.equal(await page.locator('[data-free-text-pane="preview"]').getByText("Last valid preview.").count(), 1);
+  assert.equal(await page.getByLabel("Rendered preview").getByText("Last valid preview.").count(), 1);
   assert.deepEqual(pageErrors, []);
 });

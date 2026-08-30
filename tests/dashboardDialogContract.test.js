@@ -88,6 +88,24 @@ test("dashboard dialog contract exposes every semantic variant using dashboard t
   assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i);
 });
 
+test("shared dialog backdrop leaves overlay stacking to each component owner", async () => {
+  const [dialogs, base, modes, immersive, drawer] = await Promise.all([
+    read("src/styles/dashboard-dialogs.css"),
+    read("src/styles.css"),
+    read("src/styles/modes.css"),
+    read("src/styles/immersive-display.css"),
+    read("src/styles/right-side-drawer.css"),
+  ]);
+  const sharedBackdrop = dialogs.match(/\.dashboard-dialog-backdrop\s*\{([^}]*)\}/)?.[1] ?? "";
+  assert.doesNotMatch(sharedBackdrop, /z-index\s*:/);
+  assert.match(dialogs, /:where\(\.dashboard-dialog-backdrop\)\s*\{[^}]*z-index:\s*1000;/s);
+  assert.match(base, /\.confirm-dialog-backdrop\s*\{[^}]*z-index:\s*1450/s);
+  assert.match(base, /\.chart-editor-backdrop\s*\{[^}]*z-index:\s*1350/s);
+  assert.match(modes, /\.build-move-dialog-backdrop\{[^}]*z-index:1300/);
+  assert.match(immersive, /\.fullscreen-backdrop--immersive\s*\{[^}]*z-index:\s*1200/s);
+  assert.match(drawer, /\[data-drawer-modality="dialog"\]\s*\{[^}]*z-index:\s*1600/s);
+});
+
 test("Text/Image and chart authoring expose dashboard wizard regions", async () => {
   const [staticSource, chartSource, editorHost] = await Promise.all([
     read("src/components/static-content/StaticContentWizard.jsx"),
@@ -171,7 +189,8 @@ test("display, temporal, and drawer dialog surfaces retain local scroll geometry
     read("src/styles/dashboard-dialogs.css"),
     read("src/styles/right-side-drawer.css"),
   ]);
-  assert.match(immersive, /\.multi-fullscreen-panel\.dashboard-dialog\s*\{[^}]*block-size:\s*calc\(100dvh - 24px\);/s);
+  assert.match(immersive, /\.fullscreen-backdrop--immersive\s*\{[^}]*padding:\s*12px;[^}]*overflow:\s*hidden;/s);
+  assert.match(immersive, /\.multi-fullscreen-panel\.dashboard-dialog\s*\{[^}]*inline-size:\s*100%;[^}]*block-size:\s*100%;[^}]*max-block-size:\s*none;/s);
   assert.match(immersive, /\.multi-fullscreen-panel\.dashboard-dialog \.multi-fullscreen-grid\s*\{[^}]*block-size:\s*100%;/s);
   assert.match(dialogs, /\.scene-observation-dialog > \.dashboard-dialog\s*\{[^}]*inline-size:\s*min\(100%, 520px\);[^}]*overflow:\s*hidden;[^}]*padding:\s*0;/s);
   assert.match(drawer, /\.right-side-drawer\.dashboard-dialog\s*\{[^}]*max-block-size:\s*none;/s);

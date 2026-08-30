@@ -308,6 +308,25 @@
   white-space: pre-wrap;
 }
 
+.free-text-source-editor__source-repair {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.free-text-source-editor__source-repair p {
+  color: var(--simex-text-muted);
+  margin: 0;
+}
+
+.free-text-source-editor__source-repair textarea {
+  box-sizing: border-box;
+  font: 0.8125rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  min-block-size: 220px;
+  resize: vertical;
+  width: 100%;
+}
+
 @media (max-width: 760px) {
   .free-text-source-editor__reference-cards {
     flex-direction: column;

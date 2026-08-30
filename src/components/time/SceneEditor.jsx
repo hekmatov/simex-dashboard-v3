@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 import { MATCHING_POLICY_LABELS } from "../../charting/time/temporalMatch.js";
+import ModalFocusScope from "../common/ModalFocusScope.jsx";
 import BalancedTwinCanvas from "./BalancedTwinCanvas.jsx";
 import { partitionSceneCharts } from "./sceneDraft.js";
 
@@ -111,9 +112,9 @@ function SceneVariableEvidence({ chart }) {
   return <div className="scene-variable-evidence"><p><strong>Full data</strong> {formatDate(start)}–{formatDate(end)}</p>{(chart.variables ?? []).map((variable) => <div className="scene-variable-evidence__row" key={variable.id ?? variable.label}><span><strong>{variable.label ?? variable.id}</strong><small>{variable.observations?.length ?? 0} observations</small></span><span className="scene-availability-calendar" aria-label={`${variable.label ?? variable.id} observation timeline`}>{(variable.observations ?? []).map((observation, index) => <i key={`${observation.epochMs}-${index}`} style={{ left: tickPosition(observation.epochMs, start, end) }} />)}</span></div>)}</div>;
 }
 
-function ObservationChecklist({ chart, selectedEpochs, onAction, onClose }) {
+export function ObservationChecklist({ chart, selectedEpochs, onAction, onClose }) {
   const epochs = [...new Set((chart.variables ?? []).flatMap((variable) => variable.observations ?? []).map(({ epochMs }) => epochMs).filter(Number.isFinite))].sort();
-  return <div className="scene-observation-dialog dashboard-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="scene-observation-title"><div className="dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact"><header className="dashboard-dialog__header"><h3 id="scene-observation-title">{chart.label ?? chart.title ?? chart.id} observations</h3><button type="button" onClick={onClose}>Close</button></header><div className="dashboard-dialog__body">{epochs.length === 0 ? <p>No observations available.</p> : <ol>{epochs.map((epochMs) => <li key={epochMs}><label className="choice-control-row"><input className="choice-control" type="checkbox" checked={selectedEpochs.includes(epochMs)} onChange={(event) => onAction?.({ type: "SET_FRAME_SELECTION", selection: "selected", selectedEpochs: event.target.checked ? [...selectedEpochs, epochMs].sort() : selectedEpochs.filter((value) => value !== epochMs) })} />{new Date(epochMs).toISOString()}</label></li>)}</ol>}</div></div></div>;
+  return <ModalFocusScope as="div" className="scene-observation-dialog dashboard-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="scene-observation-title" initialFocusSelector="[data-scene-observation-close]" onEscape={onClose}><div className="dashboard-dialog dashboard-dialog--utility dashboard-dialog--compact"><header className="dashboard-dialog__header"><h3 id="scene-observation-title">{chart.label ?? chart.title ?? chart.id} observations</h3><button type="button" data-scene-observation-close="true" data-modal-initial-focus="true" onClick={onClose}>Close</button></header><div className="dashboard-dialog__body">{epochs.length === 0 ? <p>No observations available.</p> : <ol>{epochs.map((epochMs) => <li key={epochMs}><label className="choice-control-row"><input className="choice-control" type="checkbox" checked={selectedEpochs.includes(epochMs)} onChange={(event) => onAction?.({ type: "SET_FRAME_SELECTION", selection: "selected", selectedEpochs: event.target.checked ? [...selectedEpochs, epochMs].sort() : selectedEpochs.filter((value) => value !== epochMs) })} />{new Date(epochMs).toISOString()}</label></li>)}</ol>}</div></div></ModalFocusScope>;
 }
 
 function ArrangeStage({ dashboard, themeProjection, draft, charts, busy, onAction }) { return <div className="scene-stage-body" data-stage="arrange"><BalancedTwinCanvas dashboard={dashboard} themeProjection={themeProjection} scene={draft.value} charts={charts} selectedChartId={draft.selectedChartId} activeBoard={draft.activeBoard} disabled={busy} onAction={onAction} /></div>; }

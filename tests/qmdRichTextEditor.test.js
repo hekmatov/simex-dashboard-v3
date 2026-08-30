@@ -53,12 +53,37 @@ test("representable source uses the single-card writer layout without authoring 
   assert.doesNotMatch(html, /Preview is up to date\./);
 });
 
-test("unsupported valid source remains visible in the Portable Markdown card without restoring authoring tabs", () => {
+test("unsupported valid source has an editable repair path inside the Portable Markdown card", () => {
   const source = "```js\nconst exact = true;\n```";
   const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, { value: source }));
   assert.match(html, />Portable Markdown</);
-  assert.match(html, /```js\nconst exact = true;\n```/);
+  assert.match(html, /<textarea[^>]*id="static-qmd-source"[^>]*aria-label="Portable QMD source"/);
+  assert.match(html, /<textarea[^>]*aria-describedby="static-qmd-source-help"/);
+  assert.match(html, /```js\nconst exact = true;\n```<\/textarea>/);
   assert.doesNotMatch(html, /role="tab"/);
+});
+
+test("the nonvisual Portable Markdown repair source preserves disabled and validation associations", () => {
+  const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, {
+    id: "repair-qmd",
+    value: `${"> ".repeat(7)}too deeply nested`,
+    disabled: true,
+  }));
+  assert.match(html, /<textarea[^>]*id="repair-qmd"[^>]*disabled/);
+  assert.match(html, /<textarea[^>]*aria-describedby="repair-qmd-help repair-qmd-errors-title"/);
+  assert.match(html, /id="repair-qmd-errors-title"/);
+});
+
+test("visual validation remediation resolves and focuses the editable Composer surface", () => {
+  const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, { id: "visual-source", value: "Visual text" }));
+  assert.match(html, /id="portable-qmd-composer-focus-target"/);
+  assert.equal(freeTextModule.validationTargetId("visual", "visual-source"), "portable-qmd-composer-focus-target");
+  assert.equal(freeTextModule.validationTargetId("advanced", "visual-source"), "visual-source");
+  let focused = false;
+  const editor = { focus() { focused = true; } };
+  const target = { matches() { return false; }, querySelector() { return editor; } };
+  assert.equal(freeTextModule.focusValidationTarget(target, 12), editor);
+  assert.equal(focused, true);
 });
 
 test("the Tiptap extension set uses TableKit and the constrained semantic nodes", () => {
