@@ -808,8 +808,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       || appliedBuildRevealIdRef.current === pendingBuildSelection.requestId
     ) return;
     appliedBuildRevealIdRef.current = pendingBuildSelection.requestId;
-    const { requestId, selection, intent } = pendingBuildSelection;
-    setBuildSelection(selection);
+    const { requestId, selection } = pendingBuildSelection;
     setBuildRevealRequest({
       id: requestId,
       selection,
@@ -2119,6 +2118,37 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (selection) void requestBuildSelection(selection, { intent: "activate" });
   }
 
+  function activateBuildSelectionImmediately(selection, intent) {
+    setBuildSelection(selection);
+    if (selection.kind !== "chart" || intent !== "activate") {
+      setChartEditorVisible(false);
+      setChartEditorPlacementId(null);
+      setChartEditBaseline(null);
+      setChartEditorDirty(false);
+      setChartEditSession(null);
+      return;
+    }
+    const currentDashboard = buildLayoutDraftRef.current?.value ?? dashboardStateRef.current;
+    const placement = findPanelPlacement(currentDashboard, selection.placementId);
+    const chart = placement?.chart ?? null;
+    const staticChart = chart
+      ? getChartSchema(chart.typeId).authoringWorkflow === "static"
+      : false;
+    setChartEditBaseline(null);
+    setChartEditorPlacementId(selection.placementId);
+    setChartEditorVisible(true);
+    setChartEditorDirty(false);
+    setChartEditSession(chart && !staticChart
+      ? createChartEditSession({
+          placementId: selection.placementId,
+          chart,
+          chronoGroups: currentDashboard.chronoGroups ?? [],
+          activeSurface: "quick",
+          restoration: captureQuickChartEditRestoration("quick"),
+        })
+      : null);
+  }
+
   function requestBuildSelection(nextSelection, { intent = "activate", discardStaticDraft = false } = {}) {
     if (
       moderatorOperationGateRef.current.isActive()
@@ -2169,6 +2199,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const result = new Promise((resolve) => {
       buildRevealResolversRef.current.set(requestId, resolve);
     });
+    activateBuildSelectionImmediately(nextSelection, intent);
     setPendingBuildSelection({ requestId, selection: nextSelection, intent });
     if (nextSelection.pageId && nextSelection.pageId !== activePage?.id) {
       void onActivePageChange(nextSelection.pageId);
@@ -2186,33 +2217,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function completeBuildReveal(requestId) {
     if (pendingBuildSelection?.requestId !== requestId) return;
-    const { selection, intent } = pendingBuildSelection;
-    if (selection.kind === "chart" && intent === "activate") {
-      const placement = findPanelPlacement(workingDashboard, selection.placementId);
-      const chart = placement?.chart ?? null;
-      const staticChart = chart
-        ? getChartSchema(chart.typeId).authoringWorkflow === "static"
-        : false;
-      setChartEditBaseline(null);
-      setChartEditorPlacementId(selection.placementId);
-      setChartEditorVisible(true);
-      setChartEditorDirty(false);
-      setChartEditSession(chart && !staticChart
-        ? createChartEditSession({
-            placementId: selection.placementId,
-            chart,
-            chronoGroups: workingDashboard.chronoGroups ?? [],
-            activeSurface: "quick",
-            restoration: captureQuickChartEditRestoration("quick"),
-          })
-        : null);
-    } else {
-      setChartEditorVisible(false);
-      setChartEditorPlacementId(null);
-      setChartEditBaseline(null);
-      setChartEditorDirty(false);
-      setChartEditSession(null);
-    }
     buildRevealResolversRef.current.get(requestId)?.(true);
     buildRevealResolversRef.current.delete(requestId);
     setPendingBuildSelection(null);

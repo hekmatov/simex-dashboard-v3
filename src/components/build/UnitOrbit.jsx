@@ -194,6 +194,11 @@ export default function UnitOrbit({
 
       if (result.needsRecenter && !recenteredRef.current) {
         recenteredRef.current = true;
+        setPlacement(constrainedUnitOrbitPlacement({
+          orbitSize,
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+          protectedRects: protectedElementRects(),
+        }));
         currentAnchor.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
         frameRef.current = window.requestAnimationFrame(update);
         return;
@@ -212,7 +217,7 @@ export default function UnitOrbit({
       frameRef.current = window.requestAnimationFrame(update);
     };
 
-    schedule();
+    update();
     window.addEventListener("resize", schedule);
     window.addEventListener("scroll", schedule, true);
     const observer = typeof ResizeObserver === "undefined"

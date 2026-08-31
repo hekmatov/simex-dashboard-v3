@@ -139,6 +139,7 @@ const {
   applyWizardMembership,
   buildChartWizardEditCommitPayload,
   chartDestinationForType,
+  chartEditDraftIdentity,
   createChartWizardEditState,
   createChartCsvDraftLifecycle,
   createChartWizardState,
@@ -150,6 +151,10 @@ const {
   routeChartWizardCommit,
   submitWizardDraft,
 } = chartWizardModule;
+const scheduleAfterPaintModule = await import(
+  "../src/lib/scheduleAfterPaint.js"
+).catch(() => ({}));
+const { scheduleAfterPaint } = scheduleAfterPaintModule;
 const {
   default: ChartEditorV3,
   acceptEditorSave,
@@ -214,6 +219,68 @@ const deltaField = {
 function render(element) {
   return renderToStaticMarkup(element);
 }
+
+test("post-paint chart preparation is deferred and cancellable", () => {
+  assert.equal(typeof scheduleAfterPaint, "function");
+  const frames = new Map();
+  const timers = new Map();
+  let sequence = 0;
+  const scheduler = {
+    requestAnimationFrame(callback) {
+      const id = ++sequence;
+      frames.set(id, callback);
+      return id;
+    },
+    cancelAnimationFrame(id) {
+      frames.delete(id);
+    },
+    setTimeout(callback) {
+      const id = ++sequence;
+      timers.set(id, callback);
+      return id;
+    },
+    clearTimeout(id) {
+      timers.delete(id);
+    },
+  };
+  const events = [];
+  scheduleAfterPaint(() => events.push("prepared"), scheduler);
+  assert.deepEqual(events, []);
+  for (const callback of [...frames.values()]) callback();
+  frames.clear();
+  assert.deepEqual(events, []);
+  for (const callback of [...timers.values()]) callback();
+  timers.clear();
+  assert.deepEqual(events, ["prepared"]);
+
+  const cancel = scheduleAfterPaint(() => events.push("stale"), scheduler);
+  cancel();
+  assert.equal(frames.size, 0);
+  assert.equal(timers.size, 0);
+});
+
+test("full editor draft identity changes only for material chart or Chrono edits", () => {
+  assert.equal(typeof chartEditDraftIdentity, "function");
+  const initial = {
+    draft: { id: "chart-a", title: "Chart A", roles: { value: { field: "cases" } } },
+    chronoGroups: [{ id: "chrono-a", members: [{ chartId: "chart-a", matching: "exact" }] }],
+  };
+  assert.equal(
+    chartEditDraftIdentity(structuredClone(initial)),
+    chartEditDraftIdentity(initial),
+  );
+  assert.notEqual(
+    chartEditDraftIdentity({ ...initial, draft: { ...initial.draft, title: "Changed" } }),
+    chartEditDraftIdentity(initial),
+  );
+  assert.notEqual(
+    chartEditDraftIdentity({
+      ...initial,
+      chronoGroups: [{ ...initial.chronoGroups[0], members: [] }],
+    }),
+    chartEditDraftIdentity(initial),
+  );
+});
 
 test("chart editor uses inspector content without dialog semantics", () => {
   const html = render(React.createElement(ChartEditorV3, {

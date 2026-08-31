@@ -54,6 +54,7 @@ import { buildCsvContentDraft } from "../../content-library/sourceEntrySchema.js
 import { buildGeoJsonContentDraft } from "../../content-library/contentDraftTransaction.js";
 import { validateGeoJson as validateManagedGeoJson } from "../../lib/geoJsonValidation.js";
 import { projectChartCreateOwner } from "../../charting/forms/chartDraftSession.js";
+import { scheduleAfterPaint } from "../../lib/scheduleAfterPaint.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
@@ -269,6 +270,10 @@ export function discardConfirmationRequired({ editMode = false, editDirty = fals
   return !editMode || editDirty;
 }
 
+export function chartEditDraftIdentity({ draft = null, chronoGroups = [] } = {}) {
+  return stableIdentity({ draft, chronoGroups });
+}
+
 export function chartDestinationForType(destination, typeId) {
   if (typeId !== "gauge") return destination;
   return {
@@ -346,6 +351,20 @@ export default function ChartWizardV3({
           dashboardRevision,
         })
   ));
+  const editAuthorityIdentity = editMode ? chartEditDraftIdentity({
+    draft: editSession?.savedChart ?? editSession?.draft,
+    chronoGroups: editSession?.savedChronoGroups ?? editSession?.chronoGroups,
+  }) : "create";
+  const emittedEditIdentityRef = React.useRef(null);
+  if (emittedEditIdentityRef.current?.authority !== editAuthorityIdentity) {
+    emittedEditIdentityRef.current = {
+      authority: editAuthorityIdentity,
+      identity: editMode ? chartEditDraftIdentity({
+        draft: editSession?.draft,
+        chronoGroups: editSession?.chronoGroups,
+      }) : null,
+    };
+  }
   const [query, setQuery] = React.useState("");
   const [localRows, setLocalRows] = React.useState({});
   const [sourceKind, setSourceKind] = React.useState(
@@ -510,6 +529,12 @@ export default function ChartWizardV3({
   }, [onDraftStateChange, wizard]);
   React.useEffect(() => {
     if (!editMode || !wizard.draft) return;
+    const identity = chartEditDraftIdentity({
+      draft: wizard.draft,
+      chronoGroups: wizard.chronoGroups,
+    });
+    if (identity === emittedEditIdentityRef.current?.identity) return;
+    emittedEditIdentityRef.current.identity = identity;
     onEditDraftChange({
       draft: structuredClone(wizard.draft),
       chronoGroups: structuredClone(wizard.chronoGroups),
@@ -604,12 +629,47 @@ export default function ChartWizardV3({
     () => source?.parsingMetadata ?? manualParsingMetadata(manualTable),
     [source?.parsingMetadata, manualTable],
   );
-  const runtime = React.useMemo(() => createWizardPreparation({
+  const cachedProfile = selectedSourceId
+    ? wizard.sourceSelection?.profile
+      ?? readEntry(wizard.profiles, selectedSourceId)
+      ?? readEntry(safeDatasetProfiles, selectedSourceId)
+      ?? null
+    : null;
+  const synchronousRuntime = React.useMemo(() => editMode ? null : {
+    status: "ready",
+    ...createWizardPreparation({
       chart: wizard.draft,
       rows,
       geoData,
       authorMetadata,
-    }), [wizard.draft, rows, geoData, authorMetadata]);
+    }),
+  }, [editMode, wizard.draft, rows, geoData, authorMetadata]);
+  const [deferredPreparation, setDeferredPreparation] = React.useState(null);
+  React.useEffect(() => {
+    if (!editMode) return undefined;
+    const chart = wizard.draft;
+    return scheduleAfterPaint(() => {
+      setDeferredPreparation({
+        chart,
+        rows,
+        geoData,
+        authorMetadata,
+        runtime: {
+          status: "ready",
+          ...createWizardPreparation({ chart, rows, geoData, authorMetadata }),
+        },
+      });
+    });
+  }, [editMode, wizard.draft, rows, geoData, authorMetadata]);
+  const deferredPreparationCurrent = deferredPreparation?.chart === wizard.draft
+    && deferredPreparation?.rows === rows
+    && deferredPreparation?.geoData === geoData
+    && deferredPreparation?.authorMetadata === authorMetadata;
+  const runtime = editMode
+    ? deferredPreparationCurrent
+      ? deferredPreparation.runtime
+      : { status: "pending", profile: cachedProfile, prepared: null }
+    : synchronousRuntime;
   const profiles = React.useMemo(() => {
     const cached = mergeCollections(safeDatasetProfiles, wizard.profiles);
     const selectedProfile = wizard.sourceSelection?.profile ?? runtime.profile;
@@ -1333,6 +1393,7 @@ export default function ChartWizardV3({
         "data-chart-owner-id": editMode
           ? `chart-edit:${editSession?.placementId ?? "unknown"}`
           : wizard.draftId ? `chart-create:${wizard.draftId}` : undefined,
+        "data-preparation-status": runtime.status,
         "aria-busy": disabled || submitting ? "true" : undefined,
         inert: disabled || submitting ? true : undefined,
         tabIndex: -1,
@@ -2500,6 +2561,19 @@ function newChartId(typeId) {
 function readEntry(collection, key) {
   if (collection instanceof Map) return collection.get(key);
   return isRecord(collection) ? collection[key] : undefined;
+}
+
+function stableIdentity(value, ancestors = new Set()) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (ancestors.has(value)) throw new TypeError("Chart edit drafts cannot contain circular data.");
+  ancestors.add(value);
+  const result = Array.isArray(value)
+    ? `[${value.map((entry) => stableIdentity(entry, ancestors)).join(",")}]`
+    : `{${Object.keys(value).sort().map((key) => (
+        `${JSON.stringify(key)}:${stableIdentity(value[key], ancestors)}`
+      )).join(",")}}`;
+  ancestors.delete(value);
+  return result;
 }
 
 function safeMessage(error) {
