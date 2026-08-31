@@ -79,3 +79,25 @@ test("chart title visibility rejects non-boolean values", () => {
     /Chart presentation title visible must be boolean\./,
   );
 });
+
+test("only Text/Image chart instances may persist an intentionally blank title", () => {
+  for (const typeId of ["freeText", "image"]) {
+    const panel = createChartDraft(typeId, {
+      id: `${typeId}-without-title`,
+      title: "",
+      sourceId: `${typeId}-source`,
+    });
+    assert.equal(validateChartInstance(panel), panel);
+  }
+
+  const chart = createChartDraft("line", {
+    id: "line-without-title",
+    title: "",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+  });
+  assert.throws(() => validateChartInstance(chart), /Chart title is required/);
+});

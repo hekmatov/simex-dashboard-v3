@@ -18,6 +18,7 @@ let page;
 beforeEach(async () => {
   page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.setDefaultTimeout(5_000);
+  page.setDefaultNavigationTimeout(15_000);
   await page.goto(`${baseURL}/tests/fixtures/free-text-harness.html`);
   await page.waitForFunction(() => window.freeTextHarnessReady === true, null, { timeout: 5_000 });
 });
@@ -33,8 +34,96 @@ after(async () => {
 });
 
 async function portableQmdRepairSource(scope = page) {
-  return scope.getByLabel("Portable QMD source");
+  const rawSource = scope.getByLabel("Portable QMD raw source");
+  if (await rawSource.count() === 0) await scope.getByRole("button", { name: "Raw text" }).click();
+  return scope.getByLabel("Portable QMD raw source");
 }
+
+test("formatted/raw switching preserves source until an edit and table cell actions stay outside the document", async () => {
+  const source = [
+    "| Facility | Ready |",
+    "| --- | --- |",
+    "| North | Yes |",
+  ].join("\n");
+  await page.evaluate((value) => window.mountFreeTextEditor(value), source);
+
+  await page.getByRole("button", { name: "Raw text" }).click();
+  const raw = page.getByLabel("Portable QMD raw source");
+  await expect(raw).toHaveValue(source);
+  await expect(raw).toHaveAttribute("id", "harness-qmd");
+  await page.getByRole("button", { name: "Formatted text" }).click();
+  await expect(page.getByLabel("Portable QMD Composer editing area")).toBeVisible();
+  await expect(page.getByText(/Formatted editing can normalize Portable QMD syntax/)).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 600 });
+
+  const firstCell = page.getByLabel("Portable QMD Composer editing area").locator("td").first();
+  await firstCell.hover();
+  const trigger = page.getByRole("button", { name: "Table cell actions" });
+  await expect(trigger).toBeVisible();
+  await expect(page.getByLabel("Portable QMD Composer editing area").getByRole("button", { name: "Table cell actions" })).toHaveCount(0);
+  await firstCell.click();
+  await page.keyboard.press("Shift+F10");
+  for (const label of ["Add row above", "Add row below", "Add column before", "Add column after", "Remove current row", "Remove current column"]) {
+    await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
+  }
+  await expect(page.getByRole("menuitem", { name: "Add row above" })).toBeFocused();
+  const menu = page.getByRole("menu", { name: "Table cell actions" });
+  const bounds = await menu.boundingBox();
+  assert.ok(bounds);
+  assert.ok(bounds.x >= 8 && bounds.x + bounds.width <= 312, `menu must fit horizontally: ${JSON.stringify(bounds)}`);
+  assert.ok(bounds.y >= 8 && bounds.y + bounds.height <= 592, `menu must fit vertically: ${JSON.stringify(bounds)}`);
+  await menu.press("Escape");
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  const rowsBefore = await page.getByLabel("Portable QMD Composer editing area").locator("tr").count();
+  await page.getByRole("menuitem", { name: "Add row below" }).click();
+  await expect(page.getByLabel("Portable QMD Composer editing area").locator("tr")).toHaveCount(rowsBefore + 1);
+});
+
+test("blank titles stay in Text/Image editor until the No title choice is unambiguous", async () => {
+  await page.evaluate((source) => window.mountFreeTextWizard(source), "Untitled content");
+  const wizard = page.getByRole("dialog", { name: "Text/Image editor" });
+  const title = wizard.getByLabel("Panel Title");
+  const noTitle = wizard.getByLabel("No title");
+  const continueButton = wizard.getByRole("button", { name: "Continue" });
+
+  await title.fill("");
+  await continueButton.click();
+  await expect(wizard.getByRole("alert")).toHaveText("Enter a panel title or select No title.");
+  await expect(title).toBeFocused();
+  await expect(wizard.locator('[data-static-content-stage="content"]')).toBeVisible();
+  await continueButton.focus();
+  await continueButton.click();
+  await expect(title).toBeFocused();
+
+  await noTitle.check();
+  await title.fill("Conflicting title");
+  await continueButton.click();
+  await expect(wizard.getByRole("alert")).toHaveText("Clear the title or unselect No title.");
+  await expect(noTitle).toBeFocused();
+  await expect(wizard.locator('[data-static-content-stage="content"]')).toBeVisible();
+
+  await title.fill("");
+  await continueButton.click();
+  await expect(wizard.locator('[data-static-content-stage="preview-and-add"]')).toBeVisible();
+  await expect(wizard.getByLabel("Text/Image preview").getByRole("heading", { name: "Preview" })).toHaveCount(0);
+});
+
+test("raw Text/Image editing remains the suspended restoration surface", async () => {
+  const source = "## Notes\n\nExact source.";
+  await page.evaluate((value) => window.mountFreeTextWizard(value, {
+    restoration: { stage: "content", surface: "advanced", focusId: "static-qmd-source", scrollTop: 0 },
+  }), source);
+  const wizard = page.getByRole("dialog", { name: "Text/Image editor" });
+  const raw = wizard.getByLabel("Portable QMD raw source");
+  await expect(raw).toBeVisible();
+  await raw.fill(`${source}\n\nChanged.`);
+  await wizard.getByRole("button", { name: "Close Text/Image editor" }).click();
+  await page.waitForFunction(() => window.__staticSuspension !== null);
+  const restoration = await page.evaluate(() => window.__staticSuspension.restoration);
+  assert.equal(restoration.surface, "advanced");
+  assert.equal(restoration.focusId, "static-qmd-source");
+});
 
 test("canonical ChartView routes typed Free text without rows or playback projection and preserves semantic structure", async () => {
   const qmd = [
@@ -657,12 +746,12 @@ test("routed controls wait for analysis, accept arbitrary inert text, and still 
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.evaluate((source) => window.mountFreeTextWizard(source), initial);
-  const wizard = page.getByRole("dialog", { name: "Edit Text/Image" });
+  const wizard = page.getByRole("dialog", { name: "Text/Image editor" });
   const source = await portableQmdRepairSource(wizard);
   const continueButton = wizard.getByRole("button", { name: "Continue" });
   const previewRail = wizard.getByRole("button", { name: "Preview & add", exact: true });
   await expect(continueButton).toBeEnabled();
-  assert.match(await wizard.locator("#static-qmd-source-help").textContent(), /preserve the construct exactly/i);
+  assert.match(await wizard.locator(".portable-qmd-composer__source-warning").textContent(), /may rewrite fenced code/i);
 
   const arbitrary = [
     "# Situation",

@@ -7,6 +7,7 @@ import QmdMediaView from "./QmdMediaView.jsx";
 export function FreeTextChartView({ model, chart, contentRenderContext = {}, hostHeadingLevel = 2, surface = "view", onMediaActivate } = {}) {
   const panelId = normalizePanelId(chart?.id ?? model?.sourceId);
   const titleId = `${panelId}-title`;
+  const title = getFreeTextChartTitle(chart?.title);
   const contentRef = React.useRef(null);
   const [portalEntries, setPortalEntries] = React.useState([]);
   const prepared = React.useMemo(() => compilePortableQmd(model?.qmd ?? "", {
@@ -57,15 +58,17 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
   return <>
     <section
       className="free-text-chart-view"
-      aria-labelledby={titleId}
+      {...(title
+        ? { "aria-labelledby": titleId }
+        : { "aria-label": getFreeTextChartAccessibleName(title) })}
       data-static-content-kind="freeText"
       data-static-source-id={model?.sourceId}
       data-static-source-revision={model?.revision}
     >
-      <header className="free-text-chart-view__header">
-        <h2 id={titleId}>{chart?.title || "Free text"}</h2>
+      {(title || chart?.description) && <header className="free-text-chart-view__header">
+        {title && <h2 id={titleId}>{title}</h2>}
         {chart?.description && <p>{chart.description}</p>}
-      </header>
+      </header>}
       <div
         ref={contentRef}
         className="free-text-chart-view__content"
@@ -92,6 +95,14 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
         : undefined}
     />, entry.host, entry.key))}
   </>;
+}
+
+export function getFreeTextChartTitle(value) {
+  return String(value ?? "").trim();
+}
+
+export function getFreeTextChartAccessibleName(title) {
+  return title || "Free text content";
 }
 
 function formatFirstError(prepared) {

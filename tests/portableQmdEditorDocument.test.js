@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  identifyPortableQmdRewriteRisks,
   parsePortableQmdEditorDocument,
+  projectPortableQmdEditorDocument,
   serializePortableQmdEditorDocument,
 } from "../src/static-content/qmd/portableQmdEditorDocument.js";
 
@@ -144,6 +146,40 @@ test("aligned tables stay exact in Advanced QMD instead of losing alignment", ()
   assert.equal(parsed.mode, "advanced");
   assert.equal(parsed.source, source);
   assert.match(parsed.reason, /table shape/i);
+});
+
+test("best-effort projection keeps formatted editing available and reports constructs that may be rewritten", () => {
+  const source = "```js\nconst exact = true;\n```";
+  const projected = projectPortableQmdEditorDocument(source);
+  assert.equal(projected.mode, "visual");
+  assert.equal(projected.source, source);
+  assert.match(projected.report.likelyAltered.join(" "), /fenced code/i);
+  assert.deepEqual(projected.document, {
+    type: "doc",
+    content: [{ type: "paragraph", content: [{ type: "text", text: source }] }],
+  });
+});
+
+test("rewrite-risk reporting lists every recognizable construct instead of only the first parser fallback", () => {
+  const source = [
+    "```js",
+    "const exact = true;",
+    "```",
+    "",
+    "Inline $x + y$ and a footnote[^note].",
+    "",
+    "::: {.callout-warning}",
+    "Warning",
+    ":::",
+  ].join("\n");
+
+  assert.deepEqual(identifyPortableQmdRewriteRisks(source), [
+    "fenced code",
+    "math",
+    "footnotes",
+    "callouts or unsupported directives",
+  ]);
+  assert.deepEqual(projectPortableQmdEditorDocument(source).report.likelyAltered, identifyPortableQmdRewriteRisks(source));
 });
 
 function assertLiteralVisualRoundTrip(text) {

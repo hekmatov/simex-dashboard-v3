@@ -40,7 +40,7 @@ function EditorHarness({ initialSource }) {
   );
 }
 
-function WizardHarness({ initialSource }) {
+function WizardHarness({ initialSource, restoration = null }) {
   const initialDraft = React.useMemo(() => createStaticContentDraft({
     mode: "edit",
     stage: "content",
@@ -65,9 +65,12 @@ function WizardHarness({ initialSource }) {
       open
       editor
       initialDraft={initialDraft}
+      restoration={restoration}
       dashboard={{ pages: [] }}
       onCreate={() => undefined}
       onClose={() => undefined}
+      onRestorationChange={(next) => { window.__staticRestoration = next; }}
+      onSuspend={(next) => { window.__staticSuspension = next; }}
     />
   );
 }
@@ -103,8 +106,10 @@ function RoutedHarness({ source }) {
 window.mountFreeTextEditor = (initialSource) => {
   root.render(<EditorHarness initialSource={initialSource} />);
 };
-window.mountFreeTextWizard = (initialSource) => {
-  root.render(<WizardHarness initialSource={initialSource} />);
+window.mountFreeTextWizard = (initialSource, options = {}) => {
+  window.__staticRestoration = null;
+  window.__staticSuspension = null;
+  root.render(<WizardHarness initialSource={initialSource} restoration={options.restoration ?? null} />);
 };
 window.mountRoutedFreeText = (qmd) => {
   root.render(<RoutedHarness source={{

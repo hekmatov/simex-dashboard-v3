@@ -16,6 +16,9 @@ const displayModule = await vite
 const gridModule = await vite
   .ssrLoadModule("/src/components/display/DisplayedChartGrid.jsx")
   .catch(() => null);
+const chartActionsModule = await vite
+  .ssrLoadModule("/src/components/charts/ChartPanelActions.jsx")
+  .catch(() => null);
 await vite.close();
 
 const dashboard = {
@@ -89,6 +92,54 @@ test("fullscreen CSS fits the panel inside its padded backdrop without backdrop 
   assert.match(css, /\.fullscreen-backdrop--immersive\s*\{[^}]*padding:\s*12px;[^}]*overflow:\s*hidden;/s);
   assert.match(css, /\.multi-fullscreen-panel\.dashboard-dialog\s*\{[^}]*inline-size:\s*100%;[^}]*block-size:\s*100%;[^}]*max-block-size:\s*none;/s);
   assert.match(css, /\.fullscreen-backdrop--immersive \.multi-fullscreen-grid\s*\{[^}]*height:\s*100%;/s);
+});
+
+test("fullscreen exit uses a compact visual with an expanded 44px pointer target", async () => {
+  const css = await import("node:fs/promises").then(({ readFile }) => readFile(
+    new URL("../src/styles/immersive-display.css", import.meta.url),
+    "utf8",
+  ));
+  assert.match(
+    css,
+    /\.fullscreen-backdrop--immersive \.fullscreen-toolbar-close\s*\{[^}]*height:\s*32px;[^}]*width:\s*32px;[^}]*position:\s*absolute;[^}]*right:\s*12px;[^}]*top:\s*12px;/s,
+  );
+  assert.match(
+    css,
+    /\.fullscreen-backdrop--immersive \.fullscreen-toolbar-close::before\s*\{[^}]*height:\s*44px;[^}]*width:\s*44px;/s,
+  );
+  assert.match(
+    css,
+    /\.fullscreen-backdrop--immersive \.fullscreen-toolbar-close \.simex-icon\s*\{[^}]*height:\s*18px;[^}]*width:\s*18px;/s,
+  );
+});
+
+test("fullscreen comparison labels intentionally untitled Text/Image panels nonvisually", () => {
+  assert.equal(
+    displayModule?.fullscreenChartLabel({ id: "notes", typeId: "freeText", title: "" }),
+    "Text/Image panel",
+  );
+  assert.equal(
+    displayModule?.fullscreenChartLabel({ id: "image", typeId: "image", title: "   " }),
+    "Text/Image panel",
+  );
+  assert.equal(
+    displayModule?.fullscreenChartLabel({ id: "chart-a", typeId: "kpi", title: "Chart A" }),
+    "Chart A",
+  );
+});
+
+test("ordinary chart focus control uses the Fullscreen tooltip while retaining its accessible name", () => {
+  assert.equal(typeof chartActionsModule?.default, "function");
+  const html = renderToStaticMarkup(React.createElement(chartActionsModule.default, {
+    chartId: "chart-a",
+    chartTitle: "Chart A",
+    sourceId: "status",
+    source: dashboard.dataSources.status,
+  }));
+  assert.match(html, /aria-label="Focus chart"/);
+  assert.match(html, /title="Fullscreen"/);
+  assert.match(html, /data-icon-tooltip="Fullscreen"/);
+  assert.doesNotMatch(html, /data-icon-tooltip="Focus"/);
 });
 
 test("fullscreen comparison preserves ordered charts in a labeled focus-scoped dialog", () => {

@@ -29,7 +29,6 @@ const DEFINITIONS = Object.freeze({
   "section.reordered": definition("Section", subjectMessage("Section reordered", "Section reordered")),
   "section.deleted": definition("Section", subjectMessage("Section deleted", "Section deleted"), "warning"),
   "static.draft.created": definition("Content draft", subjectMessage("Content draft created", "Content draft created for")),
-  "static.draft.updated": definition("Content draft", subjectMessage("Updating content draft", "Updating content draft")),
   "static.draft.suspended": definition("Content draft", subjectMessage("Content draft suspended", "Content draft suspended for")),
   "static.draft.resumed": definition("Content draft", subjectMessage("Content draft resumed", "Content draft resumed for")),
   "static.draft.discarded": definition("Content draft", subjectMessage("Content draft discarded", "Content draft discarded for")),

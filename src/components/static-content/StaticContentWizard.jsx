@@ -105,6 +105,15 @@ export function StaticContentWizard({
   const workflowDisabled = disabled || submitting;
   React.useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  React.useEffect(() => {
+    if (!draft.focusRequest || typeof document === "undefined") return undefined;
+    const frame = globalThis.requestAnimationFrame?.(() => {
+      document.getElementById(draft.focusRequest)?.focus();
+    });
+    return () => {
+      if (frame !== undefined) globalThis.cancelAnimationFrame?.(frame);
+    };
+  }, [draft.focusRequest, draft.validation]);
   React.useEffect(() => () => {
     if (suspendedRef.current) return;
     if (contentDraftIdRef.current) onContentDraftDiscard?.(contentDraftIdRef.current, "static-content-unmount");
@@ -180,7 +189,7 @@ export function StaticContentWizard({
     try {
       if (draft.stage !== "preview-and-add") {
         if (freeTextInvalid) throw new Error("Wait for the Free-text preview to finish validating before continuing.");
-        dispatch({ type: "next" });
+        dispatch({ type: "tryNext" });
         return;
       }
       validateCompiledFreeText(draft);
@@ -255,10 +264,9 @@ export function StaticContentWizard({
         onSubmit={submit}
       >
         <header className="dashboard-dialog__header">
-          <div>
-            <p className="eyebrow">{editor ? "Text/Image editor" : "Add Text/Image"}</p>
-            <h2 id="static-content-dialog-title">{editor ? "Edit Text/Image" : "Add Text/Image"}</h2>
-          </div>
+          <h2 id="static-content-dialog-title" className="dashboard-dialog__eyebrow">
+            {editor ? "Text/Image editor" : "Add Text/Image"}
+          </h2>
           <ControlTooltip disabled={workflowDisabled} reason={STATIC_CONTENT_PENDING_REASON}>
             <button type="button" className="secondary" aria-label="Close Text/Image editor" disabled={workflowDisabled} onClick={requestClose}>Close</button>
           </ControlTooltip>
@@ -276,7 +284,7 @@ export function StaticContentWizard({
                 disabled={workflowDisabled
                   || (!editor && index > stageIndex + 1)
                   || (stage === "preview-and-add" && freeTextInvalid)}
-                onClick={() => dispatch({ type: "setStage", stage })}
+                onClick={() => dispatch({ type: "trySetStage", stage })}
               >
                 {STATIC_CONTENT_STAGE_LABELS[index]}
               </button>
@@ -395,21 +403,46 @@ function ContentTypeFields({ draft, dispatch, disabled }) {
 }
 
 export function StaticContentFields({ draft, dashboard = {}, contentRenderContext = {}, restoration, disabled = false, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage, onSurfaceChange }) {
+  const titleError = draft.validation?.errors?.find((error) => error.field === "title");
+  const titleDescription = [
+    disabled ? "static-content-pending-reason" : null,
+    titleError ? "static-panel-title-error" : null,
+  ].filter(Boolean).join(" ") || undefined;
   return (
     <div>
       {disabled && <p id="static-content-pending-reason" role="status">Text/Image authoring is unavailable while this draft action is pending.</p>}
-      <label htmlFor="static-panel-title">Panel title</label>
-      <input
-        id="static-panel-title"
-        data-static-initial-focus="true"
-        disabled={disabled}
-        aria-describedby={disabled ? "static-content-pending-reason" : undefined}
-        value={draft.panel?.title ?? ""}
-        onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
-      />
+      <div className="static-content-dialog__title-choice">
+        <label className="static-content-dialog__title-label" htmlFor="static-panel-title">Panel Title</label>
+        <input
+          id="static-panel-title"
+          data-static-initial-focus="true"
+          disabled={disabled}
+          aria-invalid={titleError ? "true" : undefined}
+          aria-describedby={titleDescription}
+          value={draft.panel?.title ?? ""}
+          onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
+        />
+        <label className="static-content-dialog__no-title" htmlFor="static-panel-no-title">
+          <input
+            id="static-panel-no-title"
+            type="checkbox"
+            disabled={disabled}
+            checked={draft.noTitle === true}
+            aria-invalid={titleError ? "true" : undefined}
+            aria-describedby={titleDescription}
+            onChange={(event) => dispatch({ type: "setNoTitle", noTitle: event.target.checked })}
+          />
+          <span>No title</span>
+        </label>
+      </div>
+      {titleError && <p id="static-panel-title-error" className="form-error" role="alert">{titleError.message}</p>}
+      {draft.validation?.errors?.filter((error) => error.field !== "title").map((error, index) => (
+        <p key={`${error.message}-${index}`} className="form-error" role="alert">{error.message}</p>
+      ))}
       <ChartFootprintPicker
         subject="Panel"
         idPrefix={`static-panel-${draft.draftIdentity?.panelId ?? "draft"}`}
+        showTextLabels={false}
         value={resolveChartFootprint(draft.panel?.layout)}
         disabled={disabled}
         onChange={({ columns, rows }) => dispatch({
@@ -523,7 +556,7 @@ function StaticPreview({ draft, contentRenderContext = {} }) {
   };
   return (
     <section className="static-content-dialog__preview" aria-label="Text/Image preview">
-      <h3>{draft.panel?.title?.trim() || "Preview"}</h3>
+      {draft.panel?.title?.trim() && <h3>{draft.panel.title.trim()}</h3>}
       <StaticContentStateBoundary state={{ status: "ready" }} surface="build">
         {draft.contentTypeId === "freeText" ? (
           <div data-static-preview-type="freeText">
@@ -575,19 +608,19 @@ export function cleanupImageDraftAssets(draft, dashboard, committed = null) {
 
 function focusRestoration(stage) {
   const active = typeof document === "undefined" ? null : document.activeElement;
-  const pane = active?.closest?.("[data-free-text-pane]")?.getAttribute("data-free-text-pane");
-  const controlledPane = active?.getAttribute?.("aria-controls")?.match(/-(composer|preview|advanced)-pane$/)?.[1];
   const editor = typeof document === "undefined" ? null : document.querySelector(".free-text-source-editor");
-  const editorSurface = editor?.getAttribute("data-active-tab");
-  const surface = pane || controlledPane || editorSurface
+  const rawSource = editor?.querySelector(".portable-qmd-composer__raw-source");
+  const formattedSource = editor?.querySelector(".portable-qmd-composer__surface");
+  const editorSurface = rawSource ? "advanced" : editor ? "composer" : null;
+  const surface = editorSurface
     || (typeof document !== "undefined" && document.querySelector("[data-image-media-id]") ? "image" : "composer");
   const activeInsideEditor = Boolean(active && editor?.contains(active));
-  const selectedTabId = editor?.querySelector('[role="tab"][aria-selected="true"]')?.id || null;
+  const surfaceFocusId = rawSource?.id || formattedSource?.id || null;
   const body = typeof document === "undefined" ? null : document.querySelector(".static-content-dialog__body");
   return {
     stage,
     surface,
-    focusId: activeInsideEditor ? active?.id || selectedTabId : selectedTabId,
+    focusId: activeInsideEditor ? active?.id || surfaceFocusId : surfaceFocusId,
     invokerId: active?.id || null,
     scrollTop: Number.isFinite(body?.scrollTop) ? body.scrollTop : 0,
   };

@@ -62,7 +62,10 @@ export function validatePanelDraft(chart = {}) {
   if (collection && (chart.chronoGroupIds?.length || chart.sceneIds?.length)) {
     return issue("COLLECTION_TEMPORAL_INELIGIBLE", "Collection Display charts cannot join Chrono Groups or Scenes.");
   }
-  if (!String(chart.title ?? "").trim()) return issue("CHART_TITLE_REQUIRED", "Enter a chart title.");
+  const typeId = chart.typeId ?? chart.type;
+  if (!["freeText", "image"].includes(typeId) && !String(chart.title ?? "").trim()) {
+    return issue("CHART_TITLE_REQUIRED", "Enter a chart title.");
+  }
   return null;
 }
 

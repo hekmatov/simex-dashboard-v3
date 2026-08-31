@@ -3,7 +3,6 @@ import React from "react";
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
-import { parsePortableQmdEditorDocument } from "../../static-content/qmd/portableQmdEditorDocument.js";
 import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../../static-content/qmd/portableQmdMedia.js";
 import MediaPicker from "../source-content/MediaPicker.jsx";
 import PortableQmdRichTextEditor from "./PortableQmdRichTextEditor.jsx";
@@ -12,7 +11,7 @@ import QmdMediaInspector from "./QmdMediaInspector.jsx";
 export function FreeTextSourceEditor({
   id = "static-qmd-source", value = "", panelId = "static-text-preview", panelTitle = "",
   disabled = false, mediaItems = {}, assets = {}, contentRenderContext = {},
-  onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem, onSurfaceChange,
+  initialSurface, onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem, onSurfaceChange,
 } = {}) {
   const initial = React.useMemo(() => analyze(value, panelId), []);
   const [analysis, setAnalysis] = React.useState(initial);
@@ -20,6 +19,9 @@ export function FreeTextSourceEditor({
   const [pending, setPending] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [pickerMode, setPickerMode] = React.useState("insert");
+  const [editorMode, setEditorMode] = React.useState(
+    initialSurface === "advanced" || initialSurface === "raw" ? "raw" : "formatted",
+  );
   const [selectedMediaIdentity, setSelectedMediaIdentity] = React.useState(null);
   const revision = React.useRef(0);
   const lastValidRevision = React.useRef(initial.ok ? 0 : null);
@@ -27,7 +29,6 @@ export function FreeTextSourceEditor({
   const analysisCache = React.useRef(new Map([[value, initial]]));
   const editorRef = React.useRef(null);
   const changeTriggerRef = React.useRef(null);
-  const editorDocument = React.useMemo(() => parsePortableQmdEditorDocument(value), [value]);
   const previewRenderContext = React.useMemo(() => ({
     ...contentRenderContext,
     mediaItems: { ...(contentRenderContext.mediaItems ?? {}), ...mediaItems },
@@ -37,7 +38,9 @@ export function FreeTextSourceEditor({
   React.useEffect(() => {
     onValidationChange?.({ ...initial, pending: false, source: value, sourceRevision: 0, previewRevision: lastValidRevision.current });
   }, []);
-  React.useEffect(() => { onSurfaceChange?.("composer"); }, [onSurfaceChange]);
+  React.useEffect(() => {
+    onSurfaceChange?.(editorMode === "raw" ? "advanced" : "composer");
+  }, [editorMode, onSurfaceChange]);
   React.useEffect(() => { if (disabled) setPickerOpen(false); }, [disabled]);
 
   React.useEffect(() => {
@@ -57,7 +60,7 @@ export function FreeTextSourceEditor({
       applyAnalysis(next, value, revision.current);
     }, 200);
     return () => clearTimeout(timer);
-  }, [editorDocument.mode, onValidationChange, panelId, value]);
+  }, [onValidationChange, panelId, value]);
 
   function applyAnalysis(next, source, sourceRevision) {
     setAnalysis(next);
@@ -77,7 +80,7 @@ export function FreeTextSourceEditor({
   const selectedMediaNode = Number.isInteger(selectedMediaIdentity?.mediaNodeIndex) ? mediaNodes[selectedMediaIdentity.mediaNodeIndex] : null;
   const selectedPlacement = selectedMediaNode ? { mediaId: selectedMediaNode.mediaId, alt: selectedMediaNode.alt, ...selectedMediaNode.attributes } : null;
   const hasValidationErrors = !pending && analysis.errors.length > 0;
-  const validationTarget = validationTargetId(editorDocument.mode, id);
+  const validationTarget = validationTargetId(editorMode === "raw" ? "advanced" : "visual", id);
   const updateSelectedPlacement = (placement) => {
     if (disabled) return;
     if (!selectedMediaNode || !Number.isInteger(selectedMediaNode.sourceStart) || !Number.isInteger(selectedMediaNode.sourceEnd)) return;
@@ -104,20 +107,16 @@ export function FreeTextSourceEditor({
           <div><h3>Write a text post</h3><p>Formatting stays active until you turn it off.</p></div>
           <p className="free-text-source-editor__shortcuts"><kbd>Ctrl</kbd> + <kbd>B</kbd> / <kbd>I</kbd> also work</p>
         </header>
-        {editorDocument.mode === "visual"
-          ? <div id="portable-qmd-composer-focus-target" data-qmd-editor-focus-target="true"><PortableQmdRichTextEditor source={value} disabled={disabled} mediaItems={mediaItems} assets={assets} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} /></div>
-          : <div className="free-text-advanced-required" role="note"><h4>Visual editing is unavailable for this content</h4><p>{editorDocument.reason}</p></div>}
+        <div id="portable-qmd-composer-focus-target" data-qmd-editor-focus-target="true"><PortableQmdRichTextEditor source={value} disabled={disabled} initialMode={editorMode} rawSourceId={id} rawInvalid={hasValidationErrors} rawDescribedBy={hasValidationErrors ? `${id}-errors-title` : undefined} mediaItems={mediaItems} assets={assets} onModeChange={setEditorMode} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} /></div>
       </section>
       <div className="free-text-source-editor__reference-cards">
         <section className="free-text-source-editor__reference-card free-text-source-editor__preview" aria-label="Rendered preview">
           <header><h3>Rendered preview</h3><p>what readers see</p></header>
-          {lastValidSource !== null && typeof document !== "undefined" ? <FreeTextChartView model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }} chart={{ id: panelId, title: panelTitle.trim() || "Preview" }} contentRenderContext={previewRenderContext} onMediaActivate={({ mediaNodeIndex, sourceStart, sourceEnd }) => setSelectedMediaIdentity({ mediaNodeIndex, sourceStart, sourceEnd })} /> : lastValidSource !== null ? <p className="static-content-state">Preview is available in the browser.</p> : <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>}
+          {lastValidSource !== null && typeof document !== "undefined" ? <FreeTextChartView model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }} chart={{ id: panelId, title: panelTitle.trim() }} contentRenderContext={previewRenderContext} onMediaActivate={({ mediaNodeIndex, sourceStart, sourceEnd }) => setSelectedMediaIdentity({ mediaNodeIndex, sourceStart, sourceEnd })} /> : lastValidSource !== null ? <p className="static-content-state">Preview is available in the browser.</p> : <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>}
         </section>
         <section className="free-text-source-editor__reference-card free-text-source-editor__markdown" aria-label="Portable Markdown">
           <header><h3>Portable Markdown</h3><p>what is stored</p></header>
-          {editorDocument.mode === "visual"
-            ? <pre>{value}</pre>
-            : <div className="free-text-source-editor__source-repair"><p id={`${id}-help`}>{editorDocument.reason} Edit the stored source here to repair it or preserve the construct exactly.</p><textarea id={id} aria-label="Portable QMD source" aria-invalid={hasValidationErrors ? "true" : undefined} aria-describedby={[`${id}-help`, hasValidationErrors ? `${id}-errors-title` : ""].filter(Boolean).join(" ")} disabled={disabled} value={value} onChange={(event) => changeSource(event.target.value)} /></div>}
+          <pre>{value}</pre>
         </section>
       </div>
       {pickerOpen && pickerMode === "change" && <ChangeMediaPicker mediaItems={mediaItems} selectedMediaId={selectedPlacement?.mediaId} onSelect={chooseMedia} onCancel={closeChangePicker} />}

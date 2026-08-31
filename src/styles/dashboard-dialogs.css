@@ -86,7 +86,9 @@
   font-family: var(--simex-style-heading-font);
 }
 
-.dashboard-dialog__eyebrow {
+.dashboard-dialog__eyebrow,
+.dashboard-dialog__header h2.dashboard-dialog__eyebrow,
+.dashboard-dialog__header .eyebrow {
   margin: 0;
   color: var(--simex-accent);
   font-family: var(--simex-style-data-font);
@@ -118,6 +120,41 @@
   color: var(--simex-selected);
   background: var(--simex-selected-soft);
   border-color: var(--simex-selected);
+}
+
+.static-content-dialog > .dashboard-dialog__progress,
+.static-content-dialog > .dashboard-dialog__footer {
+  padding-block: 10px;
+}
+
+.static-content-dialog__title-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-block-end: 10px;
+}
+
+.static-content-dialog__title-label {
+  flex: 0 0 auto;
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-heading-font);
+  font-size: 1.05rem;
+  font-weight: var(--simex-style-heading-weight);
+}
+
+.static-content-dialog__title-choice > input[type="text"],
+.static-content-dialog__title-choice > input:not([type]) {
+  flex: 1 1 320px;
+  min-inline-size: min(100%, 240px);
+}
+
+.static-content-dialog__no-title {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  min-block-size: var(--simex-control-min);
 }
 
 .dashboard-dialog__body {
@@ -166,6 +203,7 @@
   box-shadow: inset 4px 0 0 var(--simex-error), var(--simex-style-shell-shadow);
 }
 
+.dashboard-dialog--danger .dashboard-dialog__eyebrow,
 .dashboard-dialog--danger .dashboard-dialog__header .eyebrow,
 .dashboard-dialog--danger > .eyebrow {
   color: var(--simex-error);

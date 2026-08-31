@@ -72,7 +72,7 @@ export function buildChartCatalogue(dashboard, aliasConfig) {
     return {
       chart_id: entry.chart.id,
       type_id: entry.chart.typeId,
-      title: requiredText(entry.chart.title, `title for chart ${entry.chart.id}`),
+      title: catalogueChartTitle(entry.chart),
       description: chartDescription(entry),
       page_id: entry.pageId,
       section_id: entry.sectionId,
@@ -538,8 +538,15 @@ function chartDescription({ chart, section, page }) {
     chart.description
     || section.description
     || page.description
-    || chart.title;
+    || catalogueChartTitle(chart);
   return requiredText(description, `description for chart ${chart.id}`);
+}
+
+export function catalogueChartTitle(chart = {}) {
+  if (["freeText", "image"].includes(chart.typeId) && !String(chart.title ?? "").trim()) {
+    return "Text/Image panel";
+  }
+  return requiredText(chart.title, `title for chart ${chart.id}`);
 }
 
 function normalizedTerms(value, label) {

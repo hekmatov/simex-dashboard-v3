@@ -70,7 +70,9 @@ test("one displayed chart is an immersive chart-only Focus surface", () => {
 
   assert.match(html, /role="dialog"[^>]*aria-label="Focused chart"/);
   assert.match(html, /data-display-mode="focus"/);
-  assert.match(html, />Exit focus<\/button>/);
+  assert.match(html, /data-fullscreen-exit="true"[^>]*aria-label="Exit fullscreen"/);
+  assert.doesNotMatch(html, />Exit fullscreen<\/button>/);
+  assert.doesNotMatch(html, /multi-fullscreen-controls/);
   assert.equal((html.match(/multi-fullscreen-cell/g) ?? []).length, 1);
   assert.doesNotMatch(html, /fullscreen-layout-button/);
   assert.doesNotMatch(html, /multi-cell-controls/);
@@ -93,8 +95,9 @@ test("two displayed charts are a chart-only Comparison with minimal top controls
 
   assert.match(html, /role="dialog"[^>]*aria-label="Chart comparison"/);
   assert.match(html, /data-display-mode="comparison"/);
-  assert.match(html, />Exit comparison<\/button>/);
-  assert.match(html, /aria-label="Comparison layout and exit"/);
+  assert.match(html, /data-fullscreen-exit="true"[^>]*aria-label="Exit comparison"/);
+  assert.doesNotMatch(html, />Exit comparison<\/button>/);
+  assert.match(html, /aria-label="Comparison layout controls"/);
   assert.match(html, /draggable="true"/);
   assert.match(html, /aria-keyshortcuts="Alt\+ArrowLeft Alt\+ArrowRight Alt\+ArrowUp Alt\+ArrowDown"/);
   assert.ok(

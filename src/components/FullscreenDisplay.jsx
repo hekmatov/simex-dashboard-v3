@@ -77,7 +77,7 @@ export default function FullscreenDisplay({
       chart_ids: reordered,
     });
     setAnnouncement(
-      `${chart.title} moved to position ${toIndex + 1} of ${panelIds.length}.`,
+      `${fullscreenChartLabel(chart)} moved to position ${toIndex + 1} of ${panelIds.length}.`,
     );
   };
 
@@ -86,7 +86,7 @@ export default function FullscreenDisplay({
     return {
       draggable: true,
       tabIndex: 0,
-      "aria-label": `${chart.title}, position ${index + 1} of ${charts.length}`,
+      "aria-label": `${fullscreenChartLabel(chart)}, position ${index + 1} of ${charts.length}`,
       "aria-keyshortcuts": "Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown",
       onDragStart: (event) => {
         draggedChartId.current = chart.id;
@@ -137,38 +137,41 @@ export default function FullscreenDisplay({
         className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout} dashboard-dialog dashboard-dialog--workspace dashboard-dialog--fullscreen`}
         data-display-mode={isComparison ? "comparison" : "focus"}
       >
-        <div
-          className="multi-fullscreen-controls dashboard-dialog__header"
-          aria-label={isComparison ? "Comparison layout and exit" : "Focus exit"}
-        >
-          {isComparison && layoutOptions.map((option) => (
-            <IconControl
-              key={option.value}
-              interactionId={LAYOUT_INTERACTION_IDS[option.value]}
-              className={[
-                "fullscreen-layout-button",
-                resolvedLayout === option.value ? "active" : "secondary",
-              ].join(" ")}
-              iconClassName="fullscreen-layout-icon"
-              pressed={resolvedLayout === option.value}
-              onClick={() => onDisplayAction?.({
-                type: "layout_changed",
-                layout: option.value,
-              })}
-              ariaLabel={`Use ${option.label.toLowerCase()} layout`}
-              tooltip={option.label}
-              title={option.label}
-            />
-          ))}
-          <IconControl
-            interactionId="fullscreen.close-chart"
-            className="secondary fullscreen-toolbar-close"
-            ariaLabel={isComparison ? "Exit comparison" : "Exit fullscreen"}
-            tooltip={isComparison ? "Exit comparison" : "Exit fullscreen"}
-            data-fullscreen-exit
-            onClick={closeAll}
-          />
-        </div>
+        {isComparison && (
+          <div
+            className="multi-fullscreen-controls dashboard-dialog__header"
+            aria-label="Comparison layout controls"
+          >
+            {layoutOptions.map((option) => (
+              <IconControl
+                key={option.value}
+                interactionId={LAYOUT_INTERACTION_IDS[option.value]}
+                className={[
+                  "fullscreen-layout-button",
+                  resolvedLayout === option.value ? "active" : "secondary",
+                ].join(" ")}
+                iconClassName="fullscreen-layout-icon"
+                pressed={resolvedLayout === option.value}
+                onClick={() => onDisplayAction?.({
+                  type: "layout_changed",
+                  layout: option.value,
+                })}
+                ariaLabel={`Use ${option.label.toLowerCase()} layout`}
+                tooltip={option.label}
+                title={option.label}
+              />
+            ))}
+          </div>
+        )}
+        <IconControl
+          interactionId="fullscreen.close-chart"
+          className="secondary fullscreen-toolbar-close"
+          ariaLabel={isComparison ? "Exit comparison" : "Exit fullscreen"}
+          tooltip={isComparison ? "Exit comparison" : "Exit fullscreen"}
+          iconSize={18}
+          data-fullscreen-exit
+          onClick={closeAll}
+        />
         <DisplayedChartGrid
           dashboard={dashboard}
           contentRenderContext={contentRenderContext}
@@ -178,17 +181,19 @@ export default function FullscreenDisplay({
           timeContextForChart={resolveTimeContext}
           getCellProps={comparisonCellProps}
           renderCellControls={isComparison
-            ? (chart, index, displayedCharts) => (
+            ? (chart, index, displayedCharts) => {
+                const chartLabel = fullscreenChartLabel(chart);
+                return (
                 <div
                   className="multi-cell-controls"
-                  aria-label={`Reorder ${chart.title}`}
+                  aria-label={`Reorder ${chartLabel}`}
                 >
                   <IconControl
                     interactionId="fullscreen.previous-displayed-chart"
                     className="secondary multi-cell-icon-button"
                     disabled={index === 0}
                     onClick={() => moveChart(chart, index, index - 1)}
-                    ariaLabel={`Move ${chart.title} previous`}
+                    ariaLabel={`Move ${chartLabel} previous`}
                     tooltip="Move previous"
                     tooltipPlacement="below"
                     title="Move previous"
@@ -198,13 +203,14 @@ export default function FullscreenDisplay({
                     className="secondary multi-cell-icon-button"
                     disabled={index === displayedCharts.length - 1}
                     onClick={() => moveChart(chart, index, index + 1)}
-                    ariaLabel={`Move ${chart.title} next`}
+                    ariaLabel={`Move ${chartLabel} next`}
                     tooltip="Move next"
                     tooltipPlacement="below"
                     title="Move next"
                   />
                 </div>
-              )
+                );
+              }
             : undefined}
         />
         <p className="visually-hidden" role="status" aria-live="polite">
@@ -213,6 +219,14 @@ export default function FullscreenDisplay({
       </article>
     </ModalFocusScope>
   );
+}
+
+export function fullscreenChartLabel(chart = {}) {
+  const title = String(chart.title ?? "").trim();
+  if (title) return title;
+  return ["freeText", "image"].includes(chart.typeId)
+    ? "Text/Image panel"
+    : String(chart.id ?? "").trim() || "Panel";
 }
 
 export function reorderDisplayedCharts(items, fromIndex, toIndex) {

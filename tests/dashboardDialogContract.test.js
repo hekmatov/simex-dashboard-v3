@@ -116,9 +116,21 @@ test("Text/Image and chart authoring expose dashboard wizard regions", async () 
   assert.match(staticSource, /dashboard-dialog__header/);
   assert.match(staticSource, /dashboard-dialog__progress/);
   assert.match(staticSource, /dashboard-dialog__footer/);
+  assert.match(staticSource, /<h2 id="static-content-dialog-title" className="dashboard-dialog__eyebrow">/);
+  assert.doesNotMatch(staticSource, /Edit Text\/Image/);
+  assert.match(staticSource, /className="static-content-dialog__title-choice"/);
+  assert.match(staticSource, />No title</);
   assert.match(chartSource, /chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide/);
   assert.match(chartSource, /dashboard-dialog__body/);
   assert.match(editorHost, /chart-editor-backdrop dashboard-dialog-backdrop/);
+});
+
+test("dialog eyebrows neutralize legacy global eyebrow paint inside every dialog", async () => {
+  const css = await read("src/styles/dashboard-dialogs.css");
+  assert.match(
+    css,
+    /\.dashboard-dialog__eyebrow,\s*\.dashboard-dialog__header h2\.dashboard-dialog__eyebrow,\s*\.dashboard-dialog__header \.eyebrow\s*\{[^}]*color:\s*var\(--simex-accent\)/s,
+  );
 });
 
 test("source action dialog branches provide an internal body before the action footer", async () => {

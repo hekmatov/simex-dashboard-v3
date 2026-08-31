@@ -42,9 +42,11 @@ export function createStaticContentDraft(options = {}) {
   const imageEditing = createImageEditing(placement);
   const destination = clone(options.destination);
   const baselineStage = mode === "edit" ? "content" : "destination";
+  const noTitle = initialNoTitleChoice(options, mode, panel);
   const baseline = {
     destination: clone(destination),
     contentTypeId,
+    noTitle,
     panel: clone(panel),
     placement: clone(placement),
     mediaItem: clone(mediaItem),
@@ -59,6 +61,7 @@ export function createStaticContentDraft(options = {}) {
     status: "editing",
     destination,
     contentTypeId,
+    noTitle,
     draftIdentity,
     panel,
     source: placement,
@@ -82,6 +85,15 @@ export function createStaticContentDraft(options = {}) {
 export function reduceStaticContentDraft(state, action = {}) {
   requireDraft(state);
   switch (action.type) {
+    case "trySetStage": {
+      requireStage(action.stage);
+      return tryStageTransition(state, action.stage);
+    }
+    case "tryNext": {
+      const currentIndex = STATIC_CONTENT_STAGES.indexOf(state.stage);
+      if (currentIndex >= STATIC_CONTENT_STAGES.length - 1) return state;
+      return tryStageTransition(state, STATIC_CONTENT_STAGES[currentIndex + 1]);
+    }
     case "setStage": {
       requireStage(action.stage);
       validateStageEntry(state, action.stage);
@@ -132,6 +144,12 @@ export function reduceStaticContentDraft(state, action = {}) {
           state.contentTypeId,
           state.draftIdentity,
         ),
+        status: "editing",
+      });
+    case "setNoTitle":
+      requireContentStage(state);
+      return authored(state, {
+        noTitle: action.noTitle === true,
         status: "editing",
       });
     case "updateSource":
@@ -380,8 +398,11 @@ export function finalizeStaticContentDraft(state) {
   const placement = sourceForAuthoringSave(state.placement, { assets: state.assets });
   if (placement.kind === "staticImage") validateMediaItem(state.mediaItem, { assets: state.assets });
   validateFreeTextContent(placement);
-  const panel = normalizePanel(state.panel, state.contentTypeId, state.draftIdentity);
-  requiredText(panel.title, "Static panel title");
+  const title = validateStaticPanelTitleChoice(state.panel?.title, state.noTitle);
+  const panel = {
+    ...normalizePanel(state.panel, state.contentTypeId, state.draftIdentity),
+    title,
+  };
   requiredText(panel.sourceId, "Static panel source id");
   const result = {
     destination: clone(state.destination),
@@ -412,6 +433,7 @@ export function isStaticContentDraftDirty(state) {
   const current = {
     destination: state.destination,
     contentTypeId: state.contentTypeId,
+    noTitle: state.noTitle,
     panel: state.panel,
     placement: state.placement,
     mediaItem: state.mediaItem,
@@ -427,6 +449,7 @@ export function hasRetainableStaticContentMutation(state) {
     const current = {
       destination: state.destination,
       contentTypeId: state.contentTypeId,
+      noTitle: state.noTitle,
       panel: state.panel,
       placement: state.placement,
       mediaItem: state.mediaItem,
@@ -439,11 +462,13 @@ export function hasRetainableStaticContentMutation(state) {
   const defaultPlacement = normalizeSource(null, state.contentTypeId, state.draftIdentity);
   const defaultMediaItem = normalizeDraftMediaItem(null, defaultPlacement, defaultPanel, state.baseline?.assets ?? {});
   return JSON.stringify({
+    noTitle: state.noTitle,
     panel: state.panel,
     placement: state.placement,
     mediaItem: state.mediaItem,
     pendingMediaItems: state.pendingMediaItems ?? {},
   }) !== JSON.stringify({
+    noTitle: false,
     panel: defaultPanel,
     placement: defaultPlacement,
     mediaItem: defaultMediaItem,
@@ -456,6 +481,7 @@ function restoreStaticContentBaseline(state, { status }) {
     ...state,
     destination: clone(state.baseline.destination),
     contentTypeId: state.baseline.contentTypeId,
+    noTitle: state.baseline.noTitle,
     panel: clone(state.baseline.panel),
     source: clone(state.baseline.placement),
     placement: clone(state.baseline.placement),
@@ -517,6 +543,32 @@ function authored(state, updates) {
   };
 }
 
+function tryStageTransition(state, stage) {
+  try {
+    validateStageEntry(state, stage);
+    return {
+      ...state,
+      stage,
+      validation: { errors: [], warnings: [] },
+      focusRequest: null,
+    };
+  } catch (error) {
+    return {
+      ...state,
+      status: "editing",
+      validation: {
+        errors: [{
+          ...(error?.field ? { field: error.field } : {}),
+          ...(error?.focusId ? { focusId: error.focusId } : {}),
+          message: error?.message ?? "Static content is not ready for the next stage.",
+        }],
+        warnings: [],
+      },
+      focusRequest: error?.focusId ?? null,
+    };
+  }
+}
+
 function normalizePanel(panel, contentTypeId, draftIdentity) {
   if (!panel && !contentTypeId) return null;
   const value = panel ?? {};
@@ -546,6 +598,11 @@ function normalizePanel(panel, contentTypeId, draftIdentity) {
       height: footprint.rows,
     },
   };
+}
+
+function initialNoTitleChoice(options, mode, panel) {
+  if (typeof options.noTitle === "boolean") return options.noTitle;
+  return mode === "edit" && String(panel?.title ?? "").trim() === "";
 }
 
 function createDraftIdentity(panel) {
@@ -584,8 +641,33 @@ function validateStageEntry(state, stage) {
     sourceForAuthoringSave(state.source, { assets: state.assets });
     if (state.source?.kind === "staticImage") validateMediaItem(state.mediaItem, { assets: state.assets });
     validateFreeTextContent(state.source);
-    requiredText(state.panel?.title, "Static panel title");
+    validateStaticPanelTitleChoice(state.panel?.title, state.noTitle);
   }
+}
+
+export function validateStaticPanelTitleChoice(value, noTitle = false) {
+  const title = String(value ?? "");
+  const hasTitle = title.trim() !== "";
+  if (!hasTitle && noTitle !== true) {
+    throw draftValidationError(
+      "Enter a panel title or select No title.",
+      "static-panel-title",
+    );
+  }
+  if (hasTitle && noTitle === true) {
+    throw draftValidationError(
+      "Clear the title or unselect No title.",
+      "static-panel-no-title",
+    );
+  }
+  return noTitle === true ? "" : title;
+}
+
+function draftValidationError(message, focusId) {
+  const error = new Error(message);
+  error.field = "title";
+  error.focusId = focusId;
+  return error;
 }
 
 function sourceForAuthoringSave(source, { assets } = {}) {

@@ -61,3 +61,19 @@ test("the shared footprint picker can label Text/Image panel sizing without char
   assert.match(html, /aria-label="Set panel size to 4 columns by 2 rows"/);
   assert.doesNotMatch(html, /Chart size|Set chart size/);
 });
+
+test("Text/Image sizing can keep the visual grid while omitting redundant footprint copy", () => {
+  const html = renderToStaticMarkup(React.createElement(pickerModule.default, {
+    subject: "Panel",
+    idPrefix: "static-panel-compact",
+    showTextLabels: false,
+    value: { columns: 2, rows: 1 },
+    onChange() {},
+  }));
+
+  assert.match(html, /role="grid"/);
+  assert.match(html, /class="dashboard-dialog__eyebrow"[^>]*>Panel size<\/span>/);
+  assert.match(html, /aria-label="Panel size: 2 columns by 1 rows"/);
+  assert.equal((html.match(/role="gridcell"/g) ?? []).length, 8);
+  assert.doesNotMatch(html, />Footprint<|4-column grid|Current footprint:/);
+});

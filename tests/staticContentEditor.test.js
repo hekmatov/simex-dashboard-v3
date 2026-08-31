@@ -31,11 +31,34 @@ test("StaticContentEditor mounts an existing V5 Image edit with media placement 
     mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
     assets: dashboard.assets,
   }));
-  assert.match(html, /Edit Text\/Image/);
+  assert.match(html, /<h2[^>]*class="dashboard-dialog__eyebrow"[^>]*>Text\/Image editor<\/h2>/);
+  assert.doesNotMatch(html, /Edit Text\/Image/);
   assert.match(html, /value="Response map"/);
+  assert.match(html, /<label[^>]*>Panel Title<\/label>/);
+  assert.match(html, /<span>No title<\/span>/);
+  assert.doesNotMatch(html, />Footprint<|4-column grid|Current footprint:/);
   assert.match(html, /Alternative text/);
   assert.match(html, /data-image-media-id="media-image-source"/);
   assert.match(html, /data-image-media-revision="3"/);
+});
+
+test("an explicitly untitled Free-text draft prepares a create transaction without persisting wizard-only state", () => {
+  const dashboard = makeDashboardV5();
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "blank-create", typeId: "freeText", sourceId: "blank-create-source", title: "" },
+    placement: { kind: "staticText", qmd: "Untitled body" },
+  });
+  draft = reduceStaticContentDraft(draft, { type: "setNoTitle", noTitle: true });
+  draft = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+  const payload = finalizeStaticContentDraft(draft);
+  const prepared = prepareStaticPanelTransaction({ dashboard, operation: "create", ...payload });
+
+  assert.equal(payload.panel.title, "");
+  assert.equal("noTitle" in payload, false);
+  assert.equal(prepared.candidateDashboard.pages[0].sections[0].panels.at(-1).chart.title, "");
 });
 
 test("StaticContentEditor forwards retained-media edit authority through the coordinator transaction", () => {

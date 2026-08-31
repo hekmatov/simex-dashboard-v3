@@ -58,7 +58,8 @@ export default function ImageChartView({
     />;
   }
 
-  const title = chart.title || "Chart image";
+  const title = String(chart.title ?? "").trim();
+  const accessibleName = title || String(model?.alt ?? "").trim() || "Image";
   const crop = safeCrop(model?.crop);
   const rotation = safeRotation(model?.rotation);
   const fit = safeFit(model?.fit);
@@ -163,7 +164,9 @@ export default function ImageChartView({
       } : undefined}
       onKeyDown={onKeyDown}
       tabIndex={active ? 0 : undefined}
-      aria-label={active ? `${title} image viewer. Use arrow keys to pan, plus and minus to zoom, and zero to reset the view.` : undefined}
+      aria-label={active
+        ? `${accessibleName === "Image" ? "Image viewer" : `${accessibleName} image viewer`}. Use arrow keys to pan, plus and minus to zoom, and zero to reset the view.`
+        : undefined}
       {...titleContainerProps(chart)}
     >
       <div className="chart-image-viewport">
@@ -211,7 +214,7 @@ export default function ImageChartView({
           </div>
         </div>
       </div>
-      {!decorative && <figcaption>{title}</figcaption>}
+      {!decorative && title && <figcaption>{title}</figcaption>}
       {active && <div className="chart-image-actions" aria-label="Image viewer actions">
         <button type="button" className="secondary" aria-label="Zoom out" disabled={scale <= MIN_IMAGE_SCALE} onClick={() => setNextScale(scale - IMAGE_SCALE_STEP)}>−</button>
         <output className="chart-image-zoom-status" aria-live="polite">{Math.round(scale * 100)}%</output>

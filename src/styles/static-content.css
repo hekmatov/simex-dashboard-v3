@@ -183,8 +183,98 @@
   border-radius: 0;
   box-sizing: border-box;
   min-height: 250px;
+  overflow-x: auto;
   padding: 22px 24px;
 }
+
+.portable-qmd-composer__surface table {
+  min-width: max-content;
+}
+
+.portable-qmd-composer__raw-source {
+  border: 0;
+  box-sizing: border-box;
+  font: 0.875rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  min-block-size: 250px;
+  padding: 22px 24px;
+  resize: vertical;
+  width: 100%;
+}
+
+.portable-qmd-composer__source-warning {
+  align-items: baseline;
+  background: var(--simex-warning-soft);
+  border-block-end: 1px solid var(--simex-warning);
+  color: var(--simex-text-strong);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 8px 14px;
+}
+
+.portable-qmd-composer__source-warning strong { color: var(--simex-warning); }
+
+.portable-qmd-composer__table-actions {
+  height: 28px;
+  position: fixed;
+  width: 28px;
+  z-index: 8;
+}
+
+.portable-qmd-composer__table-actions > button {
+  align-items: center;
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 5px;
+  color: var(--simex-text-strong);
+  display: inline-flex;
+  font-size: 1.1rem;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  width: 28px;
+}
+
+.portable-qmd-composer__table-actions > [role="menu"] {
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 18%);
+  display: grid;
+  gap: 2px;
+  margin-top: 2px;
+  max-height: var(--table-menu-max-height, calc(100vh - 16px));
+  inline-size: min(180px, calc(100vw - 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  position: absolute;
+  left: var(--table-menu-left, 0);
+  top: 100%;
+}
+
+.portable-qmd-composer__table-actions--above > [role="menu"] {
+  bottom: 100%;
+  margin-block: 0 2px;
+  top: auto;
+}
+
+.portable-qmd-composer__table-actions [role="menuitem"] {
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--simex-text-strong);
+  padding: 8px;
+  text-align: start;
+}
+
+.portable-qmd-composer__table-actions :is(button, [role="menuitem"]):focus-visible,
+.portable-qmd-composer__raw-source:focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.portable-qmd-composer__table-actions [role="menuitem"]:hover { background: var(--simex-surface-panel-alt); }
 
 .portable-qmd-composer__surface:focus-visible {
   outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);

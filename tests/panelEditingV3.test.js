@@ -29,6 +29,9 @@ test("panel draft validates footprint and Collection temporal eligibility", () =
   assert.equal(model.validatePanelDraft({ ...ordinary.chart, footprint: { columns: 5, rows: 2 } }).code, "FOOTPRINT_OUT_OF_RANGE");
   assert.equal(model.validatePanelDraft({ ...collection.chart, chronoGroupIds: ["national"] }).code, "COLLECTION_TEMPORAL_INELIGIBLE");
   assert.equal(model.validatePanelDraft({ ...ordinary.chart, footprint: { columns: 2, rows: 1 } }), null);
+  assert.equal(model.validatePanelDraft({ typeId: "freeText", title: "", footprint: { columns: 2, rows: 1 } }), null);
+  assert.equal(model.validatePanelDraft({ typeId: "image", title: "", footprint: { columns: 2, rows: 1 } }), null);
+  assert.equal(model.validatePanelDraft({ ...ordinary.chart, title: "", footprint: { columns: 2, rows: 1 } }).code, "CHART_TITLE_REQUIRED");
 });
 
 test("failed Save retains selected chart draft and retry/restoration context", () => {

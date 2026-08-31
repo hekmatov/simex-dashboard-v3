@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 
 import {
   DASHBOARD_CONTENT_ACTIVITY_IDS,
@@ -38,7 +39,6 @@ const REQUIRED_ACTIVITY_IDS = [
   "section.reordered",
   "section.deleted",
   "static.draft.created",
-  "static.draft.updated",
   "static.draft.discarded",
   "static.saved",
   "source.draft.created",
@@ -62,6 +62,14 @@ test("the semantic activity catalogue covers dashboard content manipulation boun
     REQUIRED_ACTIVITY_IDS.filter((id) => !DASHBOARD_CONTENT_ACTIVITY_IDS.includes(id)),
     [],
   );
+});
+
+test("Text/Image draft edits stay silent instead of publishing an updating-draft activity", async () => {
+  const renderer = await readFile(new URL("../src/components/DashboardRenderer.jsx", import.meta.url), "utf8");
+
+  assert.equal(DASHBOARD_CONTENT_ACTIVITY_IDS.includes("static.draft.updated"), false);
+  assert.doesNotMatch(renderer, /reportContentActivity\("static\.draft\.updated"/);
+  assert.equal((renderer.match(/onDraftChange=\{setStaticContentDraft\}/g) ?? []).length, 2);
 });
 
 test("activity descriptions use object names while retaining stable coalescing keys", () => {

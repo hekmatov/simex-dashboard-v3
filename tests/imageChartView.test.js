@@ -265,6 +265,29 @@ test("active viewer exposes bounded semantic controls with Reset view distinct f
   assert.deepEqual(clampImagePan({ x: 30, y: -20 }, 1), { x: 0, y: 0 });
 });
 
+test("an intentionally untitled Image has no generated visible caption but keeps an accessible viewer name", () => {
+  const html = renderToStaticMarkup(React.createElement(ImageChartView, {
+    chart: { title: "" },
+    model: {
+      kind: "image",
+      status: "ready",
+      src: "https://example.test/map.png",
+      alt: "Response map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+      revision: 1,
+    },
+    interactionMode: "active",
+    surface: "view",
+  }));
+
+  assert.doesNotMatch(html, /<figcaption>|Chart image<\/figcaption>/);
+  assert.match(html, /aria-label="Response map image viewer\./);
+  assert.match(html, /alt="Response map"/);
+});
+
 test("typed failures stay panel-scoped and expose the exact active-surface recovery inventory", () => {
   const source = {
     kind: "staticImage",

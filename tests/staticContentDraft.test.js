@@ -61,6 +61,76 @@ test("Text and Image drafts default to Standard 2x1 and persist the shared footp
   }
 });
 
+test("blank panel titles require an explicit No title choice without leaving the wizard", () => {
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "untitled-panel", typeId: "freeText", sourceId: "untitled-source", title: "" },
+    placement: { kind: "staticText", qmd: "Untitled content" },
+  });
+
+  assert.equal(draft.noTitle, false);
+  const missingChoice = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+  assert.equal(missingChoice.stage, "content");
+  assert.deepEqual(missingChoice.validation.errors, [{
+    field: "title",
+    focusId: "static-panel-title",
+    message: "Enter a panel title or select No title.",
+  }]);
+
+  draft = reduceStaticContentDraft(draft, { type: "setNoTitle", noTitle: true });
+  assert.equal(isStaticContentDraftDirty(draft), true);
+  draft = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+  assert.equal(draft.stage, "preview-and-add");
+  const result = finalizeStaticContentDraft(draft);
+  assert.equal(result.panel.title, "");
+  assert.equal("noTitle" in result, false);
+  assert.equal("noTitle" in result.panel, false);
+});
+
+test("a typed title and No title remain an explicit conflict focused on the checkbox", () => {
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "conflict-panel", typeId: "freeText", sourceId: "conflict-source", title: "Situation" },
+    placement: { kind: "staticText", qmd: "Conflicting choice" },
+  });
+  draft = reduceStaticContentDraft(draft, { type: "setNoTitle", noTitle: true });
+  const conflict = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+
+  assert.equal(conflict.stage, "content");
+  assert.deepEqual(conflict.validation.errors, [{
+    field: "title",
+    focusId: "static-panel-no-title",
+    message: "Clear the title or unselect No title.",
+  }]);
+});
+
+test("existing blank-title edits restore with No title selected and keep it in the dirty baseline", () => {
+  const blank = createStaticContentDraft({
+    mode: "edit",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: { id: "blank-panel", typeId: "freeText", sourceId: "blank-source", title: "" },
+    placement: { kind: "staticText", qmd: "Existing blank panel" },
+  });
+  const titled = createStaticContentDraft({
+    mode: "edit",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: { id: "titled-panel", typeId: "freeText", sourceId: "titled-source", title: "Existing title" },
+    placement: { kind: "staticText", qmd: "Existing titled panel" },
+  });
+
+  assert.equal(blank.noTitle, true);
+  assert.equal(titled.noTitle, false);
+  const changed = reduceStaticContentDraft(blank, { type: "setNoTitle", noTitle: false });
+  assert.equal(isStaticContentDraftDirty(changed), true);
+  const reset = reduceStaticContentDraft(changed, { type: "reset" });
+  assert.equal(reset.noTitle, true);
+  assert.equal(isStaticContentDraftDirty(reset), false);
+});
+
 test("owner-scoped reset restores the baseline without retiring the edit surface", () => {
   let draft = createStaticContentDraft({
     mode: "edit",

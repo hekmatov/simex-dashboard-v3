@@ -2584,17 +2584,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       initialDraft={staticContentDraft}
       restoration={staticContentRestoration}
       disabled={moderatorMutationLocked}
-      onDraftChange={(draft) => {
-        setStaticContentDraft(draft);
-        reportContentActivity("static.draft.updated", {
-          subject: draft?.title ?? draft?.mode,
-          key: "content:static.draft:active",
-        });
-      }}
+      onDraftChange={setStaticContentDraft}
       onDirtyChange={setStaticContentDirty}
       onRestorationChange={setStaticContentRestoration}
       onSave={async ({ panel, placement, mediaItem, assets, stagedAssetIds }) => {
-        const subject = panel?.title ?? selectedPlacement.panelId;
+        const subject = panel?.title?.trim() || selectedPlacement.panelId;
         const status = beginContentOperation("static.saved", {
           subject,
           workingLabel: `Saving Dashboard Content “${subject}”`,
@@ -2986,13 +2980,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         initialDraft={staticContentDraft}
         restoration={staticContentRestoration}
         disabled={moderatorMutationLocked}
-        onDraftChange={(draft) => {
-          setStaticContentDraft(draft);
-          reportContentActivity("static.draft.updated", {
-            subject: draft?.title ?? draft?.mode,
-            key: "content:static.draft:active",
-          });
-        }}
+        onDraftChange={setStaticContentDraft}
         onDirtyChange={setStaticContentDirty}
         onRestorationChange={setStaticContentRestoration}
         onSuspend={suspendStaticContentOwner}
@@ -3004,7 +2992,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           restoreStaticWizardFocus();
         }}
         onCreate={async ({ destination, panel, placement, mediaItem, assets, stagedAssetIds }) => {
-          const subject = panel?.title ?? destination?.sectionId ?? "New content";
+          const subject = panel?.title?.trim() || destination?.sectionId || "New content";
           const status = beginContentOperation("static.saved", {
             subject,
             workingLabel: `Saving Dashboard Content “${subject}”`,

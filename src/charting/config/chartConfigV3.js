@@ -688,7 +688,11 @@ export function validateChartInstance(chart, { columnTypes } = {}) {
   if (chart.configVersion !== CHART_CONFIG_VERSION) throw new Error("Chart configuration version 3 is required.");
   requiredString(chart.id, "Chart id");
   requiredString(chart.typeId, "Chart typeId");
-  requiredString(chart.title, "Chart title");
+  if (chart.typeId === "freeText" || chart.typeId === "image") {
+    if (typeof chart.title !== "string") throw new Error("Chart title is required and must be a string.");
+  } else {
+    requiredString(chart.title, "Chart title");
+  }
   if (typeof chart.description !== "string") throw new Error("Chart description is required and must be a string.");
   requiredString(chart.sourceId, "Chart sourceId");
   const schema = getChartSchema(chart.typeId);

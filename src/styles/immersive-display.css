@@ -49,6 +49,37 @@
   width: 44px;
 }
 
+.fullscreen-backdrop--immersive .fullscreen-toolbar-close {
+  align-items: center;
+  display: inline-flex;
+  height: 32px;
+  width: 32px;
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 8;
+}
+
+.fullscreen-backdrop--immersive .fullscreen-toolbar-close::before {
+  content: "";
+  height: 44px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+}
+
+.fullscreen-backdrop--immersive .fullscreen-toolbar-close .simex-icon {
+  height: 18px;
+  position: relative;
+  width: 18px;
+}
+
 .fullscreen-exit-button {
   padding: 8px 14px;
   white-space: nowrap;

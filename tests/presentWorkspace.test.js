@@ -62,6 +62,21 @@ const displayState = {
   layout: "sideBySide",
 };
 
+test("Present labels intentionally untitled Text/Image panels nonvisually", () => {
+  assert.equal(
+    presentModule?.presentChartLabel({ id: "notes", typeId: "freeText", title: "" }),
+    "Text/Image panel",
+  );
+  assert.equal(
+    presentModule?.presentChartLabel({ id: "image", typeId: "image", title: "   " }),
+    "Text/Image panel",
+  );
+  assert.equal(
+    presentModule?.presentChartLabel({ id: "chart-a", typeId: "kpi", title: "Cases" }),
+    "Cases",
+  );
+});
+
 function renderPresent(Component, overrides = {}) {
   const {
     displayState: requestedDisplayState = displayState,
