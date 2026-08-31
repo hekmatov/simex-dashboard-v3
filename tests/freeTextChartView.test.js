@@ -973,6 +973,75 @@ test("responsive writer, preview, and Portable Markdown cards remain visible and
   assert.equal(await markdown.isVisible(), true);
 });
 
+test("writer and preview track every selected authoring footprint without expanding the root", async () => {
+  const longToken = "X".repeat(240);
+  const qmd = [
+    "| Heading | Value |",
+    "| --- | --- |",
+    `| ${longToken} | ${longToken} |`,
+  ].join("\n");
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const columns of [1, 2, 3, 4]) {
+    await page.evaluate(({ source, layout }) => window.mountFreeTextEditor(source, { layout }), {
+      source: qmd,
+      layout: { width: columns, height: 1 },
+    });
+    await page.locator('[data-authoring-footprint="writer"] table').waitFor();
+    await page.locator('[data-authoring-footprint="preview"] table').waitFor();
+    const geometry = await page.evaluate((selectedColumns) => {
+      const read = (kind) => {
+        const frame = document.querySelector(`[data-authoring-footprint="${kind}"]`);
+        const grid = frame?.parentElement;
+        const table = frame?.querySelector("table");
+        const gridStyle = getComputedStyle(grid);
+        return {
+          frameWidth: frame?.clientWidth,
+          gridWidth: grid?.clientWidth,
+          columns: gridStyle.getPropertyValue("--chart-footprint-columns").trim(),
+          columnGap: Number.parseFloat(gridStyle.columnGap),
+          trackWidths: gridStyle.gridTemplateColumns.split(" ").map(Number.parseFloat),
+          tableFits: table?.scrollWidth <= table?.clientWidth,
+        };
+      };
+      return {
+        writer: read("writer"),
+        preview: read("preview"),
+        selectedColumns,
+        rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      };
+    }, columns);
+    const expectedWidth = ({ trackWidths, columnGap }) => (
+      trackWidths.slice(0, columns).reduce((total, width) => total + width, 0) + columnGap * (columns - 1)
+    );
+    for (const surface of [geometry.writer, geometry.preview]) {
+      assert.equal(surface.columns, String(columns));
+      assert.ok(Math.abs(surface.frameWidth - expectedWidth(surface)) <= 1, JSON.stringify({ columns, surface }));
+      assert.equal(surface.tableFits, true, JSON.stringify({ columns, surface }));
+    }
+    assert.equal(geometry.writer.frameWidth, geometry.preview.frameWidth);
+    assert.equal(geometry.rootFits, true);
+  }
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.evaluate(({ source }) => window.mountFreeTextEditor(source, { layout: { width: 4, height: 1 } }), { source: qmd });
+  await page.locator('[data-authoring-footprint="preview"] table').waitFor();
+  const narrowGeometry = await page.evaluate(() => {
+    const read = (kind) => {
+      const frame = document.querySelector(`[data-authoring-footprint="${kind}"]`);
+      return { frameWidth: frame?.clientWidth, gridWidth: frame?.parentElement?.clientWidth };
+    };
+    return {
+      writer: read("writer"),
+      preview: read("preview"),
+      rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    };
+  });
+  assert.equal(narrowGeometry.writer.frameWidth, narrowGeometry.writer.gridWidth);
+  assert.equal(narrowGeometry.preview.frameWidth, narrowGeometry.preview.gridWidth);
+  assert.equal(narrowGeometry.rootFits, true);
+});
+
 test("ordinary tables wrap while code retains bounded internal overflow", async () => {
   const longToken = "X".repeat(240);
   const qmd = `# Overflow\n\n${longToken}\n\n| Very wide heading ${longToken} | Value |\n| --- | --- |\n| Wide | ${longToken} |\n\n\`\`\`text\n${longToken}\n\`\`\``;

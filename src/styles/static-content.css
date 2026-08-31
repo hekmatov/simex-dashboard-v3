@@ -228,6 +228,11 @@
   table-layout: auto;
 }
 
+.portable-qmd-composer__surface :is(th, td) {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .portable-qmd-composer__raw-source {
   border: 0;
   box-sizing: border-box;
