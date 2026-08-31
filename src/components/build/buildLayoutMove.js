@@ -20,8 +20,7 @@ export function analyzeBuildLayoutMove(dashboardDraft, move) {
   const target = locateTarget(dashboard, move);
   if (!target) return immutableFailure("MOVE_TARGET_NOT_FOUND", "The move target no longer exists.");
 
-  const nextDashboard = structuredClone(dashboard);
-  const applied = moveEntity(nextDashboard, move, source, target);
+  const applied = analyzeEntityMove(dashboard, move, source, target);
   if (!applied.valid) return immutableFailure(applied.code, applied.message);
   if (!applied.changed) {
     return deepFreeze({ status: "noop", error: null, move: structuredClone(move), consequences: [] });
@@ -31,13 +30,14 @@ export function analyzeBuildLayoutMove(dashboardDraft, move) {
   const movedCharts = movedPanels
     .map((panel) => ({ id: chartIdForPanel(panel), name: chartNameForPanel(panel) }))
     .filter(({ id }) => typeof id === "string" && id !== "");
-  const consequences = source.pageId !== applied.pageId
-    ? applySceneConsequences(nextDashboard, {
+  const sceneResult = source.pageId !== applied.pageId
+    ? deriveSceneConsequences(dashboard, {
         sourcePageId: source.pageId,
         destinationPageId: applied.pageId,
         movedCharts,
       })
-    : [];
+    : { consequences: [], updates: [] };
+  const consequences = sceneResult.consequences;
   const requiresConfirmation = consequences.some(({ type }) => type === "scene-partial-split");
 
   return deepFreeze({
@@ -55,23 +55,27 @@ export function analyzeBuildLayoutMove(dashboardDraft, move) {
     movedPlacementIds: movedPanels.map(({ id }) => id).filter(Boolean),
     movedChartIds: movedCharts.map(({ id }) => id),
     consequences,
+    sceneUpdates: sceneResult.updates,
     requiresConfirmation,
-    value: nextDashboard,
   });
 }
 
 export function applyBuildLayoutMove(layoutDraft, analysis, { confirmed = false } = {}) {
   if (!layoutDraft || analysis?.status !== "ready") return layoutDraft;
   if (layoutDraft.status === "saving") return layoutDraft;
-  if (analysis.requiresConfirmation && confirmed !== true) return layoutDraft;
+  const currentAnalysis = analyzeBuildLayoutMove(layoutDraft.value, analysis.move);
+  if (currentAnalysis.status !== "ready") return layoutDraft;
+  if (currentAnalysis.requiresConfirmation && confirmed !== true) return layoutDraft;
+  const value = applyAnalyzedMove(layoutDraft.value, currentAnalysis);
+  if (value === layoutDraft.value) return layoutDraft;
   return {
     ...layoutDraft,
-    value: structuredClone(analysis.value),
-    targetId: analysis.targetId,
+    value,
+    targetId: currentAnalysis.targetId,
     status: "dirty",
     revision: (layoutDraft.revision ?? 0) + 1,
     error: null,
-    sceneConsequences: structuredClone(analysis.consequences),
+    sceneConsequences: structuredClone(currentAnalysis.consequences),
   };
 }
 
@@ -139,17 +143,15 @@ function locateTarget(dashboard, move) {
   return { page, pageIndex, section, sectionIndex, index: move.target.index };
 }
 
-function moveEntity(dashboard, move, source, target) {
+function analyzeEntityMove(dashboard, move, source, target) {
   if (move.kind === "page") {
-    const [page] = dashboard.pages.splice(source.pageIndex, 1);
-    const index = reconcileIndex(source.pageIndex, target.index, dashboard.pages.length);
-    if (index === source.pageIndex) return { valid: true, changed: false };
-    dashboard.pages.splice(index, 0, page);
-    return { valid: true, changed: true, pageId: page.id, sectionId: null, index };
+    const reconciledIndex = reconcileIndex(source.pageIndex, target.index, dashboard.pages.length - 1);
+    if (reconciledIndex === source.pageIndex) return { valid: true, changed: false };
+    return { valid: true, changed: true, pageId: source.page.id, sectionId: null, index: reconciledIndex };
   }
 
-  const sourcePage = dashboard.pages[source.pageIndex];
-  const targetPage = dashboard.pages[target.pageIndex];
+  const sourcePage = source.page;
+  const targetPage = target.page;
   if (move.kind === "section") {
     if (sourcePage !== targetPage && sourcePage.sections.length === 1) {
       return {
@@ -158,29 +160,23 @@ function moveEntity(dashboard, move, source, target) {
         message: "The source Page must retain a Section.",
       };
     }
-    const [section] = sourcePage.sections.splice(source.sectionIndex, 1);
     const index = sourcePage === targetPage
-      ? reconcileIndex(source.sectionIndex, target.index, targetPage.sections.length)
+      ? reconcileIndex(source.sectionIndex, target.index, targetPage.sections.length - 1)
       : Math.min(target.index, targetPage.sections.length);
     if (sourcePage === targetPage && index === source.sectionIndex) {
-      sourcePage.sections.splice(source.sectionIndex, 0, section);
       return { valid: true, changed: false };
     }
-    targetPage.sections.splice(index, 0, section);
-    return { valid: true, changed: true, pageId: targetPage.id, sectionId: section.id, index };
+    return { valid: true, changed: true, pageId: targetPage.id, sectionId: source.section.id, index };
   }
 
-  const sourceSection = sourcePage.sections[source.sectionIndex];
-  const targetSection = targetPage.sections[target.sectionIndex];
-  const [panel] = sourceSection.panels.splice(source.panelIndex, 1);
+  const sourceSection = source.section;
+  const targetSection = target.section;
   const index = sourceSection === targetSection
-    ? reconcileIndex(source.panelIndex, target.index, targetSection.panels.length)
+    ? reconcileIndex(source.panelIndex, target.index, targetSection.panels.length - 1)
     : Math.min(target.index, targetSection.panels.length);
   if (sourceSection === targetSection && index === source.panelIndex) {
-    sourceSection.panels.splice(source.panelIndex, 0, panel);
     return { valid: true, changed: false };
   }
-  targetSection.panels.splice(index, 0, panel);
   return {
     valid: true,
     changed: true,
@@ -188,6 +184,103 @@ function moveEntity(dashboard, move, source, target) {
     sectionId: targetSection.id,
     index,
   };
+}
+
+function applyAnalyzedMove(dashboard, analysis) {
+  let value = applyEntityLayoutMove(dashboard, analysis);
+  if (value === dashboard) return dashboard;
+  if ((analysis.sceneUpdates ?? []).length === 0) return value;
+  const updates = new Map(analysis.sceneUpdates.map(({ sceneId, scene }) => [sceneId, scene]));
+  value = {
+    ...value,
+    scenes: (value.scenes ?? []).map((scene) => (
+      updates.has(scene.id) ? structuredClone(updates.get(scene.id)) : scene
+    )),
+  };
+  return value;
+}
+
+function applyEntityLayoutMove(dashboard, analysis) {
+  const source = locateSource(dashboard, analysis.move);
+  if (!source) return dashboard;
+  if (analysis.kind === "page") {
+    const pages = dashboard.pages.slice();
+    const [page] = pages.splice(source.pageIndex, 1);
+    pages.splice(analysis.destination.index, 0, page);
+    return { ...dashboard, pages };
+  }
+
+  const target = locateTarget(dashboard, analysis.move);
+  if (!target) return dashboard;
+  if (analysis.kind === "section") {
+    const sourcePage = source.page;
+    const targetPage = target.page;
+    if (sourcePage === targetPage) {
+      const sections = sourcePage.sections.slice();
+      const [section] = sections.splice(source.sectionIndex, 1);
+      sections.splice(analysis.destination.index, 0, section);
+      const pages = dashboard.pages.slice();
+      pages[source.pageIndex] = { ...sourcePage, sections };
+      return { ...dashboard, pages };
+    }
+    const sourceSections = sourcePage.sections.slice();
+    const [section] = sourceSections.splice(source.sectionIndex, 1);
+    const targetSections = targetPage.sections.slice();
+    targetSections.splice(analysis.destination.index, 0, section);
+    const pages = dashboard.pages.slice();
+    pages[source.pageIndex] = { ...sourcePage, sections: sourceSections };
+    pages[target.pageIndex] = { ...targetPage, sections: targetSections };
+    return { ...dashboard, pages };
+  }
+
+  const sourcePage = source.page;
+  const targetPage = target.page;
+  const sourceSection = source.section;
+  const targetSection = target.section;
+  if (sourceSection === targetSection) {
+    const panels = sourceSection.panels.slice();
+    const [panel] = panels.splice(source.panelIndex, 1);
+    panels.splice(analysis.destination.index, 0, panel);
+    const sections = sourcePage.sections.slice();
+    sections[source.sectionIndex] = { ...sourceSection, panels };
+    const pages = dashboard.pages.slice();
+    pages[source.pageIndex] = { ...sourcePage, sections };
+    return { ...dashboard, pages };
+  }
+
+  const sourcePanels = sourceSection.panels.slice();
+  const [panel] = sourcePanels.splice(source.panelIndex, 1);
+  const targetPanels = targetSection.panels.slice();
+  targetPanels.splice(analysis.destination.index, 0, panel);
+  if (sourcePage === targetPage) {
+    const sections = sourcePage.sections.slice();
+    sections[source.sectionIndex] = { ...sourceSection, panels: sourcePanels };
+    sections[target.sectionIndex] = { ...targetSection, panels: targetPanels };
+    const pages = dashboard.pages.slice();
+    pages[source.pageIndex] = { ...sourcePage, sections };
+    return { ...dashboard, pages };
+  }
+  const sourceSections = sourcePage.sections.slice();
+  sourceSections[source.sectionIndex] = { ...sourceSection, panels: sourcePanels };
+  const targetSections = targetPage.sections.slice();
+  targetSections[target.sectionIndex] = { ...targetSection, panels: targetPanels };
+  const pages = dashboard.pages.slice();
+  pages[source.pageIndex] = { ...sourcePage, sections: sourceSections };
+  pages[target.pageIndex] = { ...targetPage, sections: targetSections };
+  return { ...dashboard, pages };
+}
+
+function deriveSceneConsequences(dashboard, context) {
+  const scenes = (dashboard.scenes ?? []).map((scene) => (
+    scene.pageId === context.sourcePageId ? structuredClone(scene) : scene
+  ));
+  const temporaryDashboard = { ...dashboard, scenes };
+  const consequences = applySceneConsequences(temporaryDashboard, context);
+  const affectedIds = new Set(consequences.map(({ sceneId }) => sceneId));
+  const updates = scenes
+    .filter((scene) => affectedIds.has(scene.id))
+    .map((scene) => ({ sceneId: scene.id, scene }));
+  return { consequences, updates };
 }
 
 function applySceneConsequences(dashboard, { sourcePageId, destinationPageId, movedCharts }) {

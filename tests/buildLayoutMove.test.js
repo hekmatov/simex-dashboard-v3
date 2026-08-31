@@ -23,7 +23,7 @@ test("page, section, and panel moves honor before/after/end indices without muta
   });
   assert.equal(pageAnalysis.status, "ready");
   assert.equal(Object.isFrozen(pageAnalysis), true);
-  assert.equal(Object.isFrozen(pageAnalysis.value.pages), true);
+  assert.equal(pageAnalysis.value, undefined);
   assert.deepEqual(draft.value, before);
   draft = applyBuildLayoutMove(draft, pageAnalysis, { confirmed: false });
   assert.deepEqual(draft.value.pages.map(({ id }) => id), ["page-c", "page-a", "page-b"]);
@@ -56,12 +56,17 @@ test("same-container index reconciliation preserves placement identity and rejec
     source: { pageId: "page-a", sectionId: "section-a1", placementId: "placement-a" },
     target: { pageId: "page-a", sectionId: "section-a1", index: 3 },
   });
-  const applied = applyBuildLayoutMove(createBuildLayoutDraft(dashboard), analysis, {});
+  const draft = createBuildLayoutDraft(dashboard);
+  const untouchedPage = draft.value.pages[1];
+  const movedPlacement = draft.value.pages[0].sections[0].panels[0];
+  const applied = applyBuildLayoutMove(draft, analysis, {});
   assert.deepEqual(
     applied.value.pages[0].sections[0].panels.map(({ id }) => id),
     ["placement-b", "placement-static", "placement-a"],
   );
   assert.equal(applied.value.pages[0].sections[0].panels[2].chart.id, "chart-a");
+  assert.strictEqual(applied.value.pages[0].sections[0].panels[2], movedPlacement);
+  assert.strictEqual(applied.value.pages[1], untouchedPage);
   assert.deepEqual(dashboard, before);
 
   const noOp = analyzeBuildLayoutMove(dashboard, {
@@ -83,6 +88,53 @@ test("same-container index reconciliation preserves placement identity and rejec
   assert.strictEqual(applyBuildLayoutMove(clean, invalid, {}), clean);
 });
 
+test("cross-container moves replace only source and destination paths", () => {
+  const dashboard = fixture();
+  const draft = createBuildLayoutDraft(dashboard);
+  const before = draft.value;
+  const sourcePage = before.pages[0];
+  const destinationPage = before.pages[1];
+  const untouchedPage = before.pages[2];
+  const untouchedSourceSection = sourcePage.sections[1];
+  const untouchedDestinationSection = destinationPage.sections[1];
+  const movedPlacement = sourcePage.sections[0].panels[0];
+  const chronoGroup = before.chronoGroups[0];
+
+  const analysis = analyzeBuildLayoutMove(before, {
+    kind: "panel",
+    source: { pageId: "page-a", sectionId: "section-a1", placementId: "placement-a" },
+    target: { pageId: "page-b", sectionId: "section-b1", index: 0 },
+  });
+  const applied = applyBuildLayoutMove(draft, analysis, { confirmed: true });
+
+  assert.notStrictEqual(applied.value.pages[0], sourcePage);
+  assert.notStrictEqual(applied.value.pages[1], destinationPage);
+  assert.strictEqual(applied.value.pages[2], untouchedPage);
+  assert.strictEqual(applied.value.pages[0].sections[1], untouchedSourceSection);
+  assert.strictEqual(applied.value.pages[1].sections[1], untouchedDestinationSection);
+  assert.strictEqual(applied.value.pages[1].sections[0].panels[0], movedPlacement);
+  assert.strictEqual(applied.value.chronoGroups[0], chronoGroup);
+});
+
+test("applying an analyzed move preserves newer unrelated draft changes", () => {
+  const draft = createBuildLayoutDraft(fixture());
+  const analysis = analyzeBuildLayoutMove(draft.value, {
+    kind: "panel",
+    source: { pageId: "page-a", sectionId: "section-a1", placementId: "placement-static" },
+    target: { pageId: "page-b", sectionId: "section-empty", index: 0 },
+  });
+  const newer = {
+    ...draft,
+    value: { ...draft.value, programLabel: "Newer draft label" },
+    revision: draft.revision + 1,
+  };
+
+  const applied = applyBuildLayoutMove(newer, analysis, { confirmed: false });
+
+  assert.equal(applied.value.programLabel, "Newer draft label");
+  assert.equal(applied.value.pages[1].sections[1].panels[0].id, "placement-static");
+});
+
 test("whole-Scene and single-member cross-page moves migrate only pageId and preserve Chrono and Scene fields", () => {
   const dashboard = fixture();
   dashboard.scenes = dashboard.scenes.filter(({ id }) => id !== "scene-partial");
@@ -99,12 +151,15 @@ test("whole-Scene and single-member cross-page moves migrate only pageId and pre
     { type: "scene-page-migration", sceneName: "Whole Scene" },
     { type: "scene-page-migration", sceneName: "Single Scene" },
   ]);
-  const applied = applyBuildLayoutMove(createBuildLayoutDraft(dashboard), analysis, {});
+  const draft = createBuildLayoutDraft(dashboard);
+  const chronoGroup = draft.value.chronoGroups[0];
+  const applied = applyBuildLayoutMove(draft, analysis, {});
   const whole = applied.value.scenes.find(({ id }) => id === "scene-whole");
   const single = applied.value.scenes.find(({ id }) => id === "scene-single");
   assert.deepEqual(whole, { ...beforeScene, pageId: "page-c" });
   assert.equal(single.pageId, "page-c");
   assert.deepEqual(applied.value.chronoGroups, beforeChrono);
+  assert.strictEqual(applied.value.chronoGroups[0], chronoGroup);
 });
 
 test("partial Scene splits name every consequence and cancel is a deep atomic no-op", () => {

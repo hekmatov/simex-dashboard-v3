@@ -1,7 +1,7 @@
 ﻿import React from "react";
 
 import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
-import { useOperationStatus } from "./app-shell/OperationStatusProvider.jsx";
+import { useOperationStatusActions } from "./app-shell/OperationStatusProvider.jsx";
 import {
   beginDashboardContentOperation,
   reportDashboardContentActivity,
@@ -57,6 +57,7 @@ import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
+import { useDashboardCanvasActions } from "./dashboard/dashboardCanvasActions.js";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
@@ -191,7 +192,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   operationError = "",
   themeProjection,
 }, ref) {
-  const { beginOperation, reportActivity } = useOperationStatus();
+  const { beginOperation, reportActivity } = useOperationStatusActions();
   const reportContentActivity = React.useCallback(
     (actionId, options) => reportDashboardContentActivity(
       reportActivity,
@@ -815,8 +816,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       || appliedBuildRevealIdRef.current === pendingBuildSelection.requestId
     ) return;
     appliedBuildRevealIdRef.current = pendingBuildSelection.requestId;
-    const { requestId, selection, intent } = pendingBuildSelection;
-    setBuildSelection(selection);
+    const { requestId, selection } = pendingBuildSelection;
     setBuildRevealRequest({
       id: requestId,
       selection,
@@ -839,10 +839,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setPendingRemovalPanelId(panelId);
   }
 
-  function performModeratorOperation(kind, transaction, { onError } = {}) {
+  function performModeratorOperation(kind, transaction, { onError, status = null } = {}) {
     return moderatorOperationGateRef.current.run(async () => {
-      setModeratorOperation({ kind, errorKind: null, error: "" });
       try {
+        await status?.beforeWork();
+        setModeratorOperation({ kind, errorKind: null, error: "" });
         const result = await transaction();
         setModeratorOperation({ kind: null, errorKind: null, error: "" });
         return result;
@@ -1107,7 +1108,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
     setChartEditSession(removalRequest.session);
     return performModeratorOperation("remove-chart", async () => {
-      await status.beforeWork();
       await pendingEdits.flush();
       const committed = await onPanelRemove(removalPlacementId, { reportStatus: false });
       if (layoutDraftId) {
@@ -1129,6 +1129,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setPendingRemovalPanelId(null);
       status.succeed();
     }, {
+      status,
       onError(error) {
         status.fail(error);
         setChartEditSession((current) => (
@@ -1169,7 +1170,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         key: "chart-remove",
       });
       void performModeratorOperation("remove-chart", async () => {
-        await status.beforeWork();
         await pendingEdits.flush();
         await onPanelRemove(panelId, { reportStatus: false });
         setChartEditBaseline(null);
@@ -1180,6 +1180,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setPendingRemovalPanelId(null);
         status.succeed();
       }, {
+        status,
         onError(error) {
           status.fail(error);
         },
@@ -1230,9 +1231,22 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     event.preventDefault();
     if (moderatorOperationGateRef.current.isActive()) return;
     const source = panelDragSessionRef.current.resolve(event.dataTransfer.getData(BUILD_LAYOUT_MOVE_MIME));
-    const move = canonicalMove(source, target);
+    const move = canonicalMove(source, resolvePanelDropTarget(target));
     if (move) stageBuildLayoutMove(move, event.currentTarget);
     clearDragState();
+  }
+
+  function resolvePanelDropTarget(target) {
+    if (Number.isInteger(target?.index)) return target;
+    const currentDashboard = buildLayoutDraftRef.current?.value ?? workingDashboard;
+    const page = currentDashboard.pages?.find(({ id }) => id === target?.pageId);
+    const section = page?.sections?.find(({ id }) => id === target?.sectionId);
+    const placementIndex = section?.panels?.findIndex(({ id }) => id === target?.placementId) ?? -1;
+    if (placementIndex < 0) return target;
+    return {
+      ...target,
+      index: placementIndex + (target.edge === "after" ? 1 : 0),
+    };
   }
 
   function requestPanelMove(source, label, invoker) {
@@ -1691,6 +1705,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     let preparedRequest = null;
     return performModeratorOperation("save-chart", () => runPrioritizedChartSave({
       status,
+      presentationReady: true,
       prepare() {
         const session = fullValue?.chart && activeSession.activeSurface === "full"
           ? reduceChartEditSession(activeSession, {
@@ -1735,6 +1750,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartEditorDirty(false);
       },
     }), {
+      status,
       onError(error) {
         const placementId = preparedRequest?.intent?.placementId;
         if (!placementId) return;
@@ -2075,7 +2091,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       key: `content:page:${pageId}:delete`,
     });
     void performModeratorOperation("remove-page", async () => {
-      await status.beforeWork();
       await pendingEdits.flush();
       await onPageRemove(pageId);
       onActivePageChange(fallbackPage.id);
@@ -2083,6 +2098,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setPendingRemovalPageId(null);
       status.succeed();
     }, {
+      status,
       onError(error) {
         status.fail(error);
       },
@@ -2098,6 +2114,37 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function openPanelEditor(panelId) {
     const selection = selectionForPlacement(dashboard, panelId);
     if (selection) void requestBuildSelection(selection, { intent: "activate" });
+  }
+
+  function activateBuildSelectionImmediately(selection, intent) {
+    setBuildSelection(selection);
+    if (selection.kind !== "chart" || intent !== "activate") {
+      setChartEditorVisible(false);
+      setChartEditorPlacementId(null);
+      setChartEditBaseline(null);
+      setChartEditorDirty(false);
+      setChartEditSession(null);
+      return;
+    }
+    const currentDashboard = buildLayoutDraftRef.current?.value ?? dashboardStateRef.current;
+    const placement = findPanelPlacement(currentDashboard, selection.placementId);
+    const chart = placement?.chart ?? null;
+    const staticChart = chart
+      ? getChartSchema(chart.typeId).authoringWorkflow === "static"
+      : false;
+    setChartEditBaseline(null);
+    setChartEditorPlacementId(selection.placementId);
+    setChartEditorVisible(true);
+    setChartEditorDirty(false);
+    setChartEditSession(chart && !staticChart
+      ? createChartEditSession({
+          placementId: selection.placementId,
+          chart,
+          chronoGroups: currentDashboard.chronoGroups ?? [],
+          activeSurface: "quick",
+          restoration: captureQuickChartEditRestoration("quick"),
+        })
+      : null);
   }
 
   function requestBuildSelection(nextSelection, { intent = "activate", discardStaticDraft = false } = {}) {
@@ -2150,6 +2197,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const result = new Promise((resolve) => {
       buildRevealResolversRef.current.set(requestId, resolve);
     });
+    activateBuildSelectionImmediately(nextSelection, intent);
     setPendingBuildSelection({ requestId, selection: nextSelection, intent });
     if (nextSelection.pageId && nextSelection.pageId !== activePage?.id) {
       void onActivePageChange(nextSelection.pageId);
@@ -2167,33 +2215,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function completeBuildReveal(requestId) {
     if (pendingBuildSelection?.requestId !== requestId) return;
-    const { selection, intent } = pendingBuildSelection;
-    if (selection.kind === "chart" && intent === "activate") {
-      const placement = findPanelPlacement(workingDashboard, selection.placementId);
-      const chart = placement?.chart ?? null;
-      const staticChart = chart
-        ? getChartSchema(chart.typeId).authoringWorkflow === "static"
-        : false;
-      setChartEditBaseline(null);
-      setChartEditorPlacementId(selection.placementId);
-      setChartEditorVisible(true);
-      setChartEditorDirty(false);
-      setChartEditSession(chart && !staticChart
-        ? createChartEditSession({
-            placementId: selection.placementId,
-            chart,
-            chronoGroups: workingDashboard.chronoGroups ?? [],
-            activeSurface: "quick",
-            restoration: captureQuickChartEditRestoration("quick"),
-          })
-        : null);
-    } else {
-      setChartEditorVisible(false);
-      setChartEditorPlacementId(null);
-      setChartEditBaseline(null);
-      setChartEditorDirty(false);
-      setChartEditSession(null);
-    }
     buildRevealResolversRef.current.get(requestId)?.(true);
     buildRevealResolversRef.current.delete(requestId);
     setPendingBuildSelection(null);
@@ -2319,14 +2340,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       priority: true,
     });
     void performModeratorOperation("save-session", async () => {
-      await status.beforeWork();
       const outcome = await completeFinishBuildTransition({
         requestMode: onModeRequest,
         status,
       });
       setChartEditBaseline(null);
       return outcome;
-    });
+    }, { status });
   }
 
   function changeIconAccent(nextAccent) {
@@ -2352,7 +2372,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       intent: "warning",
     });
     void performModeratorOperation("reset-session", async () => {
-      await status.beforeWork();
       const cancelled = pendingEdits.takePending();
       const retryDrafts = {
         dashboard: structuredClone(dashboardDraft),
@@ -2388,7 +2407,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         status.fail(error);
         throw error;
       }
-    });
+    }, { status });
   }
 
   function confirmDeleteDashboardContent() {
@@ -2766,6 +2785,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       exportResolutionControllerRef={buildWorkspaceExportResolutionRef}
     />
   ) : null;
+  const dashboardCanvasActions = useDashboardCanvasActions({
+    select: activateBuildCanvasSelection,
+    removePanel,
+    requestPanelMove,
+    panelDragStart: handlePanelDragStart,
+    panelDragOver: handlePanelDragOver,
+    panelDrop: handlePanelDrop,
+    panelDragEnd: clearDragState,
+    reorderSection: reorderBuildSection,
+    structureCommand: applyBuildStructureCommand,
+    addPage: addBuildPage,
+    addSection,
+    addChart: openChartWizard,
+    addStaticContent: openStaticContentWizard,
+  });
   return (
     <>
       <DashboardModeWorkspace
@@ -2786,19 +2820,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
            sectionDrafts,
            draggingPanelId,
            dragOverPanelId,
-           onSelect: activateBuildCanvasSelection,
-           onRemovePanel: removePanel,
-           onPanelDragStart: handlePanelDragStart,
-           onPanelDragOver: handlePanelDragOver,
-           onPanelDrop: handlePanelDrop,
-           onPanelDragEnd: clearDragState,
-           onRequestPanelMove: requestPanelMove,
-           onReorderSection: reorderBuildSection,
-          onStructureCommand: applyBuildStructureCommand,
-          onAddPage: addBuildPage,
-          onAddSection: addSection,
-          onAddChart: openChartWizard,
-          onAddStaticContent: openStaticContentWizard,
+           actions: dashboardCanvasActions,
         } : null}
         buildWorkspace={buildWorkspace}
         displayState={displayState}

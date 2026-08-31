@@ -162,7 +162,7 @@ export default function AppFrame({
         <p className="app-persistence-notice" role="status">{persistenceNotice}</p>
       )}
       {children}
-      <OperationStatusViewport rightDrawer={rightDrawer} />
+      <OperationStatusViewport rightDrawer={rightDrawer} theme={theme} />
     </div>
   );
 }

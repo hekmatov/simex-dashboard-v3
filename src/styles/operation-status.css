@@ -1,4 +1,5 @@
 .operation-status-viewport {
+  font-family: var(--simex-style-body-font);
   max-width: min(360px, calc(100vw - var(--operation-status-drawer-offset) - 32px));
   pointer-events: none;
   position: fixed;

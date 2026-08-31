@@ -21,7 +21,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "node tests/e2e/mock-companion-server.mjs",
+      command: "node tests/e2e/mock-companion-server.mjs --source",
       url: "http://127.0.0.1:4173/__test_ready__",
       reuseExistingServer: false,
       timeout: 30_000,
