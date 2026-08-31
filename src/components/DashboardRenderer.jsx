@@ -56,6 +56,7 @@ import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
+import { useDashboardCanvasActions } from "./dashboard/dashboardCanvasActions.js";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
@@ -1222,9 +1223,22 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     event.preventDefault();
     if (moderatorOperationGateRef.current.isActive()) return;
     const source = panelDragSessionRef.current.resolve(event.dataTransfer.getData(BUILD_LAYOUT_MOVE_MIME));
-    const move = canonicalMove(source, target);
+    const move = canonicalMove(source, resolvePanelDropTarget(target));
     if (move) stageBuildLayoutMove(move, event.currentTarget);
     clearDragState();
+  }
+
+  function resolvePanelDropTarget(target) {
+    if (Number.isInteger(target?.index)) return target;
+    const currentDashboard = buildLayoutDraftRef.current?.value ?? workingDashboard;
+    const page = currentDashboard.pages?.find(({ id }) => id === target?.pageId);
+    const section = page?.sections?.find(({ id }) => id === target?.sectionId);
+    const placementIndex = section?.panels?.findIndex(({ id }) => id === target?.placementId) ?? -1;
+    if (placementIndex < 0) return target;
+    return {
+      ...target,
+      index: placementIndex + (target.edge === "after" ? 1 : 0),
+    };
   }
 
   function requestPanelMove(source, label, invoker) {
@@ -2771,6 +2785,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       exportResolutionControllerRef={buildWorkspaceExportResolutionRef}
     />
   ) : null;
+  const dashboardCanvasActions = useDashboardCanvasActions({
+    select: activateBuildCanvasSelection,
+    removePanel,
+    requestPanelMove,
+    panelDragStart: handlePanelDragStart,
+    panelDragOver: handlePanelDragOver,
+    panelDrop: handlePanelDrop,
+    panelDragEnd: clearDragState,
+    reorderSection: reorderBuildSection,
+    structureCommand: applyBuildStructureCommand,
+    addPage: addBuildPage,
+    addSection,
+    addChart: openChartWizard,
+    addStaticContent: openStaticContentWizard,
+  });
   return (
     <>
       <DashboardModeWorkspace
@@ -2791,19 +2820,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
            sectionDrafts,
            draggingPanelId,
            dragOverPanelId,
-           onSelect: activateBuildCanvasSelection,
-           onRemovePanel: removePanel,
-           onPanelDragStart: handlePanelDragStart,
-           onPanelDragOver: handlePanelDragOver,
-           onPanelDrop: handlePanelDrop,
-           onPanelDragEnd: clearDragState,
-           onRequestPanelMove: requestPanelMove,
-           onReorderSection: reorderBuildSection,
-          onStructureCommand: applyBuildStructureCommand,
-          onAddPage: addBuildPage,
-          onAddSection: addSection,
-          onAddChart: openChartWizard,
-          onAddStaticContent: openStaticContentWizard,
+           actions: dashboardCanvasActions,
         } : null}
         buildWorkspace={buildWorkspace}
         displayState={displayState}
