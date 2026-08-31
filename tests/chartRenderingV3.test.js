@@ -903,7 +903,15 @@ test("value axes suppress native names and project stable vertical and horizonta
         axes: {
           x: { title: "Native X title" },
           primary: { title: "Primary value", titleFontSize: 10, titleBold: true },
-          secondary: { title: "Secondary value", titleFontSize: 24, titleOffsetX: -12, titleOffsetY: 9 },
+          secondary: {
+            title: "Secondary value",
+            titleFontSize: 24,
+            titleOffsetX: -12,
+            titleOffsetY: 9,
+            min: -20,
+            max: 80,
+            tickFrequency: { every: 5 },
+          },
         },
       },
     }),
@@ -915,6 +923,9 @@ test("value axes suppress native names and project stable vertical and horizonta
 
   assert.equal(horizontal.option.xAxis[0].name, "Native X title");
   assert.equal(horizontal.option.xAxis[1].name, undefined);
+  assert.equal(horizontal.option.xAxis[1].min, -20);
+  assert.equal(horizontal.option.xAxis[1].max, 80);
+  assert.equal(horizontal.option.xAxis[1].interval, 5);
   assert.deepEqual(
     horizontal.valueAxisTitleProjection.map(({ id, physicalAxis, side, fontSize, bold, offsetX, offsetY }) => ({
       id, physicalAxis, side, fontSize, bold, offsetX, offsetY,

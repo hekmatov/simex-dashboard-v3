@@ -72,7 +72,12 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const secondaryAxis = valueAxis(
     secondarySettings,
     true,
-    horizontal ? {} : null,
+    horizontal ? {
+      ...(secondarySettings ?? {}),
+      title: undefined,
+      yTitle: undefined,
+      name: undefined,
+    } : null,
     secondaryValues,
   );
   const valueAxisTitleProjection = [
