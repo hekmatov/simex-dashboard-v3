@@ -13,7 +13,23 @@ const vite = await createServer({
 const pickerModule = await vite
   .ssrLoadModule("/src/components/chart-authoring/ChartFootprintPicker.jsx")
   .catch(() => null);
+const authoringFrameModule = await vite
+  .ssrLoadModule("/src/components/common/AuthoringFootprintFrame.jsx")
+  .catch(() => null);
 await vite.close();
+
+test("the authoring footprint frame projects a selected panel width across the dashboard grid", () => {
+  assert.equal(typeof authoringFrameModule?.default, "function");
+  if (typeof authoringFrameModule?.default !== "function") return;
+  const html = renderToStaticMarkup(React.createElement(authoringFrameModule.default, {
+    layout: { width: 3, height: 1 },
+    kind: "writer",
+  }, React.createElement("p", null, "Writer")));
+
+  assert.match(html, /class="authoring-footprint-grid"/);
+  assert.match(html, /--chart-footprint-columns:3/);
+  assert.match(html, /data-authoring-footprint="writer"/);
+});
 
 test("the chart editor footprint picker renders the approved two-by-four grid", () => {
   assert.equal(typeof pickerModule?.default, "function");

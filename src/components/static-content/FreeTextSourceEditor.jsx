@@ -1,5 +1,6 @@
 import React from "react";
 
+import AuthoringFootprintFrame from "../common/AuthoringFootprintFrame.jsx";
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
@@ -10,6 +11,7 @@ import QmdMediaInspector from "./QmdMediaInspector.jsx";
 
 export function FreeTextSourceEditor({
   id = "static-qmd-source", value = "", panelId = "static-text-preview", panelTitle = "",
+  layout,
   disabled = false, mediaItems = {}, assets = {}, contentRenderContext = {},
   initialSurface, onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem, onSurfaceChange,
 } = {}) {
@@ -102,6 +104,7 @@ export function FreeTextSourceEditor({
   };
   return (
     <section ref={editorRef} className="free-text-source-editor" data-source-revision={revision.current} data-preview-revision={lastValidRevision.current ?? "none"}>
+      <AuthoringFootprintFrame layout={layout} kind="writer">
       <section className="free-text-source-editor__writer-card" aria-label="Text post editor">
         <header className="free-text-source-editor__writer-header">
           <div><h3>Write a text post</h3><p>Formatting stays active until you turn it off.</p></div>
@@ -109,11 +112,14 @@ export function FreeTextSourceEditor({
         </header>
         <div id="portable-qmd-composer-focus-target" data-qmd-editor-focus-target="true"><PortableQmdRichTextEditor source={value} disabled={disabled} initialMode={editorMode} rawSourceId={id} rawInvalid={hasValidationErrors} rawDescribedBy={hasValidationErrors ? `${id}-errors-title` : undefined} mediaItems={mediaItems} assets={assets} onModeChange={setEditorMode} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} /></div>
       </section>
+      </AuthoringFootprintFrame>
       <div className="free-text-source-editor__reference-cards">
+        <AuthoringFootprintFrame layout={layout} kind="preview">
         <section className="free-text-source-editor__reference-card free-text-source-editor__preview" aria-label="Rendered preview">
           <header><h3>Rendered preview</h3><p>what readers see</p></header>
           {lastValidSource !== null && typeof document !== "undefined" ? <FreeTextChartView model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }} chart={{ id: panelId, title: panelTitle.trim() }} contentRenderContext={previewRenderContext} onMediaActivate={({ mediaNodeIndex, sourceStart, sourceEnd }) => setSelectedMediaIdentity({ mediaNodeIndex, sourceStart, sourceEnd })} /> : lastValidSource !== null ? <p className="static-content-state">Preview is available in the browser.</p> : <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>}
         </section>
+        </AuthoringFootprintFrame>
         <section className="free-text-source-editor__reference-card free-text-source-editor__markdown" aria-label="Portable Markdown">
           <header><h3>Portable Markdown</h3><p>what is stored</p></header>
           <pre>{value}</pre>

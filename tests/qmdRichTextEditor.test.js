@@ -63,6 +63,18 @@ test("unsupported valid source remains formatted-editable with a persistent rewr
   assert.match(html, /aria-label="Raw text"/);
 });
 
+test("writer and rendered preview use the selected four-column footprint", () => {
+  for (const columns of [1, 2, 3, 4]) {
+    const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, {
+      value: "Ordinary formatted text.",
+      layout: { width: columns, height: 1 },
+    }));
+    assert.equal((html.match(new RegExp(`--chart-footprint-columns:${columns}`, "g")) ?? []).length, 2);
+    assert.match(html, /data-authoring-footprint="writer"/);
+    assert.match(html, /data-authoring-footprint="preview"/);
+  }
+});
+
 test("formatted availability replaces the old advanced-only repair fallback", () => {
   const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, {
     id: "repair-qmd",

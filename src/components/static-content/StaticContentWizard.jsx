@@ -489,6 +489,7 @@ function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, d
       value={draft.source?.qmd ?? ""}
       panelId={draft.panel?.id ?? "static-text-preview"}
       panelTitle={draft.panel?.title ?? ""}
+      layout={draft.panel?.layout}
       initialSurface={restoration?.surface}
       disabled={disabled}
       onSurfaceChange={onSurfaceChange}

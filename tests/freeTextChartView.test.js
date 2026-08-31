@@ -973,7 +973,7 @@ test("responsive writer, preview, and Portable Markdown cards remain visible and
   assert.equal(await markdown.isVisible(), true);
 });
 
-test("panel, table, and code own their bounded overflow without growing the document", async () => {
+test("ordinary tables wrap while code retains bounded internal overflow", async () => {
   const longToken = "X".repeat(240);
   const qmd = `# Overflow\n\n${longToken}\n\n| Very wide heading ${longToken} | Value |\n| --- | --- |\n| Wide | ${longToken} |\n\n\`\`\`text\n${longToken}\n\`\`\``;
   await page.setViewportSize({ width: 320, height: 700 });
@@ -988,7 +988,7 @@ test("panel, table, and code own their bounded overflow without growing the docu
       viewY: getComputedStyle(view).overflowY,
       tableX: getComputedStyle(table).overflowX,
       codeX: getComputedStyle(code).overflowX,
-      tableOwnsOverflow: table.scrollWidth > table.clientWidth,
+      tableFits: table.scrollWidth <= table.clientWidth,
       codeOwnsOverflow: code.scrollWidth > code.clientWidth,
     };
   });
@@ -997,7 +997,7 @@ test("panel, table, and code own their bounded overflow without growing the docu
     viewY: "auto",
     tableX: "auto",
     codeX: "auto",
-    tableOwnsOverflow: true,
+    tableFits: true,
     codeOwnsOverflow: true,
   });
 });

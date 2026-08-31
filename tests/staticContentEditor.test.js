@@ -183,6 +183,25 @@ test("Text/Image footer Cancel closes a clean editor and confirms only dirty wor
   assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: true, disabled: true }), "ignore");
 });
 
+test("Free-text authoring forwards the draft panel footprint to writer and preview", () => {
+  const draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "footprint-panel", sourceId: "footprint-source", layout: { width: 3, height: 1 } },
+    placement: { kind: "staticText", qmd: "Footprint content" },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+    draft,
+    dashboard: { pages: [], assets: {}, contentLibrary: { mediaItems: {} } },
+    dispatch() {},
+  }));
+
+  assert.equal((html.match(/--chart-footprint-columns:3/g) ?? []).length, 2);
+  assert.match(html, /data-authoring-footprint="writer"/);
+  assert.match(html, /data-authoring-footprint="preview"/);
+});
+
 test("Text/Image stages and footer slots stay mounted from Destination", () => {
   const readyAtDestination = createStaticContentDraft({
     destination: { pageId: "overview", sectionId: "response" },
