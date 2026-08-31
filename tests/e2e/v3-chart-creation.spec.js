@@ -24,6 +24,8 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   let { wizard } = flow;
   await flow.selectExistingSource("Biomedical cases");
   await flow.chooseChartType(null, /^Line\./);
+  const firstDraftId = await wizard.getAttribute("data-chart-draft-id");
+  expect(firstDraftId).toMatch(/^chart-line-/);
   await expect(wizard).toHaveAccessibleName("Add new chart");
   await expect(flow.stageButton("mapAndPrepare")).toHaveAttribute("aria-current", "step");
   await flow.selectRole("measurements", "national_total_cases");
@@ -64,4 +66,14 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
       .map((placement) => placement.chart ?? placement)
       .filter(({ title }) => title === "E2E atomic Step 7 chart").length;
   }, STORAGE_KEY)).toBe(1);
+
+  flow = await openChartAuthoring(page);
+  wizard = flow.wizard;
+  await expect(flow.stageButton("destination")).toHaveAttribute("aria-current", "step");
+  await expect(wizard.getByText(/already exists in the dashboard/i)).toHaveCount(0);
+  await flow.selectExistingSource("Biomedical cases");
+  await flow.chooseChartType(null, /^Line\./);
+  const secondDraftId = await wizard.getAttribute("data-chart-draft-id");
+  expect(secondDraftId).toMatch(/^chart-line-/);
+  expect(secondDraftId).not.toBe(firstDraftId);
 });

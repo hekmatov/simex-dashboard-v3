@@ -194,7 +194,84 @@ test("operation status shows blocking Finish Build work, completion, and footer-
     .toBeGreaterThanOrEqual(399);
 });
 
-test("disabled reason is keyboard-focusable while a chart draft owns Build actions", async ({ page }) => {
+test("same-page section reorder paints status first and moves the existing chart DOM without chart work", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await mapToggle.click();
+
+  const section = page.locator('[data-canonical-section-id="outbreak_dynamics"]');
+  const panel = section.locator("[data-panel-id]").first();
+  await expect(panel.locator("canvas").first()).toBeAttached();
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await panel.evaluate((panelNode) => {
+    const sectionNode = panelNode.closest("[data-canonical-section-id]");
+    window.__sectionZeroWorkProbe = {
+      sectionNode,
+      panelNode,
+      canvasNode: panelNode.querySelector("canvas"),
+      panelMutations: 0,
+      lifecycle: [],
+    };
+    new MutationObserver((records) => {
+      window.__sectionZeroWorkProbe.panelMutations += records.length;
+    }).observe(panelNode, { attributes: true, childList: true, subtree: true });
+    const record = () => {
+      const currentSections = [...document.querySelectorAll("[data-canonical-section-id]")]
+        .map((candidate) => candidate.getAttribute("data-canonical-section-id"));
+      const notice = [...document.querySelectorAll("[data-operation-status]")]
+        .find((candidate) => candidate.textContent.includes("Reordering Section"));
+      window.__sectionZeroWorkProbe.lifecycle.push({
+        order: currentSections,
+        status: notice?.getAttribute("data-operation-status") ?? null,
+      });
+    };
+    new MutationObserver(record).observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ["data-operation-status"],
+    });
+    record();
+  });
+
+  await page.getByRole("button", { name: "Move Outbreak dynamics later", exact: true }).click();
+  await expect.poll(() => page.locator("[data-canonical-section-id]").evaluateAll(
+    (nodes) => nodes.map((node) => node.getAttribute("data-canonical-section-id")).slice(0, 2),
+  )).toEqual(["health_system", "outbreak_dynamics"]);
+
+  const result = await page.evaluate(() => {
+    const probe = window.__sectionZeroWorkProbe;
+    const currentSection = document.querySelector('[data-canonical-section-id="outbreak_dynamics"]');
+    const currentPanel = currentSection?.querySelector("[data-panel-id]");
+    const currentCanvas = currentPanel?.querySelector("canvas");
+    const workingIndex = probe.lifecycle.findIndex(({ status }) => status === "working");
+    const movedIndex = probe.lifecycle.findIndex(({ order }) => (
+      order[0] === "health_system" && order[1] === "outbreak_dynamics"
+    ));
+    return {
+      sameSection: probe.sectionNode === currentSection,
+      samePanel: probe.panelNode === currentPanel,
+      sameCanvas: probe.canvasNode === currentCanvas,
+      panelMutations: probe.panelMutations,
+      workingIndex,
+      movedIndex,
+    };
+  });
+  expect(result).toEqual({
+    sameSection: true,
+    samePanel: true,
+    sameCanvas: true,
+    panelMutations: 0,
+    workingIndex: expect.any(Number),
+    movedIndex: expect.any(Number),
+  });
+  expect(result.workingIndex).toBeGreaterThanOrEqual(0);
+  expect(result.movedIndex).toBeGreaterThan(result.workingIndex);
+});
+
+test("disabled reasons remain pointer-visible without reintroducing DOM focus", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -206,16 +283,16 @@ test("disabled reason is keyboard-focusable while a chart draft owns Build actio
   await expect(finish).not.toHaveAttribute("aria-describedby", /.+/);
   const anchor = finish.locator("..");
   await expect(anchor).toHaveAttribute("data-control-tooltip-anchor", "true");
-  await expect(anchor).toHaveAttribute("tabindex", "0");
+  await expect(anchor).toHaveAttribute("tabindex", "-1");
   const reasonId = await anchor.getAttribute("aria-describedby");
   expect(reasonId).toBeTruthy();
 
   await anchor.focus();
-  await expect(anchor).toBeFocused();
-  await expect(page.locator(`#${reasonId}`)).toBeVisible();
+  await expect(anchor).not.toBeFocused();
   await expect(page.locator(`#${reasonId}`)).toHaveText("Finish or cancel the open chart draft.");
 
-  await page.keyboard.press("Escape");
+  await page.getByRole("dialog", { name: "Add new chart" })
+    .getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Add new chart" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Finish Build", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Finish Build", exact: true }).locator(".."))

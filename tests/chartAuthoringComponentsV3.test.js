@@ -803,6 +803,97 @@ test("structured presentation controls emit only validator-approved nested contr
   assert.deepEqual(normalizeChartInstance(chart).presentation.labels, presentation.labels);
 });
 
+test("axis presentation controls expose temporal X controls and only render a secondary axis when bound", () => {
+  const field = {
+    id: "axes",
+    label: "Axes",
+    control: "axes",
+    xKind: "temporal",
+    hasSecondary: false,
+  };
+  const html = render(React.createElement(StandardField, { field, value: {}, onChange() {} }));
+  assert.match(html, /X-axis title/);
+  assert.match(html, /type="datetime-local"/);
+  assert.match(html, /Label format/);
+  assert.match(html, /Primary axis/);
+  assert.doesNotMatch(html, /Secondary axis/);
+
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "tickFrequency"], { every: 2, unit: "month" }),
+    { x: { tickFrequency: { every: 2, unit: "month" } } },
+  );
+});
+
+test("temporal tick frequency defaults its unit to day on the first number edit", () => {
+  let next;
+  const tree = StandardField({
+    field: {
+      id: "axes",
+      label: "Axes",
+      control: "axes",
+      xKind: "temporal",
+    },
+    value: {},
+    onChange(value) {
+      next = value;
+    },
+  });
+  const frequencyInput = findElement(tree, (element) => (
+    element.type === "input" && element.props.placeholder === "Auto"
+  ));
+
+  assert.ok(frequencyInput);
+  frequencyInput.props.onChange({ target: { value: "2" } });
+  assert.deepEqual(next, {
+    x: { tickFrequency: { every: 2, unit: "day" } },
+  });
+});
+
+test("month cadence offers only exact calendar steps and normalizes on unit change", () => {
+  const changes = [];
+  const monthly = StandardField({
+    field: {
+      id: "axes",
+      label: "Axes",
+      control: "axes",
+      xKind: "temporal",
+    },
+    value: { x: { tickFrequency: { every: 2, unit: "month" } } },
+    onChange(value) { changes.push(value); },
+  });
+  const monthFrequency = findElement(monthly, (element) => (
+    element.type === "select" && element.props.value === "2"
+  ));
+
+  assert.ok(monthFrequency);
+  assert.deepEqual(
+    React.Children.toArray(monthFrequency.props.children).map(({ props }) => props.value),
+    ["1", "2", "3"],
+  );
+  monthFrequency.props.onChange({ target: { value: "3" } });
+  assert.deepEqual(changes.at(-1), {
+    x: { tickFrequency: { every: 3, unit: "month" } },
+  });
+
+  const daily = StandardField({
+    field: {
+      id: "axes",
+      label: "Axes",
+      control: "axes",
+      xKind: "temporal",
+    },
+    value: { x: { tickFrequency: { every: 5, unit: "day" } } },
+    onChange(value) { changes.push(value); },
+  });
+  const unit = findElement(daily, (element) => (
+    element.type === "select" && element.props.value === "day"
+  ));
+  unit.props.onChange({ target: { value: "month" } });
+  assert.deepEqual(changes.at(-1), {
+    x: { tickFrequency: { every: 1, unit: "month" } },
+  });
+});
+
 test("filter operator changes materialize exact operands and remove incompatible keys", () => {
   const equals = filterForOperator({
     field: "period",
@@ -2679,6 +2770,58 @@ test("quick editor renders the complete controlled surface without full-editor o
   assert.doesNotMatch(html, /chart-editor-backdrop|chart-editor-preview|editor\.tab\./);
 });
 
+test("quick editor keeps Save available for profile-inferred temporal axes", async () => {
+  const rows = [
+    { recordedAt: "2027-05-01", capacity: 4 },
+    { recordedAt: "2027-05-02", capacity: 6 },
+  ];
+  const chart = validLineChart({
+    roles: {
+      measurements: [{ field: "capacity", axis: "primary" }],
+      observation: { field: "recordedAt" },
+    },
+    presentation: {
+      axes: {
+        x: {
+          labelPreset: "adaptive",
+          tickFrequency: { every: 1, unit: "day" },
+        },
+      },
+    },
+  });
+  const session = reduceChartEditSession(
+    createChartEditSession({ placementId: "placement-temporal", chart }),
+    {
+      type: "CHANGE",
+      surface: "quick",
+      draft: { ...chart, title: "Updated temporal chart" },
+    },
+  );
+  let saves = 0;
+  const tree = ChartQuickEditor({
+    session,
+    profile: profileDataset(rows, {
+      recordedAt: { interpretation: "temporal" },
+    }),
+    onSave() { saves += 1; },
+  });
+  const form = findElement(tree, (element) => element.type === "form");
+  const actions = findElement(tree, (element) => element.type === EditSessionActions);
+
+  assert.equal(actions.props.valid, true);
+  form.props.onSubmit({ preventDefault() {} });
+  assert.equal(saves, 1);
+
+  const renderer = await readFile(
+    new URL("../src/components/DashboardRenderer.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    renderer,
+    /<ChartQuickEditor[\s\S]*?profile=\{workingDashboard\.datasetProfiles\?\.\[chartEditSession\.draft\.sourceId\]\}/,
+  );
+});
+
 test("quick editor emits detached draft changes and delegates every session action", () => {
   const chart = validLineChart();
   const session = reduceChartEditSession(
@@ -2783,7 +2926,7 @@ test("quick editor guards clean and externally locked actions while preserving f
   assert.equal(lockedAside.props.inert, true);
 });
 
-test("saving quick editor keeps pending reason anchors exposed while controls stay locked", () => {
+test("saving quick editor keeps pointer-only reason anchors exposed while controls stay locked", () => {
   const clean = createChartEditSession({
     placementId: "placement-line",
     chart: validLineChart(),
@@ -2811,7 +2954,7 @@ test("saving quick editor keeps pending reason anchors exposed while controls st
   const savingAside = findElement(tree, (element) => element.type === "aside");
   const aside = html.match(/<aside\b[^>]*>/)?.[0] ?? "";
   const reasonIds = [...html.matchAll(
-    /data-control-tooltip-kind="disabled" tabindex="0" aria-describedby="([^"]+)"/g,
+    /data-control-tooltip-kind="disabled" tabindex="-1" aria-describedby="([^"]+)"/g,
   )].map((match) => match[1]);
 
   assert.match(aside, /aria-busy="true"/);

@@ -27,28 +27,8 @@ export default function FullscreenDisplay({
   const panelIds = displayState.displayed_chart_ids;
   const playback = useOptionalPlayback();
   const draggedChartId = React.useRef(null);
-  const returnFocusTarget = React.useRef(null);
-  const wasOpen = React.useRef(false);
   const [announcement, setAnnouncement] = React.useState("");
   const isComparison = panelIds.length > 1;
-
-  React.useEffect(() => {
-    const open = panelIds.length > 0;
-    if (open && !wasOpen.current) {
-      returnFocusTarget.current = findReturnFocusTarget(
-        isComparison,
-        panelIds[0],
-      );
-    } else if (!open && wasOpen.current) {
-      restoreFocus(returnFocusTarget.current);
-      returnFocusTarget.current = null;
-    }
-    wasOpen.current = open;
-  }, [isComparison, panelIds.length, panelIds[0]]);
-
-  React.useEffect(() => () => {
-    if (wasOpen.current) restoreFocus(returnFocusTarget.current);
-  }, []);
 
   React.useEffect(() => {
     if (panelIds.length > 0 && playback?.playing === true) {
@@ -85,9 +65,8 @@ export default function FullscreenDisplay({
     if (!isComparison) return {};
     return {
       draggable: true,
-      tabIndex: 0,
+      tabIndex: -1,
       "aria-label": `${fullscreenChartLabel(chart)}, position ${index + 1} of ${charts.length}`,
-      "aria-keyshortcuts": "Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown",
       onDragStart: (event) => {
         draggedChartId.current = chart.id;
         event.currentTarget.classList.add("is-dragging");
@@ -110,16 +89,6 @@ export default function FullscreenDisplay({
         event.currentTarget.classList.remove("is-dragging");
         draggedChartId.current = null;
       },
-      onKeyDown: (event) => {
-        if (!event.altKey) return;
-        const earlier = event.key === "ArrowLeft" || event.key === "ArrowUp";
-        const later = event.key === "ArrowRight" || event.key === "ArrowDown";
-        if (!earlier && !later) return;
-        const nextIndex = index + (earlier ? -1 : 1);
-        if (nextIndex < 0 || nextIndex >= panelIds.length) return;
-        event.preventDefault();
-        moveChart(chart, index, nextIndex);
-      },
     };
   };
 
@@ -130,7 +99,6 @@ export default function FullscreenDisplay({
       role="dialog"
       aria-modal="true"
       aria-label={isComparison ? "Chart comparison" : "Focused chart"}
-      initialFocusSelector="[data-fullscreen-exit]"
       onEscape={closeAll}
     >
       <article
@@ -246,29 +214,6 @@ export function reorderDisplayedCharts(items, fromIndex, toIndex) {
   const [item] = reordered.splice(fromIndex, 1);
   reordered.splice(toIndex, 0, item);
   return reordered;
-}
-
-function findReturnFocusTarget(isComparison, chartId) {
-  if (typeof document === "undefined") return null;
-  if (isComparison) {
-    return document.querySelector(".view-comparison-button");
-  }
-  const panel = [...document.querySelectorAll("[data-panel-id]")]
-    .find((candidate) => candidate.dataset.panelId === chartId);
-  return panel?.querySelector('[aria-label="Focus chart"]') ?? panel ?? null;
-}
-
-function restoreFocus(target) {
-  if (!target?.isConnected || typeof target.focus !== "function") return;
-  const focus = () => target.focus({ preventScroll: true });
-  if (
-    typeof window !== "undefined"
-    && typeof window.requestAnimationFrame === "function"
-  ) {
-    window.requestAnimationFrame(focus);
-  } else {
-    focus();
-  }
 }
 
 function multiLayoutOptions(count) {

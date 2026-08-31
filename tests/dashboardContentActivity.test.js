@@ -6,6 +6,7 @@ import {
   DASHBOARD_CONTENT_ACTIVITY_IDS,
   beginDashboardContentOperation,
   describeDashboardContentActivity,
+  runDashboardContentOperation,
 } from "../src/lib/dashboardContentActivity.js";
 
 const REQUIRED_ACTIVITY_IDS = [
@@ -100,4 +101,42 @@ test("content operations request priority presentation and expose the pre-work b
   assert.equal(calls.length, 1);
   assert.equal(calls[0].priority, true);
   assert.equal(await operation.beforeWork(), expected);
+});
+
+test("section reorder work starts only after its working notice has painted", async () => {
+  let releasePaint;
+  const events = [];
+  const operation = {
+    beforeWork() {
+      events.push("working-notice-published");
+      return new Promise((resolve) => {
+        releasePaint = () => {
+          events.push("working-notice-painted");
+          resolve();
+        };
+      });
+    },
+    succeed() {
+      events.push("completed");
+    },
+    fail(error) {
+      events.push(`failed:${error.message}`);
+    },
+  };
+
+  const pending = runDashboardContentOperation(operation, () => {
+    events.push("section-reordered");
+    return "next-layout";
+  });
+
+  await Promise.resolve();
+  assert.deepEqual(events, ["working-notice-published"]);
+  releasePaint();
+  assert.equal(await pending, "next-layout");
+  assert.deepEqual(events, [
+    "working-notice-published",
+    "working-notice-painted",
+    "section-reordered",
+    "completed",
+  ]);
 });

@@ -42,13 +42,11 @@ export function revealUnitOrbitAnchor(
 
 export function captureUnitOrbitReturnState({
   windowRef = typeof window === "undefined" ? null : window,
-  focusTarget = null,
 } = {}) {
   if (!windowRef) return null;
   return {
     scrollLeft: windowRef.scrollX,
     scrollTop: windowRef.scrollY,
-    focusTarget,
   };
 }
 
@@ -66,7 +64,6 @@ export function restoreUnitOrbitReturnState(
       top: state.scrollTop,
       behavior: "auto",
     });
-    state.focusTarget?.focus?.({ preventScroll: true });
   });
   return true;
 }
@@ -154,10 +151,8 @@ export default function UnitOrbit({
   children,
 }) {
   const orbitRef = React.useRef(null);
-  const invokerRef = React.useRef(null);
   const returnStateRef = React.useRef(null);
   const recenteredRef = React.useRef(false);
-  const focusedRef = React.useRef(false);
   const frameRef = React.useRef(0);
   const [placement, setPlacement] = React.useState(null);
 
@@ -167,17 +162,10 @@ export default function UnitOrbit({
     const anchor = findAnchor(anchorPlacementId);
     if (!anchor) return undefined;
 
-    const activeElement = document.activeElement;
-    invokerRef.current = activeElement instanceof HTMLElement
-      && activeElement.dataset.buildEditFor === anchorPlacementId
-      ? activeElement
-      : findEditButton(anchor, anchorPlacementId);
     returnStateRef.current = captureUnitOrbitReturnState({
       windowRef: window,
-      focusTarget: invokerRef.current,
     });
     recenteredRef.current = false;
-    focusedRef.current = false;
 
     const update = () => {
       frameRef.current = 0;
@@ -233,41 +221,10 @@ export default function UnitOrbit({
       window.removeEventListener("resize", schedule);
       window.removeEventListener("scroll", schedule, true);
       observer?.disconnect();
-      const focusTarget = invokerRef.current?.isConnected
-        ? invokerRef.current
-        : findAnchor(anchorPlacementId);
-      restoreUnitOrbitReturnState({
-        ...returnStateRef.current,
-        focusTarget,
-      }, { windowRef: window });
+      restoreUnitOrbitReturnState(returnStateRef.current, { windowRef: window });
       returnStateRef.current = null;
     };
   }, [anchorPlacementId, open]);
-
-  React.useEffect(() => {
-    if (!open || !placement || focusedRef.current) return undefined;
-    const frame = window.requestAnimationFrame(() => {
-      const orbit = orbitRef.current;
-      const focusTarget = orbit?.querySelector(
-        '[role="tab"][aria-selected="true"], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])',
-      );
-      focusTarget?.focus?.({ preventScroll: true });
-      focusedRef.current = true;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [open, placement]);
-
-  React.useEffect(() => {
-    if (typeof document === "undefined") return undefined;
-    if (!open) return undefined;
-    const handleKeyDown = (event) => {
-      if (event.key !== "Escape" || document.querySelector('[aria-modal="true"]')) return;
-      event.preventDefault();
-      onRequestClose?.();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onRequestClose, open]);
 
   React.useEffect(() => {
     if (!open || typeof document === "undefined") return undefined;
@@ -359,11 +316,6 @@ export function constrainedUnitOrbitPlacement({
 function findAnchor(placementId) {
   return [...document.querySelectorAll("[data-build-placement-id]")]
     .find((element) => element.dataset.buildPlacementId === placementId) ?? null;
-}
-
-function findEditButton(anchor, placementId) {
-  return [...anchor.querySelectorAll("[data-build-edit-for]")]
-    .find((element) => element.dataset.buildEditFor === placementId) ?? null;
 }
 
 function protectedElementRects() {

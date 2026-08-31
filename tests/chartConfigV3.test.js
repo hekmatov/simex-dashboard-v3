@@ -80,6 +80,95 @@ test("chart title visibility rejects non-boolean values", () => {
   );
 });
 
+test("fresh chart drafts receive distinct readable identities while supplied identities remain stable", () => {
+  const first = createChartDraft("line", { title: "First", sourceId: "cases" });
+  const second = createChartDraft("line", { title: "Second", sourceId: "cases" });
+  const restored = createChartDraft("line", {
+    id: "restored-trend",
+    title: "Restored",
+    sourceId: "cases",
+  });
+
+  assert.match(first.id, /^chart-line-/);
+  assert.match(second.id, /^chart-line-/);
+  assert.notEqual(first.id, second.id);
+  assert.equal(restored.id, "restored-trend");
+});
+
+test("axis presentation accepts structured X and value-axis title options while rejecting invalid ranges", () => {
+  const chart = createChartDraft("line", {
+    id: "configured-axis-trend",
+    title: "Configured axis trend",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: {
+      axes: {
+        x: {
+          title: "Reported at",
+          min: "2027-01-01T08:30",
+          max: "2027-12-31T17:45",
+          labelPreset: "ddMmmYearBoundary",
+          tickFrequency: { every: 2, unit: "month" },
+        },
+        primary: {
+          title: "Cases",
+          titlePosition: "center",
+          titleOrientation: "vertical",
+          tickFrequency: { every: 5 },
+        },
+      },
+    },
+  });
+
+  assert.equal(validateChartInstance(chart), chart);
+  chart.presentation.axes.x.tickFrequency = { every: 5, unit: "month" };
+  assert.throws(
+    () => validateChartInstance(chart),
+    /month tick frequency must be 1, 2, or 3/i,
+  );
+  chart.presentation.axes.x.tickFrequency = { every: 2, unit: "month" };
+  chart.roles.measurements.push({ field: "rate", yAxisIndex: 1 });
+  assert.equal(validateChartInstance(chart), chart);
+  chart.presentation.axes.x.min = 2;
+  assert.throws(() => validateChartInstance(chart), /X min must be a temporal string/i);
+  chart.presentation.axes.x.min = "2027-01-01T08:30";
+  chart.presentation.axes.primary.titleOrientation = "diagonal";
+  assert.throws(() => validateChartInstance(chart), /titleOrientation/i);
+});
+
+test("axis presentation validates datetime options for an inferred temporal observation", () => {
+  const profile = profileDataset([
+    { date: "2027-01-01", cases: 4 },
+    { date: "2027-02-01", cases: 7 },
+  ]);
+  const chart = createChartDraft("line", {
+    id: "inferred-temporal-axis",
+    title: "Inferred temporal axis",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "date" },
+    },
+    presentation: {
+      axes: {
+        x: {
+          min: "2027-01-01",
+          max: "2027-12-31",
+          labelPreset: "ddMmYyyy",
+          tickFrequency: { every: 1, unit: "month" },
+        },
+      },
+    },
+  });
+
+  assert.equal(validateChartInstance(chart, {
+    columnTypes: new Map(profile.columns.map((column) => [column.name, column])),
+  }), chart);
+});
+
 test("only Text/Image chart instances may persist an intentionally blank title", () => {
   for (const typeId of ["freeText", "image"]) {
     const panel = createChartDraft(typeId, {

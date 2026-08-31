@@ -42,7 +42,6 @@ export default function AppFrame({
   const phoneRestorationRef = React.useRef({
     scrollX: 0,
     scrollY: 0,
-    focusTarget: null,
   });
 
   React.useEffect(() => {
@@ -56,12 +55,6 @@ export default function AppFrame({
       phoneRestorationRef.current.scrollX = window.scrollX;
       phoneRestorationRef.current.scrollY = window.scrollY;
     };
-    const captureFocus = (event) => {
-      const belongsToAuthoringSurface = frameRef.current?.contains(event.target)
-        || event.target.closest?.(".unit-orbit, .build-authoring-auxiliary");
-      if (phoneQuery.matches || !belongsToAuthoringSurface) return;
-      phoneRestorationRef.current.focusTarget = event.target;
-    };
     const handleViewportChange = ({ matches }) => {
       const wasPhoneLayoutActive = phoneLayoutActive;
       phoneLayoutActive = matches;
@@ -72,18 +65,14 @@ export default function AppFrame({
           top: phoneRestorationRef.current.scrollY,
           behavior: "auto",
         });
-        const focusTarget = phoneRestorationRef.current.focusTarget;
-        if (focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
       });
     };
 
     captureSupportedState();
     window.addEventListener("scroll", captureSupportedState, { passive: true });
-    document.addEventListener("focusin", captureFocus);
     phoneQuery.addEventListener("change", handleViewportChange);
     return () => {
       window.removeEventListener("scroll", captureSupportedState);
-      document.removeEventListener("focusin", captureFocus);
       phoneQuery.removeEventListener("change", handleViewportChange);
       if (restoreFrame) window.cancelAnimationFrame(restoreFrame);
     };

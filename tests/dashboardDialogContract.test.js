@@ -133,6 +133,12 @@ test("dialog eyebrows neutralize legacy global eyebrow paint inside every dialog
   );
 });
 
+test("base eyebrow paint contains no retired teal fallback", async () => {
+  const css = await read("src/styles.css");
+  assert.doesNotMatch(css, /#c8f6e7\b/i);
+  assert.match(css, /\.eyebrow\s*\{[^}]*color:\s*var\(--simex-text-muted\)/s);
+});
+
 test("source action dialog branches provide an internal body before the action footer", async () => {
   const source = await read("src/components/source-content/ContentActionDialog.jsx");
   assert.equal((source.match(/confirm-dialog-body dashboard-dialog__body/g) ?? []).length, 2);

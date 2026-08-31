@@ -30,7 +30,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   const look = page.getByRole("dialog", { name: "Dashboard look" });
   await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
-  await page.keyboard.press("Escape");
+  await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
@@ -74,32 +74,36 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
       probe.remove();
       return value;
     };
-    const read = (selector) => {
+    const read = (selector, borderProperty = "borderTopColor") => {
       const style = getComputedStyle(node.querySelector(selector));
-      return { background: style.backgroundColor, color: style.color, borderColor: style.borderTopColor };
+      return { background: style.backgroundColor, color: style.color, borderColor: style[borderProperty] };
     };
     return {
       expectedPanel: tokenPaint("--simex-surface-panel"),
       expectedPanelAlt: tokenPaint("--simex-surface-panel-alt"),
+      expectedCanvas: tokenPaint("--simex-surface-canvas"),
       expectedText: tokenPaint("--simex-text-strong"),
+      expectedMuted: tokenPaint("--simex-text-muted"),
       expectedBorder: tokenPaint("--simex-border-subtle"),
-      header: read(".chart-wizard-header"),
+      header: read(".chart-wizard-header", "borderBottomColor"),
       body: read(".chart-wizard-body"),
       footer: read(".chart-wizard-footer"),
+      proofDeck: read(".chart-creation-proof-deck"),
       proofCard: read(".chart-creation-proof"),
+      proofEyebrow: read(".chart-proof-eyebrow"),
     };
   });
   expect(wizardParts.header).toEqual({
-    background: wizardParts.expectedPanel,
+    background: wizardParts.expectedPanelAlt,
     color: wizardParts.expectedText,
     borderColor: wizardParts.expectedBorder,
   });
   expect(wizardParts.body).toMatchObject({
-    background: wizardParts.expectedPanelAlt,
+    background: wizardParts.expectedCanvas,
     color: wizardParts.expectedText,
   });
   expect(wizardParts.footer).toEqual({
-    background: wizardParts.expectedPanel,
+    background: wizardParts.expectedPanelAlt,
     color: wizardParts.expectedText,
     borderColor: wizardParts.expectedBorder,
   });
@@ -108,6 +112,11 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
     color: wizardParts.expectedText,
     borderColor: wizardParts.expectedBorder,
   });
+  expect(wizardParts.proofDeck).toMatchObject({
+    background: wizardParts.expectedPanel,
+    color: wizardParts.expectedText,
+  });
+  expect(wizardParts.proofEyebrow.color).toBe(wizardParts.expectedMuted);
 });
 
 test("Unit Orbit retains the selected theme outside AppFrame", async ({ page }) => {
@@ -145,7 +154,7 @@ test("standalone source viewer receives the selected dashboard style", async ({ 
   const look = page.getByRole("dialog", { name: "Dashboard look" });
   await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
-  await page.keyboard.press("Escape");
+  await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
@@ -178,9 +187,17 @@ async function expectSelectedThemeChrome(locator) {
       surfaceStyle: node.dataset.dashboardStyle ?? app.dataset.dashboardStyle,
       appProfile: app.dataset.dashboardColorProfile,
       surfaceProfile: node.dataset.dashboardColorProfile ?? app.dataset.dashboardColorProfile,
-      expectedBackground: tokenPaint("--simex-surface-panel"),
+      expectedBackground: tokenPaint(
+        node.classList.contains("dashboard-dialog--workspace")
+          ? "--simex-surface-canvas"
+          : "--simex-surface-panel",
+      ),
       expectedText: tokenPaint("--simex-text-strong"),
-      expectedRadius: getComputedStyle(node).getPropertyValue("--simex-style-surface-radius").trim(),
+      expectedRadius: getComputedStyle(node).getPropertyValue(
+        node.classList.contains("dashboard-dialog")
+          ? "--simex-style-panel-radius"
+          : "--simex-style-surface-radius",
+      ).trim(),
       expectedFont: getComputedStyle(app).fontFamily,
       background: style.backgroundColor,
       color: style.color,
@@ -202,6 +219,7 @@ async function expectNoRetiredDashboardPaint(locator) {
     "rgb(248, 251, 255)", "rgb(216, 226, 236)", "rgb(234, 241, 246)",
     "rgb(238, 244, 248)", "rgb(225, 233, 240)", "rgb(80, 106, 130)",
     "rgb(106, 127, 146)", "rgb(54, 81, 106)",
+    "rgb(200, 246, 231)",
   ];
   const hits = await locator.evaluate((root, values) => {
     const retiredPaint = new Set(values);

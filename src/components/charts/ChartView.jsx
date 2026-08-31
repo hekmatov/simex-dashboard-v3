@@ -68,7 +68,7 @@ export function renderChartContent(props, interactionMode) {
       chart: props.chart,
       provenance,
       zoomEnabled,
-      accessibilityEnabled: props.accessibilityEnabled === true,
+      accessibilityEnabled: false,
       mapBudgetRequest: props.mapBudgetRequest,
       onVisualChange: props.onVisualChange,
     });
@@ -77,7 +77,7 @@ export function renderChartContent(props, interactionMode) {
       model,
       chart: props.chart,
       provenance,
-      accessibilityEnabled: props.accessibilityEnabled === true,
+      accessibilityEnabled: false,
       interactionMode,
     });
     else if (model.kind === "table") view = React.createElement(TableChartView, { model, chart: props.chart, provenance });

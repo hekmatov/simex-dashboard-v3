@@ -1,7 +1,7 @@
-import { reorderPage, reorderSection } from "./buildStructureModel.js";
+import { reorderPage } from "./buildStructureModel.js";
 
 export function createBuildLayoutDraft(dashboard) {
-  const baseline = structuredClone(dashboard);
+  const baseline = cloneLayoutStructure(dashboard);
   return {
     draftId: `layout:${String(dashboard?.id ?? "dashboard")}`,
     kind: "layout",
@@ -11,7 +11,7 @@ export function createBuildLayoutDraft(dashboard) {
     activity: "active",
     surface: "dashboard-map",
     baseline,
-    value: structuredClone(baseline),
+    value: cloneLayoutStructure(baseline),
     error: null,
     revision: 0,
   };
@@ -33,8 +33,8 @@ export function reorderBuildLayoutPage(draft, pageId, targetIndex) {
 
 export function reorderBuildLayoutSection(draft, pageId, sectionId, targetIndex) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  if (!reorderSection(next.value, pageId, sectionId, targetIndex)) return draft;
+  const next = reorderSectionStructure(draft, pageId, sectionId, targetIndex);
+  if (!next) return draft;
   return markDirty(next, sectionId);
 }
 
@@ -278,6 +278,40 @@ function repairLandingRoutes(dashboard, mergedPageId, mergeTargetPageId) {
 
 function cloneDraft(draft) {
   return { ...draft, value: structuredClone(draft.value), error: null };
+}
+
+function cloneLayoutStructure(dashboard = {}) {
+  return {
+    ...dashboard,
+    pages: (dashboard.pages ?? []).map((page) => ({
+      ...page,
+      sections: [...(page.sections ?? [])],
+    })),
+  };
+}
+
+function reorderSectionStructure(draft, pageId, sectionId, targetIndex) {
+  const pageIndex = (draft.value?.pages ?? []).findIndex(({ id }) => id === pageId);
+  const page = draft.value?.pages?.[pageIndex];
+  const sections = page?.sections;
+  const sourceIndex = sections?.findIndex(({ id }) => id === sectionId) ?? -1;
+  if (
+    sourceIndex < 0
+    || !Number.isInteger(targetIndex)
+    || targetIndex < 0
+    || targetIndex >= sections.length
+    || sourceIndex === targetIndex
+  ) return null;
+  const nextSections = [...sections];
+  const [section] = nextSections.splice(sourceIndex, 1);
+  nextSections.splice(targetIndex, 0, section);
+  const pages = [...draft.value.pages];
+  pages[pageIndex] = { ...page, sections: nextSections };
+  return {
+    ...draft,
+    value: { ...draft.value, pages },
+    error: null,
+  };
 }
 
 function markDirty(draft, targetId) {

@@ -3,6 +3,10 @@ import {
   buildEChartsDataZoom,
   rangeSelectorVisible,
 } from "./zoomOptions.js";
+import {
+  valueAxisPresentation,
+  xAxisPresentation,
+} from "./axisPresentation.js";
 
 const BAR_MARKS = new Set([
   "bar",
@@ -34,20 +38,53 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const categoryIndexes = new Map(categories.map((category, index) => [category, index]));
   const grouped = groupSeries(prepared.marks);
   const hasSecondary = grouped.some(({ axis }) => axis === "secondary");
-  const categoryAxis = {
-    type: temporal ? "time" : "category",
-    ...(temporal ? {} : { data: categories }),
+  const axes = chart.presentation?.axes;
+  const xSettings = {
+    ...legacyXAxisSettings(axes),
+    ...(axes?.x ?? {}),
   };
-  const primaryAxis = valueAxis(chart.presentation?.axes?.primary);
-  const secondaryAxis = valueAxis(chart.presentation?.axes?.secondary, true);
+  const xPresentation = !horizontal
+    ? xAxisPresentation(xSettings, temporal ? "temporal" : "category")
+    : {};
+  const fixedTemporalTicks = temporal && Number.isFinite(xPresentation.interval);
+  const temporalExtent = fixedTemporalTicks
+    ? temporalDataExtent(prepared.marks)
+    : null;
+  const categoryAxis = {
+    type: fixedTemporalTicks ? "value" : temporal ? "time" : "category",
+    ...(temporal ? {} : { data: categories }),
+    ...xPresentation,
+    ...(fixedTemporalTicks ? {
+      min: temporalAxisValue(xPresentation.min) ?? temporalExtent?.min,
+      max: temporalAxisValue(xPresentation.max) ?? temporalExtent?.max,
+    } : {}),
+  };
+  const primarySettings = axes?.primary;
+  const secondarySettings = axes?.secondary;
+  const primaryAxis = valueAxis(primarySettings, false, horizontal ? {
+    ...(primarySettings ?? {}),
+    ...xSettings,
+  } : null);
+  const secondaryAxis = valueAxis(
+    secondarySettings,
+    true,
+    horizontal ? (secondarySettings ?? {}) : null,
+  );
   const series = grouped.map((group, index) => {
     const type = seriesType(mark, group, index);
     const values = temporal
       ? [...group.marks]
           .sort((left, right) => String(left.x).localeCompare(String(right.x)))
-          .map((mark) => axisDataValue(mark, [mark.x, mark.value], activeTime, type))
+          .map((mark) => axisDataValue(
+            mark,
+            [fixedTemporalTicks ? temporalAxisValue(mark.x) : mark.x, mark.value],
+            activeTime,
+            type,
+          ))
       : categoryValues(group.marks, categoryIndexes, categories.length, activeTime, type);
-    const marker = type === "line" ? playbackMarker(group.marks, activeTime) : undefined;
+    const marker = type === "line"
+      ? playbackMarker(group.marks, activeTime, fixedTemporalTicks)
+      : undefined;
     return {
       name: group.name,
       type,
@@ -152,14 +189,53 @@ function formatSeriesLabel(params) {
   return Number.isFinite(numeric) ? NUMBER_FORMATTER.format(numeric) : String(raw ?? "");
 }
 
-function valueAxis(settings = {}, secondary = false) {
+function valueAxis(settings = {}, secondary = false, xSettings = null) {
+  const presentationSettings = xSettings ?? settings;
   return {
     type: "value",
-    name: settings?.title ?? settings?.name ?? "",
-    min: settings?.min,
-    max: settings?.max,
+    ...(xSettings
+      ? xAxisPresentation(presentationSettings, "number")
+      : valueAxisPresentation(presentationSettings)),
+    min: presentationSettings?.min,
+    max: presentationSettings?.max,
     splitLine: { show: secondary ? false : settings?.grid !== false },
   };
+}
+
+function legacyXAxisSettings(axes) {
+  const primary = axes?.primary;
+  if (!primary?.xTitle) return {};
+  return { title: primary.xTitle };
+}
+
+function temporalDataExtent(marks) {
+  const values = marks
+    .map(({ x }) => temporalAxisValue(x))
+    .filter(Number.isFinite);
+  return values.length === 0
+    ? null
+    : { min: Math.min(...values), max: Math.max(...values) };
+}
+
+function temporalAxisValue(value) {
+  if (value === null || value === undefined || value === "") return undefined;
+  const localCalendar = typeof value === "string"
+    ? /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?$/.exec(value)
+    : null;
+  const numeric = typeof value === "number"
+    ? value
+    : localCalendar
+      ? new Date(
+          Number(localCalendar[1]),
+          Number(localCalendar[2]) - 1,
+          Number(localCalendar[3]),
+          Number(localCalendar[4] ?? 0),
+          Number(localCalendar[5] ?? 0),
+          Number(localCalendar[6] ?? 0),
+          Number((localCalendar[7] ?? "0").padEnd(3, "0")),
+        ).valueOf()
+      : Date.parse(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
 }
 
 function groupSeries(marks) {
@@ -245,7 +321,7 @@ function axisDataValue(mark, value, activeTime, type) {
   };
 }
 
-function playbackMarker(marks, activeTime) {
+function playbackMarker(marks, activeTime, numericTime = false) {
   if (!activeTime) return undefined;
   const mark = marks.find(isActiveObservation);
   if (!mark) return undefined;
@@ -255,7 +331,7 @@ function playbackMarker(marks, activeTime) {
     symbolSize: 12,
     data: [{
       name: provenance.label,
-      coord: [activeTime.canonical, mark.value],
+      coord: [numericTime ? temporalAxisValue(activeTime.canonical) : activeTime.canonical, mark.value],
       value: mark.value,
       active: true,
       activeTime: activeTime.canonical,

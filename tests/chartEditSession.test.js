@@ -250,6 +250,37 @@ test("rendering-only preview applies the draft immediately without mutation or s
   assert.equal(changed.savedChart.title, "Admissions");
 });
 
+test("layout-only section reorder preserves projected panel and chart identities for an open edit session", () => {
+  const dashboard = dashboardFixtureWithLayoutSiblings();
+  const changed = changeChart(createSession(), "quick", {
+    title: "Live admissions preview",
+  });
+  const firstPreview = projectChartEditSessionDashboard(dashboard, changed);
+  const reorderedDashboard = {
+    ...dashboard,
+    pages: dashboard.pages.map((page) => page.id === "page-a"
+      ? { ...page, sections: [...page.sections].reverse() }
+      : page),
+  };
+
+  const reorderedPreview = projectChartEditSessionDashboard(reorderedDashboard, changed);
+
+  assert.deepEqual(
+    reorderedPreview.pages[0].sections.map(({ id }) => id),
+    ["section-b", "section-a"],
+  );
+  for (const placementId of ["placement-a", "placement-b", "placement-c"]) {
+    const beforePlacement = placementById(firstPreview, placementId);
+    const afterPlacement = placementById(reorderedPreview, placementId);
+    assert.equal(afterPlacement, beforePlacement, `${placementId} placement must be reused`);
+    assert.equal(
+      afterPlacement.chart,
+      beforePlacement.chart,
+      `${placementId} chart must be reused`,
+    );
+  }
+});
+
 test("Save uses a narrow intent and promotes only the persisted value to the baseline", () => {
   const changed = changeChart(createSession(), "quick", { title: "Saved admissions" });
 
@@ -1097,11 +1128,15 @@ function dashboardFixtureWithRepeatedPageSectionIds() {
 }
 
 function chartByPlacement(dashboard, placementId) {
-  const placement = dashboard.pages
+  const placement = placementById(dashboard, placementId);
+  return placement?.chart ?? placement;
+}
+
+function placementById(dashboard, placementId) {
+  return dashboard.pages
     .flatMap(({ sections = [] }) => sections)
     .flatMap(({ panels = [] }) => panels)
     .find(({ id }) => id === placementId);
-  return placement?.chart ?? placement;
 }
 
 function placementChartFixture(id, title = id) {

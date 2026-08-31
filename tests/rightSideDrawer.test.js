@@ -58,22 +58,17 @@ test("shared right drawer renders dialog and complementary modality contracts", 
   assert.doesNotMatch(complementary, /right-side-drawer-click-catcher/);
 });
 
-test("shared right drawer closes through named Escape, click-away, and close-button paths", () => {
+test("shared right drawer closes through pointer click-away and close-button paths only", () => {
   assert.equal(typeof drawerModule.requestRightSideDrawerClose, "function");
   const reasons = [];
-  for (const reason of ["escape", "click-away", "close-button"]) {
+  for (const reason of ["click-away", "close-button"]) {
     drawerModule.requestRightSideDrawerClose((value) => reasons.push(value), reason);
   }
-  assert.deepEqual(reasons, ["escape", "click-away", "close-button"]);
-  assert.match(drawerSource, /addEventListener\("keydown", closeOnEscape\);/);
-  assert.doesNotMatch(
-    drawerSource,
-    /addEventListener\("keydown", closeOnEscape, true\)/,
-    "complementary Escape must run after nested controls and modal focus scopes",
-  );
+  assert.deepEqual(reasons, ["click-away", "close-button"]);
+  assert.doesNotMatch(drawerSource, /addEventListener\("keydown"/);
 });
 
-test("shared right drawer restores a connected trigger without scrolling", () => {
+test("shared right drawer never restores focus to the invoking control", () => {
   assert.equal(typeof drawerModule.restoreRightSideDrawerTriggerFocus, "function");
   const calls = [];
   const trigger = {
@@ -83,8 +78,8 @@ test("shared right drawer restores a connected trigger without scrolling", () =>
     },
   };
 
-  assert.equal(drawerModule.restoreRightSideDrawerTriggerFocus(trigger), true);
-  assert.deepEqual(calls, [{ preventScroll: true }]);
+  assert.equal(drawerModule.restoreRightSideDrawerTriggerFocus(trigger), false);
+  assert.deepEqual(calls, []);
   assert.equal(drawerModule.restoreRightSideDrawerTriggerFocus({
     isConnected: false,
     focus() {

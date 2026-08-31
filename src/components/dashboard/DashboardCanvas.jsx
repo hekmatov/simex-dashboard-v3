@@ -5,9 +5,13 @@ import ChartPanel from "../ChartPanel.jsx";
 import LandingPage, { hasLandingPresentation } from "../LandingPage.jsx";
 import LayoutGrid from "../LayoutGrid.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
+import BuildSectionPanelRegion from "../build/BuildSectionPanelRegion.jsx";
 import SectionStructureCommandDialog from "../build/SectionStructureCommandDialog.jsx";
 import BuildLayoutCreateDialog from "../build/BuildLayoutCreateDialog.jsx";
 import SceneViewCompositionGrid from "../time/SceneViewCompositionGrid.jsx";
+
+const EMPTY_OBJECT = Object.freeze({});
+const EMPTY_ARRAY = Object.freeze([]);
 
 export default function DashboardCanvas({
   activePage,
@@ -20,7 +24,7 @@ export default function DashboardCanvas({
   multiPanelIds = [],
   excludedChartIds = [],
   chronoSection = null,
-  geoDataSources = {},
+  geoDataSources = EMPTY_OBJECT,
   onNavigate,
   onAddPanelToSection,
   onDisplayAction,
@@ -29,6 +33,35 @@ export default function DashboardCanvas({
 }) {
   const canvasInstanceId = React.useId();
   const [createRequest, setCreateRequest] = React.useState(null);
+  const accessibilityEnabled = false;
+  const panelRuntime = React.useMemo(() => ({
+    loadedData: dashboard.loadedData,
+    chartDataStates: dashboard.chartDataStates,
+    dataSourceStates: dashboard.dataSourceStates,
+    datasetProfiles: dashboard.datasetProfiles,
+    geoDataSources,
+    dataSources: dashboard.dataSources ?? EMPTY_OBJECT,
+    assets: dashboard.assets ?? EMPTY_OBJECT,
+    contentRenderContext: contentRenderContext ?? EMPTY_OBJECT,
+    accessibilityEnabled,
+  }), [
+    accessibilityEnabled,
+    contentRenderContext,
+    dashboard.assets,
+    dashboard.chartDataStates,
+    dashboard.dataSourceStates,
+    dashboard.dataSources,
+    dashboard.datasetProfiles,
+    dashboard.loadedData,
+    geoDataSources,
+  ]);
+  const panelDelegates = useStableSectionPanelDelegates({
+    buildState,
+    onAddPanelToSection,
+    onDisplayAction,
+    onToggleMultiPanel,
+    onStartMultiFullscreenSelection,
+  });
   const creationDialog = <BuildLayoutCreateDialog
     open={Boolean(createRequest)}
     kind={createRequest?.kind ?? "page"}
@@ -81,8 +114,6 @@ export default function DashboardCanvas({
     </>);
   }
   const landingActive = hasLandingPresentation(activePage);
-  const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
-
   return (<>
     <section
       className="dashboard-workspace"
@@ -175,125 +206,22 @@ export default function DashboardCanvas({
                       </div>
                     </div>
                   )}
-                  {visiblePlacements.length > 0 ? (
-                    <LayoutGrid>
-                      {visiblePlacements.map((placement) => {
-                        const chart = placement.chart ?? placement;
-                        const selected = buildState?.selection?.kind === "chart"
-                          && buildState.selection.placementId === placement.id;
-                        return (
-                          <ChartPanel
-                            key={placement.id}
-                            panel={chart}
-                            canonicalPanelId={chart.id}
-                            canonicalPlacementId={placement.id ?? chart.id}
-                            canonicalPlotId={chart.id}
-                            rows={dashboard.loadedData?.[chart.sourceId]}
-                            sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
-                            datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
-                            geoData={geoDataSources[chart.presentation?.map?.geoSource]}
-                            dataSources={dashboard.dataSources}
-                            assets={dashboard.assets ?? {}}
-                            contentRenderContext={contentRenderContext}
-                            accessibilityEnabled={accessibilityEnabled}
-                            editMode={Boolean(buildState)}
-                            placementId={placement.id}
-                            editDisabled={Boolean(buildState?.disabled)}
-                            editControlDisabled={Boolean(buildState?.disabled) && !selected}
-                            isDragging={buildState?.draggingPanelId === placement.id}
-                            isDragTarget={buildState?.dragOverPanelId === placement.id}
-                            isSelected={selected}
-                            editPageId={buildState ? activePage.id : undefined}
-                            editSectionId={buildState ? section.id : undefined}
-                            onBuildSelect={buildState?.onSelect}
-                            onRemove={buildState
-                              ? () => buildState.onRemovePanel?.(placement.id)
-                              : undefined}
-                            onMove={buildState
-                              ? (invoker) => buildState.onRequestPanelMove?.({
-                                  kind: "panel",
-                                  pageId: activePage.id,
-                                  sectionId: section.id,
-                                  placementId: placement.id,
-                                }, chart.title, invoker)
-                              : undefined}
-                            onDragStart={buildState
-                              ? (event) => buildState.onPanelDragStart?.(event, {
-                                  kind: "panel",
-                                  pageId: activePage.id,
-                                  sectionId: section.id,
-                                  placementId: placement.id,
-                                })
-                              : undefined}
-                            onDragOver={buildState
-                              ? (event) => {
-                                  const rect = event.currentTarget.getBoundingClientRect();
-                                  const after = event.clientY >= rect.top + rect.height / 2;
-                                  buildState.onPanelDragOver?.(event, {
-                                    pageId: activePage.id,
-                                    sectionId: section.id,
-                                    index: section.panels.indexOf(placement) + (after ? 1 : 0),
-                                    placementId: placement.id,
-                                    edge: after ? "after" : "before",
-                                  });
-                                }
-                              : undefined}
-                            onDrop={buildState
-                              ? (event) => {
-                                  const rect = event.currentTarget.getBoundingClientRect();
-                                  const after = event.clientY >= rect.top + rect.height / 2;
-                                  buildState.onPanelDrop?.(event, {
-                                    pageId: activePage.id,
-                                    sectionId: section.id,
-                                    index: section.panels.indexOf(placement) + (after ? 1 : 0),
-                                  });
-                                }
-                              : undefined}
-                            onDragEnd={buildState?.onPanelDragEnd}
-                            onDisplayAction={onDisplayAction}
-                            multiSelectMode={multiSelectMode}
-                            isMultiSelected={multiPanelIds.includes(chart.id)}
-                            multiSelectionIndex={multiPanelIds.indexOf(chart.id) + 1}
-                            onToggleMultiPanel={onToggleMultiPanel}
-                            onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
-                          />
-                        );
-                      })}
-                    </LayoutGrid>
-                  ) : (
-                    <section
-                      className="dashboard-empty-section build-empty-section"
-                      aria-label={`${sectionDraft.title || "Untitled section"} empty state`}
-                      data-build-empty-drop-target={buildState ? "true" : undefined}
-                      onDragOver={buildState ? (event) => buildState.onPanelDragOver?.(event, {
-                        pageId: activePage.id,
-                        sectionId: section.id,
-                        index: 0,
-                        edge: "empty",
-                      }) : undefined}
-                      onDrop={buildState ? (event) => buildState.onPanelDrop?.(event, {
-                        pageId: activePage.id,
-                        sectionId: section.id,
-                        index: 0,
-                      }) : undefined}
-                    >
-                      <p>This section has no panels.</p>
-                      {buildState ? (
-                        <div className="build-empty-section__actions">
-                          <button type="button" disabled={Boolean(buildState.disabled)} onClick={() => buildState.onAddChart?.(section.id)}>
-                            Add chart
-                          </button>
-                          <button type="button" disabled={Boolean(buildState.disabled)} onClick={() => buildState.onAddStaticContent?.(section.id)}>
-                            Add Text/Image
-                          </button>
-                        </div>
-                      ) : (
-                        <button type="button" onClick={() => onAddPanelToSection?.(section.id)}>
-                          Add Panel to Section
-                        </button>
-                      )}
-                    </section>
-                  )}
+                  <BuildSectionPanelRegion
+                    section={section}
+                    sectionDraft={sectionDraft}
+                    pageId={activePage.id}
+                    runtime={panelRuntime}
+                    delegates={panelDelegates}
+                    editMode={Boolean(buildState)}
+                    disabled={Boolean(buildState?.disabled)}
+                    selectedPlacementId={buildState?.selection?.kind === "chart" ? buildState.selection.placementId : null}
+                    draggingPanelId={buildState?.draggingPanelId ?? null}
+                    dragOverPanelId={buildState?.dragOverPanelId ?? null}
+                    multiSelectMode={multiSelectMode}
+                    multiPanelIds={multiPanelIds}
+                    excludedChartIds={excludedChartIds}
+                    chronoChartIds={chronoSection?.chartIds ?? EMPTY_ARRAY}
+                  />
                 </section>
               );
             })}
@@ -382,4 +310,25 @@ function BuildSectionHeader({
       {command && <SectionStructureCommandDialog command={command} dashboard={dashboard} pageId={pageId} section={sectionDraft} onCancel={() => setCommand(null)} onConfirm={(operation) => { onCommand?.(operation); setCommand(null); }} />}
     </div>
   );
+}
+
+function useStableSectionPanelDelegates(current) {
+  const latest = React.useRef(current);
+  latest.current = current;
+  return React.useMemo(() => ({
+    canAddPanel: () => Boolean(latest.current.onAddPanelToSection),
+    addPanel: (sectionId) => latest.current.onAddPanelToSection?.(sectionId),
+    addChart: (sectionId) => latest.current.buildState?.onAddChart?.(sectionId),
+    addStaticContent: (sectionId) => latest.current.buildState?.onAddStaticContent?.(sectionId),
+    select: (selection) => latest.current.buildState?.onSelect?.(selection),
+    removePanel: (placementId) => latest.current.buildState?.onRemovePanel?.(placementId),
+    requestPanelMove: (target, title, invoker) => latest.current.buildState?.onRequestPanelMove?.(target, title, invoker),
+    panelDragStart: (event, target) => latest.current.buildState?.onPanelDragStart?.(event, target),
+    panelDragOver: (event, target) => latest.current.buildState?.onPanelDragOver?.(event, target),
+    panelDrop: (event, target) => latest.current.buildState?.onPanelDrop?.(event, target),
+    panelDragEnd: (event) => latest.current.buildState?.onPanelDragEnd?.(event),
+    displayAction: (action) => latest.current.onDisplayAction?.(action),
+    toggleMultiPanel: (chartId) => latest.current.onToggleMultiPanel?.(chartId),
+    startMultiFullscreenSelection: (chartId) => latest.current.onStartMultiFullscreenSelection?.(chartId),
+  }), []);
 }

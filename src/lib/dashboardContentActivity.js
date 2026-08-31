@@ -116,6 +116,24 @@ export function beginDashboardContentOperation(beginOperation, actionId, {
   });
 }
 
+export async function runDashboardContentOperation(operation, work) {
+  if (!operation || typeof operation.beforeWork !== "function") {
+    throw new TypeError("Dashboard content work requires an operation handle.");
+  }
+  if (typeof work !== "function") {
+    throw new TypeError("Dashboard content work requires a callback.");
+  }
+  try {
+    await operation.beforeWork();
+    const result = await work();
+    operation.succeed();
+    return result;
+  } catch (error) {
+    operation.fail(error);
+    throw error;
+  }
+}
+
 function definition(label, message, intent = "info") {
   return Object.freeze({ label, message, intent });
 }

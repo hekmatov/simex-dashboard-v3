@@ -119,6 +119,7 @@ import {
   dashboardLookUpdates,
 } from "./theme/dashboardLookDraft.js";
 import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.jsx";
+import { PointerInteractionBoundary } from "./components/common/PointerInteractionMode.js";
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 export { validateConfigurationForPersistence };
@@ -158,6 +159,7 @@ const SESSION_ONLY_MESSAGES = Object.freeze({
 });
 const DASHBOARD_LOOK_PERSISTENCE_WARNING = "Couldn’t save dashboard appearance. Your selection remains active for this session.";
 const dashboardAssetPersistence = createDashboardAssetPersistence();
+const NOOP = () => {};
 
 async function reconcileSavedAuthoredAssets(dashboard, activeRetainers = null) {
   try {
@@ -171,7 +173,7 @@ async function reconcileSavedAuthoredAssets(dashboard, activeRetainers = null) {
   }
 }
 
-export default function App() {
+function AppContent() {
   const { beginOperation } = useOperationStatus();
   const [dashboardEntry] = React.useState(() => parseDashboardEntry(
     typeof window === "undefined" ? "" : window.location.search,
@@ -202,10 +204,6 @@ export default function App() {
   const [mode, setMode] = React.useState(null);
   const modeRef = React.useRef(mode);
   modeRef.current = mode;
-  const [surfaceFocusRequest, setSurfaceFocusRequest] = React.useState({
-    key: 0,
-    mode: null,
-  });
   const [modeDisabled, setModeDisabled] = React.useState(false);
   const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
   const [buildPanelOpen, setBuildPanelOpen] = React.useState(false);
@@ -244,7 +242,6 @@ export default function App() {
   const companionClientRef = React.useRef(null);
   const dashboardRendererRef = React.useRef(null);
   const buildPanelScrollRef = React.useRef(null);
-  const dashboardMapToggleRef = React.useRef(null);
   const contentDraftCoordinatorRef = React.useRef(null);
   const contentDraftCoordinatorDisposalRef = React.useRef(null);
   if (contentDraftCoordinatorRef.current === null) {
@@ -352,18 +349,13 @@ export default function App() {
     mode,
   ]);
 
-  function closeBuildPanel({ returnFocus = false } = {}) {
+  function closeBuildPanel() {
     const previousScroll = buildPanelScrollRef.current;
     setBuildPanelOpen(false);
     buildPanelScrollRef.current = null;
     if (previousScroll) {
       window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
         window.scrollTo(previousScroll);
-      }));
-    }
-    if (returnFocus) {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-        dashboardMapToggleRef.current?.focus();
       }));
     }
   }
@@ -415,7 +407,6 @@ export default function App() {
         aria-pressed={buildPanelOpen}
         disabled={modeDisabled}
         onClick={toggleBuildPanel}
-        ref={dashboardMapToggleRef}
       >
         Dashboard map
       </button>
@@ -625,17 +616,7 @@ export default function App() {
     const nextMode = reconcileLoadedDashboardMode(mode, dashboard);
     if (nextMode === mode) return;
     setMode(nextMode);
-    setSurfaceFocusRequest((current) => ({
-      key: current.key + 1,
-      mode: nextMode,
-    }));
   }, [dashboard, mode]);
-
-  React.useEffect(() => {
-    if (!surfaceFocusRequest.key || surfaceFocusRequest.mode !== mode) return;
-    const destination = document.querySelector(`[data-canonical-mode="${mode}"]`);
-    destination?.focus({ preventScroll: true });
-  }, [mode, surfaceFocusRequest]);
 
   function ensureDashboardCommitController(initialDashboard = dashboardRef.current) {
     if (dashboardCommitControllerRef.current === null) {
@@ -1015,10 +996,7 @@ export default function App() {
         },
         onModeChange: setMode,
         onPersistMode: persistDashboardModePreference,
-        onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
-          key: current.key + 1,
-          mode: nextMode,
-        })),
+        onFocusMode: NOOP,
       }), "Dashboard cleared.");
   }
 
@@ -1133,10 +1111,6 @@ export default function App() {
         ));
       }
       setMode(nextMode);
-      setSurfaceFocusRequest((current) => ({
-        key: current.key + 1,
-        mode: nextMode,
-      }));
       persistDashboardModePreference(nextMode);
       return { ok: true, mode: nextMode };
     } catch (modeError) {
@@ -1429,10 +1403,7 @@ export default function App() {
         committedDashboard: committed,
         onModeChange: setMode,
         onPersistMode: persistDashboardModePreference,
-        onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
-          key: current.key + 1,
-          mode: nextMode,
-        })),
+        onFocusMode: NOOP,
       });
       await cleanupReplacedDashboardAssets(previousDashboard, committed, {
         failureMessage: "The package was loaded, but source files from the previous dashboard could not be removed from browser storage.",
@@ -1522,10 +1493,7 @@ export default function App() {
         committedDashboard: committed,
         onModeChange: setMode,
         onPersistMode: persistDashboardModePreference,
-        onFocusMode: (nextMode) => setSurfaceFocusRequest((current) => ({
-          key: current.key + 1,
-          mode: nextMode,
-        })),
+        onFocusMode: NOOP,
       });
       await reconcileSavedAuthoredAssets(
         committed,
@@ -1718,7 +1686,7 @@ export default function App() {
       <CanonicalHomeWorkspace
         dashboard={dashboard}
         onModeRequest={requestMode}
-        focusRequestKey={surfaceFocusRequest.key}
+        focusRequestKey={0}
       />
     ) : (
       <DashboardRenderer
@@ -1923,6 +1891,14 @@ export default function App() {
         </PlaybackProvider>
       )}
     </DashboardChartThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <PointerInteractionBoundary>
+      <AppContent />
+    </PointerInteractionBoundary>
   );
 }
 

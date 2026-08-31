@@ -163,13 +163,17 @@ function effectiveBindingType(binding, role, sourceColumn) {
 function validateBinding(binding, role, schema, columnTypes) {
   ensureObject(binding, `Role "${role.id}" binding`);
   const allowed = new Set(["field", "interpretation", "format", "timezone"]);
-  if (schema.dataFamily === "axis" && role.id === "measurements") allowed.add("axis");
+  if (schema.dataFamily === "axis" && role.id === "measurements") {
+    allowed.add("axis");
+    allowed.add("yAxisIndex");
+  }
   if (INTERPOLATION_BINDING_ROLES.has(role.id) && role.accepts.includes("number")) {
     allowed.add("interpolationAllowed");
   }
   checkKnownKeys(binding, allowed, `role "${role.id}" binding`);
   requiredString(binding.field, `Role "${role.id}" field`);
   if (binding.axis !== undefined && !["primary", "secondary"].includes(binding.axis)) throw new Error(`Role "${role.id}" axis must be primary or secondary.`);
+  if (binding.yAxisIndex !== undefined && ![0, 1].includes(binding.yAxisIndex)) throw new Error(`Role "${role.id}" yAxisIndex must be 0 or 1.`);
   if (binding.interpolationAllowed !== undefined && typeof binding.interpolationAllowed !== "boolean") {
     throw new Error(`Role "${role.id}" interpolationAllowed must be a boolean.`);
   }
@@ -383,7 +387,7 @@ function validateCollection(collection, schema) {
   normalizeCollectionSettings(collection);
 }
 
-function validatePresentation(chart, schema) {
+function validatePresentation(chart, schema, temporalRoles) {
   const presentation = ownEnumerableDataValue(
     chart,
     "presentation",
@@ -404,7 +408,7 @@ function validatePresentation(chart, schema) {
   ).value;
   validateCollection(collection, schema);
   validateLabels(descriptors.labels?.value);
-  validateAxes(descriptors.axes?.value);
+  validateAxes(descriptors.axes?.value, schema, temporalRoles);
   validateTargets(descriptors.targets?.value);
   validateMap(descriptors.map?.value);
   validateTimeline(descriptors.timeline?.value);
@@ -444,17 +448,84 @@ function validateLabels(labels) {
   for (const field of ["position", "format"]) if (labels?.[field] !== undefined && typeof labels[field] !== "string") throw new Error(`Chart presentation labels ${field} must be a string.`);
 }
 
-function validateAxes(axes) {
-  optionalObject(axes, "Chart presentation axes", new Set(["primary", "secondary"]));
+function validateAxes(axes, schema, temporalRoles) {
+  optionalObject(axes, "Chart presentation axes", new Set(["x", "primary", "secondary"]));
+  const xKind = axisXKind(schema, temporalRoles);
+  const x = axes?.x;
+  if (x !== undefined) {
+    ensureObject(x, "Chart presentation axes x");
+    checkKnownKeys(x, new Set(["title", "min", "max", "labelPreset", "tickFrequency"]), "chart presentation axes x");
+    if (x.title !== undefined && typeof x.title !== "string") throw new Error("Chart presentation axes x title must be a string.");
+    validateAxisRange(x, xKind, "X");
+    validateTickFrequency(x.tickFrequency, xKind, "X");
+    if (x.labelPreset !== undefined) {
+      if (xKind !== "temporal" || !["adaptive", "ddMmmYearBoundary", "ddMmYyyy", "ddMmYy", "hhMm", "ddMmYyyyHhMm"].includes(x.labelPreset)) {
+        throw new Error("Chart presentation axes x labelPreset is unsupported.");
+      }
+    }
+  }
   for (const axisName of ["primary", "secondary"]) {
     const axis = axes?.[axisName];
     if (axis === undefined) continue;
     ensureObject(axis, `Chart presentation axes ${axisName}`);
-    checkKnownKeys(axis, new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle"]), `chart presentation axes ${axisName}`);
+    checkKnownKeys(axis, new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency"]), `chart presentation axes ${axisName}`);
     for (const field of ["title", "name", "xTitle", "yTitle"]) if (axis[field] !== undefined && typeof axis[field] !== "string") throw new Error(`Chart presentation axes ${axisName} ${field} must be a string.`);
     for (const field of ["min", "max"]) if (axis[field] !== undefined && !Number.isFinite(axis[field])) throw new Error(`Chart presentation axes ${axisName} ${field} must be finite.`);
     if (axis.grid !== undefined && typeof axis.grid !== "boolean") throw new Error(`Chart presentation axes ${axisName} grid must be boolean.`);
     if (axis.min !== undefined && axis.max !== undefined && axis.min > axis.max) throw new Error(`Chart presentation axes ${axisName} min cannot exceed max.`);
+    if (axis.titlePosition !== undefined && !["top", "center", "bottom"].includes(axis.titlePosition)) throw new Error(`Chart presentation axes ${axisName} titlePosition is unsupported.`);
+    if (axis.titleOrientation !== undefined && !["vertical", "horizontal"].includes(axis.titleOrientation)) throw new Error(`Chart presentation axes ${axisName} titleOrientation is unsupported.`);
+    validateTickFrequency(axis.tickFrequency, "number", axisName);
+  }
+}
+
+function axisXKind(schema, temporalRoles) {
+  if (schema?.semantics?.mark === "horizontal-bar" || schema?.semantics?.mark === "horizontal-stacked-bar") return "number";
+  return temporalRoles?.has("observation") ? "temporal" : "category";
+}
+
+function validateAxisRange(axis, kind, label) {
+  if (axis.min === undefined && axis.max === undefined) return;
+  if (kind === "category") throw new Error(`Chart presentation axes ${label} range is unavailable for category axes.`);
+  if (kind === "number") {
+    if (![axis.min, axis.max].filter((value) => value !== undefined).every(Number.isFinite)) throw new Error(`Chart presentation axes ${label} min and max must be finite.`);
+    if (axis.min !== undefined && axis.max !== undefined && axis.min > axis.max) throw new Error(`Chart presentation axes ${label} min cannot exceed max.`);
+    return;
+  }
+  for (const value of [axis.min, axis.max]) {
+    if (value === undefined) continue;
+    if (typeof value !== "string" || !validAxisTemporal(value)) throw new Error(`Chart presentation axes ${label} min must be a temporal string.`);
+  }
+  if (axis.min !== undefined && axis.max !== undefined && axisTemporalEpoch(axis.min) > axisTemporalEpoch(axis.max)) throw new Error(`Chart presentation axes ${label} min cannot exceed max.`);
+}
+
+function validAxisTemporal(value) {
+  if (parseTemporalValue(value).ok) return true;
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)
+    && parseTemporalValue(`${value}:00Z`, { format: "ISO-8601" }).ok;
+}
+
+function axisTemporalEpoch(value) {
+  const local = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (local) {
+    const [year, month, day, hour, minute] = local.slice(1).map(Number);
+    return Date.UTC(year, month - 1, day, hour, minute);
+  }
+  return Date.parse(value);
+}
+
+function validateTickFrequency(value, kind, label) {
+  if (value === undefined) return;
+  ensureObject(value, `Chart presentation axes ${label} tickFrequency`);
+  checkKnownKeys(value, new Set(["every", "unit"]), `chart presentation axes ${label} tickFrequency`);
+  if (!Number.isInteger(value.every) || value.every < 1) throw new Error(`Chart presentation axes ${label} tickFrequency every must be a positive integer.`);
+  if (kind === "temporal") {
+    if (!["minute", "hour", "day", "week", "month", "year"].includes(value.unit)) throw new Error(`Chart presentation axes ${label} tickFrequency unit is required for temporal axes.`);
+    if (value.unit === "month" && ![1, 2, 3].includes(value.every)) {
+      throw new Error(`Chart presentation axes ${label} month tick frequency must be 1, 2, or 3.`);
+    }
+  } else if (value.unit !== undefined) {
+    throw new Error(`Chart presentation axes ${label} tickFrequency unit is only supported for temporal axes.`);
   }
 }
 
@@ -591,7 +662,7 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
   const schema = getChartSchema(options.typeId);
   return normalizeChartInstance({
     configVersion: CHART_CONFIG_VERSION,
-    id: options.id ?? `chart-${schema.typeId}`,
+    id: options.id ?? freshChartId(schema.typeId),
     typeId: schema.typeId,
     title: options.title ?? "",
     description: options.description ?? "",
@@ -624,6 +695,13 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
     },
     layout: { size: "standard", ...(options.layout ?? {}) },
   });
+}
+
+function freshChartId(typeId) {
+  if (typeof globalThis.crypto?.randomUUID !== "function") {
+    throw new Error("Secure random chart IDs are unavailable in this environment.");
+  }
+  return `chart-${typeId}-${globalThis.crypto.randomUUID()}`;
 }
 
 /**
@@ -698,7 +776,7 @@ export function validateChartInstance(chart, { columnTypes } = {}) {
   const schema = getChartSchema(chart.typeId);
   const temporalRoles = validateRoles(chart, schema, columnTypes);
   validateTransformations(chart, schema, columnTypes);
-  validatePresentation(chart, schema);
+  validatePresentation(chart, schema, temporalRoles);
   validateInteraction(chart, schema, temporalRoles);
   validateLayout(chart);
   return chart;

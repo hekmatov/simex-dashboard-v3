@@ -1333,6 +1333,7 @@ export default function ChartWizardV3({
         "data-chart-owner-id": editMode
           ? `chart-edit:${editSession?.placementId ?? "unknown"}`
           : wizard.draftId ? `chart-create:${wizard.draftId}` : undefined,
+        "data-chart-draft-id": wizard.draft?.id,
         "aria-busy": disabled || submitting ? "true" : undefined,
         inert: disabled || submitting ? true : undefined,
         tabIndex: -1,
@@ -1524,9 +1525,6 @@ export default function ChartWizardV3({
                   type: "selectType",
                   typeId,
                   chart: {
-                    ...(wizard.draft
-                      ? {}
-                      : { id: newChartId(typeId) }),
                     title: "",
                     layout: {
                       ...(wizard.draft?.layout ?? {}),
@@ -1865,7 +1863,7 @@ function proofHeading(label, status = "awaiting", revision = "awaiting") {
     "header",
     null,
     React.createElement("div", null,
-      React.createElement("p", { className: "eyebrow" }, label),
+      React.createElement("p", { className: "chart-proof-eyebrow" }, label),
       React.createElement("strong", null, proofStatusLabel(status)),
     ),
     React.createElement("small", { title: revision ?? "awaiting" }, `Revision ${revision ?? "awaiting"}`),
@@ -2491,10 +2489,6 @@ function uniqueSourceId(fileName, existing) {
     suffix += 1;
   }
   return candidate;
-}
-
-function newChartId(typeId) {
-  return `chart-${typeId}-${Date.now().toString(36)}`;
 }
 
 function readEntry(collection, key) {

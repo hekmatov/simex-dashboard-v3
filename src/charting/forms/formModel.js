@@ -159,7 +159,7 @@ export function buildEditorFormModel({
   };
 }
 
-export function buildQuickEditorFormModel({ chart } = {}) {
+export function buildQuickEditorFormModel({ chart, profile } = {}) {
   if (!chart || typeof chart !== "object") {
     throw new TypeError("A chart draft is required to build its quick form.");
   }
@@ -193,7 +193,7 @@ export function buildQuickEditorFormModel({ chart } = {}) {
       fields,
       advanced: false,
     }],
-    valid: chartIsValid(chart),
+    valid: chartIsValid(chart, profile),
   };
 }
 
@@ -501,13 +501,24 @@ function labelsFields({ chart }) {
   }];
 }
 
-function axesFields({ chart }) {
+function axesFields({ chart, schema, prepared }) {
+  const mark = schema.semantics?.mark;
+  const xKind = mark === "horizontal-bar" || mark === "horizontal-stacked-bar"
+    ? "number"
+    : (prepared?.meta?.axisInterpretation ?? chart.roles?.observation?.interpretation) === "temporal"
+      ? "temporal"
+      : "category";
+  const bindings = Array.isArray(chart.roles?.measurements)
+    ? chart.roles.measurements
+    : [];
   return [{
     id: "axes",
     label: "Axes",
     control: "axes",
     path: ["presentation", "axes"],
     value: chart.presentation?.axes ?? {},
+    xKind,
+    hasSecondary: bindings.some((binding) => binding?.axis === "secondary" || binding?.yAxisIndex === 1),
   }];
 }
 

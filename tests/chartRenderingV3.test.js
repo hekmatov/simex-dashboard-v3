@@ -68,6 +68,25 @@ function renderSvg(option, width = 640, height = 400) {
   }
 }
 
+function renderedXAxisDates(option, width = 800, height = 400) {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
+  try {
+    instance.setOption(option);
+    instance.renderToSVGString();
+    const ticks = instance.getModel().getComponent("xAxis").axis.scale.getTicks();
+    return [...new Set(ticks.map(({ value }) => {
+      const date = new Date(value);
+      return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
+    }))];
+  } finally {
+    instance.dispose();
+  }
+}
+
 const axisMarks = ready([
   { x: "May", value: 4, measure: "cases", measureLabel: "Cases", cluster: "North", clusterKey: "North", group: "Base", groupKey: "Base", axis: "primary", label: null },
   { x: "June", value: 6, measure: "cases", measureLabel: "Cases", cluster: "North", clusterKey: "North", group: "Base", groupKey: "Base", axis: "primary", label: null },
@@ -323,7 +342,7 @@ test("title alignment and ctrl-wheel-compatible zoom are normalized into ECharts
   assert.equal(model.option.dataZoom[0].zoomOnMouseWheel, "ctrl");
 });
 
-test("accessibility companion work is opt-in on the chart rendering hot path", () => {
+test("pointer-only chart rendering suppresses accessibility companion work even for legacy requests", () => {
   const chartConfig = chart("line");
   const disabled = buildRenderModel({
     chart: chartConfig,
@@ -336,7 +355,9 @@ test("accessibility companion work is opt-in on the chart rendering hot path", (
   });
 
   assert.equal(disabled.accessibility, undefined);
-  assert.equal(enabled.accessibility.family, "axis");
+  assert.equal(enabled.accessibility, undefined);
+  assert.equal(disabled.option.aria.enabled, false);
+  assert.equal(enabled.option.aria.enabled, false);
 });
 
 test("the mounted ECharts option applies every valid title alignment and opaque background", () => {
@@ -533,6 +554,317 @@ test("forced category dates never become an ECharts time axis", () => {
 
   assert.equal(model.option.xAxis.type, "category");
   assert.deepEqual(model.option.xAxis.data, ["2027-05-01"]);
+});
+
+test("axis presentation renders X and value titles, ranges, ticks, and temporal labels without coercing category dates", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            title: "Reported at",
+            min: "2027-01-01",
+            max: "2027-12-31",
+            labelPreset: "ddMmmYearBoundary",
+            tickFrequency: { every: 2, unit: "month" },
+          },
+          primary: {
+            title: "Cases",
+            titlePosition: "top",
+            titleOrientation: "horizontal",
+            tickFrequency: { every: 5 },
+          },
+          secondary: { title: "Rate" },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-03-01", value: 2, measure: "rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.name, "Reported at");
+  assert.equal(model.option.xAxis.type, "time");
+  assert.equal(model.option.xAxis.min, "2027-01-01");
+  assert.equal(model.option.xAxis.max, "2027-12-31");
+  assert.equal(model.option.xAxis.interval, undefined);
+  assert.equal(typeof model.option.xAxis.axisLabel.formatter, "function");
+  assert.equal(model.option.yAxis[0].name, "Cases");
+  assert.equal(model.option.yAxis[0].nameLocation, "end");
+  assert.equal(model.option.yAxis[0].nameRotate, 0);
+  assert.equal(model.option.yAxis[0].interval, 5);
+  assert.equal(model.option.yAxis[1].name, "Rate");
+  const label = model.option.xAxis.axisLabel.formatter;
+  assert.equal(label("2027-12-31T00:00:00Z"), "31 Dec 2027");
+  assert.equal(
+    label("2027-12-31T00:00:00Z"),
+    "31 Dec 2027",
+    "re-rendering the same tick must not silently change its label",
+  );
+  assert.equal(label("2028-01-02T00:00:00Z"), "02 Jan 2028");
+  assert.equal(label("2028-04-01T00:00:00Z", 2), "01 Apr");
+  const midYear = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { labelPreset: "ddMmmYearBoundary" } },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-07-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  assert.equal(midYear.option.xAxis.axisLabel.formatter("2027-07-01T00:00:00Z"), "01 Jul 2027");
+  const unorderedLabel = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            labelPreset: "ddMmmYearBoundary",
+            tickFrequency: { every: 1, unit: "month" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-12-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2028-02-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  }).option.xAxis.axisLabel.formatter;
+  assert.equal(unorderedLabel("2028-02-01T00:00:00Z", 2), "01 Feb");
+  assert.equal(unorderedLabel("2028-01-01T00:00:00Z", 1), "01 Jan 2028");
+
+  const category = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { title: "Recorded date", tickFrequency: { every: 2 } } },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-05-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-05-02", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "category" }),
+  });
+  assert.equal(category.option.xAxis.type, "category");
+  assert.equal(category.option.xAxis.interval, undefined);
+  assert.equal(category.option.xAxis.axisLabel.interval, 1);
+  assert.equal(category.option.xAxis.axisTick.interval, 1);
+  assert.deepEqual(category.option.xAxis.data, ["2027-05-01", "2027-05-02"]);
+});
+
+test("monthly cadence stays aligned to calendar month boundaries", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-07-01",
+            tickFrequency: { every: 2, unit: "month" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-07-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.type, "time");
+  assert.deepEqual(renderedXAxisDates(model.option), [
+    "2027-01-01",
+    "2027-03-01",
+    "2027-05-01",
+    "2027-07-01",
+  ]);
+
+  const quarterly = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-07-01",
+            tickFrequency: { every: 3, unit: "month" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-07-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  assert.deepEqual(renderedXAxisDates(quarterly.option), [
+    "2027-01-01",
+    "2027-04-01",
+    "2027-07-01",
+  ]);
+});
+
+test("yearly cadence stays aligned through leap years", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2031-01-01",
+            tickFrequency: { every: 2, unit: "year" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2031-01-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.type, "time");
+  assert.deepEqual(renderedXAxisDates(model.option), [
+    "2027-01-01",
+    "2029-01-01",
+    "2031-01-01",
+  ]);
+});
+
+test("horizontal bars keep the configured X-axis title horizontal", () => {
+  const model = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { title: "Confirmed cases", min: 0, max: 100 } },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.equal(model.option.xAxis[0].name, "Confirmed cases");
+  assert.equal(model.option.xAxis[0].nameRotate, 0);
+  assert.equal(model.option.xAxis[0].min, 0);
+  assert.equal(model.option.xAxis[0].max, 100);
+
+  const fallback = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { primary: { title: "Fallback value title" } },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  assert.equal(fallback.option.xAxis[0].name, "Fallback value title");
+  assert.equal(fallback.option.xAxis[0].nameRotate, 0);
+});
+
+test("configured temporal cadence controls the rendered date ticks", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-01-31",
+            labelPreset: "ddMmYyyy",
+            tickFrequency: { every: 3, unit: "day" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-01-31", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  const svg = renderSvg(model.option, 800, 400);
+
+  assert.equal(model.option.xAxis.type, "value");
+  assert.match(svg, />01-01-2027</);
+  assert.match(svg, />04-01-2027</);
+  assert.match(svg, />07-01-2027</);
+  assert.match(svg, />31-01-2027</);
+  assert.doesNotMatch(svg, />05-01-2027</);
+});
+
+test("adaptive labels remain readable when fixed cadence requires a numeric time axis", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-01-07",
+            tickFrequency: { every: 3, unit: "day" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-01-07", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  const formatter = model.option.xAxis.axisLabel.formatter;
+  const secondTick = new Date(2027, 0, 4).valueOf();
+  assert.equal(model.option.xAxis.type, "value");
+  assert.equal(typeof formatter, "function");
+  assert.equal(formatter(secondTick, 1), "4");
+  assert.equal(formatter(new Date(2027, 1, 1).valueOf(), 1), "Feb");
+  assert.equal(formatter(new Date(2028, 0, 1).valueOf(), 1), "2028");
+  assert.notEqual(formatter(secondTick, 1), String(secondTick));
+});
+
+test("fixed cadence preserves datetime-local bounds and data semantics", () => {
+  const minimum = "2027-03-28T09:30";
+  const maximum = "2027-03-30T09:30";
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: minimum,
+            max: maximum,
+            tickFrequency: { every: 1, unit: "day" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: minimum, value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: maximum, value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.type, "value");
+  assert.equal(model.option.xAxis.min, Date.parse(minimum));
+  assert.equal(model.option.xAxis.max, Date.parse(maximum));
+  assert.equal(model.option.series[0].data[0][0], Date.parse(minimum));
+  assert.equal(model.option.series[0].data[1][0], Date.parse(maximum));
 });
 
 test("field-only observations use canonical preparation metadata without downstream inference", () => {

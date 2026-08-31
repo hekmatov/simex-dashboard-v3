@@ -142,7 +142,7 @@ test("ordinary chart focus control uses the Fullscreen tooltip while retaining i
   assert.doesNotMatch(html, /data-icon-tooltip="Focus"/);
 });
 
-test("fullscreen comparison preserves ordered charts in a labeled focus-scoped dialog", () => {
+test("fullscreen comparison preserves ordered charts without autofocus or keyboard reordering", () => {
   assert.ok(displayModule, "fullscreen display must be implemented");
   const html = renderToStaticMarkup(
     React.createElement(displayModule.default, {
@@ -170,6 +170,7 @@ test("fullscreen comparison preserves ordered charts in a labeled focus-scoped d
   assert.match(html, /data-icon-id="close"/);
   assert.match(html, /layout-sideBySide/);
   assert.match(html, /data-display-mode="comparison"/);
+  assert.doesNotMatch(html, /aria-keyshortcuts=/);
 });
 
 test("the shared displayed-chart grid is available to the fullscreen surface", () => {

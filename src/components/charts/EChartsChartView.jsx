@@ -1,7 +1,6 @@
 import React from "react";
 import * as echarts from "echarts";
 
-import { describeAccessibilityCompanion } from "../../charting/rendering/accessibilityRows.js";
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import {
   chartDescriptionVisible,
@@ -50,10 +49,9 @@ export default function EChartsChartView({
   const titleVisible = chartTitleVisible(chart);
   const description = chart.description || model.option?.aria?.description || "Interactive chart.";
   const presentedModel = React.useMemo(
-    () => applyEChartsPresentation(model, chart, accessibilityEnabled, textTheme),
-    [model, chart, accessibilityEnabled, textTheme],
+    () => applyEChartsPresentation(model, chart, false, textTheme),
+    [model, chart, textTheme],
   );
-  const summary = accessibilityEnabled ? summaryFor(presentedModel, chart) : null;
   const activeError = suppliedRuntimeError ?? runtimeError;
   const mapBudget = useBuildMapBudgetSlot({
     ownerId: mapBudgetRequest?.ownerId ?? `unbudgeted:${chart.id ?? "chart"}`,
@@ -134,13 +132,6 @@ export default function EChartsChartView({
   return React.createElement("section", {
     className: "chart-echarts-view",
     "data-map-budget-status": mapBudgetRequest ? mapBudget.status : undefined,
-    ...(accessibilityEnabled
-      ? {
-          role: "img",
-          "aria-labelledby": titleId,
-          "aria-describedby": `${descriptionId} ${summaryId}`,
-        }
-      : {}),
     "data-zoom-modifier": zoomEnabled
       ? presentedModel.interaction?.zoom?.modifierKey ?? "Control"
       : undefined,
@@ -152,7 +143,7 @@ export default function EChartsChartView({
         role: "status",
       }, budgetNotice)
     : null,
-  accessibilityEnabled || !titleVisible
+  !titleVisible
     ? React.createElement("h3", {
         id: titleId,
         className: "chart-view-title chart-view-title--visually-hidden",
@@ -160,14 +151,6 @@ export default function EChartsChartView({
     : null,
   chartDescriptionVisible(chart)
     ? React.createElement("p", { id: descriptionId, className: "chart-view-description" }, description)
-    : accessibilityEnabled
-      ? React.createElement("p", {
-          id: descriptionId,
-          className: "chart-view-title--visually-hidden",
-        }, description)
-    : null,
-  accessibilityEnabled
-    ? React.createElement("p", { id: summaryId, className: "chart-view-summary" }, summary)
     : null,
   React.createElement("div", { ref: hostRef, className: "chart-echarts-host", "aria-hidden": true }));
 }
@@ -237,7 +220,7 @@ export function applyEChartsPresentation(
         : { series: normalizedSeries(option.series, textStrong, textMuted, surfacePanelAlt) }),
       aria: {
         ...(option.aria ?? {}),
-        enabled: accessibilityEnabled,
+        enabled: false,
       },
       ...(backgroundColor ? { backgroundColor } : {}),
     },
@@ -449,30 +432,6 @@ function normalizedDataColors(value, fallback) {
   return colors.length > 0 ? colors : [...fallback];
 }
 
-function summaryFor(model, chart) {
-  const companion = describeAccessibilityCompanion(model.accessibility);
-  if (companion) return companion;
-  const semanticItems = model.semanticSummary?.items;
-  if (Array.isArray(semanticItems) && semanticItems.length > 0) {
-    return semanticItems.map((item) => [
-      `${item.label ?? "Item"}: actual ${displayValue(item.actual)}`,
-      `target ${displayValue(item.target)}`,
-      item.time ? `observed ${item.time}` : null,
-    ].filter(Boolean).join("; ")).join(". ");
-  }
-  const targetDetails = (model.option?.series ?? [])
-    .flatMap((series) => Array.isArray(series.data) ? series.data : [])
-    .filter((item) => item && typeof item === "object" && "target" in item)
-    .map((item) => `${item.name ? `${item.name}: ` : ""}Value ${displayValue(item.value)}; target ${displayValue(item.target)}`);
-  if (targetDetails.length > 0) return targetDetails.join(". ");
-  const count = model.option?.series?.reduce((total, series) => (
-    total + (Array.isArray(series.data) ? series.data.length : 0)
-  ), 0) ?? 0;
-  return count > 0
-    ? `${chart.title || "Chart"} contains ${count} plotted value${count === 1 ? "" : "s"}.`
-    : "Chart data is available.";
-}
-
 function boundedRuntimeError(error) {
   const message = error instanceof Error
     ? error.message
@@ -487,12 +446,4 @@ function boundedRuntimeError(error) {
 
 function normalizeError(error) {
   return error instanceof Error ? error : new Error(boundedRuntimeError(error));
-}
-
-function displayValue(value) {
-  return value === null
-    || value === undefined
-    || (typeof value === "number" && !Number.isFinite(value))
-    ? "Unavailable"
-    : String(value);
 }

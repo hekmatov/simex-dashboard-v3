@@ -5,6 +5,7 @@ import { useOperationStatus } from "./app-shell/OperationStatusProvider.jsx";
 import {
   beginDashboardContentOperation,
   reportDashboardContentActivity,
+  runDashboardContentOperation,
 } from "../lib/dashboardContentActivity.js";
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartQuickEditor from "./chart-authoring/ChartQuickEditor.jsx";
@@ -231,6 +232,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     contentDraftCoordinator?.getActiveRetainers?.() ?? null
   ));
   const [chartDraftSessionRevision, setChartDraftSessionRevision] = React.useState(0);
+  const [chartWizardSessionEpoch, setChartWizardSessionEpoch] = React.useState(0);
+  const chartWizardSessionEpochRef = React.useRef(chartWizardSessionEpoch);
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
   const [packageExportIssues, setPackageExportIssues] = React.useState([]);
@@ -321,6 +324,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const buildRevealRequestIdRef = React.useRef(0);
   const buildRevealResolversRef = React.useRef(new Map());
   const appliedBuildRevealIdRef = React.useRef(0);
+  const sectionReorderPendingRef = React.useRef(false);
   const importInputRef = React.useRef(null);
   const chartWizardControllerRef = React.useRef(null);
   const chartDraftSessionStoreRef = React.useRef(null);
@@ -505,7 +509,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   };
   const authoredDirty = hasUnsavedAuthoredContent(authoredDirtyState);
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
-  const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
+  const accessibilityEnabled = false;
   const iconAccent = dashboard.globalStyles?.iconAccent ?? ICON_TOKENS.accentBase;
   const iconAccentVariants = React.useMemo(
     () => deriveIconAccentVariants(iconAccent),
@@ -542,6 +546,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }, []);
 
   const handleChartDraftStateChange = React.useCallback((state) => {
+    if (chartWizardSessionEpoch !== chartWizardSessionEpochRef.current) return;
     if (!state || state.discarded === true || state.status === "committed") {
       chartDraftSessionStore.clear(chartDraftSessionKey);
     } else if (chartDraftSessionStore.get(chartDraftSessionKey)) {
@@ -551,7 +556,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     }
     setChartWizardDirty(isMeaningfulChartDraft(state));
     setChartDraftSessionRevision((current) => current + 1);
-  }, [chartDraftSessionKey, chartDraftSessionStore]);
+  }, [chartDraftSessionKey, chartDraftSessionStore, chartWizardSessionEpoch]);
 
   const handleChartCreateOwnerChange = React.useCallback((owner) => {
     setChartCreateOwner((current) => (
@@ -602,6 +607,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setStaticContentDraft(null);
       setStaticContentDirty(false);
       setChartDraftSessionRevision((current) => current + 1);
+      const nextSessionEpoch = chartWizardSessionEpochRef.current + 1;
+      chartWizardSessionEpochRef.current = nextSessionEpoch;
+      setChartWizardSessionEpoch(nextSessionEpoch);
       setLocalAuthoringDrafts({});
       setInlineRenameDirty(false);
       resetExternalDirty();
@@ -1403,20 +1411,30 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function reorderBuildSection(sectionId, targetIndex) {
-    if (moderatorOperationGateRef.current.isActive() || buildLayoutDraftRef.current?.status === "saving" || !activePage) return;
-    const current = buildLayoutDraftRef.current ?? createBuildLayoutDraft(dashboardStateRef.current);
-    const next = reorderBuildLayoutSection(current, activePage.id, sectionId, targetIndex);
-    buildLayoutDraftRef.current = next;
-    setBuildLayoutDraft(next);
-    setBuildSelection((current) => (
-      current?.kind === "section" && current.sectionId === sectionId
-        ? current
-        : { kind: "page", pageId: activePage.id }
-    ));
-    reportContentActivity("section.reordered", {
-      subject: sectionId,
+    if (
+      sectionReorderPendingRef.current
+      || moderatorOperationGateRef.current.isActive()
+      || buildLayoutDraftRef.current?.status === "saving"
+      || !activePage
+    ) return;
+    const pageId = activePage.id;
+    const section = activePage.sections?.find(({ id }) => id === sectionId);
+    const subject = section?.title?.trim() || sectionId;
+    const status = beginContentOperation("section.reordered", {
+      subject,
       detail: `Moved to position ${targetIndex + 1}.`,
+      workingLabel: subject ? `Reordering Section “${subject}”` : "Reordering Section",
       key: `content:section:${sectionId}:order`,
+    });
+    sectionReorderPendingRef.current = true;
+    void runDashboardContentOperation(status, () => {
+      const current = buildLayoutDraftRef.current ?? createBuildLayoutDraft(dashboardStateRef.current);
+      const next = reorderBuildLayoutSection(current, pageId, sectionId, targetIndex);
+      buildLayoutDraftRef.current = next;
+      setBuildLayoutDraft(next);
+      return next;
+    }).catch(() => undefined).finally(() => {
+      sectionReorderPendingRef.current = false;
     });
   }
 
@@ -1989,21 +2007,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
-  function changeAccessibilityEnabled(enabled) {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    flushPendingEditsInBackground();
-    onDashboardChange({
-      globalStyles: {
-        ...(dashboard.globalStyles ?? {}),
-        accessibility: { enabled },
-      },
-    });
-    reportContentActivity("dashboard.settings.updated", {
-      detail: `Accessibility mode ${enabled ? "enabled" : "disabled"}.`,
-      key: "content:dashboard:accessibility",
-    });
-  }
-
   function startSectionAtPanel(section, panel) {
     if (moderatorOperationGateRef.current.isActive()) return;
     const title = window.prompt("Section title", "New section");
@@ -2513,12 +2516,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       workingDashboard.runtimeContentHealth?.sourceEntries,
     ),
   }), [workingDashboard.contentLibrary, workingDashboard.runtimeContentHealth?.sourceEntries, runtimeMediaItems]);
-  const contentRenderContext = {
+  const openPanelEditorRef = React.useRef(openPanelEditor);
+  openPanelEditorRef.current = openPanelEditor;
+  const requestContentRepair = React.useCallback(
+    ({ panelId }) => panelId && openPanelEditorRef.current?.(panelId),
+    [],
+  );
+  const contentRenderContext = React.useMemo(() => ({
     mediaItems: runtimeMediaItems,
     assets: workingDashboard.assets ?? {},
     resolveAsset: resolveBrowserAuthoredAsset,
-    requestRepair: ({ panelId }) => panelId && openPanelEditor(panelId),
-  };
+    requestRepair: requestContentRepair,
+  }), [requestContentRepair, runtimeMediaItems, workingDashboard.assets]);
   const navigateContentDependency = React.useCallback((use) => {
     const selection = selectionForPlacement(dashboardStateRef.current, use.panelId);
     const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
@@ -2625,6 +2634,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   ) : (
     <ChartQuickEditor
       session={chartEditSession}
+      profile={workingDashboard.datasetProfiles?.[chartEditSession.draft.sourceId]}
       disabled={moderatorMutationLocked}
       onDraftChange={changeQuickChartDraft}
       onSave={typeof onChartSave === "function" ? saveChartEditSession : undefined}
@@ -2683,7 +2693,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       treeResetGeneration={buildTreeResetGeneration}
       onRevealComplete={completeBuildReveal}
       onDashboardChange={changeDashboardText}
-      onAccessibilityChange={changeAccessibilityEnabled}
       onStructureCommit={commitStructureDraft}
       onPageChange={changePage}
       onPageRemove={removeActivePage}
@@ -2838,6 +2847,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       />
       {editMode && <>
       <ChartWizardV3
+        key={`chart-create:${chartDraftSessionKey}:${chartWizardSessionEpoch}`}
         open={Boolean(chartWizardTarget)}
         contentDraftCoordinator={contentDraftCoordinator}
         destination={chartWizardTarget}
@@ -2921,8 +2931,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           }
         }}
         onCommitSuccess={() => {
+          const nextSessionEpoch = chartWizardSessionEpochRef.current + 1;
+          chartWizardSessionEpochRef.current = nextSessionEpoch;
           chartDraftSessionStore.clear(chartDraftSessionKey);
           setChartDraftSessionRevision((current) => current + 1);
+          setChartWizardSessionEpoch(nextSessionEpoch);
           setChartCreateOwner(null);
           setChartWizardDirty(false);
           setChartWizardSuspended(false);
@@ -2930,8 +2943,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setChartWizardTarget(null);
         }}
         onDiscardChanges={() => {
+          const nextSessionEpoch = chartWizardSessionEpochRef.current + 1;
+          chartWizardSessionEpochRef.current = nextSessionEpoch;
           chartDraftSessionStore.clear(chartDraftSessionKey);
           setChartDraftSessionRevision((current) => current + 1);
+          setChartWizardSessionEpoch(nextSessionEpoch);
           setChartCreateOwner(null);
           setChartWizardDirty(false);
           setChartWizardSuspended(false);
@@ -3259,18 +3275,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               value={iconAccentVariants.base}
               onChange={changeIconAccent}
             />
-            <label className="accessibility-edit-toggle">
-              <input
-                type="checkbox"
-                disabled={moderatorMutationLocked}
-                checked={accessibilityEnabled}
-                onChange={(event) => changeAccessibilityEnabled(event.target.checked)}
-              />
-              <span>
-                Chart accessibility
-                <small>Generate screen-reader chart descriptions</small>
-              </span>
-            </label>
             <input
               ref={importInputRef}
               className="visually-hidden"
@@ -3476,6 +3480,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       </section>
       </PlaybackSurface>
       <ChartWizardV3
+        key={`chart-create:${chartDraftSessionKey}:${chartWizardSessionEpoch}`}
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
         dashboard={dashboard}
@@ -3500,6 +3505,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           const target = chartWizardTarget;
           await pendingEdits.flush();
           await onChartCreate(payload, reviewedPlacement ?? target);
+        }}
+        onCommitSuccess={() => {
+          const nextSessionEpoch = chartWizardSessionEpochRef.current + 1;
+          chartWizardSessionEpochRef.current = nextSessionEpoch;
+          chartDraftSessionStore.clear(chartDraftSessionKey);
+          setChartDraftSessionRevision((current) => current + 1);
+          setChartWizardSessionEpoch(nextSessionEpoch);
+          setChartCreateOwner(null);
+          setChartWizardDirty(false);
           setChartWizardSuspended(false);
           setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);
