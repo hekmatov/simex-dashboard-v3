@@ -29,7 +29,7 @@ test("the canonical chart canvas stays mounted while switching between View and 
 
 test("Quick Edit opens before reveal animation frames are allowed to run", async ({ page }) => {
   await enterBiomedicalBuild(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]:visible');
   const edit = panel.getByRole("button", { name: "Edit chart", exact: true });
   await expect(edit).toBeEnabled();
   await page.evaluate(() => {
@@ -54,7 +54,7 @@ test("Quick Edit opens before reveal animation frames are allowed to run", async
 
 test("Full Edit paints a pending shell without creating unchanged work", async ({ page }) => {
   await enterBiomedicalBuild(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]:visible');
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
@@ -99,7 +99,11 @@ test("chart Save commits its working toast before dashboard busy state", async (
 
   await page.evaluate(() => {
     let delivery = 0;
-    window.__chartSaveOrdering = { toastDelivery: null, busyDelivery: null };
+    window.__chartSaveOrdering = {
+      toastDelivery: null,
+      busyDelivery: null,
+      toastWasTopmost: null,
+    };
     window.__chartSaveOrderingObserver = new MutationObserver((records) => {
       delivery += 1;
       for (const record of records) {
@@ -121,6 +125,12 @@ test("chart Save commits its working toast before dashboard busy state", async (
             && window.__chartSaveOrdering.toastDelivery === null
           ) {
             window.__chartSaveOrdering.toastDelivery = delivery;
+            const bounds = notice.getBoundingClientRect();
+            const topmost = document.elementFromPoint(
+              bounds.left + (bounds.width / 2),
+              bounds.top + (bounds.height / 2),
+            );
+            window.__chartSaveOrdering.toastWasTopmost = notice.contains(topmost);
           }
         }
         for (const node of record.removedNodes ?? []) {
@@ -150,7 +160,63 @@ test("chart Save commits its working toast before dashboard busy state", async (
   });
   expect(ordering.toastDelivery).not.toBeNull();
   expect(ordering.busyDelivery).not.toBeNull();
+  expect(ordering.toastWasTopmost).toBe(true);
   expect(ordering.toastDelivery).toBeLessThan(ordering.busyDelivery);
+});
+
+test("operation feedback stays visually above an overlapping Quick Edit surface", async ({ page }) => {
+  await page.setViewportSize({ width: 790, height: 864 });
+  await enterBiomedicalBuild(page);
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByLabel("Chart title").fill("Toast stacking probe");
+
+  const notice = page.locator(".operation-status-notice")
+    .filter({ hasText: "Updating chart draft" });
+  await expect(notice).toBeVisible();
+  const stacking = await notice.evaluate((node) => {
+    const noticeBounds = node.getBoundingClientRect();
+    const editorBounds = document.querySelector(".unit-orbit")?.getBoundingClientRect();
+    const overlapLeft = editorBounds
+      ? Math.max(noticeBounds.left, editorBounds.left)
+      : noticeBounds.left;
+    const overlapRight = editorBounds
+      ? Math.min(noticeBounds.right, editorBounds.right)
+      : noticeBounds.left;
+    const overlapTop = editorBounds
+      ? Math.max(noticeBounds.top, editorBounds.top)
+      : noticeBounds.top;
+    const overlapBottom = editorBounds
+      ? Math.min(noticeBounds.bottom, editorBounds.bottom)
+      : noticeBounds.top;
+    const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+    const overlapHeight = Math.max(0, overlapBottom - overlapTop);
+    const topmost = document.elementFromPoint(
+      overlapLeft + (overlapWidth / 2),
+      overlapTop + (overlapHeight / 2),
+    );
+    return {
+      overlapArea: overlapWidth * overlapHeight,
+      noticeIsTopmost: node.contains(topmost),
+      noticeBounds: {
+        left: noticeBounds.left,
+        right: noticeBounds.right,
+        top: noticeBounds.top,
+        bottom: noticeBounds.bottom,
+      },
+      editorBounds: editorBounds ? {
+        left: editorBounds.left,
+        right: editorBounds.right,
+        top: editorBounds.top,
+        bottom: editorBounds.bottom,
+      } : null,
+    };
+  });
+
+  expect(stacking.overlapArea, JSON.stringify(stacking)).toBeGreaterThan(0);
+  expect(stacking.noticeIsTopmost).toBe(true);
 });
 
 async function enterBiomedicalBuild(page) {

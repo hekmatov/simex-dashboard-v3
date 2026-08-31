@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 import {
   useOperationStatusActions,
@@ -18,7 +19,7 @@ const useBrowserLayoutEffect = typeof window === "undefined"
   ? React.useEffect
   : React.useLayoutEffect;
 
-export default function OperationStatusViewport({ rightDrawer = null }) {
+export default function OperationStatusViewport({ rightDrawer = null, theme = null }) {
   const { dismissOperation } = useOperationStatusActions();
   const snapshot = useOperationStatusSnapshot();
   const [footerOffset, setFooterOffset] = React.useState(0);
@@ -89,11 +90,20 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
   };
   const announcement = snapshot.announcement;
 
-  return (
+  const viewport = (
     <div
       className="operation-status-viewport"
       data-right-drawer={activeDrawerId ?? rightDrawer ?? "none"}
-      style={geometry}
+      data-dashboard-style={theme?.dashboardStyle}
+      data-dashboard-color-profile={theme?.dashboardColorProfile}
+      data-chart-color-mode={theme?.chartColorMode}
+      data-appearance-preference={theme?.appearancePreference}
+      data-resolved-appearance={theme?.resolvedAppearance}
+      style={{
+        ...theme?.cssVariables,
+        ...theme?.styleVariables,
+        ...geometry,
+      }}
     >
       <span
         className="visually-hidden"
@@ -140,6 +150,9 @@ export default function OperationStatusViewport({ rightDrawer = null }) {
       </div>
     </div>
   );
+  return typeof document === "undefined"
+    ? viewport
+    : createPortal(viewport, document.body);
 }
 
 export function activeRightSideDrawer(ownerDocument = document) {
