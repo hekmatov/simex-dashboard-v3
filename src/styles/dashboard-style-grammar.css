@@ -2070,7 +2070,7 @@
   .source-content-workspace,
   [data-dashboard-style][style]
 ) {
-  font-family: var(--simex-style-body-font, Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--simex-style-body-font);
 }
 
 :is(
@@ -2083,7 +2083,7 @@
   .source-content-workspace,
   [data-dashboard-style][style]
 ) :is(h1, h2, h3, h4, legend) {
-  font-family: var(--simex-style-heading-font, Georgia, serif);
+  font-family: var(--simex-style-heading-font);
 }
 
 :is(

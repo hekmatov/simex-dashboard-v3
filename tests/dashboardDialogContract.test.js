@@ -125,6 +125,12 @@ test("Text/Image and chart authoring expose dashboard wizard regions", async () 
   assert.match(editorHost, /chart-editor-backdrop dashboard-dialog-backdrop/);
 });
 
+test("detached dashboard roots use typography tokens without fixed fallbacks", async () => {
+  const grammar = await read("src/styles/dashboard-style-grammar.css");
+  assert.match(grammar, /font-family:\s*var\(--simex-style-body-font\)/);
+  assert.match(grammar, /font-family:\s*var\(--simex-style-heading-font\)/);
+});
+
 test("dialog eyebrows neutralize legacy global eyebrow paint inside every dialog", async () => {
   const css = await read("src/styles/dashboard-dialogs.css");
   assert.match(

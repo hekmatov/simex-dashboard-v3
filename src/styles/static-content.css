@@ -145,7 +145,7 @@
   border-radius: 6px;
   color: var(--simex-text-strong);
   display: inline-flex;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--simex-style-body-font);
   font-size: 1.15rem;
   justify-content: center;
   min-width: 44px;
@@ -194,7 +194,7 @@
 .portable-qmd-composer__raw-source {
   border: 0;
   box-sizing: border-box;
-  font: 0.875rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.875rem/1.55 var(--simex-style-mono-font);
   min-block-size: 250px;
   padding: 22px 24px;
   resize: vertical;
@@ -390,7 +390,7 @@
 .free-text-source-editor__markdown pre {
   box-sizing: border-box;
   color: var(--simex-text-strong);
-  font: 0.8125rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.8125rem/1.5 var(--simex-style-mono-font);
   margin: 0;
   min-height: 168px;
   overflow: auto;
@@ -411,7 +411,7 @@
 
 .free-text-source-editor__source-repair textarea {
   box-sizing: border-box;
-  font: 0.8125rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.8125rem/1.5 var(--simex-style-mono-font);
   min-block-size: 220px;
   resize: vertical;
   width: 100%;
@@ -553,13 +553,13 @@
 }
 
 .portable-qmd-code-scroll code {
-  font: 0.875rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.875rem/1.55 var(--simex-style-mono-font);
   white-space: pre;
 }
 
 .portable-qmd-fence-info {
   color: var(--simex-text-muted);
-  font: 0.8125rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.8125rem/1.45 var(--simex-style-mono-font);
   margin: 0 0 0.4rem;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -568,7 +568,7 @@
 .portable-qmd-inert-embed,
 .portable-qmd-inert-link,
 .portable-qmd-math-fallback {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--simex-style-mono-font);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }

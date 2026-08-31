@@ -2,11 +2,9 @@ import React from "react";
 import * as echarts from "echarts";
 
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
-import {
-  chartDescriptionVisible,
-  chartTitleVisible,
-  titleContainerProps,
-} from "./chartViewPresentation.js";
+import { useDashboardChartTheme } from "../../theme/DashboardChartThemeContext.jsx";
+import ChartHeading from "./ChartHeading.jsx";
+import { titleContainerProps } from "./chartViewPresentation.js";
 import { mapBudgetNotice, useBuildMapBudgetSlot } from "../build/BuildMapBudgetContext.jsx";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
@@ -18,6 +16,10 @@ const DEFAULT_CHART_TEXT_THEME = Object.freeze({
   gridline: "#D9DDE1",
   surfacePanel: "#FFFFFF",
   surfacePanelAlt: "#F4F5F5",
+  bodyFont: "inherit",
+  headingFont: "inherit",
+  dataFont: "inherit",
+  typographyKey: "",
   dataColors: Object.freeze([
     "#4E79A7",
     "#F28E2B",
@@ -42,12 +44,11 @@ export default function EChartsChartView({
   const lifecycleRef = React.useRef(null);
   const [runtimeError, setRuntimeError] = React.useState(null);
   const [textTheme, setTextTheme] = React.useState(DEFAULT_CHART_TEXT_THEME);
+  const dashboardChartTheme = useDashboardChartTheme();
   const titleId = React.useId();
   const descriptionId = React.useId();
   const summaryId = React.useId();
-  const title = chart.title || "Chart";
-  const titleVisible = chartTitleVisible(chart);
-  const description = chart.description || model.option?.aria?.description || "Interactive chart.";
+  const typographyKey = dashboardChartTheme?.key ?? "";
   const presentedModel = React.useMemo(
     () => applyEChartsPresentation(model, chart, false, textTheme),
     [model, chart, textTheme],
@@ -78,13 +79,20 @@ export default function EChartsChartView({
         || DEFAULT_CHART_TEXT_THEME.surfacePanel,
       surfacePanelAlt: style.getPropertyValue("--simex-surface-panel-alt").trim()
         || DEFAULT_CHART_TEXT_THEME.surfacePanelAlt,
+      bodyFont: style.getPropertyValue("--simex-style-body-font").trim()
+        || DEFAULT_CHART_TEXT_THEME.bodyFont,
+      headingFont: style.getPropertyValue("--simex-style-heading-font").trim()
+        || DEFAULT_CHART_TEXT_THEME.headingFont,
+      dataFont: style.getPropertyValue("--simex-style-data-font").trim()
+        || DEFAULT_CHART_TEXT_THEME.dataFont,
+      typographyKey,
       dataColors: [1, 2, 3, 4, 5, 6].map((index) => (
         style.getPropertyValue(`--simex-data-${index}`).trim()
           || DEFAULT_CHART_TEXT_THEME.dataColors[index - 1]
       )),
     };
     setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
-  });
+  }, [typographyKey]);
 
   React.useEffect(() => {
     const host = hostRef.current;
@@ -143,15 +151,7 @@ export default function EChartsChartView({
         role: "status",
       }, budgetNotice)
     : null,
-  !titleVisible
-    ? React.createElement("h3", {
-        id: titleId,
-        className: "chart-view-title chart-view-title--visually-hidden",
-      }, title)
-    : null,
-  chartDescriptionVisible(chart)
-    ? React.createElement("p", { id: descriptionId, className: "chart-view-description" }, description)
-    : null,
+  React.createElement(ChartHeading, { chart, titleId, descriptionId }),
   React.createElement("div", { ref: hostRef, className: "chart-echarts-host", "aria-hidden": true }));
 }
 
@@ -169,7 +169,6 @@ export function applyEChartsPresentation(
     ...optionWithoutBackground
   } = option;
   const align = normalizedTitleAlignment(chart?.presentation?.title?.align);
-  const titleVisible = chartTitleVisible(chart);
   const textStrong = normalizedTextColor(
     textTheme?.textStrong,
     DEFAULT_CHART_TEXT_THEME.textStrong,
@@ -183,6 +182,9 @@ export function applyEChartsPresentation(
     textTheme?.dataColors,
     DEFAULT_CHART_TEXT_THEME.dataColors,
   );
+  const bodyFont = normalizedFontFamily(textTheme?.bodyFont, DEFAULT_CHART_TEXT_THEME.bodyFont);
+  const headingFont = normalizedFontFamily(textTheme?.headingFont, DEFAULT_CHART_TEXT_THEME.headingFont);
+  const dataFont = normalizedFontFamily(textTheme?.dataFont, DEFAULT_CHART_TEXT_THEME.dataFont);
   const backgroundColor = resolveChartSurfaceBackground(
     chart?.presentation?.background,
     { themeDefault: "transparent" },
@@ -195,29 +197,30 @@ export function applyEChartsPresentation(
       textStyle: {
         ...(option.textStyle ?? {}),
         color: textStrong,
+        fontFamily: bodyFont,
       },
       ...(option.title === undefined
         ? {}
         : {
             title: Array.isArray(option.title)
-              ? option.title.map((title) => normalizedTitle(title, align, textStrong, titleVisible))
-              : normalizedTitle(option.title, align, textStrong, titleVisible),
+              ? option.title.map((title) => normalizedTitle(title, align, textStrong, headingFont))
+              : normalizedTitle(option.title, align, textStrong, headingFont),
           }),
       ...(option.legend === undefined
         ? {}
-        : { legend: normalizedLegend(option.legend, textMuted) }),
+        : { legend: normalizedLegend(option.legend, textMuted, bodyFont) }),
       ...(option.xAxis === undefined
         ? {}
-        : { xAxis: normalizedAxis(option.xAxis, textMuted, borderSubtle, gridline) }),
+        : { xAxis: normalizedAxis(option.xAxis, textMuted, borderSubtle, gridline, bodyFont, dataFont) }),
       ...(option.yAxis === undefined
         ? {}
-        : { yAxis: normalizedAxis(option.yAxis, textMuted, borderSubtle, gridline) }),
+        : { yAxis: normalizedAxis(option.yAxis, textMuted, borderSubtle, gridline, bodyFont, dataFont) }),
       ...(option.tooltip === undefined
         ? {}
-        : { tooltip: normalizedTooltip(option.tooltip, textStrong, borderSubtle, surfacePanel) }),
+        : { tooltip: normalizedTooltip(option.tooltip, textStrong, borderSubtle, surfacePanel, bodyFont) }),
       ...(option.series === undefined
         ? {}
-        : { series: normalizedSeries(option.series, textStrong, textMuted, surfacePanelAlt) }),
+        : { series: normalizedSeries(option.series, textStrong, textMuted, surfacePanelAlt, bodyFont, dataFont) }),
       aria: {
         ...(option.aria ?? {}),
         enabled: false,
@@ -323,11 +326,11 @@ function registerMap(echartsApi, registration) {
   }
 }
 
-function normalizedTitle(value, align, textColor, visible) {
+function normalizedTitle(value, align, textColor, headingFont) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? {
         ...value,
-        show: visible,
+        show: false,
         left: align,
         top: value.top ?? 0,
         textStyle: {
@@ -335,12 +338,19 @@ function normalizedTitle(value, align, textColor, visible) {
           fontWeight: 600,
           ...(value.textStyle ?? {}),
           color: textColor,
+          fontFamily: headingFont,
         },
       }
-    : { text: "", show: visible, left: align, top: 0 };
+    : {
+        text: "",
+        show: false,
+        left: align,
+        top: 0,
+        textStyle: { color: textColor, fontFamily: headingFont },
+      };
 }
 
-function normalizedLegend(value, textColor) {
+function normalizedLegend(value, textColor, bodyFont) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   return {
     ...value,
@@ -354,15 +364,16 @@ function normalizedLegend(value, textColor) {
       fontSize: 11,
       ...(value.textStyle ?? {}),
       color: textColor,
+      fontFamily: bodyFont,
     },
   };
 }
 
-function normalizedAxis(value, textColor, borderColor, gridColor) {
+function normalizedAxis(value, textColor, borderColor, gridColor, bodyFont, dataFont) {
   const normalize = (axis = {}) => ({
     ...axis,
-    axisLabel: { ...(axis.axisLabel ?? {}), color: textColor },
-    nameTextStyle: { ...(axis.nameTextStyle ?? {}), color: textColor },
+    axisLabel: { ...(axis.axisLabel ?? {}), color: textColor, fontFamily: dataFont },
+    nameTextStyle: { ...(axis.nameTextStyle ?? {}), color: textColor, fontFamily: bodyFont },
     axisLine: {
       ...(axis.axisLine ?? {}),
       lineStyle: { ...(axis.axisLine?.lineStyle ?? {}), color: borderColor },
@@ -379,17 +390,17 @@ function normalizedAxis(value, textColor, borderColor, gridColor) {
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
 }
 
-function normalizedTooltip(value, textColor, borderColor, backgroundColor) {
+function normalizedTooltip(value, textColor, borderColor, backgroundColor, bodyFont) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   return {
     ...value,
     backgroundColor,
     borderColor,
-    textStyle: { ...(value.textStyle ?? {}), color: textColor },
+    textStyle: { ...(value.textStyle ?? {}), color: textColor, fontFamily: bodyFont },
   };
 }
 
-function normalizedSeries(value, textStrong, textMuted, surfaceAlt) {
+function normalizedSeries(value, textStrong, textMuted, surfaceAlt, bodyFont, dataFont) {
   if (!Array.isArray(value)) return value;
   return value.map((series) => {
     if (!series || typeof series !== "object") return series;
@@ -397,13 +408,16 @@ function normalizedSeries(value, textStrong, textMuted, surfaceAlt) {
       ...series,
       ...(series.label === undefined
         ? {}
-        : { label: { ...series.label, color: textStrong } }),
+        : { label: { ...series.label, color: textStrong, fontFamily: dataFont } }),
       ...(series.detail === undefined
         ? {}
-        : { detail: { ...series.detail, color: textStrong } }),
+        : { detail: { ...series.detail, color: textStrong, fontFamily: dataFont } }),
+      ...(series.axisLabel === undefined
+        ? {}
+        : { axisLabel: { ...series.axisLabel, fontFamily: dataFont } }),
       ...(series.title === undefined
         ? {}
-        : { title: { ...series.title, color: textMuted } }),
+        : { title: { ...series.title, color: textMuted, fontFamily: bodyFont } }),
       ...(series.type === "gauge" && series.axisLine?.lineStyle?.color === undefined
         ? {
             axisLine: {
@@ -446,4 +460,8 @@ function boundedRuntimeError(error) {
 
 function normalizeError(error) {
   return error instanceof Error ? error : new Error(boundedRuntimeError(error));
+}
+
+function normalizedFontFamily(value, fallback) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }

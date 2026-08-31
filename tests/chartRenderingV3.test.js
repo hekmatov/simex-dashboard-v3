@@ -409,7 +409,7 @@ test("the mounted ECharts option applies every valid title alignment and opaque 
   }
 });
 
-test("ECharts title visibility defaults on and hides without dropping structural text", () => {
+test("ECharts keeps title text for export while the DOM heading owns title visibility", () => {
   const model = {
     kind: "echarts",
     option: { title: { text: "Capacity" }, series: [] },
@@ -423,7 +423,7 @@ test("ECharts title visibility defaults on and hides without dropping structural
 
   assert.deepEqual(
     { show: visible.option.title.show, text: visible.option.title.text },
-    { show: true, text: "Capacity" },
+    { show: false, text: "Capacity" },
   );
   assert.deepEqual(
     { show: hidden.option.title.show, text: hidden.option.title.text },
@@ -494,6 +494,52 @@ test("ECharts title and legend defaults consume projected profile text colors", 
   assert.equal(presented.option.legend.textStyle.color, "#C1CFD4");
 });
 
+test("ECharts projects dashboard heading, body, and data fonts", () => {
+  const presented = applyEChartsPresentation({
+    kind: "echarts",
+    option: {
+      title: { text: "Capacity" },
+      legend: { data: ["Observed"] },
+      tooltip: { trigger: "axis" },
+      yAxis: { name: "Capacity", axisLabel: {} },
+      series: [{ type: "bar", label: {} }],
+    },
+  }, { presentation: { title: { align: "left" } } }, false, {
+    bodyFont: "Body Token Stack",
+    headingFont: "Heading Token Stack",
+    dataFont: "Data Token Stack",
+    typographyKey: "fonts-v1",
+  });
+
+  assert.equal(presented.option.title.textStyle.fontFamily, "Heading Token Stack");
+  assert.equal(presented.option.legend.textStyle.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.tooltip.textStyle.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.yAxis.nameTextStyle.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.yAxis.axisLabel.fontFamily, "Data Token Stack");
+  assert.equal(presented.option.series[0].label.fontFamily, "Data Token Stack");
+});
+
+test("ECharts projects gauge titles and numeric labels into body and data fonts", () => {
+  const presented = applyEChartsPresentation({
+    kind: "echarts",
+    option: {
+      series: [{
+        type: "gauge",
+        title: {},
+        detail: {},
+        axisLabel: {},
+      }],
+    },
+  }, { presentation: { title: { align: "left" } } }, false, {
+    bodyFont: "Body Token Stack",
+    dataFont: "Data Token Stack",
+  });
+
+  assert.equal(presented.option.series[0].title.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.series[0].detail.fontFamily, "Data Token Stack");
+  assert.equal(presented.option.series[0].axisLabel.fontFamily, "Data Token Stack");
+});
+
 test("bullet and pie charts inherit the active dashboard data palette unless authored", () => {
   const theme = {
     textStrong: "#F8FAF9",
@@ -536,6 +582,7 @@ test("equivalent chart text themes compare data palettes by value", () => {
   };
   assert.equal(sameChartTextTheme(current, next), true);
   assert.equal(sameChartTextTheme(current, { ...next, dataColors: ["#4E79A7", "#E15759"] }), false);
+  assert.equal(sameChartTextTheme(current, { ...next, typographyKey: "fonts-v2" }), false);
 });
 
 test("axis series honor validated label visibility, position, and formatting", () => {

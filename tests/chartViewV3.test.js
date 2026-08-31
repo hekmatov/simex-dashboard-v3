@@ -383,6 +383,25 @@ test("ECharts render models remain SSR-safe and describe their content", () => {
   assert.match(html, /Hold Ctrl while scrolling to zoom/);
 });
 
+test("visible chart title precedes description and canvas host", () => {
+  const model = {
+    kind: "echarts",
+    option: { title: { text: "Capacity" }, series: [] },
+  };
+  const chart = {
+    title: "Monthly capacity",
+    description: "Capacity by month.",
+    presentation: {
+      title: { align: "left" },
+      description: { visible: true },
+    },
+  };
+  const html = renderToStaticMarkup(React.createElement(EChartsChartView, { model, chart }));
+
+  assert.ok(html.indexOf("chart-view-title") < html.indexOf("chart-view-description"));
+  assert.ok(html.indexOf("chart-view-description") < html.indexOf("chart-echarts-host"));
+});
+
 test("visually hidden chart titles remain structural headings across renderers", () => {
   const chart = {
     title: "Structural capacity title",
