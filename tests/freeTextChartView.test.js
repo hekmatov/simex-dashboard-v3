@@ -1029,7 +1029,12 @@ test("writer and preview track every selected authoring footprint without expand
   const narrowGeometry = await page.evaluate(() => {
     const read = (kind) => {
       const frame = document.querySelector(`[data-authoring-footprint="${kind}"]`);
-      return { frameWidth: frame?.clientWidth, gridWidth: frame?.parentElement?.clientWidth };
+      const grid = frame?.parentElement;
+      return {
+        frameWidth: frame?.clientWidth,
+        gridWidth: grid?.clientWidth,
+        gridTrackCount: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+      };
     };
     return {
       writer: read("writer"),
@@ -1037,6 +1042,8 @@ test("writer and preview track every selected authoring footprint without expand
       rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     };
   });
+  assert.equal(narrowGeometry.writer.gridTrackCount, 1);
+  assert.equal(narrowGeometry.preview.gridTrackCount, 1);
   assert.equal(narrowGeometry.writer.frameWidth, narrowGeometry.writer.gridWidth);
   assert.equal(narrowGeometry.preview.frameWidth, narrowGeometry.preview.gridWidth);
   assert.equal(narrowGeometry.rootFits, true);
