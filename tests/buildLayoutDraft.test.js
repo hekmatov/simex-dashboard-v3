@@ -9,7 +9,12 @@ import {
   createBuildLayoutDraft,
   discardBuildLayoutDraft,
   failBuildLayoutSave,
+  mergeBuildLayoutPage,
+  mergeBuildLayoutSection,
+  moveBuildLayoutSection,
   renameBuildLayoutPage,
+  removeBuildLayoutPage,
+  removeBuildLayoutSection,
   reorderBuildLayoutPanel,
   reorderBuildLayoutPage,
   reorderBuildLayoutSection,
@@ -157,6 +162,77 @@ test("discard restores the saved layout without touching a simultaneous chart dr
   assert.deepEqual(chartDraft, { draftId: "chart-panel-a", status: "dirty", title: "Edited title" });
 });
 
+test("structure commands retain unaffected pages, sections, scenes, and Chrono Groups", () => {
+  {
+    const draft = createBuildLayoutDraft(structureFixture());
+    const before = draft.value;
+    const movedSection = before.pages[0].sections[1];
+    const untouchedSourceSection = before.pages[0].sections[0];
+    const untouchedPage = before.pages[2];
+    const chronoGroup = before.chronoGroups[0];
+    const unrelatedScene = before.scenes[1];
+    const moved = moveBuildLayoutSection(draft, "page-a", "section-a2", "page-b", { first: true });
+
+    assert.strictEqual(moved.value.pages[0].sections[0], untouchedSourceSection);
+    assert.strictEqual(moved.value.pages[1].sections[0], movedSection);
+    assert.strictEqual(moved.value.pages[2], untouchedPage);
+    assert.strictEqual(moved.value.chronoGroups[0], chronoGroup);
+    assert.strictEqual(moved.value.scenes[1], unrelatedScene);
+    assert.notStrictEqual(moved.value.scenes[0], before.scenes[0]);
+  }
+
+  {
+    const draft = createBuildLayoutDraft(structureFixture());
+    const before = draft.value;
+    const sourcePanel = before.pages[0].sections[1].panels[0];
+    const untouchedPage = before.pages[1];
+    const merged = mergeBuildLayoutSection(draft, "page-a", "section-a2", "section-a1");
+
+    assert.strictEqual(merged.value.pages[0].sections[0].panels[0], sourcePanel);
+    assert.strictEqual(merged.value.pages[1], untouchedPage);
+    assert.strictEqual(merged.value.scenes, before.scenes);
+    assert.strictEqual(merged.value.chronoGroups, before.chronoGroups);
+  }
+
+  {
+    const draft = createBuildLayoutDraft(structureFixture());
+    const before = draft.value;
+    const unrelatedGroup = before.chronoGroups[1];
+    const unrelatedScene = before.scenes[1];
+    const removed = removeBuildLayoutSection(draft, "page-a", "section-a2", { disposition: "delete-charts" });
+
+    assert.strictEqual(removed.value.pages[1], before.pages[1]);
+    assert.notStrictEqual(removed.value.chronoGroups[0], before.chronoGroups[0]);
+    assert.strictEqual(removed.value.chronoGroups[1], unrelatedGroup);
+    assert.notStrictEqual(removed.value.scenes[0], before.scenes[0]);
+    assert.strictEqual(removed.value.scenes[1], unrelatedScene);
+  }
+
+  {
+    const draft = createBuildLayoutDraft(structureFixture());
+    const before = draft.value;
+    const movedSection = before.pages[1].sections[0];
+    const untouchedChrono = before.chronoGroups[0];
+    const merged = mergeBuildLayoutPage(draft, "page-b", "page-c");
+
+    assert.strictEqual(merged.value.pages.find(({ id }) => id === "page-c").sections[1], movedSection);
+    assert.strictEqual(merged.value.chronoGroups[0], untouchedChrono);
+  }
+
+  {
+    const draft = createBuildLayoutDraft(structureFixture());
+    const before = draft.value;
+    const movedSection = before.pages[1].sections[0];
+    const removed = removeBuildLayoutPage(draft, "page-b", {
+      disposition: "move-sections",
+      targetPageId: "page-c",
+    });
+
+    assert.strictEqual(removed.value.pages.find(({ id }) => id === "page-c").sections[1], movedSection);
+    assert.strictEqual(removed.value.chronoGroups[0], before.chronoGroups[0]);
+  }
+});
+
 function fixture() {
   return {
     id: "dashboard",
@@ -169,6 +245,57 @@ function fixture() {
     }, {
       id: "page-b",
       sections: [{ id: "section-d", panels: [{ id: "panel-d" }] }],
+    }],
+  };
+}
+
+function structureFixture() {
+  return {
+    id: "dashboard-structure",
+    pages: [{
+      id: "page-a",
+      sections: [{
+        id: "section-a1",
+        panels: [{ id: "placement-a", chart: { id: "chart-a", title: "Chart A" } }],
+      }, {
+        id: "section-a2",
+        panels: [{ id: "placement-b", chart: { id: "chart-b", title: "Chart B" } }],
+      }],
+    }, {
+      id: "page-b",
+      sections: [{ id: "section-b1", panels: [{ id: "placement-c", chart: { id: "chart-c", title: "Chart C" } }] }],
+    }, {
+      id: "page-c",
+      sections: [{ id: "section-c1", panels: [] }],
+    }, {
+      id: "landing",
+      landing: {
+        domainRoutes: [{ pageId: "page-a" }, { pageId: "page-b" }, { pageId: "page-c" }],
+        hero: { primaryAction: { pageId: "page-b" } },
+      },
+      sections: [],
+    }],
+    chronoGroups: [{
+      id: "chrono-main",
+      members: [{ chartId: "chart-a" }, { chartId: "chart-b" }],
+    }, {
+      id: "chrono-unrelated",
+      members: [{ chartId: "chart-c" }],
+    }],
+    scenes: [{
+      id: "scene-a",
+      pageId: "page-a",
+      members: [{ chartId: "chart-a" }, { chartId: "chart-b" }],
+      present: { chartIds: ["chart-a", "chart-b"] },
+      frameRule: { chartId: "chart-b" },
+    }, {
+      id: "scene-unrelated",
+      pageId: "page-c",
+      members: [],
+    }, {
+      id: "scene-b",
+      pageId: "page-b",
+      members: [{ chartId: "chart-c" }],
     }],
   };
 }

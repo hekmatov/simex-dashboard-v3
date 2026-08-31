@@ -103,9 +103,8 @@ export function renameBuildLayoutPanel(draft, placementId, title) {
 
 export function moveBuildLayoutSection(draft, pageId, sectionId, targetPageId, placement = {}) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const source = findPage(next.value, pageId);
-  const target = findPage(next.value, targetPageId);
+  const source = findPage(draft.value, pageId);
+  const target = findPage(draft.value, targetPageId);
   const index = source?.sections?.findIndex(({ id }) => id === sectionId) ?? -1;
   if (!source || !target || source === target || index < 0 || target.landing) {
     return failCommand(draft, "MOVE_TARGET_INVALID", "Choose an eligible destination Page.");
@@ -113,35 +112,47 @@ export function moveBuildLayoutSection(draft, pageId, sectionId, targetPageId, p
   if (source.sections.length === 1) {
     return failCommand(draft, "FINAL_SECTION_PROTECTED", "The source Page must retain a Section.");
   }
-  const [section] = source.sections.splice(index, 1);
+  const sourceSections = source.sections.slice();
+  const [section] = sourceSections.splice(index, 1);
+  const targetSections = target.sections.slice();
   const targetIndex = placement.first === true
     ? 0
     : placement.afterSectionId
-      ? target.sections.findIndex(({ id }) => id === placement.afterSectionId) + 1
-      : target.sections.length;
-  target.sections.splice(Math.max(0, Math.min(targetIndex, target.sections.length)), 0, section);
-  removePageScopedSceneChartReferences(next.value, pageId, chartIdsForSections([section]));
-  return markDirty(next, sectionId);
+      ? targetSections.findIndex(({ id }) => id === placement.afterSectionId) + 1
+      : targetSections.length;
+  targetSections.splice(Math.max(0, Math.min(targetIndex, targetSections.length)), 0, section);
+  const pages = draft.value.pages.map((page) => {
+    if (page.id === source.id) return { ...page, sections: sourceSections };
+    if (page.id === target.id) return { ...page, sections: targetSections };
+    return page;
+  });
+  let value = { ...draft.value, pages };
+  value = removePageScopedSceneChartReferences(value, pageId, chartIdsForSections([section]));
+  return markDirty(draft, sectionId, value);
 }
 
 export function mergeBuildLayoutSection(draft, pageId, sectionId, targetSectionId) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const page = findPage(next.value, pageId);
+  const page = findPage(draft.value, pageId);
   const sourceIndex = page?.sections?.findIndex(({ id }) => id === sectionId) ?? -1;
-  const target = findSection(next.value, pageId, targetSectionId);
+  const target = findSection(draft.value, pageId, targetSectionId);
   if (!page || sourceIndex < 0 || !target || sectionId === targetSectionId) {
     return failCommand(draft, "SECTION_MERGE_TARGET_INVALID", "Choose another Section on this Page.");
   }
-  const [source] = page.sections.splice(sourceIndex, 1);
-  target.panels = [...(source.panels ?? []), ...(target.panels ?? [])];
-  return markDirty(next, targetSectionId);
+  const sections = page.sections.slice();
+  const [source] = sections.splice(sourceIndex, 1);
+  const targetIndex = sections.findIndex(({ id }) => id === targetSectionId);
+  sections[targetIndex] = {
+    ...sections[targetIndex],
+    panels: [...(source.panels ?? []), ...(target.panels ?? [])],
+  };
+  const value = updatePage(draft.value, pageId, (current) => ({ ...current, sections }));
+  return markDirty(draft, targetSectionId, value);
 }
 
 export function removeBuildLayoutSection(draft, pageId, sectionId, { disposition } = {}) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const page = findPage(next.value, pageId);
+  const page = findPage(draft.value, pageId);
   const index = page?.sections?.findIndex(({ id }) => id === sectionId) ?? -1;
   if (!page || index < 0) return failCommand(draft, "SECTION_NOT_FOUND", "The Section no longer exists.");
   if (page.sections.length === 1) return failCommand(draft, "FINAL_SECTION_PROTECTED", "A Page must retain a Section.");
@@ -151,50 +162,70 @@ export function removeBuildLayoutSection(draft, pageId, sectionId, { disposition
   }
   if (disposition === "merge-above" && index === 0) return failCommand(draft, "MERGE_DESTINATION_UNAVAILABLE", "There is no Section above.");
   if (disposition === "merge-below" && index === page.sections.length - 1) return failCommand(draft, "MERGE_DESTINATION_UNAVAILABLE", "There is no Section below.");
-  const [removed] = page.sections.splice(index, 1);
-  if (disposition === "merge-above") page.sections[index - 1].panels.push(...(removed.panels ?? []));
-  if (disposition === "merge-below") page.sections[index].panels.unshift(...(removed.panels ?? []));
-  if (disposition === "delete-charts") removeChartReferences(next.value, chartIdsForSections([removed]));
-  return markDirty(next, sectionId);
+  const sections = page.sections.slice();
+  const [removed] = sections.splice(index, 1);
+  if (disposition === "merge-above") {
+    sections[index - 1] = {
+      ...sections[index - 1],
+      panels: [...(sections[index - 1].panels ?? []), ...(removed.panels ?? [])],
+    };
+  }
+  if (disposition === "merge-below") {
+    sections[index] = {
+      ...sections[index],
+      panels: [...(removed.panels ?? []), ...(sections[index].panels ?? [])],
+    };
+  }
+  let value = updatePage(draft.value, pageId, (current) => ({ ...current, sections }));
+  if (disposition === "delete-charts") value = removeChartReferences(value, chartIdsForSections([removed]));
+  return markDirty(draft, sectionId, value);
 }
 
 export function mergeBuildLayoutPage(draft, pageId, targetPageId) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const sourceIndex = next.value.pages.findIndex(({ id }) => id === pageId);
-  const source = next.value.pages[sourceIndex];
-  const target = findPage(next.value, targetPageId);
+  const sourceIndex = draft.value.pages.findIndex(({ id }) => id === pageId);
+  const source = draft.value.pages[sourceIndex];
+  const target = findPage(draft.value, targetPageId);
   if (!source || !target || source === target || source.landing || target.landing) {
     return failCommand(draft, "PAGE_MERGE_TARGET_INVALID", "Choose another analytical Page.");
   }
-  target.sections.push(...source.sections);
-  next.value.pages.splice(sourceIndex, 1);
-  reassignPageScopedScenes(next.value, pageId, targetPageId);
-  repairLandingRoutes(next.value, pageId, targetPageId);
-  return markDirty(next, targetPageId);
+  let value = {
+    ...draft.value,
+    pages: draft.value.pages
+      .filter(({ id }) => id !== pageId)
+      .map((page) => page.id === targetPageId
+        ? { ...page, sections: [...(page.sections ?? []), ...(source.sections ?? [])] }
+        : page),
+  };
+  value = reassignPageScopedScenes(value, pageId, targetPageId);
+  value = repairLandingRoutes(value, pageId, targetPageId);
+  return markDirty(draft, targetPageId, value);
 }
 
 export function removeBuildLayoutPage(draft, pageId, { disposition, targetPageId } = {}) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
   if ((draft?.value?.pages?.length ?? 0) <= 1) return failCommand(draft, "FINAL_PAGE_PROTECTED", "The final Page cannot be removed.");
-  const next = cloneDraft(draft);
-  const index = next.value.pages.findIndex(({ id }) => id === pageId);
-  const source = next.value.pages[index];
+  const index = draft.value.pages.findIndex(({ id }) => id === pageId);
+  const source = draft.value.pages[index];
   if (!source || source.landing) return failCommand(draft, "PAGE_PROTECTED", "This Page cannot be removed.");
+  let value = draft.value;
   if (disposition === "move-sections") {
-    const target = findPage(next.value, targetPageId);
+    const target = findPage(value, targetPageId);
     if (!target || target === source || target.landing) return failCommand(draft, "PAGE_MOVE_TARGET_INVALID", "Choose an eligible destination Page.");
-    target.sections.push(...source.sections);
-    reassignPageScopedScenes(next.value, pageId, targetPageId);
+    value = updatePage(value, targetPageId, (page) => ({
+      ...page,
+      sections: [...(page.sections ?? []), ...(source.sections ?? [])],
+    }));
+    value = reassignPageScopedScenes(value, pageId, targetPageId);
   } else if (disposition === "delete-charts") {
-    removeChartReferences(next.value, chartIdsForSections(source.sections));
+    value = removeChartReferences(value, chartIdsForSections(source.sections));
   } else {
     return failCommand(draft, "PAGE_DISPOSITION_REQUIRED", "Choose what happens to the Page content.");
   }
-  next.value.pages.splice(index, 1);
-  pruneScenesWithRemovedParents(next.value, { pageIds: new Set([pageId]) });
-  repairLandingRoutes(next.value);
-  return markDirty(next, pageId);
+  value = { ...value, pages: value.pages.filter(({ id }) => id !== pageId) };
+  value = pruneScenesWithRemovedParents(value, { pageIds: new Set([pageId]) });
+  value = repairLandingRoutes(value);
+  return markDirty(draft, pageId, value);
 }
 
 export function previewBuildStructureConsequences(dashboard, operation) {
@@ -260,8 +291,9 @@ export function discardBuildLayoutDraft(draft) {
 
 function repairLandingRoutes(dashboard, mergedPageId, mergeTargetPageId) {
   const remainingPageIds = new Set(dashboard.pages.map(({ id }) => id));
-  for (const page of dashboard.pages) {
-    if (!page.landing) continue;
+  let changed = false;
+  const pages = dashboard.pages.map((page) => {
+    if (!page.landing) return page;
     const previousRoutes = (page.landing.domainRoutes ?? [])
       .map((route) => route.pageId === mergedPageId ? { ...route, pageId: mergeTargetPageId } : route)
       .filter((route, index, routes) => routes.findIndex(({ pageId }) => pageId === route.pageId) === index);
@@ -272,17 +304,30 @@ function repairLandingRoutes(dashboard, mergedPageId, mergeTargetPageId) {
       const fallbackTarget = dashboard.pages.find(({ id }) => id !== page.id)?.id ?? page.id;
       retainedRoutes.push({ ...(previousRoutes[0] ?? {}), pageId: fallbackTarget });
     }
-    page.landing.domainRoutes = retainedRoutes;
     const primaryAction = page.landing.hero?.primaryAction;
-    if (primaryAction && primaryAction.pageId === mergedPageId) primaryAction.pageId = mergeTargetPageId;
-    if (primaryAction && !remainingPageIds.has(primaryAction.pageId)) {
-      primaryAction.pageId = retainedRoutes[0].pageId;
-    }
-  }
-}
-
-function cloneDraft(draft) {
-  return { ...draft, value: structuredClone(draft.value), error: null };
+    const previousPrimaryPageId = primaryAction?.pageId;
+    const nextPrimaryPageId = previousPrimaryPageId === mergedPageId
+      ? mergeTargetPageId
+      : remainingPageIds.has(previousPrimaryPageId)
+        ? previousPrimaryPageId
+        : retainedRoutes[0].pageId;
+    const routesChanged = retainedRoutes.length !== (page.landing.domainRoutes ?? []).length
+      || retainedRoutes.some((route, index) => route.pageId !== page.landing.domainRoutes?.[index]?.pageId);
+    if (!routesChanged && nextPrimaryPageId === previousPrimaryPageId) return page;
+    changed = true;
+    return {
+      ...page,
+      landing: {
+        ...page.landing,
+        domainRoutes: retainedRoutes,
+        hero: primaryAction ? {
+          ...(page.landing.hero ?? {}),
+          primaryAction: { ...primaryAction, pageId: nextPrimaryPageId },
+        } : page.landing.hero,
+      },
+    };
+  });
+  return changed ? { ...dashboard, pages } : dashboard;
 }
 
 function markDirty(draft, targetId, value = draft.value) {
@@ -332,63 +377,78 @@ function sceneChartIds(scene) {
 }
 
 function removePageScopedSceneChartReferences(dashboard, pageId, chartIds) {
-  for (const scene of dashboard?.scenes ?? []) {
-    if (scene.pageId !== pageId) continue;
-    removeSceneChartReferences(scene, chartIds);
-  }
+  const scenes = (dashboard?.scenes ?? []).map((scene) => (
+    scene.pageId === pageId ? removeSceneChartReferences(scene, chartIds) : scene
+  ));
+  return scenes.some((scene, index) => scene !== dashboard.scenes[index])
+    ? { ...dashboard, scenes }
+    : dashboard;
 }
 
 function removeChartReferences(dashboard, chartIds) {
   const removed = new Set(chartIds);
   const removedChronoGroupIds = new Set();
-  dashboard.chronoGroups = (dashboard?.chronoGroups ?? []).flatMap((group) => {
-    group.members = (group.members ?? []).filter(({ chartId }) => !removed.has(chartId));
-    if (Array.isArray(group.chartIds)) group.chartIds = group.chartIds.filter((id) => !removed.has(id));
-    if (group.members.length > 0) return [group];
+  const chronoGroups = (dashboard?.chronoGroups ?? []).flatMap((group) => {
+    const members = (group.members ?? []).filter(({ chartId }) => !removed.has(chartId));
+    const chartIdsValue = Array.isArray(group.chartIds)
+      ? group.chartIds.filter((id) => !removed.has(id))
+      : group.chartIds;
+    if (members.length > 0) {
+      if (members.length === (group.members ?? []).length && chartIdsValue?.length === group.chartIds?.length) return [group];
+      return [{ ...group, members, ...(Array.isArray(group.chartIds) ? { chartIds: chartIdsValue } : {}) }];
+    }
     removedChronoGroupIds.add(group.id);
     return [];
   });
-  for (const scene of dashboard?.scenes ?? []) removeSceneChartReferences(scene, chartIds);
-  pruneScenesWithRemovedParents(dashboard, { chronoGroupIds: removedChronoGroupIds });
+  const scenes = (dashboard?.scenes ?? [])
+    .filter((scene) => !removedChronoGroupIds.has(scene?.chronoGroupId))
+    .map((scene) => removeSceneChartReferences(scene, chartIds));
+  return { ...dashboard, chronoGroups, scenes };
 }
 
 function pruneScenesWithRemovedParents(dashboard, { pageIds = new Set(), chronoGroupIds = new Set() } = {}) {
-  dashboard.scenes = (dashboard?.scenes ?? []).filter((scene) => (
+  const scenes = (dashboard?.scenes ?? []).filter((scene) => (
     !pageIds.has(scene?.pageId)
     && !chronoGroupIds.has(scene?.chronoGroupId)
   ));
+  return scenes.length === (dashboard.scenes ?? []).length ? dashboard : { ...dashboard, scenes };
 }
 
 function removeSceneChartReferences(scene, chartIds) {
   const removed = new Set(chartIds);
-  if (Array.isArray(scene.chartIds)) scene.chartIds = scene.chartIds.filter((id) => !removed.has(id));
-  if (Array.isArray(scene.members)) scene.members = scene.members.filter(({ chartId }) => !removed.has(chartId));
-  if (Array.isArray(scene.present?.chartIds)) scene.present.chartIds = scene.present.chartIds.filter((id) => !removed.has(id));
-  if (scene.frameRule?.chartId && removed.has(scene.frameRule.chartId)) scene.frameRule = { type: "calendar" };
+  const chartIdsValue = Array.isArray(scene.chartIds)
+    ? scene.chartIds.filter((id) => !removed.has(id))
+    : scene.chartIds;
+  const members = Array.isArray(scene.members)
+    ? scene.members.filter(({ chartId }) => !removed.has(chartId))
+    : scene.members;
+  const presentChartIds = Array.isArray(scene.present?.chartIds)
+    ? scene.present.chartIds.filter((id) => !removed.has(id))
+    : scene.present?.chartIds;
+  const frameRule = scene.frameRule?.chartId && removed.has(scene.frameRule.chartId)
+    ? { type: "calendar" }
+    : scene.frameRule;
+  const changed = chartIdsValue?.length !== scene.chartIds?.length
+    || members?.length !== scene.members?.length
+    || presentChartIds?.length !== scene.present?.chartIds?.length
+    || frameRule !== scene.frameRule;
+  if (!changed) return scene;
+  return {
+    ...scene,
+    ...(Array.isArray(scene.chartIds) ? { chartIds: chartIdsValue } : {}),
+    ...(Array.isArray(scene.members) ? { members } : {}),
+    ...(Array.isArray(scene.present?.chartIds) ? {
+      present: { ...scene.present, chartIds: presentChartIds },
+    } : {}),
+    ...(scene.frameRule !== undefined || frameRule !== undefined ? { frameRule } : {}),
+  };
 }
 
 function reassignPageScopedScenes(dashboard, sourcePageId, targetPageId) {
-  for (const scene of dashboard?.scenes ?? []) if (scene.pageId === sourcePageId) scene.pageId = targetPageId;
-}
-
-function movePanel(dashboard, sourceId, targetId) {
-  if (!sourceId || !targetId || sourceId === targetId) return false;
-  let sourceLocation = null;
-  let targetLocation = null;
-  for (const page of dashboard?.pages ?? []) {
-    for (const section of page.sections ?? []) {
-      const sourceIndex = (section.panels ?? []).findIndex(({ id }) => id === sourceId);
-      const targetIndex = (section.panels ?? []).findIndex(({ id }) => id === targetId);
-      if (sourceIndex >= 0) sourceLocation = { section, index: sourceIndex };
-      if (targetIndex >= 0) targetLocation = { section, index: targetIndex };
-    }
-  }
-  if (!sourceLocation || !targetLocation) return false;
-  const [source] = sourceLocation.section.panels.splice(sourceLocation.index, 1);
-  const targetIndex = sourceLocation.section === targetLocation.section
-    && sourceLocation.index < targetLocation.index
-    ? targetLocation.index - 1
-    : targetLocation.index;
-  targetLocation.section.panels.splice(targetIndex, 0, source);
-  return true;
+  const scenes = (dashboard?.scenes ?? []).map((scene) => (
+    scene.pageId === sourcePageId ? { ...scene, pageId: targetPageId } : scene
+  ));
+  return scenes.some((scene, index) => scene !== dashboard.scenes[index])
+    ? { ...dashboard, scenes }
+    : dashboard;
 }
