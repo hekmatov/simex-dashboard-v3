@@ -759,11 +759,14 @@ export default function ChartWizardV3({
     });
     setSubmissionError("");
   };
-  const updatePath = (path, value) => dispatch({
-    type: "updateChart",
-    path,
-    value,
-  });
+  const updatePath = (path, value) => {
+    dispatch({
+      type: "updateChart",
+      path,
+      value,
+    });
+    setSubmissionError("");
+  };
   const updateDestination = (patch) => {
     setWizard((current) => {
       const nextDestination = { ...(current.destination ?? {}), ...patch };

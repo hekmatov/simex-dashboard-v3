@@ -68,6 +68,35 @@ function renderSvg(option, width = 640, height = 400) {
   }
 }
 
+function renderedTextBounds(option, width = 640, height = 400) {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
+  try {
+    instance.setOption(option);
+    instance.renderToSVGString();
+    return instance.getZr().storage.getDisplayList(true).flatMap((element) => {
+      if (element.style?.text === undefined) return [];
+      const rect = element.getBoundingRect();
+      const corners = [
+        [rect.x, rect.y],
+        [rect.x + rect.width, rect.y],
+        [rect.x, rect.y + rect.height],
+        [rect.x + rect.width, rect.y + rect.height],
+      ].map(([x, y]) => element.transformCoordToGlobal(x, y));
+      const x = corners.map(([value]) => value);
+      const y = corners.map(([, value]) => value);
+      return [{
+        text: String(element.style.text),
+        left: Math.min(...x),
+        right: Math.max(...x),
+        top: Math.min(...y),
+        bottom: Math.max(...y),
+      }];
+    });
+  } finally {
+    instance.dispose();
+  }
+}
+
 function renderedXAxisDates(option, width = 800, height = 400) {
   const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
   try {
@@ -658,6 +687,146 @@ test("axis presentation renders X and value titles, ranges, ticks, and temporal 
   assert.equal(category.option.xAxis.axisLabel.interval, 1);
   assert.equal(category.option.xAxis.axisTick.interval, 1);
   assert.deepEqual(category.option.xAxis.data, ["2027-05-01", "2027-05-02"]);
+});
+
+test("primary and secondary Y-axis titles keep visible clearance from wide tick labels", () => {
+  const width = 500;
+  const marks = (x, value, axis, measure) => ({
+    x,
+    value,
+    measure,
+    measureLabel: measure,
+    clusterKey: "",
+    groupKey: "",
+    axis,
+  });
+
+  for (const titlePosition of ["top", "center", "bottom"]) {
+    for (const titleOrientation of ["vertical", "horizontal"]) {
+      const model = buildRenderModel({
+        chart: chart("mixed", {
+          presentation: {
+            title: { align: "left" },
+            collection: null,
+            axes: {
+              primary: {
+                title: "Primary Y title",
+                titlePosition,
+                titleOrientation,
+              },
+              secondary: {
+                title: "Secondary Y title",
+                titlePosition,
+                titleOrientation,
+              },
+            },
+          },
+        }),
+        prepared: ready([
+          marks("A", 123_456_789, "primary", "Cases"),
+          marks("B", 987_654_321, "primary", "Cases"),
+          marks("A", 234_567_890, "secondary", "Rate"),
+          marks("B", 876_543_210, "secondary", "Rate"),
+        ], { axisInterpretation: "category" }),
+      });
+      const bounds = renderedTextBounds(model.option, width, 320);
+      const numericLabels = bounds.filter(({ text }) => /^-?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text));
+      const primaryLabels = numericLabels.filter(({ right }) => right < width / 2);
+      const secondaryLabels = numericLabels.filter(({ left }) => left > width / 2);
+      const primaryTitle = bounds.find(({ text }) => text === "Primary Y title");
+      const secondaryTitle = bounds.find(({ text }) => text === "Secondary Y title");
+      const context = `${titlePosition}/${titleOrientation}`;
+      const separated = (title, label) => (
+        title.right + 8 <= label.left
+        || title.left - 8 >= label.right
+        || title.bottom + 8 <= label.top
+        || title.top - 8 >= label.bottom
+      );
+
+      assert.ok(primaryTitle && secondaryTitle, `${context}: both Y-axis titles render`);
+      assert.ok(primaryLabels.length > 0 && secondaryLabels.length > 0, `${context}: both value axes render tick labels`);
+      assert.ok(
+        primaryTitle.left >= 0 && primaryTitle.right <= width
+          && primaryTitle.top >= 0 && primaryTitle.bottom <= 320,
+        `${context}: primary title remains inside the chart canvas`,
+      );
+      assert.ok(
+        secondaryTitle.left >= 0 && secondaryTitle.right <= width
+          && secondaryTitle.top >= 0 && secondaryTitle.bottom <= 320,
+        `${context}: secondary title remains inside the chart canvas`,
+      );
+      assert.ok(primaryLabels.every((label) => separated(primaryTitle, label)), `${context}: primary title keeps 8px tick-label clearance`);
+      assert.ok(secondaryLabels.every((label) => separated(secondaryTitle, label)), `${context}: secondary title keeps 8px tick-label clearance`);
+    }
+  }
+});
+
+test("centered Y-axis titles keep clearance for fractional ticks at zero, unit, and extreme scales", () => {
+  const width = 500;
+  for (const value of [0, 1, 1e-12, 1e21, 1e24]) {
+    for (const titleOrientation of ["vertical", "horizontal"]) {
+      const model = buildRenderModel({
+        chart: chart("mixed", {
+          presentation: {
+            title: { align: "left" },
+            collection: null,
+            axes: {
+              primary: {
+                title: "Primary Y title",
+                titlePosition: "center",
+                titleOrientation,
+              },
+              secondary: {
+                title: "Secondary Y title",
+                titlePosition: "center",
+                titleOrientation,
+              },
+            },
+          },
+        }),
+        prepared: ready([
+          {
+            x: "A",
+            value,
+            measure: "Cases",
+            measureLabel: "Cases",
+            clusterKey: "",
+            groupKey: "",
+            axis: "primary",
+          },
+          {
+            x: "A",
+            value,
+            measure: "Rate",
+            measureLabel: "Rate",
+            clusterKey: "",
+            groupKey: "",
+            axis: "secondary",
+          },
+        ], { axisInterpretation: "category" }),
+      });
+      const bounds = renderedTextBounds(model.option, width, 320);
+      const numericLabels = bounds.filter(({ text }) => /^-?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text));
+      assert.equal(numericLabels.length % 2, 0, `${value}: both value axes render the same tick count`);
+      const axisTickCount = numericLabels.length / 2;
+      const primaryLabels = numericLabels.slice(0, axisTickCount);
+      const secondaryLabels = numericLabels.slice(axisTickCount);
+      const primaryTitle = bounds.find(({ text }) => text === "Primary Y title");
+      const secondaryTitle = bounds.find(({ text }) => text === "Secondary Y title");
+      const separated = (title, label) => (
+        title.right + 8 <= label.left
+        || title.left - 8 >= label.right
+        || title.bottom + 8 <= label.top
+        || title.top - 8 >= label.bottom
+      );
+
+      const context = `${value}/${titleOrientation}`;
+      assert.ok(primaryTitle && secondaryTitle, `${context}: both Y-axis titles render`);
+      assert.ok(primaryLabels.length > 0 && secondaryLabels.length > 0, `${context}: both fractional value axes render`);
+      assert.ok(primaryLabels.every((label) => separated(primaryTitle, label)), `${context}: primary title keeps 8px tick-label clearance`);
+      assert.ok(secondaryLabels.every((label) => separated(secondaryTitle, label)), `${context}: secondary title keeps 8px tick-label clearance`);
+    }
+  }
 });
 
 test("monthly cadence stays aligned to calendar month boundaries", () => {

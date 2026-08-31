@@ -5,6 +5,7 @@ import {
 } from "./zoomOptions.js";
 import {
   valueAxisPresentation,
+  valueAxisGutters,
   xAxisPresentation,
 } from "./axisPresentation.js";
 
@@ -61,14 +62,19 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   };
   const primarySettings = axes?.primary;
   const secondarySettings = axes?.secondary;
+  const primaryValues = groupedValues(grouped, "primary");
+  const secondaryValues = groupedValues(grouped, "secondary");
+  const primaryGutters = valueAxisGutters(primarySettings);
+  const secondaryGutters = valueAxisGutters(secondarySettings);
   const primaryAxis = valueAxis(primarySettings, false, horizontal ? {
     ...(primarySettings ?? {}),
     ...xSettings,
-  } : null);
+  } : null, primaryValues);
   const secondaryAxis = valueAxis(
     secondarySettings,
     true,
     horizontal ? (secondarySettings ?? {}) : null,
+    secondaryValues,
   );
   const series = grouped.map((group, index) => {
     const type = seriesType(mark, group, index);
@@ -128,10 +134,24 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
         : {}),
       grid: {
         containLabel: true,
-        left: 48,
-        right: hasSecondary ? 56 : 28,
-        top: 76,
-        bottom: rangeSelectorVisible(chart) ? 52 : 32,
+        left: horizontal
+          ? 48
+          : Math.max(48, primaryGutters.side),
+        right: horizontal
+          ? hasSecondary ? 56 : 28
+          : hasSecondary
+            ? Math.max(56, secondaryGutters.side)
+            : 28,
+        top: horizontal
+          ? 76
+          : Math.max(76, primaryGutters.top, secondaryGutters.top),
+        bottom: horizontal
+          ? rangeSelectorVisible(chart) ? 52 : 32
+          : Math.max(
+              rangeSelectorVisible(chart) ? 52 : 32,
+              primaryGutters.bottom,
+              secondaryGutters.bottom,
+            ),
       },
       xAxis: horizontal
         ? hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis
@@ -189,17 +209,24 @@ function formatSeriesLabel(params) {
   return Number.isFinite(numeric) ? NUMBER_FORMATTER.format(numeric) : String(raw ?? "");
 }
 
-function valueAxis(settings = {}, secondary = false, xSettings = null) {
+function valueAxis(settings = {}, secondary = false, xSettings = null, values = []) {
   const presentationSettings = xSettings ?? settings;
   return {
     type: "value",
     ...(xSettings
       ? xAxisPresentation(presentationSettings, "number")
-      : valueAxisPresentation(presentationSettings)),
+      : valueAxisPresentation(presentationSettings, values)),
     min: presentationSettings?.min,
     max: presentationSettings?.max,
     splitLine: { show: secondary ? false : settings?.grid !== false },
   };
+}
+
+function groupedValues(groups, axis) {
+  return groups
+    .filter((group) => group.axis === axis)
+    .flatMap((group) => group.marks.map(({ value }) => value))
+    .filter(Number.isFinite);
 }
 
 function legacyXAxisSettings(axes) {

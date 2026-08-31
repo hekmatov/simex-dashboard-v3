@@ -22,7 +22,6 @@ const REQUIRED_ACTIVITY_IDS = [
   "layout.saved",
   "layout.discarded",
   "chart.draft.created",
-  "chart.draft.updated",
   "chart.draft.reset",
   "chart.draft.suspended",
   "chart.draft.resumed",
@@ -65,22 +64,24 @@ test("the semantic activity catalogue covers dashboard content manipulation boun
   );
 });
 
-test("Text/Image draft edits stay silent instead of publishing an updating-draft activity", async () => {
+test("Text/Image and existing-chart draft edits stay silent instead of publishing updating-draft activities", async () => {
   const renderer = await readFile(new URL("../src/components/DashboardRenderer.jsx", import.meta.url), "utf8");
 
   assert.equal(DASHBOARD_CONTENT_ACTIVITY_IDS.includes("static.draft.updated"), false);
+  assert.equal(DASHBOARD_CONTENT_ACTIVITY_IDS.includes("chart.draft.updated"), false);
   assert.doesNotMatch(renderer, /reportContentActivity\("static\.draft\.updated"/);
+  assert.doesNotMatch(renderer, /reportContentActivity\("chart\.draft\.updated"/);
   assert.equal((renderer.match(/onDraftChange=\{setStaticContentDraft\}/g) ?? []).length, 2);
 });
 
 test("activity descriptions use object names while retaining stable coalescing keys", () => {
-  assert.deepEqual(describeDashboardContentActivity("chart.draft.updated", {
+  assert.deepEqual(describeDashboardContentActivity("chart.saved", {
     subject: "ICU occupancy",
     detail: "Title changed.",
   }), {
-    key: "content:chart.draft.updated:ICU occupancy",
-    label: "Chart draft",
-    message: "Updating chart draft “ICU occupancy”. Title changed.",
+    key: "content:chart.saved:ICU occupancy",
+    label: "Chart",
+    message: "Chart saved “ICU occupancy”. Title changed.",
     intent: "info",
   });
 });

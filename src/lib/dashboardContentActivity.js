@@ -11,7 +11,6 @@ const DEFINITIONS = Object.freeze({
   "layout.saved": definition("Layout", "Layout changes saved."),
   "layout.discarded": definition("Layout draft", "Layout changes discarded."),
   "chart.draft.created": definition("Chart draft", subjectMessage("Chart draft created", "Chart draft created for")),
-  "chart.draft.updated": definition("Chart draft", subjectMessage("Updating chart draft", "Updating chart draft")),
   "chart.draft.reset": definition("Chart draft", subjectMessage("Chart draft reset", "Chart draft reset for")),
   "chart.draft.suspended": definition("Chart draft", subjectMessage("Chart draft suspended", "Chart draft suspended for")),
   "chart.draft.resumed": definition("Chart draft", subjectMessage("Chart draft resumed", "Chart draft resumed for")),

@@ -822,6 +822,16 @@ test("axis presentation controls expose temporal X controls and only render a se
     updateStructuredFieldValue("axes", {}, ["x", "tickFrequency"], { every: 2, unit: "month" }),
     { x: { tickFrequency: { every: 2, unit: "month" } } },
   );
+  assert.deepEqual(
+    updateStructuredFieldValue(
+      "axes",
+      { x: { labelPreset: "ddMmYyyy" } },
+      ["x", "labelPreset"],
+      "adaptive",
+    ),
+    {},
+    "Adaptive is the implicit default and removes a stale explicit preset",
+  );
 });
 
 test("temporal tick frequency defaults its unit to day on the first number edit", () => {

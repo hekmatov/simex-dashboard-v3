@@ -498,7 +498,8 @@ function sanitizeXAxis(value) {
   for (const property of X_AXIS_PROPERTIES) {
     if (["min", "max"].includes(property) && (Number.isFinite(value[property]) || nonemptyString(value[property]))) axis[property] = typeof value[property] === "string" ? value[property].trim() : value[property];
     else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
-    else if (["title", "labelPreset"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
+    else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property].trim();
+    else if (property === "labelPreset" && nonemptyString(value[property]) && value[property].trim() !== "adaptive") axis[property] = value[property].trim();
   }
   return Object.keys(axis).length > 0 ? axis : void 0;
 }

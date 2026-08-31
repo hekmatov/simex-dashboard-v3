@@ -5,6 +5,18 @@ const TIME_UNITS_MS = Object.freeze({
   week: 604_800_000,
 });
 const DAY_MS = TIME_UNITS_MS.day;
+const AXIS_FONT_SIZE = 12;
+const AXIS_LINE_HEIGHT = 14;
+const AXIS_LABEL_MARGIN = 8;
+const AXIS_TICK_HALF_HEIGHT = 6;
+const AXIS_TITLE_CLEARANCE = 10;
+// Mirrors ZRender's renderer-independent fallback glyph metrics. The safety
+// factor also covers the small differences introduced by platform fonts when
+// ECharts measures the same 12px sans-serif text in a browser canvas.
+const AXIS_TEXT_WIDTH_MAP = "007LLmW'55;N0500LLLLLLLLLL00NNNLzWW\\\\WQb\\0FWLg\\bWb\\WQ\\WrWWQ000CL5LLFLL0LL**F*gLLLL5F0LF\\FFF5.5N";
+const AXIS_TEXT_WIDTH_OFFSET = 20;
+const AXIS_TEXT_WIDTH_SCALE = 100;
+const AXIS_TEXT_WIDTH_SAFETY_FACTOR = 1.12;
 
 export function xAxisPresentation(settings, kind) {
   const result = axisTitle(settings, "x");
@@ -36,25 +48,146 @@ export function xAxisPresentation(settings, kind) {
   return result;
 }
 
-export function valueAxisPresentation(settings) {
-  const result = axisTitle(settings, "y");
+export function valueAxisPresentation(settings, values = []) {
+  const result = axisTitle(settings, "y", {
+    tickLabelWidth: valueAxisTickLabelWidth(settings, values),
+  });
   const interval = tickInterval(settings?.tickFrequency, "number");
   if (interval !== undefined) result.interval = interval;
   return result;
 }
 
-function axisTitle(settings = {}, direction) {
-  const title = settings.title ?? settings.yTitle ?? settings.name ?? "";
+export function valueAxisGutters(settings = {}) {
+  const title = axisTitleText(settings);
+  if (!title) return { side: 0, top: 0, bottom: 0 };
+  const position = settings.titlePosition ?? "center";
+  const endGutter = Math.ceil(
+    titleVerticalFootprint(title, settings.titleOrientation)
+    + AXIS_TICK_HALF_HEIGHT
+    + AXIS_TITLE_CLEARANCE,
+  );
+  return {
+    side: position === "center"
+      ? Math.ceil(
+          titleHorizontalFootprint(title, settings.titleOrientation)
+          + (AXIS_TITLE_CLEARANCE * 2),
+        )
+      : 0,
+    top: position === "top" ? endGutter : 0,
+    bottom: position === "bottom" ? endGutter : 0,
+  };
+}
+
+function axisTitle(settings = {}, direction, { tickLabelWidth = 0 } = {}) {
+  const title = axisTitleText(settings);
   if (!title) return {};
   const positions = direction === "y"
     ? { top: "end", center: "middle", bottom: "start" }
     : { left: "start", center: "middle", right: "end" };
+  const titlePosition = settings.titlePosition ?? "center";
+  const nameRotate = direction === "x" || settings.titleOrientation === "horizontal" ? 0 : 90;
   return {
     name: title,
     nameLocation: positions[settings.titlePosition] ?? "middle",
-    nameRotate: direction === "x" || settings.titleOrientation === "horizontal" ? 0 : 90,
-    nameGap: 36,
+    nameRotate,
+    nameGap: direction === "y"
+      ? titlePosition === "center"
+        ? Math.ceil(
+            tickLabelWidth
+            + AXIS_LABEL_MARGIN
+            + AXIS_TITLE_CLEARANCE
+            + titlePerpendicularRadius(title, settings.titleOrientation),
+          )
+        : AXIS_TICK_HALF_HEIGHT + AXIS_TITLE_CLEARANCE
+      : 36,
   };
+}
+
+function axisTitleText(settings = {}) {
+  return settings.title ?? settings.yTitle ?? settings.name ?? "";
+}
+
+function titleHorizontalFootprint(title, orientation) {
+  return orientation === "horizontal"
+    ? renderedTextWidth(title)
+    : renderedTextHeight(title);
+}
+
+function titlePerpendicularRadius(title, orientation) {
+  return orientation === "horizontal" ? 0 : renderedTextHeight(title) / 2;
+}
+
+function titleVerticalFootprint(title, orientation) {
+  return orientation === "horizontal"
+    ? renderedTextHeight(title)
+    : renderedTextWidth(title);
+}
+
+function valueAxisTickLabelWidth(settings = {}, values = []) {
+  const finite = [
+    ...(Array.isArray(values) ? values : []),
+    settings.min,
+    settings.max,
+    0,
+  ].filter(Number.isFinite);
+  const maximumMagnitude = Math.max(0, ...finite.map((value) => Math.abs(value)));
+  const envelope = maximumMagnitude > 0
+    ? 10 ** Math.ceil(Math.log10(maximumMagnitude))
+    : 1;
+  if (Number.isFinite(envelope) && envelope > 0) {
+    finite.push(envelope, -envelope);
+    finite.push(envelope * 0.2, envelope * -0.2);
+  }
+  return Math.max(0, ...finite.map((value) => renderedTextWidth(formatAxisNumber(value))));
+}
+
+function formatAxisNumber(value) {
+  const precision = Math.min(20, axisNumberPrecision(value));
+  const [integer, fraction] = value.toFixed(precision).split(".");
+  const grouped = integer.replace(/(\d{1,3})(?=(?:\d{3})+(?!\d))/g, "$1,");
+  return fraction === undefined ? grouped : `${grouped}.${fraction}`;
+}
+
+function axisNumberPrecision(value) {
+  const source = value.toString().toLowerCase();
+  const exponentIndex = source.indexOf("e");
+  const exponent = exponentIndex > 0 ? Number(source.slice(exponentIndex + 1)) : 0;
+  const significandLength = exponentIndex > 0 ? exponentIndex : source.length;
+  const decimalIndex = source.indexOf(".");
+  const decimalLength = decimalIndex < 0 ? 0 : significandLength - decimalIndex - 1;
+  return Math.max(0, decimalLength - exponent);
+}
+
+function renderedTextWidth(text) {
+  return renderedTextBounds(text).width;
+}
+
+function renderedTextHeight(text) {
+  return renderedTextBounds(text).height;
+}
+
+function renderedTextBounds(text) {
+  const lines = String(text).split("\n");
+  return {
+    width: Math.max(0, ...lines.map(estimatedLineWidth)),
+    height: Math.max(1, lines.length) * AXIS_LINE_HEIGHT,
+  };
+}
+
+function estimatedLineWidth(text) {
+  let width = 0;
+  for (const character of text) {
+    const code = character.codePointAt(0);
+    const index = code >= 32 && code < 32 + AXIS_TEXT_WIDTH_MAP.length
+      ? code - 32
+      : -1;
+    const em = index < 0
+      ? 1
+      : (AXIS_TEXT_WIDTH_MAP.charCodeAt(index) - AXIS_TEXT_WIDTH_OFFSET)
+        / AXIS_TEXT_WIDTH_SCALE;
+    width += em * AXIS_FONT_SIZE;
+  }
+  return Math.ceil(width * AXIS_TEXT_WIDTH_SAFETY_FACTOR);
 }
 
 function tickInterval(frequency, kind) {

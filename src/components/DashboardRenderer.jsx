@@ -1619,10 +1619,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           draft,
         })
       : current);
-    reportContentActivity("chart.draft.updated", {
-      subject: draft?.title ?? chartEditSession?.placementId,
-      key: `content:chart.draft:${chartEditSession?.placementId ?? "active"}`,
-    });
   }
 
   const changeFullChartDraft = React.useCallback(({ draft, chronoGroups }) => {
@@ -1634,11 +1630,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           chronoGroups,
         })
       : current);
-    reportContentActivity("chart.draft.updated", {
-      subject: draft?.title ?? chartEditSession?.placementId,
-      key: `content:chart.draft:${chartEditSession?.placementId ?? "active"}`,
-    });
-  }, [chartEditSession?.placementId, reportContentActivity]);
+  }, []);
 
   const recordFullChartRestoration = React.useCallback((restoration) => {
     setChartEditSession((current) => current?.activeSurface === "full"
