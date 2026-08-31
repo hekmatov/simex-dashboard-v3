@@ -260,15 +260,17 @@ function waitForPresentation(scheduler) {
   if (typeof scheduler?.requestAnimationFrame === "function") {
     return new Promise((resolve) => {
       let settled = false;
+      let afterFrameTimer = null;
       const fallbackTimer = scheduler.setTimeout(finish, PRESENTATION_FALLBACK_MS);
       function finish() {
         if (settled) return;
         settled = true;
         scheduler.clearTimeout(fallbackTimer);
+        if (afterFrameTimer !== null) scheduler.clearTimeout(afterFrameTimer);
         resolve();
       }
       scheduler.requestAnimationFrame(() => {
-        scheduler.requestAnimationFrame(finish);
+        afterFrameTimer = scheduler.setTimeout(finish, 0);
       });
     });
   }

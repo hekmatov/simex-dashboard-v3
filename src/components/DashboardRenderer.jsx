@@ -831,10 +831,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setPendingRemovalPanelId(panelId);
   }
 
-  function performModeratorOperation(kind, transaction, { onError } = {}) {
+  function performModeratorOperation(kind, transaction, { onError, status = null } = {}) {
     return moderatorOperationGateRef.current.run(async () => {
-      setModeratorOperation({ kind, errorKind: null, error: "" });
       try {
+        await status?.beforeWork();
+        setModeratorOperation({ kind, errorKind: null, error: "" });
         const result = await transaction();
         setModeratorOperation({ kind: null, errorKind: null, error: "" });
         return result;
@@ -1099,7 +1100,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
     setChartEditSession(removalRequest.session);
     return performModeratorOperation("remove-chart", async () => {
-      await status.beforeWork();
       await pendingEdits.flush();
       const committed = await onPanelRemove(removalPlacementId, { reportStatus: false });
       if (layoutDraftId) {
@@ -1121,6 +1121,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setPendingRemovalPanelId(null);
       status.succeed();
     }, {
+      status,
       onError(error) {
         status.fail(error);
         setChartEditSession((current) => (
@@ -1161,7 +1162,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         key: "chart-remove",
       });
       void performModeratorOperation("remove-chart", async () => {
-        await status.beforeWork();
         await pendingEdits.flush();
         await onPanelRemove(panelId, { reportStatus: false });
         setChartEditBaseline(null);
@@ -1172,6 +1172,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setPendingRemovalPanelId(null);
         status.succeed();
       }, {
+        status,
         onError(error) {
           status.fail(error);
         },
@@ -1694,6 +1695,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     let preparedRequest = null;
     return performModeratorOperation("save-chart", () => runPrioritizedChartSave({
       status,
+      presentationReady: true,
       prepare() {
         const session = fullValue?.chart && activeSession.activeSurface === "full"
           ? reduceChartEditSession(activeSession, {
@@ -1738,6 +1740,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartEditorDirty(false);
       },
     }), {
+      status,
       onError(error) {
         const placementId = preparedRequest?.intent?.placementId;
         if (!placementId) return;
@@ -2093,7 +2096,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       key: `content:page:${pageId}:delete`,
     });
     void performModeratorOperation("remove-page", async () => {
-      await status.beforeWork();
       await pendingEdits.flush();
       await onPageRemove(pageId);
       onActivePageChange(fallbackPage.id);
@@ -2101,6 +2103,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setPendingRemovalPageId(null);
       status.succeed();
     }, {
+      status,
       onError(error) {
         status.fail(error);
       },
@@ -2342,14 +2345,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       priority: true,
     });
     void performModeratorOperation("save-session", async () => {
-      await status.beforeWork();
       const outcome = await completeFinishBuildTransition({
         requestMode: onModeRequest,
         status,
       });
       setChartEditBaseline(null);
       return outcome;
-    });
+    }, { status });
   }
 
   function changeIconAccent(nextAccent) {
@@ -2375,7 +2377,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       intent: "warning",
     });
     void performModeratorOperation("reset-session", async () => {
-      await status.beforeWork();
       const cancelled = pendingEdits.takePending();
       const retryDrafts = {
         dashboard: structuredClone(dashboardDraft),
@@ -2411,7 +2412,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         status.fail(error);
         throw error;
       }
-    });
+    }, { status });
   }
 
   function confirmDeleteDashboardContent() {

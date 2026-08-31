@@ -235,6 +235,7 @@ export function prepareChartEditSessionSave(state, {
 
 export async function runPrioritizedChartSave({
   status,
+  presentationReady = false,
   prepare,
   onPrepared = () => {},
   flush,
@@ -243,7 +244,7 @@ export async function runPrioritizedChartSave({
   commit = () => {},
 }) {
   try {
-    await status.beforeWork();
+    if (!presentationReady) await status.beforeWork();
     const request = prepare();
     onPrepared(request);
     await flush();

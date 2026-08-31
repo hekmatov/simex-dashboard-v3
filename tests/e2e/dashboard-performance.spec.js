@@ -87,6 +87,72 @@ test("Full Edit paints a pending shell without creating unchanged work", async (
   await expect(page.getByRole("dialog", { name: /discard/i })).toHaveCount(0);
 });
 
+test("chart Save commits its working toast before dashboard busy state", async ({ page }) => {
+  await enterBiomedicalBuild(page);
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByLabel("Chart title").fill("Toast precedes chart save work");
+  const save = quick.getByRole("button", { name: "Save", exact: true });
+  await expect(save).toBeEnabled();
+
+  await page.evaluate(() => {
+    let delivery = 0;
+    window.__chartSaveOrdering = { toastDelivery: null, busyDelivery: null };
+    window.__chartSaveOrderingObserver = new MutationObserver((records) => {
+      delivery += 1;
+      for (const record of records) {
+        if (
+          record.type === "attributes"
+          && record.target.matches?.(".chart-quick-editor")
+          && record.target.getAttribute("aria-busy") === "true"
+          && window.__chartSaveOrdering.busyDelivery === null
+        ) {
+          window.__chartSaveOrdering.busyDelivery = delivery;
+        }
+        for (const node of record.addedNodes ?? []) {
+          if (!(node instanceof Element)) continue;
+          const notice = node.matches?.('[data-operation-status="working"]')
+            ? node
+            : node.querySelector?.('[data-operation-status="working"]');
+          if (
+            notice?.textContent?.includes("Saving Chart")
+            && window.__chartSaveOrdering.toastDelivery === null
+          ) {
+            window.__chartSaveOrdering.toastDelivery = delivery;
+          }
+        }
+        for (const node of record.removedNodes ?? []) {
+          if (!(node instanceof Element)) continue;
+          if (
+            (node.matches?.(".chart-quick-editor") || node.querySelector?.(".chart-quick-editor"))
+            && window.__chartSaveOrdering.busyDelivery === null
+          ) {
+            window.__chartSaveOrdering.busyDelivery = delivery;
+          }
+        }
+      }
+    });
+    window.__chartSaveOrderingObserver.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["aria-busy", "data-operation-status"],
+    });
+  });
+
+  await save.click();
+
+  const ordering = await page.evaluate(() => {
+    window.__chartSaveOrderingObserver.disconnect();
+    return window.__chartSaveOrdering;
+  });
+  expect(ordering.toastDelivery).not.toBeNull();
+  expect(ordering.busyDelivery).not.toBeNull();
+  expect(ordering.toastDelivery).toBeLessThan(ordering.busyDelivery);
+});
+
 async function enterBiomedicalBuild(page) {
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: "Biomedical", exact: true })
