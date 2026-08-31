@@ -10,11 +10,12 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
   const title = getFreeTextChartTitle(chart?.title);
   const contentRef = React.useRef(null);
   const [portalEntries, setPortalEntries] = React.useState([]);
+  const mediaItems = useShallowStableCollection(contentRenderContext.mediaItems);
   const prepared = React.useMemo(() => compilePortableQmd(model?.qmd ?? "", {
     panelId,
     hostHeadingLevel,
-    mediaItems: contentRenderContext.mediaItems,
-  }), [contentRenderContext.mediaItems, hostHeadingLevel, model?.qmd, panelId]);
+    mediaItems,
+  }), [hostHeadingLevel, mediaItems, model?.qmd, panelId]);
 
   React.useLayoutEffect(() => {
     if (!prepared.ok || !contentRef.current) {
@@ -31,7 +32,7 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
       sourceEnd: Number(host.dataset.qmdMediaSourceEnd),
       prepared,
       host,
-      mediaItem: valueForId(contentRenderContext.mediaItems, host.dataset.qmdMediaId),
+      mediaItem: valueForId(mediaItems, host.dataset.qmdMediaId),
       attributes: {
         alt: host.dataset.qmdMediaAlt ?? "",
         width: host.dataset.qmdMediaWidth,
@@ -124,6 +125,34 @@ function valueForId(collection, id) {
   if (collection instanceof Map) return collection.get(id);
   if (Array.isArray(collection)) return collection.find((entry) => entry?.mediaId === id);
   return collection?.[id];
+}
+
+function useShallowStableCollection(collection) {
+  const stable = React.useRef(collection);
+  if (!shallowCollectionEqual(stable.current, collection)) stable.current = collection;
+  return stable.current;
+}
+
+function shallowCollectionEqual(left, right) {
+  if (Object.is(left, right)) return true;
+  if (left instanceof Map || right instanceof Map) {
+    if (!(left instanceof Map) || !(right instanceof Map) || left.size !== right.size) return false;
+    for (const [key, value] of left) {
+      if (!right.has(key) || !Object.is(value, right.get(key))) return false;
+    }
+    return true;
+  }
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => Object.is(value, right[index]));
+  }
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") return false;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every((key) => Object.hasOwn(right, key) && Object.is(left[key], right[key]));
 }
 
 export default FreeTextChartView;

@@ -224,6 +224,70 @@ test("Free text portals replace and unmount without orphan media or duplicate le
   assert.deepEqual(await page.evaluate(() => window.__qmdLeaseCalls), ["acquire:asset-ready", "release:asset-ready"]);
 });
 
+test("equivalent media wrappers stay mounted while a real media replacement transfers the lease", async () => {
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "stable-qmd-media-target";
+    const root = ReactDOMClient.createRoot(target);
+    const item = (revision, assetId) => ({
+      mediaId: "stable", revision,
+      current: { kind: "asset", assetId },
+      displayName: "Stable map", defaultDescription: "Stable map", origin: "uploaded", health: "ready",
+      dimensions: { width: 8, height: 6 }, byteLength: 32, mediaType: "image/png",
+    });
+    const first = item(1, "asset-stable-one");
+    const resolveAsset = async (assetId) => {
+      window.__stableMediaCalls.push(`acquire:${assetId}`);
+      return {
+        url: `blob:https://simex.test/${assetId}`,
+        release: () => window.__stableMediaCalls.push(`release:${assetId}`),
+      };
+    };
+    window.__stableMediaCalls = [];
+    window.__stableMediaFirst = first;
+    window.__stableMediaRoot = root;
+    window.__renderStableMedia = (mediaItem) => root.render(React.createElement(FreeTextChartView, {
+      model: { sourceId: "stable-source", revision: 1, qmd: "![Stable map](simex-media:stable)" },
+      chart: { id: "stable-panel", title: "Stable panel" },
+      contentRenderContext: {
+        mediaItems: { stable: mediaItem },
+        assets: {
+          "asset-stable-one": { assetId: "asset-stable-one" },
+          "asset-stable-two": { assetId: "asset-stable-two" },
+        },
+        resolveAsset,
+      },
+    }));
+    window.__renderStableMedia(first);
+    window.__replaceStableMedia = () => window.__renderStableMedia(item(2, "asset-stable-two"));
+  });
+
+  const scope = page.locator("#stable-qmd-media-target");
+  await scope.locator('[data-qmd-media-revision="1"] img').waitFor();
+  await page.evaluate(() => window.__renderStableMedia(window.__stableMediaFirst));
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.deepEqual(await page.evaluate(() => window.__stableMediaCalls), ["acquire:asset-stable-one"]);
+
+  await page.evaluate(() => window.__replaceStableMedia());
+  await scope.locator('[data-qmd-media-revision="2"] img').waitFor();
+  assert.deepEqual(await page.evaluate(() => window.__stableMediaCalls), [
+    "acquire:asset-stable-one",
+    "release:asset-stable-one",
+    "acquire:asset-stable-two",
+  ]);
+
+  await page.evaluate(() => window.__stableMediaRoot.unmount());
+  assert.deepEqual(await page.evaluate(() => window.__stableMediaCalls), [
+    "acquire:asset-stable-one",
+    "release:asset-stable-one",
+    "acquire:asset-stable-two",
+    "release:asset-stable-two",
+  ]);
+});
+
 test("Free-text source preview leases staged simex media through the authored asset resolver and releases on unmount", async () => {
   await page.evaluate(async () => {
     const { default: React } = await import("/node_modules/.vite/deps/react.js");
@@ -259,6 +323,89 @@ test("Free-text source preview leases staged simex media through the authored as
   assert.deepEqual(await page.evaluate(() => window.__draftPreviewCalls), ["acquire:asset-draft-local"]);
   await page.evaluate(() => window.__draftPreviewRoot.unmount());
   assert.deepEqual(await page.evaluate(() => window.__draftPreviewCalls), ["acquire:asset-draft-local", "release:asset-draft-local"]);
+});
+
+test("scrolling Add Text/Image keeps the rendered preview image mounted", async () => {
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: StaticContentWizard } = await import("/src/components/static-content/StaticContentWizard.jsx");
+    const { createStaticContentDraft } = await import("/src/static-content/forms/staticContentDraft.js");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "wizard-scroll-preview";
+    const mediaItem = {
+      mediaId: "scroll-preview", revision: 1,
+      current: { kind: "asset", assetId: "asset-scroll-preview" },
+      displayName: "Scroll preview map", defaultDescription: "Scroll preview map", origin: "uploaded", health: "ready",
+      dimensions: { width: 8, height: 6 }, byteLength: 32, mediaType: "image/png",
+    };
+    const manifestEntry = {
+      assetId: "asset-scroll-preview", mediaType: "image/png", byteLength: 32,
+      width: 8, height: 6, sha256: "b".repeat(64), storageState: "staged",
+    };
+    const initial = createStaticContentDraft({
+      mode: "create",
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "freeText",
+      panel: { id: "scroll-preview-panel", typeId: "freeText", title: "Scroll preview", sourceId: "scroll-preview-source" },
+      source: {
+        kind: "staticText", sourceVersion: 1, revision: 1, renderingPolicy: "portable-qmd-v1",
+        qmd: "![Scroll preview map](simex-media:scroll-preview)\n\nScroll the wizard without reloading this image.",
+      },
+      assets: { "asset-scroll-preview": manifestEntry },
+    });
+    initial.stage = "content";
+    initial.pendingMediaItems = { "scroll-preview": mediaItem };
+    window.__wizardScrollPreviewCalls = [];
+    window.__wizardScrollPreviewRenderCount = 0;
+
+    function ScrollRestorationHarness() {
+      const [restoration, setRestoration] = React.useState(null);
+      const resolveAsset = React.useCallback(async (assetId) => {
+        window.__wizardScrollPreviewCalls.push(`acquire:${assetId}`);
+        if (window.__wizardScrollPreviewCalls.filter((call) => call.startsWith("acquire:")).length > 1) {
+          return new Promise(() => {});
+        }
+        return {
+          url: `blob:https://simex.test/${assetId}`,
+          release: () => window.__wizardScrollPreviewCalls.push(`release:${assetId}`),
+        };
+      }, []);
+      window.__wizardScrollPreviewRenderCount += 1;
+      return React.createElement(StaticContentWizard, {
+        open: true,
+        dashboard: { pages: [], contentLibrary: { mediaItems: {} }, assets: {} },
+        initialDraft: initial,
+        restoration,
+        contentRenderContext: { mediaItems: {}, assets: {}, resolveAsset },
+        onRestorationChange: setRestoration,
+      });
+    }
+
+    window.__wizardScrollPreviewRoot = ReactDOMClient.createRoot(target);
+    window.__wizardScrollPreviewRoot.render(React.createElement(ScrollRestorationHarness));
+  });
+
+  const scope = page.locator("#wizard-scroll-preview");
+  await scope.locator('[aria-label="Rendered preview"] [data-qmd-media-host] img').waitFor();
+  const rendersBeforeScroll = await page.evaluate(() => window.__wizardScrollPreviewRenderCount);
+  await scope.locator(".static-content-dialog__body").evaluate((body) => {
+    body.scrollTop = 12;
+    body.dispatchEvent(new Event("scroll"));
+  });
+  await page.waitForFunction(
+    (previous) => window.__wizardScrollPreviewRenderCount > previous,
+    rendersBeforeScroll,
+  );
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+  await expect(scope.getByText("Loading embedded image…")).toHaveCount(0);
+  assert.deepEqual(await page.evaluate(() => window.__wizardScrollPreviewCalls), ["acquire:asset-scroll-preview"]);
+  await page.evaluate(() => window.__wizardScrollPreviewRoot.unmount());
+  assert.deepEqual(await page.evaluate(() => window.__wizardScrollPreviewCalls), [
+    "acquire:asset-scroll-preview",
+    "release:asset-scroll-preview",
+  ]);
 });
 
 test("Preview and Add leases pending QMD media through the same authored resolver and releases on close", async () => {
@@ -723,7 +870,9 @@ test("editor debounces parsing, keeps the last valid preview stale on a complexi
 
   const blocked = `${"> ".repeat(7)}too deeply nested`;
   await page.evaluate((source) => window.setFreeTextEditorSource(source), blocked);
-  assert.equal(await page.locator("output[data-validation-ok]").getAttribute("data-validation-pending"), "true");
+  await page.waitForFunction(() => (
+    document.querySelector('output[data-validation-ok]')?.getAttribute("data-validation-pending") === "true"
+  ));
   await page.waitForTimeout(240);
   assert.match(await page.locator("output[data-validation-ok]").textContent(), /1 blocking error|blocking errors/i);
   assert.equal(await preview.getByText("Initial valid preview.").count(), 1);
@@ -786,7 +935,9 @@ test("change then rapid revert restores cached validation and matching source/pr
   await page.getByLabel("Rendered preview").getByText("Initial valid preview.").waitFor();
 
   await page.evaluate((source) => window.setFreeTextEditorSource(source), "# Changed\n\nValid but not yet evaluated.");
-  assert.equal(await output.getAttribute("data-validation-pending"), "true");
+  await page.waitForFunction(() => (
+    document.querySelector('output[data-validation-ok]')?.getAttribute("data-validation-pending") === "true"
+  ));
   await page.evaluate((source) => window.setFreeTextEditorSource(source), initial);
   await page.waitForFunction(() => document.querySelector('output[data-validation-ok]')?.getAttribute("data-validation-pending") === "false");
 
