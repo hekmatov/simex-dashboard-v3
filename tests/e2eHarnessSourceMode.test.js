@@ -133,10 +133,14 @@ async function startHarness(t, { mode, appPort, controlPort, staleDist }) {
   });
 
   const appUrl = `http://127.0.0.1:${appPort}`;
-  await waitForReady(server, appUrl, () => output);
+  const controlUrl = `http://127.0.0.1:${controlPort}`;
+  await Promise.all([
+    waitForReady(server, `${appUrl}/__test_ready__`, () => output),
+    waitForReady(server, `${controlUrl}/__test__/events`, () => output),
+  ]);
   return {
     appUrl,
-    controlUrl: `http://127.0.0.1:${controlPort}`,
+    controlUrl,
   };
 }
 
@@ -173,14 +177,14 @@ async function writeFixture(root, { staleDist }) {
   await writeFile(cataloguePath, catalogue);
 }
 
-async function waitForReady(server, appUrl, readOutput) {
+async function waitForReady(server, readyUrl, readOutput) {
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
     if (server.exitCode !== null) {
       throw new Error(`source harness exited early: ${readOutput()}`);
     }
     try {
-      const response = await fetch(`${appUrl}/__test_ready__`);
+      const response = await fetch(readyUrl);
       if (response.ok) {
         return;
       }
