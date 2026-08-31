@@ -1389,7 +1389,7 @@ export default function ChartWizardV3({
     React.createElement(
       "section",
       {
-        className: "chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide",
+        className: "chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide dashboard-authoring-shell",
         role: "dialog",
         "aria-modal": "true",
         "aria-labelledby": "chart-wizard-title",
@@ -1458,7 +1458,7 @@ export default function ChartWizardV3({
       ),
       React.createElement(
         "div",
-        { className: "chart-wizard-workbench" },
+        { className: "chart-wizard-workbench dashboard-authoring-body" },
         React.createElement(
           "div",
           { className: "chart-wizard-body dashboard-dialog__body", ref: wizardBodyRef },
@@ -1743,8 +1743,10 @@ export default function ChartWizardV3({
             },
             editMode ? "Discard changes" : "Discard chart draft",
           ),
-          wizard.stage === "review-and-create"
-            ? React.createElement(IconControl, {
+          React.createElement(
+            "div",
+            { "data-footer-slot": "primary" },
+            React.createElement(IconControl, {
                 interactionId: editMode ? "editor.save-changes" : "wizard.create-chart",
                 ariaLabel: submitting
                   ? editMode ? "Saving changes" : "Creating chart"
@@ -1757,8 +1759,8 @@ export default function ChartWizardV3({
                   || placementProof.status !== "valid"
                   || renderProof.status !== "valid",
                 onClick: finish,
-              })
-            : null,
+              }),
+          ),
         ),
       ),
     ),

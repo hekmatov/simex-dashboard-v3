@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { STATIC_CONTENT_STAGE_LABELS, STATIC_CONTENT_STAGES, createStaticContentDraft, finalizeStaticContentDraft, isStaticContentDraftDirty, projectStaticContentDraftOwner, reduceStaticContentDraft } from "../src/static-content/forms/staticContentDraft.js";
+import { STATIC_CONTENT_STAGE_LABELS, STATIC_CONTENT_STAGES, createStaticContentDraft, finalizeStaticContentDraft, isStaticContentDraftDirty, projectStaticContentDraftOwner, reduceStaticContentDraft, staticContentStageReadiness } from "../src/static-content/forms/staticContentDraft.js";
 
 test("static authoring retains the exact four-stage workflow", () => {
   assert.deepEqual(STATIC_CONTENT_STAGES, ["destination", "content-type", "content", "preview-and-add"]);
@@ -59,6 +59,36 @@ test("Text and Image drafts default to Standard 2x1 and persist the shared footp
     draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { layout: { size: "wide", width: 4, height: 1 } } });
     assert.deepEqual(draft.panel.layout, { size: "wide", width: 4, height: 1 });
   }
+});
+
+test("returning to Destination does not disable satisfied later Text/Image stages", () => {
+  const ready = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "destination",
+    panel: {
+      id: "ready-text",
+      typeId: "freeText",
+      sourceId: "ready-text-source",
+      title: "Situation",
+    },
+    placement: { kind: "staticText", qmd: "Ready content" },
+  });
+
+  assert.deepEqual(staticContentStageReadiness(ready, "destination"), { ready: true, reason: "" });
+  assert.deepEqual(staticContentStageReadiness(ready, "content"), { ready: true, reason: "" });
+  assert.deepEqual(staticContentStageReadiness(ready, "preview-and-add"), { ready: true, reason: "" });
+
+  const waiting = staticContentStageReadiness(ready, "preview-and-add", { previewReady: false });
+  assert.equal(waiting.ready, false);
+  assert.match(waiting.reason, /preview.*finish validating/i);
+  const blocked = reduceStaticContentDraft(ready, {
+    type: "trySetStage",
+    stage: "preview-and-add",
+    previewReady: false,
+  });
+  assert.equal(blocked.stage, "destination");
+  assert.match(blocked.validation.errors[0].message, /preview.*finish validating/i);
 });
 
 test("blank panel titles require an explicit No title choice without leaving the wizard", () => {

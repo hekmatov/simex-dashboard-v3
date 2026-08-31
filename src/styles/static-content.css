@@ -2,6 +2,7 @@
 
 /* Static-content authoring and rendering are intentionally isolated here. */
 .static-content-dialog.dashboard-dialog {
+  block-size: min(760px, calc(100dvh - 32px));
   inline-size: min(1120px, 100%);
 }
 
@@ -12,6 +13,19 @@
 
 .static-content-dialog__preview {
   align-self: start;
+}
+
+.static-content-fields > .chart-footprint-control {
+  align-self: start;
+}
+
+.static-content-fields > .static-content-dialog__title-choice,
+.static-content-fields > [role="status"] {
+  grid-column: 1 / -1;
+}
+
+.static-content-dialog__title-choice > .static-content-dialog__title-label {
+  align-self: center;
 }
 
 .static-content-dialog input,

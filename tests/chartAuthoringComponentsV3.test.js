@@ -1511,6 +1511,50 @@ test("hostile or incomplete authoring props fail closed without rendering raw ob
   assert.doesNotMatch(section, /\[object Object\]/);
 });
 
+test("generated Configure and full-editor fields share responsive wide and boolean layout", () => {
+  const html = render(React.createElement(GeneratedFormSection, {
+    section: {
+      id: "appearance",
+      label: "Appearance",
+      fields: [
+        { id: "title", label: "Title", control: "text", value: "Response" },
+        { id: "visible", label: "Show labels", control: "toggle", value: true },
+        { id: "notes", label: "Notes", control: "textarea", value: "Context" },
+      ],
+    },
+    onChange() {},
+  }));
+
+  assert.match(html, /chart-authoring-section-fields dashboard-authoring-grid/);
+  assert.match(html, /class="[^"]*dashboard-authoring-boolean-row[^"]*"[^>]*data-field-id="visible"[^>]*><input[^>]*type="checkbox"[^>]*><label/);
+  assert.match(html, /class="[^"]*dashboard-authoring-field--wide[^"]*"[^>]*data-field-id="notes"/);
+
+  const axesHtml = render(React.createElement(StandardField, {
+    field: { id: "axes", label: "Axes", control: "axes", hasSecondary: true },
+    value: { primary: { title: "Primary", titleBold: true }, secondary: { title: "Secondary" } },
+    onChange() {},
+  }));
+  assert.equal((axesHtml.match(/chart-authoring-axis-group dashboard-authoring-grid/g) ?? []).length, 3);
+  assert.match(axesHtml, /dashboard-authoring-boolean-row[^>]*><input[^>]*type="checkbox"[^>]*>Bold<\/label>/);
+});
+
+test("chart authoring primary and shell regions stay mounted before readiness", () => {
+  const html = render(React.createElement(ChartWizardV3, {
+    open: true,
+    dataSources: {},
+    loadedData: {},
+    chronoGroups: [],
+    onClose() {},
+    onCreate() {},
+  }));
+
+  assert.match(html, /class="chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide dashboard-authoring-shell"/);
+  assert.match(html, /data-footer-slot="primary"/);
+  const primary = buttonMarkupByInteraction(html, "wizard.create-chart");
+  assert.match(primary, /aria-label="Create chart"/);
+  assert.match(primary, /disabled=""/);
+});
+
 test("wizard exposes the exact six directly clickable stages in the approved order", () => {
   const html = render(React.createElement(ChartWizardV3, {
     open: true,
@@ -2813,6 +2857,9 @@ test("editor keeps title repair reachable before preview readiness", () => {
   assert.match(html, /Chart title/);
   assert.match(html, /data-icon-control="editor\.tab\.data"/);
   assert.match(html, /data-icon-control="editor\.tab\.appearance"/);
+  assert.match(html, /class="chart-editor-form dashboard-authoring-shell"/);
+  assert.match(html, /class="chart-editor-layout dashboard-authoring-body"/);
+  assert.match(html, /<footer class="dashboard-dialog__footer dashboard-authoring-footer">/);
 });
 
 test("save and reset are adjacent and reset confirmation is accessible", () => {

@@ -539,17 +539,24 @@ export default function ChartEditorV3({
   const content = React.createElement(
       "aside",
       {
-        className: "chart-editor-v3",
+        className: surface === "inspector"
+          ? "chart-editor-v3"
+          : "chart-editor-v3 dashboard-dialog dashboard-dialog--wide",
         "aria-labelledby": "chart-editor-title",
         "aria-busy": disabled || submitting ? "true" : undefined,
         inert: disabled || submitting ? "" : undefined,
       },
       React.createElement(
         "form",
-        { onSubmit: submit },
+        {
+          className: surface === "inspector"
+            ? "chart-editor-form"
+            : "chart-editor-form dashboard-authoring-shell",
+          onSubmit: submit,
+        },
         React.createElement(
           "header",
-          { className: "chart-editor-header" },
+          { className: `chart-editor-header${surface === "inspector" ? "" : " dashboard-dialog__header"}` },
           React.createElement(
             "div",
             null,
@@ -603,7 +610,7 @@ export default function ChartEditorV3({
         ),
         React.createElement(
           "div",
-          { className: "chart-editor-layout" },
+          { className: `chart-editor-layout${surface === "inspector" ? "" : " dashboard-authoring-body"}` },
           React.createElement(
             "div",
             { className: "chart-editor-preview" },
@@ -642,26 +649,30 @@ export default function ChartEditorV3({
               error: safeMessage(error),
             })),
           }),
+          state.error && !state.conversion
+            ? React.createElement(
+                "p",
+                { className: "wizard-error chart-editor-error dashboard-authoring-field--wide", role: "alert" },
+                state.error,
+              )
+            : null,
         ),
-        state.error && !state.conversion
-          ? React.createElement(
-              "p",
-              { className: "wizard-error chart-editor-error", role: "alert" },
-              state.error,
-            )
-          : null,
-        React.createElement(EditSessionActions, {
-          valid: model.valid,
-          submitting,
-          disabled,
-          resetConfirmationOpen: state.confirmation === "reset",
-          onRequestReset: () => dispatch({ type: "requestReset" }),
-          onConfirmReset: confirmReset,
-          onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
-          onSave: submit,
-          onCancel: dismissEditor,
-          onRemove,
-        }),
+        React.createElement(
+          surface === "inspector" ? React.Fragment : "footer",
+          surface === "inspector" ? null : { className: "dashboard-dialog__footer dashboard-authoring-footer" },
+          React.createElement(EditSessionActions, {
+            valid: model.valid,
+            submitting,
+            disabled,
+            resetConfirmationOpen: state.confirmation === "reset",
+            onRequestReset: () => dispatch({ type: "requestReset" }),
+            onConfirmReset: confirmReset,
+            onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
+            onSave: submit,
+            onCancel: dismissEditor,
+            onRemove,
+          }),
+        ),
       ),
       React.createElement(ChartConversionDialog, {
         conversion: state.conversion,

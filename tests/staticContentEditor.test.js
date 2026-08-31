@@ -183,6 +183,52 @@ test("Text/Image footer Cancel closes a clean editor and confirms only dirty wor
   assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: true, disabled: true }), "ignore");
 });
 
+test("Text/Image stages and footer slots stay mounted from Destination", () => {
+  const readyAtDestination = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "destination",
+    panel: {
+      id: "stable-shell",
+      typeId: "freeText",
+      sourceId: "stable-shell-source",
+      title: "Situation",
+    },
+    placement: { kind: "staticText", qmd: "Ready content" },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentWizard, {
+    open: true,
+    dashboard: makeDashboardV5(),
+    initialDraft: readyAtDestination,
+  }));
+
+  for (const slot of ["cancel", "reset", "back", "primary"]) {
+    assert.match(html, new RegExp(`data-footer-slot="${slot}"`), slot);
+  }
+  assert.match(html, /data-footer-slot="back"[^]*?<button[^>]*disabled[^>]*>Back<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled[^>]*>Content<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled[^>]*>Preview &amp; add<\/button>/);
+});
+
+test("Text/Image content fields adopt the shared responsive field layout", () => {
+  const draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "grid-text", typeId: "freeText", sourceId: "grid-text-source", title: "Grid" },
+    placement: { kind: "staticText", qmd: "Grid content" },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+    draft,
+    dashboard: makeDashboardV5(),
+    dispatch() {},
+  }));
+
+  assert.match(html, /class="[^"]*dashboard-authoring-grid[^"]*"/);
+  assert.match(html, /class="[^"]*dashboard-authoring-boolean-row[^"]*"[^>]*><input[^>]*type="checkbox"[^>]*><span>No title<\/span>/);
+  assert.match(html, /class="[^"]*dashboard-authoring-field--wide[^"]*"[^>]*>[^]*aria-label="Text post editor"/);
+});
+
 test("embedded QMD media uses displayName as the initial nondecorative alt fallback", () => {
   const dashboard = makeDashboardV5();
   const mediaItem = makeMediaItem({

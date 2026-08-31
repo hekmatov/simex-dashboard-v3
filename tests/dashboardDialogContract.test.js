@@ -125,6 +125,21 @@ test("Text/Image and chart authoring expose dashboard wizard regions", async () 
   assert.match(editorHost, /chart-editor-backdrop dashboard-dialog-backdrop/);
 });
 
+test("authoring shells and fields keep fixed chrome around one responsive workbench", async () => {
+  const [dialogs, grammar, staticCss] = await Promise.all([
+    read("src/styles/dashboard-dialogs.css"),
+    read("src/styles/dashboard-style-grammar.css"),
+    read("src/styles/static-content.css"),
+  ]);
+  const css = `${dialogs}\n${grammar}\n${staticCss}`;
+
+  assert.match(css, /\.dashboard-authoring-shell\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*auto auto minmax\(0, 1fr\) auto;/s);
+  assert.match(css, /\.dashboard-authoring-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\);/s);
+  assert.match(css, /\.dashboard-authoring-field--wide\s*\{[^}]*grid-column:\s*1 \/ -1;/s);
+  assert.match(css, /\.dashboard-authoring-boolean-row\s*\{[^}]*grid-template-columns:\s*20px minmax\(0, 1fr\);/s);
+  assert.match(css, /\.dashboard-authoring-body\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s);
+});
+
 test("detached dashboard roots use typography tokens without fixed fallbacks", async () => {
   const grammar = await read("src/styles/dashboard-style-grammar.css");
   assert.match(grammar, /font-family:\s*var\(--simex-style-body-font\)/);

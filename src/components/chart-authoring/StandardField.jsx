@@ -33,6 +33,17 @@ function StandardField({
       structuredControls(field.control, value, onChange, field)
     );
   }
+  if (field.control === "toggle") {
+    return React.createElement(BooleanFieldShell, {
+      field,
+      control: React.createElement("input", {
+        ...shared,
+        type: "checkbox",
+        checked: value === true,
+        onChange: (event) => onChange(event.target.checked),
+      }),
+    });
+  }
   let control;
   switch (field.control) {
     case "textarea":
@@ -40,9 +51,6 @@ function StandardField({
       break;
     case "select":
       control = /* @__PURE__ */ React.createElement("select", { ...shared, value: scalar(value), onChange: (event) => onChange(event.target.value) }, optionList(field.options).map((option) => /* @__PURE__ */ React.createElement("option", { key: option.value, value: option.value }, option.label)));
-      break;
-    case "toggle":
-      control = /* @__PURE__ */ React.createElement("input", { ...shared, type: "checkbox", checked: value === true, onChange: (event) => onChange(event.target.checked) });
       break;
     case "grouping":
       control = /* @__PURE__ */ React.createElement(
@@ -88,7 +96,11 @@ function StandardField({
         }
       );
   }
-  return /* @__PURE__ */ React.createElement(FieldShell, { field }, control);
+  return /* @__PURE__ */ React.createElement(
+    FieldShell,
+    { field, className: field.control === "textarea" ? "dashboard-authoring-field--wide" : "" },
+    control,
+  );
 }
 function FieldShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
@@ -251,7 +263,7 @@ function structuredControls(control, value, onChange, field = {}) {
     updateStructuredFieldValue(control, current, path, nextValue)
   );
   if (control === "labels") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, inlineToggle(
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, inlineToggle(
       "Show labels",
       current.visible === true,
       (checked) => emit(["visible"], checked)
@@ -274,7 +286,7 @@ function structuredControls(control, value, onChange, field = {}) {
       : null);
   }
   if (control === "targets") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, /* @__PURE__ */ React.createElement("label", null, "Target direction", /* @__PURE__ */ React.createElement("select", {
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("label", null, "Target direction", /* @__PURE__ */ React.createElement("select", {
       value: current.direction ?? "",
       onChange: (event) => emit(["direction"], event.target.value)
     }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is good"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is good"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))), /* @__PURE__ */ React.createElement("label", null, "Target ranges", /* @__PURE__ */ React.createElement("input", {
@@ -284,9 +296,9 @@ function structuredControls(control, value, onChange, field = {}) {
     })));
   }
   if (control === "map") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)));
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)));
   }
-  return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, /* @__PURE__ */ React.createElement("label", null, "Timeline lanes", /* @__PURE__ */ React.createElement("input", {
+  return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("label", null, "Timeline lanes", /* @__PURE__ */ React.createElement("input", {
     value: Array.isArray(current.lanes) ? current.lanes.join(", ") : "",
     placeholder: "Response, Recovery",
     onChange: (event) => emit(["lanes"], commaSeparated(event.target.value))
@@ -295,7 +307,7 @@ function structuredControls(control, value, onChange, field = {}) {
 function axisControls(label, axis, value, emit) {
   return React.createElement(
     "fieldset",
-    { className: "chart-authoring-axis-group" },
+    { className: "chart-authoring-axis-group dashboard-authoring-grid" },
     React.createElement("legend", null, label),
     textControl("Title", value.title, (nextValue) => emit([axis, "title"], nextValue)),
     selectControl("Title position", value.titlePosition ?? "center", ["top", "center", "bottom"], (nextValue) => emit([axis, "titlePosition"], nextValue)),
@@ -308,6 +320,21 @@ function axisControls(label, axis, value, emit) {
     numericControl("Maximum", value.max, (nextValue) => emit([axis, "max"], nextValue)),
     tickControls(axis, value.tickFrequency, "number", emit),
     inlineToggle("Show grid", value.grid !== false, (checked) => emit([axis, "grid"], checked)),
+  );
+}
+function BooleanFieldShell({ field, control }) {
+  const id = fieldControlId(field);
+  return React.createElement(
+    "div",
+    {
+      className: "chart-authoring-field dashboard-authoring-boolean-row",
+      "data-field-id": field.id,
+      "aria-invalid": fieldHasError(field) ? "true" : void 0,
+    },
+    control,
+    React.createElement("label", { htmlFor: id }, field.label),
+    field.help ? React.createElement("small", { id: `${id}-help` }, field.help) : null,
+    field.error ? React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null,
   );
 }
 function selectControl(label, value, options, onChange) {
@@ -354,7 +381,7 @@ function fontSizeControl(value, onChange) {
 }
 function xAxisControls(value, kind, emit) {
   const ranged = kind === "temporal" || kind === "number";
-  return /* @__PURE__ */ React.createElement("fieldset", { className: "chart-authoring-axis-group" }, /* @__PURE__ */ React.createElement("legend", null, "X axis"), textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)), ranged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
+  return /* @__PURE__ */ React.createElement("fieldset", { className: "chart-authoring-axis-group dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("legend", null, "X axis"), textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)), ranged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
     type: kind === "temporal" ? "datetime-local" : "number",
     value: kind === "number" ? numeric(value.min) : text(value.min),
     onChange: (event) => emit(["x", "min"], kind === "number" ? optionalNumber(event.target.value) : event.target.value)
@@ -411,7 +438,7 @@ function textControl(label, value, onChange) {
   }));
 }
 function inlineToggle(label, checked, onChange) {
-  return /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle" }, /* @__PURE__ */ React.createElement("input", {
+  return /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle dashboard-authoring-boolean-row" }, /* @__PURE__ */ React.createElement("input", {
     type: "checkbox",
     checked,
     onChange: (event) => onChange(event.target.checked)

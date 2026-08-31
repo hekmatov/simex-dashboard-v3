@@ -1553,6 +1553,46 @@
   inline-size: min(1180px, 100%);
 }
 
+.app-frame .chart-editor-v3.dashboard-dialog {
+  block-size: min(820px, calc(100dvh - 48px));
+  inline-size: min(1180px, 100%);
+  padding: 0;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell {
+  block-size: 100%;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell > .chart-editor-layout {
+  grid-row: 2 / 4;
+  overflow: hidden;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell .chart-editor-preview,
+.app-frame .chart-editor-form.dashboard-authoring-shell .chart-editor-tab-panel {
+  min-block-size: 0;
+  overflow: auto;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell .chart-editor-contextual-tabs {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell > .dashboard-authoring-footer {
+  grid-row: 4;
+}
+
+.chart-authoring-axis-group.dashboard-authoring-grid > legend {
+  grid-column: 1 / -1;
+}
+
+:is(.app-frame, .unit-orbit) .dashboard-authoring-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
 .app-frame .chart-wizard-header {
   min-height: 58px;
   padding: 10px 16px;

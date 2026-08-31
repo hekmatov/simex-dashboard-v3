@@ -10,6 +10,7 @@ import {
   finalizeStaticContentDraft,
   isStaticContentDraftDirty,
   reduceStaticContentDraft,
+  staticContentStageReadiness,
 } from "../../static-content/forms/staticContentDraft.js";
 import { listStaticContentTypeOptions } from "../../static-content/staticPanelCapabilities.js";
 import StaticContentStateBoundary from "./StaticContentStateBoundary.jsx";
@@ -188,8 +189,7 @@ export function StaticContentWizard({
     setSubmitError("");
     try {
       if (draft.stage !== "preview-and-add") {
-        if (freeTextInvalid) throw new Error("Wait for the Free-text preview to finish validating before continuing.");
-        dispatch({ type: "tryNext" });
+        dispatch({ type: "tryNext", previewReady: !freeTextInvalid });
         return;
       }
       validateCompiledFreeText(draft);
@@ -254,7 +254,7 @@ export function StaticContentWizard({
       <ModalFocusScope
         as="form"
         open={open}
-        className="static-content-dialog dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide"
+        className="static-content-dialog dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide dashboard-authoring-shell"
         role="dialog"
         aria-modal="true"
         aria-labelledby="static-content-dialog-title"
@@ -271,20 +271,25 @@ export function StaticContentWizard({
             <button type="button" className="secondary" aria-label="Close Text/Image editor" disabled={workflowDisabled} onClick={requestClose}>Close</button>
           </ControlTooltip>
         </header>
-        {workflowDisabled && <p id="static-content-workflow-status" role="status">{STATIC_CONTENT_PENDING_REASON}</p>}
         <nav className="dashboard-dialog__progress" aria-label="Text/Image stages">
           {(editor ? STATIC_CONTENT_STAGES.slice(2) : STATIC_CONTENT_STAGES).map((stage) => {
             const index = STATIC_CONTENT_STAGES.indexOf(stage);
+            const readiness = staticContentStageReadiness(draft, stage, {
+              previewReady: !freeTextInvalid,
+            });
             return (
               <button
                 key={stage}
                 type="button"
                 className="secondary"
                 aria-current={draft.stage === stage ? "step" : undefined}
-                disabled={workflowDisabled
-                  || (!editor && index > stageIndex + 1)
-                  || (stage === "preview-and-add" && freeTextInvalid)}
-                onClick={() => dispatch({ type: "trySetStage", stage })}
+                disabled={workflowDisabled || !readiness.ready}
+                title={readiness.ready ? undefined : readiness.reason}
+                onClick={() => dispatch({
+                  type: "trySetStage",
+                  stage,
+                  previewReady: !freeTextInvalid,
+                })}
               >
                 {STATIC_CONTENT_STAGE_LABELS[index]}
               </button>
@@ -293,11 +298,12 @@ export function StaticContentWizard({
         </nav>
 
         <section
-          className="static-content-dialog__body dashboard-dialog__body"
+          className="static-content-dialog__body dashboard-dialog__body dashboard-authoring-body"
           data-static-content-stage={draft.stage}
           onFocusCapture={() => onRestorationChange?.(focusRestoration(draft.stage))}
           onScroll={() => onRestorationChange?.(focusRestoration(draft.stage))}
         >
+          {workflowDisabled && <p id="static-content-workflow-status" role="status">{STATIC_CONTENT_PENDING_REASON}</p>}
           {draft.stage === "destination" && <DestinationFields dashboard={dashboard} draft={draft} dispatch={dispatch} disabled={workflowDisabled} />}
           {draft.stage === "content-type" && <ContentTypeFields draft={draft} dispatch={dispatch} disabled={workflowDisabled} />}
           {draft.stage === "content" && (
@@ -315,16 +321,26 @@ export function StaticContentWizard({
             />
           )}
           {draft.stage === "preview-and-add" && <StaticPreview draft={draft} contentRenderContext={contentRenderContext} />}
+          {submitError && <p className="form-error" role="alert">{submitError}</p>}
         </section>
 
-        {submitError && <p className="form-error" role="alert">{submitError}</p>}
-        <footer className="dashboard-dialog__footer dashboard-dialog__actions">
-          <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={requestDiscard}>Cancel</button></PendingAction>
-          {editor && dirty && <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={() => void reset()}>Reset</button></PendingAction>}
-          {stageIndex > (editor ? 2 : 0) && <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={() => dispatch({ type: "previous" })}>Back</button></PendingAction>}
-          <PendingAction disabled={workflowDisabled}>
-            <button type="submit" disabled={submissionState.disabled}>{submissionState.label}</button>
-          </PendingAction>
+        <footer className="dashboard-dialog__footer dashboard-authoring-footer">
+          <div data-footer-slot="cancel">
+            <PendingAction disabled={workflowDisabled}><button type="button" className="secondary" disabled={workflowDisabled} onClick={requestDiscard}>Cancel</button></PendingAction>
+          </div>
+          <div data-footer-slot="reset">
+            {editor
+              ? <PendingAction disabled={workflowDisabled || !dirty}><button type="button" className="secondary" disabled={workflowDisabled || !dirty} onClick={() => void reset()}>Reset</button></PendingAction>
+              : <span aria-hidden="true" />}
+          </div>
+          <div data-footer-slot="back">
+            <PendingAction disabled={workflowDisabled || stageIndex <= (editor ? 2 : 0)}><button type="button" className="secondary" disabled={workflowDisabled || stageIndex <= (editor ? 2 : 0)} onClick={() => dispatch({ type: "previous" })}>Back</button></PendingAction>
+          </div>
+          <div data-footer-slot="primary">
+            <PendingAction disabled={workflowDisabled}>
+              <button type="submit" disabled={submissionState.disabled}>{submissionState.label}</button>
+            </PendingAction>
+          </div>
         </footer>
       </ModalFocusScope>
       <ConfirmDialog
@@ -409,7 +425,7 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
     titleError ? "static-panel-title-error" : null,
   ].filter(Boolean).join(" ") || undefined;
   return (
-    <div>
+    <div className="static-content-fields dashboard-authoring-grid">
       {disabled && <p id="static-content-pending-reason" role="status">Text/Image authoring is unavailable while this draft action is pending.</p>}
       <div className="static-content-dialog__title-choice">
         <label className="static-content-dialog__title-label" htmlFor="static-panel-title">Panel Title</label>
@@ -422,7 +438,7 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
           value={draft.panel?.title ?? ""}
           onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
         />
-        <label className="static-content-dialog__no-title" htmlFor="static-panel-no-title">
+        <label className="static-content-dialog__no-title dashboard-authoring-boolean-row" htmlFor="static-panel-no-title">
           <input
             id="static-panel-no-title"
             type="checkbox"
@@ -435,9 +451,9 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
           <span>No title</span>
         </label>
       </div>
-      {titleError && <p id="static-panel-title-error" className="form-error" role="alert">{titleError.message}</p>}
+      {titleError && <p id="static-panel-title-error" className="form-error dashboard-authoring-field--wide" role="alert">{titleError.message}</p>}
       {draft.validation?.errors?.filter((error) => error.field !== "title").map((error, index) => (
-        <p key={`${error.message}-${index}`} className="form-error" role="alert">{error.message}</p>
+        <p key={`${error.message}-${index}`} className="form-error dashboard-authoring-field--wide" role="alert">{error.message}</p>
       ))}
       <ChartFootprintPicker
         subject="Panel"
@@ -457,9 +473,11 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
           },
         })}
       />
-      {draft.contentTypeId === "freeText"
-        ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} restoration={restoration} disabled={disabled} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} onSurfaceChange={onSurfaceChange} />
-        : <ImageFields draft={draft} dashboard={dashboard} disabled={disabled} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
+      <div className="dashboard-authoring-field--wide">
+        {draft.contentTypeId === "freeText"
+          ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} restoration={restoration} disabled={disabled} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} onSurfaceChange={onSurfaceChange} />
+          : <ImageFields draft={draft} dashboard={dashboard} disabled={disabled} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
+      </div>
     </div>
   );
 }

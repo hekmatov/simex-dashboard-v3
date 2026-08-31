@@ -188,6 +188,53 @@
   gap: 10px;
 }
 
+.dashboard-authoring-shell {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.dashboard-authoring-body {
+  min-block-size: 0;
+  overflow: auto;
+}
+
+.dashboard-authoring-grid {
+  display: grid;
+  gap: 12px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  min-inline-size: 0;
+}
+
+.dashboard-authoring-field--wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.dashboard-authoring-boolean-row {
+  align-items: start;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: 8px;
+}
+
+.dashboard-authoring-boolean-row > :is(small, [role="alert"]) {
+  grid-column: 2;
+}
+
+.dashboard-authoring-footer {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, max-content));
+  justify-content: end;
+}
+
+.dashboard-authoring-footer > [data-footer-slot] {
+  align-items: center;
+  display: flex;
+  min-inline-size: var(--simex-control-min);
+}
+
 .dashboard-dialog--utility > :where(p, ul, dl),
 .dashboard-dialog--danger > :where(p, ul, dl) {
   margin-inline: 20px;

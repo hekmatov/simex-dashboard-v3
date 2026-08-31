@@ -32,6 +32,22 @@ export const STATIC_CONTENT_STAGE_LABELS = Object.freeze([
   "Preview & add",
 ]);
 
+export function staticContentStageReadiness(state, stage, { previewReady = true } = {}) {
+  requireStage(stage);
+  try {
+    validateStageEntry(state, stage);
+    if (stage === "preview-and-add" && !previewReady) {
+      throw new Error("Wait for the current content preview to finish validating.");
+    }
+    return Object.freeze({ ready: true, reason: "" });
+  } catch (error) {
+    return Object.freeze({
+      ready: false,
+      reason: error?.message || "This stage is not ready.",
+    });
+  }
+}
+
 export function createStaticContentDraft(options = {}) {
   const mode = options.mode === "edit" ? "edit" : "create";
   const contentTypeId = normalizeTypeId(options.contentTypeId ?? options.panel?.typeId ?? null);
@@ -87,23 +103,25 @@ export function reduceStaticContentDraft(state, action = {}) {
   switch (action.type) {
     case "trySetStage": {
       requireStage(action.stage);
-      return tryStageTransition(state, action.stage);
+      return tryStageTransition(state, action.stage, { previewReady: action.previewReady });
     }
     case "tryNext": {
       const currentIndex = STATIC_CONTENT_STAGES.indexOf(state.stage);
       if (currentIndex >= STATIC_CONTENT_STAGES.length - 1) return state;
-      return tryStageTransition(state, STATIC_CONTENT_STAGES[currentIndex + 1]);
+      return tryStageTransition(state, STATIC_CONTENT_STAGES[currentIndex + 1], {
+        previewReady: action.previewReady,
+      });
     }
     case "setStage": {
       requireStage(action.stage);
-      validateStageEntry(state, action.stage);
+      requireStaticContentStageReady(state, action.stage);
       return { ...state, stage: action.stage, validation: { errors: [], warnings: [] }, focusRequest: null };
     }
     case "next": {
       const currentIndex = STATIC_CONTENT_STAGES.indexOf(state.stage);
       if (currentIndex >= STATIC_CONTENT_STAGES.length - 1) return state;
       const stage = STATIC_CONTENT_STAGES[currentIndex + 1];
-      validateStageEntry(state, stage);
+      requireStaticContentStageReady(state, stage);
       return { ...state, stage, validation: { errors: [], warnings: [] }, focusRequest: null };
     }
     case "previous": {
@@ -543,30 +561,44 @@ function authored(state, updates) {
   };
 }
 
-function tryStageTransition(state, stage) {
-  try {
-    validateStageEntry(state, stage);
+function tryStageTransition(state, stage, { previewReady = true } = {}) {
+  const readiness = staticContentStageReadiness(state, stage, { previewReady });
+  if (readiness.ready) {
     return {
       ...state,
       stage,
       validation: { errors: [], warnings: [] },
       focusRequest: null,
     };
-  } catch (error) {
-    return {
-      ...state,
-      status: "editing",
-      validation: {
-        errors: [{
-          ...(error?.field ? { field: error.field } : {}),
-          ...(error?.focusId ? { focusId: error.focusId } : {}),
-          message: error?.message ?? "Static content is not ready for the next stage.",
-        }],
-        warnings: [],
-      },
-      focusRequest: error?.focusId ?? null,
-    };
   }
+  const detail = transitionValidationDetail(state, stage, readiness.reason);
+  return {
+    ...state,
+    status: "editing",
+    validation: {
+      errors: [{
+        ...(detail.field ? { field: detail.field } : {}),
+        ...(detail.focusId ? { focusId: detail.focusId } : {}),
+        message: readiness.reason,
+      }],
+      warnings: [],
+    },
+    focusRequest: detail.focusId ?? null,
+  };
+}
+
+function transitionValidationDetail(state, stage, fallbackMessage) {
+  try {
+    validateStageEntry(state, stage);
+  } catch (error) {
+    return error ?? new Error(fallbackMessage);
+  }
+  return new Error(fallbackMessage);
+}
+
+function requireStaticContentStageReady(state, stage, options) {
+  const readiness = staticContentStageReadiness(state, stage, options);
+  if (!readiness.ready) throw new Error(readiness.reason);
 }
 
 function normalizePanel(panel, contentTypeId, draftIdentity) {
