@@ -2,14 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  addBuildLayoutPage,
+  addBuildLayoutSection,
   beginBuildLayoutSave,
   completeBuildLayoutSave,
   createBuildLayoutDraft,
   discardBuildLayoutDraft,
   failBuildLayoutSave,
+  renameBuildLayoutPage,
   reorderBuildLayoutPanel,
+  reorderBuildLayoutPage,
   reorderBuildLayoutSection,
   renameBuildLayoutPanel,
+  renameBuildLayoutSection,
 } from "../src/components/build/buildLayoutDraft.js";
 
 test("deferred layout save completion is generation-safe and mutations are rejected while saving", async () => {
@@ -69,6 +74,78 @@ test("valid panel rename stages in the dashboard-scoped layout owner without mut
   assert.equal(draft.status, "dirty");
 });
 
+test("layout reorders preserve every unaffected entity reference", () => {
+  const draft = createBuildLayoutDraft(fixture());
+  const before = draft.value;
+  const pageA = before.pages[0];
+  const pageB = before.pages[1];
+  const sectionA = pageA.sections[0];
+  const sectionB = pageA.sections[1];
+  const panelA = sectionA.panels[0];
+  const panelB = sectionA.panels[1];
+
+  const panelReorder = reorderBuildLayoutPanel(draft, "panel-b", "panel-a");
+  assert.notStrictEqual(panelReorder.value, before);
+  assert.notStrictEqual(panelReorder.value.pages[0], pageA);
+  assert.notStrictEqual(panelReorder.value.pages[0].sections[0], sectionA);
+  assert.strictEqual(panelReorder.value.pages[0].sections[1], sectionB);
+  assert.strictEqual(panelReorder.value.pages[1], pageB);
+  assert.strictEqual(panelReorder.value.pages[0].sections[0].panels[0], panelB);
+  assert.strictEqual(panelReorder.value.pages[0].sections[0].panels[1], panelA);
+
+  const sectionReorder = reorderBuildLayoutSection(draft, "page-a", "section-b", 0);
+  assert.strictEqual(sectionReorder.value.pages[0].sections[0], sectionB);
+  assert.strictEqual(sectionReorder.value.pages[0].sections[1], sectionA);
+  assert.strictEqual(sectionReorder.value.pages[1], pageB);
+
+  const pageReorder = reorderBuildLayoutPage(draft, "page-b", 0);
+  assert.strictEqual(pageReorder.value.pages[0], pageB);
+  assert.strictEqual(pageReorder.value.pages[1], pageA);
+});
+
+test("layout rename and add commands copy only the changed ownership path", () => {
+  const draft = createBuildLayoutDraft(fixture());
+  const before = draft.value;
+  const pageA = before.pages[0];
+  const pageB = before.pages[1];
+  const sectionA = pageA.sections[0];
+  const sectionB = pageA.sections[1];
+  const panelA = sectionA.panels[0];
+  const panelB = sectionA.panels[1];
+
+  const renamedPage = renameBuildLayoutPage(draft, "page-a", "Renamed page");
+  assert.notStrictEqual(renamedPage.value.pages[0], pageA);
+  assert.strictEqual(renamedPage.value.pages[0].sections, pageA.sections);
+  assert.strictEqual(renamedPage.value.pages[1], pageB);
+
+  const renamedSection = renameBuildLayoutSection(draft, "page-a", "section-a", "Renamed section");
+  assert.notStrictEqual(renamedSection.value.pages[0].sections[0], sectionA);
+  assert.strictEqual(renamedSection.value.pages[0].sections[0].panels, sectionA.panels);
+  assert.strictEqual(renamedSection.value.pages[0].sections[1], sectionB);
+  assert.strictEqual(renamedSection.value.pages[1], pageB);
+
+  const renamedPanel = renameBuildLayoutPanel(draft, "panel-a", "Renamed panel");
+  assert.notStrictEqual(renamedPanel.value.pages[0].sections[0].panels[0], panelA);
+  assert.strictEqual(renamedPanel.value.pages[0].sections[0].panels[1], panelB);
+  assert.strictEqual(renamedPanel.value.pages[0].sections[1], sectionB);
+  assert.strictEqual(renamedPanel.value.pages[1], pageB);
+
+  const newPage = { id: "page-c", label: "Page C", sections: [] };
+  const addedPage = addBuildLayoutPage(draft, newPage);
+  assert.strictEqual(addedPage.value.pages[0], pageA);
+  assert.strictEqual(addedPage.value.pages[1], pageB);
+  assert.notStrictEqual(addedPage.value.pages[2], newPage);
+  assert.deepEqual(addedPage.value.pages[2], newPage);
+
+  const newSection = { id: "section-c", title: "Section C", panels: [] };
+  const addedSection = addBuildLayoutSection(draft, "page-a", newSection);
+  assert.strictEqual(addedSection.value.pages[0].sections[0], sectionA);
+  assert.strictEqual(addedSection.value.pages[0].sections[1], sectionB);
+  assert.strictEqual(addedSection.value.pages[1], pageB);
+  assert.notStrictEqual(addedSection.value.pages[0].sections[2], newSection);
+  assert.deepEqual(addedSection.value.pages[0].sections[2], newSection);
+});
+
 test("discard restores the saved layout without touching a simultaneous chart draft", () => {
   const saved = fixture();
   const chartDraft = { draftId: "chart-panel-a", status: "dirty", title: "Edited title" };
@@ -89,6 +166,9 @@ function fixture() {
         { id: "section-a", panels: [{ id: "panel-a" }, { id: "panel-b" }] },
         { id: "section-b", panels: [{ id: "panel-c" }] },
       ],
+    }, {
+      id: "page-b",
+      sections: [{ id: "section-d", panels: [{ id: "panel-d" }] }],
     }],
   };
 }

@@ -1,4 +1,11 @@
-import { reorderPage, reorderSection } from "./buildStructureModel.js";
+import {
+  movePageByIndex,
+  movePlacementBefore,
+  moveSectionByIndex,
+  updatePage,
+  updatePlacement,
+  updateSection,
+} from "./immutableDashboardLayout.js";
 
 export function createBuildLayoutDraft(dashboard) {
   const baseline = structuredClone(dashboard);
@@ -19,81 +26,79 @@ export function createBuildLayoutDraft(dashboard) {
 
 export function reorderBuildLayoutPanel(draft, sourceId, targetId) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  if (!movePanel(next.value, sourceId, targetId)) return draft;
-  return markDirty(next, targetId);
+  const value = movePlacementBefore(draft.value, sourceId, targetId);
+  return value === draft.value ? draft : markDirty(draft, targetId, value);
 }
 
 export function reorderBuildLayoutPage(draft, pageId, targetIndex) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  if (!reorderPage(next.value, pageId, targetIndex)) return draft;
-  return markDirty(next, pageId);
+  const value = movePageByIndex(draft.value, pageId, targetIndex);
+  return value === draft.value ? draft : markDirty(draft, pageId, value);
 }
 
 export function reorderBuildLayoutSection(draft, pageId, sectionId, targetIndex) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  if (!reorderSection(next.value, pageId, sectionId, targetIndex)) return draft;
-  return markDirty(next, sectionId);
+  const value = moveSectionByIndex(draft.value, pageId, sectionId, targetIndex);
+  return value === draft.value ? draft : markDirty(draft, sectionId, value);
 }
 
 export function renameBuildLayoutPage(draft, pageId, label) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const page = findPage(next.value, pageId);
   const name = String(label ?? "").trim();
+  const page = findPage(draft.value, pageId);
   if (!page) return failCommand(draft, "PAGE_NOT_FOUND", "The Page no longer exists.");
   if (!name) return failCommand(draft, "PAGE_NAME_REQUIRED", "Enter a Page name.");
-  page.label = name;
-  return markDirty(next, pageId);
+  const value = updatePage(draft.value, pageId, (current) => ({ ...current, label: name }));
+  return markDirty(draft, pageId, value);
 }
 
 export function addBuildLayoutPage(draft, page) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  if (!page?.id || next.value.pages.some(({ id }) => id === page.id)) {
+  if (!page?.id || draft.value.pages.some(({ id }) => id === page.id)) {
     return failCommand(draft, "PAGE_ID_INVALID", "The new Page needs a unique stable ID.");
   }
-  next.value.pages.push(structuredClone(page));
-  return markDirty(next, page.id);
+  const value = { ...draft.value, pages: [...draft.value.pages, structuredClone(page)] };
+  return markDirty(draft, page.id, value);
 }
 
 export function addBuildLayoutSection(draft, pageId, section) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const page = findPage(next.value, pageId);
-  if (!page || !section?.id || next.value.pages.flatMap(({ sections = [] }) => sections).some(({ id }) => id === section.id)) {
+  const page = findPage(draft.value, pageId);
+  if (!page || !section?.id || draft.value.pages.flatMap(({ sections = [] }) => sections).some(({ id }) => id === section.id)) {
     return failCommand(draft, "SECTION_ID_INVALID", "The new Section needs a unique stable ID.");
   }
-  page.sections.push(structuredClone(section));
-  return markDirty(next, section.id);
+  const value = updatePage(draft.value, pageId, (current) => ({
+    ...current,
+    sections: [...(current.sections ?? []), structuredClone(section)],
+  }));
+  return markDirty(draft, section.id, value);
 }
 
 export function renameBuildLayoutSection(draft, pageId, sectionId, title) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const section = findSection(next.value, pageId, sectionId);
   const name = String(title ?? "").trim();
+  const section = findSection(draft.value, pageId, sectionId);
   if (!section) return failCommand(draft, "SECTION_NOT_FOUND", "The Section no longer exists.");
   if (!name) return failCommand(draft, "SECTION_NAME_REQUIRED", "Enter a Section name.");
-  section.title = name;
-  return markDirty(next, sectionId);
+  const value = updateSection(draft.value, pageId, sectionId, (current) => ({ ...current, title: name }));
+  return markDirty(draft, sectionId, value);
 }
 
 export function renameBuildLayoutPanel(draft, placementId, title) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
-  const next = cloneDraft(draft);
-  const placement = next.value.pages
+  const placement = draft.value.pages
     .flatMap(({ sections = [] }) => sections)
     .flatMap(({ panels = [] }) => panels)
     .find(({ id }) => id === placementId);
   const name = String(title ?? "").trim();
   if (!placement) return failCommand(draft, "PANEL_NOT_FOUND", "The panel no longer exists.");
   if (!name) return failCommand(draft, "PANEL_NAME_REQUIRED", "Enter a panel name.");
-  if (placement.chart) placement.chart.title = name;
-  else placement.title = name;
-  return markDirty(next, placementId);
+  const value = updatePlacement(draft.value, placementId, (current) => (
+    current.chart
+      ? { ...current, chart: { ...current.chart, title: name } }
+      : { ...current, title: name }
+  ));
+  return markDirty(draft, placementId, value);
 }
 
 export function moveBuildLayoutSection(draft, pageId, sectionId, targetPageId, placement = {}) {
@@ -280,8 +285,15 @@ function cloneDraft(draft) {
   return { ...draft, value: structuredClone(draft.value), error: null };
 }
 
-function markDirty(draft, targetId) {
-  return { ...draft, targetId, status: "dirty", revision: (draft.revision ?? 0) + 1 };
+function markDirty(draft, targetId, value = draft.value) {
+  return {
+    ...draft,
+    value,
+    targetId,
+    status: "dirty",
+    revision: (draft.revision ?? 0) + 1,
+    error: null,
+  };
 }
 
 function isBuildLayoutDraftMutable(draft) {
