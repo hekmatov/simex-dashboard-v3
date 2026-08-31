@@ -5,9 +5,9 @@ import {
 } from "./zoomOptions.js";
 import {
   valueAxisPresentation,
-  valueAxisGutters,
   xAxisPresentation,
 } from "./axisPresentation.js";
+import { createValueAxisTitleProjection } from "./axisTitleGraphics.js";
 
 const BAR_MARKS = new Set([
   "bar",
@@ -64,18 +64,35 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const secondarySettings = axes?.secondary;
   const primaryValues = groupedValues(grouped, "primary");
   const secondaryValues = groupedValues(grouped, "secondary");
-  const primaryGutters = valueAxisGutters(primarySettings);
-  const secondaryGutters = valueAxisGutters(secondarySettings);
   const primaryAxis = valueAxis(primarySettings, false, horizontal ? {
     ...(primarySettings ?? {}),
     ...xSettings,
+    title: xSettings.title,
   } : null, primaryValues);
   const secondaryAxis = valueAxis(
     secondarySettings,
     true,
-    horizontal ? (secondarySettings ?? {}) : null,
+    horizontal ? {} : null,
     secondaryValues,
   );
+  const valueAxisTitleProjection = [
+    createValueAxisTitleProjection({
+      id: "primary",
+      horizontal,
+      secondary: false,
+      settings: primarySettings,
+      tickValues: primaryValues,
+    }),
+    hasSecondary
+      ? createValueAxisTitleProjection({
+          id: "secondary",
+          horizontal,
+          secondary: true,
+          settings: secondarySettings,
+          tickValues: secondaryValues,
+        })
+      : null,
+  ].filter(Boolean);
   const series = grouped.map((group, index) => {
     const type = seriesType(mark, group, index);
     const values = temporal
@@ -124,6 +141,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
 
   return {
     kind: "echarts",
+    valueAxisTitleProjection,
     option: {
       title: titleOption(chart),
       aria: ariaOption(chart),
@@ -136,22 +154,18 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
         containLabel: true,
         left: horizontal
           ? 48
-          : Math.max(48, primaryGutters.side),
+          : 48,
         right: horizontal
           ? hasSecondary ? 56 : 28
           : hasSecondary
-            ? Math.max(56, secondaryGutters.side)
+            ? 56
             : 28,
         top: horizontal
           ? 76
-          : Math.max(76, primaryGutters.top, secondaryGutters.top),
+          : 76,
         bottom: horizontal
           ? rangeSelectorVisible(chart) ? 52 : 32
-          : Math.max(
-              rangeSelectorVisible(chart) ? 52 : 32,
-              primaryGutters.bottom,
-              secondaryGutters.bottom,
-            ),
+          : rangeSelectorVisible(chart) ? 52 : 32,
       },
       xAxis: horizontal
         ? hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis
@@ -211,11 +225,18 @@ function formatSeriesLabel(params) {
 
 function valueAxis(settings = {}, secondary = false, xSettings = null, values = []) {
   const presentationSettings = xSettings ?? settings;
+  const presentation = xSettings
+    ? xAxisPresentation(presentationSettings, "number")
+    : valueAxisPresentation(presentationSettings, values);
+  if (!xSettings) {
+    delete presentation.name;
+    delete presentation.nameLocation;
+    delete presentation.nameRotate;
+    delete presentation.nameGap;
+  }
   return {
     type: "value",
-    ...(xSettings
-      ? xAxisPresentation(presentationSettings, "number")
-      : valueAxisPresentation(presentationSettings, values)),
+    ...presentation,
     min: presentationSettings?.min,
     max: presentationSettings?.max,
     splitLine: { show: secondary ? false : settings?.grid !== false },

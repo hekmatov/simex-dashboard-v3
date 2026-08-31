@@ -901,6 +901,86 @@ test("axis presentation controls expose temporal X controls and only render a se
   );
 });
 
+test("X, primary, and secondary axis titles retain an internal typing space", () => {
+  for (const path of [["x", "title"], ["primary", "title"], ["secondary", "title"]]) {
+    const next = updateStructuredFieldValue("axes", {}, path, "Cumulative ");
+    assert.equal(next[path[0]].title, "Cumulative ");
+    const completed = updateStructuredFieldValue("axes", next, path, "Cumulative Cases");
+    assert.equal(completed[path[0]].title, "Cumulative Cases");
+  }
+
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", { primary: { title: "Cases" } }, ["primary", "title"], ""),
+    {},
+  );
+});
+
+test("save normalization trims raw axis title editing values", () => {
+  const normalized = normalizeChartInstance(validLineChart({
+    presentation: {
+      axes: {
+        x: { title: " Reported at " },
+        primary: { title: " Cases " },
+        secondary: { title: "   " },
+      },
+    },
+  }));
+
+  assert.equal(normalized.presentation.axes.x.title, "Reported at");
+  assert.equal(normalized.presentation.axes.primary.title, "Cases");
+  assert.equal(normalized.presentation.axes.secondary, undefined);
+});
+
+test("value-axis title controls expose size steps, bold, and signed offsets only for available axes", () => {
+  const field = {
+    id: "axes",
+    label: "Axes",
+    control: "axes",
+    xKind: "category",
+    hasSecondary: true,
+  };
+  const html = render(React.createElement(StandardField, {
+    field,
+    value: {
+      primary: { titleFontSize: 10, titleBold: true, titleOffsetX: -12, titleOffsetY: 9 },
+      secondary: { titleFontSize: 24 },
+    },
+    onChange() {},
+  }));
+
+  assert.match(html, /Primary axis/);
+  assert.match(html, /Secondary axis/);
+  assert.match(html, /Title font size/);
+  assert.match(html, /Decrease title font size/);
+  assert.match(html, /Increase title font size/);
+  assert.match(html, /Bold/);
+  assert.match(html, /Horizontal offset/);
+  assert.match(html, /Vertical offset/);
+  assert.match(html, /value="-12"/);
+  assert.match(html, /value="9"/);
+
+  const primaryOnly = render(React.createElement(StandardField, {
+    field: { ...field, hasSecondary: false },
+    value: {},
+    onChange() {},
+  }));
+  assert.equal((primaryOnly.match(/Title font size/g) ?? []).length, 1);
+  assert.doesNotMatch(primaryOnly, /Secondary axis/);
+
+  const changes = [];
+  const tree = StandardField({
+    field: { ...field, hasSecondary: false },
+    value: { primary: { titleFontSize: 14 } },
+    onChange(value) { changes.push(value); },
+  });
+  findElement(tree, (element) => element.props?.["aria-label"] === "Increase title font size").props.onClick();
+  findElement(tree, (element) => element.props?.["aria-label"] === "Decrease title font size").props.onClick();
+  assert.deepEqual(changes, [
+    { primary: { titleFontSize: 15 } },
+    { primary: { titleFontSize: 13 } },
+  ]);
+});
+
 test("temporal tick frequency defaults its unit to day on the first number edit", () => {
   let next;
   const tree = StandardField({

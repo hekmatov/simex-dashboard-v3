@@ -139,6 +139,54 @@ test("axis presentation accepts structured X and value-axis title options while 
   assert.throws(() => validateChartInstance(chart), /titleOrientation/i);
 });
 
+test("value-axis title typography and offsets accept only their bounded values", () => {
+  const chart = createChartDraft("line", {
+    id: "adjustable-axis-title",
+    title: "Adjustable axis title",
+    sourceId: "cases",
+    roles: {
+      measurements: [
+        { field: "cases", axis: "primary" },
+        { field: "rate", axis: "secondary" },
+      ],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: {
+      axes: {
+        primary: {
+          title: "Cases",
+          titleFontSize: 10,
+          titleBold: true,
+          titleOffsetX: -96,
+          titleOffsetY: 96,
+        },
+        secondary: {
+          title: "Rate",
+          titleFontSize: 24,
+          titleBold: false,
+          titleOffsetX: 96,
+          titleOffsetY: -96,
+        },
+      },
+    },
+  });
+
+  assert.equal(validateChartInstance(chart), chart);
+
+  const invalid = [
+    ["titleFontSize", 9, /titleFontSize must be an integer from 10 through 24/],
+    ["titleFontSize", 24.5, /titleFontSize must be an integer from 10 through 24/],
+    ["titleBold", "true", /titleBold must be a boolean/],
+    ["titleOffsetX", -97, /titleOffsetX must be from -96 through 96/],
+    ["titleOffsetY", 97, /titleOffsetY must be from -96 through 96/],
+  ];
+  for (const [key, value, message] of invalid) {
+    const candidate = structuredClone(chart);
+    candidate.presentation.axes.primary[key] = value;
+    assert.throws(() => validateChartInstance(candidate), message, key);
+  }
+});
+
 test("axis presentation validates datetime options for an inferred temporal observation", () => {
   const profile = profileDataset([
     { date: "2027-01-01", cases: 4 },

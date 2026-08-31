@@ -31,6 +31,9 @@ const DUPLICATE_STRATEGIES = new Set(["error", "first", "last", "aggregate", ...
 const MISSING_VALUE_STRATEGIES = new Set(["gap", "zero", "drop"]);
 const COLUMN_TYPES = new Set(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
 const TITLE_ALIGNMENTS = new Set(["left", "center", "right"]);
+const VALUE_AXIS_TITLE_KEYS = new Set([
+  "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY",
+]);
 const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neutral"]);
 const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
 const COMPARISON_MODES = new Set(CHART_COMPARISON_MODES);
@@ -468,13 +471,25 @@ function validateAxes(axes, schema, temporalRoles) {
     const axis = axes?.[axisName];
     if (axis === undefined) continue;
     ensureObject(axis, `Chart presentation axes ${axisName}`);
-    checkKnownKeys(axis, new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency"]), `chart presentation axes ${axisName}`);
+    checkKnownKeys(axis, new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency", ...VALUE_AXIS_TITLE_KEYS]), `chart presentation axes ${axisName}`);
     for (const field of ["title", "name", "xTitle", "yTitle"]) if (axis[field] !== undefined && typeof axis[field] !== "string") throw new Error(`Chart presentation axes ${axisName} ${field} must be a string.`);
     for (const field of ["min", "max"]) if (axis[field] !== undefined && !Number.isFinite(axis[field])) throw new Error(`Chart presentation axes ${axisName} ${field} must be finite.`);
     if (axis.grid !== undefined && typeof axis.grid !== "boolean") throw new Error(`Chart presentation axes ${axisName} grid must be boolean.`);
     if (axis.min !== undefined && axis.max !== undefined && axis.min > axis.max) throw new Error(`Chart presentation axes ${axisName} min cannot exceed max.`);
     if (axis.titlePosition !== undefined && !["top", "center", "bottom"].includes(axis.titlePosition)) throw new Error(`Chart presentation axes ${axisName} titlePosition is unsupported.`);
     if (axis.titleOrientation !== undefined && !["vertical", "horizontal"].includes(axis.titleOrientation)) throw new Error(`Chart presentation axes ${axisName} titleOrientation is unsupported.`);
+    if (axis.titleFontSize !== undefined
+      && (!Number.isInteger(axis.titleFontSize) || axis.titleFontSize < 10 || axis.titleFontSize > 24)) {
+      throw new Error(`Chart presentation axes ${axisName} titleFontSize must be an integer from 10 through 24.`);
+    }
+    if (axis.titleBold !== undefined && typeof axis.titleBold !== "boolean") {
+      throw new Error(`Chart presentation axes ${axisName} titleBold must be a boolean.`);
+    }
+    for (const key of ["titleOffsetX", "titleOffsetY"]) {
+      if (axis[key] !== undefined && (!Number.isFinite(axis[key]) || axis[key] < -96 || axis[key] > 96)) {
+        throw new Error(`Chart presentation axes ${axisName} ${key} must be from -96 through 96.`);
+      }
+    }
     validateTickFrequency(axis.tickFrequency, "number", axisName);
   }
 }
@@ -745,6 +760,7 @@ export function normalizeChartInstance(chart) {
       )
     : undefined;
   const normalized = structuredClone(chart);
+  normalizeAxisTitles(normalized.presentation?.axes);
   if (collectionProperty.present) {
     normalized.presentation.collection = normalizedCollection;
   }
@@ -755,6 +771,18 @@ export function normalizeChartInstance(chart) {
     normalized.layout = { size: "wide", width: 4, height: 1 };
   }
   return normalized;
+}
+
+function normalizeAxisTitles(axes) {
+  if (!axes || typeof axes !== "object" || Array.isArray(axes)) return;
+  for (const axisName of ["x", "primary", "secondary"]) {
+    const axis = axes[axisName];
+    if (!axis || typeof axis !== "object" || Array.isArray(axis) || typeof axis.title !== "string") continue;
+    const title = axis.title.trim();
+    if (title) axis.title = title;
+    else delete axis.title;
+    if (Object.keys(axis).length === 0) delete axes[axisName];
+  }
 }
 
 /** Validates one fully configured v3 chart instance without mutating it. */

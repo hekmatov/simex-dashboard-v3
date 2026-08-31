@@ -1,3 +1,8 @@
+import {
+  createValueAxisTitleProjection,
+  valueAxisTitleGutters,
+} from "./axisTitleGraphics.js";
+
 const TIME_UNITS_MS = Object.freeze({
   minute: 60_000,
   hour: 3_600_000,
@@ -48,33 +53,31 @@ export function xAxisPresentation(settings, kind) {
   return result;
 }
 
-export function valueAxisPresentation(settings, values = []) {
-  const result = axisTitle(settings, "y", {
-    tickLabelWidth: valueAxisTickLabelWidth(settings, values),
-  });
+export function valueAxisPresentation(settings) {
+  const result = {};
   const interval = tickInterval(settings?.tickFrequency, "number");
   if (interval !== undefined) result.interval = interval;
   return result;
 }
 
-export function valueAxisGutters(settings = {}) {
-  const title = axisTitleText(settings);
-  if (!title) return { side: 0, top: 0, bottom: 0 };
-  const position = settings.titlePosition ?? "center";
-  const endGutter = Math.ceil(
-    titleVerticalFootprint(title, settings.titleOrientation)
-    + AXIS_TICK_HALF_HEIGHT
-    + AXIS_TITLE_CLEARANCE,
-  );
+export function valueAxisGutters(settings = {}, values = [], textTheme = {}, {
+  horizontal = false,
+  secondary = false,
+} = {}) {
+  const projection = createValueAxisTitleProjection({
+    id: secondary ? "secondary" : "primary",
+    horizontal,
+    secondary,
+    settings,
+    tickValues: values,
+  });
+  const gutters = valueAxisTitleGutters(projection, textTheme);
   return {
-    side: position === "center"
-      ? Math.ceil(
-          titleHorizontalFootprint(title, settings.titleOrientation)
-          + (AXIS_TITLE_CLEARANCE * 2),
-        )
-      : 0,
-    top: position === "top" ? endGutter : 0,
-    bottom: position === "bottom" ? endGutter : 0,
+    side: horizontal
+      ? Math.max(gutters.top, gutters.bottom)
+      : secondary ? gutters.right : gutters.left,
+    top: gutters.top,
+    bottom: gutters.bottom,
   };
 }
 
@@ -107,59 +110,8 @@ function axisTitleText(settings = {}) {
   return settings.title ?? settings.yTitle ?? settings.name ?? "";
 }
 
-function titleHorizontalFootprint(title, orientation) {
-  return orientation === "horizontal"
-    ? renderedTextWidth(title)
-    : renderedTextHeight(title);
-}
-
 function titlePerpendicularRadius(title, orientation) {
   return orientation === "horizontal" ? 0 : renderedTextHeight(title) / 2;
-}
-
-function titleVerticalFootprint(title, orientation) {
-  return orientation === "horizontal"
-    ? renderedTextHeight(title)
-    : renderedTextWidth(title);
-}
-
-function valueAxisTickLabelWidth(settings = {}, values = []) {
-  const finite = [
-    ...(Array.isArray(values) ? values : []),
-    settings.min,
-    settings.max,
-    0,
-  ].filter(Number.isFinite);
-  const maximumMagnitude = Math.max(0, ...finite.map((value) => Math.abs(value)));
-  const envelope = maximumMagnitude > 0
-    ? 10 ** Math.ceil(Math.log10(maximumMagnitude))
-    : 1;
-  if (Number.isFinite(envelope) && envelope > 0) {
-    finite.push(envelope, -envelope);
-    finite.push(envelope * 0.2, envelope * -0.2);
-  }
-  return Math.max(0, ...finite.map((value) => renderedTextWidth(formatAxisNumber(value))));
-}
-
-function formatAxisNumber(value) {
-  const precision = Math.min(20, axisNumberPrecision(value));
-  const [integer, fraction] = value.toFixed(precision).split(".");
-  const grouped = integer.replace(/(\d{1,3})(?=(?:\d{3})+(?!\d))/g, "$1,");
-  return fraction === undefined ? grouped : `${grouped}.${fraction}`;
-}
-
-function axisNumberPrecision(value) {
-  const source = value.toString().toLowerCase();
-  const exponentIndex = source.indexOf("e");
-  const exponent = exponentIndex > 0 ? Number(source.slice(exponentIndex + 1)) : 0;
-  const significandLength = exponentIndex > 0 ? exponentIndex : source.length;
-  const decimalIndex = source.indexOf(".");
-  const decimalLength = decimalIndex < 0 ? 0 : significandLength - decimalIndex - 1;
-  return Math.max(0, decimalLength - exponent);
-}
-
-function renderedTextWidth(text) {
-  return renderedTextBounds(text).width;
 }
 
 function renderedTextHeight(text) {

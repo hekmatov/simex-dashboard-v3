@@ -22,8 +22,15 @@ export async function load(url, context, nextLoad) {
 
 const {
   applyEChartsPresentation,
+  createEChartsLifecycle,
   sameChartTextTheme,
 } = await import("../src/components/charts/EChartsChartView.jsx");
+
+const {
+  createValueAxisTitleProjection,
+  resolveValueAxisTitleGraphics,
+  valueAxisTitleGutters,
+} = await import("../src/charting/rendering/axisTitleGraphics.js");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
@@ -81,6 +88,50 @@ function renderedTextBounds(option, width = 640, height = 400) {
         [rect.x + rect.width, rect.y],
         [rect.x, rect.y + rect.height],
         [rect.x + rect.width, rect.y + rect.height],
+      ].map(([x, y]) => element.transformCoordToGlobal(x, y));
+      const x = corners.map(([value]) => value);
+      const y = corners.map(([, value]) => value);
+      return [{
+        text: String(element.style.text),
+        left: Math.min(...x),
+        right: Math.max(...x),
+        top: Math.min(...y),
+        bottom: Math.max(...y),
+      }];
+    });
+  } finally {
+    instance.dispose();
+  }
+}
+
+function renderedProjectedTextBounds(model, width = 640, height = 400) {
+  const textTheme = { bodyFont: "sans-serif", textMuted: "#49627A" };
+  const presented = applyEChartsPresentation(
+    model,
+    { presentation: { title: { align: "left" } } },
+    false,
+    textTheme,
+  );
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
+  try {
+    instance.setOption(presented.option);
+    instance.renderToSVGString();
+    const rect = instance.getModel().getComponent("grid", 0).coordinateSystem.getRect();
+    const graphics = resolveValueAxisTitleGraphics({
+      projection: presented.valueAxisTitleProjection,
+      gridRect: rect,
+      textTheme: presented.valueAxisTitleTextTheme,
+    });
+    instance.setOption({ graphic: graphics });
+    instance.renderToSVGString();
+    return instance.getZr().storage.getDisplayList(true).flatMap((element) => {
+      if (element.style?.text === undefined) return [];
+      const textRect = element.getBoundingRect();
+      const corners = [
+        [textRect.x, textRect.y],
+        [textRect.x + textRect.width, textRect.y],
+        [textRect.x, textRect.y + textRect.height],
+        [textRect.x + textRect.width, textRect.y + textRect.height],
       ].map(([x, y]) => element.transformCoordToGlobal(x, y));
       const x = corners.map(([value]) => value);
       const y = corners.map(([, value]) => value);
@@ -668,11 +719,16 @@ test("axis presentation renders X and value titles, ranges, ticks, and temporal 
   assert.equal(model.option.xAxis.max, "2027-12-31");
   assert.equal(model.option.xAxis.interval, undefined);
   assert.equal(typeof model.option.xAxis.axisLabel.formatter, "function");
-  assert.equal(model.option.yAxis[0].name, "Cases");
-  assert.equal(model.option.yAxis[0].nameLocation, "end");
-  assert.equal(model.option.yAxis[0].nameRotate, 0);
+  assert.equal(model.option.yAxis[0].name, undefined);
+  assert.deepEqual(
+    model.valueAxisTitleProjection.map(({ title, position, orientation }) => ({ title, position, orientation })),
+    [
+      { title: "Cases", position: "top", orientation: "horizontal" },
+      { title: "Rate", position: "center", orientation: "vertical" },
+    ],
+  );
   assert.equal(model.option.yAxis[0].interval, 5);
-  assert.equal(model.option.yAxis[1].name, "Rate");
+  assert.equal(model.option.yAxis[1].name, undefined);
   const label = model.option.xAxis.axisLabel.formatter;
   assert.equal(label("2027-12-31T00:00:00Z"), "31 Dec 2027");
   assert.equal(
@@ -776,7 +832,7 @@ test("primary and secondary Y-axis titles keep visible clearance from wide tick 
           marks("B", 876_543_210, "secondary", "Rate"),
         ], { axisInterpretation: "category" }),
       });
-      const bounds = renderedTextBounds(model.option, width, 320);
+      const bounds = renderedProjectedTextBounds(model, width, 320);
       const numericLabels = bounds.filter(({ text }) => /^-?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text));
       const primaryLabels = numericLabels.filter(({ right }) => right < width / 2);
       const secondaryLabels = numericLabels.filter(({ left }) => left > width / 2);
@@ -806,6 +862,210 @@ test("primary and secondary Y-axis titles keep visible clearance from wide tick 
       assert.ok(secondaryLabels.every((label) => separated(secondaryTitle, label)), `${context}: secondary title keeps 8px tick-label clearance`);
     }
   }
+});
+
+test("value axes suppress native names and project stable vertical and horizontal title metadata", () => {
+  const vertical = buildRenderModel({
+    chart: chart("mixed", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: { title: "Recorded date" },
+          primary: { title: "Cases", titlePosition: "top", titleOrientation: "vertical" },
+          secondary: { title: "Rate", titlePosition: "bottom", titleOrientation: "horizontal" },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "A", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "A", value: 4, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    ], { axisInterpretation: "category" }),
+  });
+
+  assert.equal(vertical.option.xAxis.name, "Recorded date");
+  assert.deepEqual(vertical.option.yAxis.map(({ name }) => name), [undefined, undefined]);
+  assert.deepEqual(
+    vertical.valueAxisTitleProjection.map(({ id, physicalAxis, side, title, position, orientation }) => ({
+      id, physicalAxis, side, title, position, orientation,
+    })),
+    [
+      { id: "primary", physicalAxis: "y", side: "left", title: "Cases", position: "top", orientation: "vertical" },
+      { id: "secondary", physicalAxis: "y", side: "right", title: "Rate", position: "bottom", orientation: "horizontal" },
+    ],
+  );
+
+  const horizontal = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: { title: "Native X title" },
+          primary: { title: "Primary value", titleFontSize: 10, titleBold: true },
+          secondary: { title: "Secondary value", titleFontSize: 24, titleOffsetX: -12, titleOffsetY: 9 },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "A", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "A", value: 4, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    ], { axisInterpretation: "category" }),
+  });
+
+  assert.equal(horizontal.option.xAxis[0].name, "Native X title");
+  assert.equal(horizontal.option.xAxis[1].name, undefined);
+  assert.deepEqual(
+    horizontal.valueAxisTitleProjection.map(({ id, physicalAxis, side, fontSize, bold, offsetX, offsetY }) => ({
+      id, physicalAxis, side, fontSize, bold, offsetX, offsetY,
+    })),
+    [
+      { id: "primary", physicalAxis: "x", side: "bottom", fontSize: 10, bold: true, offsetX: 0, offsetY: 0 },
+      { id: "secondary", physicalAxis: "x", side: "top", fontSize: 24, bold: false, offsetX: -12, offsetY: 9 },
+    ],
+  );
+});
+
+test("value-axis title graphics apply size, weight, offsets, clearance, and positive Y upward", () => {
+  const gridRect = { x: 120, y: 80, width: 360, height: 220 };
+  const textTheme = { bodyFont: "Body Token Stack", textMuted: "#49627A" };
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    horizontal: false,
+    secondary: false,
+    settings: {
+      title: "Cumulative cases",
+      titleFontSize: 24,
+      titleBold: true,
+      titlePosition: "center",
+      titleOrientation: "vertical",
+    },
+    tickValues: [0, 1000],
+  });
+  const base = resolveValueAxisTitleGraphics({ projection, gridRect, textTheme });
+  const moved = resolveValueAxisTitleGraphics({
+    projection: { ...projection, titleOffsetX: -12, titleOffsetY: 9 },
+    gridRect,
+    textTheme,
+  });
+
+  assert.equal(base.length, 1);
+  assert.equal(base[0].id, "simex-value-axis-title-primary");
+  assert.equal(base[0].style.fontFamily, "Body Token Stack");
+  assert.equal(base[0].style.fontSize, 24);
+  assert.equal(base[0].style.fontWeight, 700);
+  assert.equal(moved[0].left, base[0].left - 12);
+  assert.equal(moved[0].top, base[0].top - 9);
+  assert.ok(base[0].left + base[0].textBounds.width <= gridRect.x - 16, "zero offset leaves the tick margin plus at least 8px title clearance");
+
+  const horizontal = createValueAxisTitleProjection({
+    id: "secondary",
+    horizontal: true,
+    secondary: true,
+    settings: { title: "Rate", titleFontSize: 10, titleOrientation: "horizontal" },
+    tickValues: [-100, 100],
+  });
+  const horizontalGraphic = resolveValueAxisTitleGraphics({ projection: horizontal, gridRect, textTheme })[0];
+  assert.equal(horizontalGraphic.id, "simex-value-axis-title-secondary");
+  assert.equal(horizontalGraphic.style.fontSize, 10);
+  assert.equal(horizontalGraphic.style.fontWeight, 400);
+  assert.ok(horizontalGraphic.top + horizontalGraphic.textBounds.height <= gridRect.y - 16);
+
+  const horizontalPrimary = createValueAxisTitleProjection({
+    id: "primary",
+    horizontal: true,
+    secondary: false,
+    settings: { title: "Confirmed cases", titleOrientation: "horizontal" },
+    tickValues: [0, 100],
+  });
+  const below = resolveValueAxisTitleGraphics({ projection: horizontalPrimary, gridRect, textTheme })[0];
+  const shifted = resolveValueAxisTitleGraphics({
+    projection: { ...horizontalPrimary, titleOffsetX: 12, titleOffsetY: -9 },
+    gridRect,
+    textTheme,
+  })[0];
+  assert.ok(below.top >= gridRect.y + gridRect.height + 16);
+  assert.equal(shifted.left, below.left + 12);
+  assert.equal(shifted.top, below.top + 9);
+});
+
+test("positive-only domains do not reserve a negative numeric envelope", () => {
+  const base = {
+    id: "primary",
+    horizontal: false,
+    secondary: false,
+    settings: { title: "Cases", min: 0, max: 1000 },
+  };
+  const positive = createValueAxisTitleProjection({ ...base, tickValues: [0, 1000] });
+  const negative = createValueAxisTitleProjection({
+    ...base,
+    settings: { ...base.settings, min: -1000 },
+    tickValues: [-1000, 1000],
+  });
+  const theme = { bodyFont: "Body Token Stack" };
+
+  assert.equal(positive.domainCanBeNegative, false);
+  assert.equal(negative.domainCanBeNegative, true);
+  assert.ok(valueAxisTitleGutters(negative, theme).left > valueAxisTitleGutters(positive, theme).left);
+});
+
+test("ECharts lifecycle replaces stable value-axis graphics after updates and resize", () => {
+  const options = [];
+  let resizeListener;
+  let rect = { x: 120, y: 80, width: 360, height: 220 };
+  const instance = {
+    setOption(option) { options.push(option); },
+    resize() {},
+    getModel() {
+      return {
+        getComponent() {
+          return { coordinateSystem: { getRect: () => rect } };
+        },
+      };
+    },
+    on() {},
+    off() {},
+    dispose() {},
+  };
+  const lifecycle = createEChartsLifecycle({
+    echartsApi: {
+      getInstanceByDom() { return null; },
+      init() { return instance; },
+      registerMap() {},
+    },
+    windowTarget: {
+      addEventListener(type, listener) { if (type === "resize") resizeListener = listener; },
+      removeEventListener() {},
+    },
+    ResizeObserverCtor: null,
+  });
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    settings: { title: "Cases" },
+    tickValues: [0, 100],
+  });
+
+  lifecycle.mount({});
+  lifecycle.update({
+    option: { grid: {} },
+    valueAxisTitleProjection: [projection],
+    valueAxisTitleTextTheme: { bodyFont: "Body Token Stack", textMuted: "#49627A" },
+  });
+  assert.equal(options.length, 2);
+  assert.equal(options[1].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[1].graphic[0].$action, "replace");
+  const firstLeft = options[1].graphic[0].left;
+
+  rect = { ...rect, x: 150 };
+  resizeListener();
+  assert.equal(options.length, 3);
+  assert.equal(options[2].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[2].graphic[0].left, firstLeft + 30);
+
+  lifecycle.update({ option: { grid: {} }, valueAxisTitleProjection: [] });
+  assert.equal(options[4].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[4].graphic[0].$action, "remove");
+  lifecycle.dispose();
 });
 
 test("centered Y-axis titles keep clearance for fractional ticks at zero, unit, and extreme scales", () => {
@@ -852,7 +1112,7 @@ test("centered Y-axis titles keep clearance for fractional ticks at zero, unit, 
           },
         ], { axisInterpretation: "category" }),
       });
-      const bounds = renderedTextBounds(model.option, width, 320);
+      const bounds = renderedProjectedTextBounds(model, width, 320);
       const numericLabels = bounds.filter(({ text }) => /^-?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text));
       assert.equal(numericLabels.length % 2, 0, `${value}: both value axes render the same tick count`);
       const axisTickCount = numericLabels.length / 2;
@@ -987,8 +1247,11 @@ test("horizontal bars keep the configured X-axis title horizontal", () => {
     }),
     prepared: axisMarks,
   });
-  assert.equal(fallback.option.xAxis[0].name, "Fallback value title");
-  assert.equal(fallback.option.xAxis[0].nameRotate, 0);
+  assert.equal(fallback.option.xAxis[0].name, undefined);
+  assert.deepEqual(
+    fallback.valueAxisTitleProjection.map(({ title, physicalAxis, side, orientation }) => ({ title, physicalAxis, side, orientation })),
+    [{ title: "Fallback value title", physicalAxis: "x", side: "bottom", orientation: "horizontal" }],
+  );
 });
 
 test("configured temporal cadence controls the rendered date ticks", () => {

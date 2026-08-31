@@ -1,7 +1,7 @@
 import React from "react";
 import { IconControl } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
-const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency"]);
+const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
 const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "tickFrequency"]);
 const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
@@ -300,6 +300,10 @@ function axisControls(label, axis, value, emit) {
     textControl("Title", value.title, (nextValue) => emit([axis, "title"], nextValue)),
     selectControl("Title position", value.titlePosition ?? "center", ["top", "center", "bottom"], (nextValue) => emit([axis, "titlePosition"], nextValue)),
     selectControl("Title orientation", value.titleOrientation ?? "vertical", ["vertical", "horizontal"], (nextValue) => emit([axis, "titleOrientation"], nextValue)),
+    fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit([axis, "titleFontSize"], nextValue)),
+    inlineToggle("Bold", value.titleBold === true, (checked) => emit([axis, "titleBold"], checked)),
+    boundedNumericControl("Horizontal offset", value.titleOffsetX, -96, 96, (nextValue) => emit([axis, "titleOffsetX"], nextValue)),
+    boundedNumericControl("Vertical offset", value.titleOffsetY, -96, 96, (nextValue) => emit([axis, "titleOffsetY"], nextValue)),
     numericControl("Minimum", value.min, (nextValue) => emit([axis, "min"], nextValue)),
     numericControl("Maximum", value.max, (nextValue) => emit([axis, "max"], nextValue)),
     tickControls(axis, value.tickFrequency, "number", emit),
@@ -318,6 +322,35 @@ function numericControl(label, value, onChange) {
     value: numeric(value),
     onChange: (event) => onChange(optionalNumber(event.target.value)),
   }));
+}
+function boundedNumericControl(label, value, min, max, onChange) {
+  return React.createElement("label", null, label, React.createElement("input", {
+    type: "number",
+    min: String(min),
+    max: String(max),
+    step: "1",
+    value: numeric(value),
+    onChange: (event) => onChange(optionalNumber(event.target.value)),
+  }));
+}
+function fontSizeControl(value, onChange) {
+  const size = Number.isInteger(value) ? Math.min(24, Math.max(10, value)) : 14;
+  return React.createElement("div", { className: "chart-authoring-axis-title-size" },
+    React.createElement("span", null, "Title font size"),
+    React.createElement("button", {
+      type: "button",
+      "aria-label": "Decrease title font size",
+      disabled: size <= 10,
+      onClick: () => onChange(size - 1),
+    }, "−"),
+    React.createElement("output", null, size),
+    React.createElement("button", {
+      type: "button",
+      "aria-label": "Increase title font size",
+      disabled: size >= 24,
+      onClick: () => onChange(size + 1),
+    }, "+"),
+  );
 }
 function xAxisControls(value, kind, emit) {
   const ranged = kind === "temporal" || kind === "number";
@@ -432,6 +465,15 @@ function normalizeStructuredInput(control, path, value) {
   if (control === "axes" && property === "tickFrequency") {
     return sanitizeTickFrequency(value);
   }
+  if (control === "axes" && property === "title") {
+    return typeof value === "string" && value.trim() ? value : void 0;
+  }
+  if (control === "axes" && property === "titleBold") {
+    return value === true;
+  }
+  if (control === "axes" && ["titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property)) {
+    return Number.isFinite(value) ? value : void 0;
+  }
   if (control === "targets" && property === "ranges") {
     return sanitizeRanges(value);
   }
@@ -482,10 +524,11 @@ function sanitizeAxis(value) {
   if (!isRecord(value)) return void 0;
   const axis = {};
   for (const property of AXIS_PROPERTIES) {
-    if (property === "grid" && typeof value[property] === "boolean") axis[property] = value[property];
-    else if (["min", "max"].includes(property) && Number.isFinite(value[property])) axis[property] = value[property];
+    if (["grid", "titleBold"].includes(property) && typeof value[property] === "boolean") axis[property] = value[property];
+    else if (["min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property) && Number.isFinite(value[property])) axis[property] = value[property];
     else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
-    else if (!["grid", "min", "max"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
+    else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
+    else if (!["grid", "titleBold", "min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY", "title"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
   }
   if (Number.isFinite(axis.min) && Number.isFinite(axis.max) && axis.min > axis.max) {
     delete axis.max;
@@ -498,7 +541,7 @@ function sanitizeXAxis(value) {
   for (const property of X_AXIS_PROPERTIES) {
     if (["min", "max"].includes(property) && (Number.isFinite(value[property]) || nonemptyString(value[property]))) axis[property] = typeof value[property] === "string" ? value[property].trim() : value[property];
     else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
-    else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property].trim();
+    else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
     else if (property === "labelPreset" && nonemptyString(value[property]) && value[property].trim() !== "adaptive") axis[property] = value[property].trim();
   }
   return Object.keys(axis).length > 0 ? axis : void 0;

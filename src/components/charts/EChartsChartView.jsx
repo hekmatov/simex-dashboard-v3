@@ -2,6 +2,10 @@ import React from "react";
 import * as echarts from "echarts";
 
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
+import {
+  resolveValueAxisTitleGraphics,
+  valueAxisTitleGutters,
+} from "../../charting/rendering/axisTitleGraphics.js";
 import { useDashboardChartTheme } from "../../theme/DashboardChartThemeContext.jsx";
 import ChartHeading from "./ChartHeading.jsx";
 import { titleContainerProps } from "./chartViewPresentation.js";
@@ -189,10 +193,19 @@ export function applyEChartsPresentation(
     chart?.presentation?.background,
     { themeDefault: "transparent" },
   );
+  const valueAxisTitleProjection = Array.isArray(model.valueAxisTitleProjection)
+    ? model.valueAxisTitleProjection
+    : [];
+  const valueAxisTitleTextTheme = { bodyFont, textMuted };
+  const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
+  const grid = normalizedGrid(option.grid, titleGutters);
   return {
     ...model,
+    valueAxisTitleProjection,
+    valueAxisTitleTextTheme,
     option: {
       ...optionWithoutBackground,
+      ...(grid === undefined ? {} : { grid }),
       color: Array.isArray(option.color) && option.color.length > 0 ? option.color : dataColors,
       textStyle: {
         ...(option.textStyle ?? {}),
@@ -258,6 +271,31 @@ export function createEChartsLifecycle({
   let observer = null;
   let resizeListener = null;
   let finishedListener = null;
+  let valueAxisTitleProjection = [];
+  let valueAxisTitleTextTheme = {};
+  let valueAxisTitleGraphicIds = [];
+
+  function replaceValueAxisTitleGraphics(nextInstance = instance) {
+    if (!nextInstance || (valueAxisTitleProjection.length === 0 && valueAxisTitleGraphicIds.length === 0)) return;
+    const gridRect = resolvedGridRect(nextInstance);
+    if (!gridRect) return;
+    const graphics = resolveValueAxisTitleGraphics({
+      projection: valueAxisTitleProjection,
+      gridRect,
+      textTheme: valueAxisTitleTextTheme,
+    });
+    const nextIds = graphics.map(({ id }) => id);
+    const removals = valueAxisTitleGraphicIds
+      .filter((id) => !nextIds.includes(id))
+      .map((id) => ({ id, $action: "remove" }));
+    nextInstance.setOption({
+      graphic: [
+        ...removals,
+        ...graphics.map((graphic) => ({ ...graphic, $action: "replace" })),
+      ],
+    }, { lazyUpdate: false });
+    valueAxisTitleGraphicIds = nextIds;
+  }
 
   function cleanup(nextInstance = instance) {
     observer?.disconnect?.();
@@ -270,6 +308,9 @@ export function createEChartsLifecycle({
     observer = null;
     resizeListener = null;
     finishedListener = null;
+    valueAxisTitleProjection = [];
+    valueAxisTitleTextTheme = {};
+    valueAxisTitleGraphicIds = [];
   }
 
   function fail(error, nextInstance = instance) {
@@ -287,6 +328,7 @@ export function createEChartsLifecycle({
         resizeListener = () => {
           try {
             nextInstance?.resize();
+            replaceValueAxisTitleGraphics(nextInstance);
           } catch (error) {
             fail(error, nextInstance);
           }
@@ -305,11 +347,16 @@ export function createEChartsLifecycle({
       if (!instance) return;
       try {
         registerMap(echartsApi, model?.mapRegistration);
+        valueAxisTitleProjection = Array.isArray(model?.valueAxisTitleProjection)
+          ? model.valueAxisTitleProjection
+          : [];
+        valueAxisTitleTextTheme = model?.valueAxisTitleTextTheme ?? {};
         instance.setOption(model?.option ?? {}, {
           notMerge: true,
           replaceMerge: model?.replaceMerge,
           lazyUpdate: false,
         });
+        replaceValueAxisTitleGraphics(instance);
       } catch (error) {
         fail(error);
       }
@@ -460,6 +507,35 @@ function boundedRuntimeError(error) {
 
 function normalizeError(error) {
   return error instanceof Error ? error : new Error(boundedRuntimeError(error));
+}
+
+function normalizedGrid(value, titleGutters) {
+  const normalize = (grid) => {
+    if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
+    return {
+      ...grid,
+      left: maximumPixelGutter(grid.left, titleGutters.left),
+      right: maximumPixelGutter(grid.right, titleGutters.right),
+      top: maximumPixelGutter(grid.top, titleGutters.top),
+      bottom: maximumPixelGutter(grid.bottom, titleGutters.bottom),
+    };
+  };
+  return Array.isArray(value) ? value.map(normalize) : normalize(value);
+}
+
+function maximumPixelGutter(current, required) {
+  return Number.isFinite(current) ? Math.max(current, required) : current;
+}
+
+function resolvedGridRect(instance) {
+  try {
+    const grid = instance.getModel?.().getComponent?.("grid", 0);
+    const rect = grid?.coordinateSystem?.getRect?.();
+    if (!rect || ![rect.x, rect.y, rect.width, rect.height].every(Number.isFinite)) return null;
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  } catch {
+    return null;
+  }
 }
 
 function normalizedFontFamily(value, fallback) {
