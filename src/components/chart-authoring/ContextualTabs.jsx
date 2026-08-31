@@ -56,47 +56,72 @@ export default function ContextualTabs({
   activeTabId,
   onSelect = noop,
   onChange = noop,
+  shellLayout = false,
+  shellLead = null,
+  shellTail = null,
   ...context
 } = {}) {
   const tabs = buildContextualTabs(sections);
-  if (tabs.length === 0) return null;
+  if (tabs.length === 0 && !shellLayout) return null;
   const active = tabs.find(({ id }) => id === activeTabId) ?? tabs[0];
+  const tabList = React.createElement(
+    "nav",
+    {
+      className: `chart-editor-tab-list${shellLayout ? " dashboard-dialog__progress" : ""}`,
+      "data-authoring-track": shellLayout ? "tabs" : undefined,
+      "aria-label": "Chart settings",
+    },
+    tabs.map((tab) => React.createElement(IconControl, {
+      key: tab.id,
+      interactionId: `editor.tab.${tab.id}`,
+      className: "chart-editor-tab",
+      ariaLabel: tab.label,
+      tooltip: tab.label,
+      "aria-current": active?.id === tab.id ? "page" : undefined,
+      pressed: active?.id === tab.id,
+      onClick: () => onSelect(tab.id),
+    })),
+  );
+  const tabPanel = active
+    ? React.createElement(
+        "div",
+        {
+          className: "chart-editor-tab-panel",
+          "data-tab-id": active.id,
+        },
+        active.sections.map((section) => React.createElement(
+          GeneratedFormSection,
+          {
+            key: section.id,
+            section,
+            onChange,
+            ...context,
+          },
+        )),
+      )
+    : null;
+  if (shellLayout) {
+    return React.createElement(
+      React.Fragment,
+      null,
+      tabList,
+      React.createElement(
+        "div",
+        {
+          className: "chart-editor-layout dashboard-authoring-body",
+          "data-authoring-track": "body",
+        },
+        shellLead,
+        tabPanel,
+        shellTail,
+      ),
+    );
+  }
   return React.createElement(
     "div",
     { className: "chart-editor-contextual-tabs" },
-    React.createElement(
-      "nav",
-      {
-        className: "chart-editor-tab-list",
-        "aria-label": "Chart settings",
-      },
-      tabs.map((tab) => React.createElement(IconControl, {
-        key: tab.id,
-        interactionId: `editor.tab.${tab.id}`,
-        className: "chart-editor-tab",
-        ariaLabel: tab.label,
-        tooltip: tab.label,
-        "aria-current": active.id === tab.id ? "page" : undefined,
-        pressed: active.id === tab.id,
-        onClick: () => onSelect(tab.id),
-      })),
-    ),
-    React.createElement(
-      "div",
-      {
-        className: "chart-editor-tab-panel",
-        "data-tab-id": active.id,
-      },
-      active.sections.map((section) => React.createElement(
-        GeneratedFormSection,
-        {
-          key: section.id,
-          section,
-          onChange,
-          ...context,
-        },
-      )),
-    ),
+    tabList,
+    tabPanel,
   );
 }
 

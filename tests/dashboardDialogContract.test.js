@@ -138,6 +138,9 @@ test("authoring shells and fields keep fixed chrome around one responsive workbe
   assert.match(css, /\.dashboard-authoring-field--wide\s*\{[^}]*grid-column:\s*1 \/ -1;/s);
   assert.match(css, /\.dashboard-authoring-boolean-row\s*\{[^}]*grid-template-columns:\s*20px minmax\(0, 1fr\);/s);
   assert.match(css, /\.dashboard-authoring-body\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s);
+  assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-tab-list\s*\{[^}]*grid-row:\s*2;/s);
+  assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-layout\s*\{[^}]*grid-row:\s*3;[^}]*overflow:\s*auto;/s);
+  assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.dashboard-authoring-footer\s*\{[^}]*grid-row:\s*4;/s);
 });
 
 test("detached dashboard roots use typography tokens without fixed fallbacks", async () => {

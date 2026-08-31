@@ -536,6 +536,55 @@ export default function ChartEditorV3({
     onReset();
   };
 
+  const preview = React.createElement(
+    "div",
+    { className: "chart-editor-preview" },
+    React.createElement(ChartPreview, {
+      key: `${state.draft.id}:${state.previewRevision}`,
+      chart: state.draft,
+      rows: safeRows,
+      geoData: selectedGeoData,
+      datasetProfile: profile,
+      prepared,
+      diagnosticNamespace: state.draft.id,
+    }),
+  );
+  const editorError = state.error && !state.conversion
+    ? React.createElement(
+        "p",
+        { className: "wizard-error chart-editor-error dashboard-authoring-field--wide", role: "alert" },
+        state.error,
+      )
+    : null;
+  const contextualTabs = (shellLayout = false) => React.createElement(ContextualTabs, {
+    sections: model.sections,
+    activeTabId: state.activeTabId,
+    onSelect: (tabId) => dispatch({ type: "selectTab", tabId }),
+    onChange: updateChartPath,
+    chart: state.draft,
+    charts: allCharts,
+    columns: profile?.columns ?? [],
+    profile,
+    diagnostics: prepared?.diagnostics ?? [],
+    diagnosticNamespace: state.draft.id,
+    loadedData: runtimeLoadedData,
+    profiles: runtimeProfiles,
+    dataSources,
+    onApplyCitationToSourceCharts,
+    onMembershipChange: changeMembership,
+    onGroupsChange: (value) => dispatch({
+      type: "updateChronoGroups",
+      value,
+    }),
+    onValidationError: (error) => setState((current) => ({
+      ...current,
+      error: safeMessage(error),
+    })),
+    shellLayout,
+    shellLead: shellLayout ? preview : null,
+    shellTail: shellLayout ? editorError : null,
+  });
+
   const content = React.createElement(
       "aside",
       {
@@ -609,57 +658,20 @@ export default function ChartEditorV3({
           }),
         ),
         React.createElement(
-          "div",
-          { className: `chart-editor-layout${surface === "inspector" ? "" : " dashboard-authoring-body"}` },
-          React.createElement(
-            "div",
-            { className: "chart-editor-preview" },
-            React.createElement(ChartPreview, {
-              key: `${state.draft.id}:${state.previewRevision}`,
-              chart: state.draft,
-              rows: safeRows,
-              geoData: selectedGeoData,
-              datasetProfile: profile,
-              prepared,
-              diagnosticNamespace: state.draft.id,
-            }),
-          ),
-          React.createElement(ContextualTabs, {
-            sections: model.sections,
-            activeTabId: state.activeTabId,
-            onSelect: (tabId) => dispatch({ type: "selectTab", tabId }),
-            onChange: updateChartPath,
-            chart: state.draft,
-            charts: allCharts,
-            columns: profile?.columns ?? [],
-            profile,
-            diagnostics: prepared?.diagnostics ?? [],
-            diagnosticNamespace: state.draft.id,
-            loadedData: runtimeLoadedData,
-            profiles: runtimeProfiles,
-            dataSources,
-            onApplyCitationToSourceCharts,
-            onMembershipChange: changeMembership,
-            onGroupsChange: (value) => dispatch({
-              type: "updateChronoGroups",
-              value,
-            }),
-            onValidationError: (error) => setState((current) => ({
-              ...current,
-              error: safeMessage(error),
-            })),
-          }),
-          state.error && !state.conversion
-            ? React.createElement(
-                "p",
-                { className: "wizard-error chart-editor-error dashboard-authoring-field--wide", role: "alert" },
-                state.error,
-              )
-            : null,
+          surface === "inspector" ? "div" : React.Fragment,
+          surface === "inspector" ? { className: "chart-editor-layout" } : null,
+          surface === "inspector" ? preview : null,
+          contextualTabs(surface !== "inspector"),
+          surface === "inspector" ? editorError : null,
         ),
         React.createElement(
           surface === "inspector" ? React.Fragment : "footer",
-          surface === "inspector" ? null : { className: "dashboard-dialog__footer dashboard-authoring-footer" },
+          surface === "inspector"
+            ? null
+            : {
+                className: "dashboard-dialog__footer dashboard-authoring-footer",
+                "data-authoring-track": "footer",
+              },
           React.createElement(EditSessionActions, {
             valid: model.valid,
             submitting,

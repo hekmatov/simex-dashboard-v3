@@ -2858,8 +2858,11 @@ test("editor keeps title repair reachable before preview readiness", () => {
   assert.match(html, /data-icon-control="editor\.tab\.data"/);
   assert.match(html, /data-icon-control="editor\.tab\.appearance"/);
   assert.match(html, /class="chart-editor-form dashboard-authoring-shell"/);
-  assert.match(html, /class="chart-editor-layout dashboard-authoring-body"/);
-  assert.match(html, /<footer class="dashboard-dialog__footer dashboard-authoring-footer">/);
+  assert.match(
+    html,
+    /<form class="chart-editor-form dashboard-authoring-shell"><header[^]*?<\/header><nav class="chart-editor-tab-list dashboard-dialog__progress" data-authoring-track="tabs"[^]*?<\/nav><div class="chart-editor-layout dashboard-authoring-body" data-authoring-track="body"/,
+  );
+  assert.match(html, /<\/div><footer class="dashboard-dialog__footer dashboard-authoring-footer" data-authoring-track="footer">/);
 });
 
 test("save and reset are adjacent and reset confirmation is accessible", () => {

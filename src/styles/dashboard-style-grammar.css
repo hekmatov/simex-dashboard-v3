@@ -1563,22 +1563,14 @@
   block-size: 100%;
 }
 
-.app-frame .chart-editor-form.dashboard-authoring-shell > .chart-editor-layout {
-  grid-row: 2 / 4;
-  overflow: hidden;
+.app-frame .chart-editor-form.dashboard-authoring-shell > .chart-editor-tab-list {
+  grid-row: 2;
 }
 
-.app-frame .chart-editor-form.dashboard-authoring-shell .chart-editor-preview,
-.app-frame .chart-editor-form.dashboard-authoring-shell .chart-editor-tab-panel {
+.app-frame .chart-editor-form.dashboard-authoring-shell > .chart-editor-layout {
+  grid-row: 3;
   min-block-size: 0;
   overflow: auto;
-}
-
-.app-frame .chart-editor-form.dashboard-authoring-shell .chart-editor-contextual-tabs {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-block-size: 0;
-  overflow: hidden;
 }
 
 .app-frame .chart-editor-form.dashboard-authoring-shell > .dashboard-authoring-footer {
