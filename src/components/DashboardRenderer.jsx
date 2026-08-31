@@ -1,7 +1,7 @@
 ﻿import React from "react";
 
 import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
-import { useOperationStatus } from "./app-shell/OperationStatusProvider.jsx";
+import { useOperationStatusActions } from "./app-shell/OperationStatusProvider.jsx";
 import {
   beginDashboardContentOperation,
   reportDashboardContentActivity,
@@ -190,7 +190,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   operationError = "",
   themeProjection,
 }, ref) {
-  const { beginOperation, reportActivity } = useOperationStatus();
+  const { beginOperation, reportActivity } = useOperationStatusActions();
   const reportContentActivity = React.useCallback(
     (actionId, options) => reportDashboardContentActivity(
       reportActivity,

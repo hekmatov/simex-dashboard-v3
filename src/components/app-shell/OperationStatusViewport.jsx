@@ -1,6 +1,9 @@
 import React from "react";
 
-import { useOperationStatus } from "./OperationStatusProvider.jsx";
+import {
+  useOperationStatusActions,
+  useOperationStatusSnapshot,
+} from "./OperationStatusProvider.jsx";
 import {
   RIGHT_SIDE_DRAWER_CHANGE_EVENT,
   RIGHT_SIDE_DRAWER_SELECTOR,
@@ -16,7 +19,8 @@ const useBrowserLayoutEffect = typeof window === "undefined"
   : React.useLayoutEffect;
 
 export default function OperationStatusViewport({ rightDrawer = null }) {
-  const { dismissOperation, snapshot } = useOperationStatus();
+  const { dismissOperation } = useOperationStatusActions();
+  const snapshot = useOperationStatusSnapshot();
   const [footerOffset, setFooterOffset] = React.useState(0);
   const [drawerOffset, setDrawerOffset] = React.useState(0);
   const [activeDrawerId, setActiveDrawerId] = React.useState(null);
