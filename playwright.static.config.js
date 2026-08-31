@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  testMatch: "v3-static-offline.spec.js",
   fullyParallel: false,
   workers: 1,
   timeout: 120_000,
@@ -13,9 +14,10 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm preview --host 127.0.0.1 --port 4180 --strictPort",
+    command:
+      "pnpm build && pnpm preview --host 127.0.0.1 --port 4180 --strictPort",
     url: "http://127.0.0.1:4180/",
     reuseExistingServer: false,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });
