@@ -71,7 +71,12 @@ export default function BuildWorkspace({
   onContentDraftCommit,
   onContentDraftDiscard,
   onReportContentActivity = () => {},
-  onBeginContentOperation = () => ({ succeed() {}, fail() {}, dismiss() {} }),
+  onBeginContentOperation = () => ({
+    beforeWork: async () => {},
+    succeed() {},
+    fail() {},
+    dismiss() {},
+  }),
   activePage,
   buildPanelOpen = false,
   onCloseDashboardMap,
@@ -526,32 +531,34 @@ export default function BuildWorkspace({
         workingLabel: `Saving Chrono Group “${savedGroup.name}”`,
         key: `content:chrono:${savedGroup.id}:save`,
       });
-      const chronoGroups = mergeChronoGroup(dashboard.chronoGroups ?? [], savedGroup, temporalCharts);
-      const duplicateSourceId = chronoContentState?.operation?.intent === "duplicate"
-        ? chronoContentState.operation.itemId
-        : null;
-      const duplicatedScenes = duplicateSourceId
-        ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId === duplicateSourceId).map((scene) => ({
-          ...structuredClone(scene),
-          id: stableDraftId("scene"),
-          name: `Copy of ${scene.name}`,
-          chronoGroupId: savedGroup.id,
-        }))
-        : [];
-      const scenes = [...(dashboard.scenes ?? []), ...duplicatedScenes];
-      Promise.resolve(commitTemporalContent({ chronoGroups, scenes }))
-        .then(() => {
+      void (async () => {
+        try {
+          await status.beforeWork();
+          const chronoGroups = mergeChronoGroup(dashboard.chronoGroups ?? [], savedGroup, temporalCharts);
+          const duplicateSourceId = chronoContentState?.operation?.intent === "duplicate"
+            ? chronoContentState.operation.itemId
+            : null;
+          const duplicatedScenes = duplicateSourceId
+            ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId === duplicateSourceId).map((scene) => ({
+              ...structuredClone(scene),
+              id: stableDraftId("scene"),
+              name: `Copy of ${scene.name}`,
+              chronoGroupId: savedGroup.id,
+            }))
+            : [];
+          const scenes = [...(dashboard.scenes ?? []), ...duplicatedScenes];
+          await commitTemporalContent({ chronoGroups, scenes });
           setChronoGroupDraft((current) => reduceChronoGroupDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedGroup }));
           setChronoContentState((current) => completeContentOperation(current, { chronoGroups, scenes }, "chronoGroup", savedGroup.id));
           status.succeed();
-        })
-        .catch((error) => {
+        } catch (error) {
           status.fail(error);
           setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
             type: "SAVE_FAILED",
             error: storageFacingError(error, "CHRONO_GROUP_SAVE_FAILED"),
           }));
-        });
+        }
+      })();
       return;
     }
     if (action.type === "DISCARD") {
@@ -581,20 +588,22 @@ export default function BuildWorkspace({
         workingLabel: `Saving Scene “${savedScene.name}”`,
         key: `content:scene:${savedScene.id}:save`,
       });
-      const scenes = mergeScene(dashboard.scenes ?? [], savedScene);
-      Promise.resolve(commitTemporalContent({ scenes }))
-        .then(() => {
+      void (async () => {
+        try {
+          await status.beforeWork();
+          const scenes = mergeScene(dashboard.scenes ?? [], savedScene);
+          await commitTemporalContent({ scenes });
           setSceneDraft((current) => reduceSceneDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedScene }));
           setChronoContentState((current) => completeContentOperation(current, { scenes }, "scene", savedScene.id));
           status.succeed();
-        })
-        .catch((error) => {
+        } catch (error) {
           status.fail(error);
           setSceneDraft((current) => reduceSceneDraft(current, {
             type: "SAVE_FAILED",
             error: storageFacingError(error, "SCENE_SAVE_FAILED"),
           }));
-        });
+        }
+      })();
       return;
     }
     if (action.type === "DISCARD") {
@@ -622,10 +631,6 @@ export default function BuildWorkspace({
         ? `Remove this Chrono Group and ${groupScenes.length} child ${groupScenes.length === 1 ? "Scene" : "Scenes"}?`
         : "Remove this Scene?";
       if (!window.confirm(message)) return;
-      const chronoGroups = itemType === "chronoGroup" ? (dashboard.chronoGroups ?? []).filter(({ id }) => id !== itemId) : (dashboard.chronoGroups ?? []);
-      const scenes = itemType === "chronoGroup"
-        ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId !== itemId)
-        : (dashboard.scenes ?? []).filter(({ id }) => id !== itemId);
       const subject = itemType === "chronoGroup"
         ? dashboard.chronoGroups?.find(({ id }) => id === itemId)?.name ?? itemId
         : dashboard.scenes?.find(({ id }) => id === itemId)?.name ?? itemId;
@@ -638,15 +643,23 @@ export default function BuildWorkspace({
         },
       );
       setChronoContentState((current) => ({ ...current, operation: { intent: "remove", itemType, itemId, status: "saving" }, error: null }));
-      Promise.resolve(commitTemporalContent({ chronoGroups, scenes }))
-        .then(() => {
+      void (async () => {
+        try {
+          await status.beforeWork();
+          const chronoGroups = itemType === "chronoGroup"
+            ? (dashboard.chronoGroups ?? []).filter(({ id }) => id !== itemId)
+            : (dashboard.chronoGroups ?? []);
+          const scenes = itemType === "chronoGroup"
+            ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId !== itemId)
+            : (dashboard.scenes ?? []).filter(({ id }) => id !== itemId);
+          await commitTemporalContent({ chronoGroups, scenes });
           status.succeed();
           setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_SUCCEEDED", chronoGroups, scenes, returnToContent: false }));
-        })
-        .catch((error) => {
+        } catch (error) {
           status.fail(error);
           setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_FAILED", error: storageFacingError(error, "TEMPORAL_REMOVE_FAILED") }));
-        });
+        }
+      })();
       return;
     }
     const next = reduceChronoContent(chronoContentState, action);

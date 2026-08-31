@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   DASHBOARD_CONTENT_ACTIVITY_IDS,
+  beginDashboardContentOperation,
   describeDashboardContentActivity,
 } from "../src/lib/dashboardContentActivity.js";
 
@@ -73,4 +74,22 @@ test("activity descriptions use object names while retaining stable coalescing k
     message: "Updating chart draft “ICU occupancy”. Title changed.",
     intent: "info",
   });
+});
+
+test("content operations request priority presentation and expose the pre-work barrier", async () => {
+  const calls = [];
+  const expected = { painted: true };
+  const operation = beginDashboardContentOperation((options) => {
+    calls.push(options);
+    return {
+      beforeWork: async () => expected,
+      succeed() {},
+      fail() {},
+      dismiss() {},
+    };
+  }, "chart.saved", { subject: "ICU occupancy" });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].priority, true);
+  assert.equal(await operation.beforeWork(), expected);
 });

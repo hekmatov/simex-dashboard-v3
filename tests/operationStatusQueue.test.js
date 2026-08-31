@@ -23,6 +23,76 @@ test("routine progress waits 500 ms while blocking work appears immediately", ()
   assert.equal(queue.getSnapshot().notices.at(-1).key, "blocking");
 });
 
+test("priority work is published immediately and waits for a browser paint before it starts", async () => {
+  const clock = fakeClock();
+  const queue = createOperationStatusQueue({ scheduler: clock });
+  const operation = queue.beginOperation({
+    key: "chart-save",
+    label: "Saving chart",
+    priority: true,
+  });
+  let workStarted = false;
+  const startWork = operation.beforeWork().then(() => {
+    workStarted = true;
+  });
+
+  assert.deepEqual(queue.getSnapshot().notices.map(pickNotice), [{
+    key: "chart-save",
+    label: "Saving chart",
+    status: "working",
+    message: "Saving chart",
+  }]);
+  assert.equal(workStarted, false);
+
+  clock.paintFrame();
+  await Promise.resolve();
+  assert.equal(workStarted, false);
+
+  clock.paintFrame();
+  await startWork;
+  assert.equal(workStarted, true);
+});
+
+test("priority work cannot stall forever when animation frames are suspended", async () => {
+  const clock = fakeClock();
+  const queue = createOperationStatusQueue({ scheduler: clock });
+  const operation = queue.beginOperation({
+    key: "background-save",
+    label: "Saving in a background tab",
+    priority: true,
+  });
+  let workStarted = false;
+  void operation.beforeWork().then(() => {
+    workStarted = true;
+  });
+
+  clock.advance(100);
+  await Promise.resolve();
+
+  assert.equal(workStarted, true);
+});
+
+test("priority work yields through a timer when animation frames are unavailable", async () => {
+  const clock = fakeClock();
+  delete clock.requestAnimationFrame;
+  delete clock.paintFrame;
+  const queue = createOperationStatusQueue({ scheduler: clock });
+  const operation = queue.beginOperation({
+    key: "non-browser-save",
+    label: "Saving without animation frames",
+    priority: true,
+  });
+  let workStarted = false;
+  void operation.beforeWork().then(() => {
+    workStarted = true;
+  });
+
+  clock.advance(0);
+  await Promise.resolve();
+
+  assert.equal(workStarted, true);
+});
+
 test("stable keys update one notice and stale handles cannot overwrite newer work", () => {
   const clock = fakeClock();
   const queue = createOperationStatusQueue({ scheduler: clock });
@@ -217,6 +287,7 @@ function fakeClock() {
   let now = 0;
   let nextId = 1;
   const timers = new Map();
+  let animationFrames = [];
   return {
     setTimeout(callback, delay) {
       const id = nextId;
@@ -232,6 +303,15 @@ function fakeClock() {
     },
     elapseWithoutTimers(milliseconds) {
       now += milliseconds;
+    },
+    requestAnimationFrame(callback) {
+      animationFrames.push(callback);
+      return animationFrames.length;
+    },
+    paintFrame() {
+      const callbacks = animationFrames;
+      animationFrames = [];
+      for (const callback of callbacks) callback(now);
     },
     advance(milliseconds) {
       now += milliseconds;

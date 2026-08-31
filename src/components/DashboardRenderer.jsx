@@ -106,6 +106,7 @@ import {
   rebaseChartPersistenceIntoLayoutDraft,
   resolveChartCreationPersistenceTarget,
   reduceChartEditSession,
+  runPrioritizedChartSave,
 } from "../charting/forms/chartEditSession.js";
 import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnloadGuard.js";
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
@@ -267,8 +268,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       const status = beginOperation({
         key: operationKey,
         label: operationLabel,
+        priority: true,
       });
       try {
+        await status.beforeWork();
         await pendingEditsRef.current?.flush();
         const result = await contentDraftCoordinator.commitDraft(draftId, { buildCandidate });
         status.succeed(successMessage);
@@ -1088,10 +1091,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function persistChartRemovalRequest(removalRequest) {
     const removalPlacementId = removalRequest.intent.placementId;
     const layoutDraftId = buildLayoutDraftRef.current?.draftId ?? null;
+    const subject = removalRequest.session?.draft?.title ?? removalPlacementId;
+    const status = beginContentOperation("chart.deleted", {
+      subject,
+      workingLabel: `Deleting Chart “${subject}”`,
+      key: "chart-remove",
+    });
     setChartEditSession(removalRequest.session);
     return performModeratorOperation("remove-chart", async () => {
+      await status.beforeWork();
       await pendingEdits.flush();
-      const committed = await onPanelRemove(removalPlacementId);
+      const committed = await onPanelRemove(removalPlacementId, { reportStatus: false });
       if (layoutDraftId) {
         setBuildLayoutDraft((current) => (
           current?.draftId === layoutDraftId
@@ -1109,8 +1119,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditorPlacementId((current) => (current === removalPlacementId ? null : current));
       setSelectedPanelId((current) => (current === removalPlacementId ? null : current));
       setPendingRemovalPanelId(null);
+      status.succeed();
     }, {
       onError(error) {
+        status.fail(error);
         setChartEditSession((current) => (
           current?.placementId === removalRequest.intent.placementId
           && current.status === "saving"
@@ -1142,15 +1154,27 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       panelId,
     );
     if (!removalRequest) {
+      const subject = selectedPanel?.title ?? panelId;
+      const status = beginContentOperation("chart.deleted", {
+        subject,
+        workingLabel: `Deleting Chart “${subject}”`,
+        key: "chart-remove",
+      });
       void performModeratorOperation("remove-chart", async () => {
+        await status.beforeWork();
         await pendingEdits.flush();
-        await onPanelRemove(panelId);
+        await onPanelRemove(panelId, { reportStatus: false });
         setChartEditBaseline(null);
         setChartEditSession(null);
         setChartEditorVisible(false);
         setChartEditorPlacementId((current) => (current === panelId ? null : current));
         setSelectedPanelId((current) => (current === panelId ? null : current));
         setPendingRemovalPanelId(null);
+        status.succeed();
+      }, {
+        onError(error) {
+          status.fail(error);
+        },
       });
       return;
     }
@@ -1445,15 +1469,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const status = beginOperation({
       key: "layout-save",
       label: "Saving layout changes",
+      priority: true,
     });
     const saving = beginBuildLayoutSave(current);
     buildLayoutDraftRef.current = saving;
     setBuildLayoutDraft(saving);
-    Promise.resolve(onStructureChange?.({
-      pages: saving.value.pages,
-      chronoGroups: saving.value.chronoGroups ?? dashboard.chronoGroups ?? [],
-      scenes: saving.value.scenes ?? dashboard.scenes ?? [],
-    }))
+    void status.beforeWork()
+      .then(() => onStructureChange?.({
+        pages: saving.value.pages,
+        chronoGroups: saving.value.chronoGroups ?? dashboard.chronoGroups ?? [],
+        scenes: saving.value.scenes ?? dashboard.scenes ?? [],
+      }))
       .then(() => {
         setBuildLayoutDraft((latest) => {
           const completed = completeBuildLayoutSave(latest ?? buildLayoutDraftRef.current, saving);
@@ -1645,49 +1671,65 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       || !chartEditSession
     ) return Promise.resolve(null);
 
-    const session = fullValue?.chart && chartEditSession.activeSurface === "full"
-      ? reduceChartEditSession(chartEditSession, {
-          type: "CHANGE",
-          surface: "full",
-          draft: fullValue.chart,
-          ...(Object.hasOwn(fullValue, "chronoGroups")
-            ? { chronoGroups: fullValue.chronoGroups }
-            : {}),
-        })
-      : chartEditSession;
-    const request = prepareChartEditSessionSave(session, {
-      runtimeArtifact: fullValue?.runtimeArtifact,
+    const activeSession = chartEditSession;
+    const status = beginContentOperation("chart.saved", {
+      subject: activeSession.draft?.title ?? activeSession.placementId,
+      workingLabel: `Saving Chart “${activeSession.draft?.title ?? activeSession.placementId}”`,
+      key: "chart-save",
     });
     const layoutDraftId = buildLayoutDraftRef.current?.draftId ?? null;
-    setChartEditSession(request.session);
-    return performModeratorOperation("save-chart", async () => {
-      await pendingEdits.flush();
-      const payload = materializeChartEditSessionSave(
+    let preparedRequest = null;
+    return performModeratorOperation("save-chart", () => runPrioritizedChartSave({
+      status,
+      prepare() {
+        const session = fullValue?.chart && activeSession.activeSurface === "full"
+          ? reduceChartEditSession(activeSession, {
+              type: "CHANGE",
+              surface: "full",
+              draft: fullValue.chart,
+              ...(Object.hasOwn(fullValue, "chronoGroups")
+                ? { chronoGroups: fullValue.chronoGroups }
+                : {}),
+            })
+          : activeSession;
+        return prepareChartEditSessionSave(session, {
+          runtimeArtifact: fullValue?.runtimeArtifact,
+        });
+      },
+      onPrepared(request) {
+        preparedRequest = request;
+        setChartEditSession(request.session);
+      },
+      flush: () => pendingEdits.flush(),
+      materialize: (request) => materializeChartEditSessionSave(
         request.intent,
         dashboardStateRef.current.chronoGroups ?? [],
-      );
-      const committed = await onChartSave(payload);
-      if (layoutDraftId) {
-        setBuildLayoutDraft((current) => (
-          current?.draftId === layoutDraftId
-            ? rebaseChartPersistenceIntoLayoutDraft({
-                layoutDraft: current,
-                committedDashboard: committed,
-                intent: request.intent,
-              })
-            : current
-        ));
-      }
-      setChartEditBaseline(null);
-      setChartEditSession(null);
-      setChartEditorVisible(false);
-      setChartEditorPlacementId(null);
-      setChartEditorDirty(false);
-      return committed;
-    }, {
+      ),
+      persist: (payload, options) => onChartSave(payload, options),
+      commit({ request, committed }) {
+        if (layoutDraftId) {
+          setBuildLayoutDraft((current) => (
+            current?.draftId === layoutDraftId
+              ? rebaseChartPersistenceIntoLayoutDraft({
+                  layoutDraft: current,
+                  committedDashboard: committed,
+                  intent: request.intent,
+                })
+              : current
+          ));
+        }
+        setChartEditBaseline(null);
+        setChartEditSession(null);
+        setChartEditorVisible(false);
+        setChartEditorPlacementId(null);
+        setChartEditorDirty(false);
+      },
+    }), {
       onError(error) {
+        const placementId = preparedRequest?.intent?.placementId;
+        if (!placementId) return;
         setChartEditSession((current) => (
-          current?.placementId === request.intent.placementId
+          current?.placementId === placementId
           && current.status === "saving"
             ? reduceChartEditSession(current, {
                 type: "PERSISTENCE_FAILED",
@@ -1890,10 +1932,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       workingLabel: `Saving Scene “${scene?.name ?? sceneId}”`,
       key: `content:scene:${sceneId}:date-position`,
     });
-    return runModeratorTransaction({
+    return status.beforeWork().then(() => runModeratorTransaction({
       flush: () => pendingEdits.flush(),
       commit: () => onSaveSceneDatePosition?.(sceneId, datePosition),
-    }).then((result) => {
+    })).then((result) => {
       status.succeed();
       return result;
     }, (error) => {
@@ -2030,13 +2072,25 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const pageId = pendingRemovalPageId;
     if (pageId === null) return;
     const activeIndex = dashboard.pages.findIndex(({ id }) => id === pageId);
+    const page = dashboard.pages[activeIndex];
     const fallbackPage = dashboard.pages[activeIndex - 1] ?? dashboard.pages[activeIndex + 1] ?? dashboard.pages[0];
+    const status = beginContentOperation("page.deleted", {
+      subject: page?.label ?? pageId,
+      workingLabel: `Deleting Page “${page?.label ?? pageId}”`,
+      key: `content:page:${pageId}:delete`,
+    });
     void performModeratorOperation("remove-page", async () => {
+      await status.beforeWork();
       await pendingEdits.flush();
       await onPageRemove(pageId);
       onActivePageChange(fallbackPage.id);
       setBuildSelection({ kind: "page", pageId: fallbackPage.id });
       setPendingRemovalPageId(null);
+      status.succeed();
+    }, {
+      onError(error) {
+        status.fail(error);
+      },
     });
   }
 
@@ -2267,8 +2321,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       key: "finish-build",
       label: "Finishing Build",
       blocking: true,
+      priority: true,
     });
     void performModeratorOperation("save-session", async () => {
+      await status.beforeWork();
       const outcome = await completeFinishBuildTransition({
         requestMode: onModeRequest,
         status,
@@ -2295,13 +2351,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function resetEditMode() {
     if (moderatorOperationGateRef.current.isActive()) return;
-    const cancelled = pendingEdits.takePending();
-    const retryDrafts = {
-      dashboard: structuredClone(dashboardDraft),
-      pages: structuredClone(pageDrafts),
-      sections: structuredClone(sectionDrafts),
-    };
+    const status = beginContentOperation("dashboard.reset", {
+      workingLabel: "Discarding dashboard changes",
+      key: "content:dashboard:reset",
+      intent: "warning",
+    });
     void performModeratorOperation("reset-session", async () => {
+      await status.beforeWork();
+      const cancelled = pendingEdits.takePending();
+      const retryDrafts = {
+        dashboard: structuredClone(dashboardDraft),
+        pages: structuredClone(pageDrafts),
+        sections: structuredClone(sectionDrafts),
+      };
       try {
         const resetDashboard = await onResetEditSession();
         pendingEdits.cancel();
@@ -2324,9 +2386,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setLocalAuthoringDrafts({});
         setBuildTreeResetGeneration((current) => current + 1);
         setResetEditSessionConfirmation(false);
+        status.succeed();
       } catch (error) {
         pendingEdits.restore(cancelled);
         scheduleRendererDrafts(retryDrafts);
+        status.fail(error);
         throw error;
       }
     });
@@ -2530,23 +2594,36 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onDirtyChange={setStaticContentDirty}
       onRestorationChange={setStaticContentRestoration}
       onSave={async ({ panel, placement, mediaItem, assets, stagedAssetIds }) => {
-        await pendingEdits.flush();
-        const prepared = prepareStaticPanelTransaction({
-          dashboard: dashboardStateRef.current,
-          operation: "update",
-          panelId: selectedPlacement.panelId,
-          panel,
-          placement,
-          mediaItem,
-          assets,
-          stagedAssetIds,
+        const subject = panel?.title ?? selectedPlacement.panelId;
+        const status = beginContentOperation("static.saved", {
+          subject,
+          workingLabel: `Saving Dashboard Content “${subject}”`,
+          key: "static-content-save",
         });
-        await onStaticPanelCommit(prepared);
-        setChartEditorVisible(false);
-        setChartEditorPlacementId(null);
-        setStaticContentDraft(null);
-        setStaticContentDirty(false);
-        setStaticContentRestoration(null);
+        try {
+          await status.beforeWork();
+          await pendingEdits.flush();
+          const prepared = prepareStaticPanelTransaction({
+            dashboard: dashboardStateRef.current,
+            operation: "update",
+            panelId: selectedPlacement.panelId,
+            panel,
+            placement,
+            mediaItem,
+            assets,
+            stagedAssetIds,
+          });
+          await onStaticPanelCommit(prepared, { reportStatus: false });
+          setChartEditorVisible(false);
+          setChartEditorPlacementId(null);
+          setStaticContentDraft(null);
+          setStaticContentDirty(false);
+          setStaticContentRestoration(null);
+          status.succeed();
+        } catch (error) {
+          status.fail(error);
+          throw error;
+        }
       }}
       onCancel={cancelSelectedPanel}
       onSuspend={suspendStaticContentOwner}
@@ -2810,31 +2887,44 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           if (moderatorOperationGateRef.current.isActive()) {
             throw new Error("Wait for the current dashboard operation to finish.");
           }
-          await pendingEdits.flush();
-          const activeLayoutDraft = buildLayoutDraftRef.current;
-          const layoutDraftId = activeLayoutDraft?.draftId ?? null;
-          const workingTarget = reviewedPlacement ?? chartWizardTarget;
-          const persistenceTarget = activeLayoutDraft
-            ? resolveChartCreationPersistenceTarget(activeLayoutDraft, workingTarget)
-            : workingTarget;
-          if (!persistenceTarget) {
-            throw new Error("Save layout changes before adding a chart to a newly created Section.");
-          }
-          const committed = await onChartCreate(payload, persistenceTarget);
-          if (layoutDraftId) {
-            const placementId = createdPlacementIdFromCommittedDashboard(committed, payload?.chart?.id);
-            setBuildLayoutDraft((current) => {
-              if (current?.draftId !== layoutDraftId || !placementId) return current;
-              const rebased = rebaseChartPersistenceIntoLayoutDraft({
-                layoutDraft: current,
-                committedDashboard: committed,
-                intent: { kind: "create", placementId },
+          const subject = payload?.chart?.title ?? payload?.chart?.id ?? "New chart";
+          const status = beginContentOperation("chart.created", {
+            subject,
+            workingLabel: `Creating Chart “${subject}”`,
+            key: "chart-create",
+          });
+          try {
+            await status.beforeWork();
+            await pendingEdits.flush();
+            const activeLayoutDraft = buildLayoutDraftRef.current;
+            const layoutDraftId = activeLayoutDraft?.draftId ?? null;
+            const workingTarget = reviewedPlacement ?? chartWizardTarget;
+            const persistenceTarget = activeLayoutDraft
+              ? resolveChartCreationPersistenceTarget(activeLayoutDraft, workingTarget)
+              : workingTarget;
+            if (!persistenceTarget) {
+              throw new Error("Save layout changes before adding a chart to a newly created Section.");
+            }
+            const committed = await onChartCreate(payload, persistenceTarget, { reportStatus: false });
+            if (layoutDraftId) {
+              const placementId = createdPlacementIdFromCommittedDashboard(committed, payload?.chart?.id);
+              setBuildLayoutDraft((current) => {
+                if (current?.draftId !== layoutDraftId || !placementId) return current;
+                const rebased = rebaseChartPersistenceIntoLayoutDraft({
+                  layoutDraft: current,
+                  committedDashboard: committed,
+                  intent: { kind: "create", placementId },
+                });
+                buildLayoutDraftRef.current = rebased;
+                return rebased;
               });
-              buildLayoutDraftRef.current = rebased;
-              return rebased;
-            });
+            }
+            status.succeed();
+            return committed;
+          } catch (error) {
+            status.fail(error);
+            throw error;
           }
-          return committed;
         }}
         onCommitSuccess={() => {
           chartDraftSessionStore.clear(chartDraftSessionKey);
@@ -2844,10 +2934,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setChartWizardSuspended(false);
           setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);
-          reportContentActivity("chart.created", {
-            subject: chartCreateOwner?.label ?? chartWizardTarget?.sectionId,
-            key: "content:chart:create",
-          });
         }}
         onDiscardChanges={() => {
           chartDraftSessionStore.clear(chartDraftSessionKey);
@@ -2918,23 +3004,36 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           restoreStaticWizardFocus();
         }}
         onCreate={async ({ destination, panel, placement, mediaItem, assets, stagedAssetIds }) => {
-          await pendingEdits.flush();
-          const prepared = prepareStaticPanelTransaction({
-            dashboard: dashboardStateRef.current,
-            operation: "create",
-            destination,
-            panel,
-            placement,
-            mediaItem,
-            assets,
-            stagedAssetIds,
+          const subject = panel?.title ?? destination?.sectionId ?? "New content";
+          const status = beginContentOperation("static.saved", {
+            subject,
+            workingLabel: `Saving Dashboard Content “${subject}”`,
+            key: "static-content-save",
           });
-          await onStaticPanelCommit(prepared);
-          setStaticWizardTarget(null);
-          setStaticContentDraft(null);
-          setStaticContentDirty(false);
-          setStaticContentRestoration(null);
-          restoreStaticWizardFocus();
+          try {
+            await status.beforeWork();
+            await pendingEdits.flush();
+            const prepared = prepareStaticPanelTransaction({
+              dashboard: dashboardStateRef.current,
+              operation: "create",
+              destination,
+              panel,
+              placement,
+              mediaItem,
+              assets,
+              stagedAssetIds,
+            });
+            await onStaticPanelCommit(prepared, { reportStatus: false });
+            setStaticWizardTarget(null);
+            setStaticContentDraft(null);
+            setStaticContentDirty(false);
+            setStaticContentRestoration(null);
+            restoreStaticWizardFocus();
+            status.succeed();
+          } catch (error) {
+            status.fail(error);
+            throw error;
+          }
         }}
       />}
       <input

@@ -867,16 +867,24 @@ export default function App() {
 
   async function chooseRecoveryPackage(file) {
     if (!file || recoveryBusy) return;
+    const status = beginOperation({
+      key: "recovery-package-read",
+      label: "Reading recovery package",
+      priority: true,
+    });
     setRecoveryBusy(true);
     setRecoveryError("");
     try {
+      await status.beforeWork();
       const config = parseDashboardBundle(await file.text());
       setRecoveryImportCandidate({
         config,
         fileName: file.name,
         summary: recoveryPackageSummary(config),
       });
+      status.succeed("Recovery package ready.");
     } catch (packageError) {
+      status.fail(packageError);
       setRecoveryImportCandidate(null);
       setRecoveryError(recoveryPackageError(packageError));
     } finally {
@@ -886,16 +894,25 @@ export default function App() {
 
   async function confirmRecoveryPackage() {
     if (!recoveryImportCandidate || recoveryBusy) return;
+    const status = beginOperation({
+      key: "recovery-package-import",
+      label: "Restoring dashboard package",
+      blocking: true,
+      priority: true,
+    });
     setRecoveryBusy(true);
     setRecoveryError("");
     try {
+      await status.beforeWork();
       await persistConfiguration(recoveryImportCandidate.config, {
         preserveAuthoredRevision: true,
         transactionId: "recovery-package-import",
       });
       replaceRecoveryDashboardController(dashboardRef.current);
       setRecoveryImportCandidate(null);
+      status.succeed("Dashboard package restored.");
     } catch (packageError) {
+      status.fail(packageError);
       setRecoveryError(recoveryPackageError(packageError));
     } finally {
       setRecoveryBusy(false);
@@ -1030,10 +1047,12 @@ export default function App() {
     const status = beginOperation({
       key: "dashboard-look",
       label: "Saving dashboard look",
+      priority: true,
     });
     setLookSavingScope("auto");
     setLookError("");
     try {
+      await status.beforeWork();
       await ensureDashboardCommitController().mutateWithCommit((next) => {
         next.globalStyles = {
           ...(next.globalStyles ?? {}),
@@ -1056,8 +1075,9 @@ export default function App() {
   }
 
   async function runOperationWithStatus(options, action, successMessage) {
-    const status = beginOperation(options);
+    const status = beginOperation({ ...options, priority: true });
     try {
+      await status.beforeWork();
       const result = await action();
       status.succeed(successMessage);
       return result;
@@ -1179,32 +1199,36 @@ export default function App() {
     return resetDashboard;
   }
 
-  async function createChart(payload, target) {
+  async function createChart(payload, target, { reportStatus = true } = {}) {
     requireChartAuthoringPayload(payload);
-    return runOperationWithStatus({
-      key: "chart-create",
-      label: "Creating chart",
-    }, async () => {
+    const create = async () => {
       const committed = await ensureDashboardCommitController().mutate((current) => (
         integrateCreatedChart(current, payload, target)
       ));
       publishCommittedChartArtifact(payload?.runtimeArtifact);
       return committed;
-    }, "Chart created.");
+    };
+    if (!reportStatus) return create();
+    return runOperationWithStatus({
+      key: "chart-create",
+      label: "Creating chart",
+    }, create, "Chart created.");
   }
 
-  async function saveChart(payload) {
+  async function saveChart(payload, { reportStatus = true } = {}) {
     requireChartAuthoringPayload(payload);
-    return runOperationWithStatus({
-      key: "chart-save",
-      label: "Saving chart",
-    }, async () => {
+    const save = async () => {
       const committed = await ensureDashboardCommitController().mutate((current) => (
         integrateSavedChart(current, payload)
       ));
       publishCommittedChartArtifact(payload?.runtimeArtifact);
       return committed;
-    }, "Chart saved.");
+    };
+    if (!reportStatus) return save();
+    return runOperationWithStatus({
+      key: "chart-save",
+      label: "Saving chart",
+    }, save, "Chart saved.");
   }
 
   function commitDurableContentDraftConfiguration(nextConfig, context = {}) {
@@ -1240,11 +1264,13 @@ export default function App() {
     return persistConfiguration(nextConfig, context);
   }
 
-  async function commitStaticPanel(prepared) {
-    const status = beginOperation({
+  async function commitStaticPanel(prepared, { reportStatus = true } = {}) {
+    const status = reportStatus ? beginOperation({
       key: "static-content-save",
       label: "Saving dashboard content",
-    });
+      priority: true,
+    }) : null;
+    await status?.beforeWork();
     const controller = ensureDashboardCommitController();
     const previousDashboard = controller.getCurrent();
     try {
@@ -1263,7 +1289,7 @@ export default function App() {
           failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
         });
         await reconcileSavedAuthoredAssets(result.dashboard, contentDraftCoordinator.getActiveRetainers());
-        status.succeed("Dashboard content saved.");
+        status?.succeed("Dashboard content saved.");
         return result;
       }
       const result = await commitStaticPanelTransaction(prepared, {
@@ -1274,10 +1300,10 @@ export default function App() {
         failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
       });
       await reconcileSavedAuthoredAssets(result.dashboard, contentDraftCoordinator.getActiveRetainers());
-      status.succeed("Dashboard content saved.");
+      status?.succeed("Dashboard content saved.");
       return result;
     } catch (error) {
-      status.fail(error);
+      status?.fail(error);
       throw error;
     }
   }
@@ -1300,11 +1326,8 @@ export default function App() {
     });
   }
 
-  async function removeChart(panelId) {
-    return runOperationWithStatus({
-      key: "chart-remove",
-      label: "Removing chart",
-    }, async () => {
+  async function removeChart(panelId, { reportStatus = true } = {}) {
+    const remove = async () => {
       const controller = ensureDashboardCommitController();
       const previousDashboard = controller.getCurrent();
       const committed = await controller.mutate((next) => {
@@ -1315,18 +1338,31 @@ export default function App() {
       });
       await reconcileSavedAuthoredAssets(committed, contentDraftCoordinator.getActiveRetainers());
       return committed;
-    }, "Chart removed.");
+    };
+    if (!reportStatus) return remove();
+    return runOperationWithStatus({
+      key: "chart-remove",
+      label: "Removing chart",
+    }, remove, "Chart removed.");
   }
 
   async function inspectImportPackage(file) {
     if (!file) return null;
+    const status = beginOperation({
+      key: "package-inspect",
+      label: "Reading dashboard package",
+      priority: true,
+    });
     setPackageImportError("");
     try {
+      await status.beforeWork();
       const candidate = parseDashboardPackageCandidate(await file.text());
       setPackageImportCandidate(candidate);
       setOperationError("");
+      status.succeed("Dashboard package ready for review.");
       return candidate;
     } catch (importError) {
+      status.fail(importError);
       setPackageImportCandidate(null);
       setOperationError(`Could not import dashboard bundle: ${importError.message}`);
       return null;
@@ -1339,10 +1375,12 @@ export default function App() {
       key: "package-import",
       label: "Importing dashboard package",
       blocking: true,
+      priority: true,
     });
     setPackageImportBusy(true);
     setPackageImportError("");
     try {
+      await status.beforeWork();
       const previousDashboard = dashboardRef.current;
       const importedAssetBytes = Object.values(packageImportCandidate.config.assets ?? {})
         .reduce((total, asset) => total + (asset?.byteLength ?? 0), 0);
@@ -1419,11 +1457,13 @@ export default function App() {
       key: "online-dashboard-restore",
       label: "Restoring online dashboard",
       blocking: true,
+      priority: true,
       intent: "warning",
     });
     setOnlineRestoreBusy(true);
     setOnlineRestoreError("");
     try {
+      await status.beforeWork();
       const candidate = await prepareOnlineDashboardRestore({
         baseUrl: import.meta.env.BASE_URL,
         loadDefinition: loadDashboardDefinition,
@@ -1518,8 +1558,10 @@ export default function App() {
     const status = beginOperation({
       key: "package-export",
       label: "Exporting dashboard package",
+      priority: true,
     });
     try {
+      await status.beforeWork();
       const prepared = await prepareDashboardPackageExport(
         configOverride ?? dashboard,
         {

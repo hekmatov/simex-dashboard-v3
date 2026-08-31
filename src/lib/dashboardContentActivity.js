@@ -87,6 +87,7 @@ export function reportDashboardContentActivity(reportActivity, actionId, options
 export function beginDashboardContentOperation(beginOperation, actionId, {
   workingLabel,
   blocking = false,
+  priority = true,
   ...options
 } = {}) {
   if (typeof beginOperation !== "function") {
@@ -97,9 +98,13 @@ export function beginDashboardContentOperation(beginOperation, actionId, {
     key: completed.key,
     label: optionalText(workingLabel) ?? completed.label,
     blocking,
+    priority,
     intent: completed.intent,
   });
   return Object.freeze({
+    beforeWork() {
+      return operation.beforeWork();
+    },
     succeed(message = completed.message) {
       return operation.succeed(message);
     },

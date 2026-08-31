@@ -233,6 +233,31 @@ export function prepareChartEditSessionSave(state, {
   };
 }
 
+export async function runPrioritizedChartSave({
+  status,
+  prepare,
+  onPrepared = () => {},
+  flush,
+  materialize,
+  persist,
+  commit = () => {},
+}) {
+  try {
+    await status.beforeWork();
+    const request = prepare();
+    onPrepared(request);
+    await flush();
+    const payload = materialize(request);
+    const committed = await persist(payload, { reportStatus: false });
+    await commit({ request, payload, committed });
+    status.succeed();
+    return committed;
+  } catch (error) {
+    status.fail(error);
+    throw error;
+  }
+}
+
 export function materializeChartEditSessionSave(intent, currentChronoGroups) {
   if (!isRecord(intent) || intent.kind !== "save") {
     throw new TypeError("A chart edit Save intent is required.");

@@ -16,6 +16,76 @@ import {
   reduceChartEditSession,
 } from "../src/charting/forms/chartEditSession.js";
 
+test("priority chart save reports a synchronous preparation failure before persistence", async () => {
+  assert.equal(typeof chartEditSessionModel.runPrioritizedChartSave, "function");
+  const events = [];
+  const preparationError = new Error("Chart draft is not saveable");
+
+  await assert.rejects(
+    chartEditSessionModel.runPrioritizedChartSave({
+      status: {
+        beforeWork: async () => events.push("painted"),
+        succeed: () => events.push("succeeded"),
+        fail: (error) => events.push(`failed:${error.message}`),
+      },
+      prepare() {
+        events.push("prepare");
+        throw preparationError;
+      },
+      flush: async () => events.push("flush"),
+      materialize: () => events.push("materialize"),
+      persist: async () => events.push("persist"),
+      commit: async () => events.push("commit"),
+    }),
+    preparationError,
+  );
+
+  assert.deepEqual(events, [
+    "painted",
+    "prepare",
+    "failed:Chart draft is not saveable",
+  ]);
+});
+
+test("priority chart save paints, flushes, materializes, and persists through one status owner", async () => {
+  const events = [];
+  const committedDashboard = { revision: "saved" };
+  const result = await chartEditSessionModel.runPrioritizedChartSave({
+    status: {
+      beforeWork: async () => events.push("painted"),
+      succeed: () => events.push("succeeded"),
+      fail: (error) => events.push(`failed:${error.message}`),
+    },
+    prepare() {
+      events.push("prepare");
+      return { intent: { placementId: "placement-a" } };
+    },
+    onPrepared: () => events.push("saving-state"),
+    flush: async () => events.push("flush"),
+    materialize() {
+      events.push("materialize");
+      return { placementId: "placement-a" };
+    },
+    async persist(payload, options) {
+      events.push(`persist:${payload.placementId}:${options.reportStatus}`);
+      return committedDashboard;
+    },
+    commit: async () => events.push("commit"),
+  });
+
+  assert.equal(result, committedDashboard);
+  assert.deepEqual(events, [
+    "painted",
+    "prepare",
+    "saving-state",
+    "flush",
+    "materialize",
+    "persist:placement-a:false",
+    "commit",
+    "succeeded",
+  ]);
+});
+
 test("one stable chart-edit owner spans Quick and Full active, suspended, saving, and error states", () => {
   const clean = createSession();
 

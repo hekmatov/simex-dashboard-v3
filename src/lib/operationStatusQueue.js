@@ -1,6 +1,7 @@
 const DEFAULT_DELAY_MS = 500;
 const SUCCESS_DISMISS_MS = 4_000;
 const MAX_VISIBLE_NOTICES = 4;
+const PRESENTATION_FALLBACK_MS = 100;
 
 export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
   if (
@@ -24,6 +25,7 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
     label,
     delayMs = DEFAULT_DELAY_MS,
     blocking = false,
+    priority = false,
     reportCompletion = true,
     intent = "info",
   } = {}) {
@@ -35,7 +37,10 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
     const previous = records.get(normalizedKey);
     clearRecordTimers(previous);
     const generation = ++operationGeneration;
-    const visible = blocking === true || delayMs === 0 || previous?.visible === true;
+    const visible = priority === true
+      || blocking === true
+      || delayMs === 0
+      || previous?.visible === true;
     const record = {
       key: normalizedKey,
       label: normalizedLabel,
@@ -47,6 +52,7 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
       order: ++sequence,
       generation,
       scheduler,
+      priority: priority === true,
       startedAt: readNow(),
       delayMs,
       reportCompletion: reportCompletion !== false,
@@ -70,6 +76,9 @@ export function createOperationStatusQueue({ scheduler = globalThis } = {}) {
     }
 
     return Object.freeze({
+      beforeWork() {
+        return waitForPresentation(scheduler);
+      },
       succeed(message) {
         const current = currentRecord(normalizedKey, generation);
         if (!current) return false;
@@ -245,6 +254,25 @@ function monotonicNow(scheduler) {
 function elapsedMilliseconds(startedAt, completedAt) {
   const elapsed = completedAt - startedAt;
   return Number.isFinite(elapsed) && elapsed >= 0 ? elapsed : 0;
+}
+
+function waitForPresentation(scheduler) {
+  if (typeof scheduler?.requestAnimationFrame === "function") {
+    return new Promise((resolve) => {
+      let settled = false;
+      const fallbackTimer = scheduler.setTimeout(finish, PRESENTATION_FALLBACK_MS);
+      function finish() {
+        if (settled) return;
+        settled = true;
+        scheduler.clearTimeout(fallbackTimer);
+        resolve();
+      }
+      scheduler.requestAnimationFrame(() => {
+        scheduler.requestAnimationFrame(finish);
+      });
+    });
+  }
+  return new Promise((resolve) => scheduler.setTimeout(resolve, 0));
 }
 
 function publicNotice(record) {
