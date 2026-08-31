@@ -2,7 +2,8 @@ import React from "react";
 
 import { createOperationStatusQueue } from "../../lib/operationStatusQueue.js";
 
-const OperationStatusContext = React.createContext(null);
+const OperationStatusActionsContext = React.createContext(null);
+const OperationStatusSnapshotContext = React.createContext(null);
 
 export function createOperationStatusProviderQueueOwner({
   suppliedQueue = null,
@@ -31,22 +32,33 @@ export default function OperationStatusProvider({ children, queue: suppliedQueue
     queue.getSnapshot,
     queue.getSnapshot,
   );
-  const value = React.useMemo(() => Object.freeze({
+  const actions = React.useMemo(() => Object.freeze({
     beginOperation: queue.beginOperation,
     reportActivity: queue.reportActivity,
     dismissOperation: queue.dismissOperation,
-    snapshot,
-  }), [queue, snapshot]);
+  }), [queue]);
 
   return (
-    <OperationStatusContext.Provider value={value}>
-      {children}
-    </OperationStatusContext.Provider>
+    <OperationStatusActionsContext.Provider value={actions}>
+      <OperationStatusSnapshotContext.Provider value={snapshot}>
+        {children}
+      </OperationStatusSnapshotContext.Provider>
+    </OperationStatusActionsContext.Provider>
   );
 }
 
-export function useOperationStatus() {
-  const value = React.useContext(OperationStatusContext);
+export function useOperationStatusActions() {
+  const value = React.useContext(OperationStatusActionsContext);
   if (!value) throw new Error("Operation status must be used within OperationStatusProvider.");
   return value;
+}
+
+export function useOperationStatusSnapshot() {
+  const value = React.useContext(OperationStatusSnapshotContext);
+  if (!value) throw new Error("Operation status must be used within OperationStatusProvider.");
+  return value;
+}
+
+export function useOperationStatus() {
+  return useOperationStatusActions();
 }

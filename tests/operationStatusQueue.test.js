@@ -23,7 +23,7 @@ test("routine progress waits 500 ms while blocking work appears immediately", ()
   assert.equal(queue.getSnapshot().notices.at(-1).key, "blocking");
 });
 
-test("priority work is published immediately and waits for a browser paint before it starts", async () => {
+test("priority work resumes from a task after the presentation frame, never inside that frame", async () => {
   const clock = fakeClock();
   const queue = createOperationStatusQueue({ scheduler: clock });
   const operation = queue.beginOperation({
@@ -48,9 +48,10 @@ test("priority work is published immediately and waits for a browser paint befor
   await Promise.resolve();
   assert.equal(workStarted, false);
 
-  clock.paintFrame();
-  await startWork;
+  clock.advance(0);
+  await Promise.resolve();
   assert.equal(workStarted, true);
+  await startWork;
 });
 
 test("priority work cannot stall forever when animation frames are suspended", async () => {

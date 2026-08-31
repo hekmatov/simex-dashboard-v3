@@ -9,7 +9,7 @@ import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
-import { useOperationStatus } from "./components/app-shell/OperationStatusProvider.jsx";
+import { useOperationStatusActions } from "./components/app-shell/OperationStatusProvider.jsx";
 import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
 import RestoreOnlineDashboardDialog from "./components/app-shell/RestoreOnlineDashboardDialog.jsx";
@@ -172,7 +172,7 @@ async function reconcileSavedAuthoredAssets(dashboard, activeRetainers = null) {
 }
 
 export default function App() {
-  const { beginOperation } = useOperationStatus();
+  const { beginOperation } = useOperationStatusActions();
   const [dashboardEntry] = React.useState(() => parseDashboardEntry(
     typeof window === "undefined" ? "" : window.location.search,
   ));
