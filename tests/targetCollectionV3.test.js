@@ -69,12 +69,6 @@ function ready(marks, meta = {}) {
   };
 }
 
-function assertDeeplyFrozen(value) {
-  if (value === null || typeof value !== "object") return;
-  assert.equal(Object.isFrozen(value), true);
-  for (const nested of Object.values(value)) assertDeeplyFrozen(nested);
-}
-
 test("repeated gauges become stable detached one-mark collection models with ranking metrics", () => {
   const sourceChart = chart("gauge");
   const sourcePrepared = ready([
@@ -135,9 +129,15 @@ test("repeated gauges become stable detached one-mark collection models with ran
     assert.equal(item.model.option.series[0].data.length, 1);
     assert.deepEqual(item.model.option.series[0].center, ["50%", "58%"]);
     assert.equal(item.model.option.title, undefined);
-    assert.equal(item.model.semanticSummary.items.length, 1);
-    assert.match(item.accessibleSummary, new RegExp(item.label));
-    assert.match(item.accessibleSummary, /actual \d+; target \d+; observed 2027-05-02/);
+    assert.deepEqual(item.model.semanticSummary.items, [{
+      label: item.label,
+      actual: item.actual,
+      target: item.target,
+      time: "2027-05-02",
+    }]);
+    assert.equal(item.accessibleSummary, undefined);
+    assert.equal(item.model.accessibility, undefined);
+    assert.equal(item.model.option.aria.enabled, false);
   }
 
   assert.equal(model.layout, undefined);
@@ -147,7 +147,6 @@ test("repeated gauges become stable detached one-mark collection models with ran
   assert.deepEqual(sourcePrepared, preparedBefore);
   assert.equal(Object.isFrozen(sourceChart.presentation.collection), false);
   assert.equal(Object.isFrozen(sourcePrepared.marks[0].delta), false);
-  assertDeeplyFrozen(model);
 
   sourceChart.presentation.collection.rows = 4;
   sourcePrepared.marks[0].delta.absolute = 999;
@@ -199,16 +198,18 @@ test("repeated bullets isolate one prepared observation per item and expose norm
     assert.equal(item.model.option.series[0].data.length, 1);
     assert.equal(item.model.option.series[1].data.length, 1);
     assert.equal(item.model.option.grid, undefined);
-    assert.deepEqual(item.model.accessibility.rows, [{
+    assert.deepEqual(item.model.semanticSummary.items, [{
       label: item.label,
       actual: item.actual,
       target: item.target,
       time: "2027-05-02",
     }]);
+    assert.equal(item.model.accessibility, undefined);
+    assert.equal(item.model.option.aria.enabled, false);
   }
 });
 
-test("playback accessibility distinguishes the playback time from carried, nearest, and interpolated provenance", () => {
+test("playback models preserve active time and provenance with accessibility companions disabled", () => {
   const activeTime = {
     groupId: "exercise",
     epochMs: MAY_2,
@@ -289,27 +290,30 @@ test("playback accessibility distinguishes the playback time from carried, neare
   assert.equal(model.items[0].temporalStatus, "carried");
   assert.equal(model.items[0].provenance.label, "Last measured 2027-05-01");
   assert.equal(model.items[0].model.option.series[0].data[0].provenance.label, "Last measured 2027-05-01");
-  assert.equal(
-    model.items[0].accessibleSummary,
-    "Clinic A: actual 78; target 80. Playback time 2027-05-02. Last measured 2027-05-01",
-  );
   assert.equal(model.items[1].temporalStatus, "nearest");
   assert.equal(model.items[1].provenance.label, "Nearest measurement 2027-05-03");
-  assert.equal(
-    model.items[1].accessibleSummary,
-    "Clinic B: actual 45; target 80. Playback time 2027-05-02. Nearest measurement 2027-05-03",
+  assert.deepEqual(
+    model.items.map(({ activeTime, temporalStatus, provenance }) => ({
+      activeTime,
+      temporalStatus,
+      label: provenance.label,
+    })),
+    [
+      { activeTime: "2027-05-02", temporalStatus: "carried", label: "Last measured 2027-05-01" },
+      { activeTime: "2027-05-02", temporalStatus: "nearest", label: "Nearest measurement 2027-05-03" },
+      { activeTime: "2027-05-02", temporalStatus: "interpolated", label: "Interpolated between 2027-05-01 and 2027-05-03" },
+      { activeTime: "2027-05-02", temporalStatus: "observed", label: "Observed 2027-05-02" },
+    ],
   );
-  assert.equal(
-    model.items[2].accessibleSummary,
-    "Clinic C: actual 62; target 80. Playback time 2027-05-02. Interpolated between 2027-05-01 and 2027-05-03",
-  );
-  assert.equal(
-    model.items[3].accessibleSummary,
-    "Clinic D: actual 80; target 80; observed 2027-05-02",
-  );
-  assert.doesNotMatch(model.items[0].accessibleSummary, /observed 2027-05-02/i);
-  assert.doesNotMatch(model.items[1].accessibleSummary, /observed 2027-05-02/i);
-  assert.doesNotMatch(model.items[2].accessibleSummary, /observed 2027-05-02/i);
+  for (const item of model.items) {
+    const semanticItem = item.model.semanticSummary.items[0];
+    assert.equal(semanticItem.activeTime, item.activeTime);
+    assert.equal(semanticItem.temporalStatus, item.temporalStatus);
+    assert.deepEqual(semanticItem.provenance, item.provenance);
+    assert.equal(item.accessibleSummary, undefined);
+    assert.equal(item.model.accessibility, undefined);
+    assert.equal(item.model.option.aria.enabled, false);
+  }
 
   const ranked = rankCollection(model.items, settings);
   assert.equal(ranked[0].entityId, model.items[1].entityId);
@@ -332,7 +336,14 @@ test("single Gauge and Bullet observations retain the ordinary ECharts path", ()
 
     assert.equal(model.kind, "echarts");
     assert.equal(model.option.series[0].data.length, 1);
-    assert.equal(model.accessibility.rows.length, 1);
+    assert.deepEqual(model.semanticSummary.items, [{
+      label: typeId === "gauge" ? "gauge status" : "Clinic A",
+      actual: typeId === "gauge" ? 72 : 8,
+      target: typeId === "gauge" ? 80 : 10,
+      time: "2027-05-02",
+    }]);
+    assert.equal(model.accessibility, undefined);
+    assert.equal(model.option.aria.enabled, false);
   }
 });
 
@@ -446,7 +457,7 @@ test("repeated target identities normalize visible labels and reject blank or co
   assert.match(crossRoleDisplayCollision.message, /duplicate.*identity/i);
 });
 
-test("the target collection view renders detached model identity and semantic summaries without nested outer metadata", async () => {
+test("the target collection view renders detached identity without injecting hidden summaries", async () => {
   const {
     default: TargetCollectionChartView,
   } = await import("../src/components/charts/TargetCollectionChartView.jsx");
@@ -471,9 +482,18 @@ test("the target collection view renders detached model identity and semantic su
 
   assert.match(html, /data-collection-entity-id="target:&quot;Clinic A&quot;"/);
   assert.match(html, /data-collection-entity-id="target:&quot;Clinic B&quot;"/);
-  assert.match(html, /Clinic A: actual 72; target 80; observed 2027-05-02/);
-  assert.match(html, /Clinic B: actual 55; target 70; observed 2027-05-02/);
-  assert.equal((html.match(/role="group"/g) ?? []).length, 2);
+  assert.deepEqual(
+    model.items.map(({ model: itemModel }) => itemModel.semanticSummary.items[0]),
+    [
+      { label: "Clinic A", actual: 72, target: 80, time: "2027-05-02" },
+      { label: "Clinic B", actual: 55, target: 70, time: "2027-05-02" },
+    ],
+  );
+  assert.ok(model.items.every((item) => item.model.option.aria.enabled === false));
+  assert.ok(model.items.every((item) => item.model.accessibility === undefined));
+  assert.doesNotMatch(html, /Clinic A: actual 72|Clinic B: actual 55/);
+  assert.doesNotMatch(html, /aria-describedby=|role="group"/);
+  assert.equal((html.match(/class="chart-embedded-echarts-host" aria-hidden="true"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /role="img"/);
   assert.equal((html.match(/class="chart-view-title"/g) ?? []).length, 1);
   assert.equal((html.match(/Source: Operations register/g) ?? []).length, 0);

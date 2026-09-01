@@ -284,7 +284,7 @@ test("target collections use shared fixed, scroll, carousel, and priority presen
   assert.match(fallback, /showing configured order/i);
 });
 
-test("target collections ignore playback order locking and preserve embedded provenance summaries", async () => {
+test("target collections preserve embedded provenance models without hidden summaries", async () => {
   const {
     default: TargetCollectionChartView,
   } = await import("../src/components/charts/TargetCollectionChartView.jsx");
@@ -330,8 +330,17 @@ test("target collections ignore playback order locking and preserve embedded pro
 
   assertTextOrder(html, ["Clinic B", "Clinic A"], "autonomous target ranking");
   assert.match(html, /data-temporal-status="carried"/);
-  assert.match(html, /Playback time 2027-05-02/);
-  assert.match(html, /Last measured 2027-05-01/);
+  assert.equal(items[1].activeTime, "2027-05-02");
+  assert.equal(items[1].provenance.label, "Last measured 2027-05-01");
+  assert.deepEqual(items[1].model.semanticSummary.items, [{
+    label: "Clinic B",
+    actual: 9,
+    target: 10,
+    time: "2027-05-01",
+  }]);
+  assert.doesNotMatch(html, /Playback time 2027-05-02|Last measured 2027-05-01/);
+  assert.doesNotMatch(html, /aria-describedby=|role="group"/);
+  assert.equal((html.match(/class="chart-embedded-echarts-host" aria-hidden="true"/g) ?? []).length, 2);
 });
 
 test("collection ordering remains autonomous from playback inputs", () => {

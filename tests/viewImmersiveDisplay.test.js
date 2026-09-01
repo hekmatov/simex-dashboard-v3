@@ -99,7 +99,10 @@ test("two displayed charts are a chart-only Comparison with minimal top controls
   assert.doesNotMatch(html, />Exit comparison<\/button>/);
   assert.match(html, /aria-label="Comparison layout controls"/);
   assert.match(html, /draggable="true"/);
-  assert.match(html, /aria-keyshortcuts="Alt\+ArrowLeft Alt\+ArrowRight Alt\+ArrowUp Alt\+ArrowDown"/);
+  assert.equal((html.match(/<section draggable="true" tabindex="-1"[^>]*class="displayed-chart-cell/g) ?? []).length, 2);
+  assert.match(html, /aria-label="Move Chart B next"/);
+  assert.match(html, /aria-label="Move Chart A previous"/);
+  assert.doesNotMatch(html, /aria-keyshortcuts=/);
   assert.ok(
     html.indexOf('data-displayed-chart-id="chart-b"')
       < html.indexOf('data-displayed-chart-id="chart-a"'),
@@ -108,7 +111,7 @@ test("two displayed charts are a chart-only Comparison with minimal top controls
   assert.doesNotMatch(html, /Close chart-/);
 });
 
-test("pointer and keyboard reordering share one exact permutation helper", () => {
+test("pointer reordering uses one exact permutation helper", () => {
   assert.deepEqual(
     displayModule.reorderDisplayedCharts(["a", "b", "c"], 0, 2),
     ["b", "c", "a"],

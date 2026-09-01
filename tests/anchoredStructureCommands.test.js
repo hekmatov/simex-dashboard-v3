@@ -45,16 +45,20 @@ test("real Section headers own inline rename and the complete command set", () =
   assert.doesNotMatch(html, />Rename Section</);
 });
 
-test("App and renderer connect Crown Page commands and canonical Section commands to the live layout draft", async () => {
-  const [app, renderer] = await Promise.all([
-    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+test("renderer, Canvas, and Section keep direct ownership of live layout commands", async () => {
+  const [renderer, canvasSource, sectionSource] = await Promise.all([
     readFile(new URL("../src/components/DashboardRenderer.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/dashboard/DashboardCanvas.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/dashboard/DashboardSection.jsx", import.meta.url), "utf8"),
   ]);
-  assert.match(app, /BuildPageNavigation/);
-  assert.match(app, /pageNavigationNode=/);
   assert.match(renderer, /onBuildStructureProjectionChange/);
-  assert.match(renderer, /onStructureCommand:/);
-  assert.match(renderer, /applyBuildStructureCommand/);
+  assert.match(renderer, /structureCommand: applyBuildStructureCommand/);
+  assert.match(canvasSource, /actions={buildActions}/);
+  assert.match(
+    sectionSource,
+    /onReorder={\(targetIndex\) => actions\.reorderSection\(section\.id, targetIndex\)}/,
+  );
+  assert.match(sectionSource, /onCommand={actions\.structureCommand}/);
 });
 
 function fixture() {
