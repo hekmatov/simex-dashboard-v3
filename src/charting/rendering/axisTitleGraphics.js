@@ -31,17 +31,22 @@ export function createValueAxisTitleProjection({
   };
 }
 
-export function resolveValueAxisTitleGraphics({ projection, gridRect, textTheme = {} } = {}) {
+export function resolveValueAxisTitleGraphics({
+  projection,
+  gridRect,
+  textTheme = {},
+  measureText = textBounds,
+} = {}) {
   if (!validGridRect(gridRect)) return [];
   return (Array.isArray(projection) ? projection : [projection])
     .filter(Boolean)
-    .map((entry) => resolveGraphic(entry, gridRect, textTheme));
+    .map((entry) => resolveGraphic(entry, gridRect, textTheme, measureText));
 }
 
-export function valueAxisTitleGutters(projection, textTheme = {}) {
+export function valueAxisTitleGutters(projection, textTheme = {}, measureText = textBounds) {
   const result = { left: 0, right: 0, top: 0, bottom: 0 };
   for (const entry of (Array.isArray(projection) ? projection : [projection]).filter(Boolean)) {
-    const metrics = projectionMetrics(entry, textTheme);
+    const metrics = projectionMetrics(entry, textTheme, measureText);
     if (entry.physicalAxis === "y") {
       result[entry.side] = Math.max(
         result[entry.side],
@@ -61,8 +66,8 @@ export function valueAxisTitleGutters(projection, textTheme = {}) {
   return result;
 }
 
-function resolveGraphic(projection, gridRect, textTheme) {
-  const metrics = projectionMetrics(projection, textTheme);
+function resolveGraphic(projection, gridRect, textTheme, measureText) {
+  const metrics = projectionMetrics(projection, textTheme, measureText);
   const right = gridRect.x + gridRect.width;
   const bottom = gridRect.y + gridRect.height;
   let left;
@@ -113,17 +118,18 @@ function resolveGraphic(projection, gridRect, textTheme) {
   };
 }
 
-function projectionMetrics(projection, textTheme) {
-  const fontFamily = normalizedFontFamily(textTheme.bodyFont);
-  const titleNatural = textBounds(
+function projectionMetrics(projection, textTheme, measureText) {
+  const titleFontFamily = normalizedFontFamily(textTheme.bodyFont);
+  const tickFontFamily = normalizedFontFamily(textTheme.dataFont ?? textTheme.bodyFont);
+  const titleNatural = measureText(
     projection.title,
     projection.fontSize,
     projection.bold === true ? 700 : 400,
-    fontFamily,
+    titleFontFamily,
   );
   const vertical = projection.orientation === "vertical";
   const tickBounds = (projection.tickValues ?? [0]).map((value) => (
-    textBounds(formatAxisNumber(value), TICK_FONT_SIZE, 400, fontFamily)
+    measureText(formatAxisNumber(value), TICK_FONT_SIZE, 400, tickFontFamily)
   ));
   return {
     titleWidth: vertical ? titleNatural.height : titleNatural.width,

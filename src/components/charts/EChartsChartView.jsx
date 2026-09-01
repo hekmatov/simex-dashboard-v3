@@ -196,7 +196,7 @@ export function applyEChartsPresentation(
   const valueAxisTitleProjection = Array.isArray(model.valueAxisTitleProjection)
     ? model.valueAxisTitleProjection
     : [];
-  const valueAxisTitleTextTheme = { bodyFont, textMuted };
+  const valueAxisTitleTextTheme = { bodyFont, dataFont, textMuted };
   const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
   const grid = normalizedGrid(option.grid, titleGutters);
   return {

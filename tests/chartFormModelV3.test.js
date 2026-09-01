@@ -334,6 +334,26 @@ test("axis fields expose temporal X controls when preparation inferred a datetim
   assert.equal(allFields(model).find(({ id }) => id === "axes").xKind, "temporal");
 });
 
+test("horizontal axis fields keep the observation interpretation", () => {
+  const chart = createChartDraft("horizontalBar", {
+    id: "horizontal-temporal-form",
+    title: "Horizontal temporal form",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "reportedAt", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+  });
+  const profile = datasetProfile();
+  const model = buildEditorFormModel({
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile),
+  });
+
+  assert.equal(allFields(model).find(({ id }) => id === "axes").xKind, "temporal");
+});
+
 test("quick editing validates inferred temporal axis settings with the source profile", () => {
   const chart = lineChart({
     roles: {

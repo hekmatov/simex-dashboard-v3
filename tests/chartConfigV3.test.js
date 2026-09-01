@@ -351,6 +351,56 @@ test("axis presentation validates datetime options for an inferred temporal obse
   }), chart);
 });
 
+test("horizontal charts validate axes.x from the observation domain rather than the physical X axis", () => {
+  const categoryChart = createChartDraft("horizontalBar", {
+    id: "horizontal-category-axis",
+    title: "Horizontal category axis",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "ward", interpretation: "category" },
+    },
+    presentation: {
+      axes: {
+        x: { title: "Ward", tickFrequency: { every: 2 } },
+        primary: { title: "Cases", min: 0, max: 100, tickFrequency: { every: 10 } },
+      },
+    },
+  });
+
+  assert.equal(validateChartInstance(categoryChart), categoryChart);
+  const categoryWithRange = structuredClone(categoryChart);
+  categoryWithRange.presentation.axes.x.min = 0;
+  assert.throws(
+    () => validateChartInstance(categoryWithRange),
+    /X range is unavailable for category axes/i,
+  );
+
+  const temporalChart = createChartDraft("horizontalBar", {
+    id: "horizontal-temporal-axis",
+    title: "Horizontal temporal axis",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "reportedAt", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: {
+      axes: {
+        x: {
+          title: "Reported at",
+          min: "2027-01-01",
+          max: "2027-01-31",
+          labelPreset: "ddMmYyyy",
+          tickFrequency: { every: 2, unit: "day" },
+        },
+        primary: { title: "Cases", min: 0, max: 100, tickFrequency: { every: 10 } },
+      },
+    },
+  });
+
+  assert.equal(validateChartInstance(temporalChart), temporalChart);
+});
+
 test("only Text/Image chart instances may persist an intentionally blank title", () => {
   for (const typeId of ["freeText", "image"]) {
     const panel = createChartDraft(typeId, {

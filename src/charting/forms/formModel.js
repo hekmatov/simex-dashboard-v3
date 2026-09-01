@@ -502,12 +502,9 @@ function labelsFields({ chart }) {
 }
 
 function axesFields({ chart, schema, prepared }) {
-  const mark = schema.semantics?.mark;
-  const xKind = mark === "horizontal-bar" || mark === "horizontal-stacked-bar"
-    ? "number"
-    : (prepared?.meta?.axisInterpretation ?? chart.roles?.observation?.interpretation) === "temporal"
-      ? "temporal"
-      : "category";
+  const xKind = (prepared?.meta?.axisInterpretation ?? chart.roles?.observation?.interpretation) === "temporal"
+    ? "temporal"
+    : "category";
   const bindings = Array.isArray(chart.roles?.measurements)
     ? chart.roles.measurements
     : [];

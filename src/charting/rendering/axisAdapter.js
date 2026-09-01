@@ -31,7 +31,7 @@ const NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
 export function buildAxisRenderModel({ chart, prepared }, schema) {
   const mark = validateSeriesRendererMark("axis", schema?.semantics?.mark);
   const horizontal = HORIZONTAL_MARKS.has(mark);
-  const temporal = !horizontal && prepared.meta?.axisInterpretation === "temporal";
+  const temporal = prepared.meta?.axisInterpretation === "temporal";
   const activeTime = prepared.meta?.activeTime ?? null;
   const seriesStyle = chart.presentation?.series;
   const referenceLine = chart.presentation?.referenceLine;
@@ -44,9 +44,11 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
     ...legacyXAxisSettings(axes),
     ...(axes?.x ?? {}),
   };
-  const xPresentation = !horizontal
-    ? xAxisPresentation(xSettings, temporal ? "temporal" : "category")
-    : {};
+  const xPresentation = xAxisPresentation(
+    xSettings,
+    temporal ? "temporal" : "category",
+    horizontal ? "y" : "x",
+  );
   const fixedTemporalTicks = temporal && Number.isFinite(xPresentation.interval);
   const temporalExtent = fixedTemporalTicks
     ? temporalDataExtent(prepared.marks)
@@ -64,22 +66,8 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const secondarySettings = axes?.secondary;
   const primaryValues = groupedValues(grouped, "primary");
   const secondaryValues = groupedValues(grouped, "secondary");
-  const primaryAxis = valueAxis(primarySettings, false, horizontal ? {
-    ...(primarySettings ?? {}),
-    ...xSettings,
-    title: xSettings.title,
-  } : null, primaryValues);
-  const secondaryAxis = valueAxis(
-    secondarySettings,
-    true,
-    horizontal ? {
-      ...(secondarySettings ?? {}),
-      title: undefined,
-      yTitle: undefined,
-      name: undefined,
-    } : null,
-    secondaryValues,
-  );
+  const primaryAxis = valueAxis(primarySettings, false, primaryValues);
+  const secondaryAxis = valueAxis(secondarySettings, true, secondaryValues);
   const valueAxisTitleProjection = [
     createValueAxisTitleProjection({
       id: "primary",
@@ -105,7 +93,9 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
           .sort((left, right) => String(left.x).localeCompare(String(right.x)))
           .map((mark) => axisDataValue(
             mark,
-            [fixedTemporalTicks ? temporalAxisValue(mark.x) : mark.x, mark.value],
+            horizontal
+              ? [mark.value, fixedTemporalTicks ? temporalAxisValue(mark.x) : mark.x]
+              : [fixedTemporalTicks ? temporalAxisValue(mark.x) : mark.x, mark.value],
             activeTime,
             type,
           ))
@@ -175,7 +165,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       xAxis: horizontal
         ? hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis
         : categoryAxis,
-      yAxis: horizontal ? { ...categoryAxis, type: "category" } : hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis,
+      yAxis: horizontal ? categoryAxis : hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis,
       series,
       dataZoom: buildEChartsDataZoom(chart, horizontal ? "y" : "x"),
     },
@@ -228,22 +218,17 @@ function formatSeriesLabel(params) {
   return Number.isFinite(numeric) ? NUMBER_FORMATTER.format(numeric) : String(raw ?? "");
 }
 
-function valueAxis(settings = {}, secondary = false, xSettings = null, values = []) {
-  const presentationSettings = xSettings ?? settings;
-  const presentation = xSettings
-    ? xAxisPresentation(presentationSettings, "number")
-    : valueAxisPresentation(presentationSettings, values);
-  if (!xSettings) {
-    delete presentation.name;
-    delete presentation.nameLocation;
-    delete presentation.nameRotate;
-    delete presentation.nameGap;
-  }
+function valueAxis(settings = {}, secondary = false, values = []) {
+  const presentation = valueAxisPresentation(settings, values);
+  delete presentation.name;
+  delete presentation.nameLocation;
+  delete presentation.nameRotate;
+  delete presentation.nameGap;
   return {
     type: "value",
     ...presentation,
-    min: presentationSettings?.min,
-    max: presentationSettings?.max,
+    min: settings?.min,
+    max: settings?.max,
     splitLine: { show: secondary ? false : settings?.grid !== false },
   };
 }

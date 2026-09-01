@@ -143,6 +143,32 @@ test("authoring shells and fields keep fixed chrome around one responsive workbe
   assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.dashboard-authoring-footer\s*\{[^}]*grid-row:\s*4;/s);
 });
 
+test("Chart Wizard and modal Chart Editor keep definite viewport-bounded shells with internal scrolling", async () => {
+  const [dialogs, grammar] = await Promise.all([
+    read("src/styles/dashboard-dialogs.css"),
+    read("src/styles/dashboard-style-grammar.css"),
+  ]);
+
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-wizard\.chart-wizard-v3\s*\{[^}]*block-size:\s*min\(820px, calc\(100dvh - 48px\)\);/s,
+  );
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-editor-v3\.dashboard-dialog\s*\{[^}]*block-size:\s*min\(820px, calc\(100dvh - 48px\)\);/s,
+  );
+  assert.match(dialogs, /\.dashboard-dialog\s*\{[^}]*overflow:\s*hidden;/s);
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-wizard-workbench\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s,
+  );
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-layout\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s,
+  );
+  assert.match(dialogs, /\.dashboard-dialog__body\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s);
+});
+
 test("detached dashboard roots use typography tokens without fixed fallbacks", async () => {
   const grammar = await read("src/styles/dashboard-style-grammar.css");
   assert.match(grammar, /font-family:\s*var\(--simex-style-body-font\)/);

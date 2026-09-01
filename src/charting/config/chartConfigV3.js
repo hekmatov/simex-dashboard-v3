@@ -544,7 +544,6 @@ function validateImagePresentation(imageDescriptor, schema) {
 }
 
 function axisXKind(schema, temporalRoles) {
-  if (schema?.semantics?.mark === "horizontal-bar" || schema?.semantics?.mark === "horizontal-stacked-bar") return "number";
   return temporalRoles?.has("observation") ? "temporal" : "category";
 }
 

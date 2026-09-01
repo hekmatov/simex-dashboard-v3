@@ -568,6 +568,8 @@ test("ECharts projects dashboard heading, body, and data fonts", () => {
   assert.equal(presented.option.yAxis.nameTextStyle.fontFamily, "Body Token Stack");
   assert.equal(presented.option.yAxis.axisLabel.fontFamily, "Data Token Stack");
   assert.equal(presented.option.series[0].label.fontFamily, "Data Token Stack");
+  assert.equal(presented.valueAxisTitleTextTheme.bodyFont, "Body Token Stack");
+  assert.equal(presented.valueAxisTitleTextTheme.dataFont, "Data Token Stack");
 });
 
 test("ECharts projects gauge titles and numeric labels into body and data fonts", () => {
@@ -921,8 +923,9 @@ test("value axes suppress native names and project stable vertical and horizonta
     ], { axisInterpretation: "category" }),
   });
 
-  assert.equal(horizontal.option.xAxis[0].name, "Native X title");
-  assert.equal(horizontal.option.xAxis[1].name, undefined);
+  assert.deepEqual(horizontal.option.xAxis.map(({ name }) => name), [undefined, undefined]);
+  assert.equal(horizontal.option.yAxis.name, "Native X title");
+  assert.equal(horizontal.option.yAxis.nameRotate, 90);
   assert.equal(horizontal.option.xAxis[1].min, -20);
   assert.equal(horizontal.option.xAxis[1].max, 80);
   assert.equal(horizontal.option.xAxis[1].interval, 5);
@@ -935,6 +938,100 @@ test("value axes suppress native names and project stable vertical and horizonta
       { id: "secondary", physicalAxis: "x", side: "top", fontSize: 24, bold: false, offsetX: -12, offsetY: 9 },
     ],
   );
+});
+
+test("semantic observation and measurement axes project to the correct physical axes in both orientations", () => {
+  const axes = {
+    x: { title: "Observation", tickFrequency: { every: 2 } },
+    primary: { title: "Primary measure", min: 0, max: 90, tickFrequency: { every: 10 } },
+    secondary: { title: "Secondary measure", min: -20, max: 80, tickFrequency: { every: 5 } },
+  };
+  const prepared = ready([
+    { x: "A", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+    { x: "B", value: 18, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+    { x: "A", value: 4, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    { x: "B", value: 8, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+  ], { axisInterpretation: "category" });
+
+  const vertical = buildRenderModel({
+    chart: chart("mixed", { presentation: { collection: null, axes } }),
+    prepared,
+  });
+  assert.equal(vertical.option.xAxis.name, "Observation");
+  assert.equal(vertical.option.xAxis.axisLabel.interval, 1);
+  assert.deepEqual(
+    vertical.option.yAxis.map(({ name, min, max, interval }) => ({ name, min, max, interval })),
+    [
+      { name: undefined, min: 0, max: 90, interval: 10 },
+      { name: undefined, min: -20, max: 80, interval: 5 },
+    ],
+  );
+
+  const horizontal = buildRenderModel({
+    chart: chart("horizontalBar", { presentation: { collection: null, axes } }),
+    prepared,
+  });
+  assert.equal(horizontal.option.yAxis.name, "Observation");
+  assert.equal(horizontal.option.yAxis.axisLabel.interval, 1);
+  assert.deepEqual(
+    horizontal.option.xAxis.map(({ name, min, max, interval }) => ({ name, min, max, interval })),
+    [
+      { name: undefined, min: 0, max: 90, interval: 10 },
+      { name: undefined, min: -20, max: 80, interval: 5 },
+    ],
+  );
+  assert.deepEqual(
+    horizontal.valueAxisTitleProjection.map(({ title, physicalAxis, side }) => ({ title, physicalAxis, side })),
+    [
+      { title: "Primary measure", physicalAxis: "x", side: "bottom" },
+      { title: "Secondary measure", physicalAxis: "x", side: "top" },
+    ],
+  );
+});
+
+test("horizontal temporal observation settings project to the physical category axis", () => {
+  const model = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        collection: null,
+        axes: {
+          x: {
+            title: "Reported at",
+            min: "2027-01-01",
+            max: "2027-01-05",
+            labelPreset: "ddMmYyyy",
+            tickFrequency: { every: 2, unit: "day" },
+          },
+          primary: { title: "Cases", min: 0, max: 20, tickFrequency: { every: 5 } },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-01-05", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.yAxis.type, "value");
+  assert.equal(model.option.yAxis.name, "Reported at");
+  assert.equal(model.option.yAxis.min, new Date(2027, 0, 1).valueOf());
+  assert.equal(model.option.yAxis.max, new Date(2027, 0, 5).valueOf());
+  assert.equal(model.option.yAxis.interval, 2 * 24 * 60 * 60 * 1000);
+  assert.equal(typeof model.option.yAxis.axisLabel.formatter, "function");
+  assert.deepEqual(
+    model.option.xAxis,
+    {
+      type: "value",
+      interval: 5,
+      min: 0,
+      max: 20,
+      splitLine: { show: true },
+    },
+  );
+  assert.deepEqual(model.option.series[0].data, [
+    [4, new Date(2027, 0, 1).valueOf()],
+    [12, new Date(2027, 0, 5).valueOf()],
+  ]);
 });
 
 test("value-axis title graphics apply size, weight, offsets, clearance, and positive Y upward", () => {
@@ -998,6 +1095,43 @@ test("value-axis title graphics apply size, weight, offsets, clearance, and posi
   assert.ok(below.top >= gridRect.y + gridRect.height + 16);
   assert.equal(shifted.left, below.left + 12);
   assert.equal(shifted.top, below.top + 9);
+});
+
+test("value-axis tick clearance uses data-font metrics while title bounds use body-font metrics", () => {
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    horizontal: false,
+    settings: { title: "Cases", titleOrientation: "horizontal" },
+    tickValues: [8888],
+  });
+  const measured = [];
+  const measureText = (text, fontSize, fontWeight, fontFamily) => {
+    measured.push({ text, fontSize, fontWeight, fontFamily });
+    return fontFamily === "Data Metric Font"
+      ? { width: 90, height: 12 }
+      : { width: 20, height: 10 };
+  };
+  const textTheme = {
+    bodyFont: "Body Metric Font",
+    dataFont: "Data Metric Font",
+    textMuted: "#49627A",
+  };
+  const gridRect = { x: 140, y: 60, width: 320, height: 180 };
+
+  const gutters = valueAxisTitleGutters(projection, textTheme, measureText);
+  const graphic = resolveValueAxisTitleGraphics({
+    projection,
+    gridRect,
+    textTheme,
+    measureText,
+  })[0];
+
+  assert.equal(gutters.left, 126);
+  assert.deepEqual(graphic.textBounds, { width: 20, height: 10 });
+  assert.equal(graphic.left, 14);
+  assert.equal(graphic.style.fontFamily, "Body Metric Font");
+  assert.ok(measured.some(({ text, fontFamily }) => text === "Cases" && fontFamily === "Body Metric Font"));
+  assert.ok(measured.some(({ text, fontFamily }) => text.includes("8") && fontFamily === "Data Metric Font"));
 });
 
 test("positive-only domains do not reserve a negative numeric envelope", () => {
@@ -1231,20 +1365,25 @@ test("yearly cadence stays aligned through leap years", () => {
   ]);
 });
 
-test("horizontal bars keep the configured X-axis title horizontal", () => {
+test("horizontal bars keep the observation title on the category axis", () => {
   const model = buildRenderModel({
     chart: chart("horizontalBar", {
       presentation: {
         title: { align: "left" },
         collection: null,
-        axes: { x: { title: "Confirmed cases", min: 0, max: 100 } },
+        axes: {
+          x: { title: "Ward", tickFrequency: { every: 2 } },
+          primary: { title: "Confirmed cases", min: 0, max: 100 },
+        },
       },
     }),
     prepared: axisMarks,
   });
 
-  assert.equal(model.option.xAxis[0].name, "Confirmed cases");
-  assert.equal(model.option.xAxis[0].nameRotate, 0);
+  assert.equal(model.option.yAxis.name, "Ward");
+  assert.equal(model.option.yAxis.nameRotate, 90);
+  assert.equal(model.option.yAxis.axisLabel.interval, 1);
+  assert.equal(model.option.xAxis[0].name, undefined);
   assert.equal(model.option.xAxis[0].min, 0);
   assert.equal(model.option.xAxis[0].max, 100);
 

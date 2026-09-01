@@ -23,8 +23,8 @@ const AXIS_TEXT_WIDTH_OFFSET = 20;
 const AXIS_TEXT_WIDTH_SCALE = 100;
 const AXIS_TEXT_WIDTH_SAFETY_FACTOR = 1.12;
 
-export function xAxisPresentation(settings, kind) {
-  const result = axisTitle(settings, "x");
+export function xAxisPresentation(settings, kind, physicalAxis = "x") {
+  const result = axisTitle(settings, physicalAxis);
   if (settings?.min !== undefined) result.min = settings.min;
   if (settings?.max !== undefined) result.max = settings.max;
   const interval = tickInterval(settings?.tickFrequency, kind);
