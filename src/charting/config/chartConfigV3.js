@@ -9,6 +9,7 @@ import { parseTemporalValue } from "../data/temporal.js";
 import {
   normalizeSeriesStyle,
 } from "../presentation/seriesStyleContract.js";
+import { validateCardPresentation } from "../presentation/cardPresentationContract.js";
 import { isNormalizedImageCustomColor } from "../presentation/imagePresentation.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
@@ -21,7 +22,7 @@ export const CHART_CONFIG_VERSION = 3;
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
 const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
 const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
-const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "table", "image", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine"]);
+const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "table", "image", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine", "card"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
 const LAYOUT_SIZES = new Set(["compact", "standard", "wide", "full"]);
@@ -447,6 +448,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   validateDescription(descriptors.description?.value);
   validateCitation(descriptors.citation?.value);
   validateReferenceLine(descriptors.referenceLine?.value, schema);
+  validateCardPresentation(descriptors.card?.value, schema.typeId);
   optionalObject(descriptors.advanced?.value, "Chart presentation advanced", new Set());
   if (Object.hasOwn(descriptors, "series")) {
     normalizeSeriesStyle(
@@ -721,7 +723,23 @@ function validateLayout(chart) {
   ensureObject(chart.layout, "Chart layout");
   checkKnownKeys(chart.layout, LAYOUT_KEYS, "chart layout");
   if (!LAYOUT_SIZES.has(chart.layout.size)) throw new Error("Chart layout size must be compact, standard, wide, or full.");
-  for (const field of ["x", "y", "width", "height"]) if (chart.layout[field] !== undefined && (!Number.isInteger(chart.layout[field]) || chart.layout[field] < 0 || (["width", "height"].includes(field) && chart.layout[field] === 0))) throw new Error(`Chart layout ${field} must be a valid positive grid value.`);
+  for (const field of ["x", "y", "width"]) {
+    if (
+      chart.layout[field] !== undefined
+      && (!Number.isInteger(chart.layout[field]) || chart.layout[field] < 0 || (field === "width" && chart.layout[field] === 0))
+    ) {
+      throw new Error(`Chart layout ${field} must be a valid positive grid value.`);
+    }
+  }
+  if (
+    chart.layout.height !== undefined
+    && !(
+      (Number.isInteger(chart.layout.height) && chart.layout.height > 0)
+      || [0.25, 0.5, 0.75, 1.25, 1.5, 1.75].includes(chart.layout.height)
+    )
+  ) {
+    throw new Error("Chart layout height must be a whole row or a supported quarter-row percentage.");
+  }
 }
 
 export function createChartDraft(typeOrOptions, overrides = {}) {

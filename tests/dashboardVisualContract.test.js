@@ -131,6 +131,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
   const [
     styles,
     modes,
+    chartDataState,
     styleGrammar,
     staticContent,
     sourceContent,
@@ -139,9 +140,11 @@ test("pending owners and named authoring surfaces consume semantic style and con
     sourceViewer,
     iconGlyphs,
     buildWorkspace,
+    chartWizard,
   ] = await Promise.all([
     readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
     readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/chart-data-state.css", import.meta.url), "utf8"),
     readFile(new URL("../src/styles/dashboard-style-grammar.css", import.meta.url), "utf8"),
     readFile(new URL("../src/styles/static-content.css", import.meta.url), "utf8"),
     readFile(new URL("../src/styles/source-content.css", import.meta.url), "utf8"),
@@ -150,6 +153,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
     readFile(new URL("../src/source-viewer/sourceViewer.css", import.meta.url), "utf8"),
     readFile(new URL("../src/iconography/iconGlyphs.js", import.meta.url), "utf8"),
     readFile(new URL("../src/components/build/BuildWorkspace.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/chart-authoring/ChartWizardV3.jsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(styles, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);
@@ -168,12 +172,28 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(modes, /data-pending-work-state="error"[^}]*background:\s*var\(--simex-error-soft\)[^}]*var\(--simex-error\)/s);
   assert.match(modes, /build-authoring-auxiliary button,[^{]*build-authoring-auxiliary input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-min/s);
   assert.match(modes, /\.build-authoring-auxiliary\s*\{[^}]*border-radius:\s*var\(--simex-style-surface-radius\)[^}]*box-shadow:\s*var\(--simex-style-shell-shadow\)/s);
+  assert.ok(styles.includes("grid-auto-rows: calc((418px - 48px) / 4);"));
+  assert.ok(modes.includes("grid-row: span var(--chart-footprint-row-span);"));
+  assert.ok(modes.includes("height: var(--footprint-preview-visual-height);"));
+  assert.match(modes, /\.chart-panel-footprint\[data-footprint-short="true"\]\s*:is\(\.chart-view-frame,\s*\.chart-zoom-guard\)\s*\{[^}]*overflow:\s*auto/s);
+  assert.match(modes, /\.chart-panel-footprint\[data-footprint-short="true"\][^{]*:is\([^}]*\.chart-echarts-host[^}]*\.chart-deferred-placeholder[^}]*\)\s*\{[^}]*min-height:\s*0/s);
+  assert.match(modes, /\.scene-view-composition-cell\[data-scene-footprint-mode="live"\]\[data-scene-short="true"\][^{]*:is\([^}]*\.chart-echarts-host[^}]*\.chart-deferred-placeholder[^}]*\)\s*\{[^}]*min-height:\s*0/s);
+  assert.match(modes, /\.chart-panel-footprint\[data-footprint-short="true"\]\s+\.chart-image-view,[\s\S]*?\.chart-image-view\s*\{[^}]*overflow:\s*auto/s);
+  assert.match(modes, /\.chart-panel-footprint\[data-footprint-compact="true"\]\s+\.chart-image-actions,[\s\S]*?\.chart-image-actions\s*\{[^}]*opacity:\s*1[^}]*pointer-events:\s*auto[^}]*position:\s*static/s);
+  assert.match(chartDataState, /\.chart-state-surface--short\s*\{[^}]*overflow:\s*auto[^}]*overscroll-behavior:\s*contain/s);
+  assert.match(modes, /\[data-scene-composition-surface="scene-preview"\] \.scene-view-composition-cell,[\s\S]*?min-height:\s*320px/s);
+  assert.match(modes, /@media \(max-width: 1000px\)\s*\{[\s\S]*?\.chart-panel-footprint,[\s\S]*?grid-column:\s*auto;[\s\S]*?grid-row:\s*auto;/);
+  assert.match(modes, /\.app-shell\[data-device-layout="phone"\] \.chart-panel-footprint\s*\{[^}]*grid-column:\s*auto;[^}]*grid-row:\s*auto;/);
+  assert.match(chartWizard, /"data-chart-wizard-stage":\s*wizard\.stage/);
+  assert.match(styleGrammar, /\.app-frame \.chart-wizard-workbench\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*3fr\)\s+minmax\(0,\s*4fr\)/s);
+  assert.match(styles, /\.chart-wizard-style-grid--without-preview\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
 
   assert.doesNotMatch(staticContent, /--simex-surface-muted/);
   assert.match(staticContent, /portable-qmd-composer__toolbar[^}]*button\[aria-pressed="true"\][^{]*\{[^}]*var\(--simex-selected-soft\)[^}]*var\(--simex-selected\)/s);
   assert.match(staticContent, /portable-qmd-composer__toolbar :is\(button, select\)[^{]*\{[^}]*min-height:\s*44px/s);
   assert.match(staticContent, /authoring-footprint-grid\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(staticContent, /authoring-footprint-frame\s*\{[^}]*grid-column:\s*span var\(--chart-footprint-columns\)/s);
+  assert.ok(staticContent.includes("grid-row: span var(--chart-footprint-row-span);"));
   assert.match(staticContent, /free-text-source-editor__reference-cards\s*\{[^}]*display:\s*contents/s);
   assert.match(staticContent, /free-text-source-editor__markdown pre\s*\{[^}]*min-height:\s*168px[^}]*overflow:\s*auto/s);
   assert.match(staticContent, /free-text-source-editor__source-repair textarea\s*\{[^}]*min-block-size:\s*220px[^}]*width:\s*100%/s);

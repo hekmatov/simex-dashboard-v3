@@ -1561,7 +1561,7 @@
 .chart-wizard.dashboard-dialog {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
-  inline-size: min(1180px, 100%);
+  inline-size: min(1180px, calc(100vw - 48px));
 }
 
 .app-frame .chart-editor-v3.dashboard-dialog {
@@ -1624,7 +1624,7 @@
 
 .app-frame .chart-wizard-workbench {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(310px, 360px);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 4fr);
   min-height: 0;
   overflow: hidden;
 }

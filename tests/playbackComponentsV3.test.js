@@ -1627,9 +1627,10 @@ test("group matching defaults reach ChartView and disclose carried card provenan
     ),
   );
 
-  assert.match(html, /<dt>Value<\/dt><dd>10<\/dd>/);
-  assert.match(html, /<dt>Playback time<\/dt><dd>2027-05-02<\/dd>/);
+  assert.match(html, /class="chart-card-value">10<\/strong>/);
+  assert.match(html, /Playback time 2027-05-02/);
   assert.match(html, /Last measured 2027-05-01/);
+  assert.doesNotMatch(html, /<dl>/);
   assert.doesNotMatch(html, /No measurement at this time/);
 });
 
@@ -1693,8 +1694,9 @@ test("member matching overrides carry validated interpolation permission into Ch
     ),
   );
 
-  assert.match(html, /<dt>Value<\/dt><dd>20<\/dd>/);
+  assert.match(html, /class="chart-card-value">20<\/strong>/);
   assert.match(html, /Interpolated between 2027-05-01 and 2027-05-03/);
+  assert.doesNotMatch(html, /<dl>/);
   assert.doesNotMatch(html, /No measurement at this time/);
 });
 

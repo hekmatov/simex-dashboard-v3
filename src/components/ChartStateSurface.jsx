@@ -91,6 +91,7 @@ export default function ChartStateSurface({
   onRetry = null,
   onRepair = null,
   onContinue = null,
+  short = false,
 }) {
   const stateValue = typeof state === "string" ? { kind: state } : state ?? {};
   const model = deriveChartStateModel({
@@ -117,12 +118,16 @@ export default function ChartStateSurface({
   return React.createElement(
     "figure",
     {
-      className: `chart-state-surface chart-state-surface--${model.kind}`,
+      className: `chart-state-surface chart-state-surface--${model.kind}${short ? " chart-state-surface--short" : ""}`,
       "data-chart-state": model.kind,
       "data-retains-plot-bounds": "true",
       "data-plot-width": plotDimensions.width ?? undefined,
       "data-plot-height": plotDimensions.height ?? undefined,
       "aria-busy": model.busy,
+      tabIndex: short ? 0 : undefined,
+      "aria-label": short
+        ? `${readableChartName(chartName)} status. Scroll to view details.`
+        : undefined,
       style: plotDimensions.style,
     },
     React.createElement(

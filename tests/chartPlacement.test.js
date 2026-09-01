@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { resolveDestination } from "../src/charting/forms/chartDestination.js";
-import { planIdentityPlacement } from "../src/charting/forms/chartPlacement.js";
+import {
+  placementEntryFootprint,
+  planIdentityPlacement,
+} from "../src/charting/forms/chartPlacement.js";
 
 test("append is the default and emits ordered nonvisual placement equivalence", () => {
   const dashboard = dashboardFixture();
@@ -132,6 +135,34 @@ test("duplicate chart identity and invalid presets block placement proof", () =>
   }, dashboard);
   assert.equal(missingHeightCatalogue.status, "invalid");
   assert.equal(missingHeightCatalogue.errors[0].code, "HEIGHT_PRESET_UNAVAILABLE");
+});
+
+test("placement accepts a quarter-row percentage height preset", () => {
+  const dashboard = dashboardFixture();
+  const destination = destinationFor(dashboard);
+  const proof = planIdentityPlacement({
+    destination,
+    chartId: "chart-new",
+    presets: {
+      ...presetFixture(),
+      heights: [
+        { id: "height-75", label: "75% of a row", rows: 0.75, default: true },
+      ],
+      selectedHeight: "height-75",
+    },
+  }, dashboard);
+
+  assert.equal(proof.status, "valid");
+  assert.match(proof.orderedText, /Height: 75% of a row \(0\.75 rows\)\./);
+});
+
+test("placement reflow reads a saved percentage footprint instead of matching preset ids", () => {
+  assert.deepEqual(placementEntryFootprint({
+    chart: { layout: { size: "standard", width: 3, height: 0.75 } },
+  }), {
+    columns: 3,
+    rows: 0.75,
+  });
 });
 
 test("empty destinations produce a valid one-panel projection without mutating dashboard geometry", () => {

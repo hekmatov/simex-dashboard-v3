@@ -196,7 +196,7 @@ test("compact command row and More expose exact Stage 3 ownership", async ({ pag
   await expect(more.getByRole("button", { name: /Upload Dashboard Package|Clear dashboard/ })).toHaveCount(0);
 });
 
-test("chart creation keeps canonical render and placement proofs reachable through all six stages", async ({ page }) => {
+test("chart creation gives every stage the Configure-sized render proof while keeping proofs reachable", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
@@ -218,12 +218,12 @@ test("chart creation keeps canonical render and placement proofs reachable throu
     await expect(deck.getByRole("article", { name: "Canonical render proof" })).toBeVisible();
     await expect(deck.getByRole("article", { name: "Placement proof" })).toBeVisible();
     await expect(deck.locator("[data-proof-revision]")).toHaveCount(2);
-  }
 
-  const bodyBox = await wizard.locator(".chart-wizard-body").boundingBox();
-  const deckBox = await deck.boundingBox();
-  expect(deckBox.x).toBeGreaterThan(bodyBox.x);
-  expect(deckBox.width).toBeGreaterThan(300);
+    const bodyBox = await wizard.locator(".chart-wizard-body").boundingBox();
+    const deckBox = await deck.boundingBox();
+    expect(deckBox.x).toBeGreaterThan(bodyBox.x);
+    expect(deckBox.width).toBeGreaterThan(bodyBox.width);
+  }
 });
 
 test("chart recovery states retain canonical plot geometry", async ({ page }) => {

@@ -699,6 +699,94 @@ test("appearance begins with the required title and its visibility control", () 
   );
 });
 
+test("card charts expose their approved visual styles and only the applicable card controls", () => {
+  const profile = datasetProfile();
+  const kpi = kpiChart();
+  const kpiModel = buildEditorFormModel({
+    chart: kpi,
+    profile,
+    prepared: preparedFor(kpi, profile),
+  });
+  const kpiAppearance = kpiModel.sections.find(({ id }) => id === "appearance");
+  const cardStyle = kpiAppearance.fields.find(({ id }) => id === "cardStyle");
+  const accentColors = kpiAppearance.fields.find(({ id }) => id === "cardAccentColors");
+
+  assert.deepEqual(
+    {
+      control: cardStyle?.control,
+      path: cardStyle?.path,
+      value: cardStyle?.value,
+      options: cardStyle?.options?.map(({ value }) => value),
+    },
+    {
+      control: "select",
+      path: ["presentation", "card", "style"],
+      value: "quietLedger",
+      options: ["quietLedger", "valueFirst", "signalStamps"],
+    },
+  );
+  assert.deepEqual(
+    {
+      control: accentColors?.control,
+      path: accentColors?.path,
+      value: accentColors?.value,
+    },
+    {
+      control: "palette",
+      path: ["presentation", "card", "accentColors"],
+      value: [],
+    },
+  );
+
+  const valueFirst = structuredClone(kpi);
+  valueFirst.presentation.card = { style: "valueFirst" };
+  const valueFirstModel = buildEditorFormModel({
+    chart: valueFirst,
+    profile,
+    prepared: preparedFor(valueFirst, profile),
+  });
+  assert.equal(valueFirstModel.sections
+    .find(({ id }) => id === "appearance")
+    .fields
+    .some(({ id }) => id === "cardAccentColors"), false);
+
+  const delta = deltaChart();
+  const deltaModel = buildEditorFormModel({
+    chart: delta,
+    profile,
+    prepared: preparedFor(delta, profile),
+  });
+  const deltaAppearance = deltaModel.sections.find(({ id }) => id === "appearance");
+  assert.deepEqual(
+    deltaAppearance.fields
+      .filter(({ id }) => id === "cardStyle" || id === "deltaArrow")
+      .map(({ id, control, path, value, options }) => ({
+        id,
+        control,
+        path,
+        value,
+        options: options?.map(({ value: option }) => option),
+      })),
+    [
+      {
+        id: "cardStyle",
+        control: "select",
+        path: ["presentation", "card", "style"],
+        value: "footerDelta",
+        options: ["footerDelta", "splitMetric", "directionRail"],
+      },
+      {
+        id: "deltaArrow",
+        control: "toggle",
+        path: ["presentation", "card", "showDeltaArrow"],
+        value: true,
+        options: undefined,
+      },
+    ],
+  );
+  assert.equal(deltaAppearance.fields.some(({ id }) => id === "cardAccentColors"), false);
+});
+
 test("legend visibility is exposed only by renderers that consume it", () => {
   const profile = datasetProfile();
   const supported = [

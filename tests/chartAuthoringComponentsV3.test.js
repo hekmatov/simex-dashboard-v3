@@ -2245,6 +2245,19 @@ test("style and layout starts with the actual preview and separates advanced con
   assert.match(html, /<details[^>]*>.*<summary>Advanced<\/summary>/);
 });
 
+test("Configure drops its unused in-form preview column when the render proof is persistent", () => {
+  const html = render(React.createElement(StyleLayoutStep, {
+    chart: validLineChart(),
+    showPreview: false,
+    sections: [],
+  }));
+
+  assert.match(
+    html,
+    /class="chart-wizard-style-grid chart-wizard-style-grid--without-preview"/,
+  );
+});
+
 test("style step hides presentation and interaction controls until the current preview is ready", () => {
   const rows = [{ period: "May", capacity: 4 }];
   const incomplete = createChartDraft("line", {
@@ -3236,7 +3249,7 @@ test("quick editor emits detached draft changes and delegates every session acti
     ["presentation", "title", "visible"],
     false,
   );
-  footprint.props.onChange({ columns: 3, rows: 2 });
+  footprint.props.onChange({ columns: 3, rows: 0.75 });
   form.props.onSubmit({ preventDefault() { prevented += 1; } });
   editActions.props.onRequestReset();
   editActions.props.onCancel();
@@ -3255,7 +3268,7 @@ test("quick editor emits detached draft changes and delegates every session acti
   assert.deepEqual(drafts[2].layout, {
     size: "standard",
     width: 3,
-    height: 2,
+    height: 0.75,
   });
   assert.notEqual(drafts[0], session.draft);
   assert.notEqual(drafts[1].presentation, session.draft.presentation);

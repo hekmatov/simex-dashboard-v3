@@ -1,4 +1,8 @@
 import { destinationIdentity, resolveDestination } from "./chartDestination.js";
+import {
+  isSupportedFootprintRowHeight,
+  resolveChartFootprint,
+} from "../../components/chartPanelLayout.js";
 
 const POSITIONS = new Set(["append", "before", "after"]);
 
@@ -184,9 +188,7 @@ function normalizePresetList(value, sizeKey, maximum) {
       || seen.has(entry.id)
       || typeof entry.label !== "string"
       || entry.label.trim() === ""
-      || !Number.isInteger(entry[sizeKey])
-      || entry[sizeKey] < 1
-      || entry[sizeKey] > maximum
+      || !validPresetSize(entry[sizeKey], sizeKey, maximum)
     ) return [];
     seen.add(entry.id);
     return [{
@@ -198,36 +200,36 @@ function normalizePresetList(value, sizeKey, maximum) {
   });
 }
 
-function affectedNeighbours({ before, after, columns, presetResult }) {
-  const beforePositions = pack(before, columns, presetResult);
-  const afterPositions = pack(after, columns, presetResult);
+function validPresetSize(value, sizeKey, maximum) {
+  if (sizeKey === "rows") return isSupportedFootprintRowHeight(value);
+  return Number.isInteger(value) && value >= 1 && value <= maximum;
+}
+
+function affectedNeighbours({ before, after, columns }) {
+  const beforePositions = pack(before, columns);
+  const afterPositions = pack(after, columns);
   return after
     .filter(({ draft }) => draft !== true)
     .filter(({ chart }) => !samePosition(beforePositions.get(chart.id), afterPositions.get(chart.id)))
     .map(({ chart }) => chart.id);
 }
 
-function pack(entries, columns, presetResult) {
+function pack(entries, columns) {
   const positions = new Map();
   let row = 0;
   let column = 0;
   let rowHeight = 1;
   for (const entry of entries) {
-    const width = entry.width
-      ?? presetResult.widths.find(({ id }) => id === entry.chart?.layout?.size)
-      ?? { columns: 1 };
-    const height = entry.height
-      ?? presetResult.heights.find(({ id }) => id === entry.chart?.layout?.height)
-      ?? { rows: 1 };
-    const span = Math.min(width.columns, columns);
+    const footprint = placementEntryFootprint(entry);
+    const span = Math.min(footprint.columns, columns);
     if (column > 0 && column + span > columns) {
       row += rowHeight;
       column = 0;
       rowHeight = 1;
     }
-    positions.set(entry.chart.id, { row, column, columns: span, rows: height.rows });
+    positions.set(entry.chart.id, { row, column, columns: span, rows: footprint.rows });
     column += span;
-    rowHeight = Math.max(rowHeight, height.rows);
+    rowHeight = Math.max(rowHeight, footprint.rows);
     if (column === columns) {
       row += rowHeight;
       column = 0;
@@ -235,6 +237,18 @@ function pack(entries, columns, presetResult) {
     }
   }
   return positions;
+}
+
+export function placementEntryFootprint(entry = {}) {
+  const saved = resolveChartFootprint(entry?.chart?.layout);
+  return {
+    columns: Number.isInteger(entry?.width?.columns) && entry.width.columns > 0
+      ? entry.width.columns
+      : saved.columns,
+    rows: isSupportedFootprintRowHeight(entry?.height?.rows)
+      ? entry.height.rows
+      : saved.rows,
+  };
 }
 
 function samePosition(left, right) {

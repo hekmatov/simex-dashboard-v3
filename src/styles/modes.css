@@ -2248,14 +2248,15 @@
   display: grid;
   gap: 16px;
   grid-auto-flow: dense;
-  grid-auto-rows: var(--scene-canonical-row-height, 418px);
+  grid-auto-rows: calc((var(--scene-canonical-row-height, 418px) - 48px) / 4);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   min-width: 0;
 }
 
 .scene-view-composition-cell {
   grid-column: span var(--scene-chart-width);
-  grid-row: span var(--scene-chart-height);
+  grid-row: span var(--scene-chart-row-span);
+  min-height: 0;
   min-width: 0;
   position: relative;
 }
@@ -2263,6 +2264,26 @@
 .scene-view-composition-cell > .chart-view-frame {
   height: 100%;
   min-height: 0;
+}
+
+.scene-view-composition-cell[data-scene-footprint-mode="live"][data-scene-short="true"] :is(.chart-view-frame, .chart-zoom-guard) {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.scene-view-composition-cell[data-scene-footprint-mode="live"][data-scene-short="true"] > .chart-zoom-guard > .chart-view-frame {
+  overflow: visible;
+}
+
+.scene-view-composition-cell[data-scene-footprint-mode="live"][data-scene-short="true"] :is(
+  .chart-echarts-host,
+  .chart-deferred-placeholder
+) {
+  min-height: 0;
+}
+
+.scene-view-composition-cell[data-scene-footprint-mode="live"][data-scene-short="true"] .chart-echarts-host {
+  flex: 1 1 auto;
 }
 
 .scene-view-composition-cell--missing {
@@ -3794,10 +3815,97 @@
   outline-offset: 2px;
 }
 
-/* Approved Sketch 002: every chart owns one bounded 4-column × 2-row footprint. */
+/* A 4 × 2 guide gives the familiar canvas shape while heights use quarter-row increments. */
 .chart-panel-footprint {
   grid-column: span var(--chart-footprint-columns);
-  grid-row: span var(--chart-footprint-rows);
+  grid-row: span var(--chart-footprint-row-span);
+  min-height: 0;
+}
+
+.chart-panel-footprint .chart-canvas {
+  height: 100%;
+}
+
+/* Short panels keep their own content reachable without changing the panel action rail. */
+.chart-panel-footprint[data-footprint-short="true"] :is(.chart-view-frame, .chart-zoom-guard) {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.chart-panel-footprint[data-footprint-short="true"] > .chart-zoom-guard > .chart-view-frame {
+  overflow: visible;
+}
+
+.chart-panel-footprint[data-footprint-short="true"] :is(
+  .chart-echarts-host,
+  .chart-deferred-placeholder
+) {
+  min-height: 0;
+}
+
+.chart-panel-footprint[data-footprint-short="true"] .chart-echarts-host {
+  flex: 1 1 auto;
+}
+
+/* Images retain a useful viewport and let the image viewer itself scroll. */
+.chart-panel-footprint[data-footprint-short="true"] .chart-image-view,
+.scene-view-composition-cell[data-scene-footprint-mode="live"][data-scene-short="true"] .chart-image-view {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Compact image panels keep zoom controls visible instead of hover-only. */
+.chart-panel-footprint[data-footprint-compact="true"] .chart-image-actions,
+.scene-view-composition-cell[data-scene-footprint-mode="live"][data-scene-compact="true"] .chart-image-actions {
+  flex-wrap: wrap;
+  max-width: 100%;
+  opacity: 1;
+  pointer-events: auto;
+  position: static;
+  transform: none;
+}
+
+.chart-card-view--short .chart-card-collection {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.chart-card-view--compact .collection-display-header {
+  min-height: 0;
+}
+
+.chart-card-view--compact .collection-display-header .chart-view-title,
+.chart-card-view--compact > .chart-view-description {
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.chart-card-view--compact .chart-card-collection {
+  margin-top: 4px;
+}
+
+.chart-card-view--compact .chart-card {
+  gap: 4px;
+  min-block-size: 80px;
+  padding: 10px;
+}
+
+.chart-card-view--compact .chart-card-value {
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.chart-card-view--compact .chart-card-delta {
+  font-size: 0.75rem;
 }
 
 .chart-footprint-control {
@@ -3834,85 +3942,82 @@
 
 .chart-footprint-picker {
   display: grid;
-  gap: 6px 8px;
-  grid-template-columns: 54px minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.9fr);
 }
 
-.chart-footprint-corner {
-  align-self: end;
+.chart-footprint-inputs {
+  align-content: start;
+  display: grid;
+  gap: 10px;
+}
+
+.chart-footprint-input {
+  display: grid;
+  gap: 5px;
+}
+
+.chart-footprint-input > span {
   color: var(--simex-text-muted);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
-  grid-column: 1;
-  grid-row: 1;
   letter-spacing: 0.04em;
   line-height: 1.25;
   text-transform: uppercase;
 }
 
-.chart-footprint-column-cues,
-.chart-footprint-row-cues {
-  color: var(--simex-text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.chart-footprint-column-cues {
-  display: grid;
-  gap: 5px;
-  grid-column: 2;
-  grid-row: 1;
-  grid-template-columns: repeat(4, minmax(44px, 1fr));
-}
-
-.chart-footprint-row-cues {
-  align-items: center;
-  display: grid;
-  gap: 5px;
-  grid-column: 1;
-  grid-row: 2;
-  grid-template-rows: repeat(2, 44px);
-  text-align: right;
-}
-
-.chart-footprint-grid {
-  display: grid;
-  gap: 5px;
-  grid-column: 2;
-  grid-row: 2;
-  grid-template-columns: repeat(4, minmax(44px, 1fr));
-  grid-template-rows: repeat(2, 44px);
-}
-
-.chart-footprint-cell {
-  align-items: center;
+.chart-footprint-input select {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius);
   color: var(--simex-text-strong);
-  display: grid;
-  font-size: 10px;
-  font-weight: 800;
-  justify-items: center;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 2px;
+  font: inherit;
+  min-height: 42px;
+  padding: 8px 10px;
 }
 
-.chart-footprint-cell[data-included="true"] {
-  background: var(--simex-selected-soft);
-  border-color: var(--simex-selected);
-}
-
-.chart-footprint-cell[aria-pressed="true"] {
-  box-shadow: inset 0 0 0 2px var(--simex-selected);
-}
-
-.chart-footprint-cell:focus-visible {
+.chart-footprint-input select:focus-visible {
   outline: 3px solid var(--simex-focus);
   outline-offset: 2px;
-  z-index: 2;
+}
+
+.chart-footprint-preview {
+  background-color: var(--simex-surface-panel);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--simex-border-strong) 76%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--simex-border-strong) 48%, transparent) 1px, transparent 1px);
+  background-size: 25% 100%, 100% 12.5%;
+  border: 1px solid var(--simex-border-strong);
+  border-radius: 12px;
+  min-height: 116px;
+  overflow: hidden;
+  position: relative;
+}
+
+.chart-footprint-preview::after {
+  background: var(--simex-border-strong);
+  content: "";
+  height: 1px;
+  inset: 50% 0 auto;
+  opacity: 0.85;
+  pointer-events: none;
+  position: absolute;
+}
+
+.chart-footprint-preview__selection {
+  background: color-mix(in srgb, var(--simex-selected) 22%, transparent);
+  border: 2px solid var(--simex-selected);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 58%, transparent);
+  box-sizing: border-box;
+  height: var(--footprint-preview-visual-height);
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transition: height 140ms ease, width 140ms ease;
+  width: var(--footprint-preview-width);
+  z-index: 1;
 }
 
 .chart-footprint-status {
@@ -3921,14 +4026,29 @@
   margin: 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .chart-panel-footprint,
   .app-shell[data-device-layout="phone"] .chart-panel-footprint {
     grid-column: auto;
     grid-row: auto;
+    min-height: 360px;
+  }
+
+  .chart-panel-footprint.chart-panel-full {
+    min-height: 520px;
   }
 
   .chart-footprint-picker {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
+}
+
+.app-shell[data-device-layout="phone"] .chart-panel-footprint {
+  grid-column: auto;
+  grid-row: auto;
+  min-height: 380px;
+}
+
+.app-shell[data-device-layout="phone"] .chart-panel-footprint.chart-panel-full {
+  min-height: 420px;
 }

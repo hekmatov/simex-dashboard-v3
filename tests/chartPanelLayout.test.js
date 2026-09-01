@@ -20,20 +20,29 @@ test("version-3 chart sizes map to their panel layout classes", () => {
   assert.equal(chartPanelLayoutClass("removed-v2-size"), "chart-panel-standard");
 });
 
-test("the universal four-by-two footprint resolves all eight bounded chart sizes", () => {
-  const expected = [
-    [1, 1], [2, 1], [3, 1], [4, 1],
-    [1, 2], [2, 2], [3, 2], [4, 2],
+test("the universal four-by-two footprint preserves every quarter-row height", () => {
+  const heights = [
+    { rows: 0.25, rowSpan: 1 },
+    { rows: 0.5, rowSpan: 2 },
+    { rows: 0.75, rowSpan: 3 },
+    { rows: 1, rowSpan: 4 },
+    { rows: 1.25, rowSpan: 5 },
+    { rows: 1.5, rowSpan: 6 },
+    { rows: 1.75, rowSpan: 7 },
+    { rows: 2, rowSpan: 8 },
   ];
-  for (const [columns, rows] of expected) {
-    assert.deepEqual(resolveChartFootprint({ width: columns, height: rows }), {
-      columns,
-      rows,
-    });
-    assert.deepEqual(chartPanelFootprintStyle({ width: columns, height: rows }), {
-      "--chart-footprint-columns": columns,
-      "--chart-footprint-rows": rows,
-    });
+  for (const columns of [1, 2, 3, 4]) {
+    for (const { rows, rowSpan } of heights) {
+      assert.deepEqual(resolveChartFootprint({ width: columns, height: rows }), {
+        columns,
+        rows,
+      });
+      assert.deepEqual(chartPanelFootprintStyle({ width: columns, height: rows }), {
+        "--chart-footprint-columns": columns,
+        "--chart-footprint-rows": rows,
+        "--chart-footprint-row-span": rowSpan,
+      });
+    }
   }
   assert.deepEqual(resolveChartFootprint({ size: "wide" }), { columns: 4, rows: 1 });
   assert.deepEqual(resolveChartFootprint({ size: "full" }), { columns: 4, rows: 2 });

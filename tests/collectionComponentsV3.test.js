@@ -700,8 +700,145 @@ test("CardChartView preserves the static single-item card path", () => {
   }));
 
   assert.match(html, /class="chart-card-collection"/);
-  assert.match(html, /class="chart-card" role="listitem"/);
+  assert.match(html, /class="chart-card [^"]+" role="listitem"/);
   assert.doesNotMatch(html, /data-collection-header-transport|collection-header-page-dot|collection-carousel-controls/);
+});
+
+test("CardChartView gives a short card collection a labelled keyboard scroll target", () => {
+  const html = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: { title: "Current capacity" },
+    compact: true,
+    short: true,
+    model: {
+      items: [cardItem("capacity", "Capacity", 8)],
+      presentation: { collection: { layout: "carousel", rows: 1, columns: 1 } },
+    },
+  }));
+
+  assert.match(html, /class="chart-card-view chart-card-view--short chart-card-view--compact"/);
+  assert.match(html, /class="chart-card-collection"[^>]*tabindex="0"[^>]*aria-label="Current capacity cards\. Scroll to view all cards\."/);
+});
+
+test("CardChartView applies KPI accent palettes and makes delta arrows optional", () => {
+  const defaultKpiHtml = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      typeId: "kpi",
+      title: "Capacity",
+      presentation: { card: { style: "quietLedger" } },
+    },
+    model: { items: [cardItem("clinic-default", "Default clinic", 3)] },
+  }));
+
+  assert.match(defaultKpiHtml, /--chart-card-accent:var\(--simex-data-1\)/);
+
+  const kpiHtml = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      typeId: "kpi",
+      title: "Capacity",
+      presentation: {
+        card: {
+          style: "quietLedger",
+          accentColors: ["#043BCB", "#36BDEB"],
+        },
+      },
+    },
+    model: {
+      items: [
+        cardItem("clinic-a", "Clinic A", 4),
+        cardItem("clinic-b", "Clinic B", 8),
+      ],
+    },
+  }));
+
+  assert.match(kpiHtml, /data-card-style="quietLedger"/);
+  assert.match(kpiHtml, /--chart-card-accent:#043BCB/);
+  assert.match(kpiHtml, /--chart-card-accent:#36BDEB/);
+
+  const signalStampsHtml = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      typeId: "kpi",
+      title: "Capacity",
+      presentation: {
+        card: {
+          style: "signalStamps",
+          accentColors: ["#F59E0B", "#F1A1AD"],
+        },
+      },
+    },
+    model: {
+      items: [
+        cardItem("clinic-c", "Clinic C", 6),
+        cardItem("clinic-d", "Clinic D", 2),
+      ],
+    },
+  }));
+  assert.match(signalStampsHtml, /data-card-style="signalStamps"/);
+  assert.match(signalStampsHtml, /--chart-card-accent:#F59E0B/);
+  assert.match(signalStampsHtml, /--chart-card-accent:#F1A1AD/);
+
+  const deltaItem = {
+    ...cardItem("capacity", "Capacity", 20),
+    delta: { absolute: 4, percentage: 25 },
+    direction: "increase",
+    favorability: "favorable",
+  };
+  const withArrow = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      typeId: "deltaCard",
+      title: "Capacity change",
+      presentation: { card: { style: "footerDelta", showDeltaArrow: true } },
+    },
+    model: { items: [deltaItem] },
+  }));
+  const withoutArrow = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      typeId: "deltaCard",
+      title: "Capacity change",
+      presentation: { card: { style: "footerDelta", showDeltaArrow: false } },
+    },
+    model: { items: [deltaItem] },
+  }));
+
+  assert.match(withArrow, /data-card-style="footerDelta"/);
+  assert.match(withArrow, /data-delta-direction="increase"/);
+  assert.match(withArrow, /class="chart-card-delta-arrow"/);
+  assert.match(withArrow, /\+4/);
+  assert.match(withArrow, /Percentage change \+25%/);
+  assert.match(withArrow, /Favorable outcome favorable/);
+  assert.match(withoutArrow, /data-delta-direction="increase"/);
+  assert.match(withoutArrow, /\+4/);
+  assert.doesNotMatch(withoutArrow, /class="chart-card-delta-arrow"/);
+
+  const directionRail = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      typeId: "deltaCard",
+      title: "Capacity change",
+      presentation: { card: { style: "directionRail" } },
+    },
+    model: {
+      items: [{
+        ...deltaItem,
+        delta: { absolute: -4, percentage: -25 },
+        direction: "decrease",
+      }],
+    },
+  }));
+  assert.match(directionRail, /data-card-style="directionRail"/);
+  assert.match(directionRail, /data-delta-direction="decrease"/);
+  assert.match(directionRail, /\-4/);
+  assert.match(directionRail, /class="chart-card-delta-arrow"/);
+
+  const splitMetric = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      typeId: "deltaCard",
+      title: "Capacity change",
+      presentation: { card: { style: "splitMetric", showDeltaArrow: false } },
+    },
+    model: { items: [deltaItem] },
+  }));
+  assert.match(splitMetric, /data-card-style="splitMetric"/);
+  assert.match(splitMetric, /\+4/);
+  assert.doesNotMatch(splitMetric, /class="chart-card-delta-arrow"/);
 });
 
 test("cards distinguish playback time from carried measurement provenance", () => {
@@ -723,9 +860,9 @@ test("cards distinguish playback time from carried measurement provenance", () =
   }));
 
   assert.match(html, /data-temporal-status="carried"/);
-  assert.match(html, /<dt>Playback time<\/dt><dd>2027-05-02<\/dd>/);
-  assert.match(html, /<dt>Measurement source<\/dt><dd>Last measured 2027-05-01<\/dd>/);
-  assert.doesNotMatch(html, /<dt>Observed<\/dt>/);
+  assert.match(html, /Playback time 2027-05-02/);
+  assert.match(html, /Measurement source Last measured 2027-05-01/);
+  assert.doesNotMatch(html, /<dl>/);
 });
 
 test("delta cards disclose displayed and comparison temporal provenance separately", () => {
@@ -755,10 +892,10 @@ test("delta cards disclose displayed and comparison temporal provenance separate
     },
   }));
 
-  assert.match(html, /<dt>Playback time<\/dt><dd>2027-05-02<\/dd>/);
+  assert.match(html, /Playback time 2027-05-02/);
   assert.match(html, /Interpolated between 2027-05-01 and 2027-05-03/);
-  assert.match(html, /<dt>Comparison source<\/dt><dd>Observed 2027-05-01<\/dd>/);
-  assert.doesNotMatch(html, /<dt>Observed<\/dt>/);
+  assert.match(html, /Comparison source Observed 2027-05-01/);
+  assert.doesNotMatch(html, /<dl>/);
 });
 
 function renderCollection(settings, items, playback = null) {

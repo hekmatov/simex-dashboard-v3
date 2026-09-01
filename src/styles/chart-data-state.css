@@ -21,6 +21,34 @@
   width: 100%;
 }
 
+.chart-state-surface--short {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.chart-state-surface--short .chart-state-surface__plot {
+  height: auto;
+}
+
+.chart-state-surface--short .chart-state-surface__overlay {
+  align-self: start;
+  justify-self: stretch;
+  margin: 8px;
+  max-width: none;
+  order: -1;
+  position: static;
+}
+
+.chart-data-state-boundary[data-chart-state-short="true"] {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.chart-data-state-boundary[data-chart-state-short="true"] .chart-data-state-boundary__feedback {
+  margin: 8px;
+  position: static;
+}
+
 .chart-state-surface__plot {
   height: 100%;
   min-height: 0;

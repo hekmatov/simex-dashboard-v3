@@ -40,7 +40,7 @@ test("Scene View composition renders actual chart roots in authored order and wi
         ],
       },
       timeContextForChart: () => null,
-      surface: "scene-preview",
+      surface: "view-scene",
     },
   ));
 
@@ -54,10 +54,30 @@ test("Scene View composition renders actual chart roots in authored order and wi
   );
   assert.deepEqual(
     [...html.matchAll(/data-scene-row-height="([^"]+)"/g)].map((match) => Number(match[1])),
-    [1, 1, 2],
+    [1, 1, 0.75],
   );
+  assert.match(html, /data-scene-footprint-mode="live"/);
+  assert.match(html, /data-scene-chart-id="chart-b"[^>]*data-scene-short="true"/);
+  assert.doesNotMatch(html, /data-scene-chart-id="chart-a"[^>]*data-scene-short="true"/);
+  assert.match(html, /--scene-chart-row-span:3/);
   assert.equal((html.match(/class="chart-view-frame"/g) ?? []).length, 3);
   assert.doesNotMatch(html, /Chart loads when it enters the viewport/);
+});
+
+test("Scene editor preview keeps fractional panels readable while live Scene View uses their saved footprint", () => {
+  const html = renderToStaticMarkup(React.createElement(
+    sceneViewModule.default,
+    {
+      dashboard: dashboardFixture(),
+      scene: { members: [{ chartId: "chart-b", width: 3 }] },
+      surface: "scene-preview",
+    },
+  ));
+
+  assert.match(html, /data-scene-footprint-mode="editor-preview"/);
+  assert.match(html, /data-scene-chart-id="chart-b"[^>]*data-scene-row-height="1"/);
+  assert.match(html, /--scene-chart-row-span:4/);
+  assert.doesNotMatch(html, /data-scene-short="true"/);
 });
 
 test("Scene View composition keeps a missing authored chart identifiable", () => {
@@ -126,7 +146,7 @@ test("active-Scene View uses the shared authored composition while group View st
 function dashboardFixture() {
   const charts = [
     kpiChart("chart-a", "source-a", 1),
-    kpiChart("chart-b", "source-b", 2),
+    kpiChart("chart-b", "source-b", 0.75),
     kpiChart("chart-c", "source-c", 1),
   ];
   const loadedData = {

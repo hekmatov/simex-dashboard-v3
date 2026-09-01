@@ -55,6 +55,8 @@
 .authoring-footprint-grid {
   display: grid;
   gap: 16px;
+  grid-auto-flow: dense;
+  grid-auto-rows: minmax(64px, auto);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-inline-size: 100%;
   min-inline-size: 0;
@@ -62,6 +64,7 @@
 
 .authoring-footprint-frame {
   grid-column: span var(--chart-footprint-columns);
+  grid-row: span var(--chart-footprint-row-span);
   max-inline-size: 100%;
   min-inline-size: 0;
 }
@@ -460,11 +463,13 @@
 
 @media (max-width: 760px) {
   .authoring-footprint-grid {
+    grid-auto-rows: auto;
     grid-template-columns: minmax(0, 1fr);
   }
 
   .authoring-footprint-frame {
     grid-column: 1;
+    grid-row: auto;
   }
 }
 

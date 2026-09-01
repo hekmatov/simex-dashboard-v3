@@ -1,3 +1,5 @@
+import { isSupportedFootprintRowHeight } from "../chartPanelLayout.js";
+
 const BASE_CAPABILITIES = Object.freeze([
   { id: "data", label: "Data" },
   { id: "content", label: "Content" },
@@ -52,11 +54,9 @@ export function validatePanelDraft(chart = {}) {
     !Number.isInteger(footprint.columns)
     || footprint.columns < 1
     || footprint.columns > 4
-    || !Number.isInteger(footprint.rows)
-    || footprint.rows < 1
-    || footprint.rows > 2
+    || !isSupportedFootprintRowHeight(footprint.rows)
   ) {
-    return issue("FOOTPRINT_OUT_OF_RANGE", "Choose a footprint from 1–4 columns and 1–2 rows.");
+    return issue("FOOTPRINT_OUT_OF_RANGE", "Choose a footprint from 1–4 columns and 25%–200% of a row.");
   }
   const collection = Boolean(chart.collection) || chart.type === "collection";
   if (collection && (chart.chronoGroupIds?.length || chart.sceneIds?.length)) {
