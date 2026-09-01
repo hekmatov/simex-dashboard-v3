@@ -314,7 +314,10 @@ function serializeInline(nodes = [], errors) {
   if (!Array.isArray(nodes)) { errors.push("Inline content must be an array."); return ""; }
   return nodes.map((node) => {
     if (node?.type === "portableMedia") {
-      try { return serializePortableMediaReference(node.attrs); }
+      const attributes = { ...node.attrs };
+      if (attributes.frameWeight === null) delete attributes.frameWeight;
+      if (attributes.frameColor === null) delete attributes.frameColor;
+      try { return serializePortableMediaReference(attributes); }
       catch (error) { errors.push(error?.message ?? "Portable media is invalid."); return ""; }
     }
     if (node?.type !== "text" || typeof node.text !== "string") { errors.push(`Unsupported inline node: ${String(node?.type)}.`); return ""; }

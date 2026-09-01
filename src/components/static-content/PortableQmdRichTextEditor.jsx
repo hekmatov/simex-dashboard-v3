@@ -30,6 +30,7 @@ const PortableMedia = Node.create({
     return {
       mediaId: { default: "" }, alt: { default: "" }, width: { default: "100%" },
       align: { default: "center" }, flow: { default: "block" }, frame: { default: "none" },
+      frameWeight: { default: null }, frameColor: { default: null },
       caption: { default: "" }, decorative: { default: false },
     };
   },

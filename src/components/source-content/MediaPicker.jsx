@@ -14,11 +14,15 @@ export default function MediaPicker({
   mediaItems = {},
   assets = {},
   mode = "qmd",
+  selectedMediaId,
   onSelect,
   onCreateLocal,
   onCancel,
 } = {}) {
   const groups = partitionMediaPickerItems(mediaItems, { mode });
+  const focusMediaId = groups.selectable.some((item) => item.mediaId === selectedMediaId)
+    ? selectedMediaId
+    : groups.selectable[0]?.mediaId;
   const [importingId, setImportingId] = React.useState(null);
   const [status, setStatus] = React.useState("");
   const [error, setError] = React.useState("");
@@ -62,37 +66,51 @@ export default function MediaPicker({
   };
 
   return (
-    <section className="source-content-detail-card" aria-label="Media picker">
+    <section className="source-content-detail-card" aria-label="Media picker" onKeyDown={(event) => {
+      if (event.key === "Escape" && onCancel) {
+        event.preventDefault();
+        event.stopPropagation();
+        onCancel();
+      }
+    }}>
       <header>
         <h3>{mode === "qmd" ? "Insert image" : "Choose from media"}</h3>
         <p>{mode === "qmd" ? "Choose portable local media or import an External item first." : "Choose any dashboard media item, including an External HTTPS image."}</p>
       </header>
-      <fieldset>
-        <legend>{mode === "qmd" ? "Available local media" : "Available media"}</legend>
-        {groups.selectable.length === 0 ? <p>No eligible media is available.</p> : groups.selectable.map((item) => (
-          <label key={item.mediaId}>
+      <section data-media-source-path="existing">
+        <h4>Use existing dashboard media</h4>
+        <fieldset>
+          <legend>{mode === "qmd" ? "Available local media" : "Available media"}</legend>
+          {groups.selectable.length === 0 ? <p>No eligible media is available.</p> : groups.selectable.map((item) => (
+            <label key={item.mediaId}>
+              <input
+                type="radio"
+                name="media-picker-selection"
+                value={item.mediaId}
+                checked={selectedMediaId ? item.mediaId === selectedMediaId : undefined}
+                autoFocus={item.mediaId === focusMediaId}
+                onChange={() => onSelect?.(item)}
+              />
+              <strong>{item.displayName}</strong> {item.origin} · {item.health}
+            </label>
+          ))}
+        </fieldset>
+      </section>
+      <section data-media-source-path="upload">
+        <h4>Upload new image</h4>
+        <fieldset>
+          <legend>Validated local image</legend>
+          <label>
+            <span>PNG, JPEG, or WebP file</span>
             <input
-              type="radio"
-              name="media-picker-selection"
-              value={item.mediaId}
-              onChange={() => onSelect?.(item)}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={busy}
+              onChange={(event) => void acceptFile(event.target.files?.[0])}
             />
-            <strong>{item.displayName}</strong> {item.origin} · {item.health}
           </label>
-        ))}
-      </fieldset>
-      <fieldset>
-        <legend>Upload local media</legend>
-        <label>
-          <span>PNG, JPEG, or WebP file</span>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            disabled={busy}
-            onChange={(event) => void acceptFile(event.target.files?.[0])}
-          />
-        </label>
-      </fieldset>
+        </fieldset>
+      </section>
       {groups.external.length > 0 && (
         <section aria-labelledby="external-media-heading">
           <h4 id="external-media-heading">External / Network required</h4>

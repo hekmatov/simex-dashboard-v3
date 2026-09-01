@@ -80,6 +80,22 @@ test("formatted/raw switching preserves source until an edit and table cell acti
   await expect(page.getByLabel("Portable QMD Composer editing area").locator("tr")).toHaveCount(rowsBefore + 1);
 });
 
+test("formatted media preserves custom frames and normalizes lowercase color only after an edit", async () => {
+  const source = '![Map](simex-media:map){width=50% align=center flow=block frame=outline frameweight=3 framecolor="#aabbcc" caption="" decorative=false}';
+  await page.evaluate((value) => window.mountFreeTextEditor(value), source);
+  await page.getByRole("button", { name: "Raw text" }).click();
+  await expect(page.getByLabel("Portable QMD raw source")).toHaveValue(source);
+  await page.getByRole("button", { name: "Formatted text" }).click();
+  const composer = page.getByLabel("Portable QMD Composer editing area");
+  await composer.click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" note");
+  await page.getByRole("button", { name: "Raw text" }).click();
+  const edited = await page.getByLabel("Portable QMD raw source").inputValue();
+  assert.match(edited, /frame=outline frameweight=3 framecolor="#AABBCC"/);
+  assert.match(edited, /note/);
+});
+
 test("blank titles stay in Text/Image editor until the No title choice is unambiguous", async () => {
   await page.evaluate((source) => window.mountFreeTextWizard(source), "Untitled content");
   const wizard = page.getByRole("dialog", { name: "Text/Image editor" });
@@ -222,6 +238,37 @@ test("Free text portals replace and unmount without orphan media or duplicate le
   await page.evaluate(() => window.__qmdPortalRoot.unmount());
   assert.equal(await page.locator('#qmd-portal-target img').count(), 0);
   assert.deepEqual(await page.evaluate(() => window.__qmdLeaseCalls), ["acquire:asset-ready", "release:asset-ready"]);
+});
+
+test("compiled frame attributes reach the media portal without default injection", async () => {
+  const result = await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(FreeTextChartView, {
+      model: { sourceId: "frame-source", revision: 1, qmd: '![Map](simex-media:map){frame=outline frameweight=4 framecolor="#A1B2C3" decorative=false}' },
+      chart: { id: "frame-panel", title: "Frame" },
+      contentRenderContext: {
+        mediaItems: { map: { mediaId: "map", revision: 1, current: { kind: "asset", assetId: "asset-map" }, displayName: "Map", health: "missing" } },
+        assets: {},
+      },
+    }));
+    for (let index = 0; index < 50 && !target.querySelector(".qmd-media-view"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    const host = target.querySelector("[data-qmd-media-host]");
+    const view = target.querySelector(".qmd-media-view");
+    const value = {
+      hostWeight: host?.dataset.qmdMediaFrameWeight,
+      hostColor: host?.dataset.qmdMediaFrameColor,
+      viewWeight: view?.style.getPropertyValue("--qmd-frame-weight"),
+      viewColor: view?.style.getPropertyValue("--qmd-frame-color"),
+    };
+    root.unmount();
+    target.remove();
+    return value;
+  });
+  assert.deepEqual(result, { hostWeight: "4", hostColor: "#A1B2C3", viewWeight: "4px", viewColor: "#A1B2C3" });
 });
 
 test("equivalent media wrappers stay mounted while a real media replacement transfers the lease", async () => {
@@ -740,7 +787,7 @@ test("authoring preview selects one media placement and changes only its seriali
   assert.deepEqual(result.actions, ["open:second"]);
   assert.equal(result.libraryUnchanged, true);
   assert.equal(result.images, 0, JSON.stringify({ imageDetails: result.imageDetails, pickerOpen: result.pickerOpen }));
-  assert.equal(result.changePickerHasIntake, false);
+  assert.equal(result.changePickerHasIntake, true);
   assert.equal(result.focusOnOpen, "second");
   assert.equal(result.pickerClosedOnEscape, true);
   assert.equal(result.focusAfterEscape, true);

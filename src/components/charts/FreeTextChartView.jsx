@@ -39,6 +39,8 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
         align: host.dataset.qmdMediaAlign,
         flow: host.dataset.qmdMediaFlow,
         frame: host.dataset.qmdMediaFrame,
+        ...(host.dataset.qmdMediaFrameWeight === undefined ? {} : { frameWeight: Number(host.dataset.qmdMediaFrameWeight) }),
+        ...(host.dataset.qmdMediaFrameColor === undefined ? {} : { frameColor: host.dataset.qmdMediaFrameColor }),
         caption: host.dataset.qmdMediaCaption ?? "",
         decorative: host.dataset.qmdMediaDecorative === "true",
       },

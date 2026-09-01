@@ -4,6 +4,11 @@ const MEDIA_ID = /^[a-z0-9][a-z0-9._:-]{0,127}$/i;
 const ALIGN = new Set(["start", "center", "end"]);
 const FLOW = new Set(["block", "wrap-start", "wrap-end"]);
 const FRAME = new Set(["none", "outline", "card"]);
+const SERIALIZED_ATTRIBUTE_NAMES = Object.freeze({
+  frameweight: "frameWeight",
+  framecolor: "frameColor",
+});
+const ATTRIBUTE_NAMES = new Set(["width", "align", "flow", "frame", "frameWeight", "frameColor", "caption", "decorative"]);
 const DEFAULT_ATTRIBUTES = Object.freeze({
   width: "100%",
   align: "center",
@@ -20,15 +25,17 @@ export function parsePortableMediaReference(destination) {
 }
 
 export function validatePortableMediaAttributes(attributes) {
-  const entries = typeof attributes === "string"
+  const serialized = typeof attributes === "string";
+  const entries = serialized
     ? parseAttributeSuffix(attributes)
     : attributes && typeof attributes === "object" && !Array.isArray(attributes)
     ? Object.entries(attributes)
     : null;
   if (!entries) return { ok: false, attributes: null };
   const value = {};
-  for (const [key, raw] of entries) {
-    if (Object.hasOwn(value, key) || !["width", "align", "flow", "frame", "caption", "decorative"].includes(key)) {
+  for (const [serializedKey, raw] of entries) {
+    const key = SERIALIZED_ATTRIBUTE_NAMES[serializedKey] ?? serializedKey;
+    if (Object.hasOwn(value, key) || !ATTRIBUTE_NAMES.has(key)) {
       return { ok: false, attributes: null };
     }
     if (key === "width") {
@@ -45,6 +52,13 @@ export function validatePortableMediaAttributes(attributes) {
     } else if (key === "frame") {
       if (!FRAME.has(raw)) return { ok: false, attributes: null };
       value.frame = raw;
+    } else if (key === "frameWeight") {
+      const frameWeight = serialized && /^\d+$/.test(raw) ? Number(raw) : raw;
+      if (!Number.isInteger(frameWeight) || frameWeight < 1 || frameWeight > 8) return { ok: false, attributes: null };
+      value.frameWeight = frameWeight;
+    } else if (key === "frameColor") {
+      if (typeof raw !== "string" || !/^#[0-9a-f]{6}$/i.test(raw)) return { ok: false, attributes: null };
+      value.frameColor = raw;
     } else if (key === "caption") {
       if (typeof raw !== "string" || /[\u0000-\u001f\u007f]/.test(raw)) return { ok: false, attributes: null };
       value.caption = raw;
@@ -63,16 +77,25 @@ export function serializePortableMediaReference({
   align = DEFAULT_ATTRIBUTES.align,
   flow = DEFAULT_ATTRIBUTES.flow,
   frame = DEFAULT_ATTRIBUTES.frame,
+  frameWeight,
+  frameColor,
   caption = DEFAULT_ATTRIBUTES.caption,
   decorative = DEFAULT_ATTRIBUTES.decorative,
 } = {}) {
   if (typeof mediaId !== "string" || !MEDIA_ID.test(mediaId)) throw new TypeError("A valid media id is required.");
   if (typeof alt !== "string" || (!decorative && !alt.trim())) throw new TypeError("Contextual alt text is required unless the image is decorative.");
-  const validated = validatePortableMediaAttributes({ width, align, flow, frame, caption, decorative });
+  const attributes = { width, align, flow, frame, caption, decorative };
+  if (frameWeight !== undefined) attributes.frameWeight = frameWeight;
+  if (frameColor !== undefined) attributes.frameColor = frameColor;
+  const validated = validatePortableMediaAttributes(attributes);
   if (!validated.ok) throw new TypeError("Portable media attributes are invalid.");
   const accessibleAlt = decorative ? "" : alt;
   const values = validated.attributes;
-  return `![${escapeMarkdownLabel(accessibleAlt)}](simex-media:${mediaId}){width=${values.width} align=${values.align} flow=${values.flow} frame=${values.frame} caption="${escapeQuoted(values.caption)}" decorative=${values.decorative}}`;
+  const frameAttributes = [
+    values.frameWeight === undefined ? "" : ` frameweight=${values.frameWeight}`,
+    values.frameColor === undefined ? "" : ` framecolor="${values.frameColor.toUpperCase()}"`,
+  ].join("");
+  return `![${escapeMarkdownLabel(accessibleAlt)}](simex-media:${mediaId}){width=${values.width} align=${values.align} flow=${values.flow} frame=${values.frame}${frameAttributes} caption="${escapeQuoted(values.caption)}" decorative=${values.decorative}}`;
 }
 
 export function annotatePortableMediaTokens(ast) {

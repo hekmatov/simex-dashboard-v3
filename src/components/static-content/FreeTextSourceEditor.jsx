@@ -95,6 +95,21 @@ export function FreeTextSourceEditor({
       closeChangePicker();
     } else { onMediaSelect?.(item); setPickerOpen(false); }
   };
+  const createMedia = async (candidate, context) => {
+    if (pickerMode === "change" && selectedPlacement) {
+      await onMediaCreate?.(candidate, {
+        ...context,
+        intent: "change",
+        sourceStart: selectedMediaNode?.sourceStart,
+        sourceEnd: selectedMediaNode?.sourceEnd,
+      });
+      updateSelectedPlacement({ ...selectedPlacement, mediaId: candidate.mediaItem.mediaId });
+      closeChangePicker();
+      return;
+    }
+    await onMediaCreate?.(candidate, { ...context, intent: "insert" });
+    setPickerOpen(false);
+  };
   const closeChangePicker = () => {
     setPickerOpen(false);
     window.requestAnimationFrame(() => {
@@ -125,8 +140,7 @@ export function FreeTextSourceEditor({
           <pre>{value}</pre>
         </section>
       </div>
-      {pickerOpen && pickerMode === "change" && <ChangeMediaPicker mediaItems={mediaItems} selectedMediaId={selectedPlacement?.mediaId} onSelect={chooseMedia} onCancel={closeChangePicker} />}
-      {pickerOpen && pickerMode === "insert" && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" onSelect={chooseMedia} onCreateLocal={async (candidate, context) => { await onMediaCreate?.(candidate, context); setPickerOpen(false); }} onCancel={() => setPickerOpen(false)} />}
+      {pickerOpen && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" selectedMediaId={pickerMode === "change" ? selectedPlacement?.mediaId : undefined} onSelect={chooseMedia} onCreateLocal={createMedia} onCancel={pickerMode === "change" ? closeChangePicker : () => setPickerOpen(false)} />}
       {selectedPlacement && <QmdMediaInspector placement={selectedPlacement} mediaItem={valueForId(mediaItems, selectedPlacement.mediaId)} disabled={disabled} onChange={updateSelectedPlacement} onChangeImage={(_mediaId, { trigger } = {}) => { changeTriggerRef.current = trigger ?? null; setPickerMode("change"); setPickerOpen(true); }} onOpenMediaItem={(mediaId) => (onOpenMediaItem ?? contentRenderContext.openMediaItem)?.(mediaId)} />}
       {hasValidationErrors && <ValidationErrors id={validationTarget} errorId={`${id}-errors-title`} value={value} errors={analysis.errors} />}
     </section>
@@ -150,12 +164,6 @@ export function focusValidationTarget(target, offset) {
 
 function pendingValidation(source, sourceRevision, previewRevision) { return { ok: false, pending: true, errors: [], warnings: [], source, sourceRevision, previewRevision }; }
 
-function ChangeMediaPicker({ mediaItems, selectedMediaId, onSelect, onCancel }) {
-  const eligible = collectionValues(mediaItems).filter((item) => item?.health === "ready" && ["asset", "package"].includes(item?.current?.kind)).sort((left, right) => left.mediaId.localeCompare(right.mediaId));
-  const focusId = eligible.some((item) => item.mediaId === selectedMediaId) ? selectedMediaId : eligible[0]?.mediaId;
-  return <section className="source-content-detail-card" aria-label="Media picker" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onCancel(); } }}><header><h3>Change image</h3><p>Choose an existing portable local media item for this placement.</p></header><fieldset><legend>Available local media</legend>{eligible.length === 0 ? <p>No eligible media is available.</p> : eligible.map((item) => <label key={item.mediaId}><input type="radio" name="qmd-media-change-selection" value={item.mediaId} checked={item.mediaId === selectedMediaId} autoFocus={item.mediaId === focusId} onChange={() => onSelect(item)} /><strong>{item.displayName}</strong> {item.origin} · {item.health}</label>)}</fieldset><button type="button" className="secondary" autoFocus={eligible.length === 0} onClick={onCancel}>Close media picker</button></section>;
-}
-
 function analyze(source, panelId) {
   try {
     if (typeof document === "undefined") { const parsed = parsePortableQmd(source); return { ok: parsed.ok, errors: parsed.errors, warnings: parsed.warnings }; }
@@ -166,6 +174,4 @@ function analyze(source, panelId) {
 
 function sourceOffset(source, location) { const lines = source.split("\n"); let offset = 0; for (let index = 0; index < Math.max(0, location.line - 1); index += 1) offset += (lines[index]?.length ?? 0) + 1; return Math.min(source.length, offset + Math.max(0, location.column - 1)); }
 function valueForId(collection, id) { if (collection instanceof Map) return collection.get(id); if (Array.isArray(collection)) return collection.find((entry) => entry?.mediaId === id); return collection?.[id]; }
-function collectionValues(collection) { if (collection instanceof Map) return [...collection.values()]; if (Array.isArray(collection)) return collection; return Object.values(collection ?? {}); }
-
 export default FreeTextSourceEditor;

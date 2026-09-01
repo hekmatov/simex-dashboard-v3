@@ -114,6 +114,42 @@ test("custom width accepts only integer percentages from 10 through 100", async 
   assert.match(await page.getByRole("status").textContent(), /whole percentage from 10 through 100/i);
 });
 
+test("framed modes expose bounded weight and shared color controls while None retains configured values", async () => {
+  await mountInspector(page);
+  await page.getByRole("button", { name: "More image options" }).click();
+  const weight = page.getByLabel("Frame weight");
+  const color = page.getByRole("textbox", { name: "Frame color" });
+  assert.equal(await weight.getAttribute("min"), "1");
+  assert.equal(await weight.getAttribute("max"), "8");
+  assert.equal(await weight.getAttribute("step"), "1");
+  assert.equal(await weight.inputValue(), "3");
+  assert.equal(await color.inputValue(), "#AABBCC");
+  assert.deepEqual(await page.evaluate(() => window.__inspectorCalls), []);
+  await weight.fill("8");
+  await color.fill("#123456");
+  await page.getByLabel("None", { exact: true }).check();
+  assert.equal(await page.getByLabel("Frame weight").count(), 0);
+  assert.equal(await page.getByRole("textbox", { name: "Frame color" }).count(), 0);
+  await page.getByLabel("Subtle outline", { exact: true }).check();
+  assert.equal(await page.getByLabel("Frame weight").inputValue(), "8");
+  assert.equal(await page.getByRole("textbox", { name: "Frame color" }).inputValue(), "#123456");
+
+  const changes = await page.evaluate(() => window.__inspectorCalls
+    .filter((entry) => entry.type === "change")
+    .map(({ value }) => value));
+  assert.equal(changes.at(-2).frame, "none");
+  assert.equal(changes.at(-2).frameWeight, 8);
+  assert.equal(changes.at(-2).frameColor, "#123456");
+  assert.equal(changes.at(-1).frame, "outline");
+  assert.equal(changes.at(-1).frameWeight, 8);
+  assert.equal(changes.at(-1).frameColor, "#123456");
+  await page.getByRole("button", { name: "Reset frame style" }).click();
+  const reset = await page.evaluate(() => window.__inspectorCalls
+    .filter((entry) => entry.type === "change").at(-1)?.value);
+  assert.equal(Object.hasOwn(reset, "frameWeight"), false);
+  assert.equal(Object.hasOwn(reset, "frameColor"), false);
+});
+
 test("nondecorative alt validation stays local and emits only serializable placements", async () => {
   await mountInspector(page);
   await page.getByRole("button", { name: "More image options" }).click();
@@ -183,7 +219,7 @@ async function mountInspector(targetPage) {
     window.__inspectorCalls = [];
     window.__inspectorPlacement = {
       mediaId: "media-map", width: "50%", align: "center", flow: "block", frame: "outline",
-      caption: "Visible caption", alt: "Response map", decorative: false,
+      frameWeight: 3, frameColor: "#aabbcc", caption: "Visible caption", alt: "Response map", decorative: false,
     };
     window.__inspectorMedia = { mediaId: "media-map", revision: 7, displayName: "Response map", defaultDescription: "Default response description" };
     function Harness() {

@@ -325,15 +325,36 @@ test("QMD draft media stays draft-owned without changing the exact finalized pay
     ...makeLocalMediaItem(),
     defaultDescription: "Local response map",
   };
+  const original = structuredClone(local);
+  const stagedManifest = assetManifest("staged");
   draft = reduceStaticContentDraft(draft, {
-    type: "insertQmdMedia", mediaItem: local, manifestEntry: assetManifest("staged"),
+    type: "insertQmdMedia", mediaItem: local, manifestEntry: stagedManifest,
   });
   assert.match(draft.source.qmd, /!\[Local response map\]\(simex-media:media-local\)/);
   assert.equal(draft.pendingMediaItems["media-local"].mediaId, "media-local");
+  assert.deepEqual(local, original);
+  assert.deepEqual(draft.pendingMediaItems["media-local"].current, original.current);
+  assert.deepEqual(draft.assets["asset-local"], stagedManifest);
   draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
   const result = finalizeStaticContentDraft(draft);
   assert.deepEqual(Object.keys(result), ["destination", "panel", "placement", "mediaItem", "assets", "stagedAssetIds"]);
   assert.equal(result.mediaItem, null);
+});
+
+test("staging replacement QMD media retains its bytes without inserting a duplicate reference", () => {
+  const draft = createStaticContentDraft({
+    stage: "content",
+    destination: { pageId: "page-a", sectionId: "section-a" }, contentTypeId: "freeText",
+    panel: { ...panel(), typeId: "freeText", sourceId: "text-source", title: "Situation" },
+    placement: { kind: "staticText", qmd: "![Old](simex-media:old)" },
+  });
+  const mediaItem = makeLocalMediaItem();
+  const manifestEntry = assetManifest("staged");
+  const staged = reduceStaticContentDraft(draft, { type: "stageQmdMedia", mediaItem, manifestEntry });
+
+  assert.equal(staged.source.qmd, draft.source.qmd);
+  assert.equal(staged.pendingMediaItems[mediaItem.mediaId].mediaId, mediaItem.mediaId);
+  assert.deepEqual(staged.assets[mediaItem.current.assetId], manifestEntry);
 });
 
 function imageDraft() {

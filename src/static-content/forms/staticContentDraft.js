@@ -250,6 +250,25 @@ export function reduceStaticContentDraft(state, action = {}) {
         status: "editing",
       });
     }
+    case "stageQmdMedia": {
+      requireContentStage(state);
+      if (state.source?.kind !== "staticText") throw new Error("QMD media staging requires Free text content.");
+      const mediaItem = clone(action.mediaItem);
+      const assets = action.manifestEntry
+        ? { ...state.assets, [mediaItem.current?.assetId]: clone(action.manifestEntry) }
+        : state.assets;
+      validateMediaItem(mediaItem, { assets });
+      if (!["asset", "package"].includes(mediaItem.current.kind) || mediaItem.health !== "ready") {
+        throw new Error("QMD can stage only ready stored or packaged media.");
+      }
+      return authored(state, {
+        assets,
+        pendingMediaItems: action.manifestEntry
+          ? { ...state.pendingMediaItems, [mediaItem.mediaId]: mediaItem }
+          : state.pendingMediaItems,
+        status: "editing",
+      });
+    }
     case "insertQmdMedia": {
       requireContentStage(state);
       if (state.source?.kind !== "staticText") throw new Error("QMD media insertion requires Free text content.");

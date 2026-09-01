@@ -502,8 +502,12 @@ function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, d
         dispatch({ type: "insertQmdMedia", mediaItem });
         void onRetainMedia?.({ mediaItem, owner: "qmd-panel" });
       }}
-      onMediaCreate={(candidate) => {
-        dispatch({ type: "insertQmdMedia", mediaItem: candidate.mediaItem, manifestEntry: candidate.assets[candidate.assetId] });
+      onMediaCreate={(candidate, context) => {
+        dispatch({
+          type: context?.intent === "change" ? "stageQmdMedia" : "insertQmdMedia",
+          mediaItem: candidate.mediaItem,
+          manifestEntry: candidate.assets[candidate.assetId],
+        });
         return onRetainMedia?.({ mediaItem: candidate.mediaItem, assetId: candidate.assetId, owner: "qmd-panel" });
       }}
     />

@@ -36,6 +36,16 @@ const mediaItems = {
   }),
 };
 
+test("shared media chooser presents existing and upload as equal source paths", () => {
+  for (const mode of ["qmd", "image"]) {
+    const html = renderToStaticMarkup(React.createElement(MediaPicker, { mediaItems, mode }));
+    assert.match(html, /data-media-source-path="existing"/);
+    assert.match(html, /Use existing dashboard media/);
+    assert.match(html, /data-media-source-path="upload"/);
+    assert.match(html, /Upload new image/);
+  }
+});
+
 test("QMD picker separates selectable local media from non-selectable External import actions", () => {
   const groups = partitionMediaPickerItems(mediaItems, { mode: "qmd" });
   assert.deepEqual(groups.local.map(({ mediaId }) => mediaId), ["packaged", "stored"]);
