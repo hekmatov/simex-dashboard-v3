@@ -62,6 +62,21 @@ const CHART_KEYS = [
 ];
 const DIGEST = /^[0-9a-f]{64}$/;
 
+test("intentionally untitled Text/Image panels keep a nonvisual catalogue name while chart titles stay strict", () => {
+  assert.equal(
+    catalogueModule.catalogueChartTitle({ id: "notes", typeId: "freeText", title: "" }),
+    "Text/Image panel",
+  );
+  assert.equal(
+    catalogueModule.catalogueChartTitle({ id: "map", typeId: "image", title: "   " }),
+    "Text/Image panel",
+  );
+  assert.throws(
+    () => catalogueModule.catalogueChartTitle({ id: "trend", typeId: "line", title: "" }),
+    /title for chart trend must be non-empty text/,
+  );
+});
+
 test("catalogue v2 covers every registered type and configured chart", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const catalogue = catalogueModule.buildChartCatalogue(dashboard, aliases);

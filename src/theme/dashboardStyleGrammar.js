@@ -1,3 +1,5 @@
+const MONO_FONT_STACK = "ui-monospace, SFMono-Regular, Consolas, monospace";
+
 const STYLE_GRAMMARS = Object.freeze({
   "evidence-ledger": Object.freeze({
     bodyFont: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -62,6 +64,7 @@ export function resolveDashboardStyleGrammar(
     "--simex-style-body-font": grammar.bodyFont,
     "--simex-style-heading-font": grammar.headingFont,
     "--simex-style-data-font": grammar.dataFont,
+    "--simex-style-mono-font": MONO_FONT_STACK,
     "--simex-style-heading-weight": grammar.headingWeight,
     "--simex-style-heading-tracking": grammar.headingTracking,
     "--simex-style-panel-radius": grammar.panelRadius,

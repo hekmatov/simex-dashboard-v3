@@ -52,6 +52,10 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
   ].join(" ");
   const common = {
     className,
+    style: safeAttributes.frame === "none" ? undefined : {
+      "--qmd-frame-weight": `${safeAttributes.frameWeight ?? 1}px`,
+      "--qmd-frame-color": safeAttributes.frameColor || "var(--simex-border-subtle)",
+    },
     "data-qmd-media-id": mediaItem?.mediaId,
     "data-qmd-media-revision": mediaItem?.revision,
     "data-qmd-media-health": available ? "ready" : mediaItem?.health ?? "missing",
@@ -99,11 +103,17 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
 
 function normalizeAttributes(attributes = {}) {
   const width = /^(?:[1-9]\d|100)%$/.test(attributes.width) ? attributes.width : "100%";
+  const frameWeight = Number.isInteger(attributes.frameWeight) && attributes.frameWeight >= 1 && attributes.frameWeight <= 8
+    ? attributes.frameWeight
+    : undefined;
+  const frameColor = /^#[0-9a-f]{6}$/i.test(attributes.frameColor) ? attributes.frameColor : undefined;
   return {
     width,
     align: ["start", "center", "end"].includes(attributes.align) ? attributes.align : "center",
     flow: ["block", "wrap-start", "wrap-end"].includes(attributes.flow) ? attributes.flow : "block",
     frame: ["none", "outline", "card"].includes(attributes.frame) ? attributes.frame : "none",
+    frameWeight,
+    frameColor,
     caption: typeof attributes.caption === "string" ? attributes.caption : "",
     decorative: attributes.decorative === true,
     alt: typeof attributes.alt === "string" ? attributes.alt : "",

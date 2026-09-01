@@ -56,6 +56,18 @@ pnpm.cmd build
 pnpm.cmd package:flashdrive
 ```
 
+Test the current source during ordinary E2E iteration, or explicitly test a
+fresh production bundle:
+
+```powershell
+pnpm.cmd test:e2e
+pnpm.cmd test:e2e:package
+```
+
+`test:e2e` always runs through Vite source and never reads `dist`.
+`test:e2e:package` rebuilds `dist` before running the dedicated static-package
+smoke check.
+
 To promote browser-authored content into the repository baseline, download its
 package, place it at the repository root as
 `packaged-dashboard-bundle.json`, run `pnpm.cmd promote:bundle`, and review

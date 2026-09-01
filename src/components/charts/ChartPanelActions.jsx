@@ -110,12 +110,12 @@ export default function ChartPanelActions({
         ? fullscreenSelected
           ? `${fullscreenSelectionIndex} of 4 selected`
           : "Add to comparison"
-        : "Focus",
+        : "Fullscreen",
       title: selectionMode
         ? fullscreenSelected
           ? "Selected for comparison"
           : "Add to comparison"
-        : "Focus",
+        : "Fullscreen",
       onPointerDown: selectionMode ? undefined : onFullscreenHoldStart,
       onPointerUp: selectionMode ? undefined : onFullscreenHoldEnd,
       onPointerCancel: selectionMode ? undefined : onFullscreenHoldEnd,

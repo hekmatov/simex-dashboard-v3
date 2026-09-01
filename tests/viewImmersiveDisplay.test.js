@@ -70,7 +70,9 @@ test("one displayed chart is an immersive chart-only Focus surface", () => {
 
   assert.match(html, /role="dialog"[^>]*aria-label="Focused chart"/);
   assert.match(html, /data-display-mode="focus"/);
-  assert.match(html, />Exit focus<\/button>/);
+  assert.match(html, /data-fullscreen-exit="true"[^>]*aria-label="Exit fullscreen"/);
+  assert.doesNotMatch(html, />Exit fullscreen<\/button>/);
+  assert.doesNotMatch(html, /multi-fullscreen-controls/);
   assert.equal((html.match(/multi-fullscreen-cell/g) ?? []).length, 1);
   assert.doesNotMatch(html, /fullscreen-layout-button/);
   assert.doesNotMatch(html, /multi-cell-controls/);
@@ -93,10 +95,14 @@ test("two displayed charts are a chart-only Comparison with minimal top controls
 
   assert.match(html, /role="dialog"[^>]*aria-label="Chart comparison"/);
   assert.match(html, /data-display-mode="comparison"/);
-  assert.match(html, />Exit comparison<\/button>/);
-  assert.match(html, /aria-label="Comparison layout and exit"/);
+  assert.match(html, /data-fullscreen-exit="true"[^>]*aria-label="Exit comparison"/);
+  assert.doesNotMatch(html, />Exit comparison<\/button>/);
+  assert.match(html, /aria-label="Comparison layout controls"/);
   assert.match(html, /draggable="true"/);
-  assert.match(html, /aria-keyshortcuts="Alt\+ArrowLeft Alt\+ArrowRight Alt\+ArrowUp Alt\+ArrowDown"/);
+  assert.equal((html.match(/<section draggable="true" tabindex="-1"[^>]*class="displayed-chart-cell/g) ?? []).length, 2);
+  assert.match(html, /aria-label="Move Chart B next"/);
+  assert.match(html, /aria-label="Move Chart A previous"/);
+  assert.doesNotMatch(html, /aria-keyshortcuts=/);
   assert.ok(
     html.indexOf('data-displayed-chart-id="chart-b"')
       < html.indexOf('data-displayed-chart-id="chart-a"'),
@@ -105,7 +111,7 @@ test("two displayed charts are a chart-only Comparison with minimal top controls
   assert.doesNotMatch(html, /Close chart-/);
 });
 
-test("pointer and keyboard reordering share one exact permutation helper", () => {
+test("pointer reordering uses one exact permutation helper", () => {
   assert.deepEqual(
     displayModule.reorderDisplayedCharts(["a", "b", "c"], 0, 2),
     ["b", "c", "a"],

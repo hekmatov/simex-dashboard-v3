@@ -298,9 +298,13 @@ export function finalizeWizardDraft(state) {
   if (!state.draft) {
     throw new Error("Choose a chart type before creating the chart.");
   }
-  const chart = normalizeChartInstance(state.draft);
+  const profile = profileForChart(state.profiles, state.draft);
+  const chart = materializeTemporalXAxisSemantics(
+    normalizeChartInstance(state.draft),
+    profile,
+  );
   validateChartInstance(chart, {
-    columnTypes: profileColumnMap(profileForChart(state.profiles, chart)),
+    columnTypes: profileColumnMap(profile),
   });
 
   const result = { chart };
@@ -313,6 +317,33 @@ export function finalizeWizardDraft(state) {
   }
   finalizedWizardResults.add(result);
   return result;
+}
+
+function materializeTemporalXAxisSemantics(chart, profileEntry) {
+  const xAxis = chart.presentation?.axes?.x;
+  if (xAxis?.labelPreset === "adaptive") {
+    delete xAxis.labelPreset;
+    if (Object.keys(xAxis).length === 0) delete chart.presentation.axes.x;
+    if (Object.keys(chart.presentation.axes).length === 0) delete chart.presentation.axes;
+  }
+  if (!hasTemporalXAxisSemantics(xAxis)) return chart;
+  const binding = chart.roles?.observation;
+  if (!isRecord(binding) || binding.interpretation !== undefined) return chart;
+  const column = profileColumnMap(profileEntry)?.get(binding.field);
+  if (resolveEffectiveBinding(binding, column).type === "temporal") {
+    chart.roles.observation = {
+      ...binding,
+      interpretation: "temporal",
+    };
+  }
+  return chart;
+}
+
+function hasTemporalXAxisSemantics(xAxis) {
+  if (!isRecord(xAxis)) return false;
+  return nonEmptyString(xAxis.labelPreset)
+    || nonEmptyString(xAxis.tickFrequency?.unit)
+    || [xAxis.min, xAxis.max].some((value) => typeof value === "string");
 }
 
 export function deriveChartCreationStageStatuses(state) {

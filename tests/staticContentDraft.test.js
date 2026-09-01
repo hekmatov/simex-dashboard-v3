@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { STATIC_CONTENT_STAGE_LABELS, STATIC_CONTENT_STAGES, createStaticContentDraft, finalizeStaticContentDraft, isStaticContentDraftDirty, projectStaticContentDraftOwner, reduceStaticContentDraft } from "../src/static-content/forms/staticContentDraft.js";
+import { STATIC_CONTENT_STAGE_LABELS, STATIC_CONTENT_STAGES, createStaticContentDraft, finalizeStaticContentDraft, isStaticContentDraftDirty, projectStaticContentDraftOwner, reduceStaticContentDraft, staticContentStageReadiness } from "../src/static-content/forms/staticContentDraft.js";
 
 test("static authoring retains the exact four-stage workflow", () => {
   assert.deepEqual(STATIC_CONTENT_STAGES, ["destination", "content-type", "content", "preview-and-add"]);
@@ -59,6 +59,163 @@ test("Text and Image drafts default to Standard 2x1 and persist the shared footp
     draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { layout: { size: "wide", width: 4, height: 1 } } });
     assert.deepEqual(draft.panel.layout, { size: "wide", width: 4, height: 1 });
   }
+});
+
+test("Image title typing preserves explicit visibility and presentation survives finalization", () => {
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "image",
+    stage: "content",
+    panel: {
+      id: "presented-image",
+      typeId: "image",
+      sourceId: "presented-image-source",
+      title: "Before",
+      presentation: {
+        title: {
+          align: "right",
+          visible: false,
+          fontSize: 21,
+          bold: true,
+          italic: true,
+          underline: true,
+        },
+        image: { background: { mode: "default", color: "#AABBCC" } },
+      },
+    },
+    placement: {
+      kind: "staticImage",
+      sourceVersion: 2,
+      mediaId: "presented-image-media",
+      alt: "Outbreak map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    mediaItem: {
+      mediaId: "presented-image-media",
+      revision: 1,
+      current: { kind: "url", url: "https://example.test/outbreak.png" },
+      displayName: "Outbreak map",
+      defaultDescription: "Outbreak map",
+      origin: "external",
+      health: "external",
+      mediaType: "image/png",
+    },
+  });
+
+  draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { title: "After" } });
+  assert.equal(draft.panel.presentation.title.visible, false);
+  assert.equal(draft.panel.presentation.title.fontSize, 21);
+  assert.deepEqual(draft.panel.presentation.image.background, {
+    mode: "default",
+    color: "#AABBCC",
+  });
+
+  draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
+  const finalized = finalizeStaticContentDraft(draft);
+  assert.deepEqual(finalized.panel.presentation, draft.panel.presentation);
+});
+
+test("returning to Destination does not disable satisfied later Text/Image stages", () => {
+  const ready = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "destination",
+    panel: {
+      id: "ready-text",
+      typeId: "freeText",
+      sourceId: "ready-text-source",
+      title: "Situation",
+    },
+    placement: { kind: "staticText", qmd: "Ready content" },
+  });
+
+  assert.deepEqual(staticContentStageReadiness(ready, "destination"), { ready: true, reason: "" });
+  assert.deepEqual(staticContentStageReadiness(ready, "content"), { ready: true, reason: "" });
+  assert.deepEqual(staticContentStageReadiness(ready, "preview-and-add"), { ready: true, reason: "" });
+
+  const waiting = staticContentStageReadiness(ready, "preview-and-add", { previewReady: false });
+  assert.equal(waiting.ready, false);
+  assert.match(waiting.reason, /preview.*finish validating/i);
+  const blocked = reduceStaticContentDraft(ready, {
+    type: "trySetStage",
+    stage: "preview-and-add",
+    previewReady: false,
+  });
+  assert.equal(blocked.stage, "destination");
+  assert.match(blocked.validation.errors[0].message, /preview.*finish validating/i);
+});
+
+test("blank panel titles require an explicit No title choice without leaving the wizard", () => {
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "untitled-panel", typeId: "freeText", sourceId: "untitled-source", title: "" },
+    placement: { kind: "staticText", qmd: "Untitled content" },
+  });
+
+  assert.equal(draft.noTitle, false);
+  const missingChoice = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+  assert.equal(missingChoice.stage, "content");
+  assert.deepEqual(missingChoice.validation.errors, [{
+    field: "title",
+    focusId: "static-panel-title",
+    message: "Enter a panel title or select No title.",
+  }]);
+
+  draft = reduceStaticContentDraft(draft, { type: "setNoTitle", noTitle: true });
+  assert.equal(isStaticContentDraftDirty(draft), true);
+  draft = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+  assert.equal(draft.stage, "preview-and-add");
+  const result = finalizeStaticContentDraft(draft);
+  assert.equal(result.panel.title, "");
+  assert.equal("noTitle" in result, false);
+  assert.equal("noTitle" in result.panel, false);
+});
+
+test("a typed title and No title remain an explicit conflict focused on the checkbox", () => {
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "conflict-panel", typeId: "freeText", sourceId: "conflict-source", title: "Situation" },
+    placement: { kind: "staticText", qmd: "Conflicting choice" },
+  });
+  draft = reduceStaticContentDraft(draft, { type: "setNoTitle", noTitle: true });
+  const conflict = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+
+  assert.equal(conflict.stage, "content");
+  assert.deepEqual(conflict.validation.errors, [{
+    field: "title",
+    focusId: "static-panel-no-title",
+    message: "Clear the title or unselect No title.",
+  }]);
+});
+
+test("existing blank-title edits restore with No title selected and keep it in the dirty baseline", () => {
+  const blank = createStaticContentDraft({
+    mode: "edit",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: { id: "blank-panel", typeId: "freeText", sourceId: "blank-source", title: "" },
+    placement: { kind: "staticText", qmd: "Existing blank panel" },
+  });
+  const titled = createStaticContentDraft({
+    mode: "edit",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: { id: "titled-panel", typeId: "freeText", sourceId: "titled-source", title: "Existing title" },
+    placement: { kind: "staticText", qmd: "Existing titled panel" },
+  });
+
+  assert.equal(blank.noTitle, true);
+  assert.equal(titled.noTitle, false);
+  const changed = reduceStaticContentDraft(blank, { type: "setNoTitle", noTitle: false });
+  assert.equal(isStaticContentDraftDirty(changed), true);
+  const reset = reduceStaticContentDraft(changed, { type: "reset" });
+  assert.equal(reset.noTitle, true);
+  assert.equal(isStaticContentDraftDirty(reset), false);
 });
 
 test("owner-scoped reset restores the baseline without retiring the edit surface", () => {
@@ -225,15 +382,36 @@ test("QMD draft media stays draft-owned without changing the exact finalized pay
     ...makeLocalMediaItem(),
     defaultDescription: "Local response map",
   };
+  const original = structuredClone(local);
+  const stagedManifest = assetManifest("staged");
   draft = reduceStaticContentDraft(draft, {
-    type: "insertQmdMedia", mediaItem: local, manifestEntry: assetManifest("staged"),
+    type: "insertQmdMedia", mediaItem: local, manifestEntry: stagedManifest,
   });
   assert.match(draft.source.qmd, /!\[Local response map\]\(simex-media:media-local\)/);
   assert.equal(draft.pendingMediaItems["media-local"].mediaId, "media-local");
+  assert.deepEqual(local, original);
+  assert.deepEqual(draft.pendingMediaItems["media-local"].current, original.current);
+  assert.deepEqual(draft.assets["asset-local"], stagedManifest);
   draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
   const result = finalizeStaticContentDraft(draft);
   assert.deepEqual(Object.keys(result), ["destination", "panel", "placement", "mediaItem", "assets", "stagedAssetIds"]);
   assert.equal(result.mediaItem, null);
+});
+
+test("staging replacement QMD media retains its bytes without inserting a duplicate reference", () => {
+  const draft = createStaticContentDraft({
+    stage: "content",
+    destination: { pageId: "page-a", sectionId: "section-a" }, contentTypeId: "freeText",
+    panel: { ...panel(), typeId: "freeText", sourceId: "text-source", title: "Situation" },
+    placement: { kind: "staticText", qmd: "![Old](simex-media:old)" },
+  });
+  const mediaItem = makeLocalMediaItem();
+  const manifestEntry = assetManifest("staged");
+  const staged = reduceStaticContentDraft(draft, { type: "stageQmdMedia", mediaItem, manifestEntry });
+
+  assert.equal(staged.source.qmd, draft.source.qmd);
+  assert.equal(staged.pendingMediaItems[mediaItem.mediaId].mediaId, mediaItem.mediaId);
+  assert.deepEqual(staged.assets[mediaItem.current.assetId], manifestEntry);
 });
 
 function imageDraft() {

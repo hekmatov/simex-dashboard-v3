@@ -9,6 +9,7 @@ import { NodeSelection } from "@tiptap/pm/state";
 const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
 const module = await vite.ssrLoadModule("/src/components/static-content/PortableQmdRichTextEditor.jsx").catch(() => null);
 const freeTextModule = await vite.ssrLoadModule("/src/components/static-content/FreeTextSourceEditor.jsx").catch(() => null);
+const chartModule = await vite.ssrLoadModule("/src/components/charts/FreeTextChartView.jsx").catch(() => null);
 await vite.close();
 
 test("the constrained Composer exposes every visible labelled authoring command", () => {
@@ -36,9 +37,10 @@ test("the Composer keeps its familiar format rail commands in accessible groups"
     onMediaSelect() {},
   }));
   assert.match(html, /data-qmd-format-rail="true"/);
-  for (const label of ["Text style", "Inline formatting", "Block formatting", "Insert content", "History"]) {
+  for (const label of ["Text style", "Inline formatting", "Block formatting", "Insert content", "History", "Editing mode"]) {
     assert.match(html, new RegExp(`role="group"[^>]*aria-label="${label}"`), label);
   }
+  assert.match(html, /aria-label="Raw text"/);
 });
 
 test("representable source uses the single-card writer layout without authoring tabs or a status panel", () => {
@@ -53,25 +55,41 @@ test("representable source uses the single-card writer layout without authoring 
   assert.doesNotMatch(html, /Preview is up to date\./);
 });
 
-test("unsupported valid source has an editable repair path inside the Portable Markdown card", () => {
+test("unsupported valid source remains formatted-editable with a persistent rewrite warning", () => {
   const source = "```js\nconst exact = true;\n```";
   const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, { value: source }));
-  assert.match(html, />Portable Markdown</);
-  assert.match(html, /<textarea[^>]*id="static-qmd-source"[^>]*aria-label="Portable QMD source"/);
-  assert.match(html, /<textarea[^>]*aria-describedby="static-qmd-source-help"/);
-  assert.match(html, /```js\nconst exact = true;\n```<\/textarea>/);
-  assert.doesNotMatch(html, /role="tab"/);
+  assert.match(html, /aria-label="Portable QMD Composer"/);
+  assert.match(html, /Formatted editing may rewrite fenced code/);
+  assert.match(html, /aria-label="Raw text"/);
 });
 
-test("the nonvisual Portable Markdown repair source preserves disabled and validation associations", () => {
+test("writer and rendered preview use the selected four-column footprint", () => {
+  for (const columns of [1, 2, 3, 4]) {
+    const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, {
+      value: "Ordinary formatted text.",
+      layout: { width: columns, height: 1 },
+    }));
+    assert.equal((html.match(new RegExp(`--chart-footprint-columns:${columns}`, "g")) ?? []).length, 2);
+    assert.match(html, /data-authoring-footprint="writer"/);
+    assert.match(html, /data-authoring-footprint="preview"/);
+  }
+});
+
+test("formatted availability replaces the old advanced-only repair fallback", () => {
   const html = renderToStaticMarkup(React.createElement(freeTextModule.FreeTextSourceEditor, {
     id: "repair-qmd",
     value: `${"> ".repeat(7)}too deeply nested`,
     disabled: true,
   }));
-  assert.match(html, /<textarea[^>]*id="repair-qmd"[^>]*disabled/);
-  assert.match(html, /<textarea[^>]*aria-describedby="repair-qmd-help repair-qmd-errors-title"/);
-  assert.match(html, /id="repair-qmd-errors-title"/);
+  assert.match(html, /aria-label="Portable QMD Composer"/);
+  assert.doesNotMatch(html, /Visual editing is unavailable/);
+  assert.doesNotMatch(html, /id="repair-qmd"/);
+});
+
+test("blank Free text titles use content as the accessible name instead of a generated heading", () => {
+  assert.equal(chartModule.getFreeTextChartTitle("   "), "");
+  assert.equal(chartModule.getFreeTextChartAccessibleName(chartModule.getFreeTextChartTitle("   ")), "Free text content");
+  assert.equal(chartModule.getFreeTextChartAccessibleName(chartModule.getFreeTextChartTitle("Situation")), "Situation");
 });
 
 test("visual validation remediation resolves and focuses the editable Composer surface", () => {
@@ -93,6 +111,9 @@ test("the Tiptap extension set uses TableKit and the constrained semantic nodes"
   const names = [...Object.keys(editor.schema.nodes), ...Object.keys(editor.schema.marks)];
   for (const name of ["paragraph", "heading", "lead", "caption", "bold", "italic", "underline", "link", "bulletList", "orderedList", "table", "tableRow", "tableHeader", "tableCell", "portableMedia"]) {
     assert.ok(names.includes(name), `${name}: ${names.join(", ")}`);
+  }
+  for (const action of ["addRowBefore", "addRowAfter", "addColumnBefore", "addColumnAfter", "deleteRow", "deleteColumn"]) {
+    assert.equal(typeof editor.commands[action], "function", action);
   }
   const media = editor.schema.nodes.portableMedia.create({ mediaId: "map", alt: "Field map" });
   assert.equal(media.isAtom, true);
@@ -157,6 +178,10 @@ test("pending reasons override intrinsic Undo and Redo unavailability", () => {
   assert.deepEqual(module.portableQmdComposerControlState({ disabled: false, editor, action: "redo" }), {
     disabled: true,
     reason: "Nothing to redo.",
+  });
+  assert.deepEqual(module.portableQmdComposerControlState({ disabled: false, editor, inactive: true }), {
+    disabled: true,
+    reason: "Formatting is unavailable while editing raw Portable QMD.",
   });
   editor.destroy();
 });

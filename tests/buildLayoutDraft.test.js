@@ -67,6 +67,25 @@ test("layout reorder previews never mutate the saved dashboard", () => {
   assert.equal(draft.status, "dirty");
 });
 
+test("same-page section reorder preserves the rendered section, panel, chart, and data references", () => {
+  const saved = fixture();
+  const data = [{ month: "Jan", value: 12 }];
+  const chart = { id: "chart-a", sourceId: "source-a", title: "Trend" };
+  saved.loadedData = { "source-a": data };
+  saved.pages[0].sections[0].panels[0].chart = chart;
+
+  const draft = createBuildLayoutDraft(saved);
+  const section = draft.value.pages[0].sections[0];
+  const panel = section.panels[0];
+  const next = reorderBuildLayoutSection(draft, "page-a", "section-b", 0);
+
+  assert.deepEqual(next.value.pages[0].sections.map(({ id }) => id), ["section-b", "section-a"]);
+  assert.strictEqual(next.value.pages[0].sections[1], section);
+  assert.strictEqual(next.value.pages[0].sections[1].panels[0], panel);
+  assert.strictEqual(next.value.pages[0].sections[1].panels[0].chart, chart);
+  assert.strictEqual(next.value.loadedData["source-a"], data);
+});
+
 test("valid panel rename stages in the dashboard-scoped layout owner without mutating saved content", () => {
   const saved = fixture();
   saved.pages[0].sections[0].panels[0].chart = { id: "chart-a", title: "Old title" };

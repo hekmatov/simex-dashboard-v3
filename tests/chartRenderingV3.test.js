@@ -22,8 +22,15 @@ export async function load(url, context, nextLoad) {
 
 const {
   applyEChartsPresentation,
+  createEChartsLifecycle,
   sameChartTextTheme,
 } = await import("../src/components/charts/EChartsChartView.jsx");
+
+const {
+  createValueAxisTitleProjection,
+  resolveValueAxisTitleGraphics,
+  valueAxisTitleGutters,
+} = await import("../src/charting/rendering/axisTitleGraphics.js");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
@@ -63,6 +70,98 @@ function renderSvg(option, width = 640, height = 400) {
   try {
     instance.setOption(option);
     return instance.renderToSVGString();
+  } finally {
+    instance.dispose();
+  }
+}
+
+function renderedTextBounds(option, width = 640, height = 400) {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
+  try {
+    instance.setOption(option);
+    instance.renderToSVGString();
+    return instance.getZr().storage.getDisplayList(true).flatMap((element) => {
+      if (element.style?.text === undefined) return [];
+      const rect = element.getBoundingRect();
+      const corners = [
+        [rect.x, rect.y],
+        [rect.x + rect.width, rect.y],
+        [rect.x, rect.y + rect.height],
+        [rect.x + rect.width, rect.y + rect.height],
+      ].map(([x, y]) => element.transformCoordToGlobal(x, y));
+      const x = corners.map(([value]) => value);
+      const y = corners.map(([, value]) => value);
+      return [{
+        text: String(element.style.text),
+        left: Math.min(...x),
+        right: Math.max(...x),
+        top: Math.min(...y),
+        bottom: Math.max(...y),
+      }];
+    });
+  } finally {
+    instance.dispose();
+  }
+}
+
+function renderedProjectedTextBounds(model, width = 640, height = 400) {
+  const textTheme = { bodyFont: "sans-serif", textMuted: "#49627A" };
+  const presented = applyEChartsPresentation(
+    model,
+    { presentation: { title: { align: "left" } } },
+    false,
+    textTheme,
+  );
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
+  try {
+    instance.setOption(presented.option);
+    instance.renderToSVGString();
+    const rect = instance.getModel().getComponent("grid", 0).coordinateSystem.getRect();
+    const graphics = resolveValueAxisTitleGraphics({
+      projection: presented.valueAxisTitleProjection,
+      gridRect: rect,
+      textTheme: presented.valueAxisTitleTextTheme,
+    });
+    instance.setOption({ graphic: graphics });
+    instance.renderToSVGString();
+    return instance.getZr().storage.getDisplayList(true).flatMap((element) => {
+      if (element.style?.text === undefined) return [];
+      const textRect = element.getBoundingRect();
+      const corners = [
+        [textRect.x, textRect.y],
+        [textRect.x + textRect.width, textRect.y],
+        [textRect.x, textRect.y + textRect.height],
+        [textRect.x + textRect.width, textRect.y + textRect.height],
+      ].map(([x, y]) => element.transformCoordToGlobal(x, y));
+      const x = corners.map(([value]) => value);
+      const y = corners.map(([, value]) => value);
+      return [{
+        text: String(element.style.text),
+        left: Math.min(...x),
+        right: Math.max(...x),
+        top: Math.min(...y),
+        bottom: Math.max(...y),
+      }];
+    });
+  } finally {
+    instance.dispose();
+  }
+}
+
+function renderedXAxisDates(option, width = 800, height = 400) {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
+  try {
+    instance.setOption(option);
+    instance.renderToSVGString();
+    const ticks = instance.getModel().getComponent("xAxis").axis.scale.getTicks();
+    return [...new Set(ticks.map(({ value }) => {
+      const date = new Date(value);
+      return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
+    }))];
   } finally {
     instance.dispose();
   }
@@ -323,7 +422,7 @@ test("title alignment and ctrl-wheel-compatible zoom are normalized into ECharts
   assert.equal(model.option.dataZoom[0].zoomOnMouseWheel, "ctrl");
 });
 
-test("accessibility companion work is opt-in on the chart rendering hot path", () => {
+test("pointer-only chart rendering suppresses accessibility companion work even for legacy requests", () => {
   const chartConfig = chart("line");
   const disabled = buildRenderModel({
     chart: chartConfig,
@@ -336,7 +435,9 @@ test("accessibility companion work is opt-in on the chart rendering hot path", (
   });
 
   assert.equal(disabled.accessibility, undefined);
-  assert.equal(enabled.accessibility.family, "axis");
+  assert.equal(enabled.accessibility, undefined);
+  assert.equal(disabled.option.aria.enabled, false);
+  assert.equal(enabled.option.aria.enabled, false);
 });
 
 test("the mounted ECharts option applies every valid title alignment and opaque background", () => {
@@ -359,7 +460,7 @@ test("the mounted ECharts option applies every valid title alignment and opaque 
   }
 });
 
-test("ECharts title visibility defaults on and hides without dropping structural text", () => {
+test("ECharts keeps title text for export while the DOM heading owns title visibility", () => {
   const model = {
     kind: "echarts",
     option: { title: { text: "Capacity" }, series: [] },
@@ -373,7 +474,7 @@ test("ECharts title visibility defaults on and hides without dropping structural
 
   assert.deepEqual(
     { show: visible.option.title.show, text: visible.option.title.text },
-    { show: true, text: "Capacity" },
+    { show: false, text: "Capacity" },
   );
   assert.deepEqual(
     { show: hidden.option.title.show, text: hidden.option.title.text },
@@ -444,6 +545,54 @@ test("ECharts title and legend defaults consume projected profile text colors", 
   assert.equal(presented.option.legend.textStyle.color, "#C1CFD4");
 });
 
+test("ECharts projects dashboard heading, body, and data fonts", () => {
+  const presented = applyEChartsPresentation({
+    kind: "echarts",
+    option: {
+      title: { text: "Capacity" },
+      legend: { data: ["Observed"] },
+      tooltip: { trigger: "axis" },
+      yAxis: { name: "Capacity", axisLabel: {} },
+      series: [{ type: "bar", label: {} }],
+    },
+  }, { presentation: { title: { align: "left" } } }, false, {
+    bodyFont: "Body Token Stack",
+    headingFont: "Heading Token Stack",
+    dataFont: "Data Token Stack",
+    typographyKey: "fonts-v1",
+  });
+
+  assert.equal(presented.option.title.textStyle.fontFamily, "Heading Token Stack");
+  assert.equal(presented.option.legend.textStyle.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.tooltip.textStyle.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.yAxis.nameTextStyle.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.yAxis.axisLabel.fontFamily, "Data Token Stack");
+  assert.equal(presented.option.series[0].label.fontFamily, "Data Token Stack");
+  assert.equal(presented.valueAxisTitleTextTheme.bodyFont, "Body Token Stack");
+  assert.equal(presented.valueAxisTitleTextTheme.dataFont, "Data Token Stack");
+});
+
+test("ECharts projects gauge titles and numeric labels into body and data fonts", () => {
+  const presented = applyEChartsPresentation({
+    kind: "echarts",
+    option: {
+      series: [{
+        type: "gauge",
+        title: {},
+        detail: {},
+        axisLabel: {},
+      }],
+    },
+  }, { presentation: { title: { align: "left" } } }, false, {
+    bodyFont: "Body Token Stack",
+    dataFont: "Data Token Stack",
+  });
+
+  assert.equal(presented.option.series[0].title.fontFamily, "Body Token Stack");
+  assert.equal(presented.option.series[0].detail.fontFamily, "Data Token Stack");
+  assert.equal(presented.option.series[0].axisLabel.fontFamily, "Data Token Stack");
+});
+
 test("bullet and pie charts inherit the active dashboard data palette unless authored", () => {
   const theme = {
     textStrong: "#F8FAF9",
@@ -486,6 +635,7 @@ test("equivalent chart text themes compare data palettes by value", () => {
   };
   assert.equal(sameChartTextTheme(current, next), true);
   assert.equal(sameChartTextTheme(current, { ...next, dataColors: ["#4E79A7", "#E15759"] }), false);
+  assert.equal(sameChartTextTheme(current, { ...next, typographyKey: "fonts-v2" }), false);
 });
 
 test("axis series honor validated label visibility, position, and formatting", () => {
@@ -533,6 +683,817 @@ test("forced category dates never become an ECharts time axis", () => {
 
   assert.equal(model.option.xAxis.type, "category");
   assert.deepEqual(model.option.xAxis.data, ["2027-05-01"]);
+});
+
+test("axis presentation renders X and value titles, ranges, ticks, and temporal labels without coercing category dates", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            title: "Reported at",
+            min: "2027-01-01",
+            max: "2027-12-31",
+            labelPreset: "ddMmmYearBoundary",
+            tickFrequency: { every: 2, unit: "month" },
+          },
+          primary: {
+            title: "Cases",
+            titlePosition: "top",
+            titleOrientation: "horizontal",
+            tickFrequency: { every: 5 },
+          },
+          secondary: { title: "Rate" },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-03-01", value: 2, measure: "rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.name, "Reported at");
+  assert.equal(model.option.xAxis.type, "time");
+  assert.equal(model.option.xAxis.min, "2027-01-01");
+  assert.equal(model.option.xAxis.max, "2027-12-31");
+  assert.equal(model.option.xAxis.interval, undefined);
+  assert.equal(typeof model.option.xAxis.axisLabel.formatter, "function");
+  assert.equal(model.option.yAxis[0].name, undefined);
+  assert.deepEqual(
+    model.valueAxisTitleProjection.map(({ title, position, orientation }) => ({ title, position, orientation })),
+    [
+      { title: "Cases", position: "top", orientation: "horizontal" },
+      { title: "Rate", position: "center", orientation: "vertical" },
+    ],
+  );
+  assert.equal(model.option.yAxis[0].interval, 5);
+  assert.equal(model.option.yAxis[1].name, undefined);
+  const label = model.option.xAxis.axisLabel.formatter;
+  assert.equal(label("2027-12-31T00:00:00Z"), "31 Dec 2027");
+  assert.equal(
+    label("2027-12-31T00:00:00Z"),
+    "31 Dec 2027",
+    "re-rendering the same tick must not silently change its label",
+  );
+  assert.equal(label("2028-01-02T00:00:00Z"), "02 Jan 2028");
+  assert.equal(label("2028-04-01T00:00:00Z", 2), "01 Apr");
+  const midYear = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { labelPreset: "ddMmmYearBoundary" } },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-07-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  assert.equal(midYear.option.xAxis.axisLabel.formatter("2027-07-01T00:00:00Z"), "01 Jul 2027");
+  const unorderedLabel = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            labelPreset: "ddMmmYearBoundary",
+            tickFrequency: { every: 1, unit: "month" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-12-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2028-02-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  }).option.xAxis.axisLabel.formatter;
+  assert.equal(unorderedLabel("2028-02-01T00:00:00Z", 2), "01 Feb");
+  assert.equal(unorderedLabel("2028-01-01T00:00:00Z", 1), "01 Jan 2028");
+
+  const category = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { title: "Recorded date", tickFrequency: { every: 2 } } },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-05-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-05-02", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "category" }),
+  });
+  assert.equal(category.option.xAxis.type, "category");
+  assert.equal(category.option.xAxis.interval, undefined);
+  assert.equal(category.option.xAxis.axisLabel.interval, 1);
+  assert.equal(category.option.xAxis.axisTick.interval, 1);
+  assert.deepEqual(category.option.xAxis.data, ["2027-05-01", "2027-05-02"]);
+});
+
+test("primary and secondary Y-axis titles keep visible clearance from wide tick labels", () => {
+  const width = 500;
+  const marks = (x, value, axis, measure) => ({
+    x,
+    value,
+    measure,
+    measureLabel: measure,
+    clusterKey: "",
+    groupKey: "",
+    axis,
+  });
+
+  for (const titlePosition of ["top", "center", "bottom"]) {
+    for (const titleOrientation of ["vertical", "horizontal"]) {
+      const model = buildRenderModel({
+        chart: chart("mixed", {
+          presentation: {
+            title: { align: "left" },
+            collection: null,
+            axes: {
+              primary: {
+                title: "Primary Y title",
+                titlePosition,
+                titleOrientation,
+              },
+              secondary: {
+                title: "Secondary Y title",
+                titlePosition,
+                titleOrientation,
+              },
+            },
+          },
+        }),
+        prepared: ready([
+          marks("A", 123_456_789, "primary", "Cases"),
+          marks("B", 987_654_321, "primary", "Cases"),
+          marks("A", 234_567_890, "secondary", "Rate"),
+          marks("B", 876_543_210, "secondary", "Rate"),
+        ], { axisInterpretation: "category" }),
+      });
+      const bounds = renderedProjectedTextBounds(model, width, 320);
+      const numericLabels = bounds.filter(({ text }) => /^-?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text));
+      const primaryLabels = numericLabels.filter(({ right }) => right < width / 2);
+      const secondaryLabels = numericLabels.filter(({ left }) => left > width / 2);
+      const primaryTitle = bounds.find(({ text }) => text === "Primary Y title");
+      const secondaryTitle = bounds.find(({ text }) => text === "Secondary Y title");
+      const context = `${titlePosition}/${titleOrientation}`;
+      const separated = (title, label) => (
+        title.right + 8 <= label.left
+        || title.left - 8 >= label.right
+        || title.bottom + 8 <= label.top
+        || title.top - 8 >= label.bottom
+      );
+
+      assert.ok(primaryTitle && secondaryTitle, `${context}: both Y-axis titles render`);
+      assert.ok(primaryLabels.length > 0 && secondaryLabels.length > 0, `${context}: both value axes render tick labels`);
+      assert.ok(
+        primaryTitle.left >= 0 && primaryTitle.right <= width
+          && primaryTitle.top >= 0 && primaryTitle.bottom <= 320,
+        `${context}: primary title remains inside the chart canvas`,
+      );
+      assert.ok(
+        secondaryTitle.left >= 0 && secondaryTitle.right <= width
+          && secondaryTitle.top >= 0 && secondaryTitle.bottom <= 320,
+        `${context}: secondary title remains inside the chart canvas`,
+      );
+      assert.ok(primaryLabels.every((label) => separated(primaryTitle, label)), `${context}: primary title keeps 8px tick-label clearance`);
+      assert.ok(secondaryLabels.every((label) => separated(secondaryTitle, label)), `${context}: secondary title keeps 8px tick-label clearance`);
+    }
+  }
+});
+
+test("value axes suppress native names and project stable vertical and horizontal title metadata", () => {
+  const vertical = buildRenderModel({
+    chart: chart("mixed", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: { title: "Recorded date" },
+          primary: { title: "Cases", titlePosition: "top", titleOrientation: "vertical" },
+          secondary: { title: "Rate", titlePosition: "bottom", titleOrientation: "horizontal" },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "A", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "A", value: 4, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    ], { axisInterpretation: "category" }),
+  });
+
+  assert.equal(vertical.option.xAxis.name, "Recorded date");
+  assert.deepEqual(vertical.option.yAxis.map(({ name }) => name), [undefined, undefined]);
+  assert.deepEqual(
+    vertical.valueAxisTitleProjection.map(({ id, physicalAxis, side, title, position, orientation }) => ({
+      id, physicalAxis, side, title, position, orientation,
+    })),
+    [
+      { id: "primary", physicalAxis: "y", side: "left", title: "Cases", position: "top", orientation: "vertical" },
+      { id: "secondary", physicalAxis: "y", side: "right", title: "Rate", position: "bottom", orientation: "horizontal" },
+    ],
+  );
+
+  const horizontal = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: { title: "Native X title" },
+          primary: { title: "Primary value", titleFontSize: 10, titleBold: true },
+          secondary: {
+            title: "Secondary value",
+            titleFontSize: 24,
+            titleOffsetX: -12,
+            titleOffsetY: 9,
+            min: -20,
+            max: 80,
+            tickFrequency: { every: 5 },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "A", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "A", value: 4, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    ], { axisInterpretation: "category" }),
+  });
+
+  assert.deepEqual(horizontal.option.xAxis.map(({ name }) => name), [undefined, undefined]);
+  assert.equal(horizontal.option.yAxis.name, "Native X title");
+  assert.equal(horizontal.option.yAxis.nameRotate, 90);
+  assert.equal(horizontal.option.xAxis[1].min, -20);
+  assert.equal(horizontal.option.xAxis[1].max, 80);
+  assert.equal(horizontal.option.xAxis[1].interval, 5);
+  assert.deepEqual(
+    horizontal.valueAxisTitleProjection.map(({ id, physicalAxis, side, fontSize, bold, offsetX, offsetY }) => ({
+      id, physicalAxis, side, fontSize, bold, offsetX, offsetY,
+    })),
+    [
+      { id: "primary", physicalAxis: "x", side: "bottom", fontSize: 10, bold: true, offsetX: 0, offsetY: 0 },
+      { id: "secondary", physicalAxis: "x", side: "top", fontSize: 24, bold: false, offsetX: -12, offsetY: 9 },
+    ],
+  );
+});
+
+test("semantic observation and measurement axes project to the correct physical axes in both orientations", () => {
+  const axes = {
+    x: { title: "Observation", tickFrequency: { every: 2 } },
+    primary: { title: "Primary measure", min: 0, max: 90, tickFrequency: { every: 10 } },
+    secondary: { title: "Secondary measure", min: -20, max: 80, tickFrequency: { every: 5 } },
+  };
+  const prepared = ready([
+    { x: "A", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+    { x: "B", value: 18, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+    { x: "A", value: 4, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+    { x: "B", value: 8, measure: "Rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary" },
+  ], { axisInterpretation: "category" });
+
+  const vertical = buildRenderModel({
+    chart: chart("mixed", { presentation: { collection: null, axes } }),
+    prepared,
+  });
+  assert.equal(vertical.option.xAxis.name, "Observation");
+  assert.equal(vertical.option.xAxis.axisLabel.interval, 1);
+  assert.deepEqual(
+    vertical.option.yAxis.map(({ name, min, max, interval }) => ({ name, min, max, interval })),
+    [
+      { name: undefined, min: 0, max: 90, interval: 10 },
+      { name: undefined, min: -20, max: 80, interval: 5 },
+    ],
+  );
+
+  const horizontal = buildRenderModel({
+    chart: chart("horizontalBar", { presentation: { collection: null, axes } }),
+    prepared,
+  });
+  assert.equal(horizontal.option.yAxis.name, "Observation");
+  assert.equal(horizontal.option.yAxis.axisLabel.interval, 1);
+  assert.deepEqual(
+    horizontal.option.xAxis.map(({ name, min, max, interval }) => ({ name, min, max, interval })),
+    [
+      { name: undefined, min: 0, max: 90, interval: 10 },
+      { name: undefined, min: -20, max: 80, interval: 5 },
+    ],
+  );
+  assert.deepEqual(
+    horizontal.valueAxisTitleProjection.map(({ title, physicalAxis, side }) => ({ title, physicalAxis, side })),
+    [
+      { title: "Primary measure", physicalAxis: "x", side: "bottom" },
+      { title: "Secondary measure", physicalAxis: "x", side: "top" },
+    ],
+  );
+});
+
+test("horizontal temporal observation settings project to the physical category axis", () => {
+  const model = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        collection: null,
+        axes: {
+          x: {
+            title: "Reported at",
+            min: "2027-01-01",
+            max: "2027-01-05",
+            labelPreset: "ddMmYyyy",
+            tickFrequency: { every: 2, unit: "day" },
+          },
+          primary: { title: "Cases", min: 0, max: 20, tickFrequency: { every: 5 } },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-01-05", value: 12, measure: "Cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.yAxis.type, "value");
+  assert.equal(model.option.yAxis.name, "Reported at");
+  assert.equal(model.option.yAxis.min, new Date(2027, 0, 1).valueOf());
+  assert.equal(model.option.yAxis.max, new Date(2027, 0, 5).valueOf());
+  assert.equal(model.option.yAxis.interval, 2 * 24 * 60 * 60 * 1000);
+  assert.equal(typeof model.option.yAxis.axisLabel.formatter, "function");
+  assert.deepEqual(
+    model.option.xAxis,
+    {
+      type: "value",
+      interval: 5,
+      min: 0,
+      max: 20,
+      splitLine: { show: true },
+    },
+  );
+  assert.deepEqual(model.option.series[0].data, [
+    [4, new Date(2027, 0, 1).valueOf()],
+    [12, new Date(2027, 0, 5).valueOf()],
+  ]);
+});
+
+test("value-axis title graphics apply size, weight, offsets, clearance, and positive Y upward", () => {
+  const gridRect = { x: 120, y: 80, width: 360, height: 220 };
+  const textTheme = { bodyFont: "Body Token Stack", textMuted: "#49627A" };
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    horizontal: false,
+    secondary: false,
+    settings: {
+      title: "Cumulative cases",
+      titleFontSize: 24,
+      titleBold: true,
+      titlePosition: "center",
+      titleOrientation: "vertical",
+    },
+    tickValues: [0, 1000],
+  });
+  const base = resolveValueAxisTitleGraphics({ projection, gridRect, textTheme });
+  const moved = resolveValueAxisTitleGraphics({
+    projection: { ...projection, titleOffsetX: -12, titleOffsetY: 9 },
+    gridRect,
+    textTheme,
+  });
+
+  assert.equal(base.length, 1);
+  assert.equal(base[0].id, "simex-value-axis-title-primary");
+  assert.equal(base[0].style.fontFamily, "Body Token Stack");
+  assert.equal(base[0].style.fontSize, 24);
+  assert.equal(base[0].style.fontWeight, 700);
+  assert.equal(moved[0].left, base[0].left - 12);
+  assert.equal(moved[0].top, base[0].top - 9);
+  assert.ok(base[0].left + base[0].textBounds.width <= gridRect.x - 16, "zero offset leaves the tick margin plus at least 8px title clearance");
+
+  const horizontal = createValueAxisTitleProjection({
+    id: "secondary",
+    horizontal: true,
+    secondary: true,
+    settings: { title: "Rate", titleFontSize: 10, titleOrientation: "horizontal" },
+    tickValues: [-100, 100],
+  });
+  const horizontalGraphic = resolveValueAxisTitleGraphics({ projection: horizontal, gridRect, textTheme })[0];
+  assert.equal(horizontalGraphic.id, "simex-value-axis-title-secondary");
+  assert.equal(horizontalGraphic.style.fontSize, 10);
+  assert.equal(horizontalGraphic.style.fontWeight, 400);
+  assert.ok(horizontalGraphic.top + horizontalGraphic.textBounds.height <= gridRect.y - 16);
+
+  const horizontalPrimary = createValueAxisTitleProjection({
+    id: "primary",
+    horizontal: true,
+    secondary: false,
+    settings: { title: "Confirmed cases", titleOrientation: "horizontal" },
+    tickValues: [0, 100],
+  });
+  const below = resolveValueAxisTitleGraphics({ projection: horizontalPrimary, gridRect, textTheme })[0];
+  const shifted = resolveValueAxisTitleGraphics({
+    projection: { ...horizontalPrimary, titleOffsetX: 12, titleOffsetY: -9 },
+    gridRect,
+    textTheme,
+  })[0];
+  assert.ok(below.top >= gridRect.y + gridRect.height + 16);
+  assert.equal(shifted.left, below.left + 12);
+  assert.equal(shifted.top, below.top + 9);
+});
+
+test("value-axis tick clearance uses data-font metrics while title bounds use body-font metrics", () => {
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    horizontal: false,
+    settings: { title: "Cases", titleOrientation: "horizontal" },
+    tickValues: [8888],
+  });
+  const measured = [];
+  const measureText = (text, fontSize, fontWeight, fontFamily) => {
+    measured.push({ text, fontSize, fontWeight, fontFamily });
+    return fontFamily === "Data Metric Font"
+      ? { width: 90, height: 12 }
+      : { width: 20, height: 10 };
+  };
+  const textTheme = {
+    bodyFont: "Body Metric Font",
+    dataFont: "Data Metric Font",
+    textMuted: "#49627A",
+  };
+  const gridRect = { x: 140, y: 60, width: 320, height: 180 };
+
+  const gutters = valueAxisTitleGutters(projection, textTheme, measureText);
+  const graphic = resolveValueAxisTitleGraphics({
+    projection,
+    gridRect,
+    textTheme,
+    measureText,
+  })[0];
+
+  assert.equal(gutters.left, 126);
+  assert.deepEqual(graphic.textBounds, { width: 20, height: 10 });
+  assert.equal(graphic.left, 14);
+  assert.equal(graphic.style.fontFamily, "Body Metric Font");
+  assert.ok(measured.some(({ text, fontFamily }) => text === "Cases" && fontFamily === "Body Metric Font"));
+  assert.ok(measured.some(({ text, fontFamily }) => text.includes("8") && fontFamily === "Data Metric Font"));
+});
+
+test("positive-only domains do not reserve a negative numeric envelope", () => {
+  const base = {
+    id: "primary",
+    horizontal: false,
+    secondary: false,
+    settings: { title: "Cases", min: 0, max: 1000 },
+  };
+  const positive = createValueAxisTitleProjection({ ...base, tickValues: [0, 1000] });
+  const negative = createValueAxisTitleProjection({
+    ...base,
+    settings: { ...base.settings, min: -1000 },
+    tickValues: [-1000, 1000],
+  });
+  const theme = { bodyFont: "Body Token Stack" };
+
+  assert.equal(positive.domainCanBeNegative, false);
+  assert.equal(negative.domainCanBeNegative, true);
+  assert.ok(valueAxisTitleGutters(negative, theme).left > valueAxisTitleGutters(positive, theme).left);
+});
+
+test("ECharts lifecycle replaces stable value-axis graphics after updates and resize", () => {
+  const options = [];
+  let resizeListener;
+  let rect = { x: 120, y: 80, width: 360, height: 220 };
+  const instance = {
+    setOption(option) { options.push(option); },
+    resize() {},
+    getModel() {
+      return {
+        getComponent() {
+          return { coordinateSystem: { getRect: () => rect } };
+        },
+      };
+    },
+    on() {},
+    off() {},
+    dispose() {},
+  };
+  const lifecycle = createEChartsLifecycle({
+    echartsApi: {
+      getInstanceByDom() { return null; },
+      init() { return instance; },
+      registerMap() {},
+    },
+    windowTarget: {
+      addEventListener(type, listener) { if (type === "resize") resizeListener = listener; },
+      removeEventListener() {},
+    },
+    ResizeObserverCtor: null,
+  });
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    settings: { title: "Cases" },
+    tickValues: [0, 100],
+  });
+
+  lifecycle.mount({});
+  lifecycle.update({
+    option: { grid: {} },
+    valueAxisTitleProjection: [projection],
+    valueAxisTitleTextTheme: { bodyFont: "Body Token Stack", textMuted: "#49627A" },
+  });
+  assert.equal(options.length, 2);
+  assert.equal(options[1].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[1].graphic[0].$action, "replace");
+  const firstLeft = options[1].graphic[0].left;
+
+  rect = { ...rect, x: 150 };
+  resizeListener();
+  assert.equal(options.length, 3);
+  assert.equal(options[2].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[2].graphic[0].left, firstLeft + 30);
+
+  lifecycle.update({ option: { grid: {} }, valueAxisTitleProjection: [] });
+  assert.equal(options[4].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[4].graphic[0].$action, "remove");
+  lifecycle.dispose();
+});
+
+test("centered Y-axis titles keep clearance for fractional ticks at zero, unit, and extreme scales", () => {
+  const width = 500;
+  for (const value of [0, 1, 1e-12, 1e21, 1e24]) {
+    for (const titleOrientation of ["vertical", "horizontal"]) {
+      const model = buildRenderModel({
+        chart: chart("mixed", {
+          presentation: {
+            title: { align: "left" },
+            collection: null,
+            axes: {
+              primary: {
+                title: "Primary Y title",
+                titlePosition: "center",
+                titleOrientation,
+              },
+              secondary: {
+                title: "Secondary Y title",
+                titlePosition: "center",
+                titleOrientation,
+              },
+            },
+          },
+        }),
+        prepared: ready([
+          {
+            x: "A",
+            value,
+            measure: "Cases",
+            measureLabel: "Cases",
+            clusterKey: "",
+            groupKey: "",
+            axis: "primary",
+          },
+          {
+            x: "A",
+            value,
+            measure: "Rate",
+            measureLabel: "Rate",
+            clusterKey: "",
+            groupKey: "",
+            axis: "secondary",
+          },
+        ], { axisInterpretation: "category" }),
+      });
+      const bounds = renderedProjectedTextBounds(model, width, 320);
+      const numericLabels = bounds.filter(({ text }) => /^-?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(text));
+      assert.equal(numericLabels.length % 2, 0, `${value}: both value axes render the same tick count`);
+      const axisTickCount = numericLabels.length / 2;
+      const primaryLabels = numericLabels.slice(0, axisTickCount);
+      const secondaryLabels = numericLabels.slice(axisTickCount);
+      const primaryTitle = bounds.find(({ text }) => text === "Primary Y title");
+      const secondaryTitle = bounds.find(({ text }) => text === "Secondary Y title");
+      const separated = (title, label) => (
+        title.right + 8 <= label.left
+        || title.left - 8 >= label.right
+        || title.bottom + 8 <= label.top
+        || title.top - 8 >= label.bottom
+      );
+
+      const context = `${value}/${titleOrientation}`;
+      assert.ok(primaryTitle && secondaryTitle, `${context}: both Y-axis titles render`);
+      assert.ok(primaryLabels.length > 0 && secondaryLabels.length > 0, `${context}: both fractional value axes render`);
+      assert.ok(primaryLabels.every((label) => separated(primaryTitle, label)), `${context}: primary title keeps 8px tick-label clearance`);
+      assert.ok(secondaryLabels.every((label) => separated(secondaryTitle, label)), `${context}: secondary title keeps 8px tick-label clearance`);
+    }
+  }
+});
+
+test("monthly cadence stays aligned to calendar month boundaries", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-07-01",
+            tickFrequency: { every: 2, unit: "month" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-07-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.type, "time");
+  assert.deepEqual(renderedXAxisDates(model.option), [
+    "2027-01-01",
+    "2027-03-01",
+    "2027-05-01",
+    "2027-07-01",
+  ]);
+
+  const quarterly = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-07-01",
+            tickFrequency: { every: 3, unit: "month" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-07-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  assert.deepEqual(renderedXAxisDates(quarterly.option), [
+    "2027-01-01",
+    "2027-04-01",
+    "2027-07-01",
+  ]);
+});
+
+test("yearly cadence stays aligned through leap years", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2031-01-01",
+            tickFrequency: { every: 2, unit: "year" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2031-01-01", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.type, "time");
+  assert.deepEqual(renderedXAxisDates(model.option), [
+    "2027-01-01",
+    "2029-01-01",
+    "2031-01-01",
+  ]);
+});
+
+test("horizontal bars keep the observation title on the category axis", () => {
+  const model = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: { title: "Ward", tickFrequency: { every: 2 } },
+          primary: { title: "Confirmed cases", min: 0, max: 100 },
+        },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.equal(model.option.yAxis.name, "Ward");
+  assert.equal(model.option.yAxis.nameRotate, 90);
+  assert.equal(model.option.yAxis.axisLabel.interval, 1);
+  assert.equal(model.option.xAxis[0].name, undefined);
+  assert.equal(model.option.xAxis[0].min, 0);
+  assert.equal(model.option.xAxis[0].max, 100);
+
+  const fallback = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { primary: { title: "Fallback value title" } },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  assert.equal(fallback.option.xAxis[0].name, undefined);
+  assert.deepEqual(
+    fallback.valueAxisTitleProjection.map(({ title, physicalAxis, side, orientation }) => ({ title, physicalAxis, side, orientation })),
+    [{ title: "Fallback value title", physicalAxis: "x", side: "bottom", orientation: "horizontal" }],
+  );
+});
+
+test("configured temporal cadence controls the rendered date ticks", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-01-31",
+            labelPreset: "ddMmYyyy",
+            tickFrequency: { every: 3, unit: "day" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-01-31", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  const svg = renderSvg(model.option, 800, 400);
+
+  assert.equal(model.option.xAxis.type, "value");
+  assert.match(svg, />01-01-2027</);
+  assert.match(svg, />04-01-2027</);
+  assert.match(svg, />07-01-2027</);
+  assert.match(svg, />31-01-2027</);
+  assert.doesNotMatch(svg, />05-01-2027</);
+});
+
+test("adaptive labels remain readable when fixed cadence requires a numeric time axis", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: "2027-01-01",
+            max: "2027-01-07",
+            tickFrequency: { every: 3, unit: "day" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: "2027-01-07", value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  const formatter = model.option.xAxis.axisLabel.formatter;
+  const secondTick = new Date(2027, 0, 4).valueOf();
+  assert.equal(model.option.xAxis.type, "value");
+  assert.equal(typeof formatter, "function");
+  assert.equal(formatter(secondTick, 1), "4");
+  assert.equal(formatter(new Date(2027, 1, 1).valueOf(), 1), "Feb");
+  assert.equal(formatter(new Date(2028, 0, 1).valueOf(), 1), "2028");
+  assert.notEqual(formatter(secondTick, 1), String(secondTick));
+});
+
+test("fixed cadence preserves datetime-local bounds and data semantics", () => {
+  const minimum = "2027-03-28T09:30";
+  const maximum = "2027-03-30T09:30";
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: {
+            min: minimum,
+            max: maximum,
+            tickFrequency: { every: 1, unit: "day" },
+          },
+        },
+      },
+    }),
+    prepared: ready([
+      { x: minimum, value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+      { x: maximum, value: 6, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(model.option.xAxis.type, "value");
+  assert.equal(model.option.xAxis.min, Date.parse(minimum));
+  assert.equal(model.option.xAxis.max, Date.parse(maximum));
+  assert.equal(model.option.series[0].data[0][0], Date.parse(minimum));
+  assert.equal(model.option.series[0].data[1][0], Date.parse(maximum));
 });
 
 test("field-only observations use canonical preparation metadata without downstream inference", () => {

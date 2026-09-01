@@ -1850,7 +1850,9 @@
                 }
               },
               "layout": {
-                "size": "wide"
+                "size": "wide",
+                "width": 4,
+                "height": 1
               }
             }
           ]
@@ -2583,7 +2585,9 @@
                 }
               },
               "layout": {
-                "size": "wide"
+                "size": "wide",
+                "width": 4,
+                "height": 1
               }
             },
             {

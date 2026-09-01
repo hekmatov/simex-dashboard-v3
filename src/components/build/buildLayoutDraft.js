@@ -8,7 +8,7 @@ import {
 } from "./immutableDashboardLayout.js";
 
 export function createBuildLayoutDraft(dashboard) {
-  const baseline = structuredClone(dashboard);
+  const baseline = cloneLayoutStructure(dashboard);
   return {
     draftId: `layout:${String(dashboard?.id ?? "dashboard")}`,
     kind: "layout",
@@ -18,7 +18,7 @@ export function createBuildLayoutDraft(dashboard) {
     activity: "active",
     surface: "dashboard-map",
     baseline,
-    value: structuredClone(baseline),
+    value: cloneLayoutStructure(baseline),
     error: null,
     revision: 0,
   };
@@ -328,6 +328,16 @@ function repairLandingRoutes(dashboard, mergedPageId, mergeTargetPageId) {
     };
   });
   return changed ? { ...dashboard, pages } : dashboard;
+}
+
+function cloneLayoutStructure(dashboard = {}) {
+  return {
+    ...dashboard,
+    pages: (dashboard.pages ?? []).map((page) => ({
+      ...page,
+      sections: [...(page.sections ?? [])],
+    })),
+  };
 }
 
 function markDirty(draft, targetId, value = draft.value) {

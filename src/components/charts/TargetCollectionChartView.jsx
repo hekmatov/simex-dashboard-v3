@@ -12,9 +12,10 @@ export default function TargetCollectionChartView({
   model,
   chart = {},
   provenance,
-  accessibilityEnabled = false,
+  accessibilityEnabled: _accessibilityEnabled = false,
   interactionMode = "active",
 }) {
+  const accessibilityEnabled = false;
   const titleId = React.useId();
   const descriptionId = React.useId();
   const controlsPortalId = `collection-controls-${React.useId()}`;

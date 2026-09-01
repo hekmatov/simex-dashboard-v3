@@ -536,20 +536,76 @@ export default function ChartEditorV3({
     onReset();
   };
 
+  const preview = React.createElement(
+    "div",
+    { className: "chart-editor-preview" },
+    React.createElement(ChartPreview, {
+      key: `${state.draft.id}:${state.previewRevision}`,
+      chart: state.draft,
+      rows: safeRows,
+      geoData: selectedGeoData,
+      datasetProfile: profile,
+      prepared,
+      diagnosticNamespace: state.draft.id,
+    }),
+  );
+  const editorError = state.error && !state.conversion
+    ? React.createElement(
+        "p",
+        { className: "wizard-error chart-editor-error dashboard-authoring-field--wide", role: "alert" },
+        state.error,
+      )
+    : null;
+  const contextualTabs = (shellLayout = false) => React.createElement(ContextualTabs, {
+    sections: model.sections,
+    activeTabId: state.activeTabId,
+    onSelect: (tabId) => dispatch({ type: "selectTab", tabId }),
+    onChange: updateChartPath,
+    chart: state.draft,
+    charts: allCharts,
+    columns: profile?.columns ?? [],
+    profile,
+    diagnostics: prepared?.diagnostics ?? [],
+    diagnosticNamespace: state.draft.id,
+    loadedData: runtimeLoadedData,
+    profiles: runtimeProfiles,
+    dataSources,
+    onApplyCitationToSourceCharts,
+    onMembershipChange: changeMembership,
+    onGroupsChange: (value) => dispatch({
+      type: "updateChronoGroups",
+      value,
+    }),
+    onValidationError: (error) => setState((current) => ({
+      ...current,
+      error: safeMessage(error),
+    })),
+    shellLayout,
+    shellLead: shellLayout ? preview : null,
+    shellTail: shellLayout ? editorError : null,
+  });
+
   const content = React.createElement(
       "aside",
       {
-        className: "chart-editor-v3",
+        className: surface === "inspector"
+          ? "chart-editor-v3"
+          : "chart-editor-v3 dashboard-dialog dashboard-dialog--wide",
         "aria-labelledby": "chart-editor-title",
         "aria-busy": disabled || submitting ? "true" : undefined,
         inert: disabled || submitting ? "" : undefined,
       },
       React.createElement(
         "form",
-        { onSubmit: submit },
+        {
+          className: surface === "inspector"
+            ? "chart-editor-form"
+            : "chart-editor-form dashboard-authoring-shell",
+          onSubmit: submit,
+        },
         React.createElement(
           "header",
-          { className: "chart-editor-header" },
+          { className: `chart-editor-header${surface === "inspector" ? "" : " dashboard-dialog__header"}` },
           React.createElement(
             "div",
             null,
@@ -602,66 +658,33 @@ export default function ChartEditorV3({
           }),
         ),
         React.createElement(
-          "div",
-          { className: "chart-editor-layout" },
-          React.createElement(
-            "div",
-            { className: "chart-editor-preview" },
-            React.createElement(ChartPreview, {
-              key: `${state.draft.id}:${state.previewRevision}`,
-              chart: state.draft,
-              rows: safeRows,
-              geoData: selectedGeoData,
-              datasetProfile: profile,
-              prepared,
-              diagnosticNamespace: state.draft.id,
-            }),
-          ),
-          React.createElement(ContextualTabs, {
-            sections: model.sections,
-            activeTabId: state.activeTabId,
-            onSelect: (tabId) => dispatch({ type: "selectTab", tabId }),
-            onChange: updateChartPath,
-            chart: state.draft,
-            charts: allCharts,
-            columns: profile?.columns ?? [],
-            profile,
-            diagnostics: prepared?.diagnostics ?? [],
-            diagnosticNamespace: state.draft.id,
-            loadedData: runtimeLoadedData,
-            profiles: runtimeProfiles,
-            dataSources,
-            onApplyCitationToSourceCharts,
-            onMembershipChange: changeMembership,
-            onGroupsChange: (value) => dispatch({
-              type: "updateChronoGroups",
-              value,
-            }),
-            onValidationError: (error) => setState((current) => ({
-              ...current,
-              error: safeMessage(error),
-            })),
+          surface === "inspector" ? "div" : React.Fragment,
+          surface === "inspector" ? { className: "chart-editor-layout" } : null,
+          surface === "inspector" ? preview : null,
+          contextualTabs(surface !== "inspector"),
+          surface === "inspector" ? editorError : null,
+        ),
+        React.createElement(
+          surface === "inspector" ? React.Fragment : "footer",
+          surface === "inspector"
+            ? null
+            : {
+                className: "dashboard-dialog__footer dashboard-authoring-footer",
+                "data-authoring-track": "footer",
+              },
+          React.createElement(EditSessionActions, {
+            valid: model.valid,
+            submitting,
+            disabled,
+            resetConfirmationOpen: state.confirmation === "reset",
+            onRequestReset: () => dispatch({ type: "requestReset" }),
+            onConfirmReset: confirmReset,
+            onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
+            onSave: submit,
+            onCancel: dismissEditor,
+            onRemove,
           }),
         ),
-        state.error && !state.conversion
-          ? React.createElement(
-              "p",
-              { className: "wizard-error chart-editor-error", role: "alert" },
-              state.error,
-            )
-          : null,
-        React.createElement(EditSessionActions, {
-          valid: model.valid,
-          submitting,
-          disabled,
-          resetConfirmationOpen: state.confirmation === "reset",
-          onRequestReset: () => dispatch({ type: "requestReset" }),
-          onConfirmReset: confirmReset,
-          onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
-          onSave: submit,
-          onCancel: dismissEditor,
-          onRemove,
-        }),
       ),
       React.createElement(ChartConversionDialog, {
         conversion: state.conversion,

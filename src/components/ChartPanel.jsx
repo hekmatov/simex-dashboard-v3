@@ -54,6 +54,8 @@ function ChartPanel({
   onStartSection,
 }) {
   const chart = panel?.chart ?? panel;
+  const panelLabel = String(chart.title ?? "").trim()
+    || (["freeText", "image"].includes(chart.typeId) ? "Text/Image panel" : chart.id || "Panel");
   const playback = useOptionalPlayback();
   const chronoAvailability = playback?.availabilityVisible === true
     ? playback.frameAvailabilityByChartId?.[chart.id] ?? null
@@ -165,7 +167,7 @@ function ChartPanel({
       onDropCapture={onDrop}
       onDragEnd={onDragEnd}
     >
-      {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
+      {editMode && <div className="panel-actions" aria-label={`${panelLabel} actions`}>
         {editMode && (
           <>
             <IconControl
@@ -173,7 +175,7 @@ function ChartPanel({
               className="secondary panel-move-handle"
               tooltipPlacement="below"
               disabled={editDisabled}
-              ariaLabel={`Move panel ${chart.title}`}
+              ariaLabel={`Move panel ${panelLabel}`}
               tooltip="Move panel"
               draggable={!editDisabled}
               onClick={(event) => {

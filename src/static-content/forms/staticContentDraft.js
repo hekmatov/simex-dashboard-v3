@@ -32,6 +32,22 @@ export const STATIC_CONTENT_STAGE_LABELS = Object.freeze([
   "Preview & add",
 ]);
 
+export function staticContentStageReadiness(state, stage, { previewReady = true } = {}) {
+  requireStage(stage);
+  try {
+    validateStageEntry(state, stage);
+    if (stage === "preview-and-add" && !previewReady) {
+      throw new Error("Wait for the current content preview to finish validating.");
+    }
+    return Object.freeze({ ready: true, reason: "" });
+  } catch (error) {
+    return Object.freeze({
+      ready: false,
+      reason: error?.message || "This stage is not ready.",
+    });
+  }
+}
+
 export function createStaticContentDraft(options = {}) {
   const mode = options.mode === "edit" ? "edit" : "create";
   const contentTypeId = normalizeTypeId(options.contentTypeId ?? options.panel?.typeId ?? null);
@@ -42,9 +58,11 @@ export function createStaticContentDraft(options = {}) {
   const imageEditing = createImageEditing(placement);
   const destination = clone(options.destination);
   const baselineStage = mode === "edit" ? "content" : "destination";
+  const noTitle = initialNoTitleChoice(options, mode, panel);
   const baseline = {
     destination: clone(destination),
     contentTypeId,
+    noTitle,
     panel: clone(panel),
     placement: clone(placement),
     mediaItem: clone(mediaItem),
@@ -59,6 +77,7 @@ export function createStaticContentDraft(options = {}) {
     status: "editing",
     destination,
     contentTypeId,
+    noTitle,
     draftIdentity,
     panel,
     source: placement,
@@ -82,16 +101,27 @@ export function createStaticContentDraft(options = {}) {
 export function reduceStaticContentDraft(state, action = {}) {
   requireDraft(state);
   switch (action.type) {
+    case "trySetStage": {
+      requireStage(action.stage);
+      return tryStageTransition(state, action.stage, { previewReady: action.previewReady });
+    }
+    case "tryNext": {
+      const currentIndex = STATIC_CONTENT_STAGES.indexOf(state.stage);
+      if (currentIndex >= STATIC_CONTENT_STAGES.length - 1) return state;
+      return tryStageTransition(state, STATIC_CONTENT_STAGES[currentIndex + 1], {
+        previewReady: action.previewReady,
+      });
+    }
     case "setStage": {
       requireStage(action.stage);
-      validateStageEntry(state, action.stage);
+      requireStaticContentStageReady(state, action.stage);
       return { ...state, stage: action.stage, validation: { errors: [], warnings: [] }, focusRequest: null };
     }
     case "next": {
       const currentIndex = STATIC_CONTENT_STAGES.indexOf(state.stage);
       if (currentIndex >= STATIC_CONTENT_STAGES.length - 1) return state;
       const stage = STATIC_CONTENT_STAGES[currentIndex + 1];
-      validateStageEntry(state, stage);
+      requireStaticContentStageReady(state, stage);
       return { ...state, stage, validation: { errors: [], warnings: [] }, focusRequest: null };
     }
     case "previous": {
@@ -132,6 +162,12 @@ export function reduceStaticContentDraft(state, action = {}) {
           state.contentTypeId,
           state.draftIdentity,
         ),
+        status: "editing",
+      });
+    case "setNoTitle":
+      requireContentStage(state);
+      return authored(state, {
+        noTitle: action.noTitle === true,
         status: "editing",
       });
     case "updateSource":
@@ -211,6 +247,25 @@ export function reduceStaticContentDraft(state, action = {}) {
             assets: clone(state.assets),
           },
         },
+        status: "editing",
+      });
+    }
+    case "stageQmdMedia": {
+      requireContentStage(state);
+      if (state.source?.kind !== "staticText") throw new Error("QMD media staging requires Free text content.");
+      const mediaItem = clone(action.mediaItem);
+      const assets = action.manifestEntry
+        ? { ...state.assets, [mediaItem.current?.assetId]: clone(action.manifestEntry) }
+        : state.assets;
+      validateMediaItem(mediaItem, { assets });
+      if (!["asset", "package"].includes(mediaItem.current.kind) || mediaItem.health !== "ready") {
+        throw new Error("QMD can stage only ready stored or packaged media.");
+      }
+      return authored(state, {
+        assets,
+        pendingMediaItems: action.manifestEntry
+          ? { ...state.pendingMediaItems, [mediaItem.mediaId]: mediaItem }
+          : state.pendingMediaItems,
         status: "editing",
       });
     }
@@ -380,8 +435,11 @@ export function finalizeStaticContentDraft(state) {
   const placement = sourceForAuthoringSave(state.placement, { assets: state.assets });
   if (placement.kind === "staticImage") validateMediaItem(state.mediaItem, { assets: state.assets });
   validateFreeTextContent(placement);
-  const panel = normalizePanel(state.panel, state.contentTypeId, state.draftIdentity);
-  requiredText(panel.title, "Static panel title");
+  const title = validateStaticPanelTitleChoice(state.panel?.title, state.noTitle);
+  const panel = {
+    ...normalizePanel(state.panel, state.contentTypeId, state.draftIdentity),
+    title,
+  };
   requiredText(panel.sourceId, "Static panel source id");
   const result = {
     destination: clone(state.destination),
@@ -412,6 +470,7 @@ export function isStaticContentDraftDirty(state) {
   const current = {
     destination: state.destination,
     contentTypeId: state.contentTypeId,
+    noTitle: state.noTitle,
     panel: state.panel,
     placement: state.placement,
     mediaItem: state.mediaItem,
@@ -427,6 +486,7 @@ export function hasRetainableStaticContentMutation(state) {
     const current = {
       destination: state.destination,
       contentTypeId: state.contentTypeId,
+      noTitle: state.noTitle,
       panel: state.panel,
       placement: state.placement,
       mediaItem: state.mediaItem,
@@ -439,11 +499,13 @@ export function hasRetainableStaticContentMutation(state) {
   const defaultPlacement = normalizeSource(null, state.contentTypeId, state.draftIdentity);
   const defaultMediaItem = normalizeDraftMediaItem(null, defaultPlacement, defaultPanel, state.baseline?.assets ?? {});
   return JSON.stringify({
+    noTitle: state.noTitle,
     panel: state.panel,
     placement: state.placement,
     mediaItem: state.mediaItem,
     pendingMediaItems: state.pendingMediaItems ?? {},
   }) !== JSON.stringify({
+    noTitle: false,
     panel: defaultPanel,
     placement: defaultPlacement,
     mediaItem: defaultMediaItem,
@@ -456,6 +518,7 @@ function restoreStaticContentBaseline(state, { status }) {
     ...state,
     destination: clone(state.baseline.destination),
     contentTypeId: state.baseline.contentTypeId,
+    noTitle: state.baseline.noTitle,
     panel: clone(state.baseline.panel),
     source: clone(state.baseline.placement),
     placement: clone(state.baseline.placement),
@@ -517,6 +580,46 @@ function authored(state, updates) {
   };
 }
 
+function tryStageTransition(state, stage, { previewReady = true } = {}) {
+  const readiness = staticContentStageReadiness(state, stage, { previewReady });
+  if (readiness.ready) {
+    return {
+      ...state,
+      stage,
+      validation: { errors: [], warnings: [] },
+      focusRequest: null,
+    };
+  }
+  const detail = transitionValidationDetail(state, stage, readiness.reason);
+  return {
+    ...state,
+    status: "editing",
+    validation: {
+      errors: [{
+        ...(detail.field ? { field: detail.field } : {}),
+        ...(detail.focusId ? { focusId: detail.focusId } : {}),
+        message: readiness.reason,
+      }],
+      warnings: [],
+    },
+    focusRequest: detail.focusId ?? null,
+  };
+}
+
+function transitionValidationDetail(state, stage, fallbackMessage) {
+  try {
+    validateStageEntry(state, stage);
+  } catch (error) {
+    return error ?? new Error(fallbackMessage);
+  }
+  return new Error(fallbackMessage);
+}
+
+function requireStaticContentStageReady(state, stage, options) {
+  const readiness = staticContentStageReadiness(state, stage, options);
+  if (!readiness.ready) throw new Error(readiness.reason);
+}
+
 function normalizePanel(panel, contentTypeId, draftIdentity) {
   if (!panel && !contentTypeId) return null;
   const value = panel ?? {};
@@ -546,6 +649,11 @@ function normalizePanel(panel, contentTypeId, draftIdentity) {
       height: footprint.rows,
     },
   };
+}
+
+function initialNoTitleChoice(options, mode, panel) {
+  if (typeof options.noTitle === "boolean") return options.noTitle;
+  return mode === "edit" && String(panel?.title ?? "").trim() === "";
 }
 
 function createDraftIdentity(panel) {
@@ -584,8 +692,33 @@ function validateStageEntry(state, stage) {
     sourceForAuthoringSave(state.source, { assets: state.assets });
     if (state.source?.kind === "staticImage") validateMediaItem(state.mediaItem, { assets: state.assets });
     validateFreeTextContent(state.source);
-    requiredText(state.panel?.title, "Static panel title");
+    validateStaticPanelTitleChoice(state.panel?.title, state.noTitle);
   }
+}
+
+export function validateStaticPanelTitleChoice(value, noTitle = false) {
+  const title = String(value ?? "");
+  const hasTitle = title.trim() !== "";
+  if (!hasTitle && noTitle !== true) {
+    throw draftValidationError(
+      "Enter a panel title or select No title.",
+      "static-panel-title",
+    );
+  }
+  if (hasTitle && noTitle === true) {
+    throw draftValidationError(
+      "Clear the title or unselect No title.",
+      "static-panel-no-title",
+    );
+  }
+  return noTitle === true ? "" : title;
+}
+
+function draftValidationError(message, focusId) {
+  const error = new Error(message);
+  error.field = "title";
+  error.focusId = focusId;
+  return error;
 }
 
 function sourceForAuthoringSave(source, { assets } = {}) {

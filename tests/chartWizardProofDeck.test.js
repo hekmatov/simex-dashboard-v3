@@ -92,6 +92,8 @@ test("proof deck presents placement order separately from canonical rendering", 
   assert.match(html, /Confirmed cases/);
   assert.match(html, /Respiratory pressure/);
   assert.match(html, /Draft chart/);
+  assert.equal((html.match(/class="chart-proof-eyebrow"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /class="eyebrow"/);
 });
 
 function fixtureDashboard() {

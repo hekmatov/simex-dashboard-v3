@@ -46,6 +46,35 @@ test("chart-panel tooltips escape clipping and use selected-style paint", async 
   expect(result.background).not.toBe("rgb(8, 34, 74)");
 });
 
+test("fullscreen tooltips are hover-only and always clear on hover-away", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
+
+  const focus = page.getByRole("button", { name: "Focus chart", exact: true }).first();
+  await focus.hover();
+  await expect(page.getByRole("tooltip", { name: "Fullscreen", exact: true })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip", { name: "Fullscreen", exact: true })).toHaveCount(0);
+
+  await focus.click();
+  const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
+  const exit = fullscreen.getByRole("button", { name: "Exit fullscreen", exact: true });
+  await expect(fullscreen).toBeVisible();
+  await expect(page.getByRole("tooltip", { name: "Exit fullscreen", exact: true })).toHaveCount(0);
+  await exit.hover();
+  await expect(page.getByRole("tooltip", { name: "Exit fullscreen", exact: true })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip", { name: "Exit fullscreen", exact: true })).toHaveCount(0);
+
+  await exit.click();
+  await expect(fullscreen).toHaveCount(0);
+  await focus.hover();
+  await expect(page.getByRole("tooltip", { name: "Fullscreen", exact: true })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip", { name: "Fullscreen", exact: true })).toHaveCount(0);
+});
+
 test("New Chart keeps stable geometry and exposes editable destination placement", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   const flow = await openWizard(page);

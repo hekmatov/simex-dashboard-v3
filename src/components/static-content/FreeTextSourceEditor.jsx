@@ -1,9 +1,9 @@
 import React from "react";
 
+import AuthoringFootprintFrame from "../common/AuthoringFootprintFrame.jsx";
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
-import { parsePortableQmdEditorDocument } from "../../static-content/qmd/portableQmdEditorDocument.js";
 import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../../static-content/qmd/portableQmdMedia.js";
 import MediaPicker from "../source-content/MediaPicker.jsx";
 import PortableQmdRichTextEditor from "./PortableQmdRichTextEditor.jsx";
@@ -11,8 +11,9 @@ import QmdMediaInspector from "./QmdMediaInspector.jsx";
 
 export function FreeTextSourceEditor({
   id = "static-qmd-source", value = "", panelId = "static-text-preview", panelTitle = "",
+  layout,
   disabled = false, mediaItems = {}, assets = {}, contentRenderContext = {},
-  onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem, onSurfaceChange,
+  initialSurface, onChange, onValidationChange, onMediaSelect, onMediaCreate, onOpenMediaItem, onSurfaceChange,
 } = {}) {
   const initial = React.useMemo(() => analyze(value, panelId), []);
   const [analysis, setAnalysis] = React.useState(initial);
@@ -20,14 +21,24 @@ export function FreeTextSourceEditor({
   const [pending, setPending] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [pickerMode, setPickerMode] = React.useState("insert");
+  const [mediaChoicePending, setMediaChoicePending] = React.useState(false);
+  const [editorMode, setEditorMode] = React.useState(
+    initialSurface === "advanced" || initialSurface === "raw" ? "raw" : "formatted",
+  );
   const [selectedMediaIdentity, setSelectedMediaIdentity] = React.useState(null);
   const revision = React.useRef(0);
   const lastValidRevision = React.useRef(initial.ok ? 0 : null);
   const observedSource = React.useRef(value);
+  const currentSource = React.useRef(value);
+  currentSource.current = value;
+  const currentDisabled = React.useRef(disabled);
+  currentDisabled.current = disabled;
   const analysisCache = React.useRef(new Map([[value, initial]]));
   const editorRef = React.useRef(null);
   const changeTriggerRef = React.useRef(null);
-  const editorDocument = React.useMemo(() => parsePortableQmdEditorDocument(value), [value]);
+  const currentMediaSelection = React.useRef(selectedMediaIdentity);
+  currentMediaSelection.current = selectedMediaIdentity;
+  const mediaChoiceOperation = React.useRef({ token: 0, pending: false });
   const previewRenderContext = React.useMemo(() => ({
     ...contentRenderContext,
     mediaItems: { ...(contentRenderContext.mediaItems ?? {}), ...mediaItems },
@@ -37,7 +48,13 @@ export function FreeTextSourceEditor({
   React.useEffect(() => {
     onValidationChange?.({ ...initial, pending: false, source: value, sourceRevision: 0, previewRevision: lastValidRevision.current });
   }, []);
-  React.useEffect(() => { onSurfaceChange?.("composer"); }, [onSurfaceChange]);
+  React.useEffect(() => () => {
+    mediaChoiceOperation.current.token += 1;
+    mediaChoiceOperation.current.pending = false;
+  }, []);
+  React.useEffect(() => {
+    onSurfaceChange?.(editorMode === "raw" ? "advanced" : "composer");
+  }, [editorMode, onSurfaceChange]);
   React.useEffect(() => { if (disabled) setPickerOpen(false); }, [disabled]);
 
   React.useEffect(() => {
@@ -57,7 +74,7 @@ export function FreeTextSourceEditor({
       applyAnalysis(next, value, revision.current);
     }, 200);
     return () => clearTimeout(timer);
-  }, [editorDocument.mode, onValidationChange, panelId, value]);
+  }, [onValidationChange, panelId, value]);
 
   function applyAnalysis(next, source, sourceRevision) {
     setAnalysis(next);
@@ -77,18 +94,89 @@ export function FreeTextSourceEditor({
   const selectedMediaNode = Number.isInteger(selectedMediaIdentity?.mediaNodeIndex) ? mediaNodes[selectedMediaIdentity.mediaNodeIndex] : null;
   const selectedPlacement = selectedMediaNode ? { mediaId: selectedMediaNode.mediaId, alt: selectedMediaNode.alt, ...selectedMediaNode.attributes } : null;
   const hasValidationErrors = !pending && analysis.errors.length > 0;
-  const validationTarget = validationTargetId(editorDocument.mode, id);
+  const validationTarget = validationTargetId(editorMode === "raw" ? "advanced" : "visual", id);
   const updateSelectedPlacement = (placement) => {
     if (disabled) return;
     if (!selectedMediaNode || !Number.isInteger(selectedMediaNode.sourceStart) || !Number.isInteger(selectedMediaNode.sourceEnd)) return;
     changeSource(`${value.slice(0, selectedMediaNode.sourceStart)}${serializePortableMediaReference(placement)}${value.slice(selectedMediaNode.sourceEnd)}`);
   };
-  const chooseMedia = (item) => {
+  const beginMediaChange = () => {
+    if (mediaChoiceOperation.current.pending || !selectedPlacement || !selectedMediaNode) return null;
+    const operation = {
+      token: mediaChoiceOperation.current.token + 1,
+      source: value,
+      mediaNodeIndex: selectedMediaIdentity?.mediaNodeIndex,
+      sourceStart: selectedMediaNode.sourceStart,
+      sourceEnd: selectedMediaNode.sourceEnd,
+      sourceText: value.slice(selectedMediaNode.sourceStart, selectedMediaNode.sourceEnd),
+      placement: selectedPlacement,
+    };
+    mediaChoiceOperation.current = { token: operation.token, pending: true };
+    setMediaChoicePending(true);
+    return operation;
+  };
+  const isCurrentMediaChange = (operation) => {
+    if (!operation || mediaChoiceOperation.current.token !== operation.token || currentDisabled.current) return false;
+    const selection = currentMediaSelection.current;
+    if (selection?.mediaNodeIndex !== operation.mediaNodeIndex) return false;
+    const source = currentSource.current;
+    if (source !== operation.source) return false;
+    const node = parsePortableQmdWithMedia(source).ast?.mediaNodes?.[operation.mediaNodeIndex];
+    return node?.sourceStart === operation.sourceStart
+      && node?.sourceEnd === operation.sourceEnd
+      && source.slice(node.sourceStart, node.sourceEnd) === operation.sourceText;
+  };
+  const finishMediaChange = (operation) => {
+    if (mediaChoiceOperation.current.token !== operation?.token) return;
+    mediaChoiceOperation.current = { token: operation.token, pending: false };
+    setMediaChoicePending(false);
+  };
+  const replaceMediaChange = (operation, mediaId) => {
+    changeSource(`${operation.source.slice(0, operation.sourceStart)}${serializePortableMediaReference({ ...operation.placement, mediaId })}${operation.source.slice(operation.sourceEnd)}`);
+  };
+  const chooseMedia = async (item) => {
     if (disabled) return;
     if (pickerMode === "change" && selectedPlacement) {
-      updateSelectedPlacement({ ...selectedPlacement, mediaId: item.mediaId });
-      closeChangePicker();
-    } else { onMediaSelect?.(item); setPickerOpen(false); }
+      const operation = beginMediaChange();
+      if (!operation) return;
+      try {
+        await onMediaSelect?.(item, {
+          intent: "change",
+          sourceStart: operation.sourceStart,
+          sourceEnd: operation.sourceEnd,
+        });
+        if (!isCurrentMediaChange(operation)) return;
+        replaceMediaChange(operation, item.mediaId);
+        closeChangePicker();
+      } finally {
+        finishMediaChange(operation);
+      }
+    } else {
+      await onMediaSelect?.(item, { intent: "insert" });
+      setPickerOpen(false);
+    }
+  };
+  const createMedia = async (candidate, context) => {
+    if (pickerMode === "change" && selectedPlacement) {
+      const operation = beginMediaChange();
+      if (!operation) return;
+      try {
+        await onMediaCreate?.(candidate, {
+          ...context,
+          intent: "change",
+          sourceStart: operation.sourceStart,
+          sourceEnd: operation.sourceEnd,
+        });
+        if (!isCurrentMediaChange(operation)) return;
+        replaceMediaChange(operation, candidate.mediaItem.mediaId);
+        closeChangePicker();
+      } finally {
+        finishMediaChange(operation);
+      }
+      return;
+    }
+    await onMediaCreate?.(candidate, { ...context, intent: "insert" });
+    setPickerOpen(false);
   };
   const closeChangePicker = () => {
     setPickerOpen(false);
@@ -99,29 +187,28 @@ export function FreeTextSourceEditor({
   };
   return (
     <section ref={editorRef} className="free-text-source-editor" data-source-revision={revision.current} data-preview-revision={lastValidRevision.current ?? "none"}>
+      <AuthoringFootprintFrame layout={layout} kind="writer">
       <section className="free-text-source-editor__writer-card" aria-label="Text post editor">
         <header className="free-text-source-editor__writer-header">
           <div><h3>Write a text post</h3><p>Formatting stays active until you turn it off.</p></div>
           <p className="free-text-source-editor__shortcuts"><kbd>Ctrl</kbd> + <kbd>B</kbd> / <kbd>I</kbd> also work</p>
         </header>
-        {editorDocument.mode === "visual"
-          ? <div id="portable-qmd-composer-focus-target" data-qmd-editor-focus-target="true"><PortableQmdRichTextEditor source={value} disabled={disabled} mediaItems={mediaItems} assets={assets} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} /></div>
-          : <div className="free-text-advanced-required" role="note"><h4>Visual editing is unavailable for this content</h4><p>{editorDocument.reason}</p></div>}
+        <div id="portable-qmd-composer-focus-target" data-qmd-editor-focus-target="true"><PortableQmdRichTextEditor source={value} disabled={disabled} initialMode={editorMode} rawSourceId={id} rawInvalid={hasValidationErrors} rawDescribedBy={hasValidationErrors ? `${id}-errors-title` : undefined} mediaItems={mediaItems} assets={assets} onModeChange={setEditorMode} onSourceChange={changeSource} onMediaSelect={() => { setPickerMode("insert"); setPickerOpen(true); }} /></div>
       </section>
+      </AuthoringFootprintFrame>
       <div className="free-text-source-editor__reference-cards">
+        <AuthoringFootprintFrame layout={layout} kind="preview">
         <section className="free-text-source-editor__reference-card free-text-source-editor__preview" aria-label="Rendered preview">
           <header><h3>Rendered preview</h3><p>what readers see</p></header>
-          {lastValidSource !== null && typeof document !== "undefined" ? <FreeTextChartView model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }} chart={{ id: panelId, title: panelTitle.trim() || "Preview" }} contentRenderContext={previewRenderContext} onMediaActivate={({ mediaNodeIndex, sourceStart, sourceEnd }) => setSelectedMediaIdentity({ mediaNodeIndex, sourceStart, sourceEnd })} /> : lastValidSource !== null ? <p className="static-content-state">Preview is available in the browser.</p> : <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>}
+          {lastValidSource !== null && typeof document !== "undefined" ? <FreeTextChartView model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }} chart={{ id: panelId, title: panelTitle.trim() }} contentRenderContext={previewRenderContext} onMediaActivate={({ mediaNodeIndex, sourceStart, sourceEnd }) => setSelectedMediaIdentity({ mediaNodeIndex, sourceStart, sourceEnd })} /> : lastValidSource !== null ? <p className="static-content-state">Preview is available in the browser.</p> : <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>}
         </section>
+        </AuthoringFootprintFrame>
         <section className="free-text-source-editor__reference-card free-text-source-editor__markdown" aria-label="Portable Markdown">
           <header><h3>Portable Markdown</h3><p>what is stored</p></header>
-          {editorDocument.mode === "visual"
-            ? <pre>{value}</pre>
-            : <div className="free-text-source-editor__source-repair"><p id={`${id}-help`}>{editorDocument.reason} Edit the stored source here to repair it or preserve the construct exactly.</p><textarea id={id} aria-label="Portable QMD source" aria-invalid={hasValidationErrors ? "true" : undefined} aria-describedby={[`${id}-help`, hasValidationErrors ? `${id}-errors-title` : ""].filter(Boolean).join(" ")} disabled={disabled} value={value} onChange={(event) => changeSource(event.target.value)} /></div>}
+          <pre>{value}</pre>
         </section>
       </div>
-      {pickerOpen && pickerMode === "change" && <ChangeMediaPicker mediaItems={mediaItems} selectedMediaId={selectedPlacement?.mediaId} onSelect={chooseMedia} onCancel={closeChangePicker} />}
-      {pickerOpen && pickerMode === "insert" && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" onSelect={chooseMedia} onCreateLocal={async (candidate, context) => { await onMediaCreate?.(candidate, context); setPickerOpen(false); }} onCancel={() => setPickerOpen(false)} />}
+      {pickerOpen && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" action={pickerMode} disabled={disabled || mediaChoicePending} onSelect={chooseMedia} onCreateLocal={createMedia} onCancel={pickerMode === "change" ? closeChangePicker : () => setPickerOpen(false)} />}
       {selectedPlacement && <QmdMediaInspector placement={selectedPlacement} mediaItem={valueForId(mediaItems, selectedPlacement.mediaId)} disabled={disabled} onChange={updateSelectedPlacement} onChangeImage={(_mediaId, { trigger } = {}) => { changeTriggerRef.current = trigger ?? null; setPickerMode("change"); setPickerOpen(true); }} onOpenMediaItem={(mediaId) => (onOpenMediaItem ?? contentRenderContext.openMediaItem)?.(mediaId)} />}
       {hasValidationErrors && <ValidationErrors id={validationTarget} errorId={`${id}-errors-title`} value={value} errors={analysis.errors} />}
     </section>
@@ -145,12 +232,6 @@ export function focusValidationTarget(target, offset) {
 
 function pendingValidation(source, sourceRevision, previewRevision) { return { ok: false, pending: true, errors: [], warnings: [], source, sourceRevision, previewRevision }; }
 
-function ChangeMediaPicker({ mediaItems, selectedMediaId, onSelect, onCancel }) {
-  const eligible = collectionValues(mediaItems).filter((item) => item?.health === "ready" && ["asset", "package"].includes(item?.current?.kind)).sort((left, right) => left.mediaId.localeCompare(right.mediaId));
-  const focusId = eligible.some((item) => item.mediaId === selectedMediaId) ? selectedMediaId : eligible[0]?.mediaId;
-  return <section className="source-content-detail-card" aria-label="Media picker" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onCancel(); } }}><header><h3>Change image</h3><p>Choose an existing portable local media item for this placement.</p></header><fieldset><legend>Available local media</legend>{eligible.length === 0 ? <p>No eligible media is available.</p> : eligible.map((item) => <label key={item.mediaId}><input type="radio" name="qmd-media-change-selection" value={item.mediaId} checked={item.mediaId === selectedMediaId} autoFocus={item.mediaId === focusId} onChange={() => onSelect(item)} /><strong>{item.displayName}</strong> {item.origin} · {item.health}</label>)}</fieldset><button type="button" className="secondary" autoFocus={eligible.length === 0} onClick={onCancel}>Close media picker</button></section>;
-}
-
 function analyze(source, panelId) {
   try {
     if (typeof document === "undefined") { const parsed = parsePortableQmd(source); return { ok: parsed.ok, errors: parsed.errors, warnings: parsed.warnings }; }
@@ -161,6 +242,4 @@ function analyze(source, panelId) {
 
 function sourceOffset(source, location) { const lines = source.split("\n"); let offset = 0; for (let index = 0; index < Math.max(0, location.line - 1); index += 1) offset += (lines[index]?.length ?? 0) + 1; return Math.min(source.length, offset + Math.max(0, location.column - 1)); }
 function valueForId(collection, id) { if (collection instanceof Map) return collection.get(id); if (Array.isArray(collection)) return collection.find((entry) => entry?.mediaId === id); return collection?.[id]; }
-function collectionValues(collection) { if (collection instanceof Map) return [...collection.values()]; if (Array.isArray(collection)) return collection; return Object.values(collection ?? {}); }
-
 export default FreeTextSourceEditor;

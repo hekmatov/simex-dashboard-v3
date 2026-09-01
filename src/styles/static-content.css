@@ -2,6 +2,7 @@
 
 /* Static-content authoring and rendering are intentionally isolated here. */
 .static-content-dialog.dashboard-dialog {
+  block-size: min(760px, calc(100dvh - 32px));
   inline-size: min(1120px, 100%);
 }
 
@@ -12,6 +13,19 @@
 
 .static-content-dialog__preview {
   align-self: start;
+}
+
+.static-content-fields > .chart-footprint-control {
+  align-self: start;
+}
+
+.static-content-fields > .static-content-dialog__title-choice,
+.static-content-fields > [role="status"] {
+  grid-column: 1 / -1;
+}
+
+.static-content-dialog__title-choice > .static-content-dialog__title-label {
+  align-self: center;
 }
 
 .static-content-dialog input,
@@ -36,6 +50,20 @@
   gap: 22px;
   margin-top: 18px;
   min-width: 0;
+}
+
+.authoring-footprint-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.authoring-footprint-frame {
+  grid-column: span var(--chart-footprint-columns);
+  max-inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .free-text-source-editor__writer-card,
@@ -145,7 +173,7 @@
   border-radius: 6px;
   color: var(--simex-text-strong);
   display: inline-flex;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--simex-style-body-font);
   font-size: 1.15rem;
   justify-content: center;
   min-width: 44px;
@@ -183,8 +211,112 @@
   border-radius: 0;
   box-sizing: border-box;
   min-height: 250px;
+  overflow-x: auto;
   padding: 22px 24px;
+  line-height: 1.62;
 }
+
+.portable-qmd-composer__surface :is(p, ul, ol, blockquote) {
+  margin-block: 0.7em;
+}
+
+.portable-qmd-composer__surface table,
+.portable-qmd-table-scroll table {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  table-layout: auto;
+}
+
+.portable-qmd-composer__surface :is(th, td) {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.portable-qmd-composer__raw-source {
+  border: 0;
+  box-sizing: border-box;
+  font: 0.875rem/1.55 var(--simex-style-mono-font);
+  min-block-size: 250px;
+  padding: 22px 24px;
+  resize: vertical;
+  width: 100%;
+}
+
+.portable-qmd-composer__source-warning {
+  align-items: baseline;
+  background: var(--simex-warning-soft);
+  border-block-end: 1px solid var(--simex-warning);
+  color: var(--simex-text-strong);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 8px 14px;
+}
+
+.portable-qmd-composer__source-warning strong { color: var(--simex-warning); }
+
+.portable-qmd-composer__table-actions {
+  height: 28px;
+  position: fixed;
+  width: 28px;
+  z-index: 8;
+}
+
+.portable-qmd-composer__table-actions > button {
+  align-items: center;
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 5px;
+  color: var(--simex-text-strong);
+  display: inline-flex;
+  font-size: 1.1rem;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  width: 28px;
+}
+
+.portable-qmd-composer__table-actions > [role="menu"] {
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 18%);
+  display: grid;
+  gap: 2px;
+  margin-top: 2px;
+  max-height: var(--table-menu-max-height, calc(100vh - 16px));
+  inline-size: min(180px, calc(100vw - 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  position: absolute;
+  left: var(--table-menu-left, 0);
+  top: 100%;
+}
+
+.portable-qmd-composer__table-actions--above > [role="menu"] {
+  bottom: 100%;
+  margin-block: 0 2px;
+  top: auto;
+}
+
+.portable-qmd-composer__table-actions [role="menuitem"] {
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--simex-text-strong);
+  padding: 8px;
+  text-align: start;
+}
+
+.portable-qmd-composer__table-actions :is(button, [role="menuitem"]):focus-visible,
+.portable-qmd-composer__raw-source:focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.portable-qmd-composer__table-actions [role="menuitem"]:hover { background: var(--simex-surface-panel-alt); }
 
 .portable-qmd-composer__surface:focus-visible {
   outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
@@ -278,12 +410,11 @@
 }
 
 .free-text-source-editor__reference-cards {
-  display: flex;
-  gap: 20px;
+  display: contents;
 }
 
 .free-text-source-editor__reference-card {
-  flex: 1 1 0;
+  max-inline-size: 100%;
   min-width: 0;
 }
 
@@ -300,7 +431,7 @@
 .free-text-source-editor__markdown pre {
   box-sizing: border-box;
   color: var(--simex-text-strong);
-  font: 0.8125rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.8125rem/1.5 var(--simex-style-mono-font);
   margin: 0;
   min-height: 168px;
   overflow: auto;
@@ -321,15 +452,19 @@
 
 .free-text-source-editor__source-repair textarea {
   box-sizing: border-box;
-  font: 0.8125rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.8125rem/1.5 var(--simex-style-mono-font);
   min-block-size: 220px;
   resize: vertical;
   width: 100%;
 }
 
 @media (max-width: 760px) {
-  .free-text-source-editor__reference-cards {
-    flex-direction: column;
+  .authoring-footprint-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .authoring-footprint-frame {
+    grid-column: 1;
   }
 }
 
@@ -443,14 +578,15 @@
 
 .portable-qmd-table-scroll table {
   border-collapse: collapse;
-  min-width: max-content;
   text-align: left;
 }
 
 .portable-qmd-table-scroll :is(th, td) {
   border-bottom: 1px solid var(--simex-border-subtle);
+  overflow-wrap: anywhere;
   padding: 8px 12px;
   vertical-align: top;
+  word-break: break-word;
 }
 
 .portable-qmd-code-scroll pre {
@@ -463,13 +599,13 @@
 }
 
 .portable-qmd-code-scroll code {
-  font: 0.875rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.875rem/1.55 var(--simex-style-mono-font);
   white-space: pre;
 }
 
 .portable-qmd-fence-info {
   color: var(--simex-text-muted);
-  font: 0.8125rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font: 0.8125rem/1.45 var(--simex-style-mono-font);
   margin: 0 0 0.4rem;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -478,7 +614,7 @@
 .portable-qmd-inert-embed,
 .portable-qmd-inert-link,
 .portable-qmd-math-fallback {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--simex-style-mono-font);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -687,6 +823,45 @@ pre.portable-qmd-math-fallback {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.image-panel-presentation {
+  display: grid;
+  gap: 12px;
+}
+
+.image-panel-presentation__group {
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  margin: 0;
+  padding: 12px;
+}
+
+.image-panel-presentation__group legend {
+  font-weight: 700;
+  padding-inline: 4px;
+}
+
+.image-panel-presentation__group label:not(.dashboard-authoring-boolean-row),
+.image-panel-presentation__group select {
+  display: block;
+  width: 100%;
+}
+
+.image-panel-presentation__size > div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.image-panel-presentation__size button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.image-panel-presentation__size output {
+  min-width: 4ch;
+  text-align: center;
+}
+
 .static-image-validation {
   background: var(--simex-error-soft);
   border: 1px solid var(--simex-error);
@@ -697,6 +872,9 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-view {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   height: 100%;
   margin: 0;
   min-height: 0;
@@ -706,9 +884,9 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-viewport {
-  background: var(--simex-surface-panel-alt);
   border-radius: var(--simex-style-control-radius);
-  height: calc(100% - 24px);
+  flex: 1 1 auto;
+  height: auto;
   min-height: 180px;
   overflow: clip;
   position: relative;
@@ -799,12 +977,6 @@ pre.portable-qmd-math-fallback {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   min-width: 4ch;
-}
-
-.chart-image-view figcaption {
-  color: var(--simex-text-muted);
-  font-size: 0.875rem;
-  margin-top: 6px;
 }
 
 @keyframes static-image-shimmer {

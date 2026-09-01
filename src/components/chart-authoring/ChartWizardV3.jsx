@@ -282,6 +282,30 @@ export function chartDestinationForType(destination, typeId) {
   };
 }
 
+export function createEditModePendingRuntime({
+  chart,
+  profile = null,
+  deferredPreparation = null,
+  rows,
+  geoData,
+  authorMetadata,
+} = {}) {
+  const formPreparationKey = buildFormPreparationKey({ chart, profile });
+  const previousPrepared = deferredPreparation?.runtime?.prepared ?? null;
+  const dataIdentitiesMatch = deferredPreparation?.rows === rows
+    && deferredPreparation?.geoData === geoData
+    && deferredPreparation?.authorMetadata === authorMetadata;
+  return {
+    status: "pending",
+    profile,
+    prepared: formPreparationKey !== null
+      && dataIdentitiesMatch
+      && previousPrepared?.meta?.formPreparationKey === formPreparationKey
+      ? previousPrepared
+      : null,
+  };
+}
+
 /**
  * Schema-generated chart authoring flow.
  *
@@ -668,7 +692,14 @@ export default function ChartWizardV3({
   const runtime = editMode
     ? deferredPreparationCurrent
       ? deferredPreparation.runtime
-      : { status: "pending", profile: cachedProfile, prepared: null }
+      : createEditModePendingRuntime({
+          chart: wizard.draft,
+          profile: cachedProfile,
+          deferredPreparation,
+          rows,
+          geoData,
+          authorMetadata,
+        })
     : synchronousRuntime;
   const profiles = React.useMemo(() => {
     const cached = mergeCollections(safeDatasetProfiles, wizard.profiles);
@@ -819,11 +850,14 @@ export default function ChartWizardV3({
     });
     setSubmissionError("");
   };
-  const updatePath = (path, value) => dispatch({
-    type: "updateChart",
-    path,
-    value,
-  });
+  const updatePath = (path, value) => {
+    dispatch({
+      type: "updateChart",
+      path,
+      value,
+    });
+    setSubmissionError("");
+  };
   const updateDestination = (patch) => {
     setWizard((current) => {
       const nextDestination = { ...(current.destination ?? {}), ...patch };
@@ -1386,13 +1420,14 @@ export default function ChartWizardV3({
     React.createElement(
       "section",
       {
-        className: "chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide",
+        className: "chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide dashboard-authoring-shell",
         role: "dialog",
         "aria-modal": "true",
         "aria-labelledby": "chart-wizard-title",
         "data-chart-owner-id": editMode
           ? `chart-edit:${editSession?.placementId ?? "unknown"}`
           : wizard.draftId ? `chart-create:${wizard.draftId}` : undefined,
+        "data-chart-draft-id": wizard.draft?.id,
         "data-preparation-status": runtime.status,
         "aria-busy": disabled || submitting ? "true" : undefined,
         inert: disabled || submitting ? true : undefined,
@@ -1454,7 +1489,7 @@ export default function ChartWizardV3({
       ),
       React.createElement(
         "div",
-        { className: "chart-wizard-workbench" },
+        { className: "chart-wizard-workbench dashboard-authoring-body" },
         React.createElement(
           "div",
           { className: "chart-wizard-body dashboard-dialog__body", ref: wizardBodyRef },
@@ -1585,9 +1620,6 @@ export default function ChartWizardV3({
                   type: "selectType",
                   typeId,
                   chart: {
-                    ...(wizard.draft
-                      ? {}
-                      : { id: newChartId(typeId) }),
                     title: "",
                     layout: {
                       ...(wizard.draft?.layout ?? {}),
@@ -1742,8 +1774,10 @@ export default function ChartWizardV3({
             },
             editMode ? "Discard changes" : "Discard chart draft",
           ),
-          wizard.stage === "review-and-create"
-            ? React.createElement(IconControl, {
+          React.createElement(
+            "div",
+            { "data-footer-slot": "primary" },
+            React.createElement(IconControl, {
                 interactionId: editMode ? "editor.save-changes" : "wizard.create-chart",
                 ariaLabel: submitting
                   ? editMode ? "Saving changes" : "Creating chart"
@@ -1756,8 +1790,8 @@ export default function ChartWizardV3({
                   || placementProof.status !== "valid"
                   || renderProof.status !== "valid",
                 onClick: finish,
-              })
-            : null,
+              }),
+          ),
         ),
       ),
     ),
@@ -1926,7 +1960,7 @@ function proofHeading(label, status = "awaiting", revision = "awaiting") {
     "header",
     null,
     React.createElement("div", null,
-      React.createElement("p", { className: "eyebrow" }, label),
+      React.createElement("p", { className: "chart-proof-eyebrow" }, label),
       React.createElement("strong", null, proofStatusLabel(status)),
     ),
     React.createElement("small", { title: revision ?? "awaiting" }, `Revision ${revision ?? "awaiting"}`),
@@ -2552,10 +2586,6 @@ function uniqueSourceId(fileName, existing) {
     suffix += 1;
   }
   return candidate;
-}
-
-function newChartId(typeId) {
-  return `chart-${typeId}-${Date.now().toString(36)}`;
 }
 
 function readEntry(collection, key) {

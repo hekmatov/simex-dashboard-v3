@@ -1235,6 +1235,17 @@
   color: var(--simex-text-muted);
 }
 
+.app-frame .static-content-dialog :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea
+) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
 .app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) :is(
   input:not([type="checkbox"]):not([type="radio"]),
   select,
@@ -1543,14 +1554,46 @@
 
 /* New Chart keeps one stable frame while only its body scrolls. */
 .app-frame .chart-wizard.chart-wizard-v3 {
-  height: calc(100dvh - 48px);
-  max-height: calc(100dvh - 48px);
+  block-size: calc(100dvh - 48px);
+  max-block-size: calc(100dvh - 48px);
 }
 
 .chart-wizard.dashboard-dialog {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   inline-size: min(1180px, 100%);
+}
+
+.app-frame .chart-editor-v3.dashboard-dialog {
+  block-size: min(820px, calc(100dvh - 48px));
+  inline-size: min(1180px, 100%);
+  padding: 0;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell {
+  block-size: 100%;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell > .chart-editor-tab-list {
+  grid-row: 2;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell > .chart-editor-layout {
+  grid-row: 3;
+  min-block-size: 0;
+  overflow: auto;
+}
+
+.app-frame .chart-editor-form.dashboard-authoring-shell > .dashboard-authoring-footer {
+  grid-row: 4;
+}
+
+.chart-authoring-axis-group.dashboard-authoring-grid > legend {
+  grid-column: 1 / -1;
+}
+
+:is(.app-frame, .unit-orbit) .dashboard-authoring-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 }
 
 .app-frame .chart-wizard-header {
@@ -1620,8 +1663,30 @@
   justify-content: space-between;
 }
 
-.app-frame .chart-creation-proof :is(.eyebrow, .chart-proof-state p, .chart-placement-proof-text) {
+.app-frame .chart-creation-proof :is(.chart-proof-eyebrow, .chart-proof-state p, .chart-placement-proof-text) {
   margin: 0;
+}
+
+.app-frame .chart-creation-proof .chart-proof-eyebrow {
+  color: var(--simex-text-muted);
+  font-family: var(--simex-style-data-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.app-frame .chart-creation-proof > header strong,
+.app-frame .chart-placement-proof-order span {
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-body-font);
+}
+
+.app-frame .chart-creation-proof .chart-proof-state {
+  background: var(--simex-surface-panel);
+  border-left-color: var(--simex-selected);
+  color: var(--simex-text-strong);
 }
 
 .app-frame .chart-creation-proof > header small {
@@ -1796,8 +1861,8 @@
 
 @media (max-width: 520px) {
   .app-frame .chart-wizard.chart-wizard-v3 {
-    height: 100dvh;
-    max-height: 100dvh;
+    block-size: calc(100dvh - 16px);
+    max-block-size: calc(100dvh - 16px);
   }
 
   .app-frame .chart-wizard-step-tabs,
@@ -2048,7 +2113,7 @@
   .source-content-workspace,
   [data-dashboard-style][style]
 ) {
-  font-family: var(--simex-style-body-font, Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--simex-style-body-font);
 }
 
 :is(
@@ -2061,7 +2126,7 @@
   .source-content-workspace,
   [data-dashboard-style][style]
 ) :is(h1, h2, h3, h4, legend) {
-  font-family: var(--simex-style-heading-font, Georgia, serif);
+  font-family: var(--simex-style-heading-font);
 }
 
 :is(

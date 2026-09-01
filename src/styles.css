@@ -6,14 +6,8 @@
 
 /* Step 7 chart creation: six stable stages with independent proof ledgers. */
 .chart-wizard.chart-wizard-v3 {
-  background: #fff;
-  color-scheme: light;
   max-width: min(1180px, calc(100vw - 32px));
   width: 100%;
-}
-
-.chart-wizard-v3 .chart-wizard-body {
-  background: #fff;
 }
 
 .chart-wizard-step-tabs {
@@ -356,7 +350,7 @@ body::before {
 }
 
 .eyebrow {
-  color: #c8f6e7;
+  color: var(--simex-text-muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
@@ -403,7 +397,7 @@ h1 {
 }
 
 .dashboard-meta dt {
-  color: #c8f6e7;
+  color: var(--simex-text-muted);
   font-size: 12px;
   font-weight: 700;
   margin-bottom: 4px;
@@ -1983,7 +1977,6 @@ th {
 .chart-info-button {
   background: #5b9bd5;
   color: white;
-  font-family: Georgia, serif;
   font-style: italic;
   font-weight: 700;
   opacity: 1;
@@ -6048,11 +6041,6 @@ html[data-simex-eyedropper-active="true"] body * {
   cursor: not-allowed;
 }
 
-.control-tooltip[data-control-tooltip-anchor="true"]:focus-visible {
-  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
-  outline-offset: 3px;
-}
-
 .control-tooltip__reason {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-strong);
@@ -6075,9 +6063,7 @@ html[data-simex-eyedropper-active="true"] body * {
   z-index: 1700;
 }
 
-.control-tooltip[data-control-tooltip-anchor="true"]:hover > .control-tooltip__reason,
-.control-tooltip[data-control-tooltip-anchor="true"]:focus > .control-tooltip__reason,
-.control-tooltip[data-control-tooltip-kind="explanation"]:focus-within > .control-tooltip__reason {
+.control-tooltip[data-control-tooltip-anchor="true"]:hover > .control-tooltip__reason {
   opacity: 1;
   visibility: visible;
 }

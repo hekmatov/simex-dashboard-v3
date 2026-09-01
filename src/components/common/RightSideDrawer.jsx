@@ -1,6 +1,7 @@
 import React from "react";
 
 import ModalFocusScope from "./ModalFocusScope.jsx";
+import { pointerControlProps } from "./PointerInteractionMode.js";
 
 export const RIGHT_SIDE_DRAWER_CHANGE_EVENT = "simex:right-side-drawer-change";
 export const RIGHT_SIDE_DRAWER_SELECTOR = '[data-right-side-drawer][data-open="true"]';
@@ -32,39 +33,19 @@ export default function RightSideDrawer({
     throw new TypeError('RightSideDrawer modality must be "dialog" or "complementary".');
   }
 
-  const returnFocusRef = React.useRef(null);
-  const restoreFocusOnCloseRef = React.useRef(true);
-  const openRef = React.useRef(false);
   const latestClose = React.useRef(onClose);
   latestClose.current = onClose;
-  if (open && !openRef.current && typeof document !== "undefined") {
-    returnFocusRef.current = document.activeElement;
-    restoreFocusOnCloseRef.current = true;
-  }
-  openRef.current = open;
 
   useBrowserLayoutEffect(() => {
     if (!open || typeof window === "undefined") return undefined;
-    const closeOnEscape = (event) => {
-      if (modality !== "complementary" || event.key !== "Escape" || event.defaultPrevented) return;
-      event.preventDefault();
-      event.stopPropagation();
-      requestRightSideDrawerClose(latestClose.current, "escape");
-    };
     const closeForPeerDrawer = (event) => {
       if (event.detail?.open !== true || event.detail?.id === id) return;
-      restoreFocusOnCloseRef.current = false;
       requestRightSideDrawerClose(latestClose.current, "peer-open");
     };
-    window.addEventListener("keydown", closeOnEscape);
     window.addEventListener(RIGHT_SIDE_DRAWER_CHANGE_EVENT, closeForPeerDrawer);
     notifyRightSideDrawerChange(id, true);
     return () => {
-      window.removeEventListener("keydown", closeOnEscape);
       window.removeEventListener(RIGHT_SIDE_DRAWER_CHANGE_EVENT, closeForPeerDrawer);
-      if (restoreFocusOnCloseRef.current) {
-        restoreRightSideDrawerTriggerFocus(returnFocusRef.current);
-      }
       window.requestAnimationFrame?.(() => notifyRightSideDrawerChange(id, false));
     };
   }, [id, modality, open]);
@@ -114,6 +95,7 @@ export default function RightSideDrawer({
         {headerActions}
         <button
           type="button"
+          {...pointerControlProps}
           className={closeClassName}
           aria-label={`Close ${title}`}
           onClick={() => requestRightSideDrawerClose(latestClose.current, "close-button")}
@@ -144,7 +126,6 @@ export default function RightSideDrawer({
         <ModalFocusScope
           as="aside"
           open={open}
-          restoreFocus={false}
           {...controlledPanelProps}
           onEscape={() => requestRightSideDrawerClose(latestClose.current, "escape")}
         >
@@ -173,9 +154,7 @@ export function requestRightSideDrawerClose(onClose, reason) {
 }
 
 export function restoreRightSideDrawerTriggerFocus(trigger) {
-  if (!trigger?.isConnected || typeof trigger.focus !== "function") return false;
-  trigger.focus({ preventScroll: true });
-  return true;
+  return false;
 }
 
 function notifyRightSideDrawerChange(id, open) {

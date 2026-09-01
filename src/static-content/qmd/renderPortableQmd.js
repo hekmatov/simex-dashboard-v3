@@ -255,6 +255,8 @@ function renderMediaHost(mediaNode, mediaItem, environment) {
   host.dataset.qmdMediaAlign = mediaNode.attributes.align;
   host.dataset.qmdMediaFlow = mediaNode.attributes.flow;
   host.dataset.qmdMediaFrame = mediaNode.attributes.frame;
+  if (mediaNode.attributes.frameWeight !== undefined) host.dataset.qmdMediaFrameWeight = String(mediaNode.attributes.frameWeight);
+  if (mediaNode.attributes.frameColor !== undefined) host.dataset.qmdMediaFrameColor = mediaNode.attributes.frameColor;
   host.dataset.qmdMediaCaption = mediaNode.attributes.caption;
   host.dataset.qmdMediaDecorative = String(mediaNode.attributes.decorative);
   host.dataset.qmdMediaHealth = mediaItem.health;

@@ -32,6 +32,41 @@ test("serializer requires a local identity and contextual alt while decorative o
   }).startsWith("![](simex-media:decorative-rule)"), true);
 });
 
+test("embedded frame weight and color round-trip without injecting absent defaults", () => {
+  const source = '![Map](simex-media:map){width=50% align=center flow=block frame=outline frameweight=3 framecolor="#AABBCC" caption="" decorative=false}';
+  const node = parsePortableQmdWithMedia(source).ast.mediaNodes[0];
+  assert.equal(node.attributes.frameWeight, 3);
+  assert.equal(node.attributes.frameColor, "#AABBCC");
+  assert.match(serializePortableMediaReference({ ...node, ...node.attributes }), /frameweight=3 framecolor="#AABBCC"/);
+
+  const baseline = serializePortableMediaReference({
+    mediaId: "map", alt: "Map", width: "50%", align: "center", flow: "block",
+    frame: "outline", caption: "", decorative: false,
+  });
+  assert.doesNotMatch(baseline, /frameweight|framecolor/);
+});
+
+test("frame validation enforces integer 1 through 8 and six-digit hex while save normalizes color", () => {
+  for (const frameWeight of [1, 8]) {
+    assert.deepEqual(validatePortableMediaAttributes({ frameWeight }).attributes, { frameWeight });
+  }
+  for (const frameWeight of [0, 9, 1.5, "3"]) {
+    assert.equal(validatePortableMediaAttributes({ frameWeight }).ok, false);
+  }
+  for (const frameColor of ["#AABBCC", "#aabbcc"]) {
+    assert.deepEqual(validatePortableMediaAttributes({ frameColor }).attributes, { frameColor });
+  }
+  for (const frameColor of ["AABBCC", "#ABC", "#AABBCCDD", "#GGHHII"]) {
+    assert.equal(validatePortableMediaAttributes({ frameColor }).ok, false);
+  }
+
+  const lowercase = '![Map](simex-media:map){frame=card frameweight=4 framecolor="#aabbcc" decorative=false}';
+  const node = parsePortableQmdWithMedia(lowercase).ast.mediaNodes[0];
+  assert.equal(node.attributes.frameColor, "#aabbcc");
+  assert.match(node.sourceText, /framecolor="#aabbcc"/);
+  assert.match(serializePortableMediaReference({ ...node, ...node.attributes }), /framecolor="#AABBCC"/);
+});
+
 test("reference and attribute grammar accepts only the portable local allowlist", () => {
   assert.deepEqual(parsePortableMediaReference("simex-media:stored-map"), { mediaId: "stored-map" });
   for (const destination of [

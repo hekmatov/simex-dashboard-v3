@@ -13,7 +13,23 @@ const vite = await createServer({
 const pickerModule = await vite
   .ssrLoadModule("/src/components/chart-authoring/ChartFootprintPicker.jsx")
   .catch(() => null);
+const authoringFrameModule = await vite
+  .ssrLoadModule("/src/components/common/AuthoringFootprintFrame.jsx")
+  .catch(() => null);
 await vite.close();
+
+test("the authoring footprint frame projects a selected panel width across the dashboard grid", () => {
+  assert.equal(typeof authoringFrameModule?.default, "function");
+  if (typeof authoringFrameModule?.default !== "function") return;
+  const html = renderToStaticMarkup(React.createElement(authoringFrameModule.default, {
+    layout: { width: 3, height: 1 },
+    kind: "writer",
+  }, React.createElement("p", null, "Writer")));
+
+  assert.match(html, /class="authoring-footprint-grid"/);
+  assert.match(html, /--chart-footprint-columns:3/);
+  assert.match(html, /data-authoring-footprint="writer"/);
+});
 
 test("the chart editor footprint picker renders the approved two-by-four grid", () => {
   assert.equal(typeof pickerModule?.default, "function");
@@ -60,4 +76,20 @@ test("the shared footprint picker can label Text/Image panel sizing without char
   assert.match(html, /aria-label="Panel size: 2 columns by 1 rows"/);
   assert.match(html, /aria-label="Set panel size to 4 columns by 2 rows"/);
   assert.doesNotMatch(html, /Chart size|Set chart size/);
+});
+
+test("Text/Image sizing can keep the visual grid while omitting redundant footprint copy", () => {
+  const html = renderToStaticMarkup(React.createElement(pickerModule.default, {
+    subject: "Panel",
+    idPrefix: "static-panel-compact",
+    showTextLabels: false,
+    value: { columns: 2, rows: 1 },
+    onChange() {},
+  }));
+
+  assert.match(html, /role="grid"/);
+  assert.match(html, /class="dashboard-dialog__eyebrow"[^>]*>Panel size<\/span>/);
+  assert.match(html, /aria-label="Panel size: 2 columns by 1 rows"/);
+  assert.equal((html.match(/role="gridcell"/g) ?? []).length, 8);
+  assert.doesNotMatch(html, />Footprint<|4-column grid|Current footprint:/);
 });

@@ -61,6 +61,9 @@ test("App prepares queued Build work and durably replaces before resetting live 
   const restoreBody = app.match(
     /async function restoreOnlineDashboard\(\) \{([\s\S]*?)\n  \}/,
   )?.[1] ?? "";
+  const replacementResetBody = renderer.match(
+    /resetAfterDashboardReplacement\(replacementDashboard\) \{([\s\S]*?)\r?\n    \},\r?\n    requestCompareCharts/,
+  )?.[1] ?? "";
 
   assert.match(restoreBody, /prepareOnlineDashboardRestore/);
   assert.match(restoreBody, /baseUrl:\s*import\.meta\.env\.BASE_URL/);
@@ -91,6 +94,10 @@ test("App prepares queued Build work and durably replaces before resetting live 
   assert.match(
     renderer,
     /const rebasedDrafts = createDashboardReplacementRendererState\([\s\S]*?buildLayoutDraftRef\.current\s*=\s*rebasedDrafts\.buildLayoutDraft;[\s\S]*?setBuildLayoutDraft\(rebasedDrafts\.buildLayoutDraft\)/,
+  );
+  assert.match(
+    replacementResetBody,
+    /const nextSessionEpoch = chartWizardSessionEpochRef\.current \+ 1;[\s\S]*?chartWizardSessionEpochRef\.current = nextSessionEpoch;[\s\S]*?setChartWizardSessionEpoch\(nextSessionEpoch\)/,
   );
 });
 

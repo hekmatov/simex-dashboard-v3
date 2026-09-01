@@ -413,6 +413,77 @@ test("finalization normalizes the chart and returns group edits separately", () 
   assert.notEqual(result.chronoGroups, state.chronoGroups);
 });
 
+test("finalization makes inferred temporal label presets portable and Adaptive recovery implicit", () => {
+  const draft = createChartDraft("line", {
+    id: "inferred-date-labels",
+    title: "Inferred date labels",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "reportedAt" },
+    },
+    presentation: {
+      axes: { x: { labelPreset: "ddMmYyyy" } },
+    },
+  });
+  const state = createWizardState({
+    draft,
+    profiles: { "exercise-data": profile() },
+  });
+
+  const formatted = finalizeWizardDraft(state).chart;
+  assert.equal(formatted.roles.observation.interpretation, "temporal");
+  assert.doesNotThrow(
+    () => validateChartInstance(formatted),
+    "the saved chart carries enough temporal evidence to validate without wizard-only state",
+  );
+
+  const adaptive = finalizeWizardDraft(reduceWizardState(state, {
+    type: "updatePresentation",
+    path: ["axes", "x", "labelPreset"],
+    value: "adaptive",
+  })).chart;
+  assert.equal(adaptive.presentation.axes?.x?.labelPreset, undefined);
+  assert.doesNotThrow(() => validateChartInstance(adaptive));
+});
+
+test("finalization makes every inferred temporal X-axis-only setting portable", () => {
+  const xSettings = [
+    {
+      labelPreset: "adaptive",
+      tickFrequency: { every: 1, unit: "day" },
+    },
+    {
+      min: "2027-05-01T00:00",
+      max: "2027-05-31T23:59",
+    },
+  ];
+
+  for (const [index, x] of xSettings.entries()) {
+    const draft = createChartDraft("line", {
+      id: `inferred-date-axis-${index}`,
+      title: "Inferred date axis",
+      sourceId: "exercise-data",
+      roles: {
+        measurements: [{ field: "value", axis: "primary" }],
+        observation: { field: "reportedAt" },
+      },
+      presentation: { axes: { x } },
+    });
+    const saved = finalizeWizardDraft(createWizardState({
+      draft,
+      profiles: { "exercise-data": profile() },
+    })).chart;
+
+    assert.equal(saved.roles.observation.interpretation, "temporal");
+    assert.equal(saved.presentation.axes.x.labelPreset, undefined);
+    assert.doesNotThrow(
+      () => validateChartInstance(saved),
+      `X settings ${index + 1} validate without wizard-only profile evidence`,
+    );
+  }
+});
+
 test("unrelated populated synchronization groups validate against authoritative existing charts", () => {
   const existing = createChartDraft("line", {
     id: "existing-trend",

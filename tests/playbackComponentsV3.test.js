@@ -1050,7 +1050,9 @@ test("playback view resolves only the map chart's configured GeoJSON source", ()
     /1 participating charts\. 1 available; 0 unavailable\./,
   );
   assert.doesNotMatch(configured, /playback-member--unavailable/);
-  assert.match(configured, /A: 20 at 2027-05-02, joined/);
+  assert.match(configured, /data-chart-active-date="2027-05-02"/);
+  assert.match(configured, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(configured, /A: 20 at 2027-05-02, joined|role="img"|chart-view-summary/);
   assert.doesNotMatch(configured, /GeoJSON source/);
   assert.match(
     missing,
@@ -1348,7 +1350,7 @@ test("playback view reports no group and empty clocks without claiming participa
   assert.doesNotMatch(noGroup, /playback-member/);
 });
 
-test("ChartView receives active time when the active Chrono Group lists it as a member", () => {
+test("ChartView receives active time without injecting an accessibility companion", () => {
   const fixture = playbackFixture();
   const staticChart = lineChart({
     id: "static",
@@ -1405,9 +1407,10 @@ test("ChartView receives active time when the active Chrono Group lists it as a 
   );
 
   assert.equal(staticInsideProvider, outsideProvider);
-  assert.match(synchronized, /value at 2027-05-02: 20/);
-  assert.doesNotMatch(synchronized, /value at 2027-05-01: 10/);
-  assert.doesNotMatch(synchronized, /value at 2027-05-03: 30/);
+  assert.match(synchronized, /data-chart-active-date="2027-05-02"/);
+  assert.match(synchronized, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(synchronized, /data-chart-active-date="2027-05-01"|data-chart-active-date="2027-05-03"/);
+  assert.doesNotMatch(synchronized, /value at 2027-05-02: 20|role="img"|chart-view-summary/);
 });
 
 test("an explicit Scene preview time is not overwritten by provider playback time", () => {
@@ -1442,8 +1445,10 @@ test("an explicit Scene preview time is not overwritten by provider playback tim
     },
   );
 
-  assert.match(html, /value at 2027-05-03: 30/);
-  assert.doesNotMatch(html, /value at 2027-05-02: 20/);
+  assert.match(html, /data-chart-active-date="2027-05-03"/);
+  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(html, /data-chart-active-date="2027-05-02"/);
+  assert.doesNotMatch(html, /value at 2027-05-03: 30|role="img"|chart-view-summary/);
 });
 
 test("closing playback removes chart time context and restores static line and latest choropleth rendering", () => {
@@ -1488,11 +1493,17 @@ test("closing playback removes chart time context and restores static line and l
     },
   );
 
-  assert.match(outsideProvider, /at 2027-05-01: 10/);
-  assert.match(outsideProvider, /at 2027-05-03: 30/);
+  const staticLineResolution = resolveChartRendering(chartProps);
+  assert.deepEqual(
+    staticLineResolution.prepared.marks.map(({ x, value }) => [x, value]),
+    [["2027-05-01", 10], ["2027-05-02", 20], ["2027-05-03", 30]],
+  );
+  assert.equal(staticLineResolution.model.option.aria.enabled, false);
+  assert.doesNotMatch(outsideProvider, /data-chart-active-date=/);
+  assert.match(outsideProvider, /class="chart-echarts-host" aria-hidden="true"/);
   assert.match(closedLine, /no-group-context\|no-chart-context/);
-  assert.match(closedLine, /at 2027-05-01: 10/);
-  assert.match(closedLine, /at 2027-05-03: 30/);
+  assert.doesNotMatch(closedLine, /data-chart-active-date=/);
+  assert.doesNotMatch(closedLine, /at 2027-05-01: 10|at 2027-05-03: 30|role="img"|chart-view-summary/);
 
   const geographyRows = [
     { observed: "2027-05-01", area: "A", cases: 10 },
@@ -1508,6 +1519,13 @@ test("closing playback removes chart time context and restores static line and l
     matching: { policy: "exact" },
     members: [{ chartId: geographyChart.id, timeRole: "time" }],
   };
+  const staticGeographyResolution = resolveChartRendering({
+    chart: geographyChart,
+    rows: geographyRows,
+    datasetProfile: geographyProfile,
+    geoData: oneAreaGeoJson(),
+    renderContext: { accessibilityEnabled: true },
+  });
   const closedChoropleth = renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -1534,8 +1552,17 @@ test("closing playback removes chart time context and restores static line and l
       }),
     ),
   );
-  assert.match(closedChoropleth, /2027-05-03/);
-  assert.doesNotMatch(closedChoropleth, /2027-05-01/);
+  assert.deepEqual(
+    staticGeographyResolution.prepared.marks.map(({ time, value }) => [time, value]),
+    [["2027-05-01", 10], ["2027-05-03", 30]],
+  );
+  assert.deepEqual(
+    staticGeographyResolution.model.option.series[0].data.map(({ time, value }) => [time, value]),
+    [["2027-05-03", 30]],
+  );
+  assert.equal(staticGeographyResolution.model.option.aria.enabled, false);
+  assert.doesNotMatch(closedChoropleth, /data-chart-active-date=/);
+  assert.match(closedChoropleth, /class="chart-echarts-host" aria-hidden="true"/);
 
   const atSecondTime = {
     ...initialPlaybackState,
@@ -1703,7 +1730,7 @@ test("the provider exposes stopped playback when an initial clock state cannot a
   assert.equal(closed, "<output>stopped</output>");
 });
 
-test("ChartView announces an active trace point beyond the 50-row accessibility cap", () => {
+test("ChartView preserves an active trace point beyond the former accessibility cap", () => {
   const rows = Array.from({ length: 51 }, (_, index) => ({
     observed: new Date(MAY_1 + (index * 86_400_000)).toISOString().slice(0, 10),
     cases: index + 1,
@@ -1742,11 +1769,29 @@ test("ChartView announces an active trace point beyond the 50-row accessibility 
     },
   );
 
-  assert.match(html, /value at 2027-06-20: 51/);
-  assert.doesNotMatch(html, /value at 2027-05-01: 1/);
+  const timeContext = buildMemberTimeContexts(
+    fixture.groups[0],
+    MAY_1 + (50 * 86_400_000),
+    { frameIndex: 50 },
+  )[chart.id];
+  const resolution = resolveChartRendering({
+    chart,
+    rows,
+    datasetProfile: fixture.profiles.primary,
+    timeContext,
+    renderContext: { accessibilityEnabled: true },
+  });
+  assert.deepEqual(
+    resolution.prepared.marks.filter(({ active }) => active).map(({ x, value }) => [x, value]),
+    [["2027-06-20", 51]],
+  );
+  assert.equal(resolution.model.option.aria.enabled, false);
+  assert.match(html, /data-chart-active-date="2027-06-20"/);
+  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(html, /value at 2027-06-20: 51|role="img"|chart-view-summary/);
 });
 
-test("timeline and swimlane playback companions announce only active events", () => {
+test("timeline and swimlane playback models identify only active events without companions", () => {
   const rows = [
     { event: "Mobilize", start: "2027-05-01", end: "2027-05-01", lane: "Ops", status: "Planned" },
     { event: "Activate", start: "2027-05-02", end: "2027-05-02", lane: "Ops", status: "Active" },
@@ -1759,6 +1804,14 @@ test("timeline and swimlane playback companions announce only active events", ()
 
   for (const typeId of ["timeline", "swimlane"]) {
     const chart = timelineChart(typeId);
+    const group = {
+      id: "exercise",
+      name: "Exercise timeline",
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [{ chartId: chart.id, timeRole: "start" }],
+    };
     const html = renderPlayback(
       React.createElement(ChartView, {
         chart,
@@ -1768,14 +1821,7 @@ test("timeline and swimlane playback companions announce only active events", ()
         renderContext: { accessibilityEnabled: true },
       }),
       {
-        groups: [{
-          id: "exercise",
-          name: "Exercise timeline",
-          period: { start: "2027-05-01", end: "2027-05-03" },
-          secondsPerFrame: 1,
-          matching: { policy: "exact" },
-          members: [{ chartId: chart.id, timeRole: "start" }],
-        }],
+        groups: [group],
         charts: [chart],
         loadedData: { primary: rows },
         profiles: { primary: profile },
@@ -1789,9 +1835,22 @@ test("timeline and swimlane playback companions announce only active events", ()
       },
     );
 
-    assert.match(html, /Activate starts 2027-05-02, state Active/);
-    assert.doesNotMatch(html, /Mobilize/);
-    assert.doesNotMatch(html, /Demobilize/);
+    const timeContext = buildMemberTimeContexts(group, MAY_2, { frameIndex: 1 })[chart.id];
+    const resolution = resolveChartRendering({
+      chart,
+      rows,
+      datasetProfile: profile,
+      timeContext,
+      renderContext: { accessibilityEnabled: true },
+    });
+    assert.deepEqual(
+      resolution.model.option.series[0].data.filter(({ active }) => active).map(({ event }) => event),
+      ["Activate"],
+    );
+    assert.equal(resolution.model.option.aria.enabled, false);
+    assert.match(html, /data-chart-active-date="2027-05-02"/);
+    assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+    assert.doesNotMatch(html, /Activate starts 2027-05-02|role="img"|chart-view-summary/);
   }
 });
 

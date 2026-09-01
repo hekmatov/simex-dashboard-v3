@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { getInteraction } from "../../iconography/iconCatalog.js";
 import { ICON_GLYPHS, getIconGlyph } from "../../iconography/iconGlyphs.js";
 import ControlTooltip from "./ControlTooltip.js";
+import { pointerControlProps, suppressPointerControlFocus } from "./PointerInteractionMode.js";
 
 export const SimExIcon = React.memo(function SimExIcon({
   iconId,
@@ -84,6 +85,7 @@ export const IconControl = React.memo(function IconControl({
         ...restButtonProps,
         ref: workflowDisabled ? undefined : tooltipState.anchorRef,
         type,
+        ...pointerControlProps,
         className: joinClassNames("simex-icon-control", className),
         disabled: isDisabled,
         "aria-disabled": isDisabled || undefined,
@@ -97,10 +99,11 @@ export const IconControl = React.memo(function IconControl({
         "data-icon-status": isPlanned ? "planned" : interaction.status,
         "data-icon-selected": isPressed === true ? "true" : undefined,
         onMouseEnter: chainHandlers(onMouseEnter, tooltipState.show),
-        onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hideUnlessFocused),
-        onFocus: chainHandlers(onFocus, tooltipState.show),
+        onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hide),
+        onMouseDown: suppressPointerControlFocus,
+        onFocus,
         onBlur: chainHandlers(onBlur, tooltipState.hide),
-        onKeyDown: chainHandlers(onKeyDown, tooltipState.handleKeyDown),
+        onKeyDown,
       },
       React.createElement(SimExIcon, {
         iconId: interaction.glyphId,
@@ -158,6 +161,7 @@ export const IconSummary = React.memo(function IconSummary({
       {
         ...forwardedSummaryProps,
         ref: tooltipState.anchorRef,
+        ...pointerControlProps,
         className: joinClassNames("simex-icon-control", className),
         "aria-label": resolvedLabel,
         "aria-describedby": tooltipState.open ? tooltipState.id : undefined,
@@ -167,10 +171,11 @@ export const IconSummary = React.memo(function IconSummary({
         "data-icon-tone": interaction.tone ?? "standard",
         "data-icon-status": interaction.status,
         onMouseEnter: chainHandlers(onMouseEnter, tooltipState.show),
-        onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hideUnlessFocused),
-        onFocus: chainHandlers(onFocus, tooltipState.show),
+        onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hide),
+        onMouseDown: suppressPointerControlFocus,
+        onFocus,
         onBlur: chainHandlers(onBlur, tooltipState.hide),
-        onKeyDown: chainHandlers(onKeyDown, tooltipState.handleKeyDown),
+        onKeyDown,
       },
       React.createElement(SimExIcon, {
         iconId: interaction.glyphId,
@@ -239,12 +244,6 @@ function useIconTooltip(label, placement) {
 
   const hide = React.useCallback(() => setOpen(false), []);
   const show = React.useCallback(() => setOpen(Boolean(label)), [label]);
-  const hideUnlessFocused = React.useCallback(() => {
-    if (document.activeElement !== anchorRef.current) setOpen(false);
-  }, []);
-  const handleKeyDown = React.useCallback((event) => {
-    if (event.key === "Escape") setOpen(false);
-  }, []);
   const layer = open && typeof document !== "undefined"
     ? createPortal(React.createElement(
         "span",
@@ -260,7 +259,7 @@ function useIconTooltip(label, placement) {
       ), document.body)
     : null;
 
-  return { anchorRef, id, open, show, hide, hideUnlessFocused, handleKeyDown, layer };
+  return { anchorRef, id, open, show, hide, layer };
 }
 
 function chainHandlers(first, second) {

@@ -277,6 +277,108 @@ test("axis measurement descriptors offer primary and secondary assignments", () 
   assert.deepEqual(measurements.axisOptions, ["primary", "secondary"]);
 });
 
+test("axis fields identify the X interpretation and hide the unused secondary value axis", () => {
+  const primaryOnly = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: preparedFor(lineChart(), datasetProfile()),
+  });
+  const axes = allFields(primaryOnly).find(({ id }) => id === "axes");
+  assert.equal(axes.xKind, "temporal");
+  assert.equal(axes.hasSecondary, false);
+
+  const secondary = buildEditorFormModel({
+    chart: lineChart({
+      roles: {
+        measurements: [
+          { field: "value", axis: "primary" },
+          { field: "rate", axis: "secondary" },
+        ],
+        observation: { field: "reportedAt", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+    }),
+    profile: datasetProfile(),
+    prepared: preparedFor(lineChart({
+      roles: {
+        measurements: [
+          { field: "value", axis: "primary" },
+          { field: "rate", axis: "secondary" },
+        ],
+        observation: { field: "reportedAt", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+    }), datasetProfile()),
+  });
+  assert.equal(allFields(secondary).find(({ id }) => id === "axes").hasSecondary, true);
+});
+
+test("axis fields expose temporal X controls when preparation inferred a datetime column", () => {
+  const chart = lineChart({
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "reportedAt" },
+    },
+  });
+  const profile = datasetProfile();
+  const model = buildEditorFormModel({
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile, {
+      ...readyPrepared,
+      meta: {
+        ...readyPrepared.meta,
+        axisInterpretation: "temporal",
+      },
+    }),
+  });
+
+  assert.equal(allFields(model).find(({ id }) => id === "axes").xKind, "temporal");
+});
+
+test("horizontal axis fields keep the observation interpretation", () => {
+  const chart = createChartDraft("horizontalBar", {
+    id: "horizontal-temporal-form",
+    title: "Horizontal temporal form",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "reportedAt", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+  });
+  const profile = datasetProfile();
+  const model = buildEditorFormModel({
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile),
+  });
+
+  assert.equal(allFields(model).find(({ id }) => id === "axes").xKind, "temporal");
+});
+
+test("quick editing validates inferred temporal axis settings with the source profile", () => {
+  const chart = lineChart({
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "reportedAt" },
+    },
+    presentation: {
+      axes: {
+        x: {
+          min: "2027-05-01",
+          max: "2027-05-31",
+          labelPreset: "adaptive",
+          tickFrequency: { every: 1, unit: "day" },
+        },
+      },
+    },
+  });
+
+  assert.equal(buildQuickEditorFormModel({ chart }).valid, false);
+  assert.equal(
+    buildQuickEditorFormModel({ chart, profile: datasetProfile() }).valid,
+    true,
+  );
+});
+
 test("empty measurement descriptors remain unbound presentation input", () => {
   const chart = lineChart({
     roles: {

@@ -1,26 +1,25 @@
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
-import { extname, resolve, sep } from "node:path";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import { WebSocketServer } from "ws";
 import { createServer as createViteServer } from "vite";
 
 const APP_HOST = "127.0.0.1";
-const APP_PORT = 4173;
-const CONTROL_PORT = 4174;
-const DIST_ROOT = resolve("dist");
-const distAvailable = await isFile(resolve(DIST_ROOT, "index.html"));
-const vite = distAvailable ? null : await createViteServer({
+requireSourceMode();
+const APP_PORT = numericArgument("--app-port", 4173);
+const CONTROL_PORT = numericArgument("--control-port", 4174);
+const vite = await createViteServer({
   root: process.cwd(),
   appType: "spa",
   logLevel: "error",
   server: { middlewareMode: true, hmr: false },
 });
 const catalogue = JSON.parse(
-  await readFile(resolve(
-    distAvailable ? DIST_ROOT : "public",
-    "integration/quorum-chart-catalogue.json",
-  ), "utf8"),
+  await readFile(
+    resolve("public", "integration/quorum-chart-catalogue.json"),
+    "utf8",
+  ),
 );
 const credential = "e2e-opaque-credential";
 const sessionId = "e2e-session";
@@ -72,12 +71,9 @@ const appServer = createServer(async (request, response) => {
       gateway_path: "/companion/ws",
     });
   }
-  if (!distAvailable) {
-    return vite.middlewares(request, response, () => (
-      json(response, 404, { error: "not found" })
-    ));
-  }
-  return serveStatic(url.pathname, response);
+  return vite.middlewares(request, response, () => (
+    json(response, 404, { error: "not found" })
+  ));
 });
 
 appServer.on("upgrade", (request, socket, head) => {
@@ -176,49 +172,6 @@ function redacted(message) {
   return copy;
 }
 
-async function serveStatic(pathname, response) {
-  const relativePath = pathname === "/" ? "index.html" : pathname.slice(1);
-  let filePath = resolve(DIST_ROOT, relativePath);
-  if (
-    filePath !== DIST_ROOT &&
-    !filePath.startsWith(`${DIST_ROOT}${sep}`)
-  ) {
-    return json(response, 403, { error: "forbidden" });
-  }
-
-  try {
-    if (!(await stat(filePath)).isFile()) {
-      throw new Error("not a file");
-    }
-  } catch {
-    if (extname(relativePath)) {
-      return json(response, 404, { error: "not found" });
-    }
-    filePath = resolve(DIST_ROOT, "index.html");
-  }
-
-  const body = await readFile(filePath);
-  response.writeHead(200, {
-    "content-type": contentType(filePath),
-    "cache-control": "no-store",
-  });
-  response.end(body);
-}
-
-function contentType(filePath) {
-  return (
-    {
-      ".css": "text/css; charset=utf-8",
-      ".csv": "text/csv; charset=utf-8",
-      ".html": "text/html; charset=utf-8",
-      ".js": "text/javascript; charset=utf-8",
-      ".json": "application/json; charset=utf-8",
-      ".svg": "image/svg+xml",
-      ".topojson": "application/json; charset=utf-8",
-    }[extname(filePath)] ?? "application/octet-stream"
-  );
-}
-
 function json(response, status, body) {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -244,10 +197,20 @@ function listen(server, port) {
   });
 }
 
-async function isFile(filePath) {
-  try {
-    return (await stat(filePath)).isFile();
-  } catch {
-    return false;
+function numericArgument(name, fallback) {
+  const index = process.argv.indexOf(name);
+  if (index === -1) {
+    return fallback;
+  }
+  const value = Number(process.argv[index + 1]);
+  if (!Number.isInteger(value) || value < 1 || value > 65_535) {
+    throw new Error(`${name} must be an integer TCP port`);
+  }
+  return value;
+}
+
+function requireSourceMode() {
+  if (!process.argv.includes("--source")) {
+    throw new Error("The companion E2E harness requires --source");
   }
 }

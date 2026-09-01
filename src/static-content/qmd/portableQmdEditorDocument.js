@@ -61,6 +61,63 @@ export function parsePortableQmdEditorDocument(source) {
   }
 }
 
+// The strict bridge remains available to consumers that need exact representability
+// decisions. The Composer uses this projection instead: it can always offer an
+// editable document, while keeping the original source authoritative until the
+// author actually makes a formatted change.
+export function projectPortableQmdEditorDocument(source) {
+  const parsed = parsePortableQmdEditorDocument(source);
+  if (parsed.mode === "visual") {
+    return Object.freeze({
+      mode: "visual",
+      source,
+      document: parsed.document,
+      report: Object.freeze({ likelyAltered: Object.freeze([]), strictMode: "visual" }),
+    });
+  }
+  const likelyAltered = identifyPortableQmdRewriteRisks(source, parsed.reason);
+  return Object.freeze({
+    mode: "visual",
+    source,
+    document: Object.freeze({
+      type: "doc",
+      content: Object.freeze([{ type: "paragraph", content: Object.freeze([{ type: "text", text: source }]) }]),
+    }),
+    report: Object.freeze({ likelyAltered, strictMode: "advanced" }),
+  });
+}
+
+export function identifyPortableQmdRewriteRisks(source, advancedReason = "") {
+  if (typeof source !== "string") throw new TypeError("Portable QMD source must be a string.");
+  const risks = [];
+  const add = (construct) => {
+    if (construct && !risks.includes(construct)) risks.push(construct);
+  };
+  for (const [pattern, construct] of UNSUPPORTED_SOURCE) {
+    const inspected = construct === "inline code"
+      ? source.replace(/```[\s\S]*?```/g, "")
+      : source;
+    if (pattern.test(inspected)) add(construct);
+  }
+  if (source.split("\n").some((line) => {
+    const value = line.trim();
+    return value.startsWith(":::")
+      && value !== ":::"
+      && value !== "::: {.simex-text-lead}"
+      && value !== "::: {.simex-text-caption}";
+  })) add("callouts or unsupported directives");
+  if (!hasSupportedTableShape(source)) add("an unsupported table shape");
+  add(constructFromAdvancedReason(advancedReason));
+  return Object.freeze(risks);
+}
+
+function constructFromAdvancedReason(reason) {
+  const value = String(reason ?? "").trim();
+  if (!value) return "";
+  const match = value.match(/preserve (.+?) exactly\.?$/i);
+  return match?.[1] ?? "source constructs outside the formatted editor schema";
+}
+
 export function serializePortableQmdEditorDocument(document) {
   const errors = [];
   if (!document || document.type !== "doc" || (document.content !== undefined && !Array.isArray(document.content))) {
@@ -257,7 +314,10 @@ function serializeInline(nodes = [], errors) {
   if (!Array.isArray(nodes)) { errors.push("Inline content must be an array."); return ""; }
   return nodes.map((node) => {
     if (node?.type === "portableMedia") {
-      try { return serializePortableMediaReference(node.attrs); }
+      const attributes = { ...node.attrs };
+      if (attributes.frameWeight === null) delete attributes.frameWeight;
+      if (attributes.frameColor === null) delete attributes.frameColor;
+      try { return serializePortableMediaReference(attributes); }
       catch (error) { errors.push(error?.message ?? "Portable media is invalid."); return ""; }
     }
     if (node?.type !== "text" || typeof node.text !== "string") { errors.push(`Unsupported inline node: ${String(node?.type)}.`); return ""; }

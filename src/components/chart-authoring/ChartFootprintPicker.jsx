@@ -16,6 +16,7 @@ export default function ChartFootprintPicker({
   idPrefix = "chart",
   value,
   disabled = false,
+  showTextLabels = true,
   onChange,
 }) {
   const current = normalizeCell(value);
@@ -38,13 +39,16 @@ export default function ChartFootprintPicker({
   };
 
   return (
-    <section className="chart-footprint-control" aria-labelledby={titleId}>
+    <section
+      className="chart-footprint-control"
+      aria-labelledby={titleId}
+    >
       <div className="chart-footprint-heading">
         <div>
-          <span className="eyebrow">{subjectLabel} size</span>
-          <h3 id={titleId}>Footprint</h3>
+          <span id={showTextLabels ? undefined : titleId} className={showTextLabels ? "eyebrow" : "dashboard-dialog__eyebrow"}>{subjectLabel} size</span>
+          {showTextLabels && <h3 id={titleId}>Footprint</h3>}
         </div>
-        <span className="chart-footprint-limit">4-column grid</span>
+        {showTextLabels && <span className="chart-footprint-limit">4-column grid</span>}
       </div>
       <div className="chart-footprint-picker">
         <span className="chart-footprint-corner" aria-hidden="true">Width →<br />Height ↓</span>
@@ -100,11 +104,13 @@ export default function ChartFootprintPicker({
           })}
         </div>
       </div>
-      <p className="chart-footprint-status" aria-live="polite">
-        {preview
-          ? `Preview: ${preview.columns} columns × ${preview.rows} rows. Click, Enter, or Space to apply.`
-          : `Current footprint: ${current.columns} columns × ${current.rows} rows.`}
-      </p>
+      {(showTextLabels || preview) && (
+        <p className="chart-footprint-status" aria-live="polite">
+          {preview
+            ? `Preview: ${preview.columns} columns × ${preview.rows} rows. Click, Enter, or Space to apply.`
+            : `Current footprint: ${current.columns} columns × ${current.rows} rows.`}
+        </p>
+      )}
     </section>
   );
 }

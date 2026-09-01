@@ -236,6 +236,90 @@ test("decorative and passive Image rendering remove announced content and all co
   assert.doesNotMatch(html, /Zoom in|Zoom out|Reset view|Pan image|chart-image-actions/);
 });
 
+test("Image heading precedes the viewport and decoration affects alt text only", () => {
+  const html = renderToStaticMarkup(React.createElement(ImageChartView, {
+    chart: {
+      title: "Outbreak map",
+      presentation: {
+        title: {
+          align: "right",
+          visible: true,
+          fontSize: 20,
+          bold: true,
+          italic: true,
+          underline: true,
+        },
+        image: { background: { mode: "custom", color: "#AABBCC" } },
+      },
+    },
+    model: {
+      kind: "image",
+      status: "ready",
+      src: "https://example.test/map.png",
+      alt: "",
+      decorative: true,
+      width: 1200,
+      height: 600,
+      fit: "contain",
+      crop: { x: 100, y: 200, width: 700, height: 500 },
+      rotation: 90,
+      revision: 1,
+    },
+    interactionMode: "passive",
+    surface: "audience",
+  }));
+
+  assert.ok(html.indexOf("chart-view-heading") < html.indexOf("chart-image-viewport"));
+  assert.match(html, /<h3[^>]*class="chart-view-title"[^>]*>Outbreak map<\/h3>/);
+  assert.match(html, /data-title-align="right"/);
+  assert.match(html, /font-family:var\(--simex-style-heading-font\)/);
+  assert.match(html, /font-size:20px/);
+  assert.match(html, /font-weight:700/);
+  assert.match(html, /font-style:italic/);
+  assert.match(html, /text-decoration:underline/);
+  assert.match(html, /class="chart-image-viewport" style="background-color:#AABBCC"/);
+  assert.equal((html.match(/#AABBCC/g) ?? []).length, 1);
+  assert.match(html, /alt=""/);
+  assert.doesNotMatch(html, /<figcaption/);
+});
+
+test("Image viewport backgrounds resolve by mode while title visibility and style stay independent", () => {
+  const render = ({ title = {}, background }) => renderToStaticMarkup(React.createElement(ImageChartView, {
+    chart: {
+      title: "Response map",
+      presentation: { title: { align: "center", ...title }, image: { background } },
+    },
+    model: {
+      kind: "image",
+      status: "ready",
+      src: "https://example.test/map.png",
+      alt: "Response map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+      revision: 1,
+    },
+    interactionMode: "passive",
+  }));
+
+  const defaultMode = render({ background: { mode: "default", color: "#AABBCC" } });
+  const whiteMode = render({ background: { mode: "white", color: "#AABBCC" } });
+  const hidden = render({
+    title: { visible: false, fontSize: 99 },
+    background: { mode: "custom", color: "not-a-color" },
+  });
+
+  assert.match(defaultMode, /class="chart-image-viewport" style="background-color:var\(--simex-surface-panel-alt\)"/);
+  assert.doesNotMatch(defaultMode, /background-color:#AABBCC/);
+  assert.match(whiteMode, /class="chart-image-viewport" style="background-color:#FFFFFF"/);
+  assert.doesNotMatch(whiteMode, /background-color:#AABBCC/);
+  assert.match(hidden, /class="chart-view-title chart-view-title--visually-hidden"/);
+  assert.match(hidden, /font-size:16px/);
+  assert.match(hidden, /class="chart-image-viewport" style="background-color:var\(--simex-surface-panel-alt\)"/);
+  assert.doesNotMatch(hidden, /not-a-color/);
+});
+
 test("active viewer exposes bounded semantic controls with Reset view distinct from Reset image", () => {
   const html = renderToStaticMarkup(React.createElement(ImageChartView, {
     chart: { title: "Response map" },
@@ -263,6 +347,29 @@ test("active viewer exposes bounded semantic controls with Reset view distinct f
   assert.equal(nextImageZoomScale(1, { ctrlKey: true, deltaY: 1 }), 1);
   assert.deepEqual(clampImagePan({ x: 900, y: -900 }, 2), { x: 50, y: -50 });
   assert.deepEqual(clampImagePan({ x: 30, y: -20 }, 1), { x: 0, y: 0 });
+});
+
+test("an intentionally untitled Image has no generated visible caption but keeps an accessible viewer name", () => {
+  const html = renderToStaticMarkup(React.createElement(ImageChartView, {
+    chart: { title: "" },
+    model: {
+      kind: "image",
+      status: "ready",
+      src: "https://example.test/map.png",
+      alt: "Response map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+      revision: 1,
+    },
+    interactionMode: "active",
+    surface: "view",
+  }));
+
+  assert.doesNotMatch(html, /<figcaption>|Chart image<\/figcaption>/);
+  assert.match(html, /aria-label="Response map image viewer\./);
+  assert.match(html, /alt="Response map"/);
 });
 
 test("typed failures stay panel-scoped and expose the exact active-surface recovery inventory", () => {

@@ -23,7 +23,7 @@ export default function DashboardCanvas({
   multiPanelIds = [],
   excludedChartIds = [],
   chronoSection = null,
-  geoDataSources = {},
+  geoDataSources = EMPTY_OBJECT,
   onNavigate,
   onAddPanelToSection,
   onDisplayAction,
@@ -32,6 +32,7 @@ export default function DashboardCanvas({
 }) {
   const canvasInstanceId = React.useId();
   const [createRequest, setCreateRequest] = React.useState(null);
+  const accessibilityEnabled = false;
   const dashboardRef = React.useRef(dashboard);
   dashboardRef.current = dashboard;
   const getDashboard = React.useCallback(() => dashboardRef.current, []);
@@ -118,8 +119,6 @@ export default function DashboardCanvas({
     </>);
   }
   const landingActive = hasLandingPresentation(activePage);
-  const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
-
   return (<>
     <section
       className="dashboard-workspace"

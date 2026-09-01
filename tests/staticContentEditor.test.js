@@ -31,11 +31,244 @@ test("StaticContentEditor mounts an existing V5 Image edit with media placement 
     mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
     assets: dashboard.assets,
   }));
-  assert.match(html, /Edit Text\/Image/);
+  assert.match(html, /<h2[^>]*class="dashboard-dialog__eyebrow"[^>]*>Text\/Image editor<\/h2>/);
+  assert.doesNotMatch(html, /Edit Text\/Image/);
   assert.match(html, /value="Response map"/);
+  assert.match(html, /<label[^>]*>Panel Title<\/label>/);
+  assert.match(html, /<span>No title<\/span>/);
+  assert.doesNotMatch(html, />Footprint<|4-column grid|Current footprint:/);
   assert.match(html, /Alternative text/);
   assert.match(html, /data-image-media-id="media-image-source"/);
   assert.match(html, /data-image-media-revision="3"/);
+});
+
+test("actual standalone Image add and edit flows lead with equal existing and upload paths", () => {
+  const dashboard = makeDashboardV5();
+  const drafts = [
+    createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "image",
+      stage: "content",
+      assets: dashboard.assets,
+    }),
+    createStaticContentDraft({
+      mode: "edit",
+      destination: { pageId: "overview", sectionId: "response" },
+      panel: dashboard.pages[0].sections[0].panels[0].chart,
+      placement: dashboard.dataSources["image-source"],
+      mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
+      assets: dashboard.assets,
+    }),
+  ];
+
+  for (const draft of drafts) {
+    const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+      draft,
+      dashboard,
+      dispatch() {},
+    }));
+    const existing = html.indexOf('data-media-source-path="existing"');
+    const upload = html.indexOf('data-media-source-path="upload"');
+    const alternatives = html.indexOf('id="static-image-origin-kind"');
+    assert.ok(existing >= 0 && upload > existing && alternatives > upload, { existing, upload, alternatives });
+    assert.equal((html.match(/type="file"/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /id="static-image-file"/);
+  }
+});
+
+test("Image add and edit expose the same title appearance and viewport background controls", () => {
+  const dashboard = makeDashboardV5();
+  const drafts = [
+    createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "image",
+      stage: "content",
+      assets: dashboard.assets,
+    }),
+    createStaticContentDraft({
+      mode: "edit",
+      destination: { pageId: "overview", sectionId: "response" },
+      panel: dashboard.pages[0].sections[0].panels[0].chart,
+      placement: dashboard.dataSources["image-source"],
+      mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
+      assets: dashboard.assets,
+    }),
+  ];
+
+  for (const draft of drafts) {
+    const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+      draft,
+      dashboard,
+      dispatch() {},
+    }));
+    for (const label of [
+      "Title alignment",
+      "Decrease image title font size",
+      "Increase image title font size",
+      "Bold",
+      "Italic",
+      "Underline",
+      "Image background",
+    ]) {
+      assert.match(html, new RegExp(label));
+    }
+    assert.match(html, /Default/);
+    assert.match(html, /White/);
+    assert.match(html, /Custom/);
+  }
+});
+
+test("Image presentation controls use one-pixel title steps and retain custom color across modes", () => {
+  const actions = [];
+  const draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "image",
+    stage: "content",
+    panel: {
+      id: "presented-image",
+      typeId: "image",
+      sourceId: "presented-image-source",
+      title: "Outbreak map",
+      presentation: {
+        title: { align: "left", visible: false, fontSize: 16 },
+        image: { background: { mode: "custom", color: "#AABBCC" } },
+      },
+    },
+  });
+  const tree = wizardModule.ImagePanelPresentationFields({
+    draft,
+    dispatch(action) { actions.push(action); },
+  });
+
+  findElement(tree, (element) => element.props?.["aria-label"] === "Increase image title font size").props.onClick();
+  findElement(tree, (element) => element.props?.["aria-label"] === "Decrease image title font size").props.onClick();
+  findElement(tree, (element) => element.props?.id === "static-image-title-bold").props.onChange({ target: { checked: true } });
+  findElement(tree, (element) => element.props?.id === "static-image-title-align").props.onChange({ target: { value: "center" } });
+  findElement(tree, (element) => element.props?.id === "static-image-background-mode").props.onChange({ target: { value: "white" } });
+  findElement(tree, (element) => element.props?.dataColorField === "static-image-background").props.onChange("#DDEEFF");
+
+  assert.deepEqual(actions.map((action) => action.updates.presentation), [
+    {
+      ...draft.panel.presentation,
+      title: { align: "left", visible: false, fontSize: 17 },
+    },
+    {
+      ...draft.panel.presentation,
+      title: { align: "left", visible: false, fontSize: 15 },
+    },
+    {
+      ...draft.panel.presentation,
+      title: { align: "left", visible: false, fontSize: 16, bold: true },
+    },
+    {
+      ...draft.panel.presentation,
+      title: { align: "center", visible: false, fontSize: 16 },
+    },
+    {
+      ...draft.panel.presentation,
+      image: { background: { mode: "white", color: "#AABBCC" } },
+    },
+    {
+      ...draft.panel.presentation,
+      image: { background: { mode: "custom", color: "#DDEEFF" } },
+    },
+  ]);
+});
+
+test("No title disables only Image title appearance controls", () => {
+  const draft = {
+    ...createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "image",
+      stage: "content",
+    }),
+    noTitle: true,
+  };
+  const html = renderToStaticMarkup(React.createElement(wizardModule.ImagePanelPresentationFields, {
+    draft,
+    dispatch() {},
+  }));
+
+  assert.match(html, /<fieldset[^>]*data-image-title-presentation="true"[^>]*disabled/);
+  assert.match(html, /<fieldset[^>]*data-image-background-presentation="true"(?![^>]*disabled)/);
+});
+
+test("Static preview leaves Free Text and Image title ownership to their rendered ChartView", () => {
+  const freeText = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "preview-and-add",
+    panel: {
+      id: "sole-text-title",
+      typeId: "freeText",
+      sourceId: "sole-text-source",
+      title: "Sole text title",
+    },
+    placement: { kind: "staticText", qmd: "Preview body" },
+  });
+  const image = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "image",
+    stage: "preview-and-add",
+    panel: {
+      id: "sole-image-title",
+      typeId: "image",
+      sourceId: "sole-image-source",
+      title: "Sole image title",
+      presentation: { title: { align: "left" } },
+    },
+    placement: {
+      kind: "staticImage",
+      sourceVersion: 2,
+      mediaId: "sole-image-media",
+      alt: "Outbreak map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    mediaItem: {
+      mediaId: "sole-image-media",
+      revision: 1,
+      current: { kind: "url", url: "https://example.test/outbreak.png" },
+      displayName: "Outbreak map",
+      defaultDescription: "Outbreak map",
+      origin: "external",
+      health: "external",
+      mediaType: "image/png",
+    },
+  });
+
+  const textTree = wizardModule.StaticPreview({ draft: freeText });
+  const imageHtml = renderToStaticMarkup(React.createElement(wizardModule.StaticPreview, { draft: image }));
+
+  assert.equal(findElement(textTree, (element) => element.type === "h3"), null);
+  assert.equal(
+    findElement(textTree, (element) => element.props?.chart === freeText.panel)?.props.chart.title,
+    "Sole text title",
+  );
+  assert.equal((imageHtml.match(/>Sole image title</g) ?? []).length, 1);
+  assert.ok(imageHtml.indexOf("chart-view-heading") < imageHtml.indexOf("chart-image-viewport"));
+  assert.doesNotMatch(imageHtml, /<figcaption/);
+});
+
+test("an explicitly untitled Free-text draft prepares a create transaction without persisting wizard-only state", () => {
+  const dashboard = makeDashboardV5();
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "blank-create", typeId: "freeText", sourceId: "blank-create-source", title: "" },
+    placement: { kind: "staticText", qmd: "Untitled body" },
+  });
+  draft = reduceStaticContentDraft(draft, { type: "setNoTitle", noTitle: true });
+  draft = reduceStaticContentDraft(draft, { type: "trySetStage", stage: "preview-and-add" });
+  const payload = finalizeStaticContentDraft(draft);
+  const prepared = prepareStaticPanelTransaction({ dashboard, operation: "create", ...payload });
+
+  assert.equal(payload.panel.title, "");
+  assert.equal("noTitle" in payload, false);
+  assert.equal(prepared.candidateDashboard.pages[0].sections[0].panels.at(-1).chart.title, "");
 });
 
 test("StaticContentEditor forwards retained-media edit authority through the coordinator transaction", () => {
@@ -108,9 +341,11 @@ test("workflow pending disables every current Text and Image mutating field", ()
         assert.match(html, new RegExp(`<button[^>]*aria-label="${label}"[^>]*disabled`), label);
       }
     } else {
-      for (const id of ["static-image-origin-kind", "static-image-file", "static-image-alt", "static-image-crop-x", "static-image-fit"]) {
+      for (const id of ["static-image-origin-kind", "static-image-alt", "static-image-crop-x", "static-image-fit"]) {
         assert.match(html, new RegExp(`<[^>]+id="${id}"[^>]*disabled`), id);
       }
+      assert.match(html, /data-media-source-path="upload"[\s\S]*type="file"[^>]*disabled/);
+      assert.doesNotMatch(html, /id="static-image-file"/);
       assert.match(html, /class="image-crop-selection"[^>]*aria-disabled="true"/);
     }
   }
@@ -158,6 +393,71 @@ test("Text/Image footer Cancel closes a clean editor and confirms only dirty wor
   assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: false }), "close");
   assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: true }), "confirm");
   assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: true, disabled: true }), "ignore");
+});
+
+test("Free-text authoring forwards the draft panel footprint to writer and preview", () => {
+  const draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "footprint-panel", sourceId: "footprint-source", layout: { width: 3, height: 1 } },
+    placement: { kind: "staticText", qmd: "Footprint content" },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+    draft,
+    dashboard: { pages: [], assets: {}, contentLibrary: { mediaItems: {} } },
+    dispatch() {},
+  }));
+
+  assert.equal((html.match(/--chart-footprint-columns:3/g) ?? []).length, 2);
+  assert.match(html, /data-authoring-footprint="writer"/);
+  assert.match(html, /data-authoring-footprint="preview"/);
+});
+
+test("Text/Image stages and footer slots stay mounted from Destination", () => {
+  const readyAtDestination = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "destination",
+    panel: {
+      id: "stable-shell",
+      typeId: "freeText",
+      sourceId: "stable-shell-source",
+      title: "Situation",
+    },
+    placement: { kind: "staticText", qmd: "Ready content" },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentWizard, {
+    open: true,
+    dashboard: makeDashboardV5(),
+    initialDraft: readyAtDestination,
+  }));
+
+  for (const slot of ["cancel", "reset", "back", "primary"]) {
+    assert.match(html, new RegExp(`data-footer-slot="${slot}"`), slot);
+  }
+  assert.match(html, /data-footer-slot="back"[^]*?<button[^>]*disabled[^>]*>Back<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled[^>]*>Content<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled[^>]*>Preview &amp; add<\/button>/);
+});
+
+test("Text/Image content fields adopt the shared responsive field layout", () => {
+  const draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "grid-text", typeId: "freeText", sourceId: "grid-text-source", title: "Grid" },
+    placement: { kind: "staticText", qmd: "Grid content" },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+    draft,
+    dashboard: makeDashboardV5(),
+    dispatch() {},
+  }));
+
+  assert.match(html, /class="[^"]*dashboard-authoring-grid[^"]*"/);
+  assert.match(html, /class="[^"]*dashboard-authoring-boolean-row[^"]*"[^>]*><input[^>]*type="checkbox"[^>]*><span>No title<\/span>/);
+  assert.match(html, /class="[^"]*dashboard-authoring-field--wide[^"]*"[^>]*>[^]*aria-label="Text post editor"/);
 });
 
 test("embedded QMD media uses displayName as the initial nondecorative alt fallback", () => {
@@ -244,3 +544,13 @@ test("discard, validation failure, and persistence failure retain prior V5 ident
   assert.deepEqual(discarded.assets, { ...dashboard.assets, ...staged });
   assert.deepEqual(dashboard, prior);
 });
+
+function findElement(element, predicate) {
+  if (!React.isValidElement(element)) return null;
+  if (predicate(element)) return element;
+  for (const child of React.Children.toArray(element.props?.children)) {
+    const match = findElement(child, predicate);
+    if (match) return match;
+  }
+  return null;
+}

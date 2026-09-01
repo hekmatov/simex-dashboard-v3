@@ -10,6 +10,8 @@ const CATALOGUE_PATH = "public/integration/quorum-chart-catalogue.json";
 const CHART_VIEW_PATH = "src/components/charts/ChartView.jsx";
 const REGISTRY_PATH = "src/charting/schemas/chartSchemaRegistry.js";
 const RENDERER_PATH = "src/charting/rendering/resolveChartRendering.js";
+const ECHARTS_TEXT_METRICS_HELPER_PATH =
+  "src/charting/rendering/axisTitleGraphics.js";
 const AUDIENCE_ENTRYPOINT = "src/components/presentation/AudienceDisplay.jsx";
 const ALLOWED_RESOLVER_CONSUMERS = new Set([
   CHART_VIEW_PATH,
@@ -449,7 +451,7 @@ function assertCanonicalRendererExclusivity(sourceFiles, reachableByMode) {
     }
 
     const allowedSignals = RAW_RENDER_SURFACE_ALLOWLIST.get(filePath) ?? new Set();
-    const unexpectedSignals = rawRenderSurfaceSignals(source, specifiers)
+    const unexpectedSignals = rawRenderSurfaceSignals(filePath, source, specifiers)
       .filter((signal) => !allowedSignals.has(signal));
     if (unexpectedSignals.length > 0) {
       throw new Error(
@@ -459,9 +461,15 @@ function assertCanonicalRendererExclusivity(sourceFiles, reachableByMode) {
   }
 }
 
-function rawRenderSurfaceSignals(source, specifiers) {
+function rawRenderSurfaceSignals(filePath, source, specifiers) {
   const signals = [];
-  if (specifiers.some((specifier) => specifier === "echarts" || specifier === "echarts-for-react")) {
+  if (
+    specifiers.some((specifier) => specifier === "echarts" || specifier === "echarts-for-react")
+    && (
+      specifiers.includes("echarts-for-react")
+      || !isAuditedEChartsTextMetricsCapability(filePath, source)
+    )
+  ) {
     signals.push("echarts-runtime");
   }
   if (
@@ -475,6 +483,20 @@ function rawRenderSurfaceSignals(source, specifiers) {
     signals.push("canvas-context");
   }
   return signals;
+}
+
+function isAuditedEChartsTextMetricsCapability(filePath, source) {
+  if (filePath !== ECHARTS_TEXT_METRICS_HELPER_PATH) return false;
+  const echartsModuleReferences = [
+    ...source.matchAll(
+      /\b(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']echarts["']|\bimport\s*\(\s*["']echarts["']\s*\)|\brequire\s*\(\s*["']echarts["']\s*\)/g,
+    ),
+  ];
+  return (
+    echartsModuleReferences.length === 1
+    && /^\s*import\s*\{\s*format\s+as\s+echartsFormat\s*\}\s*from\s+["']echarts["']\s*;?\s*$/m.test(source)
+    && !/\bechartsFormat\s*(?:\.|\?\.)\s*init\s*\(/.test(source)
+  );
 }
 
 function reachableSourceFiles(entrypoint, sourceFiles) {
@@ -498,6 +520,7 @@ function parseImportSpecifiers(source) {
   const patterns = [
     /\b(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/g,
     /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+    /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
   ];
   for (const pattern of patterns) {
     for (const match of source.matchAll(pattern)) specifiers.push(match[1]);

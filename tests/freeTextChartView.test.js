@@ -18,6 +18,7 @@ let page;
 beforeEach(async () => {
   page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.setDefaultTimeout(5_000);
+  page.setDefaultNavigationTimeout(15_000);
   await page.goto(`${baseURL}/tests/fixtures/free-text-harness.html`);
   await page.waitForFunction(() => window.freeTextHarnessReady === true, null, { timeout: 5_000 });
 });
@@ -33,8 +34,112 @@ after(async () => {
 });
 
 async function portableQmdRepairSource(scope = page) {
-  return scope.getByLabel("Portable QMD source");
+  const rawSource = scope.getByLabel("Portable QMD raw source");
+  if (await rawSource.count() === 0) await scope.getByRole("button", { name: "Raw text" }).click();
+  return scope.getByLabel("Portable QMD raw source");
 }
+
+test("formatted/raw switching preserves source until an edit and table cell actions stay outside the document", async () => {
+  const source = [
+    "| Facility | Ready |",
+    "| --- | --- |",
+    "| North | Yes |",
+  ].join("\n");
+  await page.evaluate((value) => window.mountFreeTextEditor(value), source);
+
+  await page.getByRole("button", { name: "Raw text" }).click();
+  const raw = page.getByLabel("Portable QMD raw source");
+  await expect(raw).toHaveValue(source);
+  await expect(raw).toHaveAttribute("id", "harness-qmd");
+  await page.getByRole("button", { name: "Formatted text" }).click();
+  await expect(page.getByLabel("Portable QMD Composer editing area")).toBeVisible();
+  await expect(page.getByText(/Formatted editing can normalize Portable QMD syntax/)).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 600 });
+
+  const firstCell = page.getByLabel("Portable QMD Composer editing area").locator("td").first();
+  await firstCell.hover();
+  const trigger = page.getByRole("button", { name: "Table cell actions" });
+  await expect(trigger).toBeVisible();
+  await expect(page.getByLabel("Portable QMD Composer editing area").getByRole("button", { name: "Table cell actions" })).toHaveCount(0);
+  await firstCell.click();
+  await page.keyboard.press("Shift+F10");
+  for (const label of ["Add row above", "Add row below", "Add column before", "Add column after", "Remove current row", "Remove current column"]) {
+    await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
+  }
+  await expect(page.getByRole("menuitem", { name: "Add row above" })).toBeFocused();
+  const menu = page.getByRole("menu", { name: "Table cell actions" });
+  const bounds = await menu.boundingBox();
+  assert.ok(bounds);
+  assert.ok(bounds.x >= 8 && bounds.x + bounds.width <= 312, `menu must fit horizontally: ${JSON.stringify(bounds)}`);
+  assert.ok(bounds.y >= 8 && bounds.y + bounds.height <= 592, `menu must fit vertically: ${JSON.stringify(bounds)}`);
+  await menu.press("Escape");
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  const rowsBefore = await page.getByLabel("Portable QMD Composer editing area").locator("tr").count();
+  await page.getByRole("menuitem", { name: "Add row below" }).click();
+  await expect(page.getByLabel("Portable QMD Composer editing area").locator("tr")).toHaveCount(rowsBefore + 1);
+});
+
+test("formatted media preserves custom frames and normalizes lowercase color only after an edit", async () => {
+  const source = '![Map](simex-media:map){width=50% align=center flow=block frame=outline frameweight=3 framecolor="#aabbcc" caption="" decorative=false}';
+  await page.evaluate((value) => window.mountFreeTextEditor(value), source);
+  await page.getByRole("button", { name: "Raw text" }).click();
+  await expect(page.getByLabel("Portable QMD raw source")).toHaveValue(source);
+  await page.getByRole("button", { name: "Formatted text" }).click();
+  const composer = page.getByLabel("Portable QMD Composer editing area");
+  await composer.click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" note");
+  await page.getByRole("button", { name: "Raw text" }).click();
+  const edited = await page.getByLabel("Portable QMD raw source").inputValue();
+  assert.match(edited, /frame=outline frameweight=3 framecolor="#AABBCC"/);
+  assert.match(edited, /note/);
+});
+
+test("blank titles stay in Text/Image editor until the No title choice is unambiguous", async () => {
+  await page.evaluate((source) => window.mountFreeTextWizard(source), "Untitled content");
+  const wizard = page.getByRole("dialog", { name: "Text/Image editor" });
+  const title = wizard.getByLabel("Panel Title");
+  const noTitle = wizard.getByLabel("No title");
+  const continueButton = wizard.getByRole("button", { name: "Continue" });
+
+  await title.fill("");
+  await continueButton.click();
+  await expect(wizard.getByRole("alert")).toHaveText("Enter a panel title or select No title.");
+  await expect(title).toBeFocused();
+  await expect(wizard.locator('[data-static-content-stage="content"]')).toBeVisible();
+  await continueButton.focus();
+  await continueButton.click();
+  await expect(title).toBeFocused();
+
+  await noTitle.check();
+  await title.fill("Conflicting title");
+  await continueButton.click();
+  await expect(wizard.getByRole("alert")).toHaveText("Clear the title or unselect No title.");
+  await expect(noTitle).toBeFocused();
+  await expect(wizard.locator('[data-static-content-stage="content"]')).toBeVisible();
+
+  await title.fill("");
+  await continueButton.click();
+  await expect(wizard.locator('[data-static-content-stage="preview-and-add"]')).toBeVisible();
+  await expect(wizard.getByLabel("Text/Image preview").getByRole("heading", { name: "Preview" })).toHaveCount(0);
+});
+
+test("raw Text/Image editing remains the suspended restoration surface", async () => {
+  const source = "## Notes\n\nExact source.";
+  await page.evaluate((value) => window.mountFreeTextWizard(value, {
+    restoration: { stage: "content", surface: "advanced", focusId: "static-qmd-source", scrollTop: 0 },
+  }), source);
+  const wizard = page.getByRole("dialog", { name: "Text/Image editor" });
+  const raw = wizard.getByLabel("Portable QMD raw source");
+  await expect(raw).toBeVisible();
+  await raw.fill(`${source}\n\nChanged.`);
+  await wizard.getByRole("button", { name: "Close Text/Image editor" }).click();
+  await page.waitForFunction(() => window.__staticSuspension !== null);
+  const restoration = await page.evaluate(() => window.__staticSuspension.restoration);
+  assert.equal(restoration.surface, "advanced");
+  assert.equal(restoration.focusId, "static-qmd-source");
+});
 
 test("canonical ChartView routes typed Free text without rows or playback projection and preserves semantic structure", async () => {
   const qmd = [
@@ -135,6 +240,101 @@ test("Free text portals replace and unmount without orphan media or duplicate le
   assert.deepEqual(await page.evaluate(() => window.__qmdLeaseCalls), ["acquire:asset-ready", "release:asset-ready"]);
 });
 
+test("compiled frame attributes reach the media portal without default injection", async () => {
+  const result = await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(FreeTextChartView, {
+      model: { sourceId: "frame-source", revision: 1, qmd: '![Map](simex-media:map){frame=outline frameweight=4 framecolor="#A1B2C3" decorative=false}' },
+      chart: { id: "frame-panel", title: "Frame" },
+      contentRenderContext: {
+        mediaItems: { map: { mediaId: "map", revision: 1, current: { kind: "asset", assetId: "asset-map" }, displayName: "Map", health: "missing" } },
+        assets: {},
+      },
+    }));
+    for (let index = 0; index < 50 && !target.querySelector(".qmd-media-view"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    const host = target.querySelector("[data-qmd-media-host]");
+    const view = target.querySelector(".qmd-media-view");
+    const value = {
+      hostWeight: host?.dataset.qmdMediaFrameWeight,
+      hostColor: host?.dataset.qmdMediaFrameColor,
+      viewWeight: view?.style.getPropertyValue("--qmd-frame-weight"),
+      viewColor: view?.style.getPropertyValue("--qmd-frame-color"),
+    };
+    root.unmount();
+    target.remove();
+    return value;
+  });
+  assert.deepEqual(result, { hostWeight: "4", hostColor: "#A1B2C3", viewWeight: "4px", viewColor: "#A1B2C3" });
+});
+
+test("equivalent media wrappers stay mounted while a real media replacement transfers the lease", async () => {
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "stable-qmd-media-target";
+    const root = ReactDOMClient.createRoot(target);
+    const item = (revision, assetId) => ({
+      mediaId: "stable", revision,
+      current: { kind: "asset", assetId },
+      displayName: "Stable map", defaultDescription: "Stable map", origin: "uploaded", health: "ready",
+      dimensions: { width: 8, height: 6 }, byteLength: 32, mediaType: "image/png",
+    });
+    const first = item(1, "asset-stable-one");
+    const resolveAsset = async (assetId) => {
+      window.__stableMediaCalls.push(`acquire:${assetId}`);
+      return {
+        url: `blob:https://simex.test/${assetId}`,
+        release: () => window.__stableMediaCalls.push(`release:${assetId}`),
+      };
+    };
+    window.__stableMediaCalls = [];
+    window.__stableMediaFirst = first;
+    window.__stableMediaRoot = root;
+    window.__renderStableMedia = (mediaItem) => root.render(React.createElement(FreeTextChartView, {
+      model: { sourceId: "stable-source", revision: 1, qmd: "![Stable map](simex-media:stable)" },
+      chart: { id: "stable-panel", title: "Stable panel" },
+      contentRenderContext: {
+        mediaItems: { stable: mediaItem },
+        assets: {
+          "asset-stable-one": { assetId: "asset-stable-one" },
+          "asset-stable-two": { assetId: "asset-stable-two" },
+        },
+        resolveAsset,
+      },
+    }));
+    window.__renderStableMedia(first);
+    window.__replaceStableMedia = () => window.__renderStableMedia(item(2, "asset-stable-two"));
+  });
+
+  const scope = page.locator("#stable-qmd-media-target");
+  await scope.locator('[data-qmd-media-revision="1"] img').waitFor();
+  await page.evaluate(() => window.__renderStableMedia(window.__stableMediaFirst));
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.deepEqual(await page.evaluate(() => window.__stableMediaCalls), ["acquire:asset-stable-one"]);
+
+  await page.evaluate(() => window.__replaceStableMedia());
+  await scope.locator('[data-qmd-media-revision="2"] img').waitFor();
+  assert.deepEqual(await page.evaluate(() => window.__stableMediaCalls), [
+    "acquire:asset-stable-one",
+    "release:asset-stable-one",
+    "acquire:asset-stable-two",
+  ]);
+
+  await page.evaluate(() => window.__stableMediaRoot.unmount());
+  assert.deepEqual(await page.evaluate(() => window.__stableMediaCalls), [
+    "acquire:asset-stable-one",
+    "release:asset-stable-one",
+    "acquire:asset-stable-two",
+    "release:asset-stable-two",
+  ]);
+});
+
 test("Free-text source preview leases staged simex media through the authored asset resolver and releases on unmount", async () => {
   await page.evaluate(async () => {
     const { default: React } = await import("/node_modules/.vite/deps/react.js");
@@ -170,6 +370,89 @@ test("Free-text source preview leases staged simex media through the authored as
   assert.deepEqual(await page.evaluate(() => window.__draftPreviewCalls), ["acquire:asset-draft-local"]);
   await page.evaluate(() => window.__draftPreviewRoot.unmount());
   assert.deepEqual(await page.evaluate(() => window.__draftPreviewCalls), ["acquire:asset-draft-local", "release:asset-draft-local"]);
+});
+
+test("scrolling Add Text/Image keeps the rendered preview image mounted", async () => {
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: StaticContentWizard } = await import("/src/components/static-content/StaticContentWizard.jsx");
+    const { createStaticContentDraft } = await import("/src/static-content/forms/staticContentDraft.js");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "wizard-scroll-preview";
+    const mediaItem = {
+      mediaId: "scroll-preview", revision: 1,
+      current: { kind: "asset", assetId: "asset-scroll-preview" },
+      displayName: "Scroll preview map", defaultDescription: "Scroll preview map", origin: "uploaded", health: "ready",
+      dimensions: { width: 8, height: 6 }, byteLength: 32, mediaType: "image/png",
+    };
+    const manifestEntry = {
+      assetId: "asset-scroll-preview", mediaType: "image/png", byteLength: 32,
+      width: 8, height: 6, sha256: "b".repeat(64), storageState: "staged",
+    };
+    const initial = createStaticContentDraft({
+      mode: "create",
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "freeText",
+      panel: { id: "scroll-preview-panel", typeId: "freeText", title: "Scroll preview", sourceId: "scroll-preview-source" },
+      source: {
+        kind: "staticText", sourceVersion: 1, revision: 1, renderingPolicy: "portable-qmd-v1",
+        qmd: "![Scroll preview map](simex-media:scroll-preview)\n\nScroll the wizard without reloading this image.",
+      },
+      assets: { "asset-scroll-preview": manifestEntry },
+    });
+    initial.stage = "content";
+    initial.pendingMediaItems = { "scroll-preview": mediaItem };
+    window.__wizardScrollPreviewCalls = [];
+    window.__wizardScrollPreviewRenderCount = 0;
+
+    function ScrollRestorationHarness() {
+      const [restoration, setRestoration] = React.useState(null);
+      const resolveAsset = React.useCallback(async (assetId) => {
+        window.__wizardScrollPreviewCalls.push(`acquire:${assetId}`);
+        if (window.__wizardScrollPreviewCalls.filter((call) => call.startsWith("acquire:")).length > 1) {
+          return new Promise(() => {});
+        }
+        return {
+          url: `blob:https://simex.test/${assetId}`,
+          release: () => window.__wizardScrollPreviewCalls.push(`release:${assetId}`),
+        };
+      }, []);
+      window.__wizardScrollPreviewRenderCount += 1;
+      return React.createElement(StaticContentWizard, {
+        open: true,
+        dashboard: { pages: [], contentLibrary: { mediaItems: {} }, assets: {} },
+        initialDraft: initial,
+        restoration,
+        contentRenderContext: { mediaItems: {}, assets: {}, resolveAsset },
+        onRestorationChange: setRestoration,
+      });
+    }
+
+    window.__wizardScrollPreviewRoot = ReactDOMClient.createRoot(target);
+    window.__wizardScrollPreviewRoot.render(React.createElement(ScrollRestorationHarness));
+  });
+
+  const scope = page.locator("#wizard-scroll-preview");
+  await scope.locator('[aria-label="Rendered preview"] [data-qmd-media-host] img').waitFor();
+  const rendersBeforeScroll = await page.evaluate(() => window.__wizardScrollPreviewRenderCount);
+  await scope.locator(".static-content-dialog__body").evaluate((body) => {
+    body.scrollTop = 12;
+    body.dispatchEvent(new Event("scroll"));
+  });
+  await page.waitForFunction(
+    (previous) => window.__wizardScrollPreviewRenderCount > previous,
+    rendersBeforeScroll,
+  );
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+  await expect(scope.getByText("Loading embedded image…")).toHaveCount(0);
+  assert.deepEqual(await page.evaluate(() => window.__wizardScrollPreviewCalls), ["acquire:asset-scroll-preview"]);
+  await page.evaluate(() => window.__wizardScrollPreviewRoot.unmount());
+  assert.deepEqual(await page.evaluate(() => window.__wizardScrollPreviewCalls), [
+    "acquire:asset-scroll-preview",
+    "release:asset-scroll-preview",
+  ]);
 });
 
 test("Preview and Add leases pending QMD media through the same authored resolver and releases on close", async () => {
@@ -433,6 +716,7 @@ test("authoring preview selects one media placement and changes only its seriali
     };
     const originalLibrary = structuredClone(mediaItems);
     const actions = [];
+    const selections = [];
     let latestSource = "";
     function Harness() {
       const [source, setSource] = React.useState('![First map](simex-media:first){width=50% align=center flow=block frame=none caption="Original" decorative=false}');
@@ -444,6 +728,7 @@ test("authoring preview selects one media placement and changes only its seriali
         mediaItems,
         assets: {},
         onChange: setSource,
+        onMediaSelect: (mediaItem, context) => selections.push({ mediaId: mediaItem.mediaId, context }),
         onOpenMediaItem: (mediaId) => actions.push(`open:${mediaId}`),
       });
     }
@@ -459,39 +744,34 @@ test("authoring preview selects one media placement and changes only its seriali
     const changeTrigger = target.querySelector('[data-qmd-media-action="change"]');
     changeTrigger?.click();
     for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
-    const focusOnOpen = document.activeElement?.value;
+    const changeHeading = target.querySelector('[aria-label="Media picker"] h3')?.textContent;
+    const managedRadioState = target.querySelector('[aria-label="Media picker"] input[type="radio"][autofocus], [aria-label="Media picker"] input[type="radio"]:checked') !== null;
     target.querySelector('[aria-label="Media picker"]')?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    for (let index = 0; index < 50 && target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    const pickerClosedOnEscape = target.querySelector('[aria-label="Media picker"]') === null;
-    const focusAfterEscape = document.activeElement === changeTrigger;
-    changeTrigger?.click();
-    for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
-    target.querySelector('[aria-label="Media picker"] button')?.click();
+    const pickerStayedOpenOnEscape = target.querySelector('[aria-label="Media picker"]') !== null;
+    [...target.querySelectorAll('[aria-label="Media picker"] button')].find((button) => button.textContent.includes("Close media picker"))?.click();
     for (let index = 0; index < 50 && target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    const focusAfterClose = document.activeElement === changeTrigger;
+    const pickerClosedByPointer = target.querySelector('[aria-label="Media picker"]') === null;
     changeTrigger?.click();
     for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     const changePickerHasIntake = target.querySelector('[aria-label="Media picker"] input[type="file"], [aria-label="Media picker"] button[data-import-media]') !== null
       || target.querySelector('[aria-label="Media picker"]')?.textContent.includes("Import as local media");
     target.querySelector('input[value="second"]')?.click();
     await new Promise((resolve) => setTimeout(resolve, 250));
-    const focusAfterSelection = document.activeElement === changeTrigger;
     target.querySelector("[data-qmd-media-select]")?.click();
     for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="open"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     target.querySelector('[data-qmd-media-action="open"]')?.click();
     const value = {
       source: latestSource,
       actions,
+      selections,
       libraryUnchanged: JSON.stringify(mediaItems) === JSON.stringify(originalLibrary),
       images: target.querySelectorAll("img").length,
       changePickerHasIntake,
-      focusOnOpen,
-      pickerClosedOnEscape,
-      focusAfterEscape,
-      focusAfterClose,
-      focusAfterSelection,
+      changeHeading,
+      managedRadioState,
+      pickerStayedOpenOnEscape,
+      pickerClosedByPointer,
       imageDetails: [...target.querySelectorAll("img")].map((image) => ({ className: image.className, src: image.getAttribute("src"), parent: image.parentElement?.outerHTML })),
       pickerOpen: target.querySelector('[aria-label="Media picker"]') !== null,
     };
@@ -501,16 +781,188 @@ test("authoring preview selects one media placement and changes only its seriali
 
   assert.match(result.source, /\(simex-media:second\)/);
   assert.match(result.source, /width=33% align=center flow=block frame=none caption="Original" decorative=false/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
   assert.deepEqual(result.actions, ["open:second"]);
+  assert.equal(result.selections.length, 1);
+  assert.equal(result.selections[0].mediaId, "second");
+  assert.equal(result.selections[0].context.intent, "change");
+  assert.equal(Number.isInteger(result.selections[0].context.sourceStart), true);
+  assert.equal(Number.isInteger(result.selections[0].context.sourceEnd), true);
   assert.equal(result.libraryUnchanged, true);
   assert.equal(result.images, 0, JSON.stringify({ imageDetails: result.imageDetails, pickerOpen: result.pickerOpen }));
-  assert.equal(result.changePickerHasIntake, false);
-  assert.equal(result.focusOnOpen, "second");
-  assert.equal(result.pickerClosedOnEscape, true);
-  assert.equal(result.focusAfterEscape, true);
-  assert.equal(result.focusAfterClose, true);
-  assert.equal(result.focusAfterSelection, true);
+  assert.equal(result.changePickerHasIntake, true);
+  assert.equal(result.changeHeading, "Change image");
+  assert.equal(result.managedRadioState, false);
+  assert.equal(result.pickerStayedOpenOnEscape, true);
+  assert.equal(result.pickerClosedByPointer, true);
 });
+
+test("wizard change-to-existing retains the selected identity without staging an insertion", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { StaticContentFields } = await import("/src/components/static-content/StaticContentWizard.jsx");
+    const { createStaticContentDraft, reduceStaticContentDraft } = await import("/src/static-content/forms/staticContentDraft.js");
+    const target = document.body.appendChild(document.createElement("div"));
+    const mediaItems = {
+      first: {
+        mediaId: "first", revision: 4, current: { kind: "asset", assetId: "asset-first" },
+        displayName: "First map", defaultDescription: "First map", origin: "uploaded", health: "missing",
+        dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+      },
+      second: {
+        mediaId: "second", revision: 9, current: { kind: "package", path: "media/second.png" },
+        displayName: "Second map", defaultDescription: "Second map", origin: "packaged", health: "ready",
+        dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+      },
+    };
+    const dashboard = { contentLibrary: { mediaItems } };
+    const originalLibrary = structuredClone(mediaItems);
+    const actions = [];
+    const retained = [];
+    let latestDraft;
+    function Harness() {
+      const [draft, setDraft] = React.useState(() => createStaticContentDraft({
+        contentTypeId: "freeText",
+        stage: "content",
+        panel: { id: "retain-panel", typeId: "freeText", sourceId: "retain-source", title: "Retain" },
+        placement: {
+          kind: "staticText",
+          qmd: '![First map](simex-media:first){width=50% align=center flow=block frame=none caption="Original" decorative=false}',
+        },
+      }));
+      latestDraft = draft;
+      return React.createElement(StaticContentFields, {
+        draft,
+        dashboard,
+        dispatch: (action) => {
+          actions.push(action.type);
+          setDraft((current) => reduceStaticContentDraft(current, action));
+        },
+        onRetainMedia: async (selection) => retained.push({ mediaId: selection.mediaItem.mediaId, owner: selection.owner }),
+      });
+    }
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(Harness));
+    for (let index = 0; index < 50 && !target.querySelector("[data-qmd-media-select]"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector("[data-qmd-media-select]")?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="change"]'); index += 1) {
+      target.querySelector('[aria-label="More image options"]')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    target.querySelector('[data-qmd-media-action="change"]')?.click();
+    for (let index = 0; index < 50 && !target.querySelector('input[value="second"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('input[value="second"]')?.click();
+    for (let index = 0; index < 50 && !latestDraft?.source?.qmd.includes("simex-media:second"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    const value = {
+      actions,
+      retained,
+      source: latestDraft.source.qmd,
+      pendingMediaIds: Object.keys(latestDraft.pendingMediaItems ?? {}),
+      libraryUnchanged: JSON.stringify(mediaItems) === JSON.stringify(originalLibrary),
+    };
+    root.unmount();
+    return value;
+  });
+
+  assert.deepEqual(result.actions, ["updateSource"]);
+  assert.deepEqual(result.retained, [{ mediaId: "second", owner: "qmd-panel" }]);
+  assert.match(result.source, /\(simex-media:second\)/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
+  assert.deepEqual(result.pendingMediaIds, []);
+  assert.equal(result.libraryUnchanged, true);
+});
+
+test("delayed change-to-existing is single-flight and cancels a stale source replacement", async () => {
+  const result = await runDelayedExistingChange({ mutateSource: true, attemptSecondChoice: true });
+
+  assert.equal(result.controlsDisabledWhilePending, true);
+  assert.deepEqual(result.selections, [{ mediaId: "second", intent: "change" }]);
+  assert.match(result.source, /simex-media:first/);
+  assert.match(result.source, /Newer source text/);
+  assert.doesNotMatch(result.source, /simex-media:second|simex-media:third/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
+});
+
+test("one delayed change-to-existing retains then replaces the current span exactly once", async () => {
+  const result = await runDelayedExistingChange();
+
+  assert.equal(result.controlsDisabledWhilePending, true);
+  assert.deepEqual(result.selections, [{ mediaId: "second", intent: "change" }]);
+  assert.match(result.source, /simex-media:second/);
+  assert.doesNotMatch(result.source, /simex-media:first|simex-media:third/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
+});
+
+async function runDelayedExistingChange({ mutateSource = false, attemptSecondChoice = false } = {}) {
+  return page.evaluate(async ({ mutateSource, attemptSecondChoice }) => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    const mediaItems = {
+      first: {
+        mediaId: "first", revision: 1, current: { kind: "asset", assetId: "asset-first" },
+        displayName: "First", defaultDescription: "First", origin: "uploaded", health: "missing",
+      },
+      second: {
+        mediaId: "second", revision: 1, current: { kind: "package", path: "second.png" },
+        displayName: "Second", defaultDescription: "Second", origin: "packaged", health: "ready",
+      },
+      third: {
+        mediaId: "third", revision: 1, current: { kind: "package", path: "third.png" },
+        displayName: "Third", defaultDescription: "Third", origin: "packaged", health: "ready",
+      },
+    };
+    const selections = [];
+    const resolvers = [];
+    let latestSource = "";
+    let mutateCurrentSource;
+    function Harness() {
+      const [source, setSource] = React.useState('![First](simex-media:first){width=50% align=center flow=block frame=none decorative=false}');
+      latestSource = source;
+      mutateCurrentSource = () => setSource((current) => `${current}\n\nNewer source text`);
+      return React.createElement(FreeTextSourceEditor, {
+        value: source,
+        panelId: "delayed-change-panel",
+        mediaItems,
+        assets: {},
+        onChange: setSource,
+        onMediaSelect: (mediaItem, context) => {
+          selections.push({ mediaId: mediaItem.mediaId, intent: context?.intent });
+          return new Promise((resolve) => resolvers.push(resolve));
+        },
+      });
+    }
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(Harness));
+    for (let index = 0; index < 50 && !target.querySelector("[data-qmd-media-select]"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector("[data-qmd-media-select]")?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="change"]'); index += 1) {
+      target.querySelector('[aria-label="More image options"]')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    target.querySelector('[data-qmd-media-action="change"]')?.click();
+    for (let index = 0; index < 50 && !target.querySelector('input[value="second"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('input[value="second"]')?.click();
+    for (let index = 0; index < 50 && resolvers.length === 0; index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const controls = [...target.querySelectorAll('[aria-label="Media picker"] input, [aria-label="Media picker"] button')];
+    const controlsDisabledWhilePending = controls.length > 0 && controls.every((control) => control.disabled);
+    if (attemptSecondChoice) target.querySelector('input[value="third"]')?.click();
+    if (mutateSource) {
+      mutateCurrentSource?.();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    [...resolvers].reverse().forEach((resolve) => resolve());
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const value = { controlsDisabledWhilePending, selections, source: latestSource };
+    root.unmount();
+    return value;
+  }, { mutateSource, attemptSecondChoice });
+}
 
 test("authoring edits exact parser-owned placements when inert and duplicate literals precede the selection", async () => {
   const result = await page.evaluate(async () => {
@@ -634,7 +1086,9 @@ test("editor debounces parsing, keeps the last valid preview stale on a complexi
 
   const blocked = `${"> ".repeat(7)}too deeply nested`;
   await page.evaluate((source) => window.setFreeTextEditorSource(source), blocked);
-  assert.equal(await page.locator("output[data-validation-ok]").getAttribute("data-validation-pending"), "true");
+  await page.waitForFunction(() => (
+    document.querySelector('output[data-validation-ok]')?.getAttribute("data-validation-pending") === "true"
+  ));
   await page.waitForTimeout(240);
   assert.match(await page.locator("output[data-validation-ok]").textContent(), /1 blocking error|blocking errors/i);
   assert.equal(await preview.getByText("Initial valid preview.").count(), 1);
@@ -657,12 +1111,12 @@ test("routed controls wait for analysis, accept arbitrary inert text, and still 
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.evaluate((source) => window.mountFreeTextWizard(source), initial);
-  const wizard = page.getByRole("dialog", { name: "Edit Text/Image" });
+  const wizard = page.getByRole("dialog", { name: "Text/Image editor" });
   const source = await portableQmdRepairSource(wizard);
   const continueButton = wizard.getByRole("button", { name: "Continue" });
   const previewRail = wizard.getByRole("button", { name: "Preview & add", exact: true });
   await expect(continueButton).toBeEnabled();
-  assert.match(await wizard.locator("#static-qmd-source-help").textContent(), /preserve the construct exactly/i);
+  assert.match(await wizard.locator(".portable-qmd-composer__source-warning").textContent(), /may rewrite fenced code/i);
 
   const arbitrary = [
     "# Situation",
@@ -697,7 +1151,9 @@ test("change then rapid revert restores cached validation and matching source/pr
   await page.getByLabel("Rendered preview").getByText("Initial valid preview.").waitFor();
 
   await page.evaluate((source) => window.setFreeTextEditorSource(source), "# Changed\n\nValid but not yet evaluated.");
-  assert.equal(await output.getAttribute("data-validation-pending"), "true");
+  await page.waitForFunction(() => (
+    document.querySelector('output[data-validation-ok]')?.getAttribute("data-validation-pending") === "true"
+  ));
   await page.evaluate((source) => window.setFreeTextEditorSource(source), initial);
   await page.waitForFunction(() => document.querySelector('output[data-validation-ok]')?.getAttribute("data-validation-pending") === "false");
 
@@ -733,7 +1189,83 @@ test("responsive writer, preview, and Portable Markdown cards remain visible and
   assert.equal(await markdown.isVisible(), true);
 });
 
-test("panel, table, and code own their bounded overflow without growing the document", async () => {
+test("writer and preview track every selected authoring footprint without expanding the root", async () => {
+  const longToken = "X".repeat(240);
+  const qmd = [
+    "| Heading | Value |",
+    "| --- | --- |",
+    `| ${longToken} | ${longToken} |`,
+  ].join("\n");
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const columns of [1, 2, 3, 4]) {
+    await page.evaluate(({ source, layout }) => window.mountFreeTextEditor(source, { layout }), {
+      source: qmd,
+      layout: { width: columns, height: 1 },
+    });
+    await page.locator('[data-authoring-footprint="writer"] table').waitFor();
+    await page.locator('[data-authoring-footprint="preview"] table').waitFor();
+    const geometry = await page.evaluate((selectedColumns) => {
+      const read = (kind) => {
+        const frame = document.querySelector(`[data-authoring-footprint="${kind}"]`);
+        const grid = frame?.parentElement;
+        const table = frame?.querySelector("table");
+        const gridStyle = getComputedStyle(grid);
+        return {
+          frameWidth: frame?.clientWidth,
+          gridWidth: grid?.clientWidth,
+          columns: gridStyle.getPropertyValue("--chart-footprint-columns").trim(),
+          columnGap: Number.parseFloat(gridStyle.columnGap),
+          trackWidths: gridStyle.gridTemplateColumns.split(" ").map(Number.parseFloat),
+          tableFits: table?.scrollWidth <= table?.clientWidth,
+        };
+      };
+      return {
+        writer: read("writer"),
+        preview: read("preview"),
+        selectedColumns,
+        rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      };
+    }, columns);
+    const expectedWidth = ({ trackWidths, columnGap }) => (
+      trackWidths.slice(0, columns).reduce((total, width) => total + width, 0) + columnGap * (columns - 1)
+    );
+    for (const surface of [geometry.writer, geometry.preview]) {
+      assert.equal(surface.columns, String(columns));
+      assert.ok(Math.abs(surface.frameWidth - expectedWidth(surface)) <= 1, JSON.stringify({ columns, surface }));
+      assert.equal(surface.tableFits, true, JSON.stringify({ columns, surface }));
+    }
+    assert.equal(geometry.writer.frameWidth, geometry.preview.frameWidth);
+    assert.equal(geometry.rootFits, true);
+  }
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.evaluate(({ source }) => window.mountFreeTextEditor(source, { layout: { width: 4, height: 1 } }), { source: qmd });
+  await page.locator('[data-authoring-footprint="preview"] table').waitFor();
+  const narrowGeometry = await page.evaluate(() => {
+    const read = (kind) => {
+      const frame = document.querySelector(`[data-authoring-footprint="${kind}"]`);
+      const grid = frame?.parentElement;
+      return {
+        frameWidth: frame?.clientWidth,
+        gridWidth: grid?.clientWidth,
+        gridTrackCount: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+      };
+    };
+    return {
+      writer: read("writer"),
+      preview: read("preview"),
+      rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    };
+  });
+  assert.equal(narrowGeometry.writer.gridTrackCount, 1);
+  assert.equal(narrowGeometry.preview.gridTrackCount, 1);
+  assert.equal(narrowGeometry.writer.frameWidth, narrowGeometry.writer.gridWidth);
+  assert.equal(narrowGeometry.preview.frameWidth, narrowGeometry.preview.gridWidth);
+  assert.equal(narrowGeometry.rootFits, true);
+});
+
+test("ordinary tables wrap while code retains bounded internal overflow", async () => {
   const longToken = "X".repeat(240);
   const qmd = `# Overflow\n\n${longToken}\n\n| Very wide heading ${longToken} | Value |\n| --- | --- |\n| Wide | ${longToken} |\n\n\`\`\`text\n${longToken}\n\`\`\``;
   await page.setViewportSize({ width: 320, height: 700 });
@@ -748,7 +1280,7 @@ test("panel, table, and code own their bounded overflow without growing the docu
       viewY: getComputedStyle(view).overflowY,
       tableX: getComputedStyle(table).overflowX,
       codeX: getComputedStyle(code).overflowX,
-      tableOwnsOverflow: table.scrollWidth > table.clientWidth,
+      tableFits: table.scrollWidth <= table.clientWidth,
       codeOwnsOverflow: code.scrollWidth > code.clientWidth,
     };
   });
@@ -757,7 +1289,7 @@ test("panel, table, and code own their bounded overflow without growing the docu
     viewY: "auto",
     tableX: "auto",
     codeX: "auto",
-    tableOwnsOverflow: true,
+    tableFits: true,
     codeOwnsOverflow: true,
   });
 });

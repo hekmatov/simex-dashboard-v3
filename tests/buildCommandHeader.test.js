@@ -97,7 +97,7 @@ test("Build main row has the exact compact command order and ownership", () => {
   assert.doesNotMatch(html, /data-dashboard-map-region="inspector"/);
 });
 
-test("More is a dialog drawer containing exactly Scene Studio and Chart accessibility", () => {
+test("More is a dialog drawer containing only Scene Studio in pointer-only mode", () => {
   const html = renderToStaticMarkup(React.createElement(BuildMoreDrawer, {
     open: true,
     onClose() {},
@@ -111,9 +111,9 @@ test("More is a dialog drawer containing exactly Scene Studio and Chart accessib
   assert.match(html, /data-right-side-drawer="build-more-drawer"/);
   assert.match(html, /role="dialog"/);
   assert.match(html, /aria-modal="true"/);
-  assert.deepEqual(commands, ["scene-studio", "chart-accessibility"]);
+  assert.deepEqual(commands, ["scene-studio"]);
   assert.match(html, />Scene Studio<\/button>/);
-  assert.match(html, /type="checkbox"[\s\S]*Chart accessibility/);
+  assert.doesNotMatch(html, /type="checkbox"|Chart accessibility/);
   assert.doesNotMatch(html, /Add chart|Add Text\/Image|Source content|Chrono Studio|Discard Build changes|Finish Build|Pages/);
 });
 

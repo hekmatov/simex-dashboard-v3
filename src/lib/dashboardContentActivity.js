@@ -11,7 +11,6 @@ const DEFINITIONS = Object.freeze({
   "layout.saved": definition("Layout", "Layout changes saved."),
   "layout.discarded": definition("Layout draft", "Layout changes discarded."),
   "chart.draft.created": definition("Chart draft", subjectMessage("Chart draft created", "Chart draft created for")),
-  "chart.draft.updated": definition("Chart draft", subjectMessage("Updating chart draft", "Updating chart draft")),
   "chart.draft.reset": definition("Chart draft", subjectMessage("Chart draft reset", "Chart draft reset for")),
   "chart.draft.suspended": definition("Chart draft", subjectMessage("Chart draft suspended", "Chart draft suspended for")),
   "chart.draft.resumed": definition("Chart draft", subjectMessage("Chart draft resumed", "Chart draft resumed for")),
@@ -29,7 +28,6 @@ const DEFINITIONS = Object.freeze({
   "section.reordered": definition("Section", subjectMessage("Section reordered", "Section reordered")),
   "section.deleted": definition("Section", subjectMessage("Section deleted", "Section deleted"), "warning"),
   "static.draft.created": definition("Content draft", subjectMessage("Content draft created", "Content draft created for")),
-  "static.draft.updated": definition("Content draft", subjectMessage("Updating content draft", "Updating content draft")),
   "static.draft.suspended": definition("Content draft", subjectMessage("Content draft suspended", "Content draft suspended for")),
   "static.draft.resumed": definition("Content draft", subjectMessage("Content draft resumed", "Content draft resumed for")),
   "static.draft.discarded": definition("Content draft", subjectMessage("Content draft discarded", "Content draft discarded for")),
@@ -115,6 +113,24 @@ export function beginDashboardContentOperation(beginOperation, actionId, {
       return operation.dismiss();
     },
   });
+}
+
+export async function runDashboardContentOperation(operation, work) {
+  if (!operation || typeof operation.beforeWork !== "function") {
+    throw new TypeError("Dashboard content work requires an operation handle.");
+  }
+  if (typeof work !== "function") {
+    throw new TypeError("Dashboard content work requires a callback.");
+  }
+  try {
+    await operation.beforeWork();
+    const result = await work();
+    operation.succeed();
+    return result;
+  } catch (error) {
+    operation.fail(error);
+    throw error;
+  }
 }
 
 function definition(label, message, intent = "info") {

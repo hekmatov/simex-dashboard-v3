@@ -64,7 +64,7 @@ test("select-only listbox exposes fixed-width combobox semantics and complete tr
   );
   assert.match(styles, /\.accessible-listbox-trigger:focus-visible\s*\{[^}]*outline:/s);
   assert.match(styles, /\.control-tooltip\[data-control-tooltip-anchor="true"\]:hover[^}]*\.control-tooltip__reason/s);
-  assert.match(styles, /\.control-tooltip\[data-control-tooltip-kind="explanation"\]:focus-within[^}]*\.control-tooltip__reason/s);
+  assert.doesNotMatch(styles, /\.control-tooltip[^,{]*(?::focus|:focus-within|:focus-visible)/s);
 });
 
 test("listbox key actions support Arrow, Home, End, Enter, Space, Escape, and Tab", () => {

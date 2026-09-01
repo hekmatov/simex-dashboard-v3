@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { listChartTypeOptions } from "../src/charting/forms/chartCatalogue.js";
+import {
+  isChartTypeAuthorable,
+  listChartTypeOptions,
+} from "../src/charting/forms/chartCatalogue.js";
 import {
   chartSchemaRegistry,
   getChartSchema,
@@ -19,6 +22,14 @@ test("Add chart and Add Text/Image expose disjoint registry-owned catalogues", (
   const chartIds = listChartTypeOptions({ registry: chartSchemaRegistry })
     .map(({ id }) => id);
   const staticOptions = listStaticContentTypeOptions({ registry: chartSchemaRegistry });
+  const schemas = listChartSchemas();
+  const catalogueIds = [
+    ...chartIds,
+    ...staticOptions.map(({ id }) => id),
+  ];
+  const authorableSchemaIds = schemas
+    .filter(({ typeId }) => isChartTypeAuthorable(typeId))
+    .map(({ typeId }) => typeId);
 
   assert.deepEqual(staticOptions.map(({ id }) => id), ["image", "freeText"]);
   assert.equal(staticOptions.every(({ schemaRevision }) => (
@@ -26,8 +37,14 @@ test("Add chart and Add Text/Image expose disjoint registry-owned catalogues", (
   )), true);
   assert.equal(chartIds.includes("image"), false);
   assert.equal(chartIds.includes("freeText"), false);
-  assert.equal(chartIds.length + staticOptions.length, listChartSchemas().length);
-  assert.equal(new Set([...chartIds, ...staticOptions.map(({ id }) => id)]).size, listChartSchemas().length);
+  assert.deepEqual(catalogueIds.toSorted(), authorableSchemaIds.toSorted());
+  assert.deepEqual(
+    schemas
+      .map(({ typeId }) => typeId)
+      .filter((typeId) => !catalogueIds.includes(typeId)),
+    ["bullet"],
+  );
+  assert.equal(new Set(catalogueIds).size, authorableSchemaIds.length);
 });
 
 test("the registry retains one Image identity and gives both static types typed sources", () => {

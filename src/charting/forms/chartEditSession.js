@@ -6,6 +6,7 @@ const RUNTIME_DASHBOARD_FIELDS = [
   "runtimeContentHealth",
   "loadedData",
 ];
+const projectedPlacementCache = new WeakMap();
 
 export function createChartEditSession({
   placementId,
@@ -140,20 +141,30 @@ export function projectChartEditSessionDashboard(dashboard, state) {
     throw new TypeError("A dashboard is required for chart edit preview.");
   }
 
-  const preview = structuredClone(dashboard);
   let matches = 0;
-  for (const page of preview.pages ?? []) {
-    for (const section of page.sections ?? []) {
-      section.panels = (section.panels ?? []).map((panel) => {
+  let pagesChanged = false;
+  const pages = (dashboard.pages ?? []).map((page) => {
+    let sectionsChanged = false;
+    const sections = (page.sections ?? []).map((section) => {
+      let panelsChanged = false;
+      const panels = (section.panels ?? []).map((panel) => {
         if (panel?.id !== state.placementId) return panel;
         matches += 1;
-        const chart = structuredClone(state.draft);
-        return Object.hasOwn(panel, "chart")
-          ? { ...panel, chart }
-          : chart;
+        panelsChanged = true;
+        return projectChartEditPlacement(panel, state);
       });
-    }
-  }
+      if (!panelsChanged) return section;
+      sectionsChanged = true;
+      return { ...section, panels };
+    });
+    if (!sectionsChanged) return page;
+    pagesChanged = true;
+    return { ...page, sections };
+  });
+  const preview = {
+    ...dashboard,
+    ...(pagesChanged ? { pages } : {}),
+  };
   const committedRemovalAwaitingOwnerCleanup = matches === 0
     && state.status === "saving"
     && state.pendingOperation?.kind === "remove"
@@ -171,6 +182,23 @@ export function projectChartEditSessionDashboard(dashboard, state) {
     deriveChronoGroupChanges(state.savedChronoGroups, state.chronoGroups),
   );
   return preview;
+}
+
+function projectChartEditPlacement(panel, state) {
+  const cached = projectedPlacementCache.get(state);
+  if (cached?.source === panel && cached.draft === state.draft) {
+    return cached.projected;
+  }
+  const chart = structuredClone(state.draft);
+  const projected = Object.hasOwn(panel, "chart")
+    ? { ...panel, chart }
+    : chart;
+  projectedPlacementCache.set(state, {
+    source: panel,
+    draft: state.draft,
+    projected,
+  });
+  return projected;
 }
 
 export function applyChartEditSessionChronoGroupChanges(chronoGroups, changes) {

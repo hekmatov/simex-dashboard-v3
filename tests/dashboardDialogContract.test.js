@@ -116,9 +116,94 @@ test("Text/Image and chart authoring expose dashboard wizard regions", async () 
   assert.match(staticSource, /dashboard-dialog__header/);
   assert.match(staticSource, /dashboard-dialog__progress/);
   assert.match(staticSource, /dashboard-dialog__footer/);
+  assert.match(staticSource, /<h2 id="static-content-dialog-title" className="dashboard-dialog__eyebrow">/);
+  assert.doesNotMatch(staticSource, /Edit Text\/Image/);
+  assert.match(staticSource, /className="static-content-dialog__title-choice"/);
+  assert.match(staticSource, />No title</);
   assert.match(chartSource, /chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide/);
   assert.match(chartSource, /dashboard-dialog__body/);
   assert.match(editorHost, /chart-editor-backdrop dashboard-dialog-backdrop/);
+});
+
+test("Text/Image wizard paints every standard form control with dashboard tokens", async () => {
+  const grammar = await read("src/styles/dashboard-style-grammar.css");
+  const controlPaint = grammar.match(
+    /\.app-frame \.static-content-dialog :is\(\s*input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\),\s*select,\s*textarea\s*\)\s*\{([^}]*)\}/s,
+  )?.[1];
+
+  assert.ok(controlPaint, "the static-content wizard must scope paint to all standard non-choice controls");
+  assert.match(controlPaint, /background:\s*var\(--simex-surface-panel\)/);
+  assert.match(controlPaint, /border-color:\s*var\(--simex-border-strong\)/);
+  assert.match(controlPaint, /border-radius:\s*var\(--simex-style-control-radius\)/);
+  assert.match(controlPaint, /color:\s*var\(--simex-text-strong\)/);
+});
+
+test("authoring shells and fields keep fixed chrome around one responsive workbench", async () => {
+  const [dialogs, grammar, staticCss] = await Promise.all([
+    read("src/styles/dashboard-dialogs.css"),
+    read("src/styles/dashboard-style-grammar.css"),
+    read("src/styles/static-content.css"),
+  ]);
+  const css = `${dialogs}\n${grammar}\n${staticCss}`;
+
+  assert.match(css, /\.dashboard-authoring-shell\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*auto auto minmax\(0, 1fr\) auto;/s);
+  assert.match(css, /\.dashboard-authoring-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\);/s);
+  assert.match(css, /\.dashboard-authoring-field--wide\s*\{[^}]*grid-column:\s*1 \/ -1;/s);
+  assert.match(css, /\.dashboard-authoring-boolean-row\s*\{[^}]*grid-template-columns:\s*20px minmax\(0, 1fr\);/s);
+  assert.match(css, /\.dashboard-authoring-body\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s);
+  assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-tab-list\s*\{[^}]*grid-row:\s*2;/s);
+  assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-layout\s*\{[^}]*grid-row:\s*3;[^}]*overflow:\s*auto;/s);
+  assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.dashboard-authoring-footer\s*\{[^}]*grid-row:\s*4;/s);
+});
+
+test("Chart Wizard and modal Chart Editor keep definite viewport-bounded shells with internal scrolling", async () => {
+  const [dialogs, grammar] = await Promise.all([
+    read("src/styles/dashboard-dialogs.css"),
+    read("src/styles/dashboard-style-grammar.css"),
+  ]);
+
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-wizard\.chart-wizard-v3\s*\{[^}]*block-size:\s*calc\(100dvh - 48px\);[^}]*max-block-size:\s*calc\(100dvh - 48px\);/s,
+  );
+  assert.match(
+    grammar,
+    /@media \(max-width: 520px\)\s*\{\s*\.app-frame \.chart-wizard\.chart-wizard-v3\s*\{[^}]*block-size:\s*calc\(100dvh - 16px\);[^}]*max-block-size:\s*calc\(100dvh - 16px\);/s,
+  );
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-editor-v3\.dashboard-dialog\s*\{[^}]*block-size:\s*min\(820px, calc\(100dvh - 48px\)\);/s,
+  );
+  assert.match(dialogs, /\.dashboard-dialog\s*\{[^}]*overflow:\s*hidden;/s);
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-wizard-workbench\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s,
+  );
+  assert.match(
+    grammar,
+    /\.app-frame \.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-layout\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s,
+  );
+  assert.match(dialogs, /\.dashboard-dialog__body\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s);
+});
+
+test("detached dashboard roots use typography tokens without fixed fallbacks", async () => {
+  const grammar = await read("src/styles/dashboard-style-grammar.css");
+  assert.match(grammar, /font-family:\s*var\(--simex-style-body-font\)/);
+  assert.match(grammar, /font-family:\s*var\(--simex-style-heading-font\)/);
+});
+
+test("dialog eyebrows neutralize legacy global eyebrow paint inside every dialog", async () => {
+  const css = await read("src/styles/dashboard-dialogs.css");
+  assert.match(
+    css,
+    /\.dashboard-dialog__eyebrow,\s*\.dashboard-dialog__header h2\.dashboard-dialog__eyebrow,\s*\.dashboard-dialog__header \.eyebrow\s*\{[^}]*color:\s*var\(--simex-accent\)/s,
+  );
+});
+
+test("base eyebrow paint contains no retired teal fallback", async () => {
+  const css = await read("src/styles.css");
+  assert.doesNotMatch(css, /#c8f6e7\b/i);
+  assert.match(css, /\.eyebrow\s*\{[^}]*color:\s*var\(--simex-text-muted\)/s);
 });
 
 test("source action dialog branches provide an internal body before the action footer", async () => {

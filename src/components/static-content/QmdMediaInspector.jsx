@@ -1,5 +1,6 @@
 import React from "react";
 
+import ColorField from "../ColorField.jsx";
 import {
   serializePortableMediaReference,
   validatePortableMediaAttributes,
@@ -55,7 +56,7 @@ export default function QmdMediaInspector({
     setAltError("");
   }, [placement.alt, placement.decorative, placement.mediaId]);
 
-  const change = (updates) => {
+  const change = (updates, { remove = [] } = {}) => {
     if (Object.hasOwn(updates, "alt")) setAltValue(updates.alt);
     const candidate = {
       mediaId: placement.mediaId,
@@ -68,10 +69,14 @@ export default function QmdMediaInspector({
       decorative: placement.decorative === true,
       ...updates,
     };
+    if (Object.hasOwn(placement, "frameWeight") && !Object.hasOwn(candidate, "frameWeight")) candidate.frameWeight = placement.frameWeight;
+    if (Object.hasOwn(placement, "frameColor") && !Object.hasOwn(candidate, "frameColor")) candidate.frameColor = placement.frameColor;
+    for (const key of remove) delete candidate[key];
     if (candidate.decorative) candidate.alt = "";
     const validated = validatePortableMediaAttributes(candidateAttributes(candidate));
     if (!validated.ok) return;
     const serializable = { ...candidate, ...validated.attributes };
+    if (serializable.frameColor) serializable.frameColor = serializable.frameColor.toUpperCase();
     try {
       serializePortableMediaReference(serializable);
       setAltError("");
@@ -168,6 +173,35 @@ export default function QmdMediaInspector({
       {moreOpen && (
         <div className="qmd-media-inspector__more" data-qmd-media-more="">
           <ChoiceFieldset legend="Frame" name="qmd-media-frame" choices={FRAMES} value={placement.frame ?? "none"} disabled={disabled} describedBy={GUIDANCE_IDS.frame} onChange={(frame) => change({ frame })} />
+          {(placement.frame === "outline" || placement.frame === "card") && (
+            <fieldset disabled={disabled} className="qmd-media-inspector__frame-style" aria-describedby={GUIDANCE_IDS.frame}>
+              <legend>Frame style</legend>
+              <label>
+                <span>Frame weight</span>
+                <input
+                  name="qmd-media-frame-weight"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max="8"
+                  step="1"
+                  value={placement.frameWeight ?? 1}
+                  onChange={(event) => change({ frameWeight: Number(event.target.value) })}
+                />
+              </label>
+              <ColorField
+                id="qmd-media-frame-color"
+                label="Frame color"
+                value={placement.frameColor}
+                fallback="#C7CBCF"
+                dataColorField="qmd-media-frame"
+                onChange={(frameColor) => change({ frameColor })}
+              />
+              <button type="button" className="secondary" onClick={() => change({}, { remove: ["frameWeight", "frameColor"] })}>
+                Reset frame style
+              </button>
+            </fieldset>
+          )}
           <label>
             <span>Visible caption</span>
             <input
@@ -240,7 +274,7 @@ function ChoiceFieldset({ legend, name, choices, value, disabled, describedBy, o
 }
 
 function candidateAttributes(candidate) {
-  return {
+  const attributes = {
     width: candidate.width,
     align: candidate.align,
     flow: candidate.flow,
@@ -248,6 +282,9 @@ function candidateAttributes(candidate) {
     caption: candidate.caption,
     decorative: candidate.decorative,
   };
+  if (Object.hasOwn(candidate, "frameWeight")) attributes.frameWeight = candidate.frameWeight;
+  if (Object.hasOwn(candidate, "frameColor")) attributes.frameColor = candidate.frameColor;
+  return attributes;
 }
 
 function customPercentage(width) {

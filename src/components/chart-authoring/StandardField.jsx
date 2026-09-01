@@ -1,7 +1,9 @@
 import React from "react";
 import { IconControl } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
-const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle"]);
+const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
+const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "tickFrequency"]);
+const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
 function StandardField({
   field,
@@ -28,8 +30,19 @@ function StandardField({
     return /* @__PURE__ */ React.createElement(
       GroupShell,
       { field, className: `chart-authoring-${field.control}` },
-      structuredControls(field.control, value, onChange)
+      structuredControls(field.control, value, onChange, field)
     );
+  }
+  if (field.control === "toggle") {
+    return React.createElement(BooleanFieldShell, {
+      field,
+      control: React.createElement("input", {
+        ...shared,
+        type: "checkbox",
+        checked: value === true,
+        onChange: (event) => onChange(event.target.checked),
+      }),
+    });
   }
   let control;
   switch (field.control) {
@@ -38,9 +51,6 @@ function StandardField({
       break;
     case "select":
       control = /* @__PURE__ */ React.createElement("select", { ...shared, value: scalar(value), onChange: (event) => onChange(event.target.value) }, optionList(field.options).map((option) => /* @__PURE__ */ React.createElement("option", { key: option.value, value: option.value }, option.label)));
-      break;
-    case "toggle":
-      control = /* @__PURE__ */ React.createElement("input", { ...shared, type: "checkbox", checked: value === true, onChange: (event) => onChange(event.target.checked) });
       break;
     case "grouping":
       control = /* @__PURE__ */ React.createElement(
@@ -86,7 +96,11 @@ function StandardField({
         }
       );
   }
-  return /* @__PURE__ */ React.createElement(FieldShell, { field }, control);
+  return /* @__PURE__ */ React.createElement(
+    FieldShell,
+    { field, className: field.control === "textarea" ? "dashboard-authoring-field--wide" : "" },
+    control,
+  );
 }
 function FieldShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
@@ -243,13 +257,13 @@ function filterSeed(filter) {
 function filterScalar(value) {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 }
-function structuredControls(control, value, onChange) {
+function structuredControls(control, value, onChange, field = {}) {
   const current = sanitizeStructuredValue(control, value);
   const emit = (path, nextValue) => onChange(
     updateStructuredFieldValue(control, current, path, nextValue)
   );
   if (control === "labels") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, inlineToggle(
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, inlineToggle(
       "Show labels",
       current.visible === true,
       (checked) => emit(["visible"], checked)
@@ -263,20 +277,16 @@ function structuredControls(control, value, onChange) {
     })));
   }
   if (control === "axes") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, axisControls(
-      "Primary axis",
-      "primary",
-      current.primary ?? {},
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(
+      current.x ?? {},
+      field.xKind ?? "category",
       emit
-    ), axisControls(
-      "Secondary axis",
-      "secondary",
-      current.secondary ?? {},
-      emit
-    ));
+    ), axisControls("Primary axis", "primary", current.primary ?? {}, emit), field.hasSecondary === true
+      ? axisControls("Secondary axis", "secondary", current.secondary ?? {}, emit)
+      : null);
   }
   if (control === "targets") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, /* @__PURE__ */ React.createElement("label", null, "Target direction", /* @__PURE__ */ React.createElement("select", {
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("label", null, "Target direction", /* @__PURE__ */ React.createElement("select", {
       value: current.direction ?? "",
       onChange: (event) => emit(["direction"], event.target.value)
     }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is good"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is good"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))), /* @__PURE__ */ React.createElement("label", null, "Target ranges", /* @__PURE__ */ React.createElement("input", {
@@ -286,24 +296,140 @@ function structuredControls(control, value, onChange) {
     })));
   }
   if (control === "map") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)));
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)));
   }
-  return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, /* @__PURE__ */ React.createElement("label", null, "Timeline lanes", /* @__PURE__ */ React.createElement("input", {
+  return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("label", null, "Timeline lanes", /* @__PURE__ */ React.createElement("input", {
     value: Array.isArray(current.lanes) ? current.lanes.join(", ") : "",
     placeholder: "Response, Recovery",
     onChange: (event) => emit(["lanes"], commaSeparated(event.target.value))
   })), textControl("Marker", current.marker, (nextValue) => emit(["marker"], nextValue)));
 }
 function axisControls(label, axis, value, emit) {
-  return /* @__PURE__ */ React.createElement("fieldset", { className: "chart-authoring-axis-group" }, /* @__PURE__ */ React.createElement("legend", null, label), textControl("Title", value.title, (nextValue) => emit([axis, "title"], nextValue)), /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
+  return React.createElement(
+    "fieldset",
+    { className: "chart-authoring-axis-group dashboard-authoring-grid" },
+    React.createElement("legend", null, label),
+    textControl("Title", value.title, (nextValue) => emit([axis, "title"], nextValue)),
+    selectControl("Title position", value.titlePosition ?? "center", ["top", "center", "bottom"], (nextValue) => emit([axis, "titlePosition"], nextValue)),
+    selectControl("Title orientation", value.titleOrientation ?? "vertical", ["vertical", "horizontal"], (nextValue) => emit([axis, "titleOrientation"], nextValue)),
+    fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit([axis, "titleFontSize"], nextValue)),
+    inlineToggle("Bold", value.titleBold === true, (checked) => emit([axis, "titleBold"], checked)),
+    boundedNumericControl("Horizontal offset", value.titleOffsetX, -96, 96, (nextValue) => emit([axis, "titleOffsetX"], nextValue)),
+    boundedNumericControl("Vertical offset", value.titleOffsetY, -96, 96, (nextValue) => emit([axis, "titleOffsetY"], nextValue)),
+    numericControl("Minimum", value.min, (nextValue) => emit([axis, "min"], nextValue)),
+    numericControl("Maximum", value.max, (nextValue) => emit([axis, "max"], nextValue)),
+    tickControls(axis, value.tickFrequency, "number", emit),
+    inlineToggle("Show grid", value.grid !== false, (checked) => emit([axis, "grid"], checked)),
+  );
+}
+function BooleanFieldShell({ field, control }) {
+  const id = fieldControlId(field);
+  return React.createElement(
+    "div",
+    {
+      className: "chart-authoring-field dashboard-authoring-boolean-row",
+      "data-field-id": field.id,
+      "aria-invalid": fieldHasError(field) ? "true" : void 0,
+    },
+    control,
+    React.createElement("label", { htmlFor: id }, field.label),
+    field.help ? React.createElement("small", { id: `${id}-help` }, field.help) : null,
+    field.error ? React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null,
+  );
+}
+function selectControl(label, value, options, onChange) {
+  return React.createElement("label", null, label, React.createElement("select", {
+    value,
+    onChange: (event) => onChange(event.target.value),
+  }, options.map((option) => React.createElement("option", { key: option, value: option }, sentence(option)))));
+}
+function numericControl(label, value, onChange) {
+  return React.createElement("label", null, label, React.createElement("input", {
     type: "number",
-    value: numeric(value.min),
-    onChange: (event) => emit([axis, "min"], optionalNumber(event.target.value))
+    value: numeric(value),
+    onChange: (event) => onChange(optionalNumber(event.target.value)),
+  }));
+}
+function boundedNumericControl(label, value, min, max, onChange) {
+  return React.createElement("label", null, label, React.createElement("input", {
+    type: "number",
+    min: String(min),
+    max: String(max),
+    step: "1",
+    value: numeric(value),
+    onChange: (event) => onChange(optionalNumber(event.target.value)),
+  }));
+}
+function fontSizeControl(value, onChange) {
+  const size = Number.isInteger(value) ? Math.min(24, Math.max(10, value)) : 14;
+  return React.createElement("div", { className: "chart-authoring-axis-title-size" },
+    React.createElement("span", null, "Title font size"),
+    React.createElement("button", {
+      type: "button",
+      "aria-label": "Decrease title font size",
+      disabled: size <= 10,
+      onClick: () => onChange(size - 1),
+    }, "−"),
+    React.createElement("output", null, size),
+    React.createElement("button", {
+      type: "button",
+      "aria-label": "Increase title font size",
+      disabled: size >= 24,
+      onClick: () => onChange(size + 1),
+    }, "+"),
+  );
+}
+function xAxisControls(value, kind, emit) {
+  const ranged = kind === "temporal" || kind === "number";
+  return /* @__PURE__ */ React.createElement("fieldset", { className: "chart-authoring-axis-group dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("legend", null, "X axis"), textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)), ranged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
+    type: kind === "temporal" ? "datetime-local" : "number",
+    value: kind === "number" ? numeric(value.min) : text(value.min),
+    onChange: (event) => emit(["x", "min"], kind === "number" ? optionalNumber(event.target.value) : event.target.value)
   })), /* @__PURE__ */ React.createElement("label", null, "Maximum", /* @__PURE__ */ React.createElement("input", {
-    type: "number",
-    value: numeric(value.max),
-    onChange: (event) => emit([axis, "max"], optionalNumber(event.target.value))
-  })), inlineToggle("Show grid", value.grid !== false, (checked) => emit([axis, "grid"], checked)));
+    type: kind === "temporal" ? "datetime-local" : "number",
+    value: kind === "number" ? numeric(value.max) : text(value.max),
+    onChange: (event) => emit(["x", "max"], kind === "number" ? optionalNumber(event.target.value) : event.target.value)
+  }))) : null, kind === "temporal" ? /* @__PURE__ */ React.createElement("label", null, "Label format", /* @__PURE__ */ React.createElement("select", {
+    value: value.labelPreset ?? "adaptive",
+    onChange: (event) => emit(["x", "labelPreset"], event.target.value)
+  }, [["adaptive", "Adaptive / current hierarchy"], ["ddMmmYearBoundary", "DD MMM (year boundary)"], ["ddMmYyyy", "DD-MM-YYYY"], ["ddMmYy", "DD-MM-YY"], ["hhMm", "HH:mm"], ["ddMmYyyyHhMm", "DD-MM-YYYY HH:mm"]].map(([preset, label]) => /* @__PURE__ */ React.createElement("option", { key: preset, value: preset }, label)))) : null, tickControls("x", value.tickFrequency, kind, emit));
+}
+function tickControls(axis, value, kind, emit) {
+  const monthCadence = kind === "temporal" && value?.unit === "month";
+  const everyControl = monthCadence
+    ? React.createElement("select", {
+        value: String(EXACT_MONTH_TICK_FREQUENCIES.includes(value?.every) ? value.every : 1),
+        onChange: (event) => emit([axis, "tickFrequency"], {
+          ...(value ?? {}),
+          every: Number(event.target.value),
+          unit: "month",
+        }),
+      }, EXACT_MONTH_TICK_FREQUENCIES.map((frequency) => React.createElement(
+        "option",
+        { key: frequency, value: String(frequency) },
+        String(frequency),
+      )))
+    : React.createElement("input", {
+        type: "number",
+        min: "1",
+        step: "1",
+        value: numeric(value?.every),
+        placeholder: "Auto",
+        onChange: (event) => emit([axis, "tickFrequency"], event.target.value === "" ? undefined : { ...(value ?? {}), every: Number(event.target.value), ...(kind === "temporal" ? { unit: value?.unit ?? "day" } : {}) }),
+      });
+  const every = React.createElement("label", null, "Tick frequency", everyControl);
+  if (kind !== "temporal") return every;
+  return React.createElement(React.Fragment, null, every, React.createElement("label", null, "Tick unit", React.createElement("select", {
+    value: value?.unit ?? "day",
+    onChange: (event) => {
+      const unit = event.target.value;
+      const currentEvery = Number.isInteger(value?.every) ? value.every : 1;
+      const every = unit === "month" && !EXACT_MONTH_TICK_FREQUENCIES.includes(currentEvery)
+        ? 1
+        : currentEvery;
+      emit([axis, "tickFrequency"], { ...(value ?? {}), every, unit });
+    },
+  }, ["minute", "hour", "day", "week", "month", "year"].map((unit) => React.createElement("option", { key: unit, value: unit }, sentence(unit))))));
 }
 function textControl(label, value, onChange) {
   return /* @__PURE__ */ React.createElement("label", null, label, /* @__PURE__ */ React.createElement("input", {
@@ -312,7 +438,7 @@ function textControl(label, value, onChange) {
   }));
 }
 function inlineToggle(label, checked, onChange) {
-  return /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle" }, /* @__PURE__ */ React.createElement("input", {
+  return /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle dashboard-authoring-boolean-row" }, /* @__PURE__ */ React.createElement("input", {
     type: "checkbox",
     checked,
     onChange: (event) => onChange(event.target.checked)
@@ -333,7 +459,7 @@ function updateStructuredFieldValue(control, current, path, value) {
   } else {
     const nested = isRecord(next[section]) ? { ...next[section] } : {};
     setOptional(nested, property, normalizeStructuredInput(control, path, value));
-    if (control === "axes" && Number.isFinite(nested.min) && Number.isFinite(nested.max) && nested.min > nested.max) {
+    if (control === "axes" && section !== "x" && Number.isFinite(nested.min) && Number.isFinite(nested.max) && nested.min > nested.max) {
       delete nested[property === "min" ? "max" : "min"];
     }
     if (Object.keys(nested).length > 0) next[section] = nested;
@@ -345,7 +471,7 @@ function assertStructuredPath(control, path) {
   const [section, property] = path;
   const valid = {
     labels: path.length === 1 && ["visible", "position", "format"].includes(section),
-    axes: path.length === 2 && ["primary", "secondary"].includes(section) && AXIS_PROPERTIES.has(property),
+    axes: path.length === 2 && ((["primary", "secondary"].includes(section) && AXIS_PROPERTIES.has(property)) || (section === "x" && X_AXIS_PROPERTIES.has(property))),
     targets: path.length === 1 && ["ranges", "direction"].includes(section),
     map: path.length === 1 && ["scale", "geoSource", "joinField"].includes(section),
     timeline: path.length === 1 && ["lanes", "marker"].includes(section)
@@ -357,7 +483,22 @@ function normalizeStructuredInput(control, path, value) {
   if (control === "labels" && property === "visible" || control === "axes" && property === "grid") {
     return value === true;
   }
-  if (control === "axes" && ["min", "max"].includes(property)) {
+  if (control === "axes" && ["min", "max"].includes(property) && path[0] !== "x") {
+    return Number.isFinite(value) ? value : void 0;
+  }
+  if (control === "axes" && path[0] === "x" && ["min", "max"].includes(property)) {
+    return Number.isFinite(value) || nonemptyString(value) ? value : void 0;
+  }
+  if (control === "axes" && property === "tickFrequency") {
+    return sanitizeTickFrequency(value);
+  }
+  if (control === "axes" && property === "title") {
+    return typeof value === "string" && value.trim() ? value : void 0;
+  }
+  if (control === "axes" && property === "titleBold") {
+    return value === true;
+  }
+  if (control === "axes" && ["titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property)) {
     return Number.isFinite(value) ? value : void 0;
   }
   if (control === "targets" && property === "ranges") {
@@ -382,7 +523,8 @@ function sanitizeStructuredValue(control, value) {
   if (control === "axes") {
     return compact({
       primary: sanitizeAxis(current.primary),
-      secondary: sanitizeAxis(current.secondary)
+      secondary: sanitizeAxis(current.secondary),
+      x: sanitizeXAxis(current.x)
     }, true);
   }
   if (control === "targets") {
@@ -409,14 +551,33 @@ function sanitizeAxis(value) {
   if (!isRecord(value)) return void 0;
   const axis = {};
   for (const property of AXIS_PROPERTIES) {
-    if (property === "grid" && typeof value[property] === "boolean") axis[property] = value[property];
-    else if (["min", "max"].includes(property) && Number.isFinite(value[property])) axis[property] = value[property];
-    else if (!["grid", "min", "max"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
+    if (["grid", "titleBold"].includes(property) && typeof value[property] === "boolean") axis[property] = value[property];
+    else if (["min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property) && Number.isFinite(value[property])) axis[property] = value[property];
+    else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
+    else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
+    else if (!["grid", "titleBold", "min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY", "title"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
   }
   if (Number.isFinite(axis.min) && Number.isFinite(axis.max) && axis.min > axis.max) {
     delete axis.max;
   }
   return Object.keys(axis).length > 0 ? axis : void 0;
+}
+function sanitizeXAxis(value) {
+  if (!isRecord(value)) return void 0;
+  const axis = {};
+  for (const property of X_AXIS_PROPERTIES) {
+    if (["min", "max"].includes(property) && (Number.isFinite(value[property]) || nonemptyString(value[property]))) axis[property] = typeof value[property] === "string" ? value[property].trim() : value[property];
+    else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
+    else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
+    else if (property === "labelPreset" && nonemptyString(value[property]) && value[property].trim() !== "adaptive") axis[property] = value[property].trim();
+  }
+  return Object.keys(axis).length > 0 ? axis : void 0;
+}
+function sanitizeTickFrequency(value) {
+  if (!isRecord(value) || !Number.isInteger(value.every) || value.every < 1) return void 0;
+  const frequency = { every: value.every };
+  if (nonemptyString(value.unit)) frequency.unit = value.unit.trim();
+  return frequency;
 }
 function sanitizeRanges(value) {
   if (!Array.isArray(value)) return void 0;

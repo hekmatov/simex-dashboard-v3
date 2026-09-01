@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 
 const vite = await createServer({
@@ -46,6 +47,13 @@ const deltaCard = {
   presentation: { collection: null, labels: null, accessibility: null },
   interaction: { zoom: { enabled: false } },
 };
+
+function buildModel(chart, rows, datasetProfile, timeContext) {
+  return buildRenderModel({
+    chart,
+    prepared: prepareChartData({ chart, rows, datasetProfile, timeContext }),
+  });
+}
 
 test("card render models expose labels, values, deltas, and provenance", () => {
   const html = renderToStaticMarkup(
@@ -203,7 +211,7 @@ test("temporal KPI collections show one latest observation per entity outside pl
   assert.doesNotMatch(html, /Duplicate collection entityId|This chart cannot be displayed/);
 });
 
-test("time-series playback summaries place resolved overlays at the shared clock and disclose source policy", () => {
+test("time-series render models retain resolved overlays and provenance while rendered summaries stay suppressed", () => {
   const rows = [
     { observed: "2027-02-20", value: 1 },
     { observed: "2027-02-23", value: 7 },
@@ -211,72 +219,85 @@ test("time-series playback summaries place resolved overlays at the shared clock
   const datasetProfile = profileDataset(rows, {
     observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
   });
-  const render = (matching) => renderToStaticMarkup(React.createElement(ChartView, {
-    chart: {
-      typeId: "line",
-      title: "Transmission",
-      roles: {
-        measurements: [{
-          field: "value",
-          axis: "primary",
-          ...(matching.policy === "interpolate"
-            ? { interpolationAllowed: true }
-            : {}),
-        }],
-        observation: {
-          field: "observed",
-          interpretation: "temporal",
-        },
-      },
-      transformations: {
-        filters: [],
-        grouping: [],
-        aggregation: null,
-        duplicates: null,
-        missingValues: "gap",
-      },
-      presentation: {
-        axes: { primary: {}, secondary: {} },
-        title: { align: "left" },
-        legend: { visible: true },
-      },
-      interaction: {
-        zoom: { enabled: false },
-        timeSync: null,
+  const chartFor = (matching) => ({
+    typeId: "line",
+    title: "Transmission",
+    roles: {
+      measurements: [{
+        field: "value",
+        axis: "primary",
+        ...(matching.policy === "interpolate"
+          ? { interpolationAllowed: true }
+          : {}),
+      }],
+      observation: {
+        field: "observed",
+        interpretation: "temporal",
       },
     },
+    transformations: {
+      filters: [],
+      grouping: [],
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+    },
+    presentation: {
+      axes: { primary: {}, secondary: {} },
+      title: { align: "left" },
+      legend: { visible: true },
+    },
+    interaction: {
+      zoom: { enabled: false },
+      timeSync: null,
+    },
+  });
+  const modelFor = (matching) => buildModel(chartFor(matching), rows, datasetProfile, {
+    groupId: "exercise",
+    activeEpochMs: Date.UTC(2027, 1, 22),
+    matching,
+  });
+
+  const lastKnown = modelFor({ policy: "lastKnown" });
+  const nearest = modelFor({
+    policy: "nearest",
+    toleranceMs: 2 * 24 * 60 * 60 * 1_000,
+  });
+  const interpolated = modelFor({ policy: "interpolate" });
+
+  assert.deepEqual(lastKnown.option.series[0].markPoint.data[0].coord, ["2027-02-22", 1]);
+  assert.equal(lastKnown.option.series[0].markPoint.data[0].provenance.label, "Last measured 2027-02-20");
+  assert.deepEqual(nearest.option.series[0].markPoint.data[0].coord, ["2027-02-22", 7]);
+  assert.equal(nearest.option.series[0].markPoint.data[0].provenance.label, "Nearest measurement 2027-02-23");
+  assert.deepEqual(interpolated.option.series[0].markPoint.data[0].coord, ["2027-02-22", 5]);
+  assert.equal(interpolated.option.series[0].markPoint.data[0].provenance.label, "Interpolated between 2027-02-20 and 2027-02-23");
+  assert.equal(lastKnown.option.aria.enabled, false);
+
+  const html = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: chartFor({ policy: "lastKnown" }),
     rows,
     datasetProfile,
     timeContext: {
       groupId: "exercise",
       activeEpochMs: Date.UTC(2027, 1, 22),
-      matching,
+      matching: { policy: "lastKnown" },
     },
-    accessibilityEnabled: true,
-    renderContext: { accessibilityEnabled: true },
   }));
-
-  const lastKnown = render({ policy: "lastKnown" });
-  const nearest = render({
-    policy: "nearest",
-    toleranceMs: 2 * 24 * 60 * 60 * 1_000,
-  });
-  const interpolated = render({ policy: "interpolate" });
-
-  assert.match(lastKnown, /value at 2027-02-22: 1 \(last known from 2027-02-20\)/i);
-  assert.match(nearest, /value at 2027-02-22: 7 \(nearest measurement from 2027-02-23\)/i);
-  assert.match(interpolated, /value at 2027-02-22: 5 \(interpolated between 2027-02-20 and 2027-02-23\)/i);
+  assert.match(html, /<h3[^>]*>Transmission<\/h3>/);
+  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(html, /role="img"|value at 2027-02-22|Last measured 2027-02-20/);
 });
 
-test("ECharts semantic summaries render non-finite target values as unavailable", () => {
+test("ECharts views suppress injected semantic summaries", () => {
   const html = renderToStaticMarkup(React.createElement(EChartsChartView, {
     chart: { title: "Supply readiness" },
     model: { semanticSummary: { items: [{ label: "Clinic A", actual: Number.NaN, target: Number.POSITIVE_INFINITY, time: null }] } },
     accessibilityEnabled: true,
   }));
 
-  assert.match(html, /Clinic A: actual Unavailable; target Unavailable/);
-  assert.doesNotMatch(html, /NaN|Infinity/);
+  assert.match(html, /<h3[^>]*>Supply readiness<\/h3>/);
+  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(html, /role="img"|Clinic A: actual|NaN|Infinity/);
 });
 
 test("table values render non-finite values as unavailable", () => {
@@ -327,6 +348,31 @@ test("legacy image render models discover intrinsic geometry before applying sav
   assert.match(unsafe, /chart-status-error/);
 });
 
+test("standalone Image ChartView owns one styled heading above its viewport", () => {
+  const rows = [{ src: "/maps/readiness.png", alt: "Readiness map", fit: "contain" }];
+  const html = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "image",
+      title: "Readiness map",
+      roles: {},
+      presentation: {
+        title: { align: "center", fontSize: 18, bold: true },
+        image: { background: { mode: "white", color: "#AABBCC" } },
+      },
+    },
+    rows,
+    datasetProfile: profileDataset(rows),
+  }));
+
+  assert.equal((html.match(/>Readiness map<\/h3>/g) ?? []).length, 1);
+  assert.ok(html.indexOf("chart-view-heading") < html.indexOf("chart-image-viewport"));
+  assert.match(html, /font-family:var\(--simex-style-heading-font\)/);
+  assert.match(html, /font-size:18px/);
+  assert.match(html, /font-weight:700/);
+  assert.match(html, /class="chart-image-viewport" style="background-color:#FFFFFF"/);
+  assert.doesNotMatch(html, /background-color:#AABBCC|<figcaption/);
+});
+
 test("image zoom affordances consume ChartView's authoritative schema and interaction gate", () => {
   const rows = [{ src: "/maps/readiness.png", alt: "Readiness map" }];
   const enabled = renderToStaticMarkup(React.createElement(ChartView, {
@@ -360,7 +406,7 @@ test("image zoom affordances consume ChartView's authoritative schema and intera
   assert.doesNotMatch(authoritativeDisabled, /Reset view/);
 });
 
-test("ECharts render models remain SSR-safe and describe their content", () => {
+test("ECharts renderers remain SSR-safe while suppressing injected summaries", () => {
   const rows = [{ period: "May", value: 4 }];
   const html = renderToStaticMarkup(React.createElement(ChartView, {
     chart: {
@@ -376,11 +422,31 @@ test("ECharts render models remain SSR-safe and describe their content", () => {
     renderContext: { accessibilityEnabled: true },
   }));
 
-  assert.match(html, /role="img"/);
-  assert.match(html, /value at May: 4/);
+  assert.match(html, /<h3[^>]*>Monthly capacity<\/h3>/);
+  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(html, /role="img"|value at May: 4/);
   assert.match(html, /data-zoom-modifier="Control"/);
   assert.match(html, /class="chart-zoom-guard"/);
   assert.match(html, /Hold Ctrl while scrolling to zoom/);
+});
+
+test("visible chart title precedes description and canvas host", () => {
+  const model = {
+    kind: "echarts",
+    option: { title: { text: "Capacity" }, series: [] },
+  };
+  const chart = {
+    title: "Monthly capacity",
+    description: "Capacity by month.",
+    presentation: {
+      title: { align: "left" },
+      description: { visible: true },
+    },
+  };
+  const html = renderToStaticMarkup(React.createElement(EChartsChartView, { model, chart }));
+
+  assert.ok(html.indexOf("chart-view-title") < html.indexOf("chart-view-description"));
+  assert.ok(html.indexOf("chart-view-description") < html.indexOf("chart-echarts-host"));
 });
 
 test("visually hidden chart titles remain structural headings across renderers", () => {
@@ -513,45 +579,47 @@ test("hostile DOM presentation values fall back to left alignment without invali
   assert.doesNotMatch(html, /javascript|background-color/);
 });
 
-test("gauge render models expose their value and target in the accessible summary", () => {
+test("gauge models retain exact values while rendered summaries stay suppressed", () => {
   const rows = [{ actual: 8, target: 10 }];
-  const html = renderToStaticMarkup(React.createElement(ChartView, {
-    chart: {
-      typeId: "gauge",
-      title: "Supply readiness",
-      roles: { value: { field: "actual" }, target: { field: "target" } },
-    },
-    rows,
-    datasetProfile: profileDataset(rows),
-    accessibilityEnabled: true,
-    renderContext: { accessibilityEnabled: true },
-  }));
+  const chart = {
+    typeId: "gauge",
+    title: "Supply readiness",
+    roles: { value: { field: "actual" }, target: { field: "target" } },
+  };
+  const datasetProfile = profileDataset(rows);
+  const model = buildModel(chart, rows, datasetProfile);
+  const html = renderToStaticMarkup(React.createElement(ChartView, { chart, rows, datasetProfile }));
 
-  assert.match(html, /Supply readiness: actual 8; target 10/);
+  assert.deepEqual(model.semanticSummary.items, [{ label: "Supply readiness", actual: 8, target: 10, time: null }]);
+  assert.equal(model.option.aria.enabled, false);
+  assert.match(html, /<h3[^>]*>Supply readiness<\/h3>/);
+  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(html, /Supply readiness: actual 8; target 10|role="img"/);
 });
 
-test("a single bullet summary exposes its exact label, actual, target, and time", () => {
+test("bullet models retain exact values and time while rendered summaries stay suppressed", () => {
   const rows = [
     { facility: "Clinic A", actual: 8, target: 10, observed: "2027-05-01" },
   ];
-  const html = renderToStaticMarkup(React.createElement(ChartView, {
-    chart: {
-      typeId: "bullet",
-      title: "Facility targets",
-      roles: {
-        actual: { field: "actual" },
-        target: { field: "target" },
-        label: { field: "facility" },
-        time: { field: "observed" },
-      },
+  const chart = {
+    typeId: "bullet",
+    title: "Facility targets",
+    roles: {
+      actual: { field: "actual" },
+      target: { field: "target" },
+      label: { field: "facility" },
+      time: { field: "observed" },
     },
-    rows,
-    datasetProfile: profileDataset(rows, { observed: { interpretation: "temporal" } }),
-    accessibilityEnabled: true,
-    renderContext: { accessibilityEnabled: true },
-  }));
+  };
+  const datasetProfile = profileDataset(rows, { observed: { interpretation: "temporal" } });
+  const model = buildModel(chart, rows, datasetProfile);
+  const html = renderToStaticMarkup(React.createElement(ChartView, { chart, rows, datasetProfile }));
 
-  assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);
+  assert.deepEqual(model.semanticSummary.items, [{ label: "Clinic A", actual: 8, target: 10, time: "2027-05-01" }]);
+  assert.equal(model.option.aria.enabled, false);
+  assert.match(html, /<h3[^>]*>Facility targets<\/h3>/);
+  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
+  assert.doesNotMatch(html, /Clinic A: actual 8; target 10; observed 2027-05-01|role="img"/);
 });
 
 test("repeated Gauge and Bullet charts keep shared title visibility independent of row count", () => {
@@ -585,8 +653,7 @@ test("repeated Gauge and Bullet charts keep shared title visibility independent 
   ]) {
     const title = `${typeId} facility targets`;
     const source = `${typeId}-register`;
-    const html = renderToStaticMarkup(React.createElement(ChartView, {
-      chart: {
+    const chart = {
         id: `${typeId}-collection`,
         typeId,
         title,
@@ -613,15 +680,26 @@ test("repeated Gauge and Bullet charts keep shared title visibility independent 
           targets: { ranges: [50, 80, 100] },
         },
         interaction: { zoom: { enabled: false } },
-      },
+      };
+    const datasetProfile = profileDataset(rows, {
+      observed: { interpretation: "temporal" },
+    });
+    const model = buildModel(chart, rows, datasetProfile);
+    const html = renderToStaticMarkup(React.createElement(ChartView, {
+      chart,
       rows,
-      datasetProfile: profileDataset(rows, {
-        observed: { interpretation: "temporal" },
-      }),
-      accessibilityEnabled: true,
-      renderContext: { accessibilityEnabled: true },
+      datasetProfile,
     }));
 
+    assert.equal(model.kind, "targetCollection");
+    assert.deepEqual(
+      model.items.map(({ label, actual, target, time }) => ({ label, actual, target, time })),
+      [
+        { label: "Clinic A", actual: 8, target: 10, time: "2027-05-01" },
+        { label: "Clinic B", actual: 6, target: 9, time: "2027-05-01" },
+      ],
+    );
+    assert.equal(model.items.every((item) => item.model.option.aria.enabled === false), true);
     assert.match(html, /class="chart-target-collection-view"/);
     assert.match(
       html,
@@ -631,12 +709,11 @@ test("repeated Gauge and Bullet charts keep shared title visibility independent 
     assert.equal((html.match(new RegExp(`>${title}<`, "g")) ?? []).length, 1);
     assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 0);
     assert.equal((html.match(/class="chart-target-collection-item"/g) ?? []).length, 2);
-    assert.equal((html.match(/role="group"/g) ?? []).length, 2);
-    assert.doesNotMatch(html, /role="img"/);
-    assert.match(html, /aria-labelledby="[^"]+"/);
-    assert.match(html, /aria-describedby="[^"]+"/);
-    assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);
-    assert.match(html, /Clinic B: actual 6; target 9; observed 2027-05-01/);
+    assert.equal((html.match(/class="chart-target-collection-label"/g) ?? []).length, 2);
+    assert.match(html, />Clinic A<\/h4>/);
+    assert.match(html, />Clinic B<\/h4>/);
+    assert.doesNotMatch(html, /role="group"|role="img"|aria-labelledby|aria-describedby/);
+    assert.doesNotMatch(html, /Clinic A: actual 8; target 10|Clinic B: actual 6; target 9/);
     assert.doesNotMatch(html, /class="chart-echarts-view"/);
   }
 });

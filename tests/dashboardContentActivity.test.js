@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 
 import {
   DASHBOARD_CONTENT_ACTIVITY_IDS,
   beginDashboardContentOperation,
   describeDashboardContentActivity,
+  runDashboardContentOperation,
 } from "../src/lib/dashboardContentActivity.js";
 
 const REQUIRED_ACTIVITY_IDS = [
@@ -20,7 +22,6 @@ const REQUIRED_ACTIVITY_IDS = [
   "layout.saved",
   "layout.discarded",
   "chart.draft.created",
-  "chart.draft.updated",
   "chart.draft.reset",
   "chart.draft.suspended",
   "chart.draft.resumed",
@@ -38,7 +39,6 @@ const REQUIRED_ACTIVITY_IDS = [
   "section.reordered",
   "section.deleted",
   "static.draft.created",
-  "static.draft.updated",
   "static.draft.discarded",
   "static.saved",
   "source.draft.created",
@@ -64,14 +64,24 @@ test("the semantic activity catalogue covers dashboard content manipulation boun
   );
 });
 
+test("Text/Image and existing-chart draft edits stay silent instead of publishing updating-draft activities", async () => {
+  const renderer = await readFile(new URL("../src/components/DashboardRenderer.jsx", import.meta.url), "utf8");
+
+  assert.equal(DASHBOARD_CONTENT_ACTIVITY_IDS.includes("static.draft.updated"), false);
+  assert.equal(DASHBOARD_CONTENT_ACTIVITY_IDS.includes("chart.draft.updated"), false);
+  assert.doesNotMatch(renderer, /reportContentActivity\("static\.draft\.updated"/);
+  assert.doesNotMatch(renderer, /reportContentActivity\("chart\.draft\.updated"/);
+  assert.equal((renderer.match(/onDraftChange=\{setStaticContentDraft\}/g) ?? []).length, 2);
+});
+
 test("activity descriptions use object names while retaining stable coalescing keys", () => {
-  assert.deepEqual(describeDashboardContentActivity("chart.draft.updated", {
+  assert.deepEqual(describeDashboardContentActivity("chart.saved", {
     subject: "ICU occupancy",
     detail: "Title changed.",
   }), {
-    key: "content:chart.draft.updated:ICU occupancy",
-    label: "Chart draft",
-    message: "Updating chart draft “ICU occupancy”. Title changed.",
+    key: "content:chart.saved:ICU occupancy",
+    label: "Chart",
+    message: "Chart saved “ICU occupancy”. Title changed.",
     intent: "info",
   });
 });
@@ -92,4 +102,42 @@ test("content operations request priority presentation and expose the pre-work b
   assert.equal(calls.length, 1);
   assert.equal(calls[0].priority, true);
   assert.equal(await operation.beforeWork(), expected);
+});
+
+test("section reorder work starts only after its working notice has painted", async () => {
+  let releasePaint;
+  const events = [];
+  const operation = {
+    beforeWork() {
+      events.push("working-notice-published");
+      return new Promise((resolve) => {
+        releasePaint = () => {
+          events.push("working-notice-painted");
+          resolve();
+        };
+      });
+    },
+    succeed() {
+      events.push("completed");
+    },
+    fail(error) {
+      events.push(`failed:${error.message}`);
+    },
+  };
+
+  const pending = runDashboardContentOperation(operation, () => {
+    events.push("section-reordered");
+    return "next-layout";
+  });
+
+  await Promise.resolve();
+  assert.deepEqual(events, ["working-notice-published"]);
+  releasePaint();
+  assert.equal(await pending, "next-layout");
+  assert.deepEqual(events, [
+    "working-notice-published",
+    "working-notice-painted",
+    "section-reordered",
+    "completed",
+  ]);
 });

@@ -22,6 +22,7 @@ const FULL_EDITOR_UNAVAILABLE_REASON = "Full editing is unavailable for this cha
 
 export default function ChartQuickEditor({
   session,
+  profile,
   disabled = false,
   onDraftChange = noop,
   onSave,
@@ -33,7 +34,7 @@ export default function ChartQuickEditor({
   if (session?.activeSurface !== "quick") return null;
 
   const chart = session.draft;
-  const model = buildQuickEditorFormModel({ chart });
+  const model = buildQuickEditorFormModel({ chart, profile });
   const dirty = isChartEditSessionDirty(session);
   const saving = session.status === "saving";
   const locked = disabled || saving;
@@ -174,7 +175,7 @@ export function assignQuickEditorControlIds(root, placementId) {
   const documentRef = root.ownerDocument;
   const prefix = `chart-quick-${safeControlId(placementId || "chart")}`;
   for (const control of root.querySelectorAll(
-    "button, input, select, textarea, [data-control-tooltip-anchor='true'][tabindex='0']",
+    "button, input, select, textarea",
   )) {
     if (control.id) continue;
     const semantic = quickControlSemanticId(control);

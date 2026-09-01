@@ -141,6 +141,7 @@ const {
   chartDestinationForType,
   chartEditDraftIdentity,
   createChartWizardEditState,
+  createEditModePendingRuntime,
   createChartCsvDraftLifecycle,
   createChartWizardState,
   createWizardCloseHandlers,
@@ -257,6 +258,151 @@ test("post-paint chart preparation is deferred and cancellable", () => {
   cancel();
   assert.equal(frames.size, 0);
   assert.equal(timers.size, 0);
+});
+
+test("edit-mode pending preparation keeps matching presentation controls mounted and rejects data-stale preparation", () => {
+  assert.equal(typeof createEditModePendingRuntime, "function");
+  const rows = [
+    { period: "May", capacity: 4, alternate: 9 },
+    { period: "June", capacity: 7, alternate: 3 },
+  ];
+  const chart = validLineChart();
+  const authorMetadata = {};
+  const ready = createWizardPreparation({ chart, rows, authorMetadata });
+  const deferredPreparation = {
+    chart,
+    rows,
+    geoData: null,
+    authorMetadata,
+    runtime: { status: "ready", ...ready },
+  };
+  const presentationDraft = {
+    ...chart,
+    presentation: {
+      ...chart.presentation,
+      background: { color: "#fff7ed" },
+    },
+  };
+
+  const pendingPresentation = createEditModePendingRuntime({
+    chart: presentationDraft,
+    profile: ready.profile,
+    deferredPreparation,
+    rows,
+    geoData: null,
+    authorMetadata,
+  });
+
+  assert.equal(pendingPresentation.status, "pending");
+  assert.equal(pendingPresentation.profile, ready.profile);
+  assert.equal(pendingPresentation.prepared, ready.prepared);
+  assert.ok(buildEditorFormModel({
+    chart: presentationDraft,
+    profile: pendingPresentation.profile,
+    prepared: pendingPresentation.prepared,
+  }).sections.find(({ id }) => id === "appearance")
+    .fields.some(({ id }) => id === "background"));
+
+  const dataDraft = {
+    ...presentationDraft,
+    roles: {
+      ...presentationDraft.roles,
+      measurements: [{ field: "alternate", axis: "primary" }],
+    },
+  };
+  const pendingData = createEditModePendingRuntime({
+    chart: dataDraft,
+    profile: ready.profile,
+    deferredPreparation,
+    rows,
+    geoData: null,
+    authorMetadata,
+  });
+
+  assert.equal(pendingData.status, "pending");
+  assert.equal(pendingData.prepared, null);
+  assert.equal(buildEditorFormModel({
+    chart: dataDraft,
+    profile: pendingData.profile,
+    prepared: pendingData.prepared,
+  }).sections.find(({ id }) => id === "appearance")
+    .fields.some(({ id }) => id === "background"), false);
+});
+
+test("edit-mode pending preparation never reuses an uncorrelated null preparation key", () => {
+  const previousPrepared = {
+    status: "invalid",
+    marks: [],
+    diagnostics: [],
+    meta: { formPreparationKey: null },
+  };
+  const rows = [];
+  const authorMetadata = {};
+  const deferredPreparation = {
+    chart: validLineChart(),
+    rows,
+    geoData: null,
+    authorMetadata,
+    runtime: {
+      status: "ready",
+      profile: { fingerprint: "profile-without-a-valid-chart" },
+      prepared: previousPrepared,
+    },
+  };
+
+  const pending = createEditModePendingRuntime({
+    chart: { ...validLineChart(), sourceId: "" },
+    profile: { fingerprint: "profile-without-a-valid-chart" },
+    deferredPreparation,
+    rows,
+    geoData: null,
+    authorMetadata,
+  });
+
+  assert.equal(pending.status, "pending");
+  assert.equal(pending.prepared, null);
+});
+
+test("edit-mode pending preparation rejects matching-key snapshots with stale data identities", () => {
+  const chart = validLineChart();
+  const rows = [
+    { period: "May", capacity: 4 },
+    { period: "June", capacity: 7 },
+  ];
+  const geoData = { type: "FeatureCollection", features: [] };
+  const authorMetadata = { period: { interpretation: "category" } };
+  const ready = createWizardPreparation({ chart, rows, geoData, authorMetadata });
+  const deferredPreparation = {
+    chart,
+    rows,
+    geoData,
+    authorMetadata,
+    runtime: { status: "ready", ...ready },
+  };
+  const shared = {
+    chart: { ...chart, title: "Presentation-only replacement" },
+    profile: ready.profile,
+    deferredPreparation,
+  };
+
+  assert.equal(createEditModePendingRuntime({
+    ...shared,
+    rows: [...rows],
+    geoData,
+    authorMetadata,
+  }).prepared, null, "changed row identity must invalidate deferred preparation");
+  assert.equal(createEditModePendingRuntime({
+    ...shared,
+    rows,
+    geoData: { ...geoData },
+    authorMetadata,
+  }).prepared, null, "changed GeoJSON identity must invalidate deferred preparation");
+  assert.equal(createEditModePendingRuntime({
+    ...shared,
+    rows,
+    geoData,
+    authorMetadata: { ...authorMetadata },
+  }).prepared, null, "changed metadata identity must invalidate deferred preparation");
 });
 
 test("full editor draft identity changes only for material chart or Chrono edits", () => {
@@ -870,6 +1016,187 @@ test("structured presentation controls emit only validator-approved nested contr
   assert.deepEqual(normalizeChartInstance(chart).presentation.labels, presentation.labels);
 });
 
+test("axis presentation controls expose temporal X controls and only render a secondary axis when bound", () => {
+  const field = {
+    id: "axes",
+    label: "Axes",
+    control: "axes",
+    xKind: "temporal",
+    hasSecondary: false,
+  };
+  const html = render(React.createElement(StandardField, { field, value: {}, onChange() {} }));
+  assert.match(html, /X-axis title/);
+  assert.match(html, /type="datetime-local"/);
+  assert.match(html, /Label format/);
+  assert.match(html, /Primary axis/);
+  assert.doesNotMatch(html, /Secondary axis/);
+
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "tickFrequency"], { every: 2, unit: "month" }),
+    { x: { tickFrequency: { every: 2, unit: "month" } } },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue(
+      "axes",
+      { x: { labelPreset: "ddMmYyyy" } },
+      ["x", "labelPreset"],
+      "adaptive",
+    ),
+    {},
+    "Adaptive is the implicit default and removes a stale explicit preset",
+  );
+});
+
+test("X, primary, and secondary axis titles retain an internal typing space", () => {
+  for (const path of [["x", "title"], ["primary", "title"], ["secondary", "title"]]) {
+    const next = updateStructuredFieldValue("axes", {}, path, "Cumulative ");
+    assert.equal(next[path[0]].title, "Cumulative ");
+    const completed = updateStructuredFieldValue("axes", next, path, "Cumulative Cases");
+    assert.equal(completed[path[0]].title, "Cumulative Cases");
+  }
+
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", { primary: { title: "Cases" } }, ["primary", "title"], ""),
+    {},
+  );
+});
+
+test("save normalization trims raw axis title editing values", () => {
+  const normalized = normalizeChartInstance(validLineChart({
+    presentation: {
+      axes: {
+        x: { title: " Reported at " },
+        primary: { title: " Cases " },
+        secondary: { title: "   " },
+      },
+    },
+  }));
+
+  assert.equal(normalized.presentation.axes.x.title, "Reported at");
+  assert.equal(normalized.presentation.axes.primary.title, "Cases");
+  assert.equal(normalized.presentation.axes.secondary, undefined);
+});
+
+test("value-axis title controls expose size steps, bold, and signed offsets only for available axes", () => {
+  const field = {
+    id: "axes",
+    label: "Axes",
+    control: "axes",
+    xKind: "category",
+    hasSecondary: true,
+  };
+  const html = render(React.createElement(StandardField, {
+    field,
+    value: {
+      primary: { titleFontSize: 10, titleBold: true, titleOffsetX: -12, titleOffsetY: 9 },
+      secondary: { titleFontSize: 24 },
+    },
+    onChange() {},
+  }));
+
+  assert.match(html, /Primary axis/);
+  assert.match(html, /Secondary axis/);
+  assert.match(html, /Title font size/);
+  assert.match(html, /Decrease title font size/);
+  assert.match(html, /Increase title font size/);
+  assert.match(html, /Bold/);
+  assert.match(html, /Horizontal offset/);
+  assert.match(html, /Vertical offset/);
+  assert.match(html, /value="-12"/);
+  assert.match(html, /value="9"/);
+
+  const primaryOnly = render(React.createElement(StandardField, {
+    field: { ...field, hasSecondary: false },
+    value: {},
+    onChange() {},
+  }));
+  assert.equal((primaryOnly.match(/Title font size/g) ?? []).length, 1);
+  assert.doesNotMatch(primaryOnly, /Secondary axis/);
+
+  const changes = [];
+  const tree = StandardField({
+    field: { ...field, hasSecondary: false },
+    value: { primary: { titleFontSize: 14 } },
+    onChange(value) { changes.push(value); },
+  });
+  findElement(tree, (element) => element.props?.["aria-label"] === "Increase title font size").props.onClick();
+  findElement(tree, (element) => element.props?.["aria-label"] === "Decrease title font size").props.onClick();
+  assert.deepEqual(changes, [
+    { primary: { titleFontSize: 15 } },
+    { primary: { titleFontSize: 13 } },
+  ]);
+});
+
+test("temporal tick frequency defaults its unit to day on the first number edit", () => {
+  let next;
+  const tree = StandardField({
+    field: {
+      id: "axes",
+      label: "Axes",
+      control: "axes",
+      xKind: "temporal",
+    },
+    value: {},
+    onChange(value) {
+      next = value;
+    },
+  });
+  const frequencyInput = findElement(tree, (element) => (
+    element.type === "input" && element.props.placeholder === "Auto"
+  ));
+
+  assert.ok(frequencyInput);
+  frequencyInput.props.onChange({ target: { value: "2" } });
+  assert.deepEqual(next, {
+    x: { tickFrequency: { every: 2, unit: "day" } },
+  });
+});
+
+test("month cadence offers only exact calendar steps and normalizes on unit change", () => {
+  const changes = [];
+  const monthly = StandardField({
+    field: {
+      id: "axes",
+      label: "Axes",
+      control: "axes",
+      xKind: "temporal",
+    },
+    value: { x: { tickFrequency: { every: 2, unit: "month" } } },
+    onChange(value) { changes.push(value); },
+  });
+  const monthFrequency = findElement(monthly, (element) => (
+    element.type === "select" && element.props.value === "2"
+  ));
+
+  assert.ok(monthFrequency);
+  assert.deepEqual(
+    React.Children.toArray(monthFrequency.props.children).map(({ props }) => props.value),
+    ["1", "2", "3"],
+  );
+  monthFrequency.props.onChange({ target: { value: "3" } });
+  assert.deepEqual(changes.at(-1), {
+    x: { tickFrequency: { every: 3, unit: "month" } },
+  });
+
+  const daily = StandardField({
+    field: {
+      id: "axes",
+      label: "Axes",
+      control: "axes",
+      xKind: "temporal",
+    },
+    value: { x: { tickFrequency: { every: 5, unit: "day" } } },
+    onChange(value) { changes.push(value); },
+  });
+  const unit = findElement(daily, (element) => (
+    element.type === "select" && element.props.value === "day"
+  ));
+  unit.props.onChange({ target: { value: "month" } });
+  assert.deepEqual(changes.at(-1), {
+    x: { tickFrequency: { every: 1, unit: "month" } },
+  });
+});
+
 test("filter operator changes materialize exact operands and remove incompatible keys", () => {
   const equals = filterForOperator({
     field: "period",
@@ -1328,6 +1655,50 @@ test("hostile or incomplete authoring props fail closed without rendering raw ob
 
   assert.match(picker, /Search chart types/);
   assert.doesNotMatch(section, /\[object Object\]/);
+});
+
+test("generated Configure and full-editor fields share responsive wide and boolean layout", () => {
+  const html = render(React.createElement(GeneratedFormSection, {
+    section: {
+      id: "appearance",
+      label: "Appearance",
+      fields: [
+        { id: "title", label: "Title", control: "text", value: "Response" },
+        { id: "visible", label: "Show labels", control: "toggle", value: true },
+        { id: "notes", label: "Notes", control: "textarea", value: "Context" },
+      ],
+    },
+    onChange() {},
+  }));
+
+  assert.match(html, /chart-authoring-section-fields dashboard-authoring-grid/);
+  assert.match(html, /class="[^"]*dashboard-authoring-boolean-row[^"]*"[^>]*data-field-id="visible"[^>]*><input[^>]*type="checkbox"[^>]*><label/);
+  assert.match(html, /class="[^"]*dashboard-authoring-field--wide[^"]*"[^>]*data-field-id="notes"/);
+
+  const axesHtml = render(React.createElement(StandardField, {
+    field: { id: "axes", label: "Axes", control: "axes", hasSecondary: true },
+    value: { primary: { title: "Primary", titleBold: true }, secondary: { title: "Secondary" } },
+    onChange() {},
+  }));
+  assert.equal((axesHtml.match(/chart-authoring-axis-group dashboard-authoring-grid/g) ?? []).length, 3);
+  assert.match(axesHtml, /dashboard-authoring-boolean-row[^>]*><input[^>]*type="checkbox"[^>]*>Bold<\/label>/);
+});
+
+test("chart authoring primary and shell regions stay mounted before readiness", () => {
+  const html = render(React.createElement(ChartWizardV3, {
+    open: true,
+    dataSources: {},
+    loadedData: {},
+    chronoGroups: [],
+    onClose() {},
+    onCreate() {},
+  }));
+
+  assert.match(html, /class="chart-wizard chart-wizard-v3 dashboard-dialog dashboard-dialog--wizard dashboard-dialog--wide dashboard-authoring-shell"/);
+  assert.match(html, /data-footer-slot="primary"/);
+  const primary = buttonMarkupByInteraction(html, "wizard.create-chart");
+  assert.match(primary, /aria-label="Create chart"/);
+  assert.match(primary, /disabled=""/);
 });
 
 test("wizard exposes the exact six directly clickable stages in the approved order", () => {
@@ -2632,6 +3003,12 @@ test("editor keeps title repair reachable before preview readiness", () => {
   assert.match(html, /Chart title/);
   assert.match(html, /data-icon-control="editor\.tab\.data"/);
   assert.match(html, /data-icon-control="editor\.tab\.appearance"/);
+  assert.match(html, /class="chart-editor-form dashboard-authoring-shell"/);
+  assert.match(
+    html,
+    /<form class="chart-editor-form dashboard-authoring-shell"><header[^]*?<\/header><nav class="chart-editor-tab-list dashboard-dialog__progress" data-authoring-track="tabs"[^]*?<\/nav><div class="chart-editor-layout dashboard-authoring-body" data-authoring-track="body"/,
+  );
+  assert.match(html, /<\/div><footer class="dashboard-dialog__footer dashboard-authoring-footer" data-authoring-track="footer">/);
 });
 
 test("save and reset are adjacent and reset confirmation is accessible", () => {
@@ -2746,6 +3123,58 @@ test("quick editor renders the complete controlled surface without full-editor o
   assert.doesNotMatch(html, /chart-editor-backdrop|chart-editor-preview|editor\.tab\./);
 });
 
+test("quick editor keeps Save available for profile-inferred temporal axes", async () => {
+  const rows = [
+    { recordedAt: "2027-05-01", capacity: 4 },
+    { recordedAt: "2027-05-02", capacity: 6 },
+  ];
+  const chart = validLineChart({
+    roles: {
+      measurements: [{ field: "capacity", axis: "primary" }],
+      observation: { field: "recordedAt" },
+    },
+    presentation: {
+      axes: {
+        x: {
+          labelPreset: "adaptive",
+          tickFrequency: { every: 1, unit: "day" },
+        },
+      },
+    },
+  });
+  const session = reduceChartEditSession(
+    createChartEditSession({ placementId: "placement-temporal", chart }),
+    {
+      type: "CHANGE",
+      surface: "quick",
+      draft: { ...chart, title: "Updated temporal chart" },
+    },
+  );
+  let saves = 0;
+  const tree = ChartQuickEditor({
+    session,
+    profile: profileDataset(rows, {
+      recordedAt: { interpretation: "temporal" },
+    }),
+    onSave() { saves += 1; },
+  });
+  const form = findElement(tree, (element) => element.type === "form");
+  const actions = findElement(tree, (element) => element.type === EditSessionActions);
+
+  assert.equal(actions.props.valid, true);
+  form.props.onSubmit({ preventDefault() {} });
+  assert.equal(saves, 1);
+
+  const renderer = await readFile(
+    new URL("../src/components/DashboardRenderer.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    renderer,
+    /<ChartQuickEditor[\s\S]*?profile=\{workingDashboard\.datasetProfiles\?\.\[chartEditSession\.draft\.sourceId\]\}/,
+  );
+});
+
 test("quick editor emits detached draft changes and delegates every session action", () => {
   const chart = validLineChart();
   const session = reduceChartEditSession(
@@ -2850,7 +3279,7 @@ test("quick editor guards clean and externally locked actions while preserving f
   assert.equal(lockedAside.props.inert, true);
 });
 
-test("saving quick editor keeps pending reason anchors exposed while controls stay locked", () => {
+test("saving quick editor keeps pointer-only reason anchors exposed while controls stay locked", () => {
   const clean = createChartEditSession({
     placementId: "placement-line",
     chart: validLineChart(),
@@ -2878,7 +3307,7 @@ test("saving quick editor keeps pending reason anchors exposed while controls st
   const savingAside = findElement(tree, (element) => element.type === "aside");
   const aside = html.match(/<aside\b[^>]*>/)?.[0] ?? "";
   const reasonIds = [...html.matchAll(
-    /data-control-tooltip-kind="disabled" tabindex="0" aria-describedby="([^"]+)"/g,
+    /data-control-tooltip-kind="disabled" tabindex="-1" aria-describedby="([^"]+)"/g,
   )].map((match) => match[1]);
 
   assert.match(aside, /aria-busy="true"/);

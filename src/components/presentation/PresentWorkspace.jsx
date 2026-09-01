@@ -225,12 +225,12 @@ export default function PresentWorkspace({
                   key={chart.id}
                 >
                   <span className="present-chart-order">{index + 1}</span>
-                  <strong>{chart.title ?? chart.id}</strong>
+                  <strong>{presentChartLabel(chart)}</strong>
                   <div className="present-chart-actions">
                     <button
                       type="button"
                       className="secondary"
-                      aria-label={`Move ${chart.title ?? chart.id} up`}
+                      aria-label={`Move ${presentChartLabel(chart)} up`}
                       data-presentation-item-action="move-up"
                       data-presentation-item-id={chart.id}
                       disabled={index === 0}
@@ -241,7 +241,7 @@ export default function PresentWorkspace({
                     <button
                       type="button"
                       className="secondary"
-                      aria-label={`Move ${chart.title ?? chart.id} down`}
+                      aria-label={`Move ${presentChartLabel(chart)} down`}
                       data-presentation-item-action="move-down"
                       data-presentation-item-id={chart.id}
                       disabled={index === selectedCharts.length - 1}
@@ -303,7 +303,7 @@ export default function PresentWorkspace({
                             disabled={unavailable}
                             onChange={() => toggleChart(chart.id)}
                           />
-                          <span>{chart.title ?? chart.id}</span>
+                          <span>{presentChartLabel(chart)}</span>
                         </label>
                       );
                     })}
@@ -394,6 +394,14 @@ function configuredChartGroups(dashboard, presentableItemIndex) {
       };
     }).filter((group) => group.charts.length > 0)
   ));
+}
+
+export function presentChartLabel(chart = {}) {
+  const title = String(chart.title ?? "").trim();
+  if (title) return title;
+  return ["freeText", "image"].includes(chart.typeId)
+    ? "Text/Image panel"
+    : String(chart.id ?? "").trim() || "Panel";
 }
 
 export function projectPresentableItems(itemIds, presentableItemIndex) {

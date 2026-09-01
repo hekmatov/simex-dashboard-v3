@@ -27,28 +27,8 @@ export default function FullscreenDisplay({
   const panelIds = displayState.displayed_chart_ids;
   const playback = useOptionalPlayback();
   const draggedChartId = React.useRef(null);
-  const returnFocusTarget = React.useRef(null);
-  const wasOpen = React.useRef(false);
   const [announcement, setAnnouncement] = React.useState("");
   const isComparison = panelIds.length > 1;
-
-  React.useEffect(() => {
-    const open = panelIds.length > 0;
-    if (open && !wasOpen.current) {
-      returnFocusTarget.current = findReturnFocusTarget(
-        isComparison,
-        panelIds[0],
-      );
-    } else if (!open && wasOpen.current) {
-      restoreFocus(returnFocusTarget.current);
-      returnFocusTarget.current = null;
-    }
-    wasOpen.current = open;
-  }, [isComparison, panelIds.length, panelIds[0]]);
-
-  React.useEffect(() => () => {
-    if (wasOpen.current) restoreFocus(returnFocusTarget.current);
-  }, []);
 
   React.useEffect(() => {
     if (panelIds.length > 0 && playback?.playing === true) {
@@ -77,7 +57,7 @@ export default function FullscreenDisplay({
       chart_ids: reordered,
     });
     setAnnouncement(
-      `${chart.title} moved to position ${toIndex + 1} of ${panelIds.length}.`,
+      `${fullscreenChartLabel(chart)} moved to position ${toIndex + 1} of ${panelIds.length}.`,
     );
   };
 
@@ -85,9 +65,8 @@ export default function FullscreenDisplay({
     if (!isComparison) return {};
     return {
       draggable: true,
-      tabIndex: 0,
-      "aria-label": `${chart.title}, position ${index + 1} of ${charts.length}`,
-      "aria-keyshortcuts": "Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown",
+      tabIndex: -1,
+      "aria-label": `${fullscreenChartLabel(chart)}, position ${index + 1} of ${charts.length}`,
       onDragStart: (event) => {
         draggedChartId.current = chart.id;
         event.currentTarget.classList.add("is-dragging");
@@ -110,16 +89,6 @@ export default function FullscreenDisplay({
         event.currentTarget.classList.remove("is-dragging");
         draggedChartId.current = null;
       },
-      onKeyDown: (event) => {
-        if (!event.altKey) return;
-        const earlier = event.key === "ArrowLeft" || event.key === "ArrowUp";
-        const later = event.key === "ArrowRight" || event.key === "ArrowDown";
-        if (!earlier && !later) return;
-        const nextIndex = index + (earlier ? -1 : 1);
-        if (nextIndex < 0 || nextIndex >= panelIds.length) return;
-        event.preventDefault();
-        moveChart(chart, index, nextIndex);
-      },
     };
   };
 
@@ -130,45 +99,47 @@ export default function FullscreenDisplay({
       role="dialog"
       aria-modal="true"
       aria-label={isComparison ? "Chart comparison" : "Focused chart"}
-      initialFocusSelector="[data-fullscreen-exit]"
       onEscape={closeAll}
     >
       <article
         className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout} dashboard-dialog dashboard-dialog--workspace dashboard-dialog--fullscreen`}
         data-display-mode={isComparison ? "comparison" : "focus"}
       >
-        <div
-          className="multi-fullscreen-controls dashboard-dialog__header"
-          aria-label={isComparison ? "Comparison layout and exit" : "Focus exit"}
-        >
-          {isComparison && layoutOptions.map((option) => (
-            <IconControl
-              key={option.value}
-              interactionId={LAYOUT_INTERACTION_IDS[option.value]}
-              className={[
-                "fullscreen-layout-button",
-                resolvedLayout === option.value ? "active" : "secondary",
-              ].join(" ")}
-              iconClassName="fullscreen-layout-icon"
-              pressed={resolvedLayout === option.value}
-              onClick={() => onDisplayAction?.({
-                type: "layout_changed",
-                layout: option.value,
-              })}
-              ariaLabel={`Use ${option.label.toLowerCase()} layout`}
-              tooltip={option.label}
-              title={option.label}
-            />
-          ))}
-          <IconControl
-            interactionId="fullscreen.close-chart"
-            className="secondary fullscreen-toolbar-close"
-            ariaLabel={isComparison ? "Exit comparison" : "Exit fullscreen"}
-            tooltip={isComparison ? "Exit comparison" : "Exit fullscreen"}
-            data-fullscreen-exit
-            onClick={closeAll}
-          />
-        </div>
+        {isComparison && (
+          <div
+            className="multi-fullscreen-controls dashboard-dialog__header"
+            aria-label="Comparison layout controls"
+          >
+            {layoutOptions.map((option) => (
+              <IconControl
+                key={option.value}
+                interactionId={LAYOUT_INTERACTION_IDS[option.value]}
+                className={[
+                  "fullscreen-layout-button",
+                  resolvedLayout === option.value ? "active" : "secondary",
+                ].join(" ")}
+                iconClassName="fullscreen-layout-icon"
+                pressed={resolvedLayout === option.value}
+                onClick={() => onDisplayAction?.({
+                  type: "layout_changed",
+                  layout: option.value,
+                })}
+                ariaLabel={`Use ${option.label.toLowerCase()} layout`}
+                tooltip={option.label}
+                title={option.label}
+              />
+            ))}
+          </div>
+        )}
+        <IconControl
+          interactionId="fullscreen.close-chart"
+          className="secondary fullscreen-toolbar-close"
+          ariaLabel={isComparison ? "Exit comparison" : "Exit fullscreen"}
+          tooltip={isComparison ? "Exit comparison" : "Exit fullscreen"}
+          iconSize={18}
+          data-fullscreen-exit
+          onClick={closeAll}
+        />
         <DisplayedChartGrid
           dashboard={dashboard}
           contentRenderContext={contentRenderContext}
@@ -178,17 +149,19 @@ export default function FullscreenDisplay({
           timeContextForChart={resolveTimeContext}
           getCellProps={comparisonCellProps}
           renderCellControls={isComparison
-            ? (chart, index, displayedCharts) => (
+            ? (chart, index, displayedCharts) => {
+                const chartLabel = fullscreenChartLabel(chart);
+                return (
                 <div
                   className="multi-cell-controls"
-                  aria-label={`Reorder ${chart.title}`}
+                  aria-label={`Reorder ${chartLabel}`}
                 >
                   <IconControl
                     interactionId="fullscreen.previous-displayed-chart"
                     className="secondary multi-cell-icon-button"
                     disabled={index === 0}
                     onClick={() => moveChart(chart, index, index - 1)}
-                    ariaLabel={`Move ${chart.title} previous`}
+                    ariaLabel={`Move ${chartLabel} previous`}
                     tooltip="Move previous"
                     tooltipPlacement="below"
                     title="Move previous"
@@ -198,13 +171,14 @@ export default function FullscreenDisplay({
                     className="secondary multi-cell-icon-button"
                     disabled={index === displayedCharts.length - 1}
                     onClick={() => moveChart(chart, index, index + 1)}
-                    ariaLabel={`Move ${chart.title} next`}
+                    ariaLabel={`Move ${chartLabel} next`}
                     tooltip="Move next"
                     tooltipPlacement="below"
                     title="Move next"
                   />
                 </div>
-              )
+                );
+              }
             : undefined}
         />
         <p className="visually-hidden" role="status" aria-live="polite">
@@ -213,6 +187,14 @@ export default function FullscreenDisplay({
       </article>
     </ModalFocusScope>
   );
+}
+
+export function fullscreenChartLabel(chart = {}) {
+  const title = String(chart.title ?? "").trim();
+  if (title) return title;
+  return ["freeText", "image"].includes(chart.typeId)
+    ? "Text/Image panel"
+    : String(chart.id ?? "").trim() || "Panel";
 }
 
 export function reorderDisplayedCharts(items, fromIndex, toIndex) {
@@ -232,29 +214,6 @@ export function reorderDisplayedCharts(items, fromIndex, toIndex) {
   const [item] = reordered.splice(fromIndex, 1);
   reordered.splice(toIndex, 0, item);
   return reordered;
-}
-
-function findReturnFocusTarget(isComparison, chartId) {
-  if (typeof document === "undefined") return null;
-  if (isComparison) {
-    return document.querySelector(".view-comparison-button");
-  }
-  const panel = [...document.querySelectorAll("[data-panel-id]")]
-    .find((candidate) => candidate.dataset.panelId === chartId);
-  return panel?.querySelector('[aria-label="Focus chart"]') ?? panel ?? null;
-}
-
-function restoreFocus(target) {
-  if (!target?.isConnected || typeof target.focus !== "function") return;
-  const focus = () => target.focus({ preventScroll: true });
-  if (
-    typeof window !== "undefined"
-    && typeof window.requestAnimationFrame === "function"
-  ) {
-    window.requestAnimationFrame(focus);
-  } else {
-    focus();
-  }
 }
 
 function multiLayoutOptions(count) {

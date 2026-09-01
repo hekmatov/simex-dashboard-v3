@@ -243,6 +243,54 @@ test("allowlisted percentages are content-relative without inline style or horiz
   });
 });
 
+test("custom frame variables apply only to framed modes and Card remains visually distinct", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: QmdMediaView } = await import("/src/components/charts/QmdMediaView.jsx");
+    const target = document.querySelector("#target");
+    const root = ReactDOMClient.createRoot(target);
+    const item = {
+      mediaId: "framed", revision: 1, current: { kind: "asset", assetId: "asset-framed" },
+      health: "missing", displayName: "Framed map", dimensions: { width: 800, height: 400 },
+    };
+    root.render(React.createElement("div", null,
+      React.createElement(QmdMediaView, { mediaItem: item, attributes: { frame: "none", frameWeight: 7, frameColor: "#ABCDEF", alt: "Map" }, assets: {} }),
+      React.createElement(QmdMediaView, { mediaItem: item, attributes: { frame: "outline", frameWeight: 3, frameColor: "#112233", alt: "Map" }, assets: {} }),
+      React.createElement(QmdMediaView, { mediaItem: item, attributes: { frame: "card", frameWeight: 5, frameColor: "#445566", alt: "Map" }, assets: {} }),
+    ));
+    for (let index = 0; index < 50 && target.querySelectorAll(".qmd-media-view").length !== 3; index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const values = [...target.querySelectorAll(".qmd-media-view")].map((node) => {
+      const computed = getComputedStyle(node);
+      return {
+        frame: node.className.match(/frame-(none|outline|card)/)?.[1],
+        style: node.getAttribute("style"),
+        weight: computed.getPropertyValue("--qmd-frame-weight").trim(),
+        color: computed.getPropertyValue("--qmd-frame-color").trim(),
+        padding: computed.padding,
+        radius: computed.borderRadius,
+        shadow: computed.boxShadow,
+        background: computed.backgroundColor,
+      };
+    });
+    root.unmount();
+    return values;
+  });
+
+  assert.equal(result[0].frame, "none");
+  assert.equal(result[0].style, null);
+  assert.deepEqual({ weight: result[1].weight, color: result[1].color }, { weight: "3px", color: "#112233" });
+  assert.deepEqual({ weight: result[2].weight, color: result[2].color }, { weight: "5px", color: "#445566" });
+  assert.notEqual(result[1].padding, result[2].padding);
+  assert.notEqual(result[1].radius, result[2].radius);
+  assert.equal(result[1].shadow, "none");
+  assert.notEqual(result[2].shadow, "none");
+  assert.notEqual(result[1].background, result[2].background);
+});
+
 test("wrap is capped, narrow collapse retains the token, and logical alignment follows RTL", async () => {
   const result = await page.evaluate(async () => {
     await import("/src/styles/source-content.css");
