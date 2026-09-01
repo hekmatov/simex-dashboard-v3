@@ -151,7 +151,7 @@ test("Chart Wizard and modal Chart Editor keep definite viewport-bounded shells 
 
   assert.match(
     grammar,
-    /\.app-frame \.chart-wizard\.chart-wizard-v3\s*\{[^}]*block-size:\s*min\(820px, calc\(100dvh - 48px\)\);/s,
+    /\.app-frame \.chart-wizard\.chart-wizard-v3\s*\{[^}]*block-size:\s*calc\(100dvh - 48px\);[^}]*max-block-size:\s*calc\(100dvh - 48px\);/s,
   );
   assert.match(
     grammar,

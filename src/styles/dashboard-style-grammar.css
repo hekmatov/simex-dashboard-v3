@@ -1543,7 +1543,8 @@
 
 /* New Chart keeps one stable frame while only its body scrolls. */
 .app-frame .chart-wizard.chart-wizard-v3 {
-  block-size: min(820px, calc(100dvh - 48px));
+  block-size: calc(100dvh - 48px);
+  max-block-size: calc(100dvh - 48px);
 }
 
 .chart-wizard.dashboard-dialog {
