@@ -141,6 +141,7 @@ const {
   chartDestinationForType,
   chartEditDraftIdentity,
   createChartWizardEditState,
+  createEditModePendingRuntime,
   createChartCsvDraftLifecycle,
   createChartWizardState,
   createWizardCloseHandlers,
@@ -257,6 +258,151 @@ test("post-paint chart preparation is deferred and cancellable", () => {
   cancel();
   assert.equal(frames.size, 0);
   assert.equal(timers.size, 0);
+});
+
+test("edit-mode pending preparation keeps matching presentation controls mounted and rejects data-stale preparation", () => {
+  assert.equal(typeof createEditModePendingRuntime, "function");
+  const rows = [
+    { period: "May", capacity: 4, alternate: 9 },
+    { period: "June", capacity: 7, alternate: 3 },
+  ];
+  const chart = validLineChart();
+  const authorMetadata = {};
+  const ready = createWizardPreparation({ chart, rows, authorMetadata });
+  const deferredPreparation = {
+    chart,
+    rows,
+    geoData: null,
+    authorMetadata,
+    runtime: { status: "ready", ...ready },
+  };
+  const presentationDraft = {
+    ...chart,
+    presentation: {
+      ...chart.presentation,
+      background: { color: "#fff7ed" },
+    },
+  };
+
+  const pendingPresentation = createEditModePendingRuntime({
+    chart: presentationDraft,
+    profile: ready.profile,
+    deferredPreparation,
+    rows,
+    geoData: null,
+    authorMetadata,
+  });
+
+  assert.equal(pendingPresentation.status, "pending");
+  assert.equal(pendingPresentation.profile, ready.profile);
+  assert.equal(pendingPresentation.prepared, ready.prepared);
+  assert.ok(buildEditorFormModel({
+    chart: presentationDraft,
+    profile: pendingPresentation.profile,
+    prepared: pendingPresentation.prepared,
+  }).sections.find(({ id }) => id === "appearance")
+    .fields.some(({ id }) => id === "background"));
+
+  const dataDraft = {
+    ...presentationDraft,
+    roles: {
+      ...presentationDraft.roles,
+      measurements: [{ field: "alternate", axis: "primary" }],
+    },
+  };
+  const pendingData = createEditModePendingRuntime({
+    chart: dataDraft,
+    profile: ready.profile,
+    deferredPreparation,
+    rows,
+    geoData: null,
+    authorMetadata,
+  });
+
+  assert.equal(pendingData.status, "pending");
+  assert.equal(pendingData.prepared, null);
+  assert.equal(buildEditorFormModel({
+    chart: dataDraft,
+    profile: pendingData.profile,
+    prepared: pendingData.prepared,
+  }).sections.find(({ id }) => id === "appearance")
+    .fields.some(({ id }) => id === "background"), false);
+});
+
+test("edit-mode pending preparation never reuses an uncorrelated null preparation key", () => {
+  const previousPrepared = {
+    status: "invalid",
+    marks: [],
+    diagnostics: [],
+    meta: { formPreparationKey: null },
+  };
+  const rows = [];
+  const authorMetadata = {};
+  const deferredPreparation = {
+    chart: validLineChart(),
+    rows,
+    geoData: null,
+    authorMetadata,
+    runtime: {
+      status: "ready",
+      profile: { fingerprint: "profile-without-a-valid-chart" },
+      prepared: previousPrepared,
+    },
+  };
+
+  const pending = createEditModePendingRuntime({
+    chart: { ...validLineChart(), sourceId: "" },
+    profile: { fingerprint: "profile-without-a-valid-chart" },
+    deferredPreparation,
+    rows,
+    geoData: null,
+    authorMetadata,
+  });
+
+  assert.equal(pending.status, "pending");
+  assert.equal(pending.prepared, null);
+});
+
+test("edit-mode pending preparation rejects matching-key snapshots with stale data identities", () => {
+  const chart = validLineChart();
+  const rows = [
+    { period: "May", capacity: 4 },
+    { period: "June", capacity: 7 },
+  ];
+  const geoData = { type: "FeatureCollection", features: [] };
+  const authorMetadata = { period: { interpretation: "category" } };
+  const ready = createWizardPreparation({ chart, rows, geoData, authorMetadata });
+  const deferredPreparation = {
+    chart,
+    rows,
+    geoData,
+    authorMetadata,
+    runtime: { status: "ready", ...ready },
+  };
+  const shared = {
+    chart: { ...chart, title: "Presentation-only replacement" },
+    profile: ready.profile,
+    deferredPreparation,
+  };
+
+  assert.equal(createEditModePendingRuntime({
+    ...shared,
+    rows: [...rows],
+    geoData,
+    authorMetadata,
+  }).prepared, null, "changed row identity must invalidate deferred preparation");
+  assert.equal(createEditModePendingRuntime({
+    ...shared,
+    rows,
+    geoData: { ...geoData },
+    authorMetadata,
+  }).prepared, null, "changed GeoJSON identity must invalidate deferred preparation");
+  assert.equal(createEditModePendingRuntime({
+    ...shared,
+    rows,
+    geoData,
+    authorMetadata: { ...authorMetadata },
+  }).prepared, null, "changed metadata identity must invalidate deferred preparation");
 });
 
 test("full editor draft identity changes only for material chart or Chrono edits", () => {

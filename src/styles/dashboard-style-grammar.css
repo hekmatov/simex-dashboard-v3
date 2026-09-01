@@ -1235,6 +1235,17 @@
   color: var(--simex-text-muted);
 }
 
+.app-frame .static-content-dialog :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea
+) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
 .app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) :is(
   input:not([type="checkbox"]):not([type="radio"]),
   select,

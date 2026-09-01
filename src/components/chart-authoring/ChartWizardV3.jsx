@@ -282,6 +282,30 @@ export function chartDestinationForType(destination, typeId) {
   };
 }
 
+export function createEditModePendingRuntime({
+  chart,
+  profile = null,
+  deferredPreparation = null,
+  rows,
+  geoData,
+  authorMetadata,
+} = {}) {
+  const formPreparationKey = buildFormPreparationKey({ chart, profile });
+  const previousPrepared = deferredPreparation?.runtime?.prepared ?? null;
+  const dataIdentitiesMatch = deferredPreparation?.rows === rows
+    && deferredPreparation?.geoData === geoData
+    && deferredPreparation?.authorMetadata === authorMetadata;
+  return {
+    status: "pending",
+    profile,
+    prepared: formPreparationKey !== null
+      && dataIdentitiesMatch
+      && previousPrepared?.meta?.formPreparationKey === formPreparationKey
+      ? previousPrepared
+      : null,
+  };
+}
+
 /**
  * Schema-generated chart authoring flow.
  *
@@ -668,7 +692,14 @@ export default function ChartWizardV3({
   const runtime = editMode
     ? deferredPreparationCurrent
       ? deferredPreparation.runtime
-      : { status: "pending", profile: cachedProfile, prepared: null }
+      : createEditModePendingRuntime({
+          chart: wizard.draft,
+          profile: cachedProfile,
+          deferredPreparation,
+          rows,
+          geoData,
+          authorMetadata,
+        })
     : synchronousRuntime;
   const profiles = React.useMemo(() => {
     const cached = mergeCollections(safeDatasetProfiles, wizard.profiles);

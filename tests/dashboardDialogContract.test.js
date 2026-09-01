@@ -125,6 +125,19 @@ test("Text/Image and chart authoring expose dashboard wizard regions", async () 
   assert.match(editorHost, /chart-editor-backdrop dashboard-dialog-backdrop/);
 });
 
+test("Text/Image wizard paints every standard form control with dashboard tokens", async () => {
+  const grammar = await read("src/styles/dashboard-style-grammar.css");
+  const controlPaint = grammar.match(
+    /\.app-frame \.static-content-dialog :is\(\s*input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\),\s*select,\s*textarea\s*\)\s*\{([^}]*)\}/s,
+  )?.[1];
+
+  assert.ok(controlPaint, "the static-content wizard must scope paint to all standard non-choice controls");
+  assert.match(controlPaint, /background:\s*var\(--simex-surface-panel\)/);
+  assert.match(controlPaint, /border-color:\s*var\(--simex-border-strong\)/);
+  assert.match(controlPaint, /border-radius:\s*var\(--simex-style-control-radius\)/);
+  assert.match(controlPaint, /color:\s*var\(--simex-text-strong\)/);
+});
+
 test("authoring shells and fields keep fixed chrome around one responsive workbench", async () => {
   const [dialogs, grammar, staticCss] = await Promise.all([
     read("src/styles/dashboard-dialogs.css"),
