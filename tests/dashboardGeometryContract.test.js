@@ -8,6 +8,7 @@ const sources = Object.freeze({
   build: "src/components/build/BuildWorkspace.jsx",
   modeWorkspace: "src/components/dashboard/DashboardModeWorkspace.jsx",
   canvas: "src/components/dashboard/DashboardCanvas.jsx",
+  section: "src/components/dashboard/DashboardSection.jsx",
   tokens: "src/styles/tokens.css",
   grammar: "src/styles/dashboard-style-grammar.css",
   modes: "src/styles/modes.css",
@@ -22,10 +23,11 @@ async function source(path) {
 }
 
 test("View and Build route the same saved Page through one persistent canonical renderer", async () => {
-  const [renderer, modeWorkspace, canvas] = await Promise.all([
+  const [renderer, modeWorkspace, canvas, section] = await Promise.all([
     source(sources.renderer),
     source(sources.modeWorkspace),
     source(sources.canvas),
+    source(sources.section),
   ]);
 
   assert.match(
@@ -39,10 +41,14 @@ test("View and Build route the same saved Page through one persistent canonical 
   assert.match(modeWorkspace, /dashboard=\{dashboard\}/);
   assert.match(canvas, /\(activePage\.sections \?\? \[\]\)\.map/,
     "the canonical canvas must preserve saved section order");
-  assert.match(canvas, /visiblePlacements\.map/,
-    "the canonical canvas must preserve saved panel order");
+  assert.match(canvas, /<DashboardSection[\s\S]*?section=\{section\}/,
+    "the canonical canvas must delegate each saved section to its rendering owner");
+  assert.match(section, /visiblePlacements\.map/,
+    "the saved-section renderer must preserve saved panel order");
   assert.doesNotMatch(canvas, /\.sort\(/,
     "rendering must not reorder saved layout configuration");
+  assert.doesNotMatch(section, /\.sort\(/,
+    "saved-section rendering must not reorder saved layout configuration");
 });
 
 test("View and Build share one central canvas maximum and responsive token", async () => {
