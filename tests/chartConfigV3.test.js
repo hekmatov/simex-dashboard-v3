@@ -181,6 +181,39 @@ test("Image viewport background modes retain a normalized custom color and rejec
   assert.throws(() => validateChartInstance(nonImage), /image/i);
 });
 
+test("non-image charts reject explicitly null or undefined Image presentation while an absent key remains valid", () => {
+  const options = {
+    id: "line-without-image-presentation",
+    title: "Trend",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+  };
+  const absent = createChartDraft("line", options);
+  assert.equal(Object.hasOwn(absent.presentation, "image"), false);
+  assert.equal(validateChartInstance(absent), absent);
+
+  for (const image of [null, undefined]) {
+    const chart = createChartDraft("line", {
+      ...options,
+      id: `line-with-explicit-${image === null ? "null" : "undefined"}-image-presentation`,
+      presentation: { image },
+    });
+    assert.equal(Object.hasOwn(chart.presentation, "image"), true);
+    assert.throws(() => validateChartInstance(chart), /does not support Image presentation/i);
+
+    const compatibleImage = createChartDraft("image", {
+      id: `image-with-explicit-${image === null ? "null" : "undefined"}-presentation`,
+      title: "Outbreak map",
+      sourceId: "outbreak-map-source",
+      presentation: { image },
+    });
+    assert.equal(validateChartInstance(compatibleImage), compatibleImage);
+  }
+});
+
 test("fresh chart drafts receive distinct readable identities while supplied identities remain stable", () => {
   const first = createChartDraft("line", { title: "First", sourceId: "cases" });
   const second = createChartDraft("line", { title: "Second", sourceId: "cases" });

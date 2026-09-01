@@ -440,7 +440,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   validateMap(descriptors.map?.value);
   validateTimeline(descriptors.timeline?.value);
   validateTable(descriptors.table?.value, schema);
-  validateImagePresentation(descriptors.image?.value, schema);
+  validateImagePresentation(descriptors.image, schema);
   validateBackground(descriptors.background?.value);
   validateLegend(descriptors.legend?.value);
   validateAccessibility(descriptors.accessibility?.value);
@@ -519,11 +519,13 @@ function validateAxes(axes, schema, temporalRoles) {
   }
 }
 
-function validateImagePresentation(image, schema) {
-  if (image === undefined || image === null) return;
+function validateImagePresentation(imageDescriptor, schema) {
+  if (imageDescriptor === undefined) return;
   if (schema.typeId !== "image") {
     throw new Error(`Chart type "${schema.typeId}" does not support Image presentation.`);
   }
+  const image = imageDescriptor.value;
+  if (image === undefined || image === null) return;
   ensureObject(image, "Chart presentation image");
   checkKnownKeys(image, new Set(["background"]), "chart presentation image");
   const background = image.background;
