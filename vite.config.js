@@ -15,7 +15,13 @@ export default defineConfig({
       "@tiptap/extension-underline",
       "@tiptap/extension-link",
       "@tiptap/extension-table",
+      "@tiptap/pm/state",
       "dompurify",
+      "echarts",
+      "html2canvas",
+      "katex",
+      "markdown-it",
+      "papaparse",
     ],
   },
   build: {
