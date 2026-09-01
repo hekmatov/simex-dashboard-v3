@@ -14,22 +14,20 @@ export default function MediaPicker({
   mediaItems = {},
   assets = {},
   mode = "qmd",
-  selectedMediaId,
+  action = "insert",
+  disabled = false,
   onSelect,
   onCreateLocal,
   onCancel,
 } = {}) {
   const groups = partitionMediaPickerItems(mediaItems, { mode });
-  const focusMediaId = groups.selectable.some((item) => item.mediaId === selectedMediaId)
-    ? selectedMediaId
-    : groups.selectable[0]?.mediaId;
   const [importingId, setImportingId] = React.useState(null);
   const [status, setStatus] = React.useState("");
   const [error, setError] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
   const acceptFile = async (file, externalItem = null) => {
-    if (!file) return;
+    if (!file || disabled) return;
     setBusy(true);
     setError("");
     setStatus("Validating local media…");
@@ -52,6 +50,7 @@ export default function MediaPicker({
   };
 
   const importDirect = async (item) => {
+    if (disabled) return;
     setBusy(true);
     setError("");
     setStatus("Requesting the external image from this browser…");
@@ -66,15 +65,9 @@ export default function MediaPicker({
   };
 
   return (
-    <section className="source-content-detail-card" aria-label="Media picker" onKeyDown={(event) => {
-      if (event.key === "Escape" && onCancel) {
-        event.preventDefault();
-        event.stopPropagation();
-        onCancel();
-      }
-    }}>
+    <section className="source-content-detail-card" aria-label="Media picker">
       <header>
-        <h3>{mode === "qmd" ? "Insert image" : "Choose from media"}</h3>
+        <h3>{mode === "qmd" ? (action === "change" ? "Change image" : "Insert image") : "Choose image"}</h3>
         <p>{mode === "qmd" ? "Choose portable local media or import an External item first." : "Choose any dashboard media item, including an External HTTPS image."}</p>
       </header>
       <section data-media-source-path="existing">
@@ -87,9 +80,8 @@ export default function MediaPicker({
                 type="radio"
                 name="media-picker-selection"
                 value={item.mediaId}
-                checked={selectedMediaId ? item.mediaId === selectedMediaId : undefined}
-                autoFocus={item.mediaId === focusMediaId}
-                onChange={() => onSelect?.(item)}
+                disabled={disabled}
+                onChange={() => void onSelect?.(item)}
               />
               <strong>{item.displayName}</strong> {item.origin} · {item.health}
             </label>
@@ -105,7 +97,7 @@ export default function MediaPicker({
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              disabled={busy}
+              disabled={disabled || busy}
               onChange={(event) => void acceptFile(event.target.files?.[0])}
             />
           </label>
@@ -119,12 +111,12 @@ export default function MediaPicker({
             {groups.external.map((item) => (
               <li key={item.mediaId}>
                 <strong>{item.displayName}</strong>
-                <button type="button" className="secondary" disabled={busy} onClick={() => setImportingId(item.mediaId)}>
+                <button type="button" className="secondary" disabled={disabled || busy} onClick={() => setImportingId(item.mediaId)}>
                   Import as local media
                 </button>
                 {importingId === item.mediaId && (
                   <div>
-                    <button type="button" className="secondary" disabled={busy} onClick={() => void importDirect(item)}>
+                    <button type="button" className="secondary" disabled={disabled || busy} onClick={() => void importDirect(item)}>
                       Try direct HTTPS import
                     </button>
                     <label>
@@ -132,7 +124,7 @@ export default function MediaPicker({
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
-                        disabled={busy}
+                        disabled={disabled || busy}
                         onChange={(event) => void acceptFile(event.target.files?.[0], item)}
                       />
                     </label>

@@ -88,12 +88,20 @@ export function FreeTextSourceEditor({
     if (!selectedMediaNode || !Number.isInteger(selectedMediaNode.sourceStart) || !Number.isInteger(selectedMediaNode.sourceEnd)) return;
     changeSource(`${value.slice(0, selectedMediaNode.sourceStart)}${serializePortableMediaReference(placement)}${value.slice(selectedMediaNode.sourceEnd)}`);
   };
-  const chooseMedia = (item) => {
+  const chooseMedia = async (item) => {
     if (disabled) return;
     if (pickerMode === "change" && selectedPlacement) {
+      await onMediaSelect?.(item, {
+        intent: "change",
+        sourceStart: selectedMediaNode?.sourceStart,
+        sourceEnd: selectedMediaNode?.sourceEnd,
+      });
       updateSelectedPlacement({ ...selectedPlacement, mediaId: item.mediaId });
       closeChangePicker();
-    } else { onMediaSelect?.(item); setPickerOpen(false); }
+    } else {
+      await onMediaSelect?.(item, { intent: "insert" });
+      setPickerOpen(false);
+    }
   };
   const createMedia = async (candidate, context) => {
     if (pickerMode === "change" && selectedPlacement) {
@@ -140,7 +148,7 @@ export function FreeTextSourceEditor({
           <pre>{value}</pre>
         </section>
       </div>
-      {pickerOpen && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" selectedMediaId={pickerMode === "change" ? selectedPlacement?.mediaId : undefined} onSelect={chooseMedia} onCreateLocal={createMedia} onCancel={pickerMode === "change" ? closeChangePicker : () => setPickerOpen(false)} />}
+      {pickerOpen && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" action={pickerMode} disabled={disabled} onSelect={chooseMedia} onCreateLocal={createMedia} onCancel={pickerMode === "change" ? closeChangePicker : () => setPickerOpen(false)} />}
       {selectedPlacement && <QmdMediaInspector placement={selectedPlacement} mediaItem={valueForId(mediaItems, selectedPlacement.mediaId)} disabled={disabled} onChange={updateSelectedPlacement} onChangeImage={(_mediaId, { trigger } = {}) => { changeTriggerRef.current = trigger ?? null; setPickerMode("change"); setPickerOpen(true); }} onOpenMediaItem={(mediaId) => (onOpenMediaItem ?? contentRenderContext.openMediaItem)?.(mediaId)} />}
       {hasValidationErrors && <ValidationErrors id={validationTarget} errorId={`${id}-errors-title`} value={value} errors={analysis.errors} />}
     </section>

@@ -498,9 +498,9 @@ function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, d
       contentRenderContext={contentRenderContext}
       onChange={(qmd) => dispatch({ type: "updateSource", updates: { qmd } })}
       onValidationChange={onValidationChange}
-      onMediaSelect={(mediaItem) => {
-        dispatch({ type: "insertQmdMedia", mediaItem });
-        void onRetainMedia?.({ mediaItem, owner: "qmd-panel" });
+      onMediaSelect={(mediaItem, context) => {
+        if (context?.intent !== "change") dispatch({ type: "insertQmdMedia", mediaItem });
+        return onRetainMedia?.({ mediaItem, owner: "qmd-panel" });
       }}
       onMediaCreate={(candidate, context) => {
         dispatch({

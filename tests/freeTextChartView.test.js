@@ -716,6 +716,7 @@ test("authoring preview selects one media placement and changes only its seriali
     };
     const originalLibrary = structuredClone(mediaItems);
     const actions = [];
+    const selections = [];
     let latestSource = "";
     function Harness() {
       const [source, setSource] = React.useState('![First map](simex-media:first){width=50% align=center flow=block frame=none caption="Original" decorative=false}');
@@ -727,6 +728,7 @@ test("authoring preview selects one media placement and changes only its seriali
         mediaItems,
         assets: {},
         onChange: setSource,
+        onMediaSelect: (mediaItem, context) => selections.push({ mediaId: mediaItem.mediaId, context }),
         onOpenMediaItem: (mediaId) => actions.push(`open:${mediaId}`),
       });
     }
@@ -742,39 +744,34 @@ test("authoring preview selects one media placement and changes only its seriali
     const changeTrigger = target.querySelector('[data-qmd-media-action="change"]');
     changeTrigger?.click();
     for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
-    const focusOnOpen = document.activeElement?.value;
+    const changeHeading = target.querySelector('[aria-label="Media picker"] h3')?.textContent;
+    const managedRadioState = target.querySelector('[aria-label="Media picker"] input[type="radio"][autofocus], [aria-label="Media picker"] input[type="radio"]:checked') !== null;
     target.querySelector('[aria-label="Media picker"]')?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    for (let index = 0; index < 50 && target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    const pickerClosedOnEscape = target.querySelector('[aria-label="Media picker"]') === null;
-    const focusAfterEscape = document.activeElement === changeTrigger;
-    changeTrigger?.click();
-    for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
-    target.querySelector('[aria-label="Media picker"] button')?.click();
+    const pickerStayedOpenOnEscape = target.querySelector('[aria-label="Media picker"]') !== null;
+    [...target.querySelectorAll('[aria-label="Media picker"] button')].find((button) => button.textContent.includes("Close media picker"))?.click();
     for (let index = 0; index < 50 && target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    const focusAfterClose = document.activeElement === changeTrigger;
+    const pickerClosedByPointer = target.querySelector('[aria-label="Media picker"]') === null;
     changeTrigger?.click();
     for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     const changePickerHasIntake = target.querySelector('[aria-label="Media picker"] input[type="file"], [aria-label="Media picker"] button[data-import-media]') !== null
       || target.querySelector('[aria-label="Media picker"]')?.textContent.includes("Import as local media");
     target.querySelector('input[value="second"]')?.click();
     await new Promise((resolve) => setTimeout(resolve, 250));
-    const focusAfterSelection = document.activeElement === changeTrigger;
     target.querySelector("[data-qmd-media-select]")?.click();
     for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="open"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     target.querySelector('[data-qmd-media-action="open"]')?.click();
     const value = {
       source: latestSource,
       actions,
+      selections,
       libraryUnchanged: JSON.stringify(mediaItems) === JSON.stringify(originalLibrary),
       images: target.querySelectorAll("img").length,
       changePickerHasIntake,
-      focusOnOpen,
-      pickerClosedOnEscape,
-      focusAfterEscape,
-      focusAfterClose,
-      focusAfterSelection,
+      changeHeading,
+      managedRadioState,
+      pickerStayedOpenOnEscape,
+      pickerClosedByPointer,
       imageDetails: [...target.querySelectorAll("img")].map((image) => ({ className: image.className, src: image.getAttribute("src"), parent: image.parentElement?.outerHTML })),
       pickerOpen: target.querySelector('[aria-label="Media picker"]') !== null,
     };
@@ -784,15 +781,97 @@ test("authoring preview selects one media placement and changes only its seriali
 
   assert.match(result.source, /\(simex-media:second\)/);
   assert.match(result.source, /width=33% align=center flow=block frame=none caption="Original" decorative=false/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
   assert.deepEqual(result.actions, ["open:second"]);
+  assert.equal(result.selections.length, 1);
+  assert.equal(result.selections[0].mediaId, "second");
+  assert.equal(result.selections[0].context.intent, "change");
+  assert.equal(Number.isInteger(result.selections[0].context.sourceStart), true);
+  assert.equal(Number.isInteger(result.selections[0].context.sourceEnd), true);
   assert.equal(result.libraryUnchanged, true);
   assert.equal(result.images, 0, JSON.stringify({ imageDetails: result.imageDetails, pickerOpen: result.pickerOpen }));
   assert.equal(result.changePickerHasIntake, true);
-  assert.equal(result.focusOnOpen, "second");
-  assert.equal(result.pickerClosedOnEscape, true);
-  assert.equal(result.focusAfterEscape, true);
-  assert.equal(result.focusAfterClose, true);
-  assert.equal(result.focusAfterSelection, true);
+  assert.equal(result.changeHeading, "Change image");
+  assert.equal(result.managedRadioState, false);
+  assert.equal(result.pickerStayedOpenOnEscape, true);
+  assert.equal(result.pickerClosedByPointer, true);
+});
+
+test("wizard change-to-existing retains the selected identity without staging an insertion", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { StaticContentFields } = await import("/src/components/static-content/StaticContentWizard.jsx");
+    const { createStaticContentDraft, reduceStaticContentDraft } = await import("/src/static-content/forms/staticContentDraft.js");
+    const target = document.body.appendChild(document.createElement("div"));
+    const mediaItems = {
+      first: {
+        mediaId: "first", revision: 4, current: { kind: "asset", assetId: "asset-first" },
+        displayName: "First map", defaultDescription: "First map", origin: "uploaded", health: "missing",
+        dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+      },
+      second: {
+        mediaId: "second", revision: 9, current: { kind: "package", path: "media/second.png" },
+        displayName: "Second map", defaultDescription: "Second map", origin: "packaged", health: "ready",
+        dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+      },
+    };
+    const dashboard = { contentLibrary: { mediaItems } };
+    const originalLibrary = structuredClone(mediaItems);
+    const actions = [];
+    const retained = [];
+    let latestDraft;
+    function Harness() {
+      const [draft, setDraft] = React.useState(() => createStaticContentDraft({
+        contentTypeId: "freeText",
+        stage: "content",
+        panel: { id: "retain-panel", typeId: "freeText", sourceId: "retain-source", title: "Retain" },
+        placement: {
+          kind: "staticText",
+          qmd: '![First map](simex-media:first){width=50% align=center flow=block frame=none caption="Original" decorative=false}',
+        },
+      }));
+      latestDraft = draft;
+      return React.createElement(StaticContentFields, {
+        draft,
+        dashboard,
+        dispatch: (action) => {
+          actions.push(action.type);
+          setDraft((current) => reduceStaticContentDraft(current, action));
+        },
+        onRetainMedia: async (selection) => retained.push({ mediaId: selection.mediaItem.mediaId, owner: selection.owner }),
+      });
+    }
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(Harness));
+    for (let index = 0; index < 50 && !target.querySelector("[data-qmd-media-select]"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector("[data-qmd-media-select]")?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="change"]'); index += 1) {
+      target.querySelector('[aria-label="More image options"]')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    target.querySelector('[data-qmd-media-action="change"]')?.click();
+    for (let index = 0; index < 50 && !target.querySelector('input[value="second"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('input[value="second"]')?.click();
+    for (let index = 0; index < 50 && !latestDraft?.source?.qmd.includes("simex-media:second"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    const value = {
+      actions,
+      retained,
+      source: latestDraft.source.qmd,
+      pendingMediaIds: Object.keys(latestDraft.pendingMediaItems ?? {}),
+      libraryUnchanged: JSON.stringify(mediaItems) === JSON.stringify(originalLibrary),
+    };
+    root.unmount();
+    return value;
+  });
+
+  assert.deepEqual(result.actions, ["updateSource"]);
+  assert.deepEqual(result.retained, [{ mediaId: "second", owner: "qmd-panel" }]);
+  assert.match(result.source, /\(simex-media:second\)/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
+  assert.deepEqual(result.pendingMediaIds, []);
+  assert.equal(result.libraryUnchanged, true);
 });
 
 test("authoring edits exact parser-owned placements when inert and duplicate literals precede the selection", async () => {

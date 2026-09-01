@@ -42,6 +42,40 @@ test("StaticContentEditor mounts an existing V5 Image edit with media placement 
   assert.match(html, /data-image-media-revision="3"/);
 });
 
+test("actual standalone Image add and edit flows lead with equal existing and upload paths", () => {
+  const dashboard = makeDashboardV5();
+  const drafts = [
+    createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "image",
+      stage: "content",
+      assets: dashboard.assets,
+    }),
+    createStaticContentDraft({
+      mode: "edit",
+      destination: { pageId: "overview", sectionId: "response" },
+      panel: dashboard.pages[0].sections[0].panels[0].chart,
+      placement: dashboard.dataSources["image-source"],
+      mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
+      assets: dashboard.assets,
+    }),
+  ];
+
+  for (const draft of drafts) {
+    const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+      draft,
+      dashboard,
+      dispatch() {},
+    }));
+    const existing = html.indexOf('data-media-source-path="existing"');
+    const upload = html.indexOf('data-media-source-path="upload"');
+    const alternatives = html.indexOf('id="static-image-origin-kind"');
+    assert.ok(existing >= 0 && upload > existing && alternatives > upload, { existing, upload, alternatives });
+    assert.equal((html.match(/type="file"/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /id="static-image-file"/);
+  }
+});
+
 test("an explicitly untitled Free-text draft prepares a create transaction without persisting wizard-only state", () => {
   const dashboard = makeDashboardV5();
   let draft = createStaticContentDraft({
@@ -131,9 +165,11 @@ test("workflow pending disables every current Text and Image mutating field", ()
         assert.match(html, new RegExp(`<button[^>]*aria-label="${label}"[^>]*disabled`), label);
       }
     } else {
-      for (const id of ["static-image-origin-kind", "static-image-file", "static-image-alt", "static-image-crop-x", "static-image-fit"]) {
+      for (const id of ["static-image-origin-kind", "static-image-alt", "static-image-crop-x", "static-image-fit"]) {
         assert.match(html, new RegExp(`<[^>]+id="${id}"[^>]*disabled`), id);
       }
+      assert.match(html, /data-media-source-path="upload"[\s\S]*type="file"[^>]*disabled/);
+      assert.doesNotMatch(html, /id="static-image-file"/);
       assert.match(html, /class="image-crop-selection"[^>]*aria-disabled="true"/);
     }
   }
