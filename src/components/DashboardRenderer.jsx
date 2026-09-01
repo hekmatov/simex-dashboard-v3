@@ -2565,6 +2565,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     runtimeContentLibrary,
     workingDashboard,
   ]);
+  const dashboardCanvasActions = useDashboardCanvasActions({
+    select: activateBuildCanvasSelection,
+    removePanel,
+    requestPanelMove,
+    panelDragStart: handlePanelDragStart,
+    panelDragOver: handlePanelDragOver,
+    panelDrop: handlePanelDrop,
+    panelDragEnd: clearDragState,
+    reorderSection: reorderBuildSection,
+    structureCommand: applyBuildStructureCommand,
+    addPage: addBuildPage,
+    addSection,
+    addChart: openChartWizard,
+    addStaticContent: openStaticContentWizard,
+  });
 
   if (mode === "present") {
     return (
@@ -2785,21 +2800,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       exportResolutionControllerRef={buildWorkspaceExportResolutionRef}
     />
   ) : null;
-  const dashboardCanvasActions = useDashboardCanvasActions({
-    select: activateBuildCanvasSelection,
-    removePanel,
-    requestPanelMove,
-    panelDragStart: handlePanelDragStart,
-    panelDragOver: handlePanelDragOver,
-    panelDrop: handlePanelDrop,
-    panelDragEnd: clearDragState,
-    reorderSection: reorderBuildSection,
-    structureCommand: applyBuildStructureCommand,
-    addPage: addBuildPage,
-    addSection,
-    addChart: openChartWizard,
-    addStaticContent: openStaticContentWizard,
-  });
   return (
     <>
       <DashboardModeWorkspace
