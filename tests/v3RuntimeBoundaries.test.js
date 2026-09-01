@@ -88,6 +88,35 @@ test("axis title graphics rejects another ECharts module reference", async () =>
   );
 });
 
+test("axis title graphics rejects CommonJS ECharts runtime ownership", async () => {
+  const inputs = await repositoryInputs();
+  const helperPath = "src/charting/rendering/axisTitleGraphics.js";
+  inputs.sourceFiles[helperPath] = [
+    inputs.sourceFiles[helperPath],
+    'const echarts = require("echarts");',
+    'echarts.init(document.createElement("div"));',
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${helperPath} canonicalRendererExclusivity: unexpected raw render surface (echarts-runtime)`,
+  );
+});
+
+test("axis title graphics rejects CommonJS ECharts React runtime ownership", async () => {
+  const inputs = await repositoryInputs();
+  const helperPath = "src/charting/rendering/axisTitleGraphics.js";
+  inputs.sourceFiles[helperPath] = [
+    inputs.sourceFiles[helperPath],
+    'const EChartsReact = require("echarts-for-react");',
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${helperPath} canonicalRendererExclusivity: unexpected raw render surface (echarts-runtime)`,
+  );
+});
+
 test("axis title graphics rejects ECharts React runtime ownership", async () => {
   const inputs = await repositoryInputs();
   const helperPath = "src/charting/rendering/axisTitleGraphics.js";

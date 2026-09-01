@@ -489,7 +489,7 @@ function isAuditedEChartsTextMetricsCapability(filePath, source) {
   if (filePath !== ECHARTS_TEXT_METRICS_HELPER_PATH) return false;
   const echartsModuleReferences = [
     ...source.matchAll(
-      /\b(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']echarts["']|\bimport\s*\(\s*["']echarts["']\s*\)/g,
+      /\b(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']echarts["']|\bimport\s*\(\s*["']echarts["']\s*\)|\brequire\s*\(\s*["']echarts["']\s*\)/g,
     ),
   ];
   return (
@@ -520,6 +520,7 @@ function parseImportSpecifiers(source) {
   const patterns = [
     /\b(?:import|export)\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']/g,
     /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+    /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
   ];
   for (const pattern of patterns) {
     for (const match of source.matchAll(pattern)) specifiers.push(match[1]);
