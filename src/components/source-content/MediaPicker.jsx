@@ -148,7 +148,7 @@ export default function MediaPicker({
       )}
       {status && <p role="status" aria-live="polite">{status}</p>}
       {error && <p role="alert">{error}</p>}
-      {onCancel && <button type="button" className="secondary" onClick={onCancel}>Close media picker</button>}
+      {onCancel && <button type="button" className="secondary" disabled={disabled} onClick={onCancel}>Close media picker</button>}
     </section>
   );
 }

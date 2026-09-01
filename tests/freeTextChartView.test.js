@@ -874,6 +874,96 @@ test("wizard change-to-existing retains the selected identity without staging an
   assert.equal(result.libraryUnchanged, true);
 });
 
+test("delayed change-to-existing is single-flight and cancels a stale source replacement", async () => {
+  const result = await runDelayedExistingChange({ mutateSource: true, attemptSecondChoice: true });
+
+  assert.equal(result.controlsDisabledWhilePending, true);
+  assert.deepEqual(result.selections, [{ mediaId: "second", intent: "change" }]);
+  assert.match(result.source, /simex-media:first/);
+  assert.match(result.source, /Newer source text/);
+  assert.doesNotMatch(result.source, /simex-media:second|simex-media:third/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
+});
+
+test("one delayed change-to-existing retains then replaces the current span exactly once", async () => {
+  const result = await runDelayedExistingChange();
+
+  assert.equal(result.controlsDisabledWhilePending, true);
+  assert.deepEqual(result.selections, [{ mediaId: "second", intent: "change" }]);
+  assert.match(result.source, /simex-media:second/);
+  assert.doesNotMatch(result.source, /simex-media:first|simex-media:third/);
+  assert.equal((result.source.match(/simex-media:/g) ?? []).length, 1);
+});
+
+async function runDelayedExistingChange({ mutateSource = false, attemptSecondChoice = false } = {}) {
+  return page.evaluate(async ({ mutateSource, attemptSecondChoice }) => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    const mediaItems = {
+      first: {
+        mediaId: "first", revision: 1, current: { kind: "asset", assetId: "asset-first" },
+        displayName: "First", defaultDescription: "First", origin: "uploaded", health: "missing",
+      },
+      second: {
+        mediaId: "second", revision: 1, current: { kind: "package", path: "second.png" },
+        displayName: "Second", defaultDescription: "Second", origin: "packaged", health: "ready",
+      },
+      third: {
+        mediaId: "third", revision: 1, current: { kind: "package", path: "third.png" },
+        displayName: "Third", defaultDescription: "Third", origin: "packaged", health: "ready",
+      },
+    };
+    const selections = [];
+    const resolvers = [];
+    let latestSource = "";
+    let mutateCurrentSource;
+    function Harness() {
+      const [source, setSource] = React.useState('![First](simex-media:first){width=50% align=center flow=block frame=none decorative=false}');
+      latestSource = source;
+      mutateCurrentSource = () => setSource((current) => `${current}\n\nNewer source text`);
+      return React.createElement(FreeTextSourceEditor, {
+        value: source,
+        panelId: "delayed-change-panel",
+        mediaItems,
+        assets: {},
+        onChange: setSource,
+        onMediaSelect: (mediaItem, context) => {
+          selections.push({ mediaId: mediaItem.mediaId, intent: context?.intent });
+          return new Promise((resolve) => resolvers.push(resolve));
+        },
+      });
+    }
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(Harness));
+    for (let index = 0; index < 50 && !target.querySelector("[data-qmd-media-select]"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector("[data-qmd-media-select]")?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="change"]'); index += 1) {
+      target.querySelector('[aria-label="More image options"]')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    target.querySelector('[data-qmd-media-action="change"]')?.click();
+    for (let index = 0; index < 50 && !target.querySelector('input[value="second"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('input[value="second"]')?.click();
+    for (let index = 0; index < 50 && resolvers.length === 0; index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const controls = [...target.querySelectorAll('[aria-label="Media picker"] input, [aria-label="Media picker"] button')];
+    const controlsDisabledWhilePending = controls.length > 0 && controls.every((control) => control.disabled);
+    if (attemptSecondChoice) target.querySelector('input[value="third"]')?.click();
+    if (mutateSource) {
+      mutateCurrentSource?.();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    [...resolvers].reverse().forEach((resolve) => resolve());
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const value = { controlsDisabledWhilePending, selections, source: latestSource };
+    root.unmount();
+    return value;
+  }, { mutateSource, attemptSecondChoice });
+}
+
 test("authoring edits exact parser-owned placements when inert and duplicate literals precede the selection", async () => {
   const result = await page.evaluate(async () => {
     await import("/src/styles/source-content.css");

@@ -21,6 +21,7 @@ export function FreeTextSourceEditor({
   const [pending, setPending] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [pickerMode, setPickerMode] = React.useState("insert");
+  const [mediaChoicePending, setMediaChoicePending] = React.useState(false);
   const [editorMode, setEditorMode] = React.useState(
     initialSurface === "advanced" || initialSurface === "raw" ? "raw" : "formatted",
   );
@@ -28,9 +29,16 @@ export function FreeTextSourceEditor({
   const revision = React.useRef(0);
   const lastValidRevision = React.useRef(initial.ok ? 0 : null);
   const observedSource = React.useRef(value);
+  const currentSource = React.useRef(value);
+  currentSource.current = value;
+  const currentDisabled = React.useRef(disabled);
+  currentDisabled.current = disabled;
   const analysisCache = React.useRef(new Map([[value, initial]]));
   const editorRef = React.useRef(null);
   const changeTriggerRef = React.useRef(null);
+  const currentMediaSelection = React.useRef(selectedMediaIdentity);
+  currentMediaSelection.current = selectedMediaIdentity;
+  const mediaChoiceOperation = React.useRef({ token: 0, pending: false });
   const previewRenderContext = React.useMemo(() => ({
     ...contentRenderContext,
     mediaItems: { ...(contentRenderContext.mediaItems ?? {}), ...mediaItems },
@@ -39,6 +47,10 @@ export function FreeTextSourceEditor({
 
   React.useEffect(() => {
     onValidationChange?.({ ...initial, pending: false, source: value, sourceRevision: 0, previewRevision: lastValidRevision.current });
+  }, []);
+  React.useEffect(() => () => {
+    mediaChoiceOperation.current.token += 1;
+    mediaChoiceOperation.current.pending = false;
   }, []);
   React.useEffect(() => {
     onSurfaceChange?.(editorMode === "raw" ? "advanced" : "composer");
@@ -88,16 +100,57 @@ export function FreeTextSourceEditor({
     if (!selectedMediaNode || !Number.isInteger(selectedMediaNode.sourceStart) || !Number.isInteger(selectedMediaNode.sourceEnd)) return;
     changeSource(`${value.slice(0, selectedMediaNode.sourceStart)}${serializePortableMediaReference(placement)}${value.slice(selectedMediaNode.sourceEnd)}`);
   };
+  const beginMediaChange = () => {
+    if (mediaChoiceOperation.current.pending || !selectedPlacement || !selectedMediaNode) return null;
+    const operation = {
+      token: mediaChoiceOperation.current.token + 1,
+      source: value,
+      mediaNodeIndex: selectedMediaIdentity?.mediaNodeIndex,
+      sourceStart: selectedMediaNode.sourceStart,
+      sourceEnd: selectedMediaNode.sourceEnd,
+      sourceText: value.slice(selectedMediaNode.sourceStart, selectedMediaNode.sourceEnd),
+      placement: selectedPlacement,
+    };
+    mediaChoiceOperation.current = { token: operation.token, pending: true };
+    setMediaChoicePending(true);
+    return operation;
+  };
+  const isCurrentMediaChange = (operation) => {
+    if (!operation || mediaChoiceOperation.current.token !== operation.token || currentDisabled.current) return false;
+    const selection = currentMediaSelection.current;
+    if (selection?.mediaNodeIndex !== operation.mediaNodeIndex) return false;
+    const source = currentSource.current;
+    if (source !== operation.source) return false;
+    const node = parsePortableQmdWithMedia(source).ast?.mediaNodes?.[operation.mediaNodeIndex];
+    return node?.sourceStart === operation.sourceStart
+      && node?.sourceEnd === operation.sourceEnd
+      && source.slice(node.sourceStart, node.sourceEnd) === operation.sourceText;
+  };
+  const finishMediaChange = (operation) => {
+    if (mediaChoiceOperation.current.token !== operation?.token) return;
+    mediaChoiceOperation.current = { token: operation.token, pending: false };
+    setMediaChoicePending(false);
+  };
+  const replaceMediaChange = (operation, mediaId) => {
+    changeSource(`${operation.source.slice(0, operation.sourceStart)}${serializePortableMediaReference({ ...operation.placement, mediaId })}${operation.source.slice(operation.sourceEnd)}`);
+  };
   const chooseMedia = async (item) => {
     if (disabled) return;
     if (pickerMode === "change" && selectedPlacement) {
-      await onMediaSelect?.(item, {
-        intent: "change",
-        sourceStart: selectedMediaNode?.sourceStart,
-        sourceEnd: selectedMediaNode?.sourceEnd,
-      });
-      updateSelectedPlacement({ ...selectedPlacement, mediaId: item.mediaId });
-      closeChangePicker();
+      const operation = beginMediaChange();
+      if (!operation) return;
+      try {
+        await onMediaSelect?.(item, {
+          intent: "change",
+          sourceStart: operation.sourceStart,
+          sourceEnd: operation.sourceEnd,
+        });
+        if (!isCurrentMediaChange(operation)) return;
+        replaceMediaChange(operation, item.mediaId);
+        closeChangePicker();
+      } finally {
+        finishMediaChange(operation);
+      }
     } else {
       await onMediaSelect?.(item, { intent: "insert" });
       setPickerOpen(false);
@@ -105,14 +158,21 @@ export function FreeTextSourceEditor({
   };
   const createMedia = async (candidate, context) => {
     if (pickerMode === "change" && selectedPlacement) {
-      await onMediaCreate?.(candidate, {
-        ...context,
-        intent: "change",
-        sourceStart: selectedMediaNode?.sourceStart,
-        sourceEnd: selectedMediaNode?.sourceEnd,
-      });
-      updateSelectedPlacement({ ...selectedPlacement, mediaId: candidate.mediaItem.mediaId });
-      closeChangePicker();
+      const operation = beginMediaChange();
+      if (!operation) return;
+      try {
+        await onMediaCreate?.(candidate, {
+          ...context,
+          intent: "change",
+          sourceStart: operation.sourceStart,
+          sourceEnd: operation.sourceEnd,
+        });
+        if (!isCurrentMediaChange(operation)) return;
+        replaceMediaChange(operation, candidate.mediaItem.mediaId);
+        closeChangePicker();
+      } finally {
+        finishMediaChange(operation);
+      }
       return;
     }
     await onMediaCreate?.(candidate, { ...context, intent: "insert" });
@@ -148,7 +208,7 @@ export function FreeTextSourceEditor({
           <pre>{value}</pre>
         </section>
       </div>
-      {pickerOpen && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" action={pickerMode} disabled={disabled} onSelect={chooseMedia} onCreateLocal={createMedia} onCancel={pickerMode === "change" ? closeChangePicker : () => setPickerOpen(false)} />}
+      {pickerOpen && <MediaPicker mediaItems={mediaItems} assets={assets} mode="qmd" action={pickerMode} disabled={disabled || mediaChoicePending} onSelect={chooseMedia} onCreateLocal={createMedia} onCancel={pickerMode === "change" ? closeChangePicker : () => setPickerOpen(false)} />}
       {selectedPlacement && <QmdMediaInspector placement={selectedPlacement} mediaItem={valueForId(mediaItems, selectedPlacement.mediaId)} disabled={disabled} onChange={updateSelectedPlacement} onChangeImage={(_mediaId, { trigger } = {}) => { changeTriggerRef.current = trigger ?? null; setPickerMode("change"); setPickerOpen(true); }} onOpenMediaItem={(mediaId) => (onOpenMediaItem ?? contentRenderContext.openMediaItem)?.(mediaId)} />}
       {hasValidationErrors && <ValidationErrors id={validationTarget} errorId={`${id}-errors-title`} value={value} errors={analysis.errors} />}
     </section>
