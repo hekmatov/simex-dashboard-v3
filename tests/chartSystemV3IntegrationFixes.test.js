@@ -35,7 +35,11 @@ export async function load(url, context, nextLoad) {
 
 const { default: ChartView } = await import("../src/components/charts/ChartView.jsx");
 const { default: CardChartView } = await import("../src/components/charts/CardChartView.jsx");
-const { default: EChartsChartView, createEChartsLifecycle } = await import("../src/components/charts/EChartsChartView.jsx");
+const {
+  default: EChartsChartView,
+  applyEChartsPresentation,
+  createEChartsLifecycle,
+} = await import("../src/components/charts/EChartsChartView.jsx");
 const { default: ImageChartView } = await import("../src/components/charts/ImageChartView.jsx");
 const { default: TableChartView } = await import("../src/components/charts/TableChartView.jsx");
 
@@ -839,25 +843,22 @@ test("image preparation rejects multiple manual rows instead of selecting the fi
   assert.ok(result.diagnostics.some(({ code }) => code === "image-row-count"));
 });
 
-test("ECharts models carry bounded family-aware accessibility rows, never raw records", () => {
+test("ECharts models suppress accessibility companions for every rendered family", () => {
   const cases = [
     {
       family: "axis",
       chart: { typeId: "bar", title: "Cases" },
       marks: [{ x: "May", value: 4, measure: "cases", measureLabel: "Cases", axis: "primary" }],
-      expected: { series: "Cases", category: "May", value: 4 },
     },
     {
       family: "composition",
       chart: { typeId: "pie", title: "Share" },
       marks: [{ category: "Ready", value: 3, share: 0.75 }],
-      expected: { category: "Ready", value: 3, share: 0.75 },
     },
     {
       family: "timeline",
       chart: { typeId: "timeline", title: "Events" },
       marks: [{ event: "Deploy", start: "2027-05-01", end: null, lane: null, status: "Planned" }],
-      expected: { event: "Deploy", start: "2027-05-01", end: null, lane: null, state: "Planned" },
     },
     {
       family: "geography",
@@ -872,17 +873,15 @@ test("ECharts models carry bounded family-aware accessibility rows, never raw re
           geometry: { type: "Point", coordinates: [44.79, 41.72] },
         },
       }],
-      expected: { geography: "GE-TB", value: 7, time: null, state: "joined" },
     },
     {
       family: "target",
       chart: { typeId: "gauge", title: "Capacity" },
       marks: [{ entity: "Clinic A", value: 8, target: 10, time: "2027-05-02" }],
-      expected: { label: "Clinic A", actual: 8, target: 10, time: "2027-05-02" },
     },
   ];
 
-  for (const { family, chart, marks, expected } of cases) {
+  for (const { family, chart, marks } of cases) {
     const model = buildRenderModel({
       chart: {
         presentation: { title: { align: "left" }, collection: null },
@@ -892,10 +891,9 @@ test("ECharts models carry bounded family-aware accessibility rows, never raw re
       prepared: { status: "ready", marks, diagnostics: [], meta: { dataFamily: family } },
       renderContext: { accessibilityEnabled: true },
     });
-    assert.equal(model.accessibility.family, family);
-    assert.deepEqual(model.accessibility.rows[0], expected);
-    assert.ok(model.accessibility.rows.length <= 50);
-    assert.doesNotMatch(JSON.stringify(model.accessibility), /must-not-leak|geometry|properties/);
+    assert.equal(model.kind, "echarts", family);
+    assert.equal(model.accessibility, undefined, family);
+    assert.equal(model.option.aria.enabled, false, family);
   }
 });
 
@@ -998,12 +996,18 @@ test("custom and ECharts views honor left, center, and right title alignment wit
       model: { option: { title: { text: "Aligned title", left: align }, series: [] } },
       accessibilityEnabled: true,
     }));
+    const presented = applyEChartsPresentation(
+      { option: { title: { text: "Aligned title", left: align }, series: [] } },
+      chart,
+    );
 
     for (const html of [card, table, image, echarts]) {
       assert.match(html, new RegExp(`data-title-align="${align}"`), `${align}: ${html}`);
     }
-    assert.match(echarts, /chart-view-title--visually-hidden/);
+    assert.match(echarts, /<h3[^>]*class="chart-view-title"[^>]*>Aligned title<\/h3>/);
+    assert.doesNotMatch(echarts, /chart-view-title--visually-hidden/);
     assert.equal((echarts.match(/Aligned title/g) ?? []).length, 1);
+    assert.equal(presented.option.title.show, false);
   }
 });
 

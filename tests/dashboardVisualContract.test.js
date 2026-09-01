@@ -172,7 +172,9 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.doesNotMatch(staticContent, /--simex-surface-muted/);
   assert.match(staticContent, /portable-qmd-composer__toolbar[^}]*button\[aria-pressed="true"\][^{]*\{[^}]*var\(--simex-selected-soft\)[^}]*var\(--simex-selected\)/s);
   assert.match(staticContent, /portable-qmd-composer__toolbar :is\(button, select\)[^{]*\{[^}]*min-height:\s*44px/s);
-  assert.match(staticContent, /free-text-source-editor__reference-cards\s*\{[^}]*display:\s*flex[^}]*gap:\s*20px/s);
+  assert.match(staticContent, /authoring-footprint-grid\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(staticContent, /authoring-footprint-frame\s*\{[^}]*grid-column:\s*span var\(--chart-footprint-columns\)/s);
+  assert.match(staticContent, /free-text-source-editor__reference-cards\s*\{[^}]*display:\s*contents/s);
   assert.match(staticContent, /free-text-source-editor__markdown pre\s*\{[^}]*min-height:\s*168px[^}]*overflow:\s*auto/s);
   assert.match(staticContent, /free-text-source-editor__source-repair textarea\s*\{[^}]*min-block-size:\s*220px[^}]*width:\s*100%/s);
   assert.match(staticContent, /portable-qmd-composer__announcement\[role="status"\][^{]*\{[^}]*var\(--simex-info-soft\)[^}]*var\(--simex-info\)/s);

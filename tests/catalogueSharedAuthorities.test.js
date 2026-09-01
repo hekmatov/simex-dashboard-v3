@@ -191,7 +191,7 @@ test("one conversion authority drives runtime planning and the bounded catalogue
   }
 });
 
-test("KPI to Bullet remains declared-compatible while exposing required target binding work", () => {
+test("KPI to Bullet is a remap while exposing required target binding work", () => {
   const chart = {
     typeId: "kpi",
     roles: {
@@ -205,7 +205,7 @@ test("KPI to Bullet remains declared-compatible while exposing required target b
   };
   const plan = planChartConversion(chart, "bullet");
 
-  assert.equal(plan.kind, "compatible");
+  assert.equal(plan.kind, "remap");
   assert.deepEqual(Object.keys(plan.preservedRoles).toSorted(), [
     "entity",
     "target",
@@ -213,7 +213,7 @@ test("KPI to Bullet remains declared-compatible while exposing required target b
   assert.deepEqual(plan.requiredRoles.map(({ id }) => id), ["actual"]);
 });
 
-test("the configured current-cases KPI yields the same KPI to Bullet plan from catalogue rules", async () => {
+test("the configured current-cases KPI excludes the retired Bullet conversion while retaining its role plan", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const chart = configuredChart(
     dashboard,
@@ -228,12 +228,12 @@ test("the configured current-cases KPI yields the same KPI to Bullet plan from c
     aliases,
   ).chart_types.find(({ type_id }) => type_id === "kpi");
 
-  assert.ok(kpiDescriptor.conversion.compatible_type_ids.includes("bullet"));
+  assert.equal(kpiDescriptor.conversion.compatible_type_ids.includes("bullet"), false);
   assert.deepEqual(
     kpiDescriptor.conversion.rules,
     EXPECTED_CONVERSION_RULES,
   );
-  assert.equal(plan.kind, "compatible");
+  assert.equal(plan.kind, "remap");
   assert.deepEqual(Object.keys(plan.preservedRoles), ["label", "time"]);
   assert.deepEqual(plan.requiredRoles.map(({ id }) => id), [
     "actual",
