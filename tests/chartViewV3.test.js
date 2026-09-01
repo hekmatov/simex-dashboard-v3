@@ -327,6 +327,31 @@ test("legacy image render models discover intrinsic geometry before applying sav
   assert.match(unsafe, /chart-status-error/);
 });
 
+test("standalone Image ChartView owns one styled heading above its viewport", () => {
+  const rows = [{ src: "/maps/readiness.png", alt: "Readiness map", fit: "contain" }];
+  const html = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "image",
+      title: "Readiness map",
+      roles: {},
+      presentation: {
+        title: { align: "center", fontSize: 18, bold: true },
+        image: { background: { mode: "white", color: "#AABBCC" } },
+      },
+    },
+    rows,
+    datasetProfile: profileDataset(rows),
+  }));
+
+  assert.equal((html.match(/>Readiness map<\/h3>/g) ?? []).length, 1);
+  assert.ok(html.indexOf("chart-view-heading") < html.indexOf("chart-image-viewport"));
+  assert.match(html, /font-family:var\(--simex-style-heading-font\)/);
+  assert.match(html, /font-size:18px/);
+  assert.match(html, /font-weight:700/);
+  assert.match(html, /class="chart-image-viewport" style="background-color:#FFFFFF"/);
+  assert.doesNotMatch(html, /background-color:#AABBCC|<figcaption/);
+});
+
 test("image zoom affordances consume ChartView's authoritative schema and interaction gate", () => {
   const rows = [{ src: "/maps/readiness.png", alt: "Readiness map" }];
   const enabled = renderToStaticMarkup(React.createElement(ChartView, {

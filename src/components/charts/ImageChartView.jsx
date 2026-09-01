@@ -3,6 +3,11 @@ import React from "react";
 import { StaticContentStateBoundary } from "../static-content/StaticContentStateBoundary.jsx";
 import { titleContainerProps } from "./chartViewPresentation.js";
 import { isContainedPackageImagePath } from "../../static-content/image/imageAssetValidation.js";
+import {
+  imageTitleStyle,
+  resolveImageViewportBackground,
+} from "../../charting/presentation/imagePresentation.js";
+import ChartHeading from "./ChartHeading.jsx";
 
 const MIN_IMAGE_SCALE = 1;
 const MAX_IMAGE_SCALE = 3;
@@ -169,7 +174,11 @@ export default function ImageChartView({
         : undefined}
       {...titleContainerProps(chart)}
     >
-      <div className="chart-image-viewport">
+      {title ? <ChartHeading chart={chart} titleStyle={imageTitleStyle(chart)} /> : null}
+      <div
+        className="chart-image-viewport"
+        style={{ backgroundColor: resolveImageViewportBackground(chart) }}
+      >
         {loadState === "loading" && <span className="chart-image-loading" aria-hidden="true" />}
         <div className="chart-image-saved-window">
           <div className="chart-image-transient" style={{ transform: `translate(${pan.x}%, ${pan.y}%) scale(${scale})` }}>
@@ -214,7 +223,6 @@ export default function ImageChartView({
           </div>
         </div>
       </div>
-      {!decorative && title && <figcaption>{title}</figcaption>}
       {active && <div className="chart-image-actions" aria-label="Image viewer actions">
         <button type="button" className="secondary" aria-label="Zoom out" disabled={scale <= MIN_IMAGE_SCALE} onClick={() => setNextScale(scale - IMAGE_SCALE_STEP)}>−</button>
         <output className="chart-image-zoom-status" aria-live="polite">{Math.round(scale * 100)}%</output>

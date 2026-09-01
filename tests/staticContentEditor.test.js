@@ -76,6 +76,182 @@ test("actual standalone Image add and edit flows lead with equal existing and up
   }
 });
 
+test("Image add and edit expose the same title appearance and viewport background controls", () => {
+  const dashboard = makeDashboardV5();
+  const drafts = [
+    createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "image",
+      stage: "content",
+      assets: dashboard.assets,
+    }),
+    createStaticContentDraft({
+      mode: "edit",
+      destination: { pageId: "overview", sectionId: "response" },
+      panel: dashboard.pages[0].sections[0].panels[0].chart,
+      placement: dashboard.dataSources["image-source"],
+      mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
+      assets: dashboard.assets,
+    }),
+  ];
+
+  for (const draft of drafts) {
+    const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+      draft,
+      dashboard,
+      dispatch() {},
+    }));
+    for (const label of [
+      "Title alignment",
+      "Decrease image title font size",
+      "Increase image title font size",
+      "Bold",
+      "Italic",
+      "Underline",
+      "Image background",
+    ]) {
+      assert.match(html, new RegExp(label));
+    }
+    assert.match(html, /Default/);
+    assert.match(html, /White/);
+    assert.match(html, /Custom/);
+  }
+});
+
+test("Image presentation controls use one-pixel title steps and retain custom color across modes", () => {
+  const actions = [];
+  const draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "image",
+    stage: "content",
+    panel: {
+      id: "presented-image",
+      typeId: "image",
+      sourceId: "presented-image-source",
+      title: "Outbreak map",
+      presentation: {
+        title: { align: "left", visible: false, fontSize: 16 },
+        image: { background: { mode: "custom", color: "#AABBCC" } },
+      },
+    },
+  });
+  const tree = wizardModule.ImagePanelPresentationFields({
+    draft,
+    dispatch(action) { actions.push(action); },
+  });
+
+  findElement(tree, (element) => element.props?.["aria-label"] === "Increase image title font size").props.onClick();
+  findElement(tree, (element) => element.props?.["aria-label"] === "Decrease image title font size").props.onClick();
+  findElement(tree, (element) => element.props?.id === "static-image-title-bold").props.onChange({ target: { checked: true } });
+  findElement(tree, (element) => element.props?.id === "static-image-title-align").props.onChange({ target: { value: "center" } });
+  findElement(tree, (element) => element.props?.id === "static-image-background-mode").props.onChange({ target: { value: "white" } });
+  findElement(tree, (element) => element.props?.dataColorField === "static-image-background").props.onChange("#DDEEFF");
+
+  assert.deepEqual(actions.map((action) => action.updates.presentation), [
+    {
+      ...draft.panel.presentation,
+      title: { align: "left", visible: false, fontSize: 17 },
+    },
+    {
+      ...draft.panel.presentation,
+      title: { align: "left", visible: false, fontSize: 15 },
+    },
+    {
+      ...draft.panel.presentation,
+      title: { align: "left", visible: false, fontSize: 16, bold: true },
+    },
+    {
+      ...draft.panel.presentation,
+      title: { align: "center", visible: false, fontSize: 16 },
+    },
+    {
+      ...draft.panel.presentation,
+      image: { background: { mode: "white", color: "#AABBCC" } },
+    },
+    {
+      ...draft.panel.presentation,
+      image: { background: { mode: "custom", color: "#DDEEFF" } },
+    },
+  ]);
+});
+
+test("No title disables only Image title appearance controls", () => {
+  const draft = {
+    ...createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "image",
+      stage: "content",
+    }),
+    noTitle: true,
+  };
+  const html = renderToStaticMarkup(React.createElement(wizardModule.ImagePanelPresentationFields, {
+    draft,
+    dispatch() {},
+  }));
+
+  assert.match(html, /<fieldset[^>]*data-image-title-presentation="true"[^>]*disabled/);
+  assert.match(html, /<fieldset[^>]*data-image-background-presentation="true"(?![^>]*disabled)/);
+});
+
+test("Static preview leaves Free Text and Image title ownership to their rendered ChartView", () => {
+  const freeText = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "preview-and-add",
+    panel: {
+      id: "sole-text-title",
+      typeId: "freeText",
+      sourceId: "sole-text-source",
+      title: "Sole text title",
+    },
+    placement: { kind: "staticText", qmd: "Preview body" },
+  });
+  const image = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "image",
+    stage: "preview-and-add",
+    panel: {
+      id: "sole-image-title",
+      typeId: "image",
+      sourceId: "sole-image-source",
+      title: "Sole image title",
+      presentation: { title: { align: "left" } },
+    },
+    placement: {
+      kind: "staticImage",
+      sourceVersion: 2,
+      mediaId: "sole-image-media",
+      alt: "Outbreak map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    mediaItem: {
+      mediaId: "sole-image-media",
+      revision: 1,
+      current: { kind: "url", url: "https://example.test/outbreak.png" },
+      displayName: "Outbreak map",
+      defaultDescription: "Outbreak map",
+      origin: "external",
+      health: "external",
+      mediaType: "image/png",
+    },
+  });
+
+  const textTree = wizardModule.StaticPreview({ draft: freeText });
+  const imageHtml = renderToStaticMarkup(React.createElement(wizardModule.StaticPreview, { draft: image }));
+
+  assert.equal(findElement(textTree, (element) => element.type === "h3"), null);
+  assert.equal(
+    findElement(textTree, (element) => element.props?.chart === freeText.panel)?.props.chart.title,
+    "Sole text title",
+  );
+  assert.equal((imageHtml.match(/>Sole image title</g) ?? []).length, 1);
+  assert.ok(imageHtml.indexOf("chart-view-heading") < imageHtml.indexOf("chart-image-viewport"));
+  assert.doesNotMatch(imageHtml, /<figcaption/);
+});
+
 test("an explicitly untitled Free-text draft prepares a create transaction without persisting wizard-only state", () => {
   const dashboard = makeDashboardV5();
   let draft = createStaticContentDraft({
@@ -368,3 +544,13 @@ test("discard, validation failure, and persistence failure retain prior V5 ident
   assert.deepEqual(discarded.assets, { ...dashboard.assets, ...staged });
   assert.deepEqual(dashboard, prior);
 });
+
+function findElement(element, predicate) {
+  if (!React.isValidElement(element)) return null;
+  if (predicate(element)) return element;
+  for (const child of React.Children.toArray(element.props?.children)) {
+    const match = findElement(child, predicate);
+    if (match) return match;
+  }
+  return null;
+}

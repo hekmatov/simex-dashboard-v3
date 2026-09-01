@@ -823,6 +823,45 @@ pre.portable-qmd-math-fallback {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.image-panel-presentation {
+  display: grid;
+  gap: 12px;
+}
+
+.image-panel-presentation__group {
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  margin: 0;
+  padding: 12px;
+}
+
+.image-panel-presentation__group legend {
+  font-weight: 700;
+  padding-inline: 4px;
+}
+
+.image-panel-presentation__group label:not(.dashboard-authoring-boolean-row),
+.image-panel-presentation__group select {
+  display: block;
+  width: 100%;
+}
+
+.image-panel-presentation__size > div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.image-panel-presentation__size button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.image-panel-presentation__size output {
+  min-width: 4ch;
+  text-align: center;
+}
+
 .static-image-validation {
   background: var(--simex-error-soft);
   border: 1px solid var(--simex-error);
@@ -833,6 +872,9 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-view {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   height: 100%;
   margin: 0;
   min-height: 0;
@@ -842,9 +884,9 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-viewport {
-  background: var(--simex-surface-panel-alt);
   border-radius: var(--simex-style-control-radius);
-  height: calc(100% - 24px);
+  flex: 1 1 auto;
+  height: auto;
   min-height: 180px;
   overflow: clip;
   position: relative;
@@ -935,12 +977,6 @@ pre.portable-qmd-math-fallback {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   min-width: 4ch;
-}
-
-.chart-image-view figcaption {
-  color: var(--simex-text-muted);
-  font-size: 0.875rem;
-  margin-top: 6px;
 }
 
 @keyframes static-image-shimmer {

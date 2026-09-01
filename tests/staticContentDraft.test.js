@@ -61,6 +61,63 @@ test("Text and Image drafts default to Standard 2x1 and persist the shared footp
   }
 });
 
+test("Image title typing preserves explicit visibility and presentation survives finalization", () => {
+  let draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "image",
+    stage: "content",
+    panel: {
+      id: "presented-image",
+      typeId: "image",
+      sourceId: "presented-image-source",
+      title: "Before",
+      presentation: {
+        title: {
+          align: "right",
+          visible: false,
+          fontSize: 21,
+          bold: true,
+          italic: true,
+          underline: true,
+        },
+        image: { background: { mode: "default", color: "#AABBCC" } },
+      },
+    },
+    placement: {
+      kind: "staticImage",
+      sourceVersion: 2,
+      mediaId: "presented-image-media",
+      alt: "Outbreak map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    mediaItem: {
+      mediaId: "presented-image-media",
+      revision: 1,
+      current: { kind: "url", url: "https://example.test/outbreak.png" },
+      displayName: "Outbreak map",
+      defaultDescription: "Outbreak map",
+      origin: "external",
+      health: "external",
+      mediaType: "image/png",
+    },
+  });
+
+  draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { title: "After" } });
+  assert.equal(draft.panel.presentation.title.visible, false);
+  assert.equal(draft.panel.presentation.title.fontSize, 21);
+  assert.deepEqual(draft.panel.presentation.image.background, {
+    mode: "default",
+    color: "#AABBCC",
+  });
+
+  draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
+  const finalized = finalizeStaticContentDraft(draft);
+  assert.deepEqual(finalized.panel.presentation, draft.panel.presentation);
+});
+
 test("returning to Destination does not disable satisfied later Text/Image stages", () => {
   const ready = createStaticContentDraft({
     destination: { pageId: "overview", sectionId: "response" },

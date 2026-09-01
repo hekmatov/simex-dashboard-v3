@@ -80,6 +80,107 @@ test("chart title visibility rejects non-boolean values", () => {
   );
 });
 
+test("Image title appearance is image-only, bounded, and typed", () => {
+  for (const fontSize of [12, 16, 32]) {
+    const chart = createChartDraft("image", {
+      id: `presented-image-${fontSize}`,
+      title: "Outbreak map",
+      sourceId: "outbreak-map-source",
+      presentation: {
+        title: {
+          align: "center",
+          visible: true,
+          fontSize,
+          bold: true,
+          italic: false,
+          underline: true,
+        },
+        image: { background: { mode: "custom", color: "#AABBCC" } },
+      },
+    });
+
+    assert.equal(validateChartInstance(chart), chart);
+  }
+
+  for (const fontSize of [11, 12.5, 33]) {
+    const chart = createChartDraft("image", {
+      id: `invalid-image-${fontSize}`,
+      title: "Outbreak map",
+      sourceId: "outbreak-map-source",
+      presentation: { title: { fontSize } },
+    });
+    assert.throws(() => validateChartInstance(chart), /font size.*integer.*12.*32/i);
+  }
+
+  for (const key of ["bold", "italic", "underline"]) {
+    const chart = createChartDraft("image", {
+      id: `invalid-image-${key}`,
+      title: "Outbreak map",
+      sourceId: "outbreak-map-source",
+      presentation: { title: { [key]: "true" } },
+    });
+    assert.throws(() => validateChartInstance(chart), new RegExp(`${key}.*boolean`, "i"));
+  }
+
+  for (const key of ["fontSize", "bold", "italic", "underline"]) {
+    const chart = createChartDraft("line", {
+      id: `non-image-${key}`,
+      title: "Trend",
+      sourceId: "cases",
+      roles: {
+        measurements: [{ field: "cases" }],
+        observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+      presentation: { title: { [key]: key === "fontSize" ? 20 : true } },
+    });
+    assert.throws(() => validateChartInstance(chart), /image/i);
+  }
+});
+
+test("Image viewport background modes retain a normalized custom color and reject invalid custom values", () => {
+  for (const background of [
+    { mode: "default" },
+    { mode: "white" },
+    { mode: "default", color: "#AABBCC" },
+    { mode: "custom", color: "#AABBCC" },
+  ]) {
+    const chart = createChartDraft("image", {
+      id: `image-background-${background.mode}-${background.color ?? "none"}`,
+      title: "Outbreak map",
+      sourceId: "outbreak-map-source",
+      presentation: { image: { background } },
+    });
+    assert.equal(validateChartInstance(chart), chart);
+  }
+
+  for (const background of [
+    { mode: "custom" },
+    { mode: "custom", color: "#ABC" },
+    { mode: "custom", color: "#aabbcc" },
+    { mode: "invalid", color: "#AABBCC" },
+  ]) {
+    const chart = createChartDraft("image", {
+      id: "invalid-image-background",
+      title: "Outbreak map",
+      sourceId: "outbreak-map-source",
+      presentation: { image: { background } },
+    });
+    assert.throws(() => validateChartInstance(chart), /image.*background/i);
+  }
+
+  const nonImage = createChartDraft("line", {
+    id: "non-image-background",
+    title: "Trend",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: { image: { background: { mode: "white" } } },
+  });
+  assert.throws(() => validateChartInstance(nonImage), /image/i);
+});
+
 test("fresh chart drafts receive distinct readable identities while supplied identities remain stable", () => {
   const first = createChartDraft("line", { title: "First", sourceId: "cases" });
   const second = createChartDraft("line", { title: "Second", sourceId: "cases" });

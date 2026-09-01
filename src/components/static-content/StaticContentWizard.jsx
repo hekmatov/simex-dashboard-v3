@@ -17,6 +17,7 @@ import StaticContentStateBoundary from "./StaticContentStateBoundary.jsx";
 import FreeTextSourceEditor from "./FreeTextSourceEditor.jsx";
 import ImageSourceEditor from "./ImageSourceEditor.jsx";
 import ImageTransformEditor from "./ImageTransformEditor.jsx";
+import ImagePanelPresentationFields from "./ImagePanelPresentationFields.jsx";
 import ChartView from "../charts/ChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import {
@@ -28,6 +29,8 @@ import ChartFootprintPicker from "../chart-authoring/ChartFootprintPicker.jsx";
 import { legacySizeForFootprint, resolveChartFootprint } from "../chartPanelLayout.js";
 
 const STATIC_CONTENT_PENDING_REASON = "Text/Image authoring is unavailable while this draft action is pending.";
+
+export { ImagePanelPresentationFields };
 
 export function getStaticContentSubmissionState({
   draft,
@@ -455,6 +458,11 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
       {draft.validation?.errors?.filter((error) => error.field !== "title").map((error, index) => (
         <p key={`${error.message}-${index}`} className="form-error dashboard-authoring-field--wide" role="alert">{error.message}</p>
       ))}
+      {draft.contentTypeId === "image" ? <ImagePanelPresentationFields
+        draft={draft}
+        disabled={disabled}
+        dispatch={dispatch}
+      /> : null}
       <ChartFootprintPicker
         subject="Panel"
         idPrefix={`static-panel-${draft.draftIdentity?.panelId ?? "draft"}`}
@@ -565,7 +573,7 @@ function ImageFields({ draft, dashboard, disabled, dispatch, onRetainMedia, onRe
   );
 }
 
-function StaticPreview({ draft, contentRenderContext = {} }) {
+export function StaticPreview({ draft, contentRenderContext = {} }) {
   const sourceId = draft.panel?.sourceId;
   const draftMediaItems = {
     ...(draft.pendingMediaItems ?? {}),
@@ -579,7 +587,6 @@ function StaticPreview({ draft, contentRenderContext = {} }) {
   };
   return (
     <section className="static-content-dialog__preview" aria-label="Text/Image preview">
-      {draft.panel?.title?.trim() && <h3>{draft.panel.title.trim()}</h3>}
       <StaticContentStateBoundary state={{ status: "ready" }} surface="build">
         {draft.contentTypeId === "freeText" ? (
           <div data-static-preview-type="freeText">

@@ -9,6 +9,7 @@ import { parseTemporalValue } from "../data/temporal.js";
 import {
   normalizeSeriesStyle,
 } from "../presentation/seriesStyleContract.js";
+import { isNormalizedImageCustomColor } from "../presentation/imagePresentation.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
   CHART_COMPARISON_MATCHING_POLICIES,
@@ -20,7 +21,7 @@ export const CHART_CONFIG_VERSION = 3;
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
 const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
 const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
-const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "table", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine"]);
+const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "table", "image", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
 const LAYOUT_SIZES = new Set(["compact", "standard", "wide", "full"]);
@@ -401,9 +402,32 @@ function validatePresentation(chart, schema, temporalRoles) {
   checkKnownDescriptorKeys(descriptors, PRESENTATION_KEYS, "chart presentation");
   const title = requiredDescriptorValue(descriptors, "title", "Chart presentation");
   ensureObject(title, "Chart presentation title");
-  checkKnownKeys(title, new Set(["align", "visible"]), "chart presentation title");
+  const imageTitleKeys = new Set(["fontSize", "bold", "italic", "underline"]);
+  if (schema.typeId !== "image" && Object.keys(title).some((key) => imageTitleKeys.has(key))) {
+    throw new Error("Image title appearance properties are only supported by Image charts.");
+  }
+  checkKnownKeys(
+    title,
+    new Set([
+      "align",
+      "visible",
+      ...(schema.typeId === "image" ? imageTitleKeys : []),
+    ]),
+    "chart presentation title",
+  );
   if (!TITLE_ALIGNMENTS.has(title.align)) throw new Error("Chart presentation title alignment must be left, center, or right.");
   if (title.visible !== undefined && typeof title.visible !== "boolean") throw new Error("Chart presentation title visible must be boolean.");
+  if (
+    title.fontSize !== undefined
+    && (!Number.isInteger(title.fontSize) || title.fontSize < 12 || title.fontSize > 32)
+  ) {
+    throw new Error("Image title font size must be an integer from 12 through 32.");
+  }
+  for (const key of ["bold", "italic", "underline"]) {
+    if (title[key] !== undefined && typeof title[key] !== "boolean") {
+      throw new Error(`Image title ${key} must be boolean.`);
+    }
+  }
   const collection = ownEnumerableDataValue(
     presentation,
     "collection",
@@ -416,6 +440,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   validateMap(descriptors.map?.value);
   validateTimeline(descriptors.timeline?.value);
   validateTable(descriptors.table?.value, schema);
+  validateImagePresentation(descriptors.image?.value, schema);
   validateBackground(descriptors.background?.value);
   validateLegend(descriptors.legend?.value);
   validateAccessibility(descriptors.accessibility?.value);
@@ -491,6 +516,28 @@ function validateAxes(axes, schema, temporalRoles) {
       }
     }
     validateTickFrequency(axis.tickFrequency, "number", axisName);
+  }
+}
+
+function validateImagePresentation(image, schema) {
+  if (image === undefined || image === null) return;
+  if (schema.typeId !== "image") {
+    throw new Error(`Chart type "${schema.typeId}" does not support Image presentation.`);
+  }
+  ensureObject(image, "Chart presentation image");
+  checkKnownKeys(image, new Set(["background"]), "chart presentation image");
+  const background = image.background;
+  if (background === undefined || background === null) return;
+  ensureObject(background, "Chart presentation image background");
+  checkKnownKeys(background, new Set(["mode", "color"]), "chart presentation image background");
+  if (!["default", "white", "custom"].includes(background.mode)) {
+    throw new Error("Image background mode must be default, white, or custom.");
+  }
+  if (background.color !== undefined && !isNormalizedImageCustomColor(background.color)) {
+    throw new Error("Image background color must be an uppercase six-digit hex color.");
+  }
+  if (background.mode === "custom" && !isNormalizedImageCustomColor(background.color)) {
+    throw new Error("Image background Custom mode requires an uppercase six-digit hex color.");
   }
 }
 
