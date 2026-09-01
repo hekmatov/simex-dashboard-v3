@@ -40,6 +40,87 @@ test("V3 runtime has no remote dependency and preserves Quorum and canonical ren
   ]);
 });
 
+test("axis title graphics may use the audited ECharts text-metrics capability", async () => {
+  const inputs = await repositoryInputs();
+
+  assert.doesNotThrow(() => boundaryModule.inspectRuntimeBoundaries(inputs));
+});
+
+test("axis title graphics rejects broader ECharts runtime ownership", async () => {
+  const inputs = await repositoryInputs();
+  const helperPath = "src/charting/rendering/axisTitleGraphics.js";
+  inputs.sourceFiles[helperPath] = [
+    'import * as echarts from "echarts";',
+    inputs.sourceFiles[helperPath],
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${helperPath} canonicalRendererExclusivity: unexpected raw render surface (echarts-runtime)`,
+  );
+});
+
+test("axis title graphics rejects renderer initialization", async () => {
+  const inputs = await repositoryInputs();
+  const helperPath = "src/charting/rendering/axisTitleGraphics.js";
+  inputs.sourceFiles[helperPath] = [
+    inputs.sourceFiles[helperPath],
+    "echartsFormat.init(document.createElement(\"div\"));",
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${helperPath} canonicalRendererExclusivity: unexpected raw render surface (echarts-runtime)`,
+  );
+});
+
+test("axis title graphics rejects another ECharts module reference", async () => {
+  const inputs = await repositoryInputs();
+  const helperPath = "src/charting/rendering/axisTitleGraphics.js";
+  inputs.sourceFiles[helperPath] = [
+    inputs.sourceFiles[helperPath],
+    'const runtime = import("echarts");',
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${helperPath} canonicalRendererExclusivity: unexpected raw render surface (echarts-runtime)`,
+  );
+});
+
+test("axis title graphics rejects ECharts React runtime ownership", async () => {
+  const inputs = await repositoryInputs();
+  const helperPath = "src/charting/rendering/axisTitleGraphics.js";
+  inputs.sourceFiles[helperPath] = [
+    'import EChartsReact from "echarts-for-react";',
+    inputs.sourceFiles[helperPath],
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${helperPath} canonicalRendererExclusivity: unexpected raw render surface (echarts-runtime)`,
+  );
+});
+
+test("an unapproved reachable helper cannot import ECharts text metrics", async () => {
+  const inputs = await repositoryInputs();
+  const audiencePath = "src/components/presentation/AudienceDisplay.jsx";
+  const helperPath = "src/components/presentation/AudienceTextMetrics.js";
+  inputs.sourceFiles[helperPath] = [
+    'import { format as echartsFormat } from "echarts";',
+    "export const audienceTextRect = echartsFormat.getTextRect(\"Audience\");",
+  ].join("\n");
+  inputs.sourceFiles[audiencePath] = [
+    'import { audienceTextRect } from "./AudienceTextMetrics.js";',
+    inputs.sourceFiles[audiencePath],
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${helperPath} canonicalRendererExclusivity: unexpected raw render surface (echarts-runtime)`,
+  );
+});
+
 test("remote runtime dependencies fail with the exact manifest field", async () => {
   assert.ok(boundaryModule, "runtime boundary inspector must be implemented");
   const inputs = await repositoryInputs();
