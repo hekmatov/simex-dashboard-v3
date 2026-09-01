@@ -4,6 +4,7 @@ import {
   rangeSelectorVisible,
 } from "./zoomOptions.js";
 import {
+  createTemporalHoverLabelFormatter,
   valueAxisPresentation,
   xAxisPresentation,
 } from "./axisPresentation.js";
@@ -44,6 +45,16 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
     ...legacyXAxisSettings(axes),
     ...(axes?.x ?? {}),
   };
+  const temporalHoverLabels = temporal
+    ? temporalHoverLabelLookup(prepared.marks)
+    : null;
+  const temporalHoverFormatter = temporal
+    ? createTemporalHoverLabelFormatter({
+      preset: xSettings.hoverLabelPreset,
+      sourceFormat: prepared.meta?.axisTemporalFormat ?? chart.roles?.observation?.format,
+      resolveValue: (value) => temporalHoverLabels.get(temporalAxisValue(value)) ?? value,
+    })
+    : null;
   const xPresentation = xAxisPresentation(
     xSettings,
     temporal ? "temporal" : "category",
@@ -57,6 +68,15 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
     type: fixedTemporalTicks ? "value" : temporal ? "time" : "category",
     ...(temporal ? {} : { data: categories }),
     ...xPresentation,
+    ...(temporal ? {
+      axisPointer: {
+        ...xPresentation.axisPointer,
+        label: {
+          ...xPresentation.axisPointer?.label,
+          formatter: temporalHoverFormatter,
+        },
+      },
+    } : {}),
     ...(fixedTemporalTicks ? {
       min: temporalAxisValue(xPresentation.min) ?? temporalExtent?.min,
       max: temporalAxisValue(xPresentation.max) ?? temporalExtent?.max,
@@ -253,6 +273,15 @@ function temporalDataExtent(marks) {
   return values.length === 0
     ? null
     : { min: Math.min(...values), max: Math.max(...values) };
+}
+
+function temporalHoverLabelLookup(marks) {
+  const labels = new Map();
+  for (const { x } of marks) {
+    const axisValue = temporalAxisValue(x);
+    if (Number.isFinite(axisValue) && !labels.has(axisValue)) labels.set(axisValue, x);
+  }
+  return labels;
 }
 
 function temporalAxisValue(value) {

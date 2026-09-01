@@ -482,13 +482,18 @@ function validateAxes(axes, schema, temporalRoles) {
   const x = axes?.x;
   if (x !== undefined) {
     ensureObject(x, "Chart presentation axes x");
-    checkKnownKeys(x, new Set(["title", "min", "max", "labelPreset", "tickFrequency"]), "chart presentation axes x");
+    checkKnownKeys(x, new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency"]), "chart presentation axes x");
     if (x.title !== undefined && typeof x.title !== "string") throw new Error("Chart presentation axes x title must be a string.");
     validateAxisRange(x, xKind, "X");
     validateTickFrequency(x.tickFrequency, xKind, "X");
     if (x.labelPreset !== undefined) {
       if (xKind !== "temporal" || !["adaptive", "ddMmmYearBoundary", "ddMmYyyy", "ddMmYy", "hhMm", "ddMmYyyyHhMm"].includes(x.labelPreset)) {
         throw new Error("Chart presentation axes x labelPreset is unsupported.");
+      }
+    }
+    if (x.hoverLabelPreset !== undefined) {
+      if (xKind !== "temporal" || !["auto", "year", "date", "dateTime"].includes(x.hoverLabelPreset)) {
+        throw new Error("Chart presentation axes x hoverLabelPreset is unsupported.");
       }
     }
   }

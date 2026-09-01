@@ -1,8 +1,10 @@
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MONTH_YEAR = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const ISO_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:\d{2})$/;
+const YEAR = /^(\d{4})$/;
 
 const FORMAT_PARSERS = Object.freeze({
+  YYYY: parseYear,
   "YYYY-MM-DD": parseIsoDateOnly,
   "DD/MM/YYYY": parseDayMonthYear,
   "MM/DD/YYYY": parseMonthDayYear,
@@ -11,8 +13,8 @@ const FORMAT_PARSERS = Object.freeze({
 
 export function parseTemporalValue(value, specification = {}) {
   if (value instanceof Date && !Number.isNaN(value.valueOf())) return succeeded(value.toISOString(), "instant");
-  if (typeof value !== "string") return failedTemporal("invalid-temporal-value", value);
-  const source = value.trim();
+  const source = numericYearText(value) ?? (typeof value === "string" ? value.trim() : null);
+  if (source === null) return failedTemporal("invalid-temporal-value", value);
   const format = specification.format ?? detectUnambiguousFormat(source);
   if (!format) return failedTemporal("ambiguous-date-format", value);
   const parser = FORMAT_PARSERS[format];
@@ -33,6 +35,7 @@ export function normalizeTemporalColumn(values, specification = {}) {
 }
 
 function detectUnambiguousFormat(value) {
+  if (YEAR.test(value)) return "YYYY";
   if (DATE_ONLY.test(value)) return "YYYY-MM-DD";
   if (ISO_INSTANT.test(value)) return "ISO-8601";
   const slashDate = DAY_MONTH_YEAR.exec(value);
@@ -43,6 +46,11 @@ function detectUnambiguousFormat(value) {
     if (second > 12) return "MM/DD/YYYY";
   }
   return null;
+}
+
+function parseYear(value) {
+  if (!YEAR.test(value)) return failedTemporal("invalid-date-format", value, { format: "YYYY" });
+  return succeeded(`${value}-01-01`, "date-only");
 }
 
 function parseIsoDateOnly(value) {
@@ -101,6 +109,7 @@ function offsetMinutes(value) {
 
 function daysInMonth(year, month) { return [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]; }
 function isLeapYear(year) { return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0); }
+function numericYearText(value) { return typeof value === "number" && Number.isSafeInteger(value) && value >= 1000 && value <= 9999 ? String(value) : null; }
 function succeeded(canonical, kind) { return { ok: true, canonical, kind }; }
 function failedTemporal(code, value, details = {}) { return { ok: false, diagnostic: { code, value, ...details } }; }
 function isMissing(value) { return value === null || value === undefined || (typeof value === "string" && value.trim() === ""); }

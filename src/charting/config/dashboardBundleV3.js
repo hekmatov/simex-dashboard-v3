@@ -63,7 +63,7 @@ const ASSET_PAYLOAD_KEYS = new Set(["base64", "byteLength", "mediaType", "sha256
 const PROVENANCE_KEYS = new Set(["label"]);
 const PARSING_RULE_KEYS = new Set(["format", "interpretation", "timezone"]);
 const PARSING_INTERPRETATIONS = new Set(["auto", "boolean", "category", "geographic", "numeric", "temporal"]);
-const TEMPORAL_FORMATS = new Set(["YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "ISO-8601"]);
+const TEMPORAL_FORMATS = new Set(["YYYY", "YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "ISO-8601"]);
 const TIMEZONES = new Set(["date-only"]);
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
@@ -206,7 +206,7 @@ function validateRows(value, description) {
 function sourceRows(sourceId, source) {
   if (source.kind === "inline") return source.rows;
   if (source.type === "uploadedCsv") {
-    const parsed = Papa.parse(source.csvText, { header: true, skipEmptyLines: true });
+    const parsed = Papa.parse(source.csvText, { header: true, dynamicTyping: true, skipEmptyLines: true });
     if (parsed.errors.length) throw new Error(`Uploaded CSV source "${sourceId}" could not be parsed.`);
     return parsed.data;
   }

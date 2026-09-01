@@ -22,6 +22,8 @@ const AXIS_TEXT_WIDTH_MAP = "007LLmW'55;N0500LLLLLLLLLL00NNNLzWW\\\\WQb\\0FWLg\\
 const AXIS_TEXT_WIDTH_OFFSET = 20;
 const AXIS_TEXT_WIDTH_SCALE = 100;
 const AXIS_TEXT_WIDTH_SAFETY_FACTOR = 1.12;
+const YEAR_ONLY = /^(\d{4})$/;
+const LOCAL_CALENDAR_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::\d{2}(?:\.\d{1,3})?)?)?$/;
 
 export function xAxisPresentation(settings, kind, physicalAxis = "x") {
   const result = axisTitle(settings, physicalAxis);
@@ -58,6 +60,19 @@ export function valueAxisPresentation(settings) {
   const interval = tickInterval(settings?.tickFrequency, "number");
   if (interval !== undefined) result.interval = interval;
   return result;
+}
+
+export function createTemporalHoverLabelFormatter({
+  preset = "auto",
+  sourceFormat,
+  resolveValue,
+} = {}) {
+  return (params = {}) => {
+    const value = typeof resolveValue === "function"
+      ? resolveValue(params?.value)
+      : params?.value;
+    return formatTemporalHoverLabel(value, preset, sourceFormat);
+  };
 }
 
 export function valueAxisGutters(settings = {}, values = [], textTheme = {}, {
@@ -188,6 +203,58 @@ function temporalLabelFormatter(preset, frequency) {
     if (preset === "hhMm") return time;
     if (preset === "ddMmYyyyHhMm") return `${day}-${month}-${year} ${time}`;
     return String(value ?? "");
+  };
+}
+
+function formatTemporalHoverLabel(value, preset, sourceFormat) {
+  const parts = temporalHoverParts(value);
+  if (!parts) return String(value ?? "");
+  const display = ["year", "date", "dateTime"].includes(preset) ? preset : "auto";
+  if (display === "year" || (display === "auto" && (sourceFormat === "YYYY" || parts.yearOnly))) {
+    return parts.year;
+  }
+  const date = `${parts.year}-${parts.month}-${parts.day}`;
+  return display === "dateTime" || (display === "auto" && parts.hasTime)
+    ? `${date} ${parts.hour}:${parts.minute}`
+    : date;
+}
+
+function temporalHoverParts(value) {
+  const source = typeof value === "string" ? value.trim() : null;
+  const year = source ? YEAR_ONLY.exec(source) : null;
+  if (year) {
+    return {
+      year: year[1],
+      month: "01",
+      day: "01",
+      hour: "00",
+      minute: "00",
+      yearOnly: true,
+      hasTime: false,
+    };
+  }
+  const local = source ? LOCAL_CALENDAR_TIMESTAMP.exec(source) : null;
+  if (local) {
+    return {
+      year: local[1],
+      month: local[2],
+      day: local[3],
+      hour: local[4] ?? "00",
+      minute: local[5] ?? "00",
+      yearOnly: false,
+      hasTime: local[4] !== undefined,
+    };
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.valueOf())) return null;
+  return {
+    year: String(date.getFullYear()).padStart(4, "0"),
+    month: String(date.getMonth() + 1).padStart(2, "0"),
+    day: String(date.getDate()).padStart(2, "0"),
+    hour: String(date.getHours()).padStart(2, "0"),
+    minute: String(date.getMinutes()).padStart(2, "0"),
+    yearOnly: false,
+    hasTime: source?.includes("T") ?? false,
   };
 }
 

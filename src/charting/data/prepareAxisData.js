@@ -18,6 +18,10 @@ import {
 export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
   const measurements = roleBindings(chart, "measurements");
   const observation = firstRoleBinding(chart, "observation");
+  const observationBinding = effectiveBinding(
+    observation,
+    findProfileColumn(datasetProfile, bindingField(observation)),
+  );
   const clusters = roleBindings(chart, "cluster");
   const label = firstRoleBinding(chart, "label");
   const candidates = [];
@@ -52,10 +56,10 @@ export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
   return {
     ...consolidated,
     meta: {
-      axisInterpretation: effectiveBinding(
-        observation,
-        findProfileColumn(datasetProfile, bindingField(observation)),
-      ).type,
+      axisInterpretation: observationBinding.type,
+      ...(typeof observationBinding.temporal?.format === "string"
+        ? { axisTemporalFormat: observationBinding.temporal.format }
+        : {}),
       axes: {
         primary: measurements.filter((binding) => binding?.axis !== "secondary" && binding?.yAxisIndex !== 1).map(bindingField),
         secondary: measurements.filter((binding) => binding?.axis === "secondary" || binding?.yAxisIndex === 1).map(bindingField),

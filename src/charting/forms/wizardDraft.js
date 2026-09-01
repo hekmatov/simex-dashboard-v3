@@ -326,6 +326,11 @@ function materializeTemporalXAxisSemantics(chart, profileEntry) {
     if (Object.keys(xAxis).length === 0) delete chart.presentation.axes.x;
     if (Object.keys(chart.presentation.axes).length === 0) delete chart.presentation.axes;
   }
+  if (xAxis?.hoverLabelPreset === "auto") {
+    delete xAxis.hoverLabelPreset;
+    if (Object.keys(xAxis).length === 0) delete chart.presentation.axes.x;
+    if (Object.keys(chart.presentation.axes).length === 0) delete chart.presentation.axes;
+  }
   if (!hasTemporalXAxisSemantics(xAxis)) return chart;
   const binding = chart.roles?.observation;
   if (!isRecord(binding) || binding.interpretation !== undefined) return chart;
@@ -342,6 +347,7 @@ function materializeTemporalXAxisSemantics(chart, profileEntry) {
 function hasTemporalXAxisSemantics(xAxis) {
   if (!isRecord(xAxis)) return false;
   return nonEmptyString(xAxis.labelPreset)
+    || nonEmptyString(xAxis.hoverLabelPreset)
     || nonEmptyString(xAxis.tickFrequency?.unit)
     || [xAxis.min, xAxis.max].some((value) => typeof value === "string");
 }

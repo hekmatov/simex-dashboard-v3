@@ -25,6 +25,9 @@ import {
 } from "../src/charting/time/chronoGroupModel.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 import {
+  validateDashboardConfig,
+} from "../src/charting/config/dashboardBundleV3.js";
+import {
   loadDashboardConfig,
   validateDataSourceDescriptor,
   validateDashboardSourceDescriptors,
@@ -397,6 +400,11 @@ test("descriptor parsing rules accept only temporal-authority enums", () => {
         format: "DD/MM/YYYY",
         timezone: "date-only",
       },
+      Year: {
+        interpretation: "temporal",
+        format: "YYYY",
+        timezone: "date-only",
+      },
       cases: { interpretation: "numeric" },
     },
   }), "data/cases.csv");
@@ -415,6 +423,40 @@ test("descriptor parsing rules accept only temporal-authority enums", () => {
       message,
     );
   }
+});
+
+test("uploaded CSV profiles preserve numeric year cells as YYYY temporal evidence", async () => {
+  const dashboard = sourceLoadingDashboard({
+    youth: {
+      kind: "dataset",
+      type: "uploadedCsv",
+      fileName: "youth.csv",
+      csvText: "Year,Percent of 16 to 24 year olds\n2016,24.8\n2017,26.1\n",
+      provenance: { label: "Youth statistics" },
+      parsingMetadata: {
+        Year: {
+          interpretation: "temporal",
+          format: "YYYY",
+          timezone: "date-only",
+        },
+      },
+    },
+  });
+
+  assert.doesNotThrow(() => validateDashboardConfig({ ...dashboard, timezone: "UTC" }));
+  const loaded = await loadDashboardConfig(dashboard, {});
+  const byName = Object.fromEntries(
+    loaded.datasetProfiles.youth.columns.map((column) => [column.name, column]),
+  );
+
+  assert.deepEqual(loaded.loadedData.youth, [
+    { Year: 2016, "Percent of 16 to 24 year olds": 24.8 },
+    { Year: 2017, "Percent of 16 to 24 year olds": 26.1 },
+  ]);
+  assert.deepEqual(byName.Year.temporal.values, ["2016-01-01", "2017-01-01"]);
+  assert.deepEqual(byName.Year.temporal.diagnostics, []);
+  assert.equal(byName["Percent of 16 to 24 year olds"].type, "numeric");
+  assert.equal(Object.hasOwn(byName["Percent of 16 to 24 year olds"], "temporal"), false);
 });
 
 test("runtime loading filters fallback extras and fails closed for invalid embedded profiles", async () => {

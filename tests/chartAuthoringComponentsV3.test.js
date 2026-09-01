@@ -1028,6 +1028,7 @@ test("axis presentation controls expose temporal X controls and only render a se
   assert.match(html, /X-axis title/);
   assert.match(html, /type="datetime-local"/);
   assert.match(html, /Label format/);
+  assert.match(html, /Hover date\/time/);
   assert.match(html, /Primary axis/);
   assert.doesNotMatch(html, /Secondary axis/);
 
@@ -1044,6 +1045,20 @@ test("axis presentation controls expose temporal X controls and only render a se
     ),
     {},
     "Adaptive is the implicit default and removes a stale explicit preset",
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "hoverLabelPreset"], "dateTime"),
+    { x: { hoverLabelPreset: "dateTime" } },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue(
+      "axes",
+      { x: { hoverLabelPreset: "dateTime" } },
+      ["x", "hoverLabelPreset"],
+      "auto",
+    ),
+    {},
+    "Auto is the implicit hover default and removes a stale explicit preset",
   );
 });
 

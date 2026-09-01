@@ -66,6 +66,19 @@ test("ISO date-only and instants normalize to stable canonical values", () => {
   });
 });
 
+test("four-digit years accept numeric CSV cells without accepting arbitrary numbers", () => {
+  for (const value of [2016, "2016"]) {
+    assert.deepEqual(parseTemporalValue(value, { interpretation: "temporal" }), {
+      ok: true,
+      canonical: "2016-01-01",
+      kind: "date-only",
+    });
+  }
+  for (const value of [201, 2016.5, 20160]) {
+    assert.equal(parseTemporalValue(value, { interpretation: "temporal" }).ok, false);
+  }
+});
+
 test("invalid calendar dates and source strings outside approved formats are rejected", () => {
   assert.equal(parseTemporalValue("2027-02-29", { interpretation: "temporal" }).ok, false);
   assert.equal(parseTemporalValue("May 2, 2027", { interpretation: "temporal" }).diagnostic.code, "ambiguous-date-format");
@@ -101,6 +114,26 @@ test("profiling reports typed columns, missing and unique counts, examples, hint
   assert.match(profile.fingerprint, /^[a-f0-9]{64}$/);
   assert.equal(profile.fingerprint, profileDataset(rows).fingerprint);
   assert.notEqual(profile.fingerprint, profileDataset([{ ...rows[0], cases: "11" }, rows[1], rows[2]]).fingerprint);
+});
+
+test("numeric CSV year columns profile as temporal without treating percentage values as dates", () => {
+  const profile = profileDataset([
+    { Year: 2016, "Percent of 16 to 24 year olds": 24.8, Capacity: 1100 },
+    { Year: 2017, "Percent of 16 to 24 year olds": 26.1, Capacity: 1200 },
+  ]);
+  const byName = Object.fromEntries(profile.columns.map((column) => [column.name, column]));
+
+  assert.equal(byName.Year.type, "temporal");
+  assert.deepEqual(byName.Year.temporal.values, ["2016-01-01", "2017-01-01"]);
+  assert.deepEqual(byName.Year.temporal.diagnostics, []);
+  assert.deepEqual(byName.Year.temporal.parsingMetadata, {
+    interpretation: "auto",
+    format: "YYYY",
+  });
+  assert.equal(byName["Percent of 16 to 24 year olds"].type, "numeric");
+  assert.equal(Object.hasOwn(byName["Percent of 16 to 24 year olds"], "temporal"), false);
+  assert.equal(byName.Capacity.type, "numeric");
+  assert.equal(Object.hasOwn(byName.Capacity, "temporal"), false);
 });
 
 test("author overrides determine a column type and temporal format", () => {

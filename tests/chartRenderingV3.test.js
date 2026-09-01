@@ -4,6 +4,8 @@ import { register } from "node:module";
 
 import * as echarts from "echarts";
 
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { buildAxisRenderModel } from "../src/charting/rendering/axisAdapter.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 import { buildCompositionRenderModel } from "../src/charting/rendering/compositionAdapter.js";
@@ -1059,9 +1061,16 @@ test("value-axis title graphics apply size, weight, offsets, clearance, and posi
 
   assert.equal(base.length, 1);
   assert.equal(base[0].id, "simex-value-axis-title-primary");
-  assert.equal(base[0].style.fontFamily, "Body Token Stack");
-  assert.equal(base[0].style.fontSize, 24);
-  assert.equal(base[0].style.fontWeight, 700);
+  assert.equal(base[0].style, undefined);
+  assert.equal(base[0].children.length, 1);
+  assert.equal(base[0].children[0].style.fontFamily, "Body Token Stack");
+  assert.equal(base[0].children[0].style.fontSize, 24);
+  assert.equal(base[0].children[0].style.fontWeight, 700);
+  const renderedTitle = renderedTextBounds({ graphic: base });
+  assert.equal(renderedTitle.length, 1);
+  assert.equal(renderedTitle[0].text, "Cumulative cases");
+  assert.ok(Math.abs((renderedTitle[0].right - renderedTitle[0].left) - base[0].textBounds.width) < 1);
+  assert.ok(Math.abs((renderedTitle[0].bottom - renderedTitle[0].top) - base[0].textBounds.height) < 1);
   assert.equal(moved[0].left, base[0].left - 12);
   assert.equal(moved[0].top, base[0].top - 9);
   assert.ok(base[0].left + base[0].textBounds.width <= gridRect.x - 16, "zero offset leaves the tick margin plus at least 8px title clearance");
@@ -1075,8 +1084,8 @@ test("value-axis title graphics apply size, weight, offsets, clearance, and posi
   });
   const horizontalGraphic = resolveValueAxisTitleGraphics({ projection: horizontal, gridRect, textTheme })[0];
   assert.equal(horizontalGraphic.id, "simex-value-axis-title-secondary");
-  assert.equal(horizontalGraphic.style.fontSize, 10);
-  assert.equal(horizontalGraphic.style.fontWeight, 400);
+  assert.equal(horizontalGraphic.children[0].style.fontSize, 10);
+  assert.equal(horizontalGraphic.children[0].style.fontWeight, 400);
   assert.ok(horizontalGraphic.top + horizontalGraphic.textBounds.height <= gridRect.y - 16);
 
   const horizontalPrimary = createValueAxisTitleProjection({
@@ -1129,7 +1138,7 @@ test("value-axis tick clearance uses data-font metrics while title bounds use bo
   assert.equal(gutters.left, 126);
   assert.deepEqual(graphic.textBounds, { width: 20, height: 10 });
   assert.equal(graphic.left, 14);
-  assert.equal(graphic.style.fontFamily, "Body Metric Font");
+  assert.equal(graphic.children[0].style.fontFamily, "Body Metric Font");
   assert.ok(measured.some(({ text, fontFamily }) => text === "Cases" && fontFamily === "Body Metric Font"));
   assert.ok(measured.some(({ text, fontFamily }) => text.includes("8") && fontFamily === "Data Metric Font"));
 });
@@ -1464,6 +1473,84 @@ test("adaptive labels remain readable when fixed cadence requires a numeric time
   assert.equal(formatter(new Date(2027, 1, 1).valueOf(), 1), "Feb");
   assert.equal(formatter(new Date(2028, 0, 1).valueOf(), 1), "2028");
   assert.notEqual(formatter(secondTick, 1), String(secondTick));
+});
+
+test("temporal hover labels keep date-only values readable with and without fixed cadence", () => {
+  const dateOnly = buildRenderModel({
+    chart: chart("line"),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  const fixedCadence = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { tickFrequency: { every: 1, unit: "day" } } },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  const dateOnlyFormatter = dateOnly.option.xAxis.axisPointer.label.formatter;
+  const fixedCadenceFormatter = fixedCadence.option.xAxis.axisPointer.label.formatter;
+  const fixedCadenceValue = fixedCadence.option.series[0].data[0][0];
+
+  assert.equal(dateOnlyFormatter({ value: "2027-01-01" }), "2027-01-01");
+  assert.doesNotMatch(dateOnlyFormatter({ value: "2027-01-01" }), /00:00:00/);
+  assert.equal(fixedCadenceFormatter({ value: fixedCadenceValue }), "2027-01-01");
+  assert.notEqual(fixedCadenceFormatter({ value: fixedCadenceValue }), String(fixedCadenceValue));
+});
+
+test("temporal hover labels honor date-time and year display choices", () => {
+  const dateTime = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { hoverLabelPreset: "dateTime" } },
+      },
+    }),
+    prepared: ready([
+      { x: "2027-01-02T09:05", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+  const year = buildRenderModel({
+    chart: chart("line", {
+      roles: { observation: { field: "year", interpretation: "temporal", format: "YYYY" } },
+    }),
+    prepared: ready([
+      { x: "2027-01-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
+    ], { axisInterpretation: "temporal" }),
+  });
+
+  assert.equal(dateTime.option.xAxis.axisPointer.label.formatter({ value: "2027-01-02T09:05" }), "2027-01-02 09:05");
+  assert.equal(year.option.xAxis.axisPointer.label.formatter({ value: "2027-01-01" }), "2027");
+});
+
+test("automatic temporal hover labels retain inferred YYYY source granularity", () => {
+  const rows = [{ Year: 2016, value: 12 }, { Year: 2017, value: 14 }];
+  const chartConfig = chart("line", {
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "Year" },
+    },
+  });
+  const prepared = prepareChartData({
+    chart: chartConfig,
+    rows,
+    datasetProfile: profileDataset(rows),
+  });
+  const model = buildRenderModel({ chart: chartConfig, prepared });
+
+  assert.equal(prepared.meta.axisTemporalFormat, "YYYY");
+  assert.equal(
+    model.option.xAxis.axisPointer.label.formatter({ value: model.option.series[0].data[0][0] }),
+    "2016",
+  );
 });
 
 test("fixed cadence preserves datetime-local bounds and data semantics", () => {

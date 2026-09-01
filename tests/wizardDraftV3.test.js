@@ -457,6 +457,9 @@ test("finalization makes every inferred temporal X-axis-only setting portable", 
       min: "2027-05-01T00:00",
       max: "2027-05-31T23:59",
     },
+    {
+      hoverLabelPreset: "dateTime",
+    },
   ];
 
   for (const [index, x] of xSettings.entries()) {
@@ -477,6 +480,7 @@ test("finalization makes every inferred temporal X-axis-only setting portable", 
 
     assert.equal(saved.roles.observation.interpretation, "temporal");
     assert.equal(saved.presentation.axes.x.labelPreset, undefined);
+    assert.equal(saved.presentation.axes.x.hoverLabelPreset, index === 2 ? "dateTime" : undefined);
     assert.doesNotThrow(
       () => validateChartInstance(saved),
       `X settings ${index + 1} validate without wizard-only profile evidence`,

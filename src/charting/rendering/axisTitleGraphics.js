@@ -112,7 +112,6 @@ function resolveGraphic(projection, gridRect, textTheme, measureText) {
     top,
     width: metrics.titleWidth,
     height: metrics.titleHeight,
-    style: { ...child.style },
     textBounds: { width: metrics.titleWidth, height: metrics.titleHeight },
     children: [child],
   };

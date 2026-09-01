@@ -65,6 +65,7 @@ const PARSING_INTERPRETATIONS = new Set([
   "temporal",
 ]);
 const TEMPORAL_FORMATS = new Set([
+  "YYYY",
   "YYYY-MM-DD",
   "DD/MM/YYYY",
   "MM/DD/YYYY",

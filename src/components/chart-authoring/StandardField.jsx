@@ -2,7 +2,7 @@ import React from "react";
 import { IconControl } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
 const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
-const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "tickFrequency"]);
+const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency"]);
 const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
 function StandardField({
@@ -392,7 +392,10 @@ function xAxisControls(value, kind, emit) {
   }))) : null, kind === "temporal" ? /* @__PURE__ */ React.createElement("label", null, "Label format", /* @__PURE__ */ React.createElement("select", {
     value: value.labelPreset ?? "adaptive",
     onChange: (event) => emit(["x", "labelPreset"], event.target.value)
-  }, [["adaptive", "Adaptive / current hierarchy"], ["ddMmmYearBoundary", "DD MMM (year boundary)"], ["ddMmYyyy", "DD-MM-YYYY"], ["ddMmYy", "DD-MM-YY"], ["hhMm", "HH:mm"], ["ddMmYyyyHhMm", "DD-MM-YYYY HH:mm"]].map(([preset, label]) => /* @__PURE__ */ React.createElement("option", { key: preset, value: preset }, label)))) : null, tickControls("x", value.tickFrequency, kind, emit));
+  }, [["adaptive", "Adaptive / current hierarchy"], ["ddMmmYearBoundary", "DD MMM (year boundary)"], ["ddMmYyyy", "DD-MM-YYYY"], ["ddMmYy", "DD-MM-YY"], ["hhMm", "HH:mm"], ["ddMmYyyyHhMm", "DD-MM-YYYY HH:mm"]].map(([preset, label]) => /* @__PURE__ */ React.createElement("option", { key: preset, value: preset }, label)))) : null, kind === "temporal" ? /* @__PURE__ */ React.createElement("label", null, "Hover date/time", /* @__PURE__ */ React.createElement("select", {
+    value: value.hoverLabelPreset ?? "auto",
+    onChange: (event) => emit(["x", "hoverLabelPreset"], event.target.value)
+  }, [["auto", "Auto (match source)"], ["year", "Year (YYYY)"], ["date", "Date (YYYY-MM-DD)"], ["dateTime", "Date and time (YYYY-MM-DD HH:mm)"]].map(([preset, label]) => /* @__PURE__ */ React.createElement("option", { key: preset, value: preset }, label)))) : null, tickControls("x", value.tickFrequency, kind, emit));
 }
 function tickControls(axis, value, kind, emit) {
   const monthCadence = kind === "temporal" && value?.unit === "month";
@@ -570,6 +573,7 @@ function sanitizeXAxis(value) {
     else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
     else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
     else if (property === "labelPreset" && nonemptyString(value[property]) && value[property].trim() !== "adaptive") axis[property] = value[property].trim();
+    else if (property === "hoverLabelPreset" && nonemptyString(value[property]) && value[property].trim() !== "auto") axis[property] = value[property].trim();
   }
   return Object.keys(axis).length > 0 ? axis : void 0;
 }

@@ -31,10 +31,14 @@ function profileColumn(name, rows, specification) {
 }
 
 function inferType(name, values, temporal) {
-  if (values.length > 0 && temporal.diagnostics.length === 0) return "temporal";
-  if (values.length > 0 && TEMPORAL_NAME.test(name)) return "temporal";
+  if (
+    values.length > 0
+    && temporal.diagnostics.length === 0
+    && (!values.every(isNumeric) || TEMPORAL_NAME.test(name))
+  ) return "temporal";
   if (values.length > 0 && values.every(isBoolean)) return "boolean";
   if (values.length > 0 && values.every(isNumeric)) return "numeric";
+  if (values.length > 0 && TEMPORAL_NAME.test(name)) return "temporal";
   return "category";
 }
 
@@ -53,10 +57,18 @@ function temporalParsingMetadata(values, specification) {
 
 function inferTemporalFormat(values) {
   if (values.length === 0) return null;
+  if (values.every(isFourDigitYear)) return "YYYY";
   if (values.every((value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim()))) return "YYYY-MM-DD";
   if (values.every((value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value.trim()))) return "ISO-8601";
   const formats = values.map(autoSlashFormat);
   return formats.every(Boolean) && new Set(formats).size === 1 ? formats[0] : null;
+}
+
+function isFourDigitYear(value) {
+  return (
+    (typeof value === "number" && Number.isSafeInteger(value) && value >= 1000 && value <= 9999)
+    || (typeof value === "string" && /^\d{4}$/.test(value.trim()))
+  );
 }
 
 function autoSlashFormat(value) {

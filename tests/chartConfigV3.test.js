@@ -273,6 +273,41 @@ test("axis presentation accepts structured X and value-axis title options while 
   assert.throws(() => validateChartInstance(chart), /titleOrientation/i);
 });
 
+test("temporal hover presets validate only on temporal observation axes", () => {
+  const temporal = createChartDraft("line", {
+    id: "configured-hover-date-format",
+    title: "Configured hover date format",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: { axes: { x: { hoverLabelPreset: "dateTime" } } },
+  });
+  assert.equal(validateChartInstance(temporal), temporal);
+
+  temporal.presentation.axes.x.hoverLabelPreset = "rawEpoch";
+  assert.throws(
+    () => validateChartInstance(temporal),
+    /hoverLabelPreset is unsupported/i,
+  );
+
+  const category = createChartDraft("line", {
+    id: "category-hover-date-format",
+    title: "Category hover date format",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "region", interpretation: "category" },
+    },
+    presentation: { axes: { x: { hoverLabelPreset: "date" } } },
+  });
+  assert.throws(
+    () => validateChartInstance(category),
+    /hoverLabelPreset is unsupported/i,
+  );
+});
+
 test("value-axis title typography and offsets accept only their bounded values", () => {
   const chart = createChartDraft("line", {
     id: "adjustable-axis-title",
