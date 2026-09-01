@@ -193,7 +193,7 @@ export default function QmdMediaInspector({
                 id="qmd-media-frame-color"
                 label="Frame color"
                 value={placement.frameColor}
-                fallback="#D8E2EC"
+                fallback="#C7CBCF"
                 dataColorField="qmd-media-frame"
                 onChange={(frameColor) => change({ frameColor })}
               />
