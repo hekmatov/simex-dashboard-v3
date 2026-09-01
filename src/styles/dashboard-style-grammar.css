@@ -1851,6 +1851,7 @@
 @media (max-width: 520px) {
   .app-frame .chart-wizard.chart-wizard-v3 {
     block-size: calc(100dvh - 16px);
+    max-block-size: calc(100dvh - 16px);
   }
 
   .app-frame .chart-wizard-step-tabs,
