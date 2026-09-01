@@ -334,7 +334,8 @@ test("workflow pending disables every current Text and Image mutating field", ()
     }));
     assert.match(html, /Text\/Image authoring is unavailable while this draft action is pending/);
     assert.match(html, /<input[^>]*id="static-panel-title"[^>]*disabled/);
-    assert.match(html, /role="gridcell"[^>]*disabled/);
+    assert.match(html, /<select[^>]*id="static-panel-[^"]+-footprint-width"[^>]*disabled/);
+    assert.match(html, /<select[^>]*id="static-panel-[^"]+-footprint-row-height"[^>]*disabled/);
     if (contentTypeId === "freeText") {
       assert.match(html, /<select[^>]*id="portable-qmd-semantic-style"[^>]*disabled/);
       for (const label of ["Bold", "Italic", "Insert image"]) {
@@ -400,7 +401,7 @@ test("Free-text authoring forwards the draft panel footprint to writer and previ
     destination: { pageId: "overview", sectionId: "response" },
     contentTypeId: "freeText",
     stage: "content",
-    panel: { id: "footprint-panel", sourceId: "footprint-source", layout: { width: 3, height: 1 } },
+    panel: { id: "footprint-panel", sourceId: "footprint-source", layout: { width: 3, height: 0.75 } },
     placement: { kind: "staticText", qmd: "Footprint content" },
   });
   const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
@@ -410,6 +411,7 @@ test("Free-text authoring forwards the draft panel footprint to writer and previ
   }));
 
   assert.equal((html.match(/--chart-footprint-columns:3/g) ?? []).length, 2);
+  assert.equal((html.match(/--chart-footprint-row-span:3/g) ?? []).length, 2);
   assert.match(html, /data-authoring-footprint="writer"/);
   assert.match(html, /data-authoring-footprint="preview"/);
 });

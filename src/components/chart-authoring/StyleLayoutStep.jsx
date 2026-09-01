@@ -45,7 +45,12 @@ export default function StyleLayoutStep({
     chart
       ? React.createElement(
           "div",
-          { className: "chart-wizard-style-grid" },
+          {
+            className: [
+              "chart-wizard-style-grid",
+              showPreview ? "" : "chart-wizard-style-grid--without-preview",
+            ].filter(Boolean).join(" "),
+          },
           showPreview
             ? React.createElement(
                 "div",

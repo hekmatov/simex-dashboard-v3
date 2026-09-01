@@ -363,6 +363,55 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
   await expectStoredChart(page, "timeline", "E2E coordination timeline");
 });
 
+test("full editor keeps every tab's controls and render panels aligned", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1645, height: 1214 });
+  await openBiomedicalPage(page);
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await page.locator(".chart-quick-editor")
+    .getByRole("button", { name: "Open full editor", exact: true })
+    .click();
+
+  const full = page.getByRole("dialog", { name: "Edit chart" });
+  await expect(full).toBeVisible();
+
+  const dimensions = async () => full.evaluate((dialog) => {
+    const controls = dialog.querySelector(".chart-wizard-body");
+    const render = dialog.querySelector(".chart-creation-proof-deck");
+    if (!controls || !render) {
+      throw new Error("Full editor is missing its controls or render panel.");
+    }
+    return {
+      dialog: dialog.getBoundingClientRect().width,
+      controls: controls.getBoundingClientRect().width,
+      render: render.getBoundingClientRect().width,
+    };
+  });
+
+  const stages = [
+    /^Destination\./,
+    /^Data source\./,
+    /^Chart type\./,
+    /^Map and prepare\./,
+    /^Configure\./,
+    /^Review\./,
+  ];
+  const stageWidths = [];
+  for (const stage of stages) {
+    await full.getByRole("button", { name: stage }).click();
+    stageWidths.push(await dimensions());
+  }
+
+  const expected = stageWidths[0];
+  for (const width of stageWidths) {
+    expect(Math.abs(width.dialog - expected.dialog)).toBeLessThan(1);
+    expect(Math.abs(width.controls - expected.controls)).toBeLessThan(1);
+    expect(Math.abs(width.render - expected.render)).toBeLessThan(1);
+  }
+});
+
 test("full editor continues Quick state, restores suspended Full work, and saves without duplication", async ({
   page,
 }) => {

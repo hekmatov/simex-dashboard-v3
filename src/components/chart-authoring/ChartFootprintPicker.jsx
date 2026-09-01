@@ -1,15 +1,11 @@
 import React from "react";
 
-const CELLS = Object.freeze([
-  Object.freeze({ columns: 1, rows: 1 }),
-  Object.freeze({ columns: 2, rows: 1 }),
-  Object.freeze({ columns: 3, rows: 1 }),
-  Object.freeze({ columns: 4, rows: 1 }),
-  Object.freeze({ columns: 1, rows: 2 }),
-  Object.freeze({ columns: 2, rows: 2 }),
-  Object.freeze({ columns: 3, rows: 2 }),
-  Object.freeze({ columns: 4, rows: 2 }),
-]);
+import {
+  FOOTPRINT_ROW_HEIGHTS,
+  resolveChartFootprint,
+} from "../chartPanelLayout.js";
+
+const WIDTHS = Object.freeze([1, 2, 3, 4]);
 
 export default function ChartFootprintPicker({
   subject = "Chart",
@@ -19,118 +15,94 @@ export default function ChartFootprintPicker({
   showTextLabels = true,
   onChange,
 }) {
-  const current = normalizeCell(value);
-  const [preview, setPreview] = React.useState(null);
-  const gridRef = React.useRef(null);
-  const shown = preview ?? current;
+  const current = normalizeFootprint(value);
   const subjectLabel = String(subject || "Chart");
-  const subjectLower = subjectLabel.toLocaleLowerCase();
   const titleId = `${idPrefix}-footprint-title`;
+  const widthId = `${idPrefix}-footprint-width`;
+  const rowHeightId = `${idPrefix}-footprint-row-height`;
+  const rowHeightLabel = describeRowHeight(current.rows);
+  const previewHeight = `${Math.round(current.rows * 100)}%`;
 
-  const focusCell = (next) => {
-    gridRef.current
-      ?.querySelector(`[data-columns="${next.columns}"][data-rows="${next.rows}"]`)
-      ?.focus();
-  };
-  const previewCell = (cell) => setPreview(cell);
-  const clearPreview = (event) => {
-    if (event?.relatedTarget && gridRef.current?.contains(event.relatedTarget)) return;
-    setPreview(null);
-  };
+  const update = (updates) => onChange?.({ ...current, ...updates });
 
   return (
-    <section
-      className="chart-footprint-control"
-      aria-labelledby={titleId}
-    >
+    <section className="chart-footprint-control" aria-labelledby={titleId}>
       <div className="chart-footprint-heading">
         <div>
-          <span id={showTextLabels ? undefined : titleId} className={showTextLabels ? "eyebrow" : "dashboard-dialog__eyebrow"}>{subjectLabel} size</span>
+          <span
+            id={showTextLabels ? undefined : titleId}
+            className={showTextLabels ? "eyebrow" : "dashboard-dialog__eyebrow"}
+          >
+            {subjectLabel} size
+          </span>
           {showTextLabels && <h3 id={titleId}>Footprint</h3>}
         </div>
-        {showTextLabels && <span className="chart-footprint-limit">4-column grid</span>}
+        {showTextLabels && <span className="chart-footprint-limit">4 × 2 guide</span>}
       </div>
       <div className="chart-footprint-picker">
-        <span className="chart-footprint-corner" aria-hidden="true">Width →<br />Height ↓</span>
-        <div className="chart-footprint-column-cues" aria-hidden="true">
-          <span>1 col</span><span>2 cols</span><span>3 cols</span><span>4 cols</span>
-        </div>
-        <div className="chart-footprint-row-cues" aria-hidden="true">
-          <span>1 row</span><span>2 rows</span>
+        <div className="chart-footprint-inputs">
+          <label className="chart-footprint-input" htmlFor={widthId}>
+            <span>Width</span>
+            <select
+              id={widthId}
+              value={current.columns}
+              disabled={disabled}
+              onChange={(event) => update({ columns: Number(event.target.value) })}
+            >
+              {WIDTHS.map((columns) => (
+                <option key={columns} value={columns}>
+                  {columns} {columns === 1 ? "column" : "columns"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="chart-footprint-input" htmlFor={rowHeightId}>
+            <span>Row height</span>
+            <select
+              id={rowHeightId}
+              value={String(current.rows)}
+              disabled={disabled}
+              onChange={(event) => update({ rows: Number(event.target.value) })}
+            >
+              {FOOTPRINT_ROW_HEIGHTS.map((rows) => (
+                <option key={rows} value={rows}>
+                  {describeRowHeight(rows)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div
-          ref={gridRef}
-          className="chart-footprint-grid"
-          role="grid"
-          aria-label={`${subjectLabel} size: ${current.columns} columns by ${current.rows} rows`}
-          data-previewing={preview ? "true" : "false"}
-          onMouseLeave={() => setPreview(null)}
-          onBlur={clearPreview}
+          className="chart-footprint-preview"
+          data-footprint-preview="true"
+          role="img"
+          aria-label={`${subjectLabel} size: ${current.columns} columns by ${rowHeightLabel}`}
+          style={{
+            "--footprint-preview-columns": current.columns,
+            "--footprint-preview-width": `${current.columns * 25}%`,
+            "--footprint-preview-height": previewHeight,
+            "--footprint-preview-visual-height": `${current.rows * 50}%`,
+          }}
         >
-          {CELLS.map((cell) => {
-            const selected = sameCell(cell, current);
-            const included = cell.columns <= shown.columns && cell.rows <= shown.rows;
-            return (
-              <button
-                key={`${cell.columns}x${cell.rows}`}
-                type="button"
-                role="gridcell"
-                className="chart-footprint-cell"
-                data-columns={cell.columns}
-                data-rows={cell.rows}
-                data-included={included ? "true" : "false"}
-                aria-label={`Set ${subjectLower} size to ${cell.columns} column${cell.columns === 1 ? "" : "s"} by ${cell.rows} row${cell.rows === 1 ? "" : "s"}`}
-                aria-pressed={selected}
-                tabIndex={selected ? 0 : -1}
-                disabled={disabled}
-                onMouseEnter={() => previewCell(cell)}
-                onFocus={() => previewCell(cell)}
-                onClick={() => {
-                  if (!selected) onChange?.(cell);
-                  setPreview(null);
-                }}
-                onKeyDown={(event) => {
-                  const next = nextFootprintCell(cell, event.key);
-                  if (sameCell(next, cell)) return;
-                  event.preventDefault();
-                  setPreview(next);
-                  focusCell(next);
-                }}
-              >
-                <span aria-hidden="true">{selected ? "✓" : ""}</span>
-                <span>{cell.columns} × {cell.rows}</span>
-              </button>
-            );
-          })}
+          <span className="chart-footprint-preview__selection" aria-hidden="true" />
         </div>
       </div>
-      {(showTextLabels || preview) && (
-        <p className="chart-footprint-status" aria-live="polite">
-          {preview
-            ? `Preview: ${preview.columns} columns × ${preview.rows} rows. Click, Enter, or Space to apply.`
-            : `Current footprint: ${current.columns} columns × ${current.rows} rows.`}
+      {showTextLabels && (
+        <p className="chart-footprint-status">
+          Current footprint: {current.columns} columns × {rowHeightLabel}.
         </p>
       )}
     </section>
   );
 }
 
-export function nextFootprintCell(value, key) {
-  const current = normalizeCell(value);
-  if (key === "ArrowLeft") return { ...current, columns: Math.max(1, current.columns - 1) };
-  if (key === "ArrowRight") return { ...current, columns: Math.min(4, current.columns + 1) };
-  if (key === "ArrowUp") return { ...current, rows: Math.max(1, current.rows - 1) };
-  if (key === "ArrowDown") return { ...current, rows: Math.min(2, current.rows + 1) };
-  return current;
+export function describeRowHeight(rows) {
+  return `${Math.round(rows * 100)}% of a row`;
 }
 
-function normalizeCell(value) {
-  return {
-    columns: Number.isInteger(value?.columns) ? Math.min(4, Math.max(1, value.columns)) : 2,
-    rows: Number.isInteger(value?.rows) ? Math.min(2, Math.max(1, value.rows)) : 1,
-  };
-}
-
-function sameCell(left, right) {
-  return left.columns === right.columns && left.rows === right.rows;
+function normalizeFootprint(value) {
+  return resolveChartFootprint({
+    width: value?.columns,
+    height: value?.rows,
+  });
 }

@@ -161,6 +161,8 @@ function ChartPanel({
       data-canonical-placement-id={canonicalPlacementId}
       data-build-placement-id={editMode && placementId ? placementId : undefined}
       data-footprint={`${footprint.columns}x${footprint.rows}`}
+      data-footprint-short={footprint.rows < 1 ? "true" : undefined}
+      data-footprint-compact={footprint.rows <= 0.5 ? "true" : undefined}
       style={chartPanelFootprintStyle(chart.layout)}
       tabIndex={editMode && placementId ? -1 : undefined}
       onDragOverCapture={onDragOver}
@@ -213,6 +215,7 @@ function ChartPanel({
             active: shouldRenderChart,
           } : null}
           interactionMode="active"
+          panelFootprint={footprint}
           surface={editMode ? "build" : "view"}
           onImageReplace={requestEdit}
           onImageEdit={requestEdit}

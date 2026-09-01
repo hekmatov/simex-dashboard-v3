@@ -47,6 +47,7 @@ import { planIdentityPlacement } from "../../charting/forms/chartPlacement.js";
 import { deriveChartCreationIssues } from "../../charting/forms/chartCreationIssues.js";
 import { compileAuthoredChartRuntimeArtifact } from "../../charting/runtime/authoredChartRuntimeArtifact.js";
 import {
+  FOOTPRINT_ROW_HEIGHTS,
   legacySizeForFootprint,
   resolveChartFootprint,
 } from "../chartPanelLayout.js";
@@ -242,9 +243,9 @@ const PLACEMENT_PRESETS = Object.freeze({
     columns,
     default: columns === 2,
   }))),
-  heights: Object.freeze([1, 2].map((rows) => Object.freeze({
+  heights: Object.freeze(FOOTPRINT_ROW_HEIGHTS.map((rows) => Object.freeze({
     id: `height-${rows}`,
-    label: `${rows}-row height`,
+    label: `${Math.round(rows * 100)}% of a row`,
     rows,
     default: rows === 1,
   }))),
@@ -1489,7 +1490,10 @@ export default function ChartWizardV3({
       ),
       React.createElement(
         "div",
-        { className: "chart-wizard-workbench dashboard-authoring-body" },
+        {
+          className: "chart-wizard-workbench dashboard-authoring-body",
+          "data-chart-wizard-stage": wizard.stage,
+        },
         React.createElement(
           "div",
           { className: "chart-wizard-body dashboard-dialog__body", ref: wizardBodyRef },

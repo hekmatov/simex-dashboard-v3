@@ -7,6 +7,7 @@ import {
   SERIES_STYLE_PROPERTIES,
   seriesStylePropertySupported,
 } from "../presentation/seriesStyleContract.js";
+import { cardPresentationCompatible } from "../presentation/cardPresentationContract.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
   chartConversionKind,
@@ -34,6 +35,7 @@ const PRESENTATION_SECTIONS = Object.freeze({
   legend: "appearance",
   accessibility: "advanced",
   advanced: "advanced",
+  card: "appearance",
 });
 
 const DANGEROUS_PROPERTY_KEYS = new Set([
@@ -219,7 +221,7 @@ function removedSettings(chart, target, preserved, effectiveRoles = preserved) {
     if (
       Object.hasOwn(presentation, key)
       && meaningful(presentation[key], key === "collection" ? null : undefined)
-      && !presentationAllowed(target, key, section)
+      && !presentationAllowed(target, key, section, presentation[key])
     ) {
       removed.push(setting(
         `presentation.${key}`,
@@ -313,7 +315,7 @@ function targetPresentation(sourceValue, target) {
     if (
       key !== "collection"
       && Object.hasOwn(source, key)
-      && presentationAllowed(target, key, section)
+      && presentationAllowed(target, key, section, source[key])
     ) {
       presentation[key] = clonePlainData(
         source[key],
@@ -332,8 +334,9 @@ function targetPresentation(sourceValue, target) {
   return presentation;
 }
 
-function presentationAllowed(target, key, section) {
+function presentationAllowed(target, key, section, value) {
   if (key === "collection") return target.capabilities.collection;
+  if (key === "card") return cardPresentationCompatible(value, target.typeId);
   return target.form.sections.includes(section);
 }
 

@@ -58,6 +58,8 @@ test("Text and Image drafts default to Standard 2x1 and persist the shared footp
     assert.deepEqual(draft.panel.layout, { size: "standard", width: 2, height: 1 });
     draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { layout: { size: "wide", width: 4, height: 1 } } });
     assert.deepEqual(draft.panel.layout, { size: "wide", width: 4, height: 1 });
+    draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { layout: { size: "standard", width: 3, height: 0.75 } } });
+    assert.deepEqual(draft.panel.layout, { size: "standard", width: 3, height: 0.75 });
   }
 });
 

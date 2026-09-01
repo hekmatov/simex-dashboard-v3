@@ -89,6 +89,26 @@ function kpiChart() {
   });
 }
 
+function deltaListChart() {
+  return createChartDraft("deltaList", {
+    id: "exercise-status-by-region",
+    title: "Exercise status by region",
+    sourceId: "exercise-data",
+    roles: {
+      measurement: { field: "value" },
+      entity: { field: "region" },
+      time: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    presentation: {
+      card: { showDeltaArrow: false },
+    },
+  });
+}
+
 test("line to area preserves compatible roles and title alignment", () => {
   const chart = lineChart();
   const plan = planChartConversion(chart, "area");
@@ -197,6 +217,83 @@ test("schema-compatible collection state is retained in normalized form", () => 
     normalizeCollectionSettings(chart.presentation.collection),
   );
   validateChartInstance(converted);
+});
+
+test("KPI card presentation accepts a configurable accent palette and is removed for non-card targets", () => {
+  const chart = kpiChart();
+  chart.presentation.card = {
+    style: "signalStamps",
+    accentColors: ["#043BCB", "#36BDEB"],
+  };
+
+  assert.doesNotThrow(() => validateChartInstance(chart));
+
+  const plan = planChartConversion(chart, "gauge");
+  assert.ok(plan.removedSettings.some(
+    ({ path }) => path === "presentation.card",
+  ));
+
+  const converted = applyChartConversion(chart, "gauge", {});
+  assert.notEqual(converted, chart);
+  assert.equal(Object.hasOwn(converted.presentation, "card"), false);
+  validateChartInstance(converted);
+});
+
+test("delta-card conversions retain an arrow preference when the default style is implicit", () => {
+  const chart = deltaListChart();
+  const plan = planChartConversion(chart, "deltaCard");
+
+  assert.equal(plan.removedSettings.some(
+    ({ path }) => path === "presentation.card",
+  ), false);
+
+  const converted = applyChartConversion(chart, "deltaCard", {});
+  assert.notEqual(converted, chart);
+  assert.deepEqual(converted.presentation.card, { showDeltaArrow: false });
+  validateChartInstance(converted);
+});
+
+test("card presentation rejects inherited and accessor-backed settings without reading them", () => {
+  const chart = kpiChart();
+  let styleReads = 0;
+  const accessorCard = {};
+  Object.defineProperty(accessorCard, "style", {
+    enumerable: true,
+    get() {
+      styleReads += 1;
+      return "quietLedger";
+    },
+  });
+  chart.presentation.card = accessorCard;
+
+  assert.throws(
+    () => validateChartInstance(chart),
+    /data property/,
+  );
+  assert.equal(styleReads, 0);
+
+  chart.presentation.card = Object.create({ style: "quietLedger" });
+  assert.throws(
+    () => validateChartInstance(chart),
+    /plain object/,
+  );
+
+  let colorReads = 0;
+  const accessorColors = ["#043BCB"];
+  Object.defineProperty(accessorColors, "0", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      colorReads += 1;
+      return "#043BCB";
+    },
+  });
+  chart.presentation.card = { accentColors: accessorColors };
+  assert.throws(
+    () => validateChartInstance(chart),
+    /direct data entries/,
+  );
+  assert.equal(colorReads, 0);
 });
 
 test("incomplete and invalid target roles fail closed with original identity", () => {

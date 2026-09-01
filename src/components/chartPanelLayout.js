@@ -12,6 +12,25 @@ const PANEL_LAYOUT_CLASSES = Object.freeze({
   full: "chart-panel-full",
 });
 
+export const FOOTPRINT_ROW_HEIGHTS = Object.freeze([
+  0.25,
+  0.5,
+  0.75,
+  1,
+  1.25,
+  1.5,
+  1.75,
+  2,
+]);
+
+export function isSupportedFootprintRowHeight(rows) {
+  return FOOTPRINT_ROW_HEIGHTS.includes(rows);
+}
+
+export function chartFootprintRowSpan(rows) {
+  return isSupportedFootprintRowHeight(rows) ? Math.round(rows * 4) : 4;
+}
+
 export function chartPanelLayoutClass(size = "standard") {
   return PANEL_LAYOUT_CLASSES[size] ?? PANEL_LAYOUT_CLASSES.standard;
 }
@@ -23,9 +42,7 @@ export function resolveChartFootprint(layout = {}) {
     Number.isInteger(columns)
     && columns >= 1
     && columns <= 4
-    && Number.isInteger(rows)
-    && rows >= 1
-    && rows <= 2
+    && isSupportedFootprintRowHeight(rows)
   ) {
     return { columns, rows };
   }
@@ -38,6 +55,7 @@ export function chartPanelFootprintStyle(layout = {}) {
   return {
     "--chart-footprint-columns": footprint.columns,
     "--chart-footprint-rows": footprint.rows,
+    "--chart-footprint-row-span": chartFootprintRowSpan(footprint.rows),
   };
 }
 

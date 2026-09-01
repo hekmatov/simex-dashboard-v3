@@ -29,6 +29,8 @@ export default function ChartView(props) {
     ? props
     : withPlaybackTimeContext(props, playback);
   const interactionMode = props.interactionMode === "passive" ? "passive" : "active";
+  const panelRows = Number(props.panelFootprint?.rows);
+  const shortPanel = Number.isFinite(panelRows) && panelRows < 1;
   const state = staticContent ? null : resolveChartDataState({
     chartTitle: props.chart?.title,
     rows: props.rows,
@@ -43,6 +45,7 @@ export default function ChartView(props) {
   return React.createElement(ChartDataStateBoundary, {
     state,
     chartName: props.chart?.title,
+    short: shortPanel,
   }, content);
 }
 
@@ -56,6 +59,9 @@ export function renderChartContent(props, interactionMode) {
       : resolveChartRendering(props);
     const { model, prepared, schema } = resolved;
     const provenance = resolveProvenance(props);
+    const panelRows = Number(props.panelFootprint?.rows);
+    const shortPanel = Number.isFinite(panelRows) && panelRows < 1;
+    const compactPanel = Number.isFinite(panelRows) && panelRows <= 0.5;
     let view;
     const chartZoom = interactionMode === "active"
       && chartZoomEnabled(props.chart, schema);
@@ -72,7 +78,14 @@ export function renderChartContent(props, interactionMode) {
       mapBudgetRequest: props.mapBudgetRequest,
       onVisualChange: props.onVisualChange,
     });
-    else if (model.kind === "cards") view = React.createElement(CardChartView, { model, chart: props.chart, provenance, interactionMode });
+    else if (model.kind === "cards") view = React.createElement(CardChartView, {
+      model,
+      chart: props.chart,
+      provenance,
+      interactionMode,
+      short: shortPanel,
+      compact: compactPanel,
+    });
     else if (model.kind === "targetCollection") view = React.createElement(TargetCollectionChartView, {
       model,
       chart: props.chart,

@@ -3,6 +3,12 @@ import { validateChartInstance } from "../config/chartConfigV3.js";
 import {
   SERIES_STYLE_LIMITS,
 } from "../presentation/seriesStyleContract.js";
+import {
+  cardPresentationForChart,
+  cardStyleOptions,
+  cardStyleUsesAccentColors,
+  isDeltaCardType,
+} from "../presentation/cardPresentationContract.js";
 import { chartDescriptionVisible } from "../presentation/chartCitation.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
@@ -412,6 +418,7 @@ function appearanceFields({ chart, schema }) {
   const series = chart.presentation?.series ?? {};
   return [
     ...common,
+    ...cardAppearanceFields(chart),
     ...(LEGEND_PRESENTATION_RENDERERS.has(schema.renderer)
       ? [{
           id: "legendVisible",
@@ -443,6 +450,45 @@ function appearanceFields({ chart, schema }) {
       )
     )),
   ];
+}
+
+function cardAppearanceFields(chart) {
+  const options = cardStyleOptions(chart.typeId);
+  if (options.length === 0) return [];
+
+  const card = cardPresentationForChart(chart);
+  const fields = [{
+    id: "cardStyle",
+    label: "Card style",
+    control: "select",
+    path: ["presentation", "card", "style"],
+    value: card.style,
+    options,
+  }];
+
+  if (cardStyleUsesAccentColors(chart.typeId, card.style)) {
+    fields.push({
+      id: "cardAccentColors",
+      label: "Accent colors",
+      control: "palette",
+      path: ["presentation", "card", "accentColors"],
+      value: card.accentColors,
+      min: SERIES_STYLE_LIMITS.colors.min,
+      max: SERIES_STYLE_LIMITS.colors.max,
+      help: "Applied in order to card accents in this collection.",
+    });
+  }
+
+  if (isDeltaCardType(chart.typeId)) {
+    fields.push({
+      id: "deltaArrow",
+      label: "Show direction arrow",
+      control: "toggle",
+      path: ["presentation", "card", "showDeltaArrow"],
+      value: card.showDeltaArrow,
+    });
+  }
+  return fields;
 }
 
 function seriesAppearanceField(fieldId, series, referenceLine) {

@@ -2,7 +2,10 @@ import React from "react";
 
 import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
 import { configuredCharts } from "../../lib/dashboardSelectors.js";
-import { resolveChartFootprint } from "../chartPanelLayout.js";
+import {
+  chartFootprintRowSpan,
+  resolveChartFootprint,
+} from "../chartPanelLayout.js";
 import ChartView from "../charts/ChartView.jsx";
 
 export default function SceneViewCompositionGrid({
@@ -18,6 +21,8 @@ export default function SceneViewCompositionGrid({
     configuredCharts(dashboard).map((chart) => [chart.id, chart]),
   );
   const accessibilityEnabled = dashboard?.globalStyles?.accessibility?.enabled === true;
+  const usesLiveFootprint = surface !== "scene-preview";
+  const footprintMode = usesLiveFootprint ? "live" : "editor-preview";
 
   return (
     <div
@@ -34,11 +39,13 @@ export default function SceneViewCompositionGrid({
               className="scene-view-composition-cell scene-view-composition-cell--missing"
               data-scene-chart-id={member.chartId}
               data-scene-chart-missing="true"
+              data-scene-footprint-mode={footprintMode}
               data-scene-width={member.width}
               data-scene-row-height="1"
               style={{
                 "--scene-chart-width": member.width,
                 "--scene-chart-height": 1,
+                "--scene-chart-row-span": 4,
               }}
               key={member.chartId}
             >
@@ -49,16 +56,23 @@ export default function SceneViewCompositionGrid({
         }
 
         const height = resolveChartFootprint(chart.layout).rows;
+        const rowSpan = chartFootprintRowSpan(height);
+        const displayedHeight = usesLiveFootprint ? height : 1;
+        const displayedRowSpan = usesLiveFootprint ? rowSpan : 4;
         return (
           <section
             {...cellProps}
             className="scene-view-composition-cell"
             data-scene-chart-id={chart.id}
+            data-scene-footprint-mode={footprintMode}
             data-scene-width={member.width}
-            data-scene-row-height={height}
+            data-scene-row-height={displayedHeight}
+            data-scene-short={usesLiveFootprint && height < 1 ? "true" : undefined}
+            data-scene-compact={usesLiveFootprint && height <= 0.5 ? "true" : undefined}
             style={{
               "--scene-chart-width": member.width,
-              "--scene-chart-height": height,
+              "--scene-chart-height": displayedHeight,
+              "--scene-chart-row-span": displayedRowSpan,
             }}
             key={chart.id}
           >
@@ -84,6 +98,7 @@ export default function SceneViewCompositionGrid({
               timeContext={timeContextForChart(chart.id)}
               timeContextAuthority={timeContextAuthority}
               interactionMode="active"
+              panelFootprint={usesLiveFootprint ? { columns: member.width, rows: height } : undefined}
               surface="view"
             />
           </section>

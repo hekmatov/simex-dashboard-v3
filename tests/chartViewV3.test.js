@@ -117,6 +117,22 @@ test("invalid prepared data renders a bounded chart error", () => {
   assert.ok(fallback.length <= 240);
 });
 
+test("short chart panels keep data-state details reachable by keyboard", () => {
+  const html = renderToStaticMarkup(
+    React.createElement(ChartView, {
+      chart: deltaCard,
+      rows: [],
+      sourceState: { status: "error" },
+      panelFootprint: { columns: 2, rows: 0.25 },
+    }),
+  );
+
+  assert.match(html, /data-chart-state-short="true"/);
+  assert.match(html, /chart-state-surface--short/);
+  assert.match(html, /tabindex="0"/);
+  assert.match(html, /aria-label="Current capacity status\. Scroll to view details\."/);
+});
+
 test("table render models retain headers, values, and observation time while citation stays hidden", () => {
   const rows = [{ facility: "Clinic A", score: 7, observed: "2027-05-02" }];
   const html = renderToStaticMarkup(React.createElement(ChartView, {
@@ -167,8 +183,8 @@ test("card values render non-finite values as unavailable while retaining zero a
     },
   }));
 
-  assert.match(html, /<dd>0<\/dd>/);
-  assert.match(html, /<dd>-2<\/dd>/);
+  assert.match(html, /class="chart-card-value">0<\/strong>/);
+  assert.match(html, /class="chart-card-delta-value">-2<\/span>/);
   assert.doesNotMatch(html, /NaN|Infinity/);
   assert.match(html, /Not available/);
 });
@@ -204,10 +220,11 @@ test("temporal KPI collections show one latest observation per entity outside pl
     }),
   }));
 
-  assert.equal((html.match(/<h4>Clinic A<\/h4>/g) ?? []).length, 1);
-  assert.equal((html.match(/<h4>Clinic B<\/h4>/g) ?? []).length, 1);
-  assert.match(html, /<h4>Clinic A<\/h4><dl><div[^>]*><dt>Value<\/dt><dd>30<\/dd>/);
-  assert.match(html, /<h4>Clinic B<\/h4><dl><div[^>]*><dt>Value<\/dt><dd>5<\/dd>/);
+  assert.equal((html.match(/class="chart-card-label">Clinic A<\/span>/g) ?? []).length, 1);
+  assert.equal((html.match(/class="chart-card-label">Clinic B<\/span>/g) ?? []).length, 1);
+  assert.match(html, /class="chart-card-label">Clinic A<\/span><strong class="chart-card-value">30<\/strong>/);
+  assert.match(html, /class="chart-card-label">Clinic B<\/span><strong class="chart-card-value">5<\/strong>/);
+  assert.doesNotMatch(html, /<dl>/);
   assert.doesNotMatch(html, /Duplicate collection entityId|This chart cannot be displayed/);
 });
 

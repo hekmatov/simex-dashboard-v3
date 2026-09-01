@@ -80,6 +80,27 @@ test("chart title visibility rejects non-boolean values", () => {
   );
 });
 
+test("chart layout supports quarter-row percentage heights and rejects unsupported fractions", () => {
+  const chart = createChartDraft("image", {
+    id: "three-quarter-image",
+    title: "Three-quarter image",
+    sourceId: "image-source",
+    layout: { size: "standard", width: 3, height: 0.75 },
+  });
+
+  assert.equal(validateChartInstance(chart), chart);
+
+  for (const height of [0.2, 0.6, 2.25]) {
+    const invalid = createChartDraft("image", {
+      id: `invalid-height-${height}`,
+      title: "Invalid percentage height",
+      sourceId: "image-source",
+      layout: { size: "standard", width: 3, height },
+    });
+    assert.throws(() => validateChartInstance(invalid), /Chart layout height/);
+  }
+});
+
 test("Image title appearance is image-only, bounded, and typed", () => {
   for (const fontSize of [12, 16, 32]) {
     const chart = createChartDraft("image", {
