@@ -41,6 +41,13 @@
   max-block-size: none;
 }
 
+.right-side-drawer:is(.build-more-drawer, .audience-display-options-drawer) {
+  block-size: auto;
+  bottom: auto;
+  max-block-size: calc(100dvh - var(--right-side-drawer-top) - 8px);
+  overflow: hidden;
+}
+
 .right-side-drawer__header {
   align-items: start;
   border-bottom: 1px solid var(--simex-border-subtle);

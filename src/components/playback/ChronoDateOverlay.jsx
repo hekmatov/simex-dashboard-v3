@@ -1,7 +1,7 @@
 import React from "react";
 
-const DEFAULT_GEOMETRY = Object.freeze({ width: 300, height: 112, x: 24, y: 142 });
-const MINIMUM_SIZE = Object.freeze({ width: 190, height: 76 });
+const DEFAULT_GEOMETRY = Object.freeze({ width: 200, height: 56, x: 24, y: 142 });
+const MINIMUM_SIZE = Object.freeze({ width: 180, height: 48 });
 const KEYBOARD_STEP = 10;
 const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
 
@@ -20,6 +20,7 @@ export default function ChronoDateOverlay({ epochMs, suspended = false }) {
     window.addEventListener("resize", keepInsideViewport);
     const observed = [
       document.querySelector(".dashboard-command-crown"),
+      document.querySelector(".canonical-dashboard-frame .dashboard-header"),
       document.querySelector(".playback-controls--floating"),
     ].filter(Boolean);
     const resizeObserver = typeof ResizeObserver === "function"
@@ -123,8 +124,10 @@ function constrainGeometry(geometry, viewportWidthValue, viewportHeightValue) {
   if (typeof document === "undefined") return bounded;
   const viewportHeight = Number.isFinite(viewportHeightValue) ? viewportHeightValue : 720;
   const crown = visibleRectangle(document.querySelector(".dashboard-command-crown"));
+  const dashboardHeader = visibleRectangle(document.querySelector(".canonical-dashboard-frame .dashboard-header"));
   const controller = visibleRectangle(document.querySelector(".playback-controls--floating"));
   let top = Math.max(8, crown ? crown.bottom + 8 : 8);
+  if (dashboardHeader) top = Math.max(top, dashboardHeader.bottom + 8);
   let bottom = viewportHeight - 8;
   if (controller) {
     if (controller.element.classList.contains("playback-controls--top")) top = Math.max(top, controller.bottom + 8);

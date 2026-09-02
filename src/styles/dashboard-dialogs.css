@@ -307,6 +307,45 @@
   line-height: var(--simex-control-line-height);
 }
 
+/* Multiline desktop choices align the glyph with the first text line while
+   keeping any explanatory copy in its own compact row. */
+.dashboard-choice-row {
+  align-items: start;
+  align-self: start;
+  column-gap: var(--simex-gap-choice-label);
+  display: grid;
+  font-size: var(--simex-control-font-size);
+  grid-template-columns: var(--simex-choice-glyph) minmax(0, 1fr);
+  min-block-size: var(--simex-control-compact);
+  row-gap: 0;
+  line-height: var(--simex-control-line-height);
+}
+
+.dashboard-choice-row > input:is([type="checkbox"], [type="radio"]) {
+  align-self: start;
+  block-size: var(--simex-choice-glyph);
+  inline-size: var(--simex-choice-glyph);
+  margin: 1px 0 0;
+  min-block-size: var(--simex-choice-glyph);
+  min-inline-size: var(--simex-choice-glyph);
+  padding: 0;
+}
+
+.dashboard-choice-copy {
+  align-self: start;
+  display: grid;
+  gap: var(--simex-space-1);
+  line-height: var(--simex-control-line-height);
+  min-inline-size: 0;
+}
+
+.dashboard-choice-copy > small {
+  color: var(--simex-text-muted);
+  font-size: var(--simex-control-font-size);
+  font-weight: 400;
+  line-height: var(--simex-control-line-height);
+}
+
 /* The live full-chart editor is a desktop operations workspace. Keep its
    navigation and command rows compact across its desktop-only width range. */
 .app-frame .chart-wizard-header.dashboard-dialog__header {
@@ -570,20 +609,24 @@
 
 .chart-wizard.chart-wizard-v3 .chart-wizard-step-tabs .chart-wizard-step-button {
   align-items: center;
-  block-size: var(--simex-control-standard);
+  block-size: var(--simex-control-prominent);
   box-sizing: border-box;
   display: flex;
-  flex-direction: row;
-  gap: var(--simex-space-2);
-  height: var(--simex-control-standard);
+  flex-direction: column;
+  gap: 0;
+  height: var(--simex-control-prominent);
   justify-content: center;
-  max-block-size: var(--simex-control-standard);
-  max-height: var(--simex-control-standard);
-  min-block-size: var(--simex-control-standard);
-  min-height: var(--simex-control-standard);
-  padding: var(--simex-space-1) var(--simex-space-3);
+  max-block-size: var(--simex-control-prominent);
+  max-height: var(--simex-control-prominent);
+  min-block-size: var(--simex-control-prominent);
+  min-height: var(--simex-control-prominent);
+  padding: var(--simex-space-1) var(--simex-space-2);
   text-align: center;
   white-space: nowrap;
+}
+
+.chart-wizard.chart-wizard-v3 .chart-wizard-step-button > :is(span, small) {
+  max-inline-size: 100%;
 }
 
 .chart-wizard.chart-wizard-v3 .chart-wizard-destination {

@@ -29,7 +29,7 @@ export default function AudienceDisplayOptionsDrawer({
           const descriptionId = `present-audience-fact-${fact.key}`;
           return (
             <label
-              className={`present-audience-fact${available ? "" : " is-unavailable"}`}
+              className={`present-audience-fact dashboard-choice-row${available ? "" : " is-unavailable"}`}
               key={fact.key}
               title={available ? undefined : fact.unavailableReason}
             >
@@ -44,7 +44,7 @@ export default function AudienceDisplayOptionsDrawer({
                   event.target.checked,
                 )}
               />
-              <span>
+              <span className="dashboard-choice-copy">
                 <strong>{fact.label}</strong>
                 <small id={descriptionId}>
                   {fact.value ?? fact.unavailableReason}

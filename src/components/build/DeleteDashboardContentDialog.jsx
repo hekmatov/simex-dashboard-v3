@@ -50,14 +50,16 @@ export default function DeleteDashboardContentDialog({
           <ul className="delete-dashboard-content-summary" aria-label="Content to delete">
             {consequences.map((label) => <li key={label}>{label}</li>)}
           </ul>
-          <label className="delete-dashboard-content-acknowledgement" id="delete-dashboard-content-acknowledgement">
+          <label className="delete-dashboard-content-acknowledgement dashboard-choice-row" id="delete-dashboard-content-acknowledgement">
             <input
               type="checkbox"
               checked={acknowledged}
               disabled={busy}
               onChange={(event) => setAcknowledged(event.target.checked)}
             />
-            <span>I understand that the authored dashboard content listed above will be permanently deleted.</span>
+            <span className="dashboard-choice-copy">
+              <span>I understand that the authored dashboard content listed above will be permanently deleted.</span>
+            </span>
           </label>
           {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
         </div>

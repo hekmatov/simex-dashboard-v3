@@ -404,7 +404,7 @@ function ContentTypeFields({ draft, dispatch, disabled }) {
     <fieldset>
       <legend>Content type</legend>
       {listStaticContentTypeOptions().map((option, index) => (
-        <label key={option.id}>
+        <label key={option.id} className="dashboard-choice-row">
           <input
             data-static-initial-focus={index === 0 ? "true" : undefined}
             type="radio"
@@ -414,7 +414,10 @@ function ContentTypeFields({ draft, dispatch, disabled }) {
             checked={draft.contentTypeId === option.id}
             onChange={() => dispatch({ type: "setContentType", contentTypeId: option.id })}
           />
-          <strong>{option.label}</strong> {option.description}
+          <span className="dashboard-choice-copy">
+            <strong>{option.label}</strong>
+            <small>{option.description}</small>
+          </span>
         </label>
       ))}
     </fieldset>

@@ -71,21 +71,31 @@ export function ImagePanelPresentationFields({ draft, disabled = false, dispatch
             >+</button>
           </div>
         </div>
-        {[
-          ["bold", "Bold"],
-          ["italic", "Italic"],
-          ["underline", "Underline"],
-        ].map(([key, label]) => (
-          <label key={key} className="dashboard-authoring-boolean-row" htmlFor={`static-image-title-${key}`}>
-            <input
-              id={`static-image-title-${key}`}
-              type="checkbox"
-              checked={title[key] === true}
-              onChange={(event) => setTitle({ [key]: event.target.checked })}
-            />
-            <span>{label}</span>
-          </label>
-        ))}
+        <div
+          className="image-panel-presentation__styles dashboard-authoring-field--wide"
+          role="group"
+          aria-label="Title style"
+        >
+          {[
+            ["bold", "Bold"],
+            ["italic", "Italic"],
+            ["underline", "Underline"],
+          ].map(([key, label]) => (
+            <label
+              key={key}
+              className="dashboard-authoring-boolean-row dashboard-choice-row"
+              htmlFor={`static-image-title-${key}`}
+            >
+              <input
+                id={`static-image-title-${key}`}
+                type="checkbox"
+                checked={title[key] === true}
+                onChange={(event) => setTitle({ [key]: event.target.checked })}
+              />
+              <span className="dashboard-choice-copy">{label}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
       <fieldset
         className="image-panel-presentation__group dashboard-authoring-grid"

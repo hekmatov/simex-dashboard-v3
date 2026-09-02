@@ -855,6 +855,18 @@ pre.portable-qmd-math-fallback {
   width: 100%;
 }
 
+.image-panel-presentation__styles {
+  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--simex-space-4);
+  min-inline-size: 0;
+}
+
+.image-panel-presentation__styles .dashboard-choice-row {
+  flex: 0 0 auto;
+}
+
 .image-panel-presentation__size > div {
   align-items: center;
   display: flex;

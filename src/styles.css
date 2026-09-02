@@ -3439,10 +3439,10 @@ button.danger {
   container-type: inline-size;
   display: flex;
   justify-content: center;
-  min-height: 76px;
-  min-width: 190px;
+  min-height: 48px;
+  min-width: 180px;
   overflow: hidden;
-  padding: 10px;
+  padding: 4px;
   position: fixed;
   z-index: 930;
 }
@@ -3456,13 +3456,13 @@ button.danger {
   cursor: move;
   display: flex;
   font-family: var(--simex-style-heading-font);
-  font-size: clamp(30px, 15cqi, 92px);
+  font-size: clamp(18px, 12cqi, 32px);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   height: 100%;
   justify-content: center;
   line-height: 1;
-  padding: 18px 28px;
+  padding: 4px 8px;
   touch-action: none;
   user-select: none;
   white-space: nowrap;
