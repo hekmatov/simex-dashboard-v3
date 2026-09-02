@@ -49,6 +49,20 @@ test("View, Build, and Present remain visible while preserving the active page",
     .toHaveAttribute("aria-current", "page");
 });
 
+test("Build authoring controls never leak back into View after a mode remount", async ({ page }) => {
+  const modes = page.getByLabel("Dashboard mode");
+  await openDashboardFromLanding(page);
+
+  await modes.getByRole("button", { name: "Present", exact: true }).click();
+  await modes.getByRole("button", { name: "Build", exact: true }).click();
+  await expect(page.locator(".build-section-actions").first()).toBeVisible();
+
+  await modes.getByRole("button", { name: "View", exact: true }).click();
+  await expect(page.locator('[data-dashboard-surface="view"]')).toBeVisible();
+  await expect(page.locator(".build-section-actions")).toHaveCount(0);
+  await expect(page.locator(".panel-actions")).toHaveCount(0);
+});
+
 test("Build metadata persists on save and stays editable after storage fallback", async ({ page }) => {
   const passport = await enterScenarioInspector(page);
   await passport.getByRole("button", { name: /^Edit Program:/ }).click();

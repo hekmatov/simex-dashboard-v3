@@ -1067,14 +1067,6 @@
     min-height: 0;
   }
 
-  .build-page-navigation {
-    flex-wrap: wrap;
-  }
-
-  .build-page-tab-scroller {
-    flex-basis: 100%;
-  }
-
   .build-section-header,
   .build-empty-section {
     align-items: stretch;

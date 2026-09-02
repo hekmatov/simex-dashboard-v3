@@ -65,7 +65,7 @@ export default function DashboardCanvas({
     buildState?.onSelect,
     buildState?.onStructureCommand,
   ]);
-  const buildActions = buildState?.actions ?? legacyActions;
+  const buildActions = buildState ? (buildState.actions ?? legacyActions) : null;
   const creationDialog = <BuildLayoutCreateDialog
     open={Boolean(createRequest)}
     kind={createRequest?.kind ?? "page"}
