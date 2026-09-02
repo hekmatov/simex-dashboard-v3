@@ -15,21 +15,26 @@ function GeneratedFormSection({
   const previewDiagnostics = buildPreviewDiagnostics(diagnostics, {
     namespace: diagnosticNamespace
   });
-  const content = /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-section-fields dashboard-authoring-grid" }, fields.map((field) => /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      key: field.id,
-      className: `dashboard-authoring-field-slot${wideField(field) ? " dashboard-authoring-field--wide" : ""}`,
-      "data-field-slot": field.id,
-    },
-    React.createElement(SchemaField, {
-      field,
-      value: field.value,
-      onChange,
-      diagnostics: previewDiagnostics.filter((diagnostic) => diagnosticAppliesToField(diagnostic, field)),
-      ...context
-    })
-  )));
+  const content = /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-section-fields dashboard-authoring-grid" }, fields.map((field) => {
+    const renderedField = duplicateStructuredTitle(section, field)
+      ? { ...field, suppressLegend: true }
+      : field;
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: field.id,
+        className: `dashboard-authoring-field-slot${wideField(field) ? " dashboard-authoring-field--wide" : ""}`,
+        "data-field-slot": field.id,
+      },
+      React.createElement(SchemaField, {
+        field: renderedField,
+        value: field.value,
+        onChange,
+        diagnostics: previewDiagnostics.filter((diagnostic) => diagnosticAppliesToField(diagnostic, field)),
+        ...context
+      })
+    );
+  }));
   if (section.advanced) {
     return /* @__PURE__ */ React.createElement("details", { className: "chart-authoring-section chart-authoring-section-advanced" }, /* @__PURE__ */ React.createElement("summary", null, section.label), content);
   }
@@ -55,8 +60,15 @@ const WIDE_CONTROLS = new Set([
   "role", "palette", "referenceLine", "citation", "collection", "timeSync",
   "deltaComparison",
 ]);
+const DUPLICATE_SAFE_STRUCTURED_CONTROLS = new Set([
+  "labels", "axes", "targets", "map", "timeline",
+]);
 function wideField(field) {
   return WIDE_CONTROLS.has(field.control);
+}
+function duplicateStructuredTitle(section, field) {
+  return DUPLICATE_SAFE_STRUCTURED_CONTROLS.has(field.control)
+    && section.label.trim() === field.label.trim();
 }
 function safeId(value) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");

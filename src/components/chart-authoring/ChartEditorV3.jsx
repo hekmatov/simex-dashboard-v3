@@ -608,54 +608,63 @@ export default function ChartEditorV3({
           { className: `chart-editor-header${surface === "inspector" ? "" : " dashboard-dialog__header"}` },
           React.createElement(
             "div",
-            null,
-            React.createElement("p", { className: "eyebrow" }, "Chart editor"),
+            { className: "chart-editor-identity-strip" },
             React.createElement(
-              "h2",
-              { id: "chart-editor-title" },
-              state.draft.title || "Untitled chart",
+              "div",
+              { className: "chart-editor-identity" },
+              React.createElement("p", { className: "eyebrow" }, "Chart editor"),
+              React.createElement(
+                "h2",
+                { id: "chart-editor-title" },
+                state.draft.title || "Untitled chart",
+              ),
+            ),
+            React.createElement(
+              "label",
+              { className: "chart-editor-type-select" },
+              React.createElement("span", null, "Chart type"),
+              React.createElement(
+                "select",
+                {
+                  value: state.draft.typeId,
+                  disabled: disabled || submitting,
+                  onChange: (event) => {
+                    if (event.target.value !== state.draft.typeId) {
+                      dispatch({
+                        type: "requestConversion",
+                        targetTypeId: event.target.value,
+                      });
+                    }
+                  },
+                },
+                listChartSchemas()
+                  .filter((schema) => isChartTypeAuthorable(schema.typeId) || schema.typeId === state.draft.typeId)
+                  .map((schema) => React.createElement(
+                  "option",
+                  { key: schema.typeId, value: schema.typeId },
+                  schema.label,
+                )),
+              ),
             ),
           ),
           React.createElement(
-            "label",
-            { className: "chart-editor-type-select" },
-            React.createElement("span", null, "Chart type"),
-            React.createElement(
-              "select",
-              {
-                value: state.draft.typeId,
-                disabled: disabled || submitting,
-                onChange: (event) => {
-                  if (event.target.value !== state.draft.typeId) {
-                    dispatch({
-                      type: "requestConversion",
-                      targetTypeId: event.target.value,
-                    });
-                  }
+            "div",
+            { className: "chart-editor-footprint-block" },
+            React.createElement(ChartFootprintPicker, {
+              value: resolveChartFootprint(state.draft.layout),
+              disabled: disabled || submitting || state.draft.typeId === "gauge",
+              showTextLabels: false,
+              onChange: ({ columns, rows }) => updateChartPath(
+                ["layout"],
+                {
+                  ...(state.draft.layout ?? {}),
+                  size: legacySizeForFootprint({ columns, rows }),
+                  width: columns,
+                  height: rows,
                 },
-              },
-              listChartSchemas()
-                .filter((schema) => isChartTypeAuthorable(schema.typeId) || schema.typeId === state.draft.typeId)
-                .map((schema) => React.createElement(
-                "option",
-                { key: schema.typeId, value: schema.typeId },
-                schema.label,
-              )),
-            ),
+              ),
+            }),
           ),
-          React.createElement(ChartFootprintPicker, {
-            value: resolveChartFootprint(state.draft.layout),
-            disabled: disabled || submitting || state.draft.typeId === "gauge",
-            onChange: ({ columns, rows }) => updateChartPath(
-              ["layout"],
-              {
-                ...(state.draft.layout ?? {}),
-                size: legacySizeForFootprint({ columns, rows }),
-                width: columns,
-                height: rows,
-              },
-            ),
-          }),
         ),
         React.createElement(
           surface === "inspector" ? "div" : React.Fragment,

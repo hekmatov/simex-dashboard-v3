@@ -42,7 +42,7 @@ test("the command crown orders mode, dashboard/Page, and one equal-sized mode co
     /data-command-crown-layer="mode"[\s\S]*data-command-crown-layer="location"[\s\S]*data-command-crown-layer="context"/,
   );
   assert.equal((html.match(/data-command-crown-layer=/g) ?? []).length, 3);
-  assert.match(html, /--dashboard-mode-context-block-size:52px/);
+  assert.match(html, /--dashboard-mode-context-block-size:var\(--simex-command-crown-row\)/);
   assert.match(html, /data-mode-context-size="shared"/);
 });
 
@@ -72,9 +72,9 @@ test("an empty mode context is omitted until a real projection needs it", async 
 
   assert.doesNotMatch(view, /data-command-crown-layer="context"/);
   assert.doesNotMatch(build, /data-command-crown-layer="context"/);
-  assert.match(view, /--dashboard-mode-context-block-size:52px/);
-  assert.match(build, /--dashboard-mode-context-block-size:52px/);
-  assert.match(scenarioRule, /min-height:\s*44px;/);
-  assert.match(pageButtonRule, /min-height:\s*44px;/);
-  assert.match(pageButtonRule, /min-width:\s*44px;/);
+  assert.match(view, /--dashboard-mode-context-block-size:var\(--simex-command-crown-row\)/);
+  assert.match(build, /--dashboard-mode-context-block-size:var\(--simex-command-crown-row\)/);
+  assert.match(scenarioRule, /min-height:\s*var\(--simex-control-standard\);/);
+  assert.match(pageButtonRule, /min-height:\s*var\(--simex-control-standard\);/);
+  assert.match(pageButtonRule, /min-width:\s*var\(--simex-control-standard\);/);
 });

@@ -241,7 +241,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(modes, /data-pending-work-state="dirty"[^}]*background:\s*var\(--simex-warning-soft\)[^}]*var\(--simex-warning\)/s);
   assert.match(modes, /data-pending-work-state="saving"[^}]*background:\s*var\(--simex-info-soft\)[^}]*var\(--simex-info\)/s);
   assert.match(modes, /data-pending-work-state="error"[^}]*background:\s*var\(--simex-error-soft\)[^}]*var\(--simex-error\)/s);
-  assert.match(modes, /build-authoring-auxiliary button,[^{]*build-authoring-auxiliary input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-min/s);
+  assert.match(modes, /build-authoring-auxiliary button,[^{]*build-authoring-auxiliary input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-standard/s);
   assert.match(modes, /\.build-authoring-auxiliary\s*\{[^}]*border-radius:\s*var\(--simex-style-surface-radius\)[^}]*box-shadow:\s*var\(--simex-style-shell-shadow\)/s);
   assert.ok(styles.includes("grid-auto-rows: calc((418px - 48px) / 4);"));
   assert.ok(modes.includes("grid-row: span var(--chart-footprint-row-span);"));

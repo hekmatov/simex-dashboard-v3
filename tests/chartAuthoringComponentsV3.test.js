@@ -1687,7 +1687,7 @@ test("generated Configure and full-editor fields share responsive wide and boole
   }));
 
   assert.match(html, /chart-authoring-section-fields dashboard-authoring-grid/);
-  assert.match(html, /class="[^"]*dashboard-authoring-boolean-row[^"]*"[^>]*data-field-id="visible"[^>]*><input[^>]*type="checkbox"[^>]*><label/);
+  assert.match(html, /class="[^"]*dashboard-authoring-boolean-row[^"]*"[^>]*data-field-id="visible"[^>]*><input[^>]*type="checkbox"[^>]*><div class="dashboard-authoring-boolean-copy"><label/);
   assert.match(html, /class="[^"]*dashboard-authoring-field--wide[^"]*"[^>]*data-field-id="notes"/);
 
   const axesHtml = render(React.createElement(StandardField, {
@@ -1697,6 +1697,80 @@ test("generated Configure and full-editor fields share responsive wide and boole
   }));
   assert.equal((axesHtml.match(/chart-authoring-axis-group dashboard-authoring-grid/g) ?? []).length, 3);
   assert.match(axesHtml, /dashboard-authoring-boolean-row[^>]*><input[^>]*type="checkbox"[^>]*>Bold<\/label>/);
+});
+
+test("generated boolean fields keep their label, help, and error in one text column", () => {
+  const html = render(React.createElement(GeneratedFormSection, {
+    section: {
+      id: "labels",
+      label: "Labels",
+      fields: [{
+        id: "visible",
+        label: "Show labels",
+        control: "toggle",
+        value: true,
+        help: "Display a value beside each mark.",
+        error: "Label visibility could not be saved.",
+      }],
+    },
+    onChange() {},
+  }));
+
+  assert.match(
+    html,
+    /<input[^>]*type="checkbox"[^>]*><div class="dashboard-authoring-boolean-copy"><label[^>]*>Show labels<\/label><small[^>]*>Display a value beside each mark\.<\/small><small[^>]*role="alert"[^>]*>Label visibility could not be saved\.<\/small><\/div>/,
+  );
+});
+
+test("a structured field omits only the legend that duplicates its section heading", () => {
+  const duplicate = render(React.createElement(GeneratedFormSection, {
+    section: {
+      id: "axes",
+      label: "Axes",
+      fields: [{
+        id: "axes",
+        label: "Axes",
+        control: "axes",
+        value: {},
+        hasSecondary: true,
+      }],
+    },
+    onChange() {},
+  }));
+  const distinct = render(React.createElement(GeneratedFormSection, {
+    section: {
+      id: "appearance",
+      label: "Appearance",
+      fields: [{
+        id: "axes",
+        label: "Axes",
+        control: "axes",
+        value: {},
+      }],
+    },
+    onChange() {},
+  }));
+
+  assert.equal((duplicate.match(/>Axes</g) ?? []).length, 1);
+  assert.doesNotMatch(duplicate, /<legend>Axes<\/legend>/);
+  assert.match(duplicate, /<legend>X axis<\/legend>/);
+  assert.match(duplicate, /<legend>Primary axis<\/legend>/);
+  assert.match(duplicate, /<legend>Secondary axis<\/legend>/);
+  assert.match(distinct, /<h3[^>]*>Appearance<\/h3>[\s\S]*<legend>Axes<\/legend>/);
+});
+
+test("the full editor separates chart identity and type from footprint controls", () => {
+  const html = render(React.createElement(ChartEditorV3, {
+    chart: validPieChart(),
+    rows: [{ category: "Ready", value: 6 }],
+    onSave() {},
+    onCancel() {},
+  }));
+
+  assert.match(
+    html,
+    /<header class="chart-editor-header dashboard-dialog__header"><div class="chart-editor-identity-strip"><div class="chart-editor-identity">[\s\S]*<label class="chart-editor-type-select">[\s\S]*<\/label><\/div><div class="chart-editor-footprint-block"><section class="chart-footprint-control"/,
+  );
 });
 
 test("chart authoring primary and shell regions stay mounted before readiness", () => {

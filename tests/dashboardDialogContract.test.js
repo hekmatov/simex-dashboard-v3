@@ -101,7 +101,7 @@ test("shared dialog backdrop leaves overlay stacking to each component owner", a
   assert.match(dialogs, /:where\(\.dashboard-dialog-backdrop\)\s*\{[^}]*z-index:\s*1000;/s);
   assert.match(base, /\.confirm-dialog-backdrop\s*\{[^}]*z-index:\s*1450/s);
   assert.match(base, /\.chart-editor-backdrop\s*\{[^}]*z-index:\s*1350/s);
-  assert.match(modes, /\.build-move-dialog-backdrop\{[^}]*z-index:1300/);
+  assert.match(modes, /\.build-move-dialog-backdrop\s*\{[^}]*z-index:\s*1300/);
   assert.match(immersive, /\.fullscreen-backdrop--immersive\s*\{[^}]*z-index:\s*1200/s);
   assert.match(drawer, /\[data-drawer-modality="dialog"\]\s*\{[^}]*z-index:\s*1600/s);
 });
@@ -149,7 +149,7 @@ test("authoring shells and fields keep fixed chrome around one responsive workbe
   assert.match(css, /\.dashboard-authoring-shell\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*auto auto minmax\(0, 1fr\) auto;/s);
   assert.match(css, /\.dashboard-authoring-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\);/s);
   assert.match(css, /\.dashboard-authoring-field--wide\s*\{[^}]*grid-column:\s*1 \/ -1;/s);
-  assert.match(css, /\.dashboard-authoring-boolean-row\s*\{[^}]*grid-template-columns:\s*20px minmax\(0, 1fr\);/s);
+  assert.match(css, /\.dashboard-authoring-boolean-row\s*\{[^}]*grid-template-columns:\s*var\(--simex-choice-glyph\) minmax\(0, 1fr\);/s);
   assert.match(css, /\.dashboard-authoring-body\s*\{[^}]*min-block-size:\s*0;[^}]*overflow:\s*auto;/s);
   assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-tab-list\s*\{[^}]*grid-row:\s*2;/s);
   assert.match(css, /\.chart-editor-form\.dashboard-authoring-shell > \.chart-editor-layout\s*\{[^}]*grid-row:\s*3;[^}]*overflow:\s*auto;/s);

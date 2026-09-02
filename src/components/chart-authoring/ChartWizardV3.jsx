@@ -1783,6 +1783,7 @@ export default function ChartWizardV3({
             { "data-footer-slot": "primary" },
             React.createElement(IconControl, {
                 interactionId: editMode ? "editor.save-changes" : "wizard.create-chart",
+                className: "simex-prominent-control",
                 ariaLabel: submitting
                   ? editMode ? "Saving changes" : "Creating chart"
                   : editMode ? "Save changes" : "Create chart",

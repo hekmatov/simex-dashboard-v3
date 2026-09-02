@@ -683,7 +683,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   })).toHaveCount(0);
 });
 
-test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a 44px pointer caret", async ({ page }) => {
+test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a compact caret", async ({ page }) => {
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
   const socio = tree.getByRole("treeitem", { name: "Socio-economic", exact: true });
@@ -697,8 +697,8 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a 4
   const caret = socio.getByRole("button", { name: "Collapse Socio-economic", exact: true });
   await expect(caret).toHaveAttribute("tabindex", "-1");
   const caretBox = await caret.boundingBox();
-  expect(caretBox?.width ?? 0).toBeGreaterThanOrEqual(44);
-  expect(caretBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(caretBox?.width ?? 0).toBe(24);
+  expect(caretBox?.height ?? 0).toBe(24);
 
   await socio.focus();
   await socio.press("ArrowLeft");

@@ -79,6 +79,14 @@
   border-block-end: 1px solid var(--simex-border-subtle);
 }
 
+.chart-editor-header.dashboard-dialog__header {
+  display: grid;
+  align-items: stretch;
+  gap: var(--simex-gap-section);
+  grid-template-columns: minmax(0, 1fr);
+  padding: var(--simex-padding-dialog);
+}
+
 .dashboard-dialog__header h2,
 .dashboard-dialog__header h3 {
   margin: 0;
@@ -213,14 +221,170 @@
 }
 
 .dashboard-authoring-boolean-row {
-  align-items: start;
+  align-items: center;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  column-gap: 8px;
+  grid-template-columns: var(--simex-choice-glyph) minmax(0, 1fr);
+  column-gap: var(--simex-gap-choice-label);
+  min-block-size: var(--simex-control-compact);
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
 }
 
-.dashboard-authoring-boolean-row > :is(small, [role="alert"]) {
-  grid-column: 2;
+.chart-authoring-inline-toggle.dashboard-authoring-boolean-row {
+  display: grid !important;
+}
+
+.chart-authoring-inline-toggle:not(.dashboard-authoring-boolean-row) {
+  gap: var(--simex-gap-choice-label) !important;
+  min-block-size: var(--simex-control-compact);
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
+}
+
+.chart-authoring-inline-toggle > input:is([type="checkbox"], [type="radio"]) {
+  block-size: var(--simex-choice-glyph);
+  flex: 0 0 var(--simex-choice-glyph);
+  inline-size: var(--simex-choice-glyph);
+  margin: 0;
+  min-block-size: var(--simex-choice-glyph);
+  min-inline-size: var(--simex-choice-glyph);
+  padding: 0;
+}
+
+.dashboard-authoring-boolean-row > input:is([type="checkbox"], [type="radio"]) {
+  align-self: center;
+  block-size: var(--simex-choice-glyph);
+  inline-size: var(--simex-choice-glyph);
+  margin: 0;
+  min-block-size: var(--simex-choice-glyph);
+  min-inline-size: var(--simex-choice-glyph);
+  padding: 0;
+}
+
+.dashboard-authoring-boolean-row:has(> .dashboard-authoring-boolean-copy) {
+  align-items: start;
+}
+
+.dashboard-authoring-boolean-row:has(> .dashboard-authoring-boolean-copy)
+  > input:is([type="checkbox"], [type="radio"]) {
+  align-self: start;
+  margin-block-start: calc((var(--simex-control-compact) - var(--simex-choice-glyph)) / 2);
+}
+
+.dashboard-authoring-boolean-copy {
+  display: grid;
+  gap: var(--simex-space-1);
+  min-inline-size: 0;
+}
+
+.dashboard-authoring-boolean-copy > label {
+  align-items: center;
+  display: flex;
+  min-block-size: var(--simex-control-compact);
+  font-size: var(--simex-control-font-size);
+  font-weight: 800;
+  line-height: var(--simex-control-line-height);
+}
+
+/* The live full-chart editor is a desktop operations workspace. Keep its
+   navigation and command rows compact across its desktop-only width range. */
+.app-frame .chart-wizard-header.dashboard-dialog__header {
+  align-items: center;
+  gap: var(--simex-gap-section);
+  min-block-size: var(--simex-control-prominent);
+  padding: var(--simex-space-2) var(--simex-padding-dialog);
+}
+
+.app-frame .chart-wizard-header .chart-wizard-close.simex-icon-control {
+  block-size: var(--simex-control-utility);
+  flex: 0 0 var(--simex-control-utility);
+  inline-size: var(--simex-control-utility);
+  min-block-size: var(--simex-control-utility);
+  min-inline-size: var(--simex-control-utility);
+}
+
+.app-frame .chart-wizard-step-tabs.dashboard-dialog__progress {
+  gap: var(--simex-space-2);
+  padding: var(--simex-space-2) var(--simex-padding-dialog);
+}
+
+.app-frame .chart-wizard-step-tabs .chart-wizard-step-button {
+  align-items: center;
+  display: flex;
+  gap: var(--simex-space-2);
+  justify-content: center;
+  min-block-size: var(--simex-control-standard);
+  padding: var(--simex-space-1) var(--simex-space-3);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.app-frame .chart-wizard-step-button > :is(span, small) {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-frame .chart-wizard-step-button > small {
+  font-size: 10px;
+  line-height: 12px;
+}
+
+.app-frame .chart-wizard-style-controls {
+  gap: var(--simex-gap-section);
+}
+
+.app-frame .chart-wizard-footer.dashboard-dialog__footer {
+  align-items: center;
+  display: grid;
+  gap: var(--simex-gap-section);
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: var(--simex-space-3) var(--simex-padding-dialog);
+}
+
+.app-frame .chart-wizard-footer > span {
+  min-inline-size: 0;
+  text-align: start;
+}
+
+.app-frame .chart-wizard-footer-actions.dashboard-dialog__actions {
+  flex-wrap: nowrap;
+  gap: var(--simex-gap-control-group);
+}
+
+.app-frame .chart-wizard-footer .simex-icon-control {
+  block-size: var(--simex-control-utility);
+  flex: 0 0 var(--simex-control-utility);
+  inline-size: var(--simex-control-utility);
+  min-block-size: var(--simex-control-utility);
+  min-inline-size: var(--simex-control-utility);
+}
+
+.app-frame .chart-wizard-footer .simex-icon-control.simex-prominent-control {
+  block-size: var(--simex-control-prominent);
+  flex-basis: var(--simex-control-prominent);
+  inline-size: var(--simex-control-prominent);
+  min-block-size: var(--simex-control-prominent);
+  min-inline-size: var(--simex-control-prominent);
+}
+
+.app-frame .chart-wizard .settings-color-row {
+  grid-template-columns: var(--simex-control-utility) minmax(0, 1fr) auto;
+}
+
+.app-frame .chart-wizard .settings-color-swatch {
+  block-size: var(--simex-control-utility);
+  border-radius: var(--simex-style-control-radius);
+  inline-size: var(--simex-control-utility);
+  min-block-size: var(--simex-control-utility);
+  min-inline-size: var(--simex-control-utility);
+}
+
+.app-frame .chart-wizard .settings-pipette-button.simex-icon-control {
+  block-size: var(--simex-control-utility);
+  inline-size: var(--simex-control-utility);
+  min-block-size: var(--simex-control-utility);
+  min-inline-size: var(--simex-control-utility);
 }
 
 .dashboard-authoring-footer {
@@ -349,4 +513,104 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-dialog, .dashboard-dialog * { scroll-behavior: auto; }
+}
+
+/* Final physical geometry wins over legacy min-height declarations that use
+   the physical axis while the shared contract uses logical properties. */
+.chart-wizard.chart-wizard-v3 .chart-wizard-header.dashboard-dialog__header {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-block-size: var(--simex-control-prominent);
+  min-height: var(--simex-control-prominent);
+  padding: var(--simex-space-2) var(--simex-padding-dialog);
+}
+
+.chart-wizard.chart-wizard-v3 .chart-wizard-header .chart-wizard-close.simex-icon-control {
+  block-size: var(--simex-control-utility) !important;
+  height: var(--simex-control-utility) !important;
+  inline-size: var(--simex-control-utility);
+  max-block-size: var(--simex-control-utility) !important;
+  max-height: var(--simex-control-utility) !important;
+  min-block-size: var(--simex-control-utility) !important;
+  min-height: var(--simex-control-utility) !important;
+  min-inline-size: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
+  padding: 0 !important;
+  width: var(--simex-control-utility);
+}
+
+.chart-wizard.chart-wizard-v3 .chart-wizard-step-tabs.dashboard-dialog__progress {
+  display: grid;
+  gap: var(--simex-space-2);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  padding: var(--simex-space-2) var(--simex-padding-dialog);
+}
+
+.chart-wizard.chart-wizard-v3 .chart-wizard-step-tabs .chart-wizard-step-button {
+  align-items: center;
+  block-size: var(--simex-control-standard);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: var(--simex-space-2);
+  height: var(--simex-control-standard);
+  justify-content: center;
+  max-block-size: var(--simex-control-standard);
+  max-height: var(--simex-control-standard);
+  min-block-size: var(--simex-control-standard);
+  min-height: var(--simex-control-standard);
+  padding: var(--simex-space-1) var(--simex-space-3);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.chart-wizard.chart-wizard-v3 .chart-wizard-destination {
+  container: chart-destination-controls / inline-size;
+}
+
+.chart-wizard.chart-wizard-v3 .chart-destination-controls {
+  gap: var(--simex-gap-control-group) var(--simex-gap-section);
+}
+
+@container chart-destination-controls (max-width: 720px) {
+  .chart-wizard.chart-wizard-v3 .chart-destination-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container chart-destination-controls (max-width: 360px) {
+  .chart-wizard.chart-wizard-v3 .chart-destination-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.chart-wizard.chart-wizard-v3 .settings-color-swatch,
+.chart-wizard.chart-wizard-v3 .settings-pipette-button.simex-icon-control,
+.chart-wizard.chart-wizard-v3 .chart-wizard-footer .simex-icon-control:not(.simex-prominent-control) {
+  block-size: var(--simex-control-utility) !important;
+  height: var(--simex-control-utility) !important;
+  inline-size: var(--simex-control-utility);
+  max-block-size: var(--simex-control-utility) !important;
+  max-height: var(--simex-control-utility) !important;
+  min-block-size: var(--simex-control-utility) !important;
+  min-height: var(--simex-control-utility) !important;
+  min-inline-size: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
+  padding: 0 !important;
+  width: var(--simex-control-utility);
+}
+
+.chart-wizard.chart-wizard-v3 .chart-wizard-footer .simex-icon-control.simex-prominent-control {
+  block-size: var(--simex-control-prominent) !important;
+  height: var(--simex-control-prominent) !important;
+  inline-size: var(--simex-control-prominent);
+  max-block-size: var(--simex-control-prominent) !important;
+  max-height: var(--simex-control-prominent) !important;
+  min-block-size: var(--simex-control-prominent) !important;
+  min-height: var(--simex-control-prominent) !important;
+  min-inline-size: var(--simex-control-prominent);
+  min-width: var(--simex-control-prominent);
+  padding: 0 !important;
+  width: var(--simex-control-prominent);
 }

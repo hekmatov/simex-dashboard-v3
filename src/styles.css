@@ -17,18 +17,19 @@
 }
 
 .chart-wizard-step-button {
-  align-items: flex-start;
+  align-items: center;
   background: var(--surface, #fff);
   border: 1px solid var(--border-color, #c7d0db);
   border-radius: 8px;
   color: inherit;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  gap: var(--simex-space-2);
   justify-content: center;
-  min-height: 52px;
+  min-height: var(--simex-control-standard);
   min-width: 0;
-  padding: 8px 10px;
-  text-align: left;
+  padding: var(--simex-space-1) var(--simex-space-3);
+  text-align: center;
 }
 
 .chart-wizard-step-button[aria-current="step"] {
@@ -92,8 +93,8 @@
   display: grid;
   gap: 2px 10px;
   grid-template-columns: auto 1fr;
-  min-height: 52px;
-  padding: 8px 12px;
+  min-height: var(--simex-control-compact);
+  padding: var(--simex-space-1) var(--simex-space-3);
 }
 
 .chart-time-membership-option input {
@@ -110,7 +111,7 @@
 }
 
 .chart-wizard-discard {
-  min-height: 44px;
+  min-height: var(--simex-control-standard);
 }
 
 @media (max-width: 900px) {
@@ -135,7 +136,7 @@
   }
 
   .chart-wizard-step-button {
-    min-height: 60px;
+    min-height: var(--simex-control-standard);
   }
 }
 
@@ -430,7 +431,7 @@ h1 {
 
 .header-edit-card {
   display: grid;
-  min-width: 44px;
+  min-width: var(--simex-control-utility);
   transition: width 180ms ease;
 }
 
@@ -716,7 +717,7 @@ textarea {
   border: 1px solid color-mix(in srgb, var(--simex-text-strong) 20%, transparent);
   border-radius: var(--simex-style-control-radius, var(--simex-component-control-radius));
   color: var(--simex-text-strong);
-  min-height: var(--simex-control-min, 44px);
+  min-height: var(--simex-control-standard, 32px);
   padding: 5px 8px;
 }
 
@@ -2917,7 +2918,7 @@ button.danger {
   align-items: center;
   display: flex;
   gap: 10px;
-  min-height: 44px;
+  min-height: var(--simex-control-standard);
 }
 
 .collection-display-header .chart-view-title {
@@ -2974,10 +2975,10 @@ button.danger {
 }
 
 .collection-header-icon-group .simex-icon-control {
-  block-size: 44px;
-  inline-size: 44px;
-  min-block-size: 44px;
-  min-inline-size: 44px;
+  block-size: var(--simex-control-utility);
+  inline-size: var(--simex-control-utility);
+  min-block-size: var(--simex-control-utility);
+  min-inline-size: var(--simex-control-utility);
 }
 
 .chart-panel-has-actions .collection-display-header {
@@ -3243,7 +3244,7 @@ button.danger {
 
 .playback-controls button,
 .playback-controls select {
-  min-height: 40px;
+  min-height: var(--simex-control-standard);
 }
 
 .playback-controls button:focus-visible,
@@ -3279,7 +3280,7 @@ button.danger {
 
 .chrono-session-controls select {
   max-width: 100%;
-  min-height: 44px;
+  min-height: var(--simex-control-standard);
   width: 100%;
 }
 
@@ -3415,7 +3416,7 @@ button.danger {
 
 .chrono-cadence input {
   max-width: 108px;
-  min-height: 44px;
+  min-height: var(--simex-control-standard);
 }
 
 .chrono-date-overlay {
@@ -3466,13 +3467,13 @@ button.danger {
   border: 0;
   bottom: 0;
   cursor: nwse-resize;
-  height: 44px;
-  min-height: 44px;
+  height: var(--simex-control-compact);
+  min-height: var(--simex-control-compact);
   padding: 0;
   position: absolute;
   right: 0;
   touch-action: none;
-  width: 44px;
+  width: var(--simex-control-compact);
 }
 
 .chrono-date-resize::after {
@@ -3514,8 +3515,8 @@ button.danger {
   display: inline-flex;
   font-size: 1.2rem;
   justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--simex-control-standard);
+  min-width: var(--simex-control-standard);
 }
 
 .playback-view {
@@ -3665,8 +3666,8 @@ button.danger {
 .showcase-route button {
   border-radius: var(--simex-style-control-radius);
   font-weight: 800;
-  min-height: 44px;
-  padding: 11px 16px;
+  min-height: var(--simex-control-prominent);
+  padding: var(--simex-space-2) var(--simex-space-5);
 }
 
 .showcase-actions button {
@@ -4906,8 +4907,8 @@ button.danger {
   cursor: pointer;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 12px;
-  min-height: 44px;
-  padding: 9px 12px;
+  min-height: var(--simex-control-standard);
+  padding: var(--simex-space-1) var(--simex-space-3);
   text-align: left;
   width: 100%;
 }
@@ -4977,9 +4978,9 @@ button.danger {
   border-radius: calc(var(--simex-style-control-radius, 8px) - 2px);
   cursor: pointer;
   display: flex;
-  min-height: 40px;
+  min-height: var(--simex-control-compact);
   min-width: 0;
-  padding: 8px 10px;
+  padding: var(--simex-space-1) var(--simex-space-3);
 }
 
 .accessible-listbox-option:hover,
@@ -5216,8 +5217,10 @@ button.danger {
   border-radius: 999px;
   color: var(--simex-icon-base);
   display: inline-flex;
-  height: 36px;
+  height: var(--simex-control-utility);
   justify-content: center;
+  min-height: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
   overflow: visible;
   padding: 0;
   position: relative;
@@ -5227,7 +5230,14 @@ button.danger {
     box-shadow 120ms ease,
     color 120ms ease,
     transform 120ms ease;
-  width: 36px;
+  width: var(--simex-control-utility);
+}
+
+.simex-icon-control.simex-prominent-control {
+  height: var(--simex-control-prominent);
+  min-height: var(--simex-control-prominent);
+  min-width: var(--simex-control-prominent);
+  width: var(--simex-control-prominent);
 }
 
 .simex-icon-control:hover:not(:disabled) {
@@ -5327,10 +5337,11 @@ button.danger {
   background: rgb(255 255 255 / 18%);
   border-color: rgb(255 255 255 / 24%);
   color: #fff;
-  height: 34px;
-  min-width: 34px;
+  height: var(--simex-control-utility);
+  min-height: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
   padding: 0;
-  width: 34px;
+  width: var(--simex-control-utility);
 }
 
 .header-edit-floating-button.simex-icon-control:hover:not(:disabled) {
@@ -5339,23 +5350,27 @@ button.danger {
 }
 
 .settings-pipette-button.simex-icon-control {
-  height: 32px;
-  min-height: 32px;
-  width: 34px;
+  height: var(--simex-control-utility);
+  min-height: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
+  width: var(--simex-control-utility);
 }
 
 .playback-controls .simex-icon-control {
-  height: 40px;
-  width: 40px;
+  height: var(--simex-control-utility);
+  min-height: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
+  width: var(--simex-control-utility);
 }
 
 /* Canonical icon-only adoption surfaces */
 .device-layout-control .simex-icon-control,
 .install-dashboard-button.simex-icon-control {
-  height: 34px;
-  min-height: 34px;
+  height: var(--simex-control-utility);
+  min-height: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
   padding: 0;
-  width: 34px;
+  width: var(--simex-control-utility);
 }
 
 .chart-wizard-step-button.simex-icon-control {
@@ -5365,9 +5380,10 @@ button.danger {
   border-radius: 0;
   box-shadow: none;
   color: var(--simex-text-muted);
-  height: 46px;
+  height: var(--simex-control-standard);
+  min-height: var(--simex-control-standard);
   padding: 0;
-  width: 46px;
+  width: var(--simex-control-standard);
 }
 
 .chart-wizard-step-button.simex-icon-control:hover:not(:disabled),
@@ -5394,10 +5410,11 @@ button.danger {
   border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   color: #173f69;
-  flex: 0 0 40px;
-  height: 40px;
+  flex: 0 0 var(--simex-control-standard);
+  height: var(--simex-control-standard);
+  min-height: var(--simex-control-standard);
   padding: 0;
-  width: 40px;
+  width: var(--simex-control-standard);
 }
 
 .chart-editor-tab.simex-icon-control[aria-current="page"] {
@@ -5663,8 +5680,21 @@ button.danger {
 }
 
 .chart-editor-header {
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chart-editor-identity-strip {
   align-items: end;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.8fr);
+  display: grid;
+  gap: var(--simex-gap-section);
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  min-inline-size: 0;
+}
+
+.chart-editor-identity,
+.chart-editor-footprint-block {
+  min-inline-size: 0;
 }
 
 .chart-editor-header h2 {
@@ -5760,7 +5790,7 @@ button.danger {
     position: static;
   }
 
-  .chart-editor-header {
+  .chart-editor-identity-strip {
     grid-template-columns: 1fr;
   }
 }
@@ -5804,7 +5834,7 @@ button.danger {
 .chart-editor-header {
   background: var(--simex-surface-panel);
   border-bottom: 1px solid var(--simex-border-subtle);
-  padding: 14px 20px;
+  padding: var(--simex-padding-dialog);
 }
 
 .chart-editor-layout {
@@ -5812,7 +5842,7 @@ button.danger {
   grid-template-columns: minmax(0, 1fr);
   min-height: 0;
   overflow: auto;
-  padding: 16px 20px;
+  padding: var(--simex-padding-dialog);
 }
 
 .chart-editor-preview {
@@ -5944,10 +5974,10 @@ html[data-simex-eyedropper-active="true"] body * {
   box-shadow: 0 6px 18px color-mix(in srgb, var(--simex-text-strong) 16%, transparent);
   color: var(--simex-text-strong);
   display: inline-flex;
-  height: 32px;
+  height: var(--simex-control-utility);
   justify-content: center;
   padding: 0;
-  width: 32px;
+  width: var(--simex-control-utility);
 }
 
 .chart-panel-icon-button:hover,

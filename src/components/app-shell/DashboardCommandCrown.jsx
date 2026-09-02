@@ -26,7 +26,10 @@ export default function DashboardCommandCrown({
   contextDisabledReason = disabledReason,
 }) {
   return (
-    <div className="dashboard-command-crown" style={{ "--dashboard-mode-context-block-size": "52px" }}>
+    <div
+      className="dashboard-command-crown"
+      style={{ "--dashboard-mode-context-block-size": "var(--simex-command-crown-row)" }}
+    >
       <header className="command-crown-mode-row" data-command-crown-layer="mode">
         <span className="app-frame-identity">SimEx</span>
         <ModeSwitcher

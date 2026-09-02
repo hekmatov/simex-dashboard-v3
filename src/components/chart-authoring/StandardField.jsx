@@ -118,12 +118,14 @@ function GroupShell({ field, children, className = "" }) {
       "aria-invalid": fieldHasError(field) ? "true" : void 0,
       "aria-describedby": fieldDescribedBy(field) || void 0
     },
-    /* @__PURE__ */ React.createElement(
-      "legend",
-      null,
-      field.label,
-      field.required ? /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true" }, " *") : null
-    ),
+    field.suppressLegend === true
+      ? null
+      : /* @__PURE__ */ React.createElement(
+          "legend",
+          null,
+          field.label,
+          field.required ? /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true" }, " *") : null
+        ),
     field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null,
     children,
     field.help ? /* @__PURE__ */ React.createElement("small", { id: `${id}-help` }, field.help) : null,
@@ -332,9 +334,13 @@ function BooleanFieldShell({ field, control }) {
       "aria-invalid": fieldHasError(field) ? "true" : void 0,
     },
     control,
-    React.createElement("label", { htmlFor: id }, field.label),
-    field.help ? React.createElement("small", { id: `${id}-help` }, field.help) : null,
-    field.error ? React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null,
+    React.createElement(
+      "div",
+      { className: "dashboard-authoring-boolean-copy" },
+      React.createElement("label", { htmlFor: id }, field.label),
+      field.help ? React.createElement("small", { id: `${id}-help` }, field.help) : null,
+      field.error ? React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null,
+    ),
   );
 }
 function selectControl(label, value, options, onChange) {
