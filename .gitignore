@@ -10,3 +10,4 @@ voice-logs/
 playwright-report/
 test-results/
 .superpowers/
+.worktrees/
