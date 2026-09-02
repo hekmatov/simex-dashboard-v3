@@ -256,6 +256,11 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.build-page-tab-scroller::-webkit-scrollbar {
+  display: none;
 }
 
 .build-page-tab-item {
@@ -818,6 +823,10 @@
   gap: var(--simex-gap-control-group);
 }
 
+.dashboard-command-page-scroller.build-page-navigation {
+  overflow: visible;
+}
+
 .build-section-actions button {
   align-items: center;
   display: inline-flex;
@@ -1077,6 +1086,13 @@
     flex-direction: column;
   }
 
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .dashboard-identity-row .dashboard-identity-summary {
+    flex-basis: 280px;
+    max-width: 28vw;
+  }
 }
 
 @media (max-width: 767px) {

@@ -63,6 +63,28 @@ test("Build authoring controls never leak back into View after a mode remount", 
   await expect(page.locator(".panel-actions")).toHaveCount(0);
 });
 
+test("the Build crown stays inside two 36px rows at the minimum desktop width", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openDashboardFromLanding(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+
+  const modeRow = await page.locator(".command-crown-mode-row").boundingBox();
+  const locationRow = await page.locator(".dashboard-identity-row").boundingBox();
+  const navigation = await page.locator(".build-page-navigation").boundingBox();
+  const scroller = await page.locator(".build-page-tab-scroller").boundingBox();
+
+  expect(modeRow?.height).toBe(36);
+  expect(locationRow?.height).toBe(36);
+  expect(navigation?.height).toBeLessThanOrEqual(36);
+  expect(scroller?.height).toBeLessThanOrEqual(36);
+  expect(scroller?.y).toBeGreaterThanOrEqual(locationRow?.y ?? 0);
+  expect((scroller?.y ?? 0) + (scroller?.height ?? 0))
+    .toBeLessThanOrEqual((locationRow?.y ?? 0) + (locationRow?.height ?? 0));
+  await expect.poll(() => page.evaluate(() => (
+    document.documentElement.scrollWidth - document.documentElement.clientWidth
+  ))).toBe(0);
+});
+
 test("Build metadata persists on save and stays editable after storage fallback", async ({ page }) => {
   const passport = await enterScenarioInspector(page);
   await passport.getByRole("button", { name: /^Edit Program:/ }).click();

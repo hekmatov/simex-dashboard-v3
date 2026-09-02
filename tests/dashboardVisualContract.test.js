@@ -245,7 +245,10 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(modes, /build-authoring-auxiliary button,[^{]*build-authoring-auxiliary input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-standard/s);
   assert.match(modes, /\.build-authoring-auxiliary\s*\{[^}]*border-radius:\s*var\(--simex-style-surface-radius\)[^}]*box-shadow:\s*var\(--simex-style-shell-shadow\)/s);
   assert.match(modes, /\.build-page-navigation\s*\{[^}]*block-size:\s*var\(--simex-command-crown-row\)[^}]*box-sizing:\s*border-box[^}]*flex-wrap:\s*nowrap[^}]*overflow:\s*visible/s);
-  assert.match(modes, /\.build-page-tab-scroller\s*\{[^}]*flex:\s*1;[^}]*overflow-x:\s*auto/s);
+  assert.match(modes, /\.build-page-tab-scroller\s*\{[^}]*flex:\s*1;[^}]*overflow-x:\s*auto[^}]*scrollbar-width:\s*none/s);
+  assert.match(modes, /\.build-page-tab-scroller::-webkit-scrollbar\s*\{[^}]*display:\s*none/s);
+  assert.match(modes, /\.dashboard-command-page-scroller\.build-page-navigation\s*\{[^}]*overflow:\s*visible/s);
+  assert.match(modes, /@media \(min-width:\s*1024px\) and \(max-width:\s*1199px\)\s*\{[\s\S]*?\.dashboard-identity-row \.dashboard-identity-summary\s*\{[^}]*max-width:\s*28vw/s);
   assert.doesNotMatch(modes, /\.build-page-navigation\s*\{[^}]*flex-wrap:\s*wrap/s);
   assert.doesNotMatch(modes, /\.build-page-tab-scroller\s*\{[^}]*flex-basis:\s*100%/s);
   assert.match(modes, /\.build-section-actions\s*\{[^}]*align-items:\s*center[^}]*gap:\s*var\(--simex-gap-control-group\)/s);
