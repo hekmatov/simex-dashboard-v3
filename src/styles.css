@@ -1097,7 +1097,7 @@ th {
   display: grid;
   font-size: 13px;
   font-weight: 700;
-  gap: 7px;
+  gap: var(--simex-gap-label-control);
 }
 
 .settings-color-row {
@@ -1285,15 +1285,12 @@ th {
 .chart-authoring-field {
   border: 0;
   display: grid;
-  gap: 7px;
+  gap: var(--simex-gap-label-control);
   margin: 0;
   min-width: 0;
   padding: 0;
 }
 
-.chart-authoring-field input,
-.chart-authoring-field select,
-.chart-authoring-field textarea,
 .chart-type-picker input {
   border: 1px solid #bdcbd9;
   border-radius: 8px;
@@ -1307,7 +1304,7 @@ th {
 .chart-authoring-field > legend {
   font-size: 13px;
   font-weight: 800;
-  margin-bottom: 7px;
+  margin-bottom: var(--simex-gap-label-control);
   padding: 0;
 }
 
@@ -1460,28 +1457,42 @@ th {
 
 .settings-color-palette-group {
   display: grid;
-  gap: 5px;
+  gap: var(--simex-space-2);
 }
 
 .settings-color-preset-grid {
   display: grid;
-  gap: 5px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--simex-space-2);
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, var(--simex-control-standard));
+  justify-content: start;
 }
 
-.settings-color-preset-grid button {
+.app-frame .settings-color-preset-grid button {
   aspect-ratio: 1;
+  block-size: var(--simex-control-standard);
   border: 1px solid color-mix(in srgb, var(--simex-text-strong) 18%, transparent);
   border-radius: 9px;
+  box-sizing: border-box;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 40%);
   cursor: pointer;
-  min-height: 22px;
+  height: var(--simex-control-standard);
+  inline-size: var(--simex-control-standard);
+  max-block-size: var(--simex-control-standard);
+  max-height: var(--simex-control-standard);
+  max-width: var(--simex-control-standard);
+  min-block-size: var(--simex-control-standard);
+  min-height: var(--simex-control-standard);
+  min-inline-size: var(--simex-control-standard);
+  min-width: var(--simex-control-standard);
+  padding: 0;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+  width: var(--simex-control-standard);
 }
 
 .settings-color-preset-grid button.active {
   box-shadow: 0 0 0 2px var(--simex-text-strong), inset 0 0 0 2px rgb(255 255 255 / 75%);
-  transform: scale(0.94);
+  transform: none;
 }
 
 .settings-color-preset-grid button:hover {
@@ -4864,6 +4875,42 @@ button.danger {
 .chart-wizard-data-source .accessible-listbox-trigger {
   min-width: 0;
   width: 100%;
+}
+
+.app-frame .chart-authoring-field :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  select,
+  textarea
+) {
+  border: 1px solid #bdcbd9;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--simex-text-strong);
+  font-family: inherit;
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
+  min-block-size: var(--simex-control-standard);
+  padding-block: var(--simex-space-2);
+  padding-inline: var(--simex-space-3);
+  width: 100%;
+}
+
+.app-frame .chart-authoring-field :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  select:not([multiple])
+) {
+  block-size: var(--simex-control-standard);
+  height: var(--simex-control-standard);
+  max-block-size: var(--simex-control-standard);
+  max-height: var(--simex-control-standard);
+  min-height: var(--simex-control-standard);
+}
+
+.app-frame .chart-authoring-field :is(textarea, select[multiple]) {
+  block-size: auto;
+  height: auto;
+  max-block-size: none;
+  max-height: none;
 }
 
 .wizard-choice-card {

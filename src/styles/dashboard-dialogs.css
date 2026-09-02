@@ -196,6 +196,27 @@
   gap: var(--simex-gap-control-group);
 }
 
+.restore-online-dashboard-dialog .dashboard-dialog__footer {
+  align-items: stretch;
+  display: grid;
+  gap: var(--simex-gap-control-group);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.restore-online-dashboard-dialog .dashboard-dialog__footer > :is(button, .control-tooltip) {
+  min-inline-size: 0;
+  width: 100%;
+}
+
+.restore-online-dashboard-dialog .dashboard-dialog__footer > .control-tooltip {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.restore-online-dashboard-dialog .dashboard-dialog__footer > .control-tooltip > button {
+  width: 100%;
+}
+
 .dashboard-authoring-shell {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
