@@ -94,18 +94,18 @@ test("fullscreen CSS fits the panel inside its padded backdrop without backdrop 
   assert.match(css, /\.fullscreen-backdrop--immersive \.multi-fullscreen-grid\s*\{[^}]*height:\s*100%;/s);
 });
 
-test("fullscreen exit uses a compact visual with an expanded 44px pointer target", async () => {
+test("fullscreen exit uses the dense desktop utility size for its visual and pointer target", async () => {
   const css = await import("node:fs/promises").then(({ readFile }) => readFile(
     new URL("../src/styles/immersive-display.css", import.meta.url),
     "utf8",
   ));
   assert.match(
     css,
-    /\.fullscreen-backdrop--immersive \.fullscreen-toolbar-close\s*\{[^}]*height:\s*32px;[^}]*width:\s*32px;[^}]*position:\s*absolute;[^}]*right:\s*12px;[^}]*top:\s*12px;/s,
+    /\.fullscreen-backdrop--immersive \.fullscreen-toolbar-close\s*\{[^}]*height:\s*var\(--simex-control-utility,\s*24px\);[^}]*width:\s*var\(--simex-control-utility,\s*24px\);[^}]*position:\s*absolute;[^}]*right:\s*12px;[^}]*top:\s*12px;/s,
   );
   assert.match(
     css,
-    /\.fullscreen-backdrop--immersive \.fullscreen-toolbar-close::before\s*\{[^}]*height:\s*44px;[^}]*width:\s*44px;/s,
+    /\.fullscreen-backdrop--immersive \.fullscreen-toolbar-close::before\s*\{[^}]*height:\s*var\(--simex-control-utility,\s*24px\);[^}]*width:\s*var\(--simex-control-utility,\s*24px\);/s,
   );
   assert.match(
     css,
