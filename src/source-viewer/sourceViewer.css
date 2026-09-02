@@ -80,7 +80,7 @@ input {
   grid-template-columns: max-content minmax(0, 1fr);
   margin: 0;
   max-width: 100%;
-  row-gap: 6px;
+  row-gap: var(--simex-space-3);
 }
 
 .source-viewer-provenance dt {

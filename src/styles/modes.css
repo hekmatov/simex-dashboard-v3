@@ -251,7 +251,7 @@
   align-items: stretch;
   display: flex;
   flex: 1;
-  gap: 6px;
+  gap: var(--simex-gap-control-group);
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -267,7 +267,7 @@
   align-items: stretch;
   display: flex;
   flex: 0 0 auto;
-  gap: 3px;
+  gap: var(--simex-space-2);
 }
 
 .build-page-tab-item.dragging {
@@ -752,7 +752,7 @@
 .build-structure-list ul,
 .build-chrono-group-summary ul {
   display: grid;
-  gap: 6px;
+  gap: var(--simex-space-3);
   list-style: none;
   margin: 0;
   padding-left: 14px;
@@ -760,7 +760,7 @@
 
 .build-structure-list > li {
   display: grid;
-  gap: 6px;
+  gap: var(--simex-space-3);
 }
 
 .build-structure-list button {
@@ -2197,7 +2197,7 @@
   border: 1px solid var(--simex-border-subtle);
   border-radius: 9px;
   display: grid;
-  gap: 6px;
+  gap: var(--simex-gap-control-group);
   margin: 0;
   padding: 10px;
 }
@@ -2434,6 +2434,14 @@
 .temporal-studio__filters {
   display: grid;
   font-weight: 700;
+}
+
+.chrono-group-studio label,
+.scene-studio label {
+  gap: var(--simex-gap-label-control);
+}
+
+.temporal-studio__filters {
   gap: 6px;
 }
 
@@ -3361,7 +3369,7 @@
   border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-component-control-radius, 8px);
   display: grid;
-  gap: 6px;
+  gap: var(--simex-space-3);
   padding: 6px;
   position: relative;
   z-index: 2;
@@ -3379,7 +3387,7 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--simex-gap-control-group);
 }
 
 .scene-chart-authoring-overlay__title-row .scene-chart-title {
@@ -3423,7 +3431,7 @@
 .scene-unit-orbit fieldset {
   border: 0;
   display: grid;
-  gap: 6px;
+  gap: var(--simex-gap-control-group);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0;
   padding: 0;
@@ -3435,7 +3443,7 @@
 
 .scene-unit-orbit__moves {
   display: grid;
-  gap: 6px;
+  gap: var(--simex-gap-control-group);
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 

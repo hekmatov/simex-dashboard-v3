@@ -86,7 +86,7 @@
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-grid {
-  gap: 6px;
+  gap: var(--simex-space-3);
   height: 100%;
   padding: 6px;
 }

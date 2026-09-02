@@ -883,7 +883,7 @@ pre.portable-qmd-math-fallback {
 .chart-image-view {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--simex-space-3);
   height: 100%;
   margin: 0;
   min-height: 0;
@@ -957,7 +957,7 @@ pre.portable-qmd-math-fallback {
   bottom: 32px;
   box-shadow: var(--simex-style-panel-shadow);
   display: flex;
-  gap: 6px;
+  gap: var(--simex-gap-control-group);
   opacity: 0;
   padding: 6px;
   pointer-events: none;
