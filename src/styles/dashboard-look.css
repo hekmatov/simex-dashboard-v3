@@ -1,5 +1,5 @@
 .dashboard-look-trigger {
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .build-page-tabs .dashboard-look-trigger {
@@ -21,9 +21,9 @@
   align-items: start;
   border-bottom: 1px solid var(--simex-border-subtle);
   display: flex;
-  gap: 16px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
-  padding: 20px 22px 16px;
+  padding: var(--simex-padding-dialog, 16px);
 }
 
 .look-drawer-header h2,
@@ -32,8 +32,8 @@
 }
 
 .look-drawer-header h2 {
-  font-size: 24px;
-  line-height: 1.2;
+  font-size: 20px;
+  line-height: 24px;
 }
 
 .look-drawer-header #look-drawer-description {
@@ -48,7 +48,7 @@
 }
 
 .look-drawer button {
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .look-drawer button:focus-visible,
@@ -62,7 +62,7 @@
 .look-drawer-scroll {
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 18px 22px 28px;
+  padding: var(--simex-padding-dialog, 16px);
   scroll-padding-bottom: 24px;
 }
 
@@ -70,16 +70,17 @@
   border: 0;
   border-top: 1px solid var(--simex-border-subtle);
   margin: 0;
-  padding: 18px 0 0;
+  padding: var(--simex-gap-section, 12px) 0 0;
 }
 
 .look-control-section + .look-control-section {
-  margin-top: 18px;
+  margin-top: var(--simex-gap-section, 12px);
 }
 
 .look-control-section legend {
-  font-size: 17px;
+  font-size: var(--simex-body-font-size, 14px);
   font-weight: 800;
+  line-height: var(--simex-body-line-height, 20px);
   padding: 0;
 }
 
@@ -111,13 +112,13 @@
   border: 1px solid var(--simex-border-subtle);
   cursor: pointer;
   display: flex;
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .look-style-choice > label,
 .look-segmented-options label {
   gap: 8px;
-  padding: 8px 10px;
+  padding: 5px 8px;
 }
 
 .look-style-choice > label:has(input:checked),
@@ -132,11 +133,12 @@
 }
 
 .look-profile-option {
-  align-items: start;
+  align-items: center;
   display: grid;
   gap: 8px;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  padding: 10px;
+  min-height: var(--simex-control-prominent, 36px);
+  padding: 5px 8px;
 }
 
 .look-profile-copy {
@@ -187,8 +189,8 @@
   cursor: pointer;
   display: flex;
   gap: 8px;
-  min-height: 44px;
-  padding: 8px 10px;
+  min-height: var(--simex-control-standard, 32px);
+  padding: 5px 8px;
 }
 
 .look-style-choice:has(input:checked),
@@ -209,14 +211,14 @@
 .look-appearance-options {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .look-appearance-option {
   display: grid;
-  gap: 5px;
+  gap: var(--simex-gap-choice-label, 8px);
   grid-template-columns: auto auto minmax(0, 1fr);
-  padding: 8px 6px;
+  padding: 5px 8px;
 }
 
 .look-appearance-option .simex-icon {
@@ -228,7 +230,7 @@
 }
 
 .look-segmented-options {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .look-drawer-footer {
@@ -237,8 +239,8 @@
   border-top: 1px solid var(--simex-border-strong);
   display: grid;
   gap: 8px;
-  grid-template-columns: 1fr 1fr;
-  padding: 12px 22px max(12px, env(safe-area-inset-bottom));
+  grid-template-columns: minmax(0, 1fr);
+  padding: var(--simex-gap-section, 12px) var(--simex-padding-dialog, 16px) max(12px, env(safe-area-inset-bottom));
 }
 
 .look-drawer-feedback {

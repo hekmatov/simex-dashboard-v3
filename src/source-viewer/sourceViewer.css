@@ -25,7 +25,7 @@ input {
 }
 
 .source-viewer-theme-root :is(button, input) {
-  min-block-size: var(--simex-control-min, 44px);
+  min-block-size: var(--simex-control-standard, 32px);
 }
 
 .source-viewer-theme-root :is(button, input):focus-visible {
@@ -40,7 +40,7 @@ input {
   box-shadow: var(--simex-style-shell-shadow, none);
   margin: 0 auto;
   max-width: 1800px;
-  padding: 24px;
+  padding: var(--simex-padding-dialog, 16px);
 }
 
 .source-viewer-header h1 {
@@ -57,7 +57,7 @@ input {
 .source-viewer-header {
   align-items: start;
   display: flex;
-  gap: 20px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
 }
 
@@ -68,7 +68,7 @@ input {
   color: var(--simex-text-strong);
   flex: 0 0 auto;
   font-weight: 700;
-  padding: 9px 14px;
+  padding: 5px 10px;
 }
 
 .source-viewer-return:focus-visible {
@@ -86,7 +86,7 @@ input {
 .source-viewer-provenance dt {
   color: var(--simex-text-muted);
   font-weight: 700;
-  padding-right: 16px;
+  padding-right: var(--simex-gap-section, 12px);
 }
 
 .source-viewer-provenance dd {
@@ -106,9 +106,9 @@ input {
 .source-viewer-pagination {
   align-items: end;
   display: flex;
-  gap: 16px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
-  margin: 18px 0 10px;
+  margin: var(--simex-gap-section, 12px) 0 var(--simex-space-3, 8px);
 }
 
 .source-viewer-toolbar label {
@@ -122,7 +122,7 @@ input {
   border: 1px solid var(--simex-border-strong, #747b82);
   border-radius: var(--simex-style-control-radius, 6px);
   color: var(--simex-text-strong, #17191b);
-  padding: 9px 11px;
+  padding: 5px 8px;
 }
 
 .source-viewer-table-wrap {
@@ -143,7 +143,7 @@ table {
 th,
 td {
   border-bottom: 1px solid var(--simex-border-subtle, #c7cbcf);
-  padding: 8px 10px;
+  padding: 5px 8px;
   text-align: left;
   white-space: nowrap;
 }
@@ -165,9 +165,9 @@ thead th {
   font-weight: 700;
   gap: 8px;
   justify-content: space-between;
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
   min-width: 100%;
-  padding: 7px 10px;
+  padding: 5px 8px;
   text-align: left;
   white-space: nowrap;
 }
@@ -187,8 +187,8 @@ tbody tr:nth-child(even) {
   border-radius: var(--simex-style-control-radius, 6px);
   color: var(--simex-on-accent, #fff);
   font-weight: 700;
-  min-height: 44px;
-  padding: 9px 14px;
+  min-height: var(--simex-control-standard, 32px);
+  padding: 5px 10px;
 }
 
 .source-viewer-pagination button:disabled {
@@ -198,8 +198,8 @@ tbody tr:nth-child(even) {
 .source-viewer-error {
   background: var(--simex-error-soft, #fee9e7);
   border-left: 4px solid var(--simex-error, #b42318);
-  margin-top: 20px;
-  padding: 16px;
+  margin-top: var(--simex-gap-section, 12px);
+  padding: var(--simex-padding-panel, 12px);
 }
 
 @media (max-width: 600px) {

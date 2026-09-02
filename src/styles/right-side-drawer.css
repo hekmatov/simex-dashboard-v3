@@ -45,9 +45,9 @@
   align-items: start;
   border-bottom: 1px solid var(--simex-border-subtle);
   display: var(--right-side-drawer-header-display, flex);
-  gap: 12px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
-  padding: 16px 18px;
+  padding: var(--simex-padding-dialog, 16px);
 }
 
 .right-side-drawer__heading {
@@ -61,8 +61,8 @@
 }
 
 .right-side-drawer__header h2 {
-  font-size: 1.25rem;
-  line-height: 1.2;
+  font-size: 1.125rem;
+  line-height: 1.333;
 }
 
 .right-side-drawer__header p:not(.eyebrow) {
@@ -72,7 +72,8 @@
 
 .right-side-drawer__header button {
   flex: 0 0 auto;
-  min-height: 44px;
+  min-height: var(--simex-control-utility, 24px);
+  min-width: var(--simex-control-utility, 24px);
 }
 
 .right-side-drawer__content {

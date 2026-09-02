@@ -276,12 +276,12 @@
   border-radius: var(--simex-component-control-radius);
   box-sizing: border-box;
   color: var(--simex-text-strong);
-  height: 44px;
+  height: var(--simex-control-standard, 32px);
   inset-block-start: 24px;
   inset-inline-end: 24px;
   place-items: center;
   position: absolute;
-  width: 44px;
+  width: var(--simex-control-standard, 32px);
   z-index: 2;
 }
 
@@ -291,16 +291,16 @@
   margin: 0 auto;
   max-width: 1440px;
   min-height: calc(100dvh - 64px);
-  padding: 0 24px 24px;
+  padding: 0 var(--simex-padding-dialog, 16px) var(--simex-padding-dialog, 16px);
 }
 
 .present-status-strip {
   align-items: center;
   border-bottom: 1px solid var(--simex-border-subtle);
   display: grid;
-  gap: 16px;
+  gap: var(--simex-gap-section, 12px);
   grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 64px;
+  min-height: 48px;
 }
 
 .present-status-strip p,
@@ -316,10 +316,11 @@
 }
 
 .present-workspace-body {
+  align-items: start;
   display: grid;
-  gap: 20px;
+  gap: var(--simex-gap-section, 12px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 24px 0 96px;
+  padding: var(--simex-padding-dialog, 16px) 0 64px;
 }
 
 .present-context-panel,
@@ -327,7 +328,7 @@
   background: var(--simex-surface-canvas);
   border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-style-surface-radius);
-  padding: 24px;
+  padding: var(--simex-padding-panel, 12px);
 }
 
 .present-catalogue-recovery {
@@ -354,19 +355,19 @@
 
 .present-catalogue-recovery button {
   justify-self: start;
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .present-context-panel {
   align-content: start;
   display: grid;
-  gap: 20px;
+  gap: var(--simex-gap-section, 12px);
 }
 
 .present-context-controls,
 .present-displayed-panel {
   display: grid;
-  gap: 20px;
+  gap: var(--simex-gap-section, 12px);
 }
 
 .audience-snapshot-monitor {
@@ -446,19 +447,19 @@
 .present-panel-heading {
   align-items: end;
   display: flex;
-  gap: 16px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
 }
 
 .present-panel-heading h1 {
-  font-size: 24px;
-  line-height: 32px;
+  font-size: 20px;
+  line-height: 24px;
   margin: 4px 0 0;
 }
 
 .present-field {
   display: grid;
-  gap: 8px;
+  gap: var(--simex-gap-label-control, 4px);
 }
 
 .present-field > span,
@@ -468,7 +469,7 @@
 
 .present-field select,
 .present-field input {
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .present-layout-field {
@@ -478,8 +479,8 @@
 .presentation-composition {
   border-block: 1px solid var(--simex-border-subtle);
   display: grid;
-  gap: 12px;
-  padding-block: 16px;
+  gap: var(--simex-gap-section, 12px);
+  padding-block: var(--simex-gap-section, 12px);
 }
 
 .presentation-composition h2,
@@ -490,7 +491,7 @@
 .presentation-composition__heading {
   align-items: center;
   display: flex;
-  gap: 16px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
 }
 
@@ -510,8 +511,8 @@
 
 .presentation-date-position-handle {
   cursor: grab;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--simex-control-utility, 24px);
+  min-width: var(--simex-control-utility, 24px);
   position: absolute;
   touch-action: none;
 }
@@ -533,7 +534,7 @@
 }
 
 .presentation-composition__actions button {
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .present-audience-fact,
@@ -541,7 +542,7 @@
   align-items: center;
   display: flex;
   gap: 8px;
-  min-height: 44px;
+  min-height: var(--simex-control-compact, 28px);
 }
 
 .present-chart-choice.is-unavailable {
@@ -551,15 +552,21 @@
 
 .present-audience-fact input,
 .present-chart-choice input {
-  block-size: 20px;
-  inline-size: 20px;
+  block-size: var(--simex-choice-glyph, 16px);
+  height: var(--simex-choice-glyph, 16px);
+  inline-size: var(--simex-choice-glyph, 16px);
+  max-height: var(--simex-choice-glyph, 16px);
+  max-width: var(--simex-choice-glyph, 16px);
+  min-height: var(--simex-choice-glyph, 16px);
+  min-width: var(--simex-choice-glyph, 16px);
+  width: var(--simex-choice-glyph, 16px);
 }
 
 .present-selected-charts,
 .present-chart-groups {
   display: grid;
-  gap: 12px;
-  margin-top: 24px;
+  gap: var(--simex-gap-control-group, 8px);
+  margin-top: var(--simex-gap-section, 12px);
 }
 
 .present-chart-limit-status {
@@ -577,10 +584,10 @@
   border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-style-control-radius);
   display: grid;
-  gap: 12px;
+  gap: var(--simex-gap-control-group, 8px);
   grid-template-columns: auto minmax(0, 1fr) auto;
-  min-height: 56px;
-  padding: 8px 12px;
+  min-height: var(--simex-control-prominent, 36px);
+  padding: 5px 8px;
 }
 
 .present-chart-order {
@@ -607,18 +614,26 @@
 .present-chart-actions button,
 .present-session-actions button,
 .present-time-controls > button {
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 @media (min-width: 900px) {
   .present-context-panel {
     align-self: start;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
     max-height: calc(100dvh - 120px);
     overflow: hidden;
     position: sticky;
     top: 16px;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .present-scene-panel {
+    align-self: start;
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    position: sticky;
+    top: 16px;
   }
 
   .present-displayed-panel {
@@ -652,8 +667,8 @@
   border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-style-panel-radius);
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--simex-gap-control-group, 8px);
+  padding: var(--simex-padding-panel, 12px);
 }
 
 .present-chart-group legend {
@@ -667,10 +682,10 @@
   border-top: 1px solid var(--simex-border-subtle);
   bottom: 0;
   display: flex;
-  gap: 16px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
-  min-height: 72px;
-  padding: 12px 0;
+  min-height: 48px;
+  padding: var(--simex-space-3, 8px) 0;
   position: sticky;
 }
 
@@ -702,7 +717,7 @@
 .presentation-controller button,
 .presentation-controller select,
 .presentation-controller input:not([type="range"]) {
-  min-height: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .presentation-controller :is(button, select, input):focus-visible {
@@ -902,14 +917,14 @@
   border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-style-panel-radius);
   display: grid;
-  gap: 10px;
+  gap: var(--simex-gap-control-group, 8px);
   margin: 0;
   min-width: 0;
-  padding: 14px;
+  padding: var(--simex-padding-panel, 12px);
 }
 
 .audience-display-options-drawer__content {
-  padding: 18px;
+  padding: var(--simex-padding-dialog, 16px);
 }
 
 .audience-display-options-drawer .present-audience-information {
@@ -930,7 +945,7 @@
 
 .present-audience-fact {
   align-items: start;
-  min-height: 44px;
+  min-height: var(--simex-control-prominent, 36px);
 }
 
 .present-audience-fact > span {
@@ -988,7 +1003,11 @@
   outline-offset: 2px;
 }
 
-:where(.present-workspace, .audience-display) :is(button, input, select) {
+:where(.present-workspace, .audience-display) :is(
+  button,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"])
+) {
   border-radius: var(--simex-component-control-radius);
   min-height: var(--simex-control-min);
 }

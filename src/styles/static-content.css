@@ -47,8 +47,8 @@
 
 .free-text-source-editor {
   display: grid;
-  gap: 22px;
-  margin-top: 18px;
+  gap: var(--simex-gap-section, 12px);
+  margin-top: var(--simex-gap-section, 12px);
   min-width: 0;
 }
 
@@ -86,8 +86,8 @@
 }
 
 .free-text-source-editor__writer-header {
-  gap: 18px;
-  padding: 16px 18px 12px;
+  gap: var(--simex-gap-section, 12px);
+  padding: var(--simex-padding-panel, 12px);
 }
 
 .free-text-source-editor__writer-header :is(h3, p),
@@ -138,7 +138,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0;
-  padding: 8px 12px;
+  padding: var(--simex-space-2, 4px) var(--simex-space-3, 8px);
 }
 
 .portable-qmd-composer__toolbar-group {
@@ -146,7 +146,7 @@
   border-inline-end: 1px solid var(--simex-border-subtle);
   display: flex;
   gap: 3px;
-  padding-inline: 8px;
+  padding-inline: var(--simex-space-2, 4px);
 }
 
 .portable-qmd-composer__toolbar-group:first-child {
@@ -165,8 +165,8 @@
   display: none;
 }
 
-.portable-qmd-composer__toolbar :is(button, select) {
-  min-height: 44px;
+.portable-qmd-composer__toolbar select {
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .portable-qmd-composer__toolbar button {
@@ -179,7 +179,8 @@
   font-family: var(--simex-style-body-font);
   font-size: 1.15rem;
   justify-content: center;
-  min-width: 44px;
+  min-height: var(--simex-control-utility, 24px);
+  min-width: var(--simex-control-utility, 24px);
   padding: 0;
 }
 
@@ -206,7 +207,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 12px;
+  padding: var(--simex-space-3, 8px);
 }
 
 .portable-qmd-composer__surface {
@@ -215,7 +216,7 @@
   box-sizing: border-box;
   min-height: 250px;
   overflow-x: auto;
-  padding: 22px 24px;
+  padding: var(--simex-padding-dialog, 16px);
   line-height: 1.62;
 }
 
@@ -241,7 +242,7 @@
   box-sizing: border-box;
   font: 0.875rem/1.55 var(--simex-style-mono-font);
   min-block-size: 250px;
-  padding: 22px 24px;
+  padding: var(--simex-padding-dialog, 16px);
   resize: vertical;
   width: 100%;
 }
@@ -424,11 +425,11 @@
 .free-text-source-editor__reference-card > header {
   border-bottom: 1px solid var(--simex-border-subtle);
   gap: 12px;
-  padding: 13px 16px;
+  padding: var(--simex-space-3, 8px) var(--simex-padding-panel, 12px);
 }
 
 .free-text-source-editor__preview .free-text-chart-view {
-  padding: 16px;
+  padding: var(--simex-padding-panel, 12px);
 }
 
 .free-text-source-editor__markdown pre {
@@ -438,14 +439,14 @@
   margin: 0;
   min-height: 168px;
   overflow: auto;
-  padding: 16px;
+  padding: var(--simex-padding-panel, 12px);
   white-space: pre-wrap;
 }
 
 .free-text-source-editor__source-repair {
   display: grid;
-  gap: 10px;
-  padding: 16px;
+  gap: var(--simex-gap-control-group, 8px);
+  padding: var(--simex-padding-panel, 12px);
 }
 
 .free-text-source-editor__source-repair p {
@@ -677,8 +678,8 @@ pre.portable-qmd-math-fallback {
 
 .image-transform-editor {
   display: grid;
-  gap: 18px;
-  margin-top: 16px;
+  gap: var(--simex-gap-section, 12px);
+  margin-top: var(--simex-gap-section, 12px);
   min-width: 0;
 }
 
@@ -732,13 +733,13 @@ pre.portable-qmd-math-fallback {
 .image-crop-handle {
   background: transparent;
   border: 0;
-  bottom: -22px;
+  bottom: -12px;
   cursor: nwse-resize;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--simex-control-utility, 24px);
+  min-width: var(--simex-control-utility, 24px);
   padding: 0;
   position: absolute;
-  right: -22px;
+  right: -12px;
 }
 
 .image-crop-handle::after {
@@ -746,16 +747,16 @@ pre.portable-qmd-math-fallback {
   border: 2px solid #fff;
   border-radius: 50%;
   content: "";
-  height: 14px;
-  left: 15px;
+  height: 12px;
+  left: 6px;
   position: absolute;
-  top: 15px;
-  width: 14px;
+  top: 6px;
+  width: 12px;
 }
 
 .image-guided-sections {
   display: grid;
-  gap: 14px;
+  gap: var(--simex-gap-section, 12px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
 }
@@ -765,10 +766,10 @@ pre.portable-qmd-math-fallback {
   border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-style-panel-radius);
   display: grid;
-  gap: 12px;
+  gap: var(--simex-gap-control-group, 8px);
   grid-template-columns: 32px minmax(0, 1fr);
   min-width: 0;
-  padding: 14px;
+  padding: var(--simex-padding-panel, 12px);
 }
 
 .image-guided-section__step {
@@ -816,10 +817,13 @@ pre.portable-qmd-math-fallback {
   margin-block: 8px 12px;
 }
 
-.image-crop-nudges button,
+.image-crop-nudges button {
+  min-height: var(--simex-control-utility, 24px);
+  min-width: var(--simex-control-utility, 24px);
+}
+
 .image-rotation-controls button {
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 .image-crop-numeric {
@@ -858,8 +862,8 @@ pre.portable-qmd-math-fallback {
 }
 
 .image-panel-presentation__size button {
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--simex-control-utility, 24px);
+  min-width: var(--simex-control-utility, 24px);
 }
 
 .image-panel-presentation__size output {
@@ -973,8 +977,8 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-actions button {
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--simex-control-compact, 28px);
+  min-width: var(--simex-control-compact, 28px);
 }
 
 .chart-image-zoom-status {

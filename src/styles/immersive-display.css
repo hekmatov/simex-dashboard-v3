@@ -28,10 +28,10 @@
   border-radius: var(--simex-style-surface-radius, 10px);
   box-shadow: var(--simex-style-panel-shadow, none);
   display: flex;
-  gap: 6px;
+  gap: var(--simex-space-2, 4px);
   left: 50%;
   max-width: calc(100vw - 24px);
-  padding: 6px;
+  padding: var(--simex-space-2, 4px);
   position: absolute;
   top: 12px;
   transform: translateX(-50%);
@@ -41,19 +41,19 @@
 
 .fullscreen-backdrop--immersive .multi-fullscreen-controls button,
 .fullscreen-backdrop--immersive .multi-fullscreen-controls .fullscreen-layout-button {
-  min-height: 44px;
+  min-height: var(--simex-control-utility, 24px);
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-controls .fullscreen-layout-button {
-  height: 44px;
-  width: 44px;
+  height: var(--simex-control-utility, 24px);
+  width: var(--simex-control-utility, 24px);
 }
 
 .fullscreen-backdrop--immersive .fullscreen-toolbar-close {
   align-items: center;
   display: inline-flex;
-  height: 32px;
-  width: 32px;
+  height: var(--simex-control-utility, 24px);
+  width: var(--simex-control-utility, 24px);
   justify-content: center;
   min-height: 0;
   min-width: 0;
@@ -66,12 +66,12 @@
 
 .fullscreen-backdrop--immersive .fullscreen-toolbar-close::before {
   content: "";
-  height: 44px;
+  height: var(--simex-control-utility, 24px);
   left: 50%;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 44px;
+  width: var(--simex-control-utility, 24px);
 }
 
 .fullscreen-backdrop--immersive .fullscreen-toolbar-close .simex-icon {
@@ -81,7 +81,7 @@
 }
 
 .fullscreen-exit-button {
-  padding: 8px 14px;
+  padding: 5px 10px;
   white-space: nowrap;
 }
 
@@ -131,9 +131,9 @@
 }
 
 .fullscreen-backdrop--immersive .multi-cell-controls .multi-cell-icon-button {
-  height: 44px;
-  min-height: 44px;
-  width: 44px;
+  height: var(--simex-control-utility, 24px);
+  min-height: var(--simex-control-utility, 24px);
+  width: var(--simex-control-utility, 24px);
 }
 
 .multi-select-dock {
@@ -141,8 +141,9 @@
 }
 
 .multi-select-dock button {
-  min-height: 44px;
-  padding: 8px 14px;
+  min-height: var(--simex-control-utility, 24px);
+  min-width: var(--simex-control-utility, 24px);
+  padding: 3px 6px;
 }
 
 @media (max-width: 767px) {

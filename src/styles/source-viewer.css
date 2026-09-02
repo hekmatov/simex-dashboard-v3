@@ -9,18 +9,18 @@
 
 .source-viewer-panel {
   display: grid;
-  gap: 18px;
+  gap: var(--simex-gap-section, 12px);
   grid-auto-rows: max-content;
   max-width: 100%;
   overflow: auto;
-  padding: 24px;
+  padding: var(--simex-padding-dialog, 16px);
   width: min(460px, 92vw);
 }
 
 .source-viewer-panel-header {
   align-items: start;
   display: flex;
-  gap: 16px;
+  gap: var(--simex-gap-section, 12px);
   justify-content: space-between;
 }
 
@@ -41,13 +41,13 @@
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   margin: 0;
-  row-gap: 8px;
+  row-gap: var(--simex-gap-control-group, 8px);
 }
 
 .source-viewer-metadata dt {
   color: var(--simex-text-muted);
   font-weight: 700;
-  padding-right: 16px;
+  padding-right: var(--simex-gap-section, 12px);
 }
 
 .source-viewer-metadata dd {
@@ -56,12 +56,12 @@
 }
 
 .chart-source-viewer-button {
-  min-height: 40px;
+  min-height: var(--simex-control-standard, 32px);
 }
 
 @media (max-width: 700px) {
   .source-viewer-panel {
-    padding: 18px;
+    padding: var(--simex-padding-panel, 12px);
     width: 100%;
   }
 }
