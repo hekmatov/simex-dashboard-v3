@@ -1,0 +1,446 @@
+{
+  "surface": {
+    "id": "chart-quick-editor",
+    "family": "chart-editor",
+    "owner": "chart-quick-editor",
+    "mode": "build",
+    "state": "quick-edit",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".chart-quick-editor",
+    "tag": "aside",
+    "classes": [
+      "chart-editor-v3",
+      "chart-quick-editor"
+    ],
+    "rect": {
+      "x": 44,
+      "y": 404.59,
+      "width": 418,
+      "height": 982.69,
+      "right": 462,
+      "bottom": 1387.28
+    },
+    "style": {
+      "display": "block",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "#chart-quick-bio_confirmed_cases-editor-save-changes",
+      "tag": "button",
+      "type": "submit",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 64,
+        "y": 496.59,
+        "width": 24,
+        "height": 24,
+        "right": 88,
+        "bottom": 520.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-quick-bio_confirmed_cases-editor-reset-changes",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 96,
+        "y": 496.59,
+        "width": 24,
+        "height": 24,
+        "right": 120,
+        "bottom": 520.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-quick-bio_confirmed_cases-editor-cancel",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 128,
+        "y": 496.59,
+        "width": 24,
+        "height": 24,
+        "right": 152,
+        "bottom": 520.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-quick-bio_confirmed_cases-chart-remove",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 160,
+        "y": 496.59,
+        "width": 24,
+        "height": 24,
+        "right": 184,
+        "bottom": 520.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-footprint-width",
+      "tag": "select",
+      "type": null,
+      "text": "1 column 2 columns 3 columns 4 columns",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 73,
+        "y": 628.34,
+        "width": 360,
+        "height": 32,
+        "right": 433,
+        "bottom": 660.34
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-footprint-row-height",
+      "tag": "select",
+      "type": null,
+      "text": "25% of a row 50% of a row 75% of a row 100% of a row 125% of a row 150% of a row 175% of a row 200% of a row",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 73,
+        "y": 686.09,
+        "width": 360,
+        "height": 32,
+        "right": 433,
+        "bottom": 718.09
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#chart-quick-editor-title",
+      "text": "Confirmed cases",
+      "normalizedText": "confirmed cases",
+      "tag": "h2",
+      "rect": {
+        "x": 60,
+        "y": 444.59,
+        "width": 386,
+        "height": 22,
+        "right": 446,
+        "bottom": 466.59
+      }
+    },
+    {
+      "id": "#chart-footprint-title",
+      "text": "Footprint",
+      "normalizedText": "footprint",
+      "tag": "h3",
+      "rect": {
+        "x": 73,
+        "y": 585.59,
+        "width": 67.27,
+        "height": 17,
+        "right": 140.27,
+        "bottom": 602.59
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "form:nth(0)",
+      "gaps": [],
+      "declaredGap": 0,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.chart-editor-actions.chart-quick-editor-actions:nth(1)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        12,
+        20,
+        12,
+        20
+      ]
+    },
+    {
+      "id": "fieldset.chart-quick-editor-fields:nth(2)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        5.6,
+        12,
+        10,
+        12
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "div.chart-editor-actions.chart-quick-editor-actions:nth(2)",
+      "strandedInlineSpace": 298,
+      "occupiedRatio": 0.29,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "div.chart-editor-actions.chart-quick-editor-actions:nth(2)",
+      "occupiedRatio": 0.29,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 6,
+    "lowest": [
+      {
+        "id": "p.chart-footprint-status:nth(5)",
+        "text": "Current footprint: 4 columns × 100% of a row.",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "QUICK EDIT",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#chart-footprint-title",
+        "text": "Footprint",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.chart-footprint-input:nth(3)",
+        "text": "WIDTH 1 column 2 columns 3 columns 4 columns",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.chart-footprint-input:nth(4)",
+        "text": "ROW HEIGHT 25% of a row 50% of a row 75% of a row 100% of a row 125% of a row 150% of a ro",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 2,
+      "visibleStateTextCount": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "chart-quick-editor:rhythm:1",
+      "surfaceId": "chart-quick-editor",
+      "owner": "chart-quick-editor",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.chart-editor-actions.chart-quick-editor-actions:nth(1) uses off-scale spacing: 20px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "chart-quick-editor:rhythm:2",
+      "surfaceId": "chart-quick-editor",
+      "owner": "chart-quick-editor",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset.chart-quick-editor-fields:nth(2) uses off-scale spacing: 5.6, 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 2
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

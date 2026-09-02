@@ -1,0 +1,1536 @@
+{
+  "surface": {
+    "id": "present-pressure",
+    "family": "present",
+    "owner": "present-workspace",
+    "mode": "present",
+    "state": "composition-pressure",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 1280,
+    "clientHeight": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 720
+  },
+  "root": {
+    "selector": ".present-workspace",
+    "tag": "main",
+    "classes": [
+      "present-workspace"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 72,
+      "width": 1280,
+      "height": 648,
+      "right": 1280,
+      "bottom": 720
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        16,
+        16,
+        16
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary.dashboard-look-trigger:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Dashboard look",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 969.77,
+        "y": 79.5,
+        "width": 114.63,
+        "height": 32,
+        "right": 1084.39,
+        "bottom": 111.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.audience-display-options-trigger:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Audience display options",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1092.39,
+        "y": 79.5,
+        "width": 171.61,
+        "height": 32,
+        "right": 1264,
+        "bottom": 111.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(2)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 219,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 235
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(3)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 255,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 271
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(4)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 291,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 307
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(5)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 327,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 343
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(6)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 363,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 379
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(7)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 399,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 415
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(8)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 435,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 451
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(9)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 471,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 487
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(10)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 674,
+        "y": 507,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 523
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"source\"]",
+      "tag": "select",
+      "type": null,
+      "text": "Municipal outbreak playback National outbreak and health-system playback",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 16,
+        "y": 559,
+        "width": 1054.69,
+        "height": 32,
+        "right": 1070.69,
+        "bottom": 591
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"open-new-session\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Open new audience session",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1078.69,
+        "y": 559,
+        "width": 185.31,
+        "height": 32,
+        "right": 1264,
+        "bottom": 591
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"previous\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Previous",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 16,
+        "y": 624,
+        "width": 70.42,
+        "height": 32,
+        "right": 86.42,
+        "bottom": 656
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"seek\"]",
+      "tag": "input",
+      "type": "range",
+      "text": "",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 96.42,
+        "y": 622,
+        "width": 276,
+        "height": 32,
+        "right": 372.42,
+        "bottom": 654
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"next\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Next",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 382.42,
+        "y": 624,
+        "width": 47.55,
+        "height": 32,
+        "right": 429.97,
+        "bottom": 656
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"trace-reveal\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Reveal to frame",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 437.97,
+        "y": 624,
+        "width": 114.06,
+        "height": 32,
+        "right": 552.03,
+        "bottom": 656
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"trace-full\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Full timeline",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 560.03,
+        "y": 624,
+        "width": 93.59,
+        "height": 32,
+        "right": 653.63,
+        "bottom": 656
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"cadence\"]",
+      "tag": "input",
+      "type": "number",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 661.63,
+        "y": 624,
+        "width": 136,
+        "height": 32,
+        "right": 797.63,
+        "bottom": 656
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"play\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Play",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 805.63,
+        "y": 624,
+        "width": 43.67,
+        "height": 32,
+        "right": 849.3,
+        "bottom": 656
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"pause\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Pause",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 857.3,
+        "y": 624,
+        "width": 53.28,
+        "height": 32,
+        "right": 910.58,
+        "bottom": 656
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"output-active\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Active",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 16,
+        "y": 664,
+        "width": 56.09,
+        "height": 32,
+        "right": 72.09,
+        "bottom": 696
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"output-holding\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Holding",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 80.09,
+        "y": 664,
+        "width": 67.27,
+        "height": 32,
+        "right": 147.36,
+        "bottom": 696
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"output-blank\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Blank",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 155.36,
+        "y": 664,
+        "width": 52.17,
+        "height": 32,
+        "right": 207.53,
+        "bottom": 696
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"blackout\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Blackout",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 215.53,
+        "y": 664,
+        "width": 71.22,
+        "height": 32,
+        "right": 286.75,
+        "bottom": 696
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"restore\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "Restore",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 294.75,
+        "y": 664,
+        "width": 64.03,
+        "height": 32,
+        "right": 358.78,
+        "bottom": 696
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-presentation-control-id=\"end\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "End presentation",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 366.78,
+        "y": 664,
+        "width": 121.88,
+        "height": 32,
+        "right": 488.66,
+        "bottom": 696
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input:nth(0)",
+      "text": "Confirmed cases",
+      "glyphRect": {
+        "x": 674,
+        "y": 219,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 235
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 213,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 241
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 213,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 241
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(1)",
+      "text": "Daily confirmed cases",
+      "glyphRect": {
+        "x": 674,
+        "y": 255,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 271
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 249,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 277
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 249,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 277
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(2)",
+      "text": "Daily cases and deaths",
+      "glyphRect": {
+        "x": 674,
+        "y": 291,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 307
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 285,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 313
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 285,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 313
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(3)",
+      "text": "Reproduction value",
+      "glyphRect": {
+        "x": 674,
+        "y": 327,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 343
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 321,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 349
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 321,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 349
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(4)",
+      "text": "Cases by province",
+      "glyphRect": {
+        "x": 674,
+        "y": 363,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 379
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 357,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 385
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 357,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 385
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(5)",
+      "text": "Mortality by age group",
+      "glyphRect": {
+        "x": 674,
+        "y": 399,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 415
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 393,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 421
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 393,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 421
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(6)",
+      "text": "Change in cases by province",
+      "glyphRect": {
+        "x": 674,
+        "y": 435,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 451
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 429,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 457
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 429,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 457
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(7)",
+      "text": "Municipal infection rate over time",
+      "glyphRect": {
+        "x": 674,
+        "y": 471,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 487
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 465,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 493
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 465,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 493
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(8)",
+      "text": "Aggregate municipal infections",
+      "glyphRect": {
+        "x": 674,
+        "y": 507,
+        "width": 16,
+        "height": 16,
+        "right": 690,
+        "bottom": 523
+      },
+      "labelRect": {
+        "x": 674,
+        "y": 501,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 529
+      },
+      "rowRect": {
+        "x": 674,
+        "y": 501,
+        "width": 562,
+        "height": 28,
+        "right": 1236,
+        "bottom": 529
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    }
+  ],
+  "headings": [
+    {
+      "id": "legend:nth(0)",
+      "text": "Biomedical / Outbreak dynamics",
+      "normalizedText": "biomedical outbreak dynamics",
+      "tag": "legend",
+      "rect": {
+        "x": 674,
+        "y": 182,
+        "width": 277.41,
+        "height": 19,
+        "right": 951.41,
+        "bottom": 201
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.present-status-actions:nth(0)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.present-context-controls:nth(1)",
+      "gaps": [
+        12
+      ],
+      "declaredGap": 12,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fieldset.present-chart-group:nth(2)",
+      "gaps": [
+        12,
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.present-status-actions:nth(1)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div.presentation-controller__source:nth(12)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div.presentation-controller__timeline:nth(13)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div.presentation-controller__output:nth(14)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "div.present-status-actions:nth(1)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.presentation-controller__source:nth(12)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.presentation-controller__timeline:nth(13)",
+      "strandedInlineSpace": 353.42,
+      "occupiedRatio": 0.72,
+      "crowded": false
+    },
+    {
+      "id": "div.presentation-controller__output:nth(14)",
+      "strandedInlineSpace": 775.34,
+      "occupiedRatio": 0.38,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [
+    {
+      "id": "aside.present-context-panel:nth(8)",
+      "overflowX": 0,
+      "overflowY": 91,
+      "modeX": "hidden",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    },
+    {
+      "id": "section.present-scene-panel:nth(18)",
+      "overflowX": 0,
+      "overflowY": 1337,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "fieldset.present-chart-group:nth(9)",
+      "occupiedRatio": 0.96,
+      "crowded": false
+    },
+    {
+      "id": "section.presentation-controller:nth(11)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.presentation-controller__timeline:nth(13)",
+      "occupiedRatio": 0.72,
+      "crowded": false
+    },
+    {
+      "id": "div.presentation-controller__output:nth(14)",
+      "occupiedRatio": 0.38,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 32,
+    "lowest": [
+      {
+        "id": "p:nth(1)",
+        "text": "Biomedical: holding scene",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#present-chart-limit-status",
+        "text": "Choose up to 4 charts. 0 of 4 selected.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "[data-presentation-control-id=\"open-new-session\"]",
+        "text": "Open new audience session",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "[data-presentation-control-id=\"play\"]",
+        "text": "Play",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary.dashboard-look-trigger:nth(3)",
+        "text": "Dashboard look",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 3
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

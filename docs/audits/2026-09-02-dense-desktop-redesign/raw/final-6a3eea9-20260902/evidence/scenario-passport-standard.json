@@ -1,0 +1,740 @@
+{
+  "surface": {
+    "id": "scenario-passport-standard",
+    "family": "scenario-passport",
+    "owner": "scenario-passport",
+    "mode": "build",
+    "state": "identity-and-package",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[aria-label='Scenario Passport']",
+    "tag": "aside",
+    "classes": [
+      "scenario-passport-popover"
+    ],
+    "rect": {
+      "x": 16,
+      "y": 77.5,
+      "width": 430,
+      "height": 730,
+      "right": 446,
+      "bottom": 807.5
+    },
+    "style": {
+      "display": "grid",
+      "position": "absolute",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "gap": 14,
+      "rowGap": 14,
+      "columnGap": 14,
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 380.48,
+        "y": 97.5,
+        "width": 48.52,
+        "height": 32,
+        "right": 429,
+        "bottom": 129.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.scenario-passport-value:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "HeV-A26 Day 2 Simulation",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 33,
+        "y": 164.5,
+        "width": 396,
+        "height": 32,
+        "right": 429,
+        "bottom": 196.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.scenario-passport-value:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Pandemic & Disaster Preparedness Center",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 33,
+        "y": 222.5,
+        "width": 396,
+        "height": 32,
+        "right": 429,
+        "bottom": 254.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.scenario-passport-value:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "2026-07-27",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 33,
+        "y": 280.5,
+        "width": 396,
+        "height": 32,
+        "right": 429,
+        "bottom": 312.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(4)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 49,
+        "y": 359.5,
+        "width": 16,
+        "height": 16,
+        "right": 65,
+        "bottom": 375.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(5)",
+      "tag": "button",
+      "type": "button",
+      "text": "Save Scenario",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 203.61,
+        "y": 466.5,
+        "width": 100.11,
+        "height": 32,
+        "right": 303.72,
+        "bottom": 498.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(6)",
+      "tag": "button",
+      "type": "button",
+      "text": "Discard Scenario",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 311.72,
+        "y": 466.5,
+        "width": 117.28,
+        "height": 32,
+        "right": 429,
+        "bottom": 498.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(7)",
+      "tag": "button",
+      "type": "button",
+      "text": "Upload Dashboard Package",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 33,
+        "y": 565.5,
+        "width": 396,
+        "height": 32,
+        "right": 429,
+        "bottom": 597.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "Download Dashboard Package",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 33,
+        "y": 605.5,
+        "width": 396,
+        "height": 32,
+        "right": 429,
+        "bottom": 637.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(9)",
+      "tag": "button",
+      "type": "button",
+      "text": "Discard Build changes",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 33,
+        "y": 693.5,
+        "width": 396,
+        "height": 32,
+        "right": 429,
+        "bottom": 725.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(10)",
+      "tag": "button",
+      "type": "button",
+      "text": "Restore online dashboard…",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 33,
+        "y": 733.5,
+        "width": 396,
+        "height": 32,
+        "right": 429,
+        "bottom": 765.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.danger:nth(11)",
+      "tag": "button",
+      "type": "button",
+      "text": "Clear dashboard…",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 33,
+        "y": 773.5,
+        "width": 396,
+        "height": 36,
+        "right": 429,
+        "bottom": 809.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input:nth(0)",
+      "text": "Show Home",
+      "glyphRect": {
+        "x": 49,
+        "y": 359.5,
+        "width": 16,
+        "height": 16,
+        "right": 65,
+        "bottom": 375.5
+      },
+      "labelRect": {
+        "x": 49,
+        "y": 353.5,
+        "width": 364,
+        "height": 28,
+        "right": 413,
+        "bottom": 381.5
+      },
+      "rowRect": {
+        "x": 49,
+        "y": 353.5,
+        "width": 364,
+        "height": 28,
+        "right": 413,
+        "bottom": 381.5
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    }
+  ],
+  "headings": [
+    {
+      "id": "h2:nth(0)",
+      "text": "Scenario Passport",
+      "normalizedText": "scenario passport",
+      "tag": "h2",
+      "rect": {
+        "x": 33,
+        "y": 110.5,
+        "width": 339.48,
+        "height": 22,
+        "right": 372.48,
+        "bottom": 132.5
+      }
+    },
+    {
+      "id": "legend:nth(1)",
+      "text": "Canonical Home",
+      "normalizedText": "canonical home",
+      "tag": "legend",
+      "rect": {
+        "x": 49,
+        "y": 326.5,
+        "width": 121.81,
+        "height": 19,
+        "right": 170.81,
+        "bottom": 345.5
+      }
+    },
+    {
+      "id": "#dashboard-package-title",
+      "text": "Dashboard package",
+      "normalizedText": "dashboard package",
+      "tag": "h3",
+      "rect": {
+        "x": 33,
+        "y": 536.5,
+        "width": 396,
+        "height": 21,
+        "right": 429,
+        "bottom": 557.5
+      }
+    },
+    {
+      "id": "#dashboard-recovery-title",
+      "text": "Dashboard recovery",
+      "normalizedText": "dashboard recovery",
+      "tag": "h3",
+      "rect": {
+        "x": 33,
+        "y": 664.5,
+        "width": 396,
+        "height": 21,
+        "right": 429,
+        "bottom": 685.5
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset.scenario-passport-home:nth(0)",
+      "gaps": [
+        8,
+        4
+      ],
+      "declaredGap": 4,
+      "panelPadding": [
+        8,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "div.scenario-passport-draft-actions:nth(1)",
+      "gaps": [
+        68.98,
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        10,
+        0,
+        10,
+        0
+      ]
+    },
+    {
+      "id": "section.scenario-passport-package-actions:nth(2)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        12,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "section.scenario-passport-recovery-actions:nth(3)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        12,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.scenario-passport-draft-actions:nth(6)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "div.scenario-passport-draft-actions:nth(6)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "div.scenario-passport-fields:nth(1)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "section.scenario-passport-recovery-actions:nth(8)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 19,
+    "lowest": [
+      {
+        "id": "span.build-draft-status:nth(9)",
+        "text": "Scenario saved",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "DASHBOARD IDENTITY",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(8)",
+        "text": "When off, Home is unavailable to dashboard visitors. You can turn it back on here.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(10)",
+        "text": "Save Scenario",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "disabled"
+      },
+      {
+        "id": "button.danger:nth(18)",
+        "text": "Clear dashboard…",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 4,
+      "visibleStateTextCount": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "scenario-passport-standard:rhythm:1",
+      "surfaceId": "scenario-passport-standard",
+      "owner": "scenario-passport",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.scenario-passport-draft-actions:nth(1) uses off-scale spacing: 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  }
+}

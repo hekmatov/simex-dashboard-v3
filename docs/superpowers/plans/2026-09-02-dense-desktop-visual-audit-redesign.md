@@ -40,7 +40,7 @@
 - [x] Collect controls, choice rows, headings, groups, panels, scroll containers, portals, and their normalized rectangles/styles without focus or keyboard fields.
 - [x] Classify role-size, centreline, rhythm, wrap, whitespace, overlap, clipping, overflow, repeated-title, same-role-variance, and occupancy findings.
 - [x] Continue after individual setup failures and record every manifest entry as inspected, failed setup, or intentionally out of scope.
-- [ ] Capture initial screenshots and write the initial Markdown review with P0/P1/P2 findings ordered by shared owner.
+- [x] Record the measured initial baseline and write the initial Markdown review with P0/P1/P2 findings ordered by shared owner; explicitly document why no synthetic pre-change screenshot set was created after implementation began.
 
 ### Task 2: Shared dense-desktop tokens and control grammar
 
@@ -107,8 +107,8 @@
 - [x] Normalize panel/body padding, label gaps, group gaps, and action-row stacking to the shared aliases.
 - [x] Convert every confirmed crowded horizontal cluster with unused adjacent space into a compact stack or balanced grid.
 - [x] Apply the hard Build/Present mode gate below 1024px and hide their internal workspaces and transient authoring chrome.
-- [ ] Inspect Dashboard Look, Source Content, static content, temporal/scene, Present, dialogs, menus, warnings, empty states, and source viewer after shared changes.
-- [ ] Fix remaining P0/P1 findings and record any isolated P2 deferral with its owner and rationale.
+- [x] Inspect Dashboard Look, Source Content, static content, temporal/scene, Present, dialogs, menus, warnings, empty states, and source viewer after shared changes.
+- [x] Fix remaining P0/P1 findings and record any isolated P2 deferral with its owner and rationale.
 
 ### Task 5: Final complete audit and review delivery
 
@@ -121,9 +121,9 @@
 - Consumes the same surface manifest and geometry collector used for the initial review.
 - Produces coverage totals, before/after finding disposition, final screenshots, prioritized residuals, and the user-facing local review URL.
 
-- [ ] Run the complete manifest on the final candidate at its material desktop and Audience viewports.
-- [ ] Inspect contact-sheet/screenshot evidence for judgement-heavy spacing, hierarchy, contrast, and human-visible semantics.
-- [ ] Confirm no P0 or systemic P1 finding remains and that every manifest entry has a disposition.
-- [ ] Run the smallest deterministic contract selection for shared density, dialog geometry, and the hard mode gate.
-- [ ] Commit the coherent redesign and evidence on `codex/dense-ui-audit`.
-- [ ] Confirm the live server at `http://127.0.0.1:4190/` serves the final worktree and report the URL, branch, audit summary, and any P2 residuals.
+- [x] Run the complete manifest on the final candidate at its material desktop and Audience viewports.
+- [x] Inspect contact-sheet/screenshot evidence for judgement-heavy spacing, hierarchy, contrast, and human-visible semantics.
+- [x] Confirm no P0 or systemic P1 finding remains and that every manifest entry has a disposition.
+- [x] Run the smallest deterministic contract selection for shared density, dialog geometry, and the hard mode gate.
+- [x] Commit the coherent redesign and evidence on `codex/dense-ui-audit`.
+- [x] Confirm the live server at `http://127.0.0.1:4190/` serves the final worktree and report the URL, branch, audit summary, and any P2 residuals.

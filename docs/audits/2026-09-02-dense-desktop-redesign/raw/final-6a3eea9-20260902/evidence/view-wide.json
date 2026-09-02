@@ -1,0 +1,500 @@
+{
+  "surface": {
+    "id": "view-wide",
+    "family": "view",
+    "owner": "view-workspace",
+    "mode": "view",
+    "state": "biomedical-wide",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "document": {
+    "clientWidth": 1920,
+    "clientHeight": 1080,
+    "scrollWidth": 1920,
+    "scrollHeight": 9727
+  },
+  "root": {
+    "selector": "[data-canonical-mode='view']",
+    "tag": "main",
+    "classes": [
+      "app-shell",
+      "canonical-dashboard-frame",
+      "view-shell"
+    ],
+    "rect": {
+      "x": 264,
+      "y": 72,
+      "width": 1392,
+      "height": 9655.16,
+      "right": 1656,
+      "bottom": 9727.16
+    },
+    "style": {
+      "display": "block",
+      "position": "relative",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 1080,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "a:nth(0)",
+      "tag": "a",
+      "type": null,
+      "text": "Report a bug / request a feature",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 1440.97,
+        "y": 9693.16,
+        "width": 197.03,
+        "height": 17,
+        "right": 1638,
+        "bottom": 9710.16
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": null,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "h1:nth(0)",
+      "text": "HeV-A26 Dashboard: Epidemiological overview",
+      "normalizedText": "hev a26 dashboard epidemiological overview",
+      "tag": "h1",
+      "rect": {
+        "x": 351,
+        "y": 104,
+        "width": 530.66,
+        "height": 27.59,
+        "right": 881.66,
+        "bottom": 131.59
+      }
+    },
+    {
+      "id": "p.subtitle:nth(1)",
+      "text": "Cases, mortality, healthcare, testing, wastewater, and vaccination indicators.",
+      "normalizedText": "cases mortality healthcare testing wastewater and vaccination indicators",
+      "tag": "p",
+      "rect": {
+        "x": 351,
+        "y": 135.59,
+        "width": 530.66,
+        "height": 21,
+        "right": 881.66,
+        "bottom": 156.59
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(2)",
+      "text": "Outbreak dynamics National, provincial, and municipal transmission and burden.",
+      "normalizedText": "outbreak dynamics national provincial and municipal transmission and burden",
+      "tag": "div",
+      "rect": {
+        "x": 283,
+        "y": 194.59,
+        "width": 1354,
+        "height": 51.39,
+        "right": 1637,
+        "bottom": 245.98
+      }
+    },
+    {
+      "id": "h2:nth(3)",
+      "text": "Outbreak dynamics",
+      "normalizedText": "outbreak dynamics",
+      "tag": "h2",
+      "rect": {
+        "x": 283,
+        "y": 194.59,
+        "width": 1354,
+        "height": 26.39,
+        "right": 1637,
+        "bottom": 220.98
+      }
+    },
+    {
+      "id": "#_r_2g_",
+      "text": "Confirmed cases",
+      "normalizedText": "confirmed cases",
+      "tag": "h3",
+      "rect": {
+        "x": 296,
+        "y": 283.98,
+        "width": 1256,
+        "height": 20.39,
+        "right": 1552,
+        "bottom": 304.38
+      }
+    },
+    {
+      "id": "#_r_2k_",
+      "text": "Daily confirmed cases",
+      "normalizedText": "daily confirmed cases",
+      "tag": "h3",
+      "rect": {
+        "x": 296,
+        "y": 717.98,
+        "width": 1256,
+        "height": 20.39,
+        "right": 1552,
+        "bottom": 738.38
+      }
+    },
+    {
+      "id": "#_r_2o_",
+      "text": "Daily cases and deaths",
+      "normalizedText": "daily cases and deaths",
+      "tag": "h3",
+      "rect": {
+        "x": 296,
+        "y": 1151.98,
+        "width": 1256,
+        "height": 20.39,
+        "right": 1552,
+        "bottom": 1172.38
+      }
+    },
+    {
+      "id": "#_r_2s_",
+      "text": "Reproduction value",
+      "normalizedText": "reproduction value",
+      "tag": "h3",
+      "rect": {
+        "x": 296,
+        "y": 1585.98,
+        "width": 571,
+        "height": 20.39,
+        "right": 867,
+        "bottom": 1606.38
+      }
+    },
+    {
+      "id": "#_r_30_",
+      "text": "Cases by province",
+      "normalizedText": "cases by province",
+      "tag": "h3",
+      "rect": {
+        "x": 981,
+        "y": 1585.98,
+        "width": 571,
+        "height": 20.39,
+        "right": 1552,
+        "bottom": 1606.38
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(9)",
+      "text": "Health-system pressure and coordination Capacity, occupancy, admissions, delayed care, and testing.",
+      "normalizedText": "health system pressure and coordination capacity occupancy admissions delayed care and testing",
+      "tag": "div",
+      "rect": {
+        "x": 283,
+        "y": 4623.98,
+        "width": 1354,
+        "height": 51.39,
+        "right": 1637,
+        "bottom": 4675.38
+      }
+    },
+    {
+      "id": "h2:nth(10)",
+      "text": "Health-system pressure and coordination",
+      "normalizedText": "health system pressure and coordination",
+      "tag": "h2",
+      "rect": {
+        "x": 283,
+        "y": 4623.98,
+        "width": 1354,
+        "height": 26.39,
+        "right": 1637,
+        "bottom": 4650.38
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(11)",
+      "text": "Environmental surveillance Wastewater signals as a regional early-warning layer.",
+      "normalizedText": "environmental surveillance wastewater signals as a regional early warning layer",
+      "tag": "div",
+      "rect": {
+        "x": 283,
+        "y": 7751.38,
+        "width": 1354,
+        "height": 51.39,
+        "right": 1637,
+        "bottom": 7802.77
+      }
+    },
+    {
+      "id": "h2:nth(12)",
+      "text": "Environmental surveillance",
+      "normalizedText": "environmental surveillance",
+      "tag": "h2",
+      "rect": {
+        "x": 283,
+        "y": 7751.38,
+        "width": 1354,
+        "height": 26.39,
+        "right": 1637,
+        "bottom": 7777.77
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(13)",
+      "text": "Vaccination Current status and uptake over time.",
+      "normalizedText": "vaccination current status and uptake over time",
+      "tag": "div",
+      "rect": {
+        "x": 283,
+        "y": 8708.77,
+        "width": 1354,
+        "height": 51.39,
+        "right": 1637,
+        "bottom": 8760.16
+      }
+    },
+    {
+      "id": "h2:nth(14)",
+      "text": "Vaccination",
+      "normalizedText": "vaccination",
+      "tag": "h2",
+      "rect": {
+        "x": 283,
+        "y": 8708.77,
+        "width": 1354,
+        "height": 26.39,
+        "right": 1637,
+        "bottom": 8735.16
+      }
+    }
+  ],
+  "rhythms": [],
+  "wraps": [
+    {
+      "id": "footer.dashboard-footer:nth(44)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div:nth(45)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "nav:nth(46)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "a:nth(0)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "#_r_2o_",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "#_r_2s_",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "#_r_30_",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h2:nth(11)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(12)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h2:nth(13)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(14)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h2:nth(15)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(16)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "div.page-stack:nth(4)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "section.layout-grid.layout-two-column:nth(8)",
+      "occupiedRatio": 0.97,
+      "crowded": false
+    },
+    {
+      "id": "section.layout-grid.layout-two-column:nth(23)",
+      "occupiedRatio": 0.97,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 16,
+    "lowest": [
+      {
+        "id": "p:nth(4)",
+        "text": "National, provincial, and municipal transmission and burden.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(11)",
+        "text": "Capacity, occupancy, admissions, delayed care, and testing.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(13)",
+        "text": "Wastewater signals as a regional early-warning layer.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(15)",
+        "text": "Current status and uptake over time.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "PANDEMIC & DISASTER PREPAREDNESS CENTER",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 15,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

@@ -1,0 +1,1318 @@
+{
+  "surface": {
+    "id": "text-image-composer",
+    "family": "static-content",
+    "owner": "text-image-composer",
+    "mode": "build",
+    "state": "composer",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[role='dialog']",
+    "tag": "form",
+    "classes": [
+      "static-content-dialog",
+      "dashboard-dialog",
+      "dashboard-dialog--wizard",
+      "dashboard-dialog--wide",
+      "dashboard-authoring-shell"
+    ],
+    "rect": {
+      "x": 160,
+      "y": 70,
+      "width": 1120,
+      "height": 760,
+      "right": 1280,
+      "bottom": 830
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1210.48,
+        "y": 87,
+        "width": 48.52,
+        "height": 32,
+        "right": 1259,
+        "bottom": 119
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Destination",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 181,
+        "y": 146,
+        "width": 86.53,
+        "height": 32,
+        "right": 267.53,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Content type",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 275.53,
+        "y": 146,
+        "width": 95.63,
+        "height": 32,
+        "right": 371.16,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "Content",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 379.16,
+        "y": 146,
+        "width": 64.89,
+        "height": 32,
+        "right": 444.05,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "Preview & add",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 452.05,
+        "y": 146,
+        "width": 105.59,
+        "height": 32,
+        "right": 557.64,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-title",
+      "tag": "input",
+      "type": null,
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 272.63,
+        "y": 209,
+        "width": 904.02,
+        "height": 32,
+        "right": 1176.64,
+        "bottom": 241
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-no-title",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1188.64,
+        "y": 217,
+        "width": 16,
+        "height": 16,
+        "right": 1204.64,
+        "bottom": 233
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-static-b3fa22ad-b1f5-4433-9ae3-9a4280010304-footprint-width",
+      "tag": "select",
+      "type": null,
+      "text": "1 column 2 columns 3 columns 4 columns",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 194,
+        "y": 322.75,
+        "width": 231.5,
+        "height": 32,
+        "right": 425.5,
+        "bottom": 354.75
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-static-b3fa22ad-b1f5-4433-9ae3-9a4280010304-footprint-row-height",
+      "tag": "select",
+      "type": null,
+      "text": "25% of a row 50% of a row 75% of a row 100% of a row 125% of a row 150% of a row 175% of a row 200% of a row",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 194,
+        "y": 380.5,
+        "width": 231.5,
+        "height": 32,
+        "right": 425.5,
+        "bottom": 412.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-semantic-style",
+      "tag": "select",
+      "type": null,
+      "text": "Paragraph Lead Heading Subheading Caption",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 190,
+        "y": 611.5,
+        "width": 133,
+        "height": 32,
+        "right": 323,
+        "bottom": 643.5
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          28,
+          4,
+          10
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-bold",
+      "tag": "button",
+      "type": "button",
+      "text": "B",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 332,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 356,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-italic",
+      "tag": "button",
+      "type": "button",
+      "text": "I",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 359,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 383,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-underline",
+      "tag": "button",
+      "type": "button",
+      "text": "U",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 386,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 410,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-link",
+      "tag": "button",
+      "type": "button",
+      "text": "↗",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 413,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 437,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-clear-formatting",
+      "tag": "button",
+      "type": "button",
+      "text": "Tx",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 440,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 464,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-bullet-list",
+      "tag": "button",
+      "type": "button",
+      "text": "•≡",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 473,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 497,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-numbered-list",
+      "tag": "button",
+      "type": "button",
+      "text": "1≡",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 500,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 524,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-table",
+      "tag": "button",
+      "type": "button",
+      "text": "▦",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 527,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 551,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-insert-image",
+      "tag": "button",
+      "type": "button",
+      "text": "▧",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 560,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 584,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-undo",
+      "tag": "button",
+      "type": "button",
+      "text": "↶",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 593,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 617,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-redo",
+      "tag": "button",
+      "type": "button",
+      "text": "↷",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 620,
+        "y": 615.5,
+        "width": 24,
+        "height": 24,
+        "right": 644,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#portable-qmd-raw-text",
+      "tag": "button",
+      "type": "button",
+      "text": "Raw",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 653,
+        "y": 615.5,
+        "width": 36.59,
+        "height": 24,
+        "right": 689.59,
+        "bottom": 639.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 18.4,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(22)",
+      "tag": "button",
+      "type": "button",
+      "text": "Cancel",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1030.75,
+        "y": 787,
+        "width": 55.95,
+        "height": 32,
+        "right": 1086.7,
+        "bottom": 819
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(23)",
+      "tag": "button",
+      "type": "button",
+      "text": "Back",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1134.7,
+        "y": 787,
+        "width": 44.84,
+        "height": 32,
+        "right": 1179.55,
+        "bottom": 819
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(24)",
+      "tag": "button",
+      "type": "submit",
+      "text": "Continue",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1187.55,
+        "y": 787,
+        "width": 71.45,
+        "height": 32,
+        "right": 1259,
+        "bottom": 819
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "#static-panel-no-title",
+      "text": "No title",
+      "glyphRect": {
+        "x": 1188.64,
+        "y": 217,
+        "width": 16,
+        "height": 16,
+        "right": 1204.64,
+        "bottom": 233
+      },
+      "labelRect": {
+        "x": 1188.64,
+        "y": 211,
+        "width": 70.36,
+        "height": 28,
+        "right": 1259,
+        "bottom": 239
+      },
+      "rowRect": {
+        "x": 1188.64,
+        "y": 211,
+        "width": 70.36,
+        "height": 28,
+        "right": 1259,
+        "bottom": 239
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0.5
+    }
+  ],
+  "headings": [
+    {
+      "id": "#static-content-dialog-title",
+      "text": "ADD TEXT/IMAGE",
+      "normalizedText": "add text image",
+      "tag": "h2",
+      "rect": {
+        "x": 181,
+        "y": 87,
+        "width": 130.28,
+        "height": 14,
+        "right": 311.28,
+        "bottom": 101
+      }
+    },
+    {
+      "id": "h3:nth(1)",
+      "text": "Write a text post",
+      "normalizedText": "write a text post",
+      "tag": "h3",
+      "rect": {
+        "x": 194,
+        "y": 558.5,
+        "width": 246.19,
+        "height": 19,
+        "right": 440.19,
+        "bottom": 577.5
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.portable-qmd-composer__toolbar:nth(0)",
+      "gaps": [],
+      "declaredGap": 0,
+      "panelPadding": [
+        4,
+        8,
+        4,
+        8
+      ]
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(1)",
+      "gaps": [],
+      "declaredGap": 3,
+      "panelPadding": [
+        0,
+        4,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(2)",
+      "gaps": [
+        3
+      ],
+      "declaredGap": 3,
+      "panelPadding": [
+        0,
+        4,
+        0,
+        4
+      ]
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(3)",
+      "gaps": [
+        3
+      ],
+      "declaredGap": 3,
+      "panelPadding": [
+        0,
+        4,
+        0,
+        4
+      ]
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(4)",
+      "gaps": [],
+      "declaredGap": 3,
+      "panelPadding": [
+        0,
+        4,
+        0,
+        4
+      ]
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(5)",
+      "gaps": [
+        3
+      ],
+      "declaredGap": 3,
+      "panelPadding": [
+        0,
+        4,
+        0,
+        4
+      ]
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group.portable-qmd-composer__toolbar-group--mode:nth(6)",
+      "gaps": [],
+      "declaredGap": 3,
+      "panelPadding": [
+        0,
+        4,
+        0,
+        4
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.static-content-dialog__title-choice:nth(3)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar:nth(12)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div.portable-qmd-composer__source-warning:nth(19)",
+      "rowCount": 2,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "nav.dashboard-dialog__progress:nth(1)",
+      "strandedInlineSpace": 741.36,
+      "occupiedRatio": 0.34,
+      "crowded": false
+    },
+    {
+      "id": "div.static-content-dialog__title-choice:nth(3)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar:nth(12)",
+      "strandedInlineSpace": 25.41,
+      "occupiedRatio": 0.95,
+      "crowded": false
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(14)",
+      "strandedInlineSpace": 9,
+      "occupiedRatio": 0.94,
+      "crowded": false
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(15)",
+      "strandedInlineSpace": 9,
+      "occupiedRatio": 0.9,
+      "crowded": false
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(17)",
+      "strandedInlineSpace": 9,
+      "occupiedRatio": 0.85,
+      "crowded": true
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [
+    {
+      "id": "section.static-content-dialog__body.dashboard-dialog__body:nth(9)",
+      "overflowX": 0,
+      "overflowY": 777.5,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "nav.dashboard-dialog__progress:nth(1)",
+      "occupiedRatio": 0.34,
+      "crowded": false
+    },
+    {
+      "id": "div.static-content-fields.dashboard-authoring-grid:nth(2)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar:nth(12)",
+      "occupiedRatio": 0.95,
+      "crowded": false
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(14)",
+      "occupiedRatio": 0.94,
+      "crowded": false
+    },
+    {
+      "id": "div.portable-qmd-composer__toolbar-group:nth(15)",
+      "occupiedRatio": 0.9,
+      "crowded": false
+    },
+    {
+      "id": "footer.dashboard-dialog__footer.dashboard-authoring-footer:nth(20)",
+      "occupiedRatio": 0.2,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 30,
+    "lowest": [
+      {
+        "id": "p:nth(11)",
+        "text": "Formatting stays active until you turn it off.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.free-text-source-editor__shortcuts:nth(12)",
+        "text": "Ctrl + B / I also work",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#static-content-dialog-title",
+        "text": "ADD TEXT/IMAGE",
+        "ratio": 11.18,
+        "foreground": "rgba(44, 56, 61, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(29)",
+        "text": "Continue",
+        "ratio": 12.07,
+        "foreground": "rgba(255, 255, 255, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "div.portable-qmd-composer__source-warning:nth(26)",
+        "text": "Source fidelity Formatted editing can normalize Portable QMD syntax. Raw text avoids forma",
+        "ratio": 12.65,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(238, 231, 216, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 2,
+      "visibleStateTextCount": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "text-image-composer:rhythm:1",
+      "surfaceId": "text-image-composer",
+      "owner": "text-image-composer",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.portable-qmd-composer__toolbar-group:nth(1) uses off-scale spacing: 3px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "text-image-composer:rhythm:2",
+      "surfaceId": "text-image-composer",
+      "owner": "text-image-composer",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.portable-qmd-composer__toolbar-group:nth(2) uses off-scale spacing: 3px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "text-image-composer:rhythm:3",
+      "surfaceId": "text-image-composer",
+      "owner": "text-image-composer",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.portable-qmd-composer__toolbar-group:nth(3) uses off-scale spacing: 3px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "text-image-composer:rhythm:4",
+      "surfaceId": "text-image-composer",
+      "owner": "text-image-composer",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.portable-qmd-composer__toolbar-group:nth(4) uses off-scale spacing: 3px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "text-image-composer:rhythm:5",
+      "surfaceId": "text-image-composer",
+      "owner": "text-image-composer",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.portable-qmd-composer__toolbar-group:nth(5) uses off-scale spacing: 3px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "text-image-composer:rhythm:6",
+      "surfaceId": "text-image-composer",
+      "owner": "text-image-composer",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.portable-qmd-composer__toolbar-group.portable-qmd-composer__toolbar-group--mode:nth(6) uses off-scale spacing: 3px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 6
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 6
+  }
+}

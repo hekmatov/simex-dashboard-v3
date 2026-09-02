@@ -1,0 +1,280 @@
+{
+  "surface": {
+    "id": "application-recovery",
+    "family": "recovery",
+    "owner": "application-recovery",
+    "mode": "recovery",
+    "state": "configuration-unavailable",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 1280,
+    "clientHeight": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 720
+  },
+  "root": {
+    "selector": ".application-recovery",
+    "tag": "main",
+    "classes": [
+      "application-recovery"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "right": 1280,
+      "bottom": 720
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 720,
+      "padding": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Reload Dashboard",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 73,
+        "y": 429.36,
+        "width": 161.25,
+        "height": 39,
+        "right": 234.25,
+        "bottom": 468.36
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 36,
+        "padding": [
+          9,
+          12,
+          9,
+          12
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Import Dashboard Package",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 244.25,
+        "y": 429.36,
+        "width": 228.59,
+        "height": 39,
+        "right": 472.84,
+        "bottom": 468.36
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 36,
+        "padding": [
+          9,
+          12,
+          9,
+          12
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#application-recovery-title",
+      "text": "Dashboard couldn’t load. No valid scenario is available.",
+      "normalizedText": "dashboard couldn t load no valid scenario is available",
+      "tag": "h1",
+      "rect": {
+        "x": 73,
+        "y": 281.64,
+        "width": 622,
+        "height": 90.72,
+        "right": 695,
+        "bottom": 372.36
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.application-recovery-actions:nth(0)",
+      "gaps": [
+        10
+      ],
+      "declaredGap": 10,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.application-recovery-actions:nth(1)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "div.application-recovery-actions:nth(1)",
+      "strandedInlineSpace": 222.16,
+      "occupiedRatio": 0.64,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 5,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "SIMEX DASHBOARD",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(3)",
+        "text": "Reload Dashboard",
+        "ratio": 12.07,
+        "foreground": "rgba(255, 255, 255, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(4)",
+        "text": "Import Dashboard Package",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#application-recovery-title",
+        "text": "Dashboard couldn’t load. No valid scenario is available.",
+        "ratio": 15.31,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(2)",
+        "text": "Reload the latest dashboard source or choose a current version 3 dashboard package.",
+        "ratio": 15.31,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "application-recovery:role-size:1",
+      "surfaceId": "application-recovery",
+      "owner": "application-recovery",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(0) is 39px high; standard expects 32px (±2px).",
+      "recommendation": "Move button:nth(0) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "application-recovery:role-size:2",
+      "surfaceId": "application-recovery",
+      "owner": "application-recovery",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button.secondary:nth(1) is 39px high; standard expects 32px (±2px).",
+      "recommendation": "Move button.secondary:nth(1) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "application-recovery:rhythm:3",
+      "surfaceId": "application-recovery",
+      "owner": "application-recovery",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.application-recovery-actions:nth(0) uses off-scale spacing: 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 2,
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 3
+  }
+}

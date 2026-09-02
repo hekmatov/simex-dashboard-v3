@@ -1,0 +1,514 @@
+{
+  "surface": {
+    "id": "home-standard",
+    "family": "home",
+    "owner": "home-workspace",
+    "mode": "home",
+    "state": "showcase",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 1657
+  },
+  "root": {
+    "selector": "[data-canonical-mode='home']",
+    "tag": "main",
+    "classes": [
+      "app-shell",
+      "canonical-dashboard-frame",
+      "home-shell"
+    ],
+    "rect": {
+      "x": 24,
+      "y": 72,
+      "width": 1392,
+      "height": 1584.83,
+      "right": 1416,
+      "bottom": 1656.83
+    },
+    "style": {
+      "display": "block",
+      "position": "relative",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 900,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Open the dashboard",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 90,
+        "y": 359.23,
+        "width": 161.5,
+        "height": 36,
+        "right": 251.5,
+        "bottom": 395.23
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          4,
+          16,
+          4,
+          16
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "a:nth(1)",
+      "tag": "a",
+      "type": null,
+      "text": "View the repository",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 606.8,
+        "y": 1445.53,
+        "width": 187.03,
+        "height": 45,
+        "right": 793.83,
+        "bottom": 1490.53
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": null,
+        "padding": [
+          12,
+          16,
+          12,
+          16
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "a:nth(2)",
+      "tag": "a",
+      "type": null,
+      "text": "Report a bug / request a feature",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 1200.97,
+        "y": 1622.83,
+        "width": 197.03,
+        "height": 17,
+        "right": 1398,
+        "bottom": 1639.83
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": null,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#showcase-landing-title",
+      "text": "SimEx Dashboard",
+      "normalizedText": "simex dashboard",
+      "tag": "h1",
+      "rect": {
+        "x": 90,
+        "y": 190,
+        "width": 670.09,
+        "height": 63.23,
+        "right": 760.09,
+        "bottom": 253.23
+      }
+    },
+    {
+      "id": "#showcase-capabilities-title",
+      "text": "How SimEx works",
+      "normalizedText": "how simex works",
+      "tag": "h2",
+      "rect": {
+        "x": 82,
+        "y": 536.23,
+        "width": 1276,
+        "height": 41,
+        "right": 1358,
+        "bottom": 577.23
+      }
+    },
+    {
+      "id": "h3:nth(2)",
+      "text": "View",
+      "normalizedText": "view",
+      "tag": "h3",
+      "rect": {
+        "x": 103,
+        "y": 668.23,
+        "width": 374,
+        "height": 21,
+        "right": 477,
+        "bottom": 689.23
+      }
+    },
+    {
+      "id": "h3:nth(3)",
+      "text": "Build",
+      "normalizedText": "build",
+      "tag": "h3",
+      "rect": {
+        "x": 533,
+        "y": 668.23,
+        "width": 374,
+        "height": 21,
+        "right": 907,
+        "bottom": 689.23
+      }
+    },
+    {
+      "id": "h3:nth(4)",
+      "text": "Present",
+      "normalizedText": "present",
+      "tag": "h3",
+      "rect": {
+        "x": 963,
+        "y": 668.23,
+        "width": 374,
+        "height": 21,
+        "right": 1337,
+        "bottom": 689.23
+      }
+    },
+    {
+      "id": "#showcase-faq-title",
+      "text": "Getting started with building",
+      "normalizedText": "getting started with building",
+      "tag": "h2",
+      "rect": {
+        "x": 82,
+        "y": 898.23,
+        "width": 500.8,
+        "height": 76,
+        "right": 582.8,
+        "bottom": 974.23
+      }
+    },
+    {
+      "id": "#showcase-resources-title",
+      "text": "Project resources",
+      "normalizedText": "project resources",
+      "tag": "h2",
+      "rect": {
+        "x": 82,
+        "y": 1428.23,
+        "width": 500.8,
+        "height": 38,
+        "right": 582.8,
+        "bottom": 1466.23
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.showcase-actions:nth(0)",
+      "gaps": [],
+      "declaredGap": 10,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.showcase-actions:nth(1)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "footer.dashboard-footer:nth(6)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div:nth(7)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "nav:nth(8)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "a:nth(1)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "a:nth(2)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "#showcase-faq-title",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(16)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(17)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(18)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(19)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(20)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(21)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(22)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(23)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p.showcase-eyebrow:nth(24)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "#showcase-resources-title",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(26)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 18,
+    "lowest": [
+      {
+        "id": "p:nth(14)",
+        "text": "A few practical answers for shaping your first SimEx dashboard.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(17)",
+        "text": "Find the source, follow progress, or contribute to the dashboard’s next steps.",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(7)",
+        "text": "Explore the prepared biomedical and socio-economic exercise views.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(9)",
+        "text": "Shape pages, sections, and charts around the story your exercise needs to tell.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(11)",
+        "text": "Move from analysis to a focused, briefing-ready view for your audience.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 7,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "home-standard:role-size:1",
+      "surfaceId": "home-standard",
+      "owner": "home-workspace",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(0) is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move button:nth(0) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "home-standard:rhythm:2",
+      "surfaceId": "home-standard",
+      "owner": "home-workspace",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.showcase-actions:nth(0) uses off-scale spacing: 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 1,
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

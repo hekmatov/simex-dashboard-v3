@@ -1,0 +1,781 @@
+{
+  "surface": {
+    "id": "scene-unit-orbit",
+    "family": "temporal",
+    "owner": "unit-orbit",
+    "mode": "build",
+    "state": "scene-chart-selected",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".unit-orbit:has(.scene-unit-orbit)",
+    "tag": "aside",
+    "classes": [
+      "unit-orbit"
+    ],
+    "rect": {
+      "x": 724,
+      "y": 467,
+      "width": 420,
+      "height": 421,
+      "right": 1144,
+      "bottom": 888
+    },
+    "style": {
+      "display": "block",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Done",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1080.56,
+        "y": 482,
+        "width": 48.44,
+        "height": 32,
+        "right": 1129,
+        "bottom": 514
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(1)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 748,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 764,
+        "bottom": 633
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(2)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 847.5,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 863.5,
+        "bottom": 633
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(3)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 947,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 963,
+        "bottom": 633
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(4)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1046.5,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 1062.5,
+        "bottom": 633
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(5)",
+      "tag": "select",
+      "type": null,
+      "text": "Use authored default Concurrent only Interpolate Snap to Latest Snap to Closest Use authored settings",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 739,
+        "y": 671,
+        "width": 390,
+        "height": 32,
+        "right": 1129,
+        "bottom": 703
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(6)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 748,
+        "y": 721,
+        "width": 16,
+        "height": 16,
+        "right": 764,
+        "bottom": 737
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(7)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move first",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 739,
+        "y": 755,
+        "width": 191,
+        "height": 32,
+        "right": 930,
+        "bottom": 787
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move earlier",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 938,
+        "y": 755,
+        "width": 191,
+        "height": 32,
+        "right": 1129,
+        "bottom": 787
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(9)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move later",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 739,
+        "y": 795,
+        "width": 191,
+        "height": 32,
+        "right": 930,
+        "bottom": 827
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(10)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move last",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 938,
+        "y": 795,
+        "width": 191,
+        "height": 32,
+        "right": 1129,
+        "bottom": 827
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.danger:nth(11)",
+      "tag": "button",
+      "type": "button",
+      "text": "Remove from Scene",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 739,
+        "y": 839,
+        "width": 390,
+        "height": 36,
+        "right": 1129,
+        "bottom": 875
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input.choice-control:nth(0)",
+      "text": "1",
+      "glyphRect": {
+        "x": 748,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 764,
+        "bottom": 633
+      },
+      "labelRect": {
+        "x": 739,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 830.5,
+        "bottom": 639
+      },
+      "rowRect": {
+        "x": 739,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 830.5,
+        "bottom": 639
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(1)",
+      "text": "2",
+      "glyphRect": {
+        "x": 847.5,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 863.5,
+        "bottom": 633
+      },
+      "labelRect": {
+        "x": 838.5,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 930,
+        "bottom": 639
+      },
+      "rowRect": {
+        "x": 838.5,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 930,
+        "bottom": 639
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(2)",
+      "text": "3",
+      "glyphRect": {
+        "x": 947,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 963,
+        "bottom": 633
+      },
+      "labelRect": {
+        "x": 938,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 1029.5,
+        "bottom": 639
+      },
+      "rowRect": {
+        "x": 938,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 1029.5,
+        "bottom": 639
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(3)",
+      "text": "4",
+      "glyphRect": {
+        "x": 1046.5,
+        "y": 617,
+        "width": 16,
+        "height": 16,
+        "right": 1062.5,
+        "bottom": 633
+      },
+      "labelRect": {
+        "x": 1037.5,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 1129,
+        "bottom": 639
+      },
+      "rowRect": {
+        "x": 1037.5,
+        "y": 611,
+        "width": 91.5,
+        "height": 28,
+        "right": 1129,
+        "bottom": 639
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(4)",
+      "text": "Include in Present",
+      "glyphRect": {
+        "x": 748,
+        "y": 721,
+        "width": 16,
+        "height": 16,
+        "right": 764,
+        "bottom": 737
+      },
+      "labelRect": {
+        "x": 739,
+        "y": 715,
+        "width": 390,
+        "height": 28,
+        "right": 1129,
+        "bottom": 743
+      },
+      "rowRect": {
+        "x": 739,
+        "y": 715,
+        "width": 390,
+        "height": 28,
+        "right": 1129,
+        "bottom": 743
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    }
+  ],
+  "headings": [
+    {
+      "id": "#scene-unit-orbit-title",
+      "text": "Unit Orbit",
+      "normalizedText": "unit orbit",
+      "tag": "h3",
+      "rect": {
+        "x": 739,
+        "y": 506,
+        "width": 237.91,
+        "height": 21,
+        "right": 976.91,
+        "bottom": 527
+      }
+    },
+    {
+      "id": "legend:nth(1)",
+      "text": "Width",
+      "normalizedText": "width",
+      "tag": "legend",
+      "rect": {
+        "x": 739,
+        "y": 592,
+        "width": 48.33,
+        "height": 19,
+        "right": 787.33,
+        "bottom": 611
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset:nth(0)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "fieldset:nth(1)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.scene-unit-orbit__moves:nth(2)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 16,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "SELECTED UNIT",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(3)",
+        "text": "Done",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(11)",
+        "text": "Move first",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(12)",
+        "text": "Move earlier",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(13)",
+        "text": "Move later",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 2,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "surface": {
+    "id": "build-create-section-dialog",
+    "family": "structure-management",
+    "owner": "build-layout-create-dialog",
+    "mode": "build",
+    "state": "create-section",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".build-move-dialog",
+    "tag": "section",
+    "classes": [
+      "build-move-dialog",
+      "dashboard-dialog",
+      "dashboard-dialog--utility",
+      "dashboard-dialog--compact"
+    ],
+    "rect": {
+      "x": 605,
+      "y": 316,
+      "width": 230,
+      "height": 268,
+      "right": 835,
+      "bottom": 584
+    },
+    "style": {
+      "display": "flex",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": 0,
+      "rowGap": 0,
+      "columnGap": 0,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "input:nth(0)",
+      "tag": "input",
+      "type": null,
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 626,
+        "y": 438,
+        "width": 188,
+        "height": 32,
+        "right": 814,
+        "bottom": 470
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Cancel",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 647.58,
+        "y": 535,
+        "width": 55.95,
+        "height": 32,
+        "right": 703.53,
+        "bottom": 567
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(2)",
+      "tag": "button",
+      "type": "submit",
+      "text": "Create section",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 711.53,
+        "y": 535,
+        "width": 102.47,
+        "height": 32,
+        "right": 814,
+        "bottom": 567
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#build-layout-create-title",
+      "text": "Create Section",
+      "normalizedText": "create section",
+      "tag": "h2",
+      "rect": {
+        "x": 626,
+        "y": 333,
+        "width": 178.92,
+        "height": 27,
+        "right": 804.92,
+        "bottom": 360
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "form.dashboard-dialog__form:nth(0)",
+      "gaps": [
+        12,
+        28
+      ],
+      "declaredGap": 12,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.dialog-actions.dashboard-dialog__footer:nth(1)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        16,
+        20,
+        16,
+        20
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.dialog-actions.dashboard-dialog__footer:nth(2)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "div.dialog-actions.dashboard-dialog__footer:nth(2)",
+      "strandedInlineSpace": 61.58,
+      "occupiedRatio": 0.73,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 4,
+    "lowest": [
+      {
+        "id": "button:nth(3)",
+        "text": "Create section",
+        "ratio": 12.07,
+        "foreground": "rgba(255, 255, 255, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label:nth(1)",
+        "text": "Section name",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#build-layout-create-title",
+        "text": "Create Section",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(2)",
+        "text": "Cancel",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "build-create-section-dialog:rhythm:1",
+      "surfaceId": "build-create-section-dialog",
+      "owner": "build-layout-create-dialog",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "form.dashboard-dialog__form:nth(0) uses off-scale spacing: 28px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "build-create-section-dialog:rhythm:2",
+      "surfaceId": "build-create-section-dialog",
+      "owner": "build-layout-create-dialog",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.dialog-actions.dashboard-dialog__footer:nth(1) uses off-scale spacing: 20px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 2
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

@@ -1,0 +1,573 @@
+{
+  "surface": {
+    "id": "text-image-destination",
+    "family": "static-content",
+    "owner": "text-image-wizard",
+    "mode": "build",
+    "state": "destination",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 1280,
+    "clientHeight": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".static-content-dialog",
+    "tag": "form",
+    "classes": [
+      "static-content-dialog",
+      "dashboard-dialog",
+      "dashboard-dialog--wizard",
+      "dashboard-dialog--wide",
+      "dashboard-authoring-shell"
+    ],
+    "rect": {
+      "x": 80,
+      "y": 32,
+      "width": 1120,
+      "height": 656,
+      "right": 1200,
+      "bottom": 688
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1130.48,
+        "y": 49,
+        "width": 48.52,
+        "height": 32,
+        "right": 1179,
+        "bottom": 81
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Destination",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 101,
+        "y": 108,
+        "width": 86.53,
+        "height": 32,
+        "right": 187.53,
+        "bottom": 140
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Content type",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 195.53,
+        "y": 108,
+        "width": 95.63,
+        "height": 32,
+        "right": 291.16,
+        "bottom": 140
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "Content",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 299.16,
+        "y": 108,
+        "width": 64.89,
+        "height": 32,
+        "right": 364.05,
+        "bottom": 140
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "Preview & add",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 372.05,
+        "y": 108,
+        "width": 105.59,
+        "height": 32,
+        "right": 477.64,
+        "bottom": 140
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-destination-page",
+      "tag": "select",
+      "type": null,
+      "text": "Choose a Page Biomedical Socio-economic",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 117,
+        "y": 212.59,
+        "width": 131,
+        "height": 32,
+        "right": 248,
+        "bottom": 244.59
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-destination-section",
+      "tag": "select",
+      "type": null,
+      "text": "Choose a Section Outbreak dynamics Health-system pressure and coordination Environmental surveillance Vaccination",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 117,
+        "y": 261.59,
+        "width": 275,
+        "height": 32,
+        "right": 392,
+        "bottom": 293.59
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(7)",
+      "tag": "button",
+      "type": "button",
+      "text": "Cancel",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 950.75,
+        "y": 645,
+        "width": 55.95,
+        "height": 32,
+        "right": 1006.7,
+        "bottom": 677
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "Back",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1054.7,
+        "y": 645,
+        "width": 44.84,
+        "height": 32,
+        "right": 1099.55,
+        "bottom": 677
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(9)",
+      "tag": "button",
+      "type": "submit",
+      "text": "Continue",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1107.55,
+        "y": 645,
+        "width": 71.45,
+        "height": 32,
+        "right": 1179,
+        "bottom": 677
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#static-content-dialog-title",
+      "text": "ADD TEXT/IMAGE",
+      "normalizedText": "add text image",
+      "tag": "h2",
+      "rect": {
+        "x": 101,
+        "y": 49,
+        "width": 130.28,
+        "height": 14,
+        "right": 231.28,
+        "bottom": 63
+      }
+    },
+    {
+      "id": "legend:nth(1)",
+      "text": "Destination",
+      "normalizedText": "destination",
+      "tag": "legend",
+      "rect": {
+        "x": 117,
+        "y": 171,
+        "width": 86.66,
+        "height": 19,
+        "right": 203.66,
+        "bottom": 190
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset:nth(0)",
+      "gaps": [
+        5.59
+      ],
+      "declaredGap": null,
+      "panelPadding": [
+        5.6,
+        12,
+        10,
+        12
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "nav.dashboard-dialog__progress:nth(1)",
+      "strandedInlineSpace": 741.36,
+      "occupiedRatio": 0.34,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "nav.dashboard-dialog__progress:nth(1)",
+      "occupiedRatio": 0.34,
+      "crowded": false
+    },
+    {
+      "id": "footer.dashboard-dialog__footer.dashboard-authoring-footer:nth(2)",
+      "occupiedRatio": 0.2,
+      "crowded": true
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 12,
+    "lowest": [
+      {
+        "id": "#static-content-dialog-title",
+        "text": "ADD TEXT/IMAGE",
+        "ratio": 11.18,
+        "foreground": "rgba(44, 56, 61, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(11)",
+        "text": "Continue",
+        "ratio": 12.07,
+        "foreground": "rgba(255, 255, 255, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "legend:nth(6)",
+        "text": "Destination",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label:nth(7)",
+        "text": "Page",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label:nth(8)",
+        "text": "Section",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 2,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "text-image-destination:rhythm:1",
+      "surfaceId": "text-image-destination",
+      "owner": "text-image-wizard",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset:nth(0) uses off-scale spacing: 5.59, 5.6, 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "text-image-destination:occupancy:2",
+      "surfaceId": "text-image-destination",
+      "owner": "text-image-wizard",
+      "category": "occupancy",
+      "priority": "P2",
+      "evidence": "footer.dashboard-dialog__footer.dashboard-authoring-footer:nth(2) has 20% inline occupancy while its children are crowded.",
+      "recommendation": "Use the available panel width intentionally without stretching the controls themselves."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 1,
+    "occupancy": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

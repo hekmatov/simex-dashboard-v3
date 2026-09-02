@@ -1,0 +1,621 @@
+{
+  "surface": {
+    "id": "chrono-group-editor",
+    "family": "temporal",
+    "owner": "chrono-group-editor",
+    "mode": "build",
+    "state": "name-and-period",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".chrono-group-studio",
+    "tag": "section",
+    "classes": [
+      "chrono-group-studio"
+    ],
+    "rect": {
+      "x": 71,
+      "y": 189,
+      "width": 950,
+      "height": 672,
+      "right": 1021,
+      "bottom": 861
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": 16,
+      "rowGap": 16,
+      "columnGap": 16,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "1 Name and period ✓ Complete",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 71,
+        "y": 281,
+        "width": 231.5,
+        "height": 35.41,
+        "right": 302.5,
+        "bottom": 316.41
+      },
+      "style": {
+        "display": "grid",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": 2,
+        "rowGap": 2,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "2 Choose charts ✓ Complete",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 310.5,
+        "y": 281,
+        "width": 231.5,
+        "height": 35.41,
+        "right": 542,
+        "bottom": 316.41
+      },
+      "style": {
+        "display": "grid",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": 2,
+        "rowGap": 2,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "3 Set defaults ✓ Complete",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 550,
+        "y": 281,
+        "width": 231.5,
+        "height": 35.41,
+        "right": 781.5,
+        "bottom": 316.41
+      },
+      "style": {
+        "display": "grid",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": 2,
+        "rowGap": 2,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "4 Review ✓ Complete",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 789.5,
+        "y": 281,
+        "width": 231.5,
+        "height": 35.41,
+        "right": 1021,
+        "bottom": 316.41
+      },
+      "style": {
+        "display": "grid",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": 2,
+        "rowGap": 2,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chrono-group-name",
+      "tag": "input",
+      "type": null,
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 88,
+        "y": 423.41,
+        "width": 914,
+        "height": 32,
+        "right": 1002,
+        "bottom": 455.41
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#period-start",
+      "tag": "input",
+      "type": "date",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 88,
+        "y": 490.41,
+        "width": 452,
+        "height": 32,
+        "right": 540,
+        "bottom": 522.41
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#period-end",
+      "tag": "input",
+      "type": "date",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 550,
+        "y": 490.41,
+        "width": 452,
+        "height": 32,
+        "right": 1002,
+        "bottom": 522.41
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(7)",
+      "tag": "button",
+      "type": "button",
+      "text": "Back",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 71,
+        "y": 829,
+        "width": 44.84,
+        "height": 32,
+        "right": 115.84,
+        "bottom": 861
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "Continue",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 880.14,
+        "y": 829,
+        "width": 71.45,
+        "height": 32,
+        "right": 951.59,
+        "bottom": 861
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(9)",
+      "tag": "button",
+      "type": "button",
+      "text": "Discard",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 959.59,
+        "y": 829,
+        "width": 61.41,
+        "height": 32,
+        "right": 1021,
+        "bottom": 861
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#chrono-group-studio-title",
+      "text": "Chrono Studio",
+      "normalizedText": "chrono studio",
+      "tag": "h2",
+      "rect": {
+        "x": 71,
+        "y": 213,
+        "width": 508.14,
+        "height": 27,
+        "right": 579.14,
+        "bottom": 240
+      }
+    },
+    {
+      "id": "legend:nth(1)",
+      "text": "Name and period",
+      "normalizedText": "name and period",
+      "tag": "legend",
+      "rect": {
+        "x": 88,
+        "y": 334.41,
+        "width": 126.52,
+        "height": 19,
+        "right": 214.52,
+        "bottom": 353.41
+      }
+    },
+    {
+      "id": "h4:nth(2)",
+      "text": "Period semantics",
+      "normalizedText": "period semantics",
+      "tag": "h4",
+      "rect": {
+        "x": 88,
+        "y": 668.67,
+        "width": 914,
+        "height": 19,
+        "right": 1002,
+        "bottom": 687.67
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset.chrono-period-stage:nth(0)",
+      "gaps": [
+        14
+      ],
+      "declaredGap": 14,
+      "panelPadding": [
+        14,
+        14,
+        14,
+        14
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "footer:nth(3)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "footer:nth(3)",
+      "strandedInlineSpace": 4,
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "footer:nth(3)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 22,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "TEMPORAL AUTHORING",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(2)",
+        "text": "Dashboard-wide authored object · local draft · fixed Staged Proof Studio",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(12)",
+        "text": "Set a unique name and an inclusive authoring period. Availability is not analysed while th",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(19)",
+        "text": "Back",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "disabled"
+      },
+      {
+        "id": "button:nth(21)",
+        "text": "Discard",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "disabled"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 3,
+      "visibleStateTextCount": 4
+    }
+  },
+  "findings": [
+    {
+      "id": "chrono-group-editor:role-size:1",
+      "surfaceId": "chrono-group-editor",
+      "owner": "chrono-group-editor",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(0) is 35.41px high; standard expects 32px (±2px).",
+      "recommendation": "Move button:nth(0) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chrono-group-editor:role-size:2",
+      "surfaceId": "chrono-group-editor",
+      "owner": "chrono-group-editor",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(1) is 35.41px high; standard expects 32px (±2px).",
+      "recommendation": "Move button:nth(1) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chrono-group-editor:role-size:3",
+      "surfaceId": "chrono-group-editor",
+      "owner": "chrono-group-editor",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(2) is 35.41px high; standard expects 32px (±2px).",
+      "recommendation": "Move button:nth(2) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chrono-group-editor:role-size:4",
+      "surfaceId": "chrono-group-editor",
+      "owner": "chrono-group-editor",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(3) is 35.41px high; standard expects 32px (±2px).",
+      "recommendation": "Move button:nth(3) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chrono-group-editor:role-size:5",
+      "surfaceId": "chrono-group-editor",
+      "owner": "chrono-group-editor",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(9) is 32px high; prominent expects 36px (±2px).",
+      "recommendation": "Move button:nth(9) to the shared prominent height instead of preserving a local minimum."
+    },
+    {
+      "id": "chrono-group-editor:rhythm:6",
+      "surfaceId": "chrono-group-editor",
+      "owner": "chrono-group-editor",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset.chrono-period-stage:nth(0) uses off-scale spacing: 14px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 5,
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 6
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "surface": {
+    "id": "chart-state-recovery-harness",
+    "family": "chart-state",
+    "owner": "chart-state-surface",
+    "mode": "harness",
+    "state": "error-and-partial",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 1280,
+    "clientHeight": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 720
+  },
+  "root": {
+    "selector": "#root",
+    "tag": "div",
+    "classes": [],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 712,
+      "right": 1280,
+      "bottom": 712
+    },
+    "style": {
+      "display": "block",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Continue with Available Data",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 91.84,
+        "y": 545.69,
+        "width": 242.66,
+        "height": 39,
+        "right": 334.5,
+        "bottom": 584.69
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": null,
+        "padding": [
+          9,
+          12,
+          9,
+          12
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [],
+  "rhythms": [
+    {
+      "id": "div.chart-state-surface__actions:nth(0)",
+      "gaps": [],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.chart-state-surface__actions:nth(3)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 6,
+    "lowest": [
+      {
+        "id": "button:nth(9)",
+        "text": "Continue with Available Data",
+        "ratio": 12.07,
+        "foreground": "rgba(255, 255, 255, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "figure.chart-state-surface.chart-state-surface--error:nth(0)",
+        "text": "! Error Couldn’t load Recovery proof. The previous valid dashboard state is unchanged.",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "div.chart-state-surface__status:nth(1)",
+        "text": "! Error",
+        "ratio": 15.23,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(254.52, 252.34, 247.04, 1)",
+        "state": "available"
+      },
+      {
+        "id": "span.chart-state-surface__status-icon:nth(2)",
+        "text": "!",
+        "ratio": 15.23,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(254.52, 252.34, 247.04, 1)",
+        "state": "available"
+      },
+      {
+        "id": "strong.chart-state-surface__status-text:nth(3)",
+        "text": "Error",
+        "ratio": 15.23,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(254.52, 252.34, 247.04, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 0,
+      "visibleStateTextCount": 7
+    }
+  },
+  "findings": [
+    {
+      "id": "chart-state-recovery-harness:role-size:1",
+      "surfaceId": "chart-state-recovery-harness",
+      "owner": "chart-state-surface",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(0) is 39px high; standard expects 32px (±2px).",
+      "recommendation": "Move button:nth(0) to the shared standard height instead of preserving a local minimum."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  }
+}

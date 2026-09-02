@@ -1,0 +1,256 @@
+{
+  "surface": {
+    "id": "package-export-readiness",
+    "family": "package-management",
+    "owner": "dashboard-package-export-dialog",
+    "mode": "build",
+    "state": "unfinished-work",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".dashboard-package-export",
+    "tag": "section",
+    "classes": [
+      "confirm-dialog",
+      "dashboard-package-export",
+      "dashboard-dialog",
+      "dashboard-dialog--utility",
+      "dashboard-dialog--compact"
+    ],
+    "rect": {
+      "x": 490,
+      "y": 294,
+      "width": 460,
+      "height": 312,
+      "right": 950,
+      "bottom": 606
+    },
+    "style": {
+      "display": "flex",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": 0,
+      "rowGap": 0,
+      "columnGap": 0,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Open Scenario Passport",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 756,
+        "y": 470,
+        "width": 161,
+        "height": 32,
+        "right": 917,
+        "bottom": 502
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Cancel download",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 808.69,
+        "y": 557,
+        "width": 120.31,
+        "height": 32,
+        "right": 929,
+        "bottom": 589
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#dashboard-package-export-title",
+      "text": "Finish unfinished work before download",
+      "normalizedText": "finish unfinished work before download",
+      "tag": "h2",
+      "rect": {
+        "x": 511,
+        "y": 325,
+        "width": 418,
+        "height": 54,
+        "right": 929,
+        "bottom": 379
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.confirm-dialog-actions.dashboard-dialog__footer:nth(0)",
+      "gaps": [],
+      "declaredGap": 8,
+      "panelPadding": [
+        16,
+        20,
+        16,
+        20
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.confirm-dialog-actions.dashboard-dialog__footer:nth(1)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 5,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "DASHBOARD PACKAGE",
+        "ratio": 11.18,
+        "foreground": "rgba(44, 56, 61, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#dashboard-package-export-description",
+        "text": "Resolve each active draft first so the package contains a deliberate, recoverable dashboar",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#dashboard-package-export-title",
+        "text": "Finish unfinished work before download",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(3)",
+        "text": "Open Scenario Passport",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(4)",
+        "text": "Cancel download",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "package-export-readiness:rhythm:1",
+      "surfaceId": "package-export-readiness",
+      "owner": "dashboard-package-export-dialog",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.confirm-dialog-actions.dashboard-dialog__footer:nth(0) uses off-scale spacing: 20px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  }
+}

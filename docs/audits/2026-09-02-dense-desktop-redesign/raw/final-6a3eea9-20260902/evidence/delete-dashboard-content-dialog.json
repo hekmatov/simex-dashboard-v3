@@ -1,0 +1,345 @@
+{
+  "surface": {
+    "id": "delete-dashboard-content-dialog",
+    "family": "package-management",
+    "owner": "delete-dashboard-content-dialog",
+    "mode": "build",
+    "state": "destructive-confirmation",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".delete-dashboard-content-dialog",
+    "tag": "section",
+    "classes": [
+      "confirm-dialog",
+      "delete-dashboard-content-dialog",
+      "dashboard-dialog",
+      "dashboard-dialog--danger",
+      "dashboard-dialog--compact"
+    ],
+    "rect": {
+      "x": 490,
+      "y": 249,
+      "width": 460,
+      "height": 402,
+      "right": 950,
+      "bottom": 651
+    },
+    "style": {
+      "display": "flex",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": 0,
+      "rowGap": 0,
+      "columnGap": 0,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "input:nth(0)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 524,
+        "y": 507,
+        "width": 16,
+        "height": 16,
+        "right": 540,
+        "bottom": 523
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Keep dashboard",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 614.14,
+        "y": 598,
+        "width": 114.67,
+        "height": 36,
+        "right": 728.81,
+        "bottom": 634
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.danger:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Delete all dashboard content",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 736.81,
+        "y": 598,
+        "width": 192.19,
+        "height": 36,
+        "right": 929,
+        "bottom": 634
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input:nth(0)",
+      "text": "I understand that the authored dashboard content listed above will be permanently deleted.",
+      "glyphRect": {
+        "x": 524,
+        "y": 507,
+        "width": 16,
+        "height": 16,
+        "right": 540,
+        "bottom": 523
+      },
+      "labelRect": {
+        "x": 511,
+        "y": 493,
+        "width": 418,
+        "height": 62,
+        "right": 929,
+        "bottom": 555
+      },
+      "rowRect": {
+        "x": 511,
+        "y": 493,
+        "width": 418,
+        "height": 62,
+        "right": 929,
+        "bottom": 555
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 62,
+      "singleLine": false,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0.5
+    }
+  ],
+  "headings": [
+    {
+      "id": "#delete-dashboard-content-title",
+      "text": "Delete all dashboard content?",
+      "normalizedText": "delete all dashboard content",
+      "tag": "h2",
+      "rect": {
+        "x": 511,
+        "y": 266,
+        "width": 367.45,
+        "height": 27,
+        "right": 878.45,
+        "bottom": 293
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.confirm-dialog-actions.dashboard-dialog__footer:nth(0)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        16,
+        20,
+        16,
+        20
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.confirm-dialog-actions.dashboard-dialog__footer:nth(1)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "div.confirm-dialog-actions.dashboard-dialog__footer:nth(1)",
+      "strandedInlineSpace": 143.14,
+      "occupiedRatio": 0.69,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 5,
+    "lowest": [
+      {
+        "id": "button.danger:nth(4)",
+        "text": "Delete all dashboard content",
+        "ratio": 6.43,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(129, 81, 75, 1)",
+        "state": "disabled"
+      },
+      {
+        "id": "#delete-dashboard-content-description",
+        "text": "Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes. Ca",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#delete-dashboard-content-title",
+        "text": "Delete all dashboard content?",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#delete-dashboard-content-acknowledgement",
+        "text": "I understand that the authored dashboard content listed above will be permanently deleted.",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(3)",
+        "text": "Keep dashboard",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "delete-dashboard-content-dialog:role-size:1",
+      "surfaceId": "delete-dashboard-content-dialog",
+      "owner": "delete-dashboard-content-dialog",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button.secondary:nth(1) is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move button.secondary:nth(1) to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "delete-dashboard-content-dialog:rhythm:2",
+      "surfaceId": "delete-dashboard-content-dialog",
+      "owner": "delete-dashboard-content-dialog",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.confirm-dialog-actions.dashboard-dialog__footer:nth(0) uses off-scale spacing: 20px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 1,
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

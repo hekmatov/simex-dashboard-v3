@@ -1,0 +1,168 @@
+{
+  "surface": {
+    "id": "focused-chart-dialog",
+    "family": "fullscreen",
+    "owner": "fullscreen-display",
+    "mode": "view",
+    "state": "single-chart-focus",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9727
+  },
+  "root": {
+    "selector": "[role='dialog'][aria-label='Focused chart']",
+    "tag": "div",
+    "classes": [
+      "fullscreen-backdrop",
+      "fullscreen-backdrop--immersive",
+      "dashboard-dialog-backdrop"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "right": 1440,
+      "bottom": 900
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.simex-icon-control.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1391,
+        "y": 25,
+        "width": 24,
+        "height": 24,
+        "right": 1415,
+        "bottom": 49
+      },
+      "style": {
+        "display": "flex",
+        "position": "absolute",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 0,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#_r_2t_",
+      "text": "Confirmed cases",
+      "normalizedText": "confirmed cases",
+      "tag": "h3",
+      "rect": {
+        "x": 37,
+        "y": 37,
+        "width": 1366,
+        "height": 19,
+        "right": 1403,
+        "bottom": 56
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "button.simex-icon-control.secondary:nth(0)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 1,
+    "lowest": [
+      {
+        "id": "#_r_2t_",
+        "text": "Confirmed cases",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

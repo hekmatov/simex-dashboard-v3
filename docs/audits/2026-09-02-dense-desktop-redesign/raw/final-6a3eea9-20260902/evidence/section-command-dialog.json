@@ -1,0 +1,397 @@
+{
+  "surface": {
+    "id": "section-command-dialog",
+    "family": "structure-management",
+    "owner": "section-structure-command-dialog",
+    "mode": "build",
+    "state": "move-section",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".section-structure-command-dialog",
+    "tag": "aside",
+    "classes": [
+      "section-structure-command-dialog",
+      "dashboard-dialog",
+      "dashboard-dialog--utility",
+      "dashboard-dialog--standard"
+    ],
+    "rect": {
+      "x": 996,
+      "y": 140,
+      "width": 420,
+      "height": 736,
+      "right": 1416,
+      "bottom": 876
+    },
+    "style": {
+      "display": "flex",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1330.48,
+        "y": 178,
+        "width": 48.52,
+        "height": 32,
+        "right": 1379,
+        "bottom": 210
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(1)",
+      "tag": "select",
+      "type": null,
+      "text": "Socio-economic",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1013,
+        "y": 271,
+        "width": 386,
+        "height": 32,
+        "right": 1399,
+        "bottom": 303
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(2)",
+      "tag": "select",
+      "type": null,
+      "text": "First Section After Public response and policy signals After Trust and wellbeing After Economy and staffing",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1013,
+        "y": 342,
+        "width": 386,
+        "height": 32,
+        "right": 1399,
+        "bottom": 374
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(3)",
+      "tag": "button",
+      "type": "submit",
+      "text": "Confirm",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1249.31,
+        "y": 825,
+        "width": 65.73,
+        "height": 32,
+        "right": 1315.05,
+        "bottom": 857
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "Cancel",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1323.05,
+        "y": 825,
+        "width": 55.95,
+        "height": 32,
+        "right": 1379,
+        "bottom": 857
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "h3:nth(0)",
+      "text": "Move to Page",
+      "normalizedText": "move to page",
+      "tag": "h3",
+      "rect": {
+        "x": 1033,
+        "y": 194,
+        "width": 147.22,
+        "height": 21,
+        "right": 1180.22,
+        "bottom": 215
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "form:nth(0)",
+      "gaps": [
+        14
+      ],
+      "declaredGap": 14,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "footer.dashboard-dialog__footer.dashboard-dialog__actions:nth(1)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        16,
+        20,
+        16,
+        20
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "footer.dashboard-dialog__footer.dashboard-dialog__actions:nth(3)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "footer.dashboard-dialog__footer.dashboard-dialog__actions:nth(3)",
+      "strandedInlineSpace": 256.31,
+      "occupiedRatio": 0.34,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "form:nth(0)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 10,
+    "lowest": [
+      {
+        "id": "p:nth(4)",
+        "text": "Confirmed cases, Daily confirmed cases, Daily cases and deaths, Reproduction value, Cases ",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(5)",
+        "text": "Municipal outbreak playback, National outbreak and health-system playback",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(6)",
+        "text": "None",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(7)",
+        "text": "Municipal outbreak playback, National outbreak and health-system playback remains attached",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(8)",
+        "text": "Confirm",
+        "ratio": 12.07,
+        "foreground": "rgba(255, 255, 255, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "section-command-dialog:rhythm:1",
+      "surfaceId": "section-command-dialog",
+      "owner": "section-structure-command-dialog",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "form:nth(0) uses off-scale spacing: 14px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "section-command-dialog:rhythm:2",
+      "surfaceId": "section-command-dialog",
+      "owner": "section-structure-command-dialog",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "footer.dashboard-dialog__footer.dashboard-dialog__actions:nth(1) uses off-scale spacing: 20px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 2
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

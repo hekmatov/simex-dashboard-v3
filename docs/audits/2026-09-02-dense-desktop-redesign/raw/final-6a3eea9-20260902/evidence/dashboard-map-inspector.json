@@ -1,0 +1,275 @@
+{
+  "surface": {
+    "id": "dashboard-map-inspector",
+    "family": "structure-management",
+    "owner": "dashboard-map",
+    "mode": "build",
+    "state": "context-inspector",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[role='region'][aria-label='Context inspector']",
+    "tag": "section",
+    "classes": [
+      "build-side-sheet",
+      "build-inspector-sheet"
+    ],
+    "rect": {
+      "x": 1071,
+      "y": 253.98,
+      "width": 359,
+      "height": 339,
+      "right": 1430,
+      "bottom": 592.98
+    },
+    "style": {
+      "display": "block",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "input:nth(0)",
+      "tag": "input",
+      "type": null,
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1088,
+        "y": 362.98,
+        "width": 325,
+        "height": 32,
+        "right": 1413,
+        "bottom": 394.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "textarea:nth(1)",
+      "tag": "textarea",
+      "type": null,
+      "text": "",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 1088,
+        "y": 428.98,
+        "width": 325,
+        "height": 82,
+        "right": 1413,
+        "bottom": 510.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 82,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.danger:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Delete page…",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 1310.16,
+        "y": 539.98,
+        "width": 102.84,
+        "height": 36,
+        "right": 1413,
+        "bottom": 575.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#build-inspector-title",
+      "text": "Biomedical",
+      "normalizedText": "biomedical",
+      "tag": "h2",
+      "rect": {
+        "x": 1088,
+        "y": 301.98,
+        "width": 325,
+        "height": 27,
+        "right": 1413,
+        "bottom": 328.98
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.build-destructive-actions:nth(0)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "section.build-inspector:nth(0)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 5,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "PAGE",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label:nth(2)",
+        "text": "Page title",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label:nth(3)",
+        "text": "Description",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.danger:nth(4)",
+        "text": "Delete page…",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#build-inspector-title",
+        "text": "Biomedical",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

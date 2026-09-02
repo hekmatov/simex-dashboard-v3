@@ -1,0 +1,686 @@
+{
+  "surface": {
+    "id": "chart-wizard-review-issues",
+    "family": "chart-authoring",
+    "owner": "chart-wizard",
+    "mode": "build",
+    "state": "review-issues",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 1280,
+    "clientHeight": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".chart-wizard",
+    "tag": "section",
+    "classes": [
+      "chart-wizard",
+      "chart-wizard-v3",
+      "dashboard-dialog",
+      "dashboard-dialog--wizard",
+      "dashboard-dialog--wide",
+      "dashboard-authoring-shell"
+    ],
+    "rect": {
+      "x": 50,
+      "y": 32,
+      "width": 1180,
+      "height": 672,
+      "right": 1230,
+      "bottom": 704
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.simex-icon-control.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1189,
+        "y": 38.5,
+        "width": 24,
+        "height": 24,
+        "right": 1213,
+        "bottom": 62.5
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-stage-destination",
+      "tag": "button",
+      "type": "button",
+      "text": "Destination Complete",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 67,
+        "y": 73,
+        "width": 187.66,
+        "height": 36,
+        "right": 254.66,
+        "bottom": 109
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          4,
+          2,
+          4
+        ],
+        "gap": 0,
+        "rowGap": 0,
+        "columnGap": 0,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-stage-data-source",
+      "tag": "button",
+      "type": "button",
+      "text": "Data source Not started",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 258.66,
+        "y": 73,
+        "width": 187.67,
+        "height": 36,
+        "right": 446.33,
+        "bottom": 109
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          4,
+          2,
+          4
+        ],
+        "gap": 0,
+        "rowGap": 0,
+        "columnGap": 0,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-stage-chart-type",
+      "tag": "button",
+      "type": "button",
+      "text": "Chart type Waiting on prerequisite",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 450.33,
+        "y": 73,
+        "width": 187.67,
+        "height": 36,
+        "right": 638,
+        "bottom": 109
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          4,
+          2,
+          4
+        ],
+        "gap": 0,
+        "rowGap": 0,
+        "columnGap": 0,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-stage-map-and-prepare-data",
+      "tag": "button",
+      "type": "button",
+      "text": "Map and prepare Waiting on prerequisite",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 642,
+        "y": 73,
+        "width": 187.66,
+        "height": 36,
+        "right": 829.66,
+        "bottom": 109
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          4,
+          2,
+          4
+        ],
+        "gap": 0,
+        "rowGap": 0,
+        "columnGap": 0,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-stage-configure-chart",
+      "tag": "button",
+      "type": "button",
+      "text": "Configure Waiting on prerequisite",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 833.66,
+        "y": 73,
+        "width": 187.67,
+        "height": 36,
+        "right": 1021.33,
+        "bottom": 109
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          4,
+          2,
+          4
+        ],
+        "gap": 0,
+        "rowGap": 0,
+        "columnGap": 0,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-stage-review-and-create",
+      "tag": "button",
+      "type": "button",
+      "text": "Review Waiting on prerequisite",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1025.33,
+        "y": 73,
+        "width": 187.67,
+        "height": 36,
+        "right": 1213,
+        "bottom": 109
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          4,
+          2,
+          4
+        ],
+        "gap": 0,
+        "rowGap": 0,
+        "columnGap": 0,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.chart-creation-repair-link:nth(7)",
+      "tag": "button",
+      "type": "button",
+      "text": "Chart type",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 259.67,
+        "y": 206,
+        "width": 73.41,
+        "height": 21,
+        "right": 333.08,
+        "bottom": 227
+      },
+      "style": {
+        "display": "inline",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 0,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.simex-icon-control:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 974.23,
+        "y": 665,
+        "width": 24,
+        "height": 24,
+        "right": 998.23,
+        "bottom": 689
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.simex-icon-control:nth(9)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1006.23,
+        "y": 665,
+        "width": 24,
+        "height": 24,
+        "right": 1030.23,
+        "bottom": 689
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.chart-wizard-discard:nth(10)",
+      "tag": "button",
+      "type": "button",
+      "text": "Discard chart draft",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1038.23,
+        "y": 661,
+        "width": 130.77,
+        "height": 32,
+        "right": 1169,
+        "bottom": 693
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.simex-icon-control.simex-prominent-control:nth(11)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 1177,
+        "y": 659,
+        "width": 36,
+        "height": 36,
+        "right": 1213,
+        "bottom": 695
+      },
+      "style": {
+        "display": "inline-flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#chart-wizard-title",
+      "text": "Add new chart",
+      "normalizedText": "add new chart",
+      "tag": "h2",
+      "rect": {
+        "x": 67,
+        "y": 39.5,
+        "width": 1110,
+        "height": 22,
+        "right": 1177,
+        "bottom": 61.5
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.chart-wizard-footer-actions.dashboard-dialog__actions:nth(0)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "div.chart-wizard-footer-actions.dashboard-dialog__actions:nth(6)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [
+    {
+      "id": "div.chart-wizard-body.dashboard-dialog__body:nth(25)",
+      "overflowX": 0,
+      "overflowY": 430,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    },
+    {
+      "id": "aside.chart-creation-proof-deck:nth(41)",
+      "overflowX": 0,
+      "overflowY": 315.5,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "nav.chart-wizard-step-tabs.dashboard-dialog__progress:nth(1)",
+      "occupiedRatio": 0.97,
+      "crowded": false
+    },
+    {
+      "id": "div.chart-wizard-footer-actions.dashboard-dialog__actions:nth(6)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 22,
+    "lowest": [
+      {
+        "id": "#chart-stage-destination",
+        "text": "Destination Complete",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "small:nth(2)",
+        "text": "Complete",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#chart-stage-data-source",
+        "text": "Data source Not started",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "small:nth(4)",
+        "text": "Not started",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#chart-stage-chart-type",
+        "text": "Chart type Waiting on prerequisite",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "chart-wizard-review-issues:role-size:1",
+      "surfaceId": "chart-wizard-review-issues",
+      "owner": "chart-wizard",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "#chart-stage-destination is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move #chart-stage-destination to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chart-wizard-review-issues:role-size:2",
+      "surfaceId": "chart-wizard-review-issues",
+      "owner": "chart-wizard",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "#chart-stage-data-source is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move #chart-stage-data-source to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chart-wizard-review-issues:role-size:3",
+      "surfaceId": "chart-wizard-review-issues",
+      "owner": "chart-wizard",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "#chart-stage-chart-type is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move #chart-stage-chart-type to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chart-wizard-review-issues:role-size:4",
+      "surfaceId": "chart-wizard-review-issues",
+      "owner": "chart-wizard",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "#chart-stage-map-and-prepare-data is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move #chart-stage-map-and-prepare-data to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chart-wizard-review-issues:role-size:5",
+      "surfaceId": "chart-wizard-review-issues",
+      "owner": "chart-wizard",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "#chart-stage-configure-chart is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move #chart-stage-configure-chart to the shared standard height instead of preserving a local minimum."
+    },
+    {
+      "id": "chart-wizard-review-issues:role-size:6",
+      "surfaceId": "chart-wizard-review-issues",
+      "owner": "chart-wizard",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "#chart-stage-review-and-create is 36px high; standard expects 32px (±2px).",
+      "recommendation": "Move #chart-stage-review-and-create to the shared standard height instead of preserving a local minimum."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 6
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 6
+  }
+}

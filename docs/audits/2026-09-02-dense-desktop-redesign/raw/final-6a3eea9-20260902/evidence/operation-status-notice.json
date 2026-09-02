@@ -1,0 +1,155 @@
+{
+  "surface": {
+    "id": "operation-status-notice",
+    "family": "operation-status",
+    "owner": "operation-status-viewport",
+    "mode": "build",
+    "state": "completed-scenario-save",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".operation-status-notice",
+    "tag": "article",
+    "classes": [
+      "operation-status-notice"
+    ],
+    "rect": {
+      "x": 1064,
+      "y": 754.61,
+      "width": 360,
+      "height": 129.39,
+      "right": 1424,
+      "bottom": 884
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        8,
+        12,
+        8,
+        12
+      ],
+      "gap": 8,
+      "rowGap": 8,
+      "columnGap": 8,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.operation-status-notice__dismiss:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Dismiss",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1336.33,
+        "y": 844,
+        "width": 74.67,
+        "height": 31,
+        "right": 1411,
+        "bottom": 875
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 3,
+    "lowest": [
+      {
+        "id": "p:nth(1)",
+        "text": "Chart saved “Confirmed cases audit”.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "div.operation-status-notice__heading:nth(0)",
+        "text": "Saving Chart “Confirmed cases audit” COMPLETED",
+        "ratio": 15.31,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.operation-status-notice__dismiss:nth(2)",
+        "text": "Dismiss",
+        "ratio": 15.31,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 0,
+      "visibleStateTextCount": 2
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

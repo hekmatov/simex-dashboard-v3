@@ -1,0 +1,1121 @@
+{
+  "surface": {
+    "id": "static-image-source-editor",
+    "family": "image-editor",
+    "owner": "static-image-editor",
+    "mode": "build",
+    "state": "source-and-crop",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".static-content-dialog",
+    "tag": "form",
+    "classes": [
+      "static-content-dialog",
+      "dashboard-dialog",
+      "dashboard-dialog--wizard",
+      "dashboard-dialog--wide",
+      "dashboard-authoring-shell"
+    ],
+    "rect": {
+      "x": 160,
+      "y": 70,
+      "width": 1120,
+      "height": 760,
+      "right": 1280,
+      "bottom": 830
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1210.48,
+        "y": 87,
+        "width": 48.52,
+        "height": 32,
+        "right": 1259,
+        "bottom": 119
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Destination",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 181,
+        "y": 146,
+        "width": 86.53,
+        "height": 32,
+        "right": 267.53,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Content type",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 275.53,
+        "y": 146,
+        "width": 95.63,
+        "height": 32,
+        "right": 371.16,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "Content",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 379.16,
+        "y": 146,
+        "width": 64.89,
+        "height": 32,
+        "right": 444.05,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "Preview & add",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 452.05,
+        "y": 146,
+        "width": 105.59,
+        "height": 32,
+        "right": 557.64,
+        "bottom": 178
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-title",
+      "tag": "input",
+      "type": null,
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 272.63,
+        "y": 209,
+        "width": 904.02,
+        "height": 32,
+        "right": 1176.64,
+        "bottom": 241
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-no-title",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1188.64,
+        "y": 217,
+        "width": 16,
+        "height": 16,
+        "right": 1204.64,
+        "bottom": 233
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-image-title-align",
+      "tag": "select",
+      "type": null,
+      "text": "Left Center Right",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 194,
+        "y": 311,
+        "width": 251,
+        "height": 32,
+        "right": 445,
+        "bottom": 343
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "−",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 461,
+        "y": 315,
+        "width": 25.2,
+        "height": 26,
+        "right": 486.2,
+        "bottom": 341
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(9)",
+      "tag": "button",
+      "type": "button",
+      "text": "+",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 536.7,
+        "y": 315,
+        "width": 25.2,
+        "height": 26,
+        "right": 561.91,
+        "bottom": 341
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-image-title-bold",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 194,
+        "y": 356,
+        "width": 16,
+        "height": 16,
+        "right": 210,
+        "bottom": 372
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-image-title-italic",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 258.03,
+        "y": 356,
+        "width": 16,
+        "height": 16,
+        "right": 274.03,
+        "bottom": 372
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-image-title-underline",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 323.84,
+        "y": 356,
+        "width": 16,
+        "height": 16,
+        "right": 339.84,
+        "bottom": 372
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-image-background-mode",
+      "tag": "select",
+      "type": null,
+      "text": "Default White Custom",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 194,
+        "y": 456,
+        "width": 1052,
+        "height": 32,
+        "right": 1246,
+        "bottom": 488
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-static-66cd0ae3-a4f2-4eb6-b7a8-10ca257c3d35-footprint-width",
+      "tag": "select",
+      "type": null,
+      "text": "1 column 2 columns 3 columns 4 columns",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 194,
+        "y": 572.75,
+        "width": 231.5,
+        "height": 32,
+        "right": 425.5,
+        "bottom": 604.75
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#static-panel-static-66cd0ae3-a4f2-4eb6-b7a8-10ca257c3d35-footprint-row-height",
+      "tag": "select",
+      "type": null,
+      "text": "25% of a row 50% of a row 75% of a row 100% of a row 125% of a row 150% of a row 175% of a row 200% of a row",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 194,
+        "y": 630.5,
+        "width": 231.5,
+        "height": 32,
+        "right": 425.5,
+        "bottom": 662.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(16)",
+      "tag": "button",
+      "type": "button",
+      "text": "Cancel",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1030.75,
+        "y": 787,
+        "width": 55.95,
+        "height": 32,
+        "right": 1086.7,
+        "bottom": 819
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(17)",
+      "tag": "button",
+      "type": "button",
+      "text": "Back",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1134.7,
+        "y": 787,
+        "width": 44.84,
+        "height": 32,
+        "right": 1179.55,
+        "bottom": 819
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(18)",
+      "tag": "button",
+      "type": "submit",
+      "text": "Continue",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1187.55,
+        "y": 787,
+        "width": 71.45,
+        "height": 32,
+        "right": 1259,
+        "bottom": 819
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "#static-panel-no-title",
+      "text": "No title",
+      "glyphRect": {
+        "x": 1188.64,
+        "y": 217,
+        "width": 16,
+        "height": 16,
+        "right": 1204.64,
+        "bottom": 233
+      },
+      "labelRect": {
+        "x": 1188.64,
+        "y": 211,
+        "width": 70.36,
+        "height": 28,
+        "right": 1259,
+        "bottom": 239
+      },
+      "rowRect": {
+        "x": 1188.64,
+        "y": 211,
+        "width": 70.36,
+        "height": 28,
+        "right": 1259,
+        "bottom": 239
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0.5
+    },
+    {
+      "id": "#static-image-title-bold",
+      "text": "Bold",
+      "glyphRect": {
+        "x": 194,
+        "y": 356,
+        "width": 16,
+        "height": 16,
+        "right": 210,
+        "bottom": 372
+      },
+      "labelRect": {
+        "x": 194,
+        "y": 355,
+        "width": 52.03,
+        "height": 28,
+        "right": 246.03,
+        "bottom": 383
+      },
+      "rowRect": {
+        "x": 194,
+        "y": 355,
+        "width": 52.03,
+        "height": 28,
+        "right": 246.03,
+        "bottom": 383
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0.5
+    },
+    {
+      "id": "#static-image-title-italic",
+      "text": "Italic",
+      "glyphRect": {
+        "x": 258.03,
+        "y": 356,
+        "width": 16,
+        "height": 16,
+        "right": 274.03,
+        "bottom": 372
+      },
+      "labelRect": {
+        "x": 258.03,
+        "y": 355,
+        "width": 53.81,
+        "height": 28,
+        "right": 311.84,
+        "bottom": 383
+      },
+      "rowRect": {
+        "x": 258.03,
+        "y": 355,
+        "width": 53.81,
+        "height": 28,
+        "right": 311.84,
+        "bottom": 383
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0.5
+    },
+    {
+      "id": "#static-image-title-underline",
+      "text": "Underline",
+      "glyphRect": {
+        "x": 323.84,
+        "y": 356,
+        "width": 16,
+        "height": 16,
+        "right": 339.84,
+        "bottom": 372
+      },
+      "labelRect": {
+        "x": 323.84,
+        "y": 355,
+        "width": 83.81,
+        "height": 28,
+        "right": 407.66,
+        "bottom": 383
+      },
+      "rowRect": {
+        "x": 323.84,
+        "y": 355,
+        "width": 83.81,
+        "height": 28,
+        "right": 407.66,
+        "bottom": 383
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0.5
+    }
+  ],
+  "headings": [
+    {
+      "id": "#static-content-dialog-title",
+      "text": "ADD TEXT/IMAGE",
+      "normalizedText": "add text image",
+      "tag": "h2",
+      "rect": {
+        "x": 181,
+        "y": 87,
+        "width": 130.28,
+        "height": 14,
+        "right": 311.28,
+        "bottom": 101
+      }
+    },
+    {
+      "id": "legend:nth(1)",
+      "text": "Image title",
+      "normalizedText": "image title",
+      "tag": "legend",
+      "rect": {
+        "x": 194,
+        "y": 263,
+        "width": 96.39,
+        "height": 19,
+        "right": 290.39,
+        "bottom": 282
+      }
+    },
+    {
+      "id": "legend:nth(2)",
+      "text": "Image viewport",
+      "normalizedText": "image viewport",
+      "tag": "legend",
+      "rect": {
+        "x": 194,
+        "y": 408,
+        "width": 136.42,
+        "height": 19,
+        "right": 330.42,
+        "bottom": 427
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset.image-panel-presentation__group.dashboard-authoring-grid:nth(0)",
+      "gaps": [
+        12,
+        16
+      ],
+      "declaredGap": 12,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "div.image-panel-presentation__styles.dashboard-authoring-field--wide:nth(1)",
+      "gaps": [
+        12
+      ],
+      "declaredGap": 0,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fieldset.image-panel-presentation__group.dashboard-authoring-grid:nth(2)",
+      "gaps": [
+        12
+      ],
+      "declaredGap": 12,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "div.image-crop-selection:nth(3)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.static-content-dialog__title-choice:nth(3)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div.image-panel-presentation__styles.dashboard-authoring-field--wide:nth(7)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "nav.dashboard-dialog__progress:nth(1)",
+      "strandedInlineSpace": 741.36,
+      "occupiedRatio": 0.34,
+      "crowded": false
+    },
+    {
+      "id": "div.static-content-dialog__title-choice:nth(3)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div:nth(6)",
+      "strandedInlineSpace": 150.09,
+      "occupiedRatio": 0.4,
+      "crowded": false
+    },
+    {
+      "id": "div.image-panel-presentation__styles.dashboard-authoring-field--wide:nth(7)",
+      "strandedInlineSpace": 838.34,
+      "occupiedRatio": 0.2,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "p:nth(31)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [
+    {
+      "id": "section.static-content-dialog__body.dashboard-dialog__body:nth(9)",
+      "overflowX": 0,
+      "overflowY": 1288.73,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "nav.dashboard-dialog__progress:nth(1)",
+      "occupiedRatio": 0.34,
+      "crowded": false
+    },
+    {
+      "id": "div.static-content-fields.dashboard-authoring-grid:nth(2)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "fieldset.image-panel-presentation__group.dashboard-authoring-grid:nth(5)",
+      "occupiedRatio": 0.98,
+      "crowded": false
+    },
+    {
+      "id": "div.image-panel-presentation__styles.dashboard-authoring-field--wide:nth(7)",
+      "occupiedRatio": 0.2,
+      "crowded": false
+    },
+    {
+      "id": "footer.dashboard-dialog__footer.dashboard-authoring-footer:nth(14)",
+      "occupiedRatio": 0.2,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 22,
+    "lowest": [
+      {
+        "id": "#static-content-dialog-title",
+        "text": "ADD TEXT/IMAGE",
+        "ratio": 11.18,
+        "foreground": "rgba(44, 56, 61, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(22)",
+        "text": "Continue",
+        "ratio": 12.07,
+        "foreground": "rgba(255, 255, 255, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.static-content-dialog__title-label:nth(6)",
+        "text": "Panel Title",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.static-content-dialog__no-title.dashboard-authoring-boolean-row:nth(7)",
+        "text": "No title",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "legend:nth(8)",
+        "text": "Image title",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 3,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

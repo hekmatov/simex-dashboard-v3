@@ -1,0 +1,515 @@
+{
+  "surface": {
+    "id": "source-content-compact",
+    "family": "source-content",
+    "owner": "source-content-workspace",
+    "mode": "build",
+    "state": "catalogue-pressure",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1024,
+    "height": 768
+  },
+  "document": {
+    "clientWidth": 1024,
+    "clientHeight": 768,
+    "scrollWidth": 1024,
+    "scrollHeight": 9924
+  },
+  "root": {
+    "selector": "[aria-label='Source content authoring']",
+    "tag": "aside",
+    "classes": [
+      "build-authoring-auxiliary",
+      "build-authoring-auxiliary--source-content"
+    ],
+    "rect": {
+      "x": 16,
+      "y": 174,
+      "width": 992,
+      "height": 570,
+      "right": 1008,
+      "bottom": 744
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "gap": 14,
+      "rowGap": 14,
+      "columnGap": 14,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary.build-auxiliary-close:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 944.48,
+        "y": 189,
+        "width": 48.52,
+        "height": 32,
+        "right": 993,
+        "bottom": 221
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Media",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 52,
+        "y": 338,
+        "width": 54.22,
+        "height": 32,
+        "right": 106.22,
+        "bottom": 370
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Data sources",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 114.22,
+        "y": 338,
+        "width": 93.88,
+        "height": 32,
+        "right": 208.09,
+        "bottom": 370
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "Add media",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 52,
+        "y": 419,
+        "width": 82.52,
+        "height": 32,
+        "right": 134.52,
+        "bottom": 451
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "Catalogue",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 881.25,
+        "y": 470.5,
+        "width": 77.75,
+        "height": 32,
+        "right": 959,
+        "bottom": 502.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(5)",
+      "tag": "input",
+      "type": "search",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 65,
+        "y": 544,
+        "width": 894,
+        "height": 32,
+        "right": 959,
+        "bottom": 576
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(6)",
+      "tag": "select",
+      "type": null,
+      "text": "All Uploaded Packaged External Linked project Legacy import",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 65,
+        "y": 607,
+        "width": 443,
+        "height": 32,
+        "right": 508,
+        "bottom": 639
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(7)",
+      "tag": "select",
+      "type": null,
+      "text": "All Ready External Missing Corrupt Needs relink Needs review",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 516,
+        "y": 607,
+        "width": 443,
+        "height": 32,
+        "right": 959,
+        "bottom": 639
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(8)",
+      "tag": "select",
+      "type": null,
+      "text": "All Used Unused",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 65,
+        "y": 670,
+        "width": 443,
+        "height": 32,
+        "right": 508,
+        "bottom": 702
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#source-content-heading",
+      "text": "Source content",
+      "normalizedText": "source content",
+      "tag": "h2",
+      "rect": {
+        "x": 52,
+        "y": 266,
+        "width": 153.66,
+        "height": 27,
+        "right": 205.66,
+        "bottom": 293
+      }
+    },
+    {
+      "id": "h3:nth(1)",
+      "text": "Media catalogue",
+      "normalizedText": "media catalogue",
+      "tag": "h3",
+      "rect": {
+        "x": 65,
+        "y": 488,
+        "width": 130.94,
+        "height": 21,
+        "right": 195.94,
+        "bottom": 509
+      }
+    }
+  ],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "div.source-content-tabs.dashboard-dialog__progress:nth(2)",
+      "strandedInlineSpace": 803.91,
+      "occupiedRatio": 0.16,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "div.source-content-filters:nth(4)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 15,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(7)",
+        "text": "CATALOGUE",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.source-content-empty:nth(14)",
+        "text": "No content matches these filters.",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.eyebrow:nth(1)",
+        "text": "BUILD",
+        "ratio": 11.18,
+        "foreground": "rgba(44, 56, 61, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary.build-auxiliary-close:nth(0)",
+        "text": "Close",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#source-content-heading",
+        "text": "Source content",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 2,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "source-content-compact:role-size:1",
+      "surfaceId": "source-content-compact",
+      "owner": "source-content-workspace",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(1) is 32px high; compact expects 28px (±2px).",
+      "recommendation": "Move button:nth(1) to the shared compact height instead of preserving a local minimum."
+    },
+    {
+      "id": "source-content-compact:role-size:2",
+      "surfaceId": "source-content-compact",
+      "owner": "source-content-workspace",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button:nth(2) is 32px high; compact expects 28px (±2px).",
+      "recommendation": "Move button:nth(2) to the shared compact height instead of preserving a local minimum."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 2
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

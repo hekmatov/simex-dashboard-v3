@@ -1,0 +1,1402 @@
+{
+  "surface": {
+    "id": "dashboard-look-standard",
+    "family": "dashboard-look",
+    "owner": "dashboard-look-drawer",
+    "mode": "home",
+    "state": "profile-options",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 1657
+  },
+  "root": {
+    "selector": "[role='dialog']",
+    "tag": "aside",
+    "classes": [
+      "right-side-drawer",
+      "dashboard-dialog",
+      "dashboard-dialog--workspace",
+      "dashboard-dialog--wide",
+      "look-drawer"
+    ],
+    "rect": {
+      "x": 1040,
+      "y": 84,
+      "width": 400,
+      "height": 816,
+      "right": 1440,
+      "bottom": 900
+    },
+    "style": {
+      "display": "grid",
+      "position": "absolute",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1366.69,
+        "y": 101,
+        "width": 56.31,
+        "height": 31,
+        "right": 1423,
+        "bottom": 132
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 24,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(1)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 254.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 270.48
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(2)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 291.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 307.48
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(3)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 328.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 344.48
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(4)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 401.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 417.48
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(5)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 438.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 454.48
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(6)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 475.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 491.48
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(7)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 547.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 563.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(8)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 583.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 599.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(9)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 619.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 635.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(10)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 655.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 671.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(11)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 691.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 707.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(12)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 727.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 743.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(13)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 763.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 779.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(14)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 799.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 815.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(15)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 835.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 851.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(16)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1070,
+        "y": 871.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 887.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input:nth(0)",
+      "text": "System",
+      "glyphRect": {
+        "x": 1070,
+        "y": 254.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 270.48
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 247.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 276.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 247.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 276.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 29,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(1)",
+      "text": "Light",
+      "glyphRect": {
+        "x": 1070,
+        "y": 291.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 307.48
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 284.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 313.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 284.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 313.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 29,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(2)",
+      "text": "Dark",
+      "glyphRect": {
+        "x": 1070,
+        "y": 328.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 344.48
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 321.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 350.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 321.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 350.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 29,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(3)",
+      "text": "Ledger",
+      "glyphRect": {
+        "x": 1070,
+        "y": 401.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 417.48
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 394.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 423.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 394.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 423.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 29,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(4)",
+      "text": "Humanist",
+      "glyphRect": {
+        "x": 1070,
+        "y": 438.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 454.48
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 431.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 460.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 431.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 460.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 29,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(5)",
+      "text": "Instrument",
+      "glyphRect": {
+        "x": 1070,
+        "y": 475.48,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 491.48
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 468.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 497.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 468.98,
+        "width": 358,
+        "height": 29,
+        "right": 1419,
+        "bottom": 497.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 29,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(6)",
+      "text": "Vellum",
+      "glyphRect": {
+        "x": 1070,
+        "y": 547.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 563.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 541.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 569.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 541.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 569.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(7)",
+      "text": "Register",
+      "glyphRect": {
+        "x": 1070,
+        "y": 583.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 599.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 577.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 605.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 577.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 605.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(8)",
+      "text": "Archive",
+      "glyphRect": {
+        "x": 1070,
+        "y": 619.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 635.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 613.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 641.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 613.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 641.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(9)",
+      "text": "Common Ground",
+      "glyphRect": {
+        "x": 1070,
+        "y": 655.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 671.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 649.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 677.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 649.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 677.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(10)",
+      "text": "Forum",
+      "glyphRect": {
+        "x": 1070,
+        "y": 691.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 707.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 685.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 713.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 685.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 713.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(11)",
+      "text": "Steel",
+      "glyphRect": {
+        "x": 1070,
+        "y": 727.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 743.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 721.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 749.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 721.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 749.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(12)",
+      "text": "Telemetry",
+      "glyphRect": {
+        "x": 1070,
+        "y": 763.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 779.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 757.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 785.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 757.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 785.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(13)",
+      "text": "Amber",
+      "glyphRect": {
+        "x": 1070,
+        "y": 799.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 815.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 793.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 821.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 793.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 821.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(14)",
+      "text": "Prismatic",
+      "glyphRect": {
+        "x": 1070,
+        "y": 835.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 851.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 829.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 857.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 829.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 857.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input:nth(15)",
+      "text": "Ladder",
+      "glyphRect": {
+        "x": 1070,
+        "y": 871.98,
+        "width": 16,
+        "height": 16,
+        "right": 1086,
+        "bottom": 887.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 865.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 893.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 865.98,
+        "width": 358,
+        "height": 28,
+        "right": 1419,
+        "bottom": 893.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    }
+  ],
+  "headings": [
+    {
+      "id": "#look-drawer-title",
+      "text": "Dashboard look",
+      "normalizedText": "dashboard look",
+      "tag": "h2",
+      "rect": {
+        "x": 1057,
+        "y": 119,
+        "width": 297.69,
+        "height": 23.98,
+        "right": 1354.69,
+        "bottom": 142.98
+      }
+    },
+    {
+      "id": "legend:nth(1)",
+      "text": "Appearance",
+      "normalizedText": "appearance",
+      "tag": "legend",
+      "rect": {
+        "x": 1061,
+        "y": 227.98,
+        "width": 86.11,
+        "height": 20,
+        "right": 1147.11,
+        "bottom": 247.98
+      }
+    },
+    {
+      "id": "legend:nth(2)",
+      "text": "Visual style",
+      "normalizedText": "visual style",
+      "tag": "legend",
+      "rect": {
+        "x": 1061,
+        "y": 362.98,
+        "width": 82.42,
+        "height": 20,
+        "right": 1143.42,
+        "bottom": 382.98
+      }
+    },
+    {
+      "id": "legend:nth(3)",
+      "text": "Colour profile",
+      "normalizedText": "colour profile",
+      "tag": "legend",
+      "rect": {
+        "x": 1061,
+        "y": 509.98,
+        "width": 101.61,
+        "height": 20,
+        "right": 1162.61,
+        "bottom": 529.98
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset.look-control-section.look-appearance-section:nth(0)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fieldset.look-control-section:nth(1)",
+      "gaps": [
+        12
+      ],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fieldset.look-control-section:nth(2)",
+      "gaps": [
+        12
+      ],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [
+    {
+      "id": "div.right-side-drawer__content.dashboard-dialog__body:nth(6)",
+      "overflowX": 0,
+      "overflowY": 147.98,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "div.look-appearance-options:nth(2)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.look-choice-list:nth(3)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.look-profile-grid:nth(4)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 23,
+    "lowest": [
+      {
+        "id": "#look-drawer-description",
+        "text": "Selections are saved automatically and applied to the live dashboard.",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "DASHBOARD SETTINGS",
+        "ratio": 11.18,
+        "foreground": "rgba(44, 56, 61, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "legend:nth(4)",
+        "text": "Appearance",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "legend:nth(8)",
+        "text": "Visual style",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "legend:nth(12)",
+        "text": "Colour profile",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 4,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

@@ -1,0 +1,580 @@
+{
+  "surface": {
+    "id": "build-unit-orbit",
+    "family": "structure-management",
+    "owner": "unit-orbit",
+    "mode": "build",
+    "state": "selected-chart",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 7611
+  },
+  "root": {
+    "selector": ".unit-orbit",
+    "tag": "aside",
+    "classes": [
+      "unit-orbit"
+    ],
+    "rect": {
+      "x": 1008,
+      "y": 234.59,
+      "width": 420,
+      "height": 653.41,
+      "right": 1428,
+      "bottom": 888
+    },
+    "style": {
+      "display": "block",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "#chart-quick-socio_risk_perception-editor-save-changes",
+      "tag": "button",
+      "type": "submit",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1029,
+        "y": 327.59,
+        "width": 24,
+        "height": 24,
+        "right": 1053,
+        "bottom": 351.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-quick-socio_risk_perception-editor-reset-changes",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1061,
+        "y": 327.59,
+        "width": 24,
+        "height": 24,
+        "right": 1085,
+        "bottom": 351.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-quick-socio_risk_perception-editor-cancel",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1093,
+        "y": 327.59,
+        "width": 24,
+        "height": 24,
+        "right": 1117,
+        "bottom": 351.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-quick-socio_risk_perception-chart-remove",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1125,
+        "y": 327.59,
+        "width": 24,
+        "height": 24,
+        "right": 1149,
+        "bottom": 351.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-footprint-width",
+      "tag": "select",
+      "type": null,
+      "text": "1 column 2 columns 3 columns 4 columns",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1038,
+        "y": 459.34,
+        "width": 360,
+        "height": 32,
+        "right": 1398,
+        "bottom": 491.34
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-footprint-row-height",
+      "tag": "select",
+      "type": null,
+      "text": "25% of a row 50% of a row 75% of a row 100% of a row 125% of a row 150% of a row 175% of a row 200% of a row",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1038,
+        "y": 517.09,
+        "width": 360,
+        "height": 32,
+        "right": 1398,
+        "bottom": 549.09
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-field-title",
+      "tag": "input",
+      "type": "text",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1056,
+        "y": 794.69,
+        "width": 324,
+        "height": 32,
+        "right": 1380,
+        "bottom": 826.69
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chart-field-titleVisible",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1056,
+        "y": 844.69,
+        "width": 16,
+        "height": 16,
+        "right": 1072,
+        "bottom": 860.69
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "#chart-field-titleVisible",
+      "text": "Show title",
+      "glyphRect": {
+        "x": 1056,
+        "y": 844.69,
+        "width": 16,
+        "height": 16,
+        "right": 1072,
+        "bottom": 860.69
+      },
+      "labelRect": {
+        "x": 1080,
+        "y": 838.69,
+        "width": 300,
+        "height": 28,
+        "right": 1380,
+        "bottom": 866.69
+      },
+      "rowRect": {
+        "x": 1056,
+        "y": 838.69,
+        "width": 324,
+        "height": 28,
+        "right": 1380,
+        "bottom": 866.69
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0.5
+    }
+  ],
+  "headings": [
+    {
+      "id": "#chart-quick-editor-title",
+      "text": "Risk perception over time",
+      "normalizedText": "risk perception over time",
+      "tag": "h2",
+      "rect": {
+        "x": 1025,
+        "y": 275.59,
+        "width": 386,
+        "height": 22,
+        "right": 1411,
+        "bottom": 297.59
+      }
+    },
+    {
+      "id": "#chart-footprint-title",
+      "text": "Footprint",
+      "normalizedText": "footprint",
+      "tag": "h3",
+      "rect": {
+        "x": 1038,
+        "y": 416.59,
+        "width": 67.27,
+        "height": 17,
+        "right": 1105.27,
+        "bottom": 433.59
+      }
+    },
+    {
+      "id": "#chart-form-section-quick-appearance",
+      "text": "Quick appearance",
+      "normalizedText": "quick appearance",
+      "tag": "h3",
+      "rect": {
+        "x": 1056,
+        "y": 720.69,
+        "width": 324,
+        "height": 21,
+        "right": 1380,
+        "bottom": 741.69
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "form:nth(0)",
+      "gaps": [],
+      "declaredGap": 0,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.chart-editor-actions.chart-quick-editor-actions:nth(1)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        12,
+        20,
+        12,
+        20
+      ]
+    },
+    {
+      "id": "fieldset.chart-quick-editor-fields:nth(2)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        5.6,
+        12,
+        10,
+        12
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "div.chart-editor-actions.chart-quick-editor-actions:nth(2)",
+      "strandedInlineSpace": 298,
+      "occupiedRatio": 0.29,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [
+    {
+      "id": "div.unit-orbit-scroll:nth(0)",
+      "overflowX": 0,
+      "overflowY": 190.69,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "div.chart-editor-actions.chart-quick-editor-actions:nth(2)",
+      "occupiedRatio": 0.29,
+      "crowded": false
+    },
+    {
+      "id": "div.chart-authoring-section-fields.dashboard-authoring-grid:nth(9)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 10,
+    "lowest": [
+      {
+        "id": "p.chart-footprint-status:nth(5)",
+        "text": "Current footprint: 4 columns × 200% of a row.",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "QUICK EDIT",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#chart-footprint-title",
+        "text": "Footprint",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.chart-footprint-input:nth(3)",
+        "text": "WIDTH 1 column 2 columns 3 columns 4 columns",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.chart-footprint-input:nth(4)",
+        "text": "ROW HEIGHT 25% of a row 50% of a row 75% of a row 100% of a row 125% of a row 150% of a ro",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 3,
+      "visibleStateTextCount": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "build-unit-orbit:rhythm:1",
+      "surfaceId": "build-unit-orbit",
+      "owner": "unit-orbit",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.chart-editor-actions.chart-quick-editor-actions:nth(1) uses off-scale spacing: 20px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "build-unit-orbit:rhythm:2",
+      "surfaceId": "build-unit-orbit",
+      "owner": "unit-orbit",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset.chart-quick-editor-fields:nth(2) uses off-scale spacing: 5.6, 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 2
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

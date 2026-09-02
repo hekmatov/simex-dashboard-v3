@@ -1,0 +1,381 @@
+{
+  "surface": {
+    "id": "chart-comparison-dialog",
+    "family": "fullscreen",
+    "owner": "fullscreen-display",
+    "mode": "view",
+    "state": "two-chart-comparison",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9727
+  },
+  "root": {
+    "selector": "[role='dialog'][aria-label='Chart comparison']",
+    "tag": "div",
+    "classes": [
+      "fullscreen-backdrop",
+      "fullscreen-backdrop--immersive",
+      "dashboard-dialog-backdrop"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "right": 1440,
+      "bottom": 900
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.simex-icon-control.fullscreen-layout-button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 694,
+        "y": 30,
+        "width": 24,
+        "height": 24,
+        "right": 718,
+        "bottom": 54
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.simex-icon-control.fullscreen-layout-button:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 722,
+        "y": 30,
+        "width": 24,
+        "height": 24,
+        "right": 746,
+        "bottom": 54
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.simex-icon-control.secondary:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1391,
+        "y": 25,
+        "width": 24,
+        "height": 24,
+        "right": 1415,
+        "bottom": 49
+      },
+      "style": {
+        "display": "flex",
+        "position": "absolute",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 0,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.simex-icon-control.secondary:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1327,
+        "y": 55,
+        "width": 24,
+        "height": 24,
+        "right": 1351,
+        "bottom": 79
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 19,
+        "lineHeight": 19,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.simex-icon-control.secondary:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1359,
+        "y": 55,
+        "width": 24,
+        "height": 24,
+        "right": 1383,
+        "bottom": 79
+      },
+      "style": {
+        "display": "flex",
+        "position": "relative",
+        "fontSize": 19,
+        "lineHeight": 19,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#_r_51_",
+      "text": "Confirmed cases",
+      "normalizedText": "confirmed cases",
+      "tag": "h3",
+      "rect": {
+        "x": 44,
+        "y": 44,
+        "width": 665,
+        "height": 19,
+        "right": 709,
+        "bottom": 63
+      }
+    },
+    {
+      "id": "#_r_57_",
+      "text": "Daily confirmed cases",
+      "normalizedText": "daily confirmed cases",
+      "tag": "h3",
+      "rect": {
+        "x": 731,
+        "y": 44,
+        "width": 665,
+        "height": 19,
+        "right": 1396,
+        "bottom": 63
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.multi-fullscreen-controls.dashboard-dialog__header:nth(0)",
+      "gaps": [
+        4
+      ],
+      "declaredGap": 4,
+      "panelPadding": [
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "button.simex-icon-control.secondary:nth(1)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.multi-cell-controls:nth(2)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        4,
+        6,
+        4,
+        6
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "div.multi-fullscreen-controls.dashboard-dialog__header:nth(0)",
+      "strandedInlineSpace": 10,
+      "occupiedRatio": 0.84,
+      "crowded": false
+    },
+    {
+      "id": "div.multi-cell-controls:nth(5)",
+      "strandedInlineSpace": 14,
+      "occupiedRatio": 0.8,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 2,
+    "lowest": [
+      {
+        "id": "#_r_51_",
+        "text": "Confirmed cases",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#_r_57_",
+        "text": "Daily confirmed cases",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 2,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "chart-comparison-dialog:rhythm:1",
+      "surfaceId": "chart-comparison-dialog",
+      "owner": "fullscreen-display",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "div.multi-cell-controls:nth(2) uses off-scale spacing: 6px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "surface": {
+    "id": "build-more-menu",
+    "family": "build",
+    "owner": "build-command-crown",
+    "mode": "build",
+    "state": "more-commands",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 1280,
+    "clientHeight": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[role='dialog']",
+    "tag": "aside",
+    "classes": [
+      "right-side-drawer",
+      "dashboard-dialog",
+      "dashboard-dialog--workspace",
+      "dashboard-dialog--wide",
+      "build-more-drawer"
+    ],
+    "rect": {
+      "x": 880,
+      "y": 84,
+      "width": 400,
+      "height": 171.98,
+      "right": 1280,
+      "bottom": 255.98
+    },
+    "style": {
+      "display": "grid",
+      "position": "absolute",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1214.48,
+        "y": 101,
+        "width": 48.52,
+        "height": 26,
+        "right": 1263,
+        "bottom": 127
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Scene Studio",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 901,
+        "y": 202.98,
+        "width": 358,
+        "height": 32,
+        "right": 1259,
+        "bottom": 234.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#build-more-drawer-title",
+      "text": "More Build commands",
+      "normalizedText": "more build commands",
+      "tag": "h2",
+      "rect": {
+        "x": 897,
+        "y": 119,
+        "width": 210.84,
+        "height": 23.98,
+        "right": 1107.84,
+        "bottom": 142.98
+      }
+    }
+  ],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 5,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "BUILD",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#build-more-drawer-description",
+        "text": "Additional authoring commands.",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#build-more-drawer-title",
+        "text": "More Build commands",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(3)",
+        "text": "Close",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(4)",
+        "text": "Scene Studio",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

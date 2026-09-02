@@ -1,0 +1,225 @@
+{
+  "surface": {
+    "id": "build-page-actions",
+    "family": "structure-management",
+    "owner": "anchored-page-navigation",
+    "mode": "build",
+    "state": "page-actions",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[role='group'][aria-label='Biomedical Page actions']",
+    "tag": "div",
+    "classes": [
+      "build-page-action-menu"
+    ],
+    "rect": {
+      "x": 347.97,
+      "y": 76.5,
+      "width": 220,
+      "height": 134,
+      "right": 567.97,
+      "bottom": 210.5
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        10,
+        10,
+        10,
+        10
+      ],
+      "gap": 8,
+      "rowGap": 8,
+      "columnGap": 8,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Edit Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 358.97,
+        "y": 87.5,
+        "width": 198,
+        "height": 32,
+        "right": 556.97,
+        "bottom": 119.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move earlier",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 358.97,
+        "y": 127.5,
+        "width": 198,
+        "height": 32,
+        "right": 556.97,
+        "bottom": 159.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move later",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 358.97,
+        "y": 167.5,
+        "width": 198,
+        "height": 32,
+        "right": 556.97,
+        "bottom": 199.5
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 3,
+    "lowest": [
+      {
+        "id": "button:nth(0)",
+        "text": "Edit Page",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(1)",
+        "text": "Move earlier",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "disabled"
+      },
+      {
+        "id": "button:nth(2)",
+        "text": "Move later",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 0,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

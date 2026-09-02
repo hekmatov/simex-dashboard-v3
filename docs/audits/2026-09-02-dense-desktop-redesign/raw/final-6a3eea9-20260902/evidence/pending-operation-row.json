@@ -1,0 +1,292 @@
+{
+  "surface": {
+    "id": "pending-operation-row",
+    "family": "operation-status",
+    "owner": "pending-work-navigation",
+    "mode": "build",
+    "state": "dirty-chart",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9946
+  },
+  "root": {
+    "selector": "[data-pending-work-id='chart-edit:bio_confirmed_cases']",
+    "tag": "li",
+    "classes": [
+      "build-pending-work__item"
+    ],
+    "rect": {
+      "x": 34,
+      "y": -174.41,
+      "width": 1372,
+      "height": 53,
+      "right": 1406,
+      "bottom": -121.41
+    },
+    "style": {
+      "display": "flex",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "gap": 10,
+      "rowGap": 10,
+      "columnGap": 10,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Focus Chart changes",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1006.25,
+        "y": -163.91,
+        "width": 150.61,
+        "height": 32,
+        "right": 1156.86,
+        "bottom": -131.91
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Save changes",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 1164.86,
+        "y": -163.91,
+        "width": 103.83,
+        "height": 32,
+        "right": 1268.69,
+        "bottom": -131.91
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Discard changes",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1276.69,
+        "y": -163.91,
+        "width": 122.31,
+        "height": 32,
+        "right": 1399,
+        "bottom": -131.91
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [],
+  "rhythms": [
+    {
+      "id": "span.build-pending-work__actions:nth(0)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "button.secondary:nth(0)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(2)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "small:nth(3)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 4,
+    "lowest": [
+      {
+        "id": "small:nth(0)",
+        "text": "Unsaved",
+        "ratio": 5.72,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(238, 231, 216, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(1)",
+        "text": "Focus Chart changes",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(2)",
+        "text": "Save changes",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(3)",
+        "text": "Discard changes",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 0,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "pending-operation-row:role-size:1",
+      "surfaceId": "pending-operation-row",
+      "owner": "pending-work-navigation",
+      "category": "role-size",
+      "priority": "P2",
+      "evidence": "button.secondary:nth(1) is 32px high; prominent expects 36px (±2px).",
+      "recommendation": "Move button.secondary:nth(1) to the shared prominent height instead of preserving a local minimum."
+    }
+  ],
+  "categoryCounts": {
+    "role-size": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  }
+}

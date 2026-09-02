@@ -1,0 +1,128 @@
+{
+  "surface": {
+    "id": "audience-1280",
+    "family": "audience",
+    "owner": "audience-display",
+    "mode": "audience",
+    "state": "live-1280",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 1280,
+    "clientHeight": 720,
+    "scrollWidth": 1280,
+    "scrollHeight": 720
+  },
+  "root": {
+    "selector": ".audience-display",
+    "tag": "main",
+    "classes": [
+      "audience-display",
+      "audience-output",
+      "audience-output-active"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "right": 1280,
+      "bottom": 720
+    },
+    "style": {
+      "display": "grid",
+      "position": "relative",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        48,
+        48,
+        48,
+        48
+      ],
+      "gap": 24,
+      "rowGap": 24,
+      "columnGap": 24,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [],
+  "choices": [],
+  "headings": [
+    {
+      "id": "h1:nth(0)",
+      "text": "SimEx Dashboard V3",
+      "normalizedText": "simex dashboard v3",
+      "tag": "h1",
+      "rect": {
+        "x": 48,
+        "y": 52,
+        "width": 1176,
+        "height": 56,
+        "right": 1224,
+        "bottom": 108
+      }
+    }
+  ],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 2,
+    "lowest": [
+      {
+        "id": "p.audience-shared-context:nth(1)",
+        "text": "Municipal outbreak playback",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "h1:nth(0)",
+        "text": "SimEx Dashboard V3",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

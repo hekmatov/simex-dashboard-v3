@@ -1,0 +1,268 @@
+{
+  "surface": {
+    "id": "build-page-orbit",
+    "family": "structure-management",
+    "owner": "page-orbit",
+    "mode": "build",
+    "state": "page-command-orbit",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[aria-label='Page Orbit for Biomedical']",
+    "tag": "aside",
+    "classes": [
+      "build-page-orbit"
+    ],
+    "rect": {
+      "x": 430,
+      "y": 124,
+      "width": 300,
+      "height": 188,
+      "right": 730,
+      "bottom": 312
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "gap": 10,
+      "rowGap": 10,
+      "columnGap": 10,
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Rename Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 445,
+        "y": 139,
+        "width": 270,
+        "height": 32,
+        "right": 715,
+        "bottom": 171
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Merge Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 445,
+        "y": 181,
+        "width": 270,
+        "height": 32,
+        "right": 715,
+        "bottom": 213
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "Remove Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 445,
+        "y": 223,
+        "width": 270,
+        "height": 32,
+        "right": 715,
+        "bottom": 255
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 445,
+        "y": 265,
+        "width": 270,
+        "height": 32,
+        "right": 715,
+        "bottom": 297
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 4,
+    "lowest": [
+      {
+        "id": "button:nth(0)",
+        "text": "Rename Page",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(1)",
+        "text": "Merge Page",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(2)",
+        "text": "Remove Page",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.secondary:nth(3)",
+        "text": "Close",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 0,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

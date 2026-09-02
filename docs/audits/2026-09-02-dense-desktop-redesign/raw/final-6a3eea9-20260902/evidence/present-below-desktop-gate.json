@@ -1,0 +1,139 @@
+{
+  "surface": {
+    "id": "present-below-desktop-gate",
+    "family": "desktop-gate",
+    "owner": "app-shell-mode-gate",
+    "mode": "present",
+    "state": "below-1024",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 900,
+    "height": 720
+  },
+  "document": {
+    "clientWidth": 900,
+    "clientHeight": 720,
+    "scrollWidth": 900,
+    "scrollHeight": 720
+  },
+  "root": {
+    "selector": ".app-frame",
+    "tag": "div",
+    "classes": [
+      "app-frame"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 900,
+      "height": 720,
+      "right": 900,
+      "bottom": 720
+    },
+    "style": {
+      "display": "block",
+      "position": "relative",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 720,
+      "padding": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Switch to View",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 666.81,
+        "y": 128,
+        "width": 106.19,
+        "height": 32,
+        "right": 773,
+        "bottom": 160
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 1,
+    "lowest": [
+      {
+        "id": "button:nth(0)",
+        "text": "Switch to View",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 0,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

@@ -1,0 +1,760 @@
+{
+  "surface": {
+    "id": "chart-wizard-source-listbox",
+    "family": "chart-authoring",
+    "owner": "accessible-listbox",
+    "mode": "build",
+    "state": "managed-source-options",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".accessible-listbox-popup",
+    "tag": "ul",
+    "classes": [
+      "accessible-listbox-popup"
+    ],
+    "rect": {
+      "x": 164,
+      "y": 264,
+      "width": 438.84,
+      "height": 240,
+      "right": 602.84,
+      "bottom": 504
+    },
+    "style": {
+      "display": "grid",
+      "position": "absolute",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        4,
+        4,
+        4,
+        4
+      ],
+      "gap": 2,
+      "rowGap": 2,
+      "columnGap": 2,
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "#accessible-listbox-_r_62_-option-0",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical admissions",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 269,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 297
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-1",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical cases",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 299,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 327
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-2",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical healthcare cases",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 329,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 357
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-3",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical hospital occupancy",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 359,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 387
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-4",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical ICU occupancy",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 389,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 417
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-5",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical mortality by age",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 419,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 447
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-6",
+      "tag": "li",
+      "type": null,
+      "text": "Generated aggregate timeline derived from the authoritative harmonized municipal biomedical dataset",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 449,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 477
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-7",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical municipal infections",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 479,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 507
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-8",
+      "tag": "li",
+      "type": null,
+      "text": "Generated latest municipal snapshot derived from the authoritative harmonized municipal biomedical dataset",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 509,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 537
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-9",
+      "tag": "li",
+      "type": null,
+      "text": "Generated map timeline derived from the authoritative harmonized municipal biomedical dataset",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 539,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 567
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-10",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical occupancy gauges",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 569,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 597
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-11",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical province cases",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 599,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 627
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-12",
+      "tag": "li",
+      "type": null,
+      "text": "Simulation exercise biomedical latest province snapshot",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 629,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 657
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-13",
+      "tag": "li",
+      "type": null,
+      "text": "Simulation exercise biomedical derived province changes",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 659,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 687
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-14",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical R values",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 689,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 717
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-15",
+      "tag": "li",
+      "type": null,
+      "text": "Biomedical testing",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 719,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 747
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-16",
+      "tag": "li",
+      "type": null,
+      "text": "Simulation exercise biomedical vaccination snapshot",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 749,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 777
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-17",
+      "tag": "li",
+      "type": null,
+      "text": "Simulation exercise biomedical vaccination time series",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 779,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 807
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#accessible-listbox-_r_62_-option-18",
+      "tag": "li",
+      "type": null,
+      "text": "Simulation exercise biomedical wastewater dataset",
+      "role": "compact",
+      "expectedHeight": 28,
+      "rect": {
+        "x": 169,
+        "y": 809,
+        "width": 428.84,
+        "height": 28,
+        "right": 597.84,
+        "bottom": 837
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 28,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 0,
+    "lowest": []
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 0,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

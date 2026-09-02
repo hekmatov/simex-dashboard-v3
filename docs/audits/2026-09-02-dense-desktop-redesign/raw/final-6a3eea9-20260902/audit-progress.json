@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-09-02T03:44:14.397Z",
+  "phase": "final",
+  "selected": 71,
+  "accountedFor": 71,
+  "latest": "mobile-view-custom-design",
+  "statuses": {
+    "inspected": 64,
+    "covered-by-alias": 6,
+    "intentionally-out-of-scope": 1
+  }
+}

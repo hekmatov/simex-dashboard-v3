@@ -1,0 +1,515 @@
+{
+  "surface": {
+    "id": "source-viewer-standard",
+    "family": "source-viewer",
+    "owner": "source-viewer",
+    "mode": "view",
+    "state": "biomedical-csv",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 996
+  },
+  "root": {
+    "selector": ".source-viewer-theme-root",
+    "tag": "div",
+    "classes": [
+      "source-viewer-theme-root"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 996,
+      "right": 1440,
+      "bottom": 996
+    },
+    "style": {
+      "display": "block",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 900,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary.source-viewer-return:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Return to dashboard",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1245.97,
+        "y": 17,
+        "width": 177.03,
+        "height": 33,
+        "right": 1423,
+        "bottom": 50
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          10,
+          5,
+          10
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(1)",
+      "tag": "input",
+      "type": "search",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 17,
+        "y": 215,
+        "width": 420,
+        "height": 33,
+        "right": 437,
+        "bottom": 248
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.source-viewer-sort-button:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "date ↕",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 18,
+        "y": 257,
+        "width": 203.44,
+        "height": 32,
+        "right": 221.44,
+        "bottom": 289
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13.12,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": 8,
+        "rowGap": 8,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.source-viewer-sort-button:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "national_total_cases ↕",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 221.44,
+        "y": 257,
+        "width": 374.66,
+        "height": 32,
+        "right": 596.09,
+        "bottom": 289
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13.12,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": 8,
+        "rowGap": 8,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.source-viewer-sort-button:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "total_deaths ↕",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 596.09,
+        "y": 257,
+        "width": 259.67,
+        "height": 32,
+        "right": 855.77,
+        "bottom": 289
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13.12,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": 8,
+        "rowGap": 8,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.source-viewer-sort-button:nth(5)",
+      "tag": "button",
+      "type": "button",
+      "text": "daily_new_cases ↕",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 855.77,
+        "y": 257,
+        "width": 315.05,
+        "height": 32,
+        "right": 1170.81,
+        "bottom": 289
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13.12,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": 8,
+        "rowGap": 8,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.source-viewer-sort-button:nth(6)",
+      "tag": "button",
+      "type": "button",
+      "text": "new_deaths ↕",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1170.81,
+        "y": 257,
+        "width": 251.19,
+        "height": 32,
+        "right": 1422,
+        "bottom": 289
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13.12,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          8,
+          5,
+          8
+        ],
+        "gap": 8,
+        "rowGap": 8,
+        "columnGap": 8,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(7)",
+      "tag": "button",
+      "type": "button",
+      "text": "Previous",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 17,
+        "y": 938,
+        "width": 86.52,
+        "height": 33,
+        "right": 103.52,
+        "bottom": 971
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          10,
+          5,
+          10
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "Next",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1364.64,
+        "y": 938,
+        "width": 58.36,
+        "height": 33,
+        "right": 1423,
+        "bottom": 971
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 16,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          5,
+          10,
+          5,
+          10
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "h1:nth(0)",
+      "text": "Biomedical cases",
+      "normalizedText": "biomedical cases",
+      "tag": "h1",
+      "rect": {
+        "x": 17,
+        "y": 33,
+        "width": 232.59,
+        "height": 36,
+        "right": 249.59,
+        "bottom": 69
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.source-viewer-toolbar:nth(0)",
+      "gaps": [
+        873.42
+      ],
+      "declaredGap": 12,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "footer.source-viewer-pagination:nth(2)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "button:nth(7)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button:nth(8)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [
+    {
+      "id": "div.source-viewer-table-wrap:nth(20)",
+      "overflowX": 0,
+      "overflowY": 2165,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": true
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 12,
+    "lowest": [
+      {
+        "id": "p.source-viewer-eyebrow:nth(0)",
+        "text": "SOURCE DATA",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(10)",
+        "text": "Previous",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "disabled"
+      },
+      {
+        "id": "button:nth(11)",
+        "text": "Next",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "h1:nth(1)",
+        "text": "Biomedical cases",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label:nth(3)",
+        "text": "Search all columns",
+        "ratio": 13.95,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

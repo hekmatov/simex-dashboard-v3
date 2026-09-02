@@ -1,0 +1,953 @@
+{
+  "surface": {
+    "id": "scene-studio-details",
+    "family": "temporal",
+    "owner": "scene-studio",
+    "mode": "build",
+    "state": "create-details",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[role='dialog']",
+    "tag": "aside",
+    "classes": [
+      "build-authoring-auxiliary",
+      "dashboard-dialog",
+      "dashboard-dialog--workspace",
+      "dashboard-dialog--wide"
+    ],
+    "rect": {
+      "x": 16,
+      "y": 174,
+      "width": 1408,
+      "height": 702,
+      "right": 1424,
+      "bottom": 876
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "gap": 14,
+      "rowGap": 14,
+      "columnGap": 14,
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary.build-auxiliary-close:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1360.48,
+        "y": 189,
+        "width": 48.52,
+        "height": 32,
+        "right": 1409,
+        "bottom": 221
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "1 Scene details",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 31,
+        "y": 311,
+        "width": 454,
+        "height": 32,
+        "right": 485,
+        "bottom": 343
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(2)",
+      "tag": "button",
+      "type": "button",
+      "text": "2 Select charts and frames",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 493,
+        "y": 311,
+        "width": 454,
+        "height": 32,
+        "right": 947,
+        "bottom": 343
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "3 Arrange and configure",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 955,
+        "y": 311,
+        "width": 454,
+        "height": 32,
+        "right": 1409,
+        "bottom": 343
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#scene-name",
+      "tag": "input",
+      "type": null,
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 48,
+        "y": 462,
+        "width": 1344,
+        "height": 32,
+        "right": 1392,
+        "bottom": 494
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(5)",
+      "tag": "select",
+      "type": null,
+      "text": "Choose page Biomedical Socio-economic",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 48,
+        "y": 527,
+        "width": 666,
+        "height": 32,
+        "right": 714,
+        "bottom": 559
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(6)",
+      "tag": "select",
+      "type": null,
+      "text": "Choose Chrono Group Municipal outbreak playback",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 726,
+        "y": 527,
+        "width": 666,
+        "height": 32,
+        "right": 1392,
+        "bottom": 559
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(7)",
+      "tag": "input",
+      "type": "date",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 59,
+        "y": 621,
+        "width": 657,
+        "height": 32,
+        "right": 716,
+        "bottom": 653
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(8)",
+      "tag": "input",
+      "type": "date",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 724,
+        "y": 621,
+        "width": 657,
+        "height": 32,
+        "right": 1381,
+        "bottom": 653
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(9)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 68,
+        "y": 742,
+        "width": 16,
+        "height": 16,
+        "right": 84,
+        "bottom": 758
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(10)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 68,
+        "y": 778,
+        "width": 16,
+        "height": 16,
+        "right": 84,
+        "bottom": 794
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#scene-frame-source",
+      "tag": "select",
+      "type": null,
+      "text": "Choose replacement Municipal infection rate over time Aggregate municipal infections",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 726,
+        "y": 728,
+        "width": 666,
+        "height": 32,
+        "right": 1392,
+        "bottom": 760
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(12)",
+      "tag": "select",
+      "type": null,
+      "text": "Inherit Chrono Group Concurrent only Interpolate Snap to Latest Snap to Closest Use authored settings",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 48,
+        "y": 844,
+        "width": 666,
+        "height": 32,
+        "right": 714,
+        "bottom": 876
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(13)",
+      "tag": "input",
+      "type": "number",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 726,
+        "y": 844,
+        "width": 666,
+        "height": 32,
+        "right": 1392,
+        "bottom": 876
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(14)",
+      "tag": "button",
+      "type": "button",
+      "text": "Save Scene",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1202.27,
+        "y": 930,
+        "width": 83.28,
+        "height": 32,
+        "right": 1285.55,
+        "bottom": 962
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(15)",
+      "tag": "button",
+      "type": "button",
+      "text": "Discard Scene",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1293.55,
+        "y": 930,
+        "width": 100.45,
+        "height": 32,
+        "right": 1394,
+        "bottom": 962
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input.choice-control:nth(0)",
+      "text": "Calendar interval",
+      "glyphRect": {
+        "x": 68,
+        "y": 742,
+        "width": 16,
+        "height": 16,
+        "right": 84,
+        "bottom": 758
+      },
+      "labelRect": {
+        "x": 59,
+        "y": 736,
+        "width": 644,
+        "height": 28,
+        "right": 703,
+        "bottom": 764
+      },
+      "rowRect": {
+        "x": 59,
+        "y": 736,
+        "width": 644,
+        "height": 28,
+        "right": 703,
+        "bottom": 764
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(1)",
+      "text": "Chart observations",
+      "glyphRect": {
+        "x": 68,
+        "y": 778,
+        "width": 16,
+        "height": 16,
+        "right": 84,
+        "bottom": 794
+      },
+      "labelRect": {
+        "x": 59,
+        "y": 772,
+        "width": 644,
+        "height": 28,
+        "right": 703,
+        "bottom": 800
+      },
+      "rowRect": {
+        "x": 59,
+        "y": 772,
+        "width": 644,
+        "height": 28,
+        "right": 703,
+        "bottom": 800
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    }
+  ],
+  "headings": [
+    {
+      "id": "#scene-studio-title",
+      "text": "Scene Studio",
+      "normalizedText": "scene studio",
+      "tag": "h2",
+      "rect": {
+        "x": 31,
+        "y": 249,
+        "width": 322.36,
+        "height": 27,
+        "right": 353.36,
+        "bottom": 276
+      }
+    },
+    {
+      "id": "#scene-details-stage-title",
+      "text": "Scene details",
+      "normalizedText": "scene details",
+      "tag": "h3",
+      "rect": {
+        "x": 48,
+        "y": 376,
+        "width": 103.61,
+        "height": 21,
+        "right": 151.61,
+        "bottom": 397
+      }
+    },
+    {
+      "id": "legend:nth(2)",
+      "text": "Period",
+      "normalizedText": "period",
+      "tag": "legend",
+      "rect": {
+        "x": 59,
+        "y": 571,
+        "width": 50.55,
+        "height": 19,
+        "right": 109.55,
+        "bottom": 590
+      }
+    },
+    {
+      "id": "legend:nth(3)",
+      "text": "Time mode",
+      "normalizedText": "time mode",
+      "tag": "legend",
+      "rect": {
+        "x": 59,
+        "y": 707,
+        "width": 83.92,
+        "height": 19,
+        "right": 142.92,
+        "bottom": 726
+      }
+    },
+    {
+      "id": "#scene-save-readiness-title",
+      "text": "Save readiness",
+      "normalizedText": "save readiness",
+      "tag": "h4",
+      "rect": {
+        "x": 60,
+        "y": 922,
+        "width": 329.53,
+        "height": 19,
+        "right": 389.53,
+        "bottom": 941
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset.scene-details-stage__period.scene-details-stage__wide:nth(0)",
+      "gaps": [
+        10,
+        14
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        10,
+        10,
+        10,
+        10
+      ]
+    },
+    {
+      "id": "fieldset:nth(1)",
+      "gaps": [
+        10,
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        10,
+        10,
+        10,
+        10
+      ]
+    },
+    {
+      "id": "div.build-surface-actions:nth(2)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [
+    {
+      "id": "div.build-surface-actions:nth(11)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "button:nth(14)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(15)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "#scene-save-readiness-title",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(35)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "nav.scene-stage-navigation:nth(3)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.scene-details-stage__fields:nth(6)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 27,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(1)",
+        "text": "TEMPORAL AUTHORING",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "span.build-draft-status:nth(4)",
+        "text": "Scene saved",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "small:nth(16)",
+        "text": "Maximum: 2020-02-27 to 2021-04-17",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button:nth(25)",
+        "text": "Save Scene",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "disabled"
+      },
+      {
+        "id": "button:nth(5)",
+        "text": "1 Scene details",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 5,
+      "visibleStateTextCount": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "scene-studio-details:rhythm:1",
+      "surfaceId": "scene-studio-details",
+      "owner": "scene-studio",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset.scene-details-stage__period.scene-details-stage__wide:nth(0) uses off-scale spacing: 10, 14px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    },
+    {
+      "id": "scene-studio-details:rhythm:2",
+      "surfaceId": "scene-studio-details",
+      "owner": "scene-studio",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset:nth(1) uses off-scale spacing: 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 2
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2
+  }
+}

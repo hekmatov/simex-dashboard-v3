@@ -1,0 +1,1717 @@
+{
+  "surface": {
+    "id": "scene-observation-dialog",
+    "family": "temporal",
+    "owner": "scene-observation-dialog",
+    "mode": "build",
+    "state": "observation-detail",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".scene-observation-dialog",
+    "tag": "div",
+    "classes": [
+      "scene-observation-dialog",
+      "dashboard-dialog-backdrop"
+    ],
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "right": 1440,
+      "bottom": 900
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 910.48,
+        "y": 107,
+        "width": 48.52,
+        "height": 32,
+        "right": 959,
+        "bottom": 139
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(1)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 198,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 214
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(2)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 226,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 242
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(3)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 254,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 270
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(4)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 282,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 298
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(5)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 310,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 326
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(6)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 338,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 354
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(7)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 366,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 382
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(8)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 394,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 410
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(9)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 422,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 438
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(10)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 450,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 466
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(11)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 478,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 494
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(12)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 506,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 522
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(13)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 534,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 550
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(14)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 562,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 578
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(15)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 590,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 606
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(16)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 618,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 634
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(17)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 646,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 662
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(18)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 674,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 690
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(19)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 702,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 718
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(20)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 730,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 746
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(21)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 758,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 774
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(22)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 530,
+        "y": 786,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 802
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input.choice-control:nth(0)",
+      "text": "2020-02-27T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 198,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 214
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 192,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 220
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 192,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 220
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(1)",
+      "text": "2020-02-28T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 226,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 242
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 220,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 248
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 220,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 248
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(2)",
+      "text": "2020-02-29T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 254,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 270
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 248,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 276
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 248,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 276
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(3)",
+      "text": "2020-03-01T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 282,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 298
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 276,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 304
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 276,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 304
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(4)",
+      "text": "2020-03-02T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 310,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 326
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 304,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 332
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 304,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 332
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(5)",
+      "text": "2020-03-03T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 338,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 354
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 332,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 360
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 332,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 360
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(6)",
+      "text": "2020-03-04T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 366,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 382
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 360,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 388
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 360,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 388
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(7)",
+      "text": "2020-03-05T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 394,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 410
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 388,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 416
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 388,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 416
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(8)",
+      "text": "2020-03-06T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 422,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 438
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 416,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 444
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 416,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 444
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(9)",
+      "text": "2020-03-07T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 450,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 466
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 444,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 472
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 444,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 472
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(10)",
+      "text": "2020-03-08T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 478,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 494
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 472,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 500
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 472,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 500
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(11)",
+      "text": "2020-03-09T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 506,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 522
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 500,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 528
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 500,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 528
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(12)",
+      "text": "2020-03-10T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 534,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 550
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 528,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 556
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 528,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 556
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(13)",
+      "text": "2020-03-11T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 562,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 578
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 556,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 584
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 556,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 584
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(14)",
+      "text": "2020-03-12T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 590,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 606
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 584,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 612
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 584,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 612
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(15)",
+      "text": "2020-03-13T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 618,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 634
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 612,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 640
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 612,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 640
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(16)",
+      "text": "2020-03-14T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 646,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 662
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 640,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 668
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 640,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 668
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(17)",
+      "text": "2020-03-15T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 674,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 690
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 668,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 696
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 668,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 696
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(18)",
+      "text": "2020-03-16T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 702,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 718
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 696,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 724
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 696,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 724
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(19)",
+      "text": "2020-03-17T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 730,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 746
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 724,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 752
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 724,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 752
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(20)",
+      "text": "2020-03-18T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 758,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 774
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 752,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 780
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 752,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 780
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(21)",
+      "text": "2020-03-19T00:00:00.000Z",
+      "glyphRect": {
+        "x": 530,
+        "y": 786,
+        "width": 16,
+        "height": 16,
+        "right": 546,
+        "bottom": 802
+      },
+      "labelRect": {
+        "x": 521,
+        "y": 780,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 808
+      },
+      "rowRect": {
+        "x": 521,
+        "y": 780,
+        "width": 438,
+        "height": 28,
+        "right": 959,
+        "bottom": 808
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    }
+  ],
+  "headings": [
+    {
+      "id": "#scene-observation-title",
+      "text": "Municipal infection rate over time observations",
+      "normalizedText": "municipal infection rate over time observations",
+      "tag": "h3",
+      "rect": {
+        "x": 481,
+        "y": 107,
+        "width": 378.11,
+        "height": 21,
+        "right": 859.11,
+        "bottom": 128
+      }
+    }
+  ],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [
+    {
+      "id": "div.dashboard-dialog__body:nth(4)",
+      "overflowX": 0,
+      "overflowY": 11003,
+      "modeX": "auto",
+      "modeY": "auto",
+      "topReachable": true,
+      "bottomReachable": true,
+      "allowsHorizontal": false
+    }
+  ],
+  "repeatedTitles": [],
+  "occupancies": [],
+  "operationalContrastSamples": {
+    "measured": 25,
+    "lowest": [
+      {
+        "id": "button:nth(1)",
+        "text": "Close",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#scene-observation-title",
+        "text": "Municipal infection rate over time observations",
+        "ratio": 14.43,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.choice-control-row:nth(2)",
+        "text": "2020-02-27T00:00:00.000Z",
+        "ratio": 15.31,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.choice-control-row:nth(3)",
+        "text": "2020-02-28T00:00:00.000Z",
+        "ratio": 15.31,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "label.choice-control-row:nth(4)",
+        "text": "2020-02-29T00:00:00.000Z",
+        "ratio": 15.31,
+        "foreground": "rgba(29, 37, 41, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

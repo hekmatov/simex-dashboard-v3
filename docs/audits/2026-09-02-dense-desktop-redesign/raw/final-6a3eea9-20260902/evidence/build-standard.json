@@ -1,0 +1,2201 @@
+{
+  "surface": {
+    "id": "build-standard",
+    "family": "build",
+    "owner": "build-workspace",
+    "mode": "build",
+    "state": "biomedical",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[data-canonical-mode='build']",
+    "tag": "main",
+    "classes": [
+      "app-shell",
+      "canonical-dashboard-frame",
+      "build-shell",
+      "build-workspace"
+    ],
+    "rect": {
+      "x": 24,
+      "y": 72,
+      "width": 1392,
+      "height": 9771.59,
+      "right": 1416,
+      "bottom": 9843.59
+    },
+    "style": {
+      "display": "block",
+      "position": "relative",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 900,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": 16,
+      "rowGap": 16,
+      "columnGap": 16,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Add chart",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 34,
+        "y": 187.59,
+        "width": 81.16,
+        "height": 32,
+        "right": 115.16,
+        "bottom": 219.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#add-static-content-command",
+      "tag": "button",
+      "type": "button",
+      "text": "Add Text/Image",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 123.16,
+        "y": 187.59,
+        "width": 121.98,
+        "height": 32,
+        "right": 245.14,
+        "bottom": 219.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#source-content-command",
+      "tag": "button",
+      "type": "button",
+      "text": "Source content",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 253.14,
+        "y": 187.59,
+        "width": 115.19,
+        "height": 32,
+        "right": 368.33,
+        "bottom": 219.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "#chrono-studio-command",
+      "tag": "button",
+      "type": "button",
+      "text": "Chrono Studio",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 376.33,
+        "y": 187.59,
+        "width": 110.77,
+        "height": 32,
+        "right": 487.09,
+        "bottom": 219.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(4)",
+      "tag": "button",
+      "type": "button",
+      "text": "Discard Build changes",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 495.09,
+        "y": 187.59,
+        "width": 160.25,
+        "height": 32,
+        "right": 655.34,
+        "bottom": 219.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button:nth(5)",
+      "tag": "button",
+      "type": "button",
+      "text": "Finish Build",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 663.34,
+        "y": 187.59,
+        "width": 94.23,
+        "height": 32,
+        "right": 757.58,
+        "bottom": 219.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(6)",
+      "tag": "button",
+      "type": "button",
+      "text": "More",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 765.58,
+        "y": 187.59,
+        "width": 51.06,
+        "height": 32,
+        "right": 816.64,
+        "bottom": 219.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 14,
+        "lineHeight": 16.8,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(7)",
+      "tag": "button",
+      "type": "button",
+      "text": "Outbreak dynamics",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 43,
+        "y": 232.59,
+        "width": 130.06,
+        "height": 32,
+        "right": 173.06,
+        "bottom": 264.59
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(8)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1150.08,
+        "y": 228.59,
+        "width": 24,
+        "height": 24,
+        "right": 1174.08,
+        "bottom": 252.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(9)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1182.08,
+        "y": 228.59,
+        "width": 24,
+        "height": 24,
+        "right": 1206.08,
+        "bottom": 252.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(10)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move to Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1214.08,
+        "y": 224.59,
+        "width": 88.22,
+        "height": 32,
+        "right": 1302.3,
+        "bottom": 256.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(11)",
+      "tag": "button",
+      "type": "button",
+      "text": "Merge",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1310.3,
+        "y": 224.59,
+        "width": 43.69,
+        "height": 32,
+        "right": 1353.98,
+        "bottom": 256.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.danger:nth(12)",
+      "tag": "button",
+      "type": "button",
+      "text": "Remove",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 1361.98,
+        "y": 222.59,
+        "width": 53.02,
+        "height": 36,
+        "right": 1415,
+        "bottom": 258.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(13)",
+      "tag": "button",
+      "type": "button",
+      "text": "Health-system pressure and coordination",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 43,
+        "y": 4667.59,
+        "width": 256.13,
+        "height": 32,
+        "right": 299.13,
+        "bottom": 4699.59
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(14)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1150.08,
+        "y": 4663.59,
+        "width": 24,
+        "height": 24,
+        "right": 1174.08,
+        "bottom": 4687.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(15)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1182.08,
+        "y": 4663.59,
+        "width": 24,
+        "height": 24,
+        "right": 1206.08,
+        "bottom": 4687.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(16)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move to Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1214.08,
+        "y": 4659.59,
+        "width": 88.22,
+        "height": 32,
+        "right": 1302.3,
+        "bottom": 4691.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(17)",
+      "tag": "button",
+      "type": "button",
+      "text": "Merge",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1310.3,
+        "y": 4659.59,
+        "width": 43.69,
+        "height": 32,
+        "right": 1353.98,
+        "bottom": 4691.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.danger:nth(18)",
+      "tag": "button",
+      "type": "button",
+      "text": "Remove",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 1361.98,
+        "y": 4657.59,
+        "width": 53.02,
+        "height": 36,
+        "right": 1415,
+        "bottom": 4693.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(19)",
+      "tag": "button",
+      "type": "button",
+      "text": "Environmental surveillance",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 43,
+        "y": 7800.59,
+        "width": 176.59,
+        "height": 32,
+        "right": 219.59,
+        "bottom": 7832.59
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(20)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1150.08,
+        "y": 7796.59,
+        "width": 24,
+        "height": 24,
+        "right": 1174.08,
+        "bottom": 7820.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(21)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1182.08,
+        "y": 7796.59,
+        "width": 24,
+        "height": 24,
+        "right": 1206.08,
+        "bottom": 7820.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(22)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move to Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1214.08,
+        "y": 7792.59,
+        "width": 88.22,
+        "height": 32,
+        "right": 1302.3,
+        "bottom": 7824.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(23)",
+      "tag": "button",
+      "type": "button",
+      "text": "Merge",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1310.3,
+        "y": 7792.59,
+        "width": 43.69,
+        "height": 32,
+        "right": 1353.98,
+        "bottom": 7824.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.danger:nth(24)",
+      "tag": "button",
+      "type": "button",
+      "text": "Remove",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 1361.98,
+        "y": 7790.59,
+        "width": 53.02,
+        "height": 36,
+        "right": 1415,
+        "bottom": 7826.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(25)",
+      "tag": "button",
+      "type": "button",
+      "text": "Vaccination",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 43,
+        "y": 8763.59,
+        "width": 86.05,
+        "height": 32,
+        "right": 129.05,
+        "bottom": 8795.59
+      },
+      "style": {
+        "display": "inline-block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(26)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1150.08,
+        "y": 8759.59,
+        "width": 24,
+        "height": 24,
+        "right": 1174.08,
+        "bottom": 8783.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(27)",
+      "tag": "button",
+      "type": "button",
+      "text": "",
+      "role": "utility",
+      "expectedHeight": 24,
+      "rect": {
+        "x": 1182.08,
+        "y": 8759.59,
+        "width": 24,
+        "height": 24,
+        "right": 1206.08,
+        "bottom": 8783.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 24,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(28)",
+      "tag": "button",
+      "type": "button",
+      "text": "Move to Page",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1214.08,
+        "y": 8755.59,
+        "width": 88.22,
+        "height": 32,
+        "right": 1302.3,
+        "bottom": 8787.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(29)",
+      "tag": "button",
+      "type": "button",
+      "text": "Merge",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1310.3,
+        "y": 8755.59,
+        "width": 43.69,
+        "height": 32,
+        "right": 1353.98,
+        "bottom": 8787.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary.danger:nth(30)",
+      "tag": "button",
+      "type": "button",
+      "text": "Remove",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 1361.98,
+        "y": 8753.59,
+        "width": 53.02,
+        "height": 36,
+        "right": 1415,
+        "bottom": 8789.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 36,
+        "padding": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(31)",
+      "tag": "button",
+      "type": "button",
+      "text": "Add section",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 25,
+        "y": 9723.59,
+        "width": 112.39,
+        "height": 32,
+        "right": 137.39,
+        "bottom": 9755.59
+      },
+      "style": {
+        "display": "flex",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": 6,
+        "rowGap": 6,
+        "columnGap": 6,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "a:nth(32)",
+      "tag": "a",
+      "type": null,
+      "text": "Report a bug / request a feature",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 1200.97,
+        "y": 9809.59,
+        "width": 197.03,
+        "height": 17,
+        "right": 1398,
+        "bottom": 9826.59
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": null,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "h1:nth(0)",
+      "text": "HeV-A26 Dashboard: Epidemiological overview",
+      "normalizedText": "hev a26 dashboard epidemiological overview",
+      "tag": "h1",
+      "rect": {
+        "x": 111,
+        "y": 104,
+        "width": 530.66,
+        "height": 27.59,
+        "right": 641.66,
+        "bottom": 131.59
+      }
+    },
+    {
+      "id": "p.subtitle:nth(1)",
+      "text": "Cases, mortality, healthcare, testing, wastewater, and vaccination indicators.",
+      "normalizedText": "cases mortality healthcare testing wastewater and vaccination indicators",
+      "tag": "p",
+      "rect": {
+        "x": 111,
+        "y": 135.59,
+        "width": 530.66,
+        "height": 21,
+        "right": 641.66,
+        "bottom": 156.59
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(2)",
+      "text": "Outbreak dynamics National, provincial, and municipal transmission and burden.",
+      "normalizedText": "outbreak dynamics national provincial and municipal transmission and burden",
+      "tag": "div",
+      "rect": {
+        "x": 43,
+        "y": 232.59,
+        "width": 1354,
+        "height": 57,
+        "right": 1397,
+        "bottom": 289.59
+      }
+    },
+    {
+      "id": "h2:nth(3)",
+      "text": "Outbreak dynamics",
+      "normalizedText": "outbreak dynamics",
+      "tag": "h2",
+      "rect": {
+        "x": 43,
+        "y": 232.59,
+        "width": 1354,
+        "height": 32,
+        "right": 1397,
+        "bottom": 264.59
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(4)",
+      "text": "Outbreak dynamics",
+      "normalizedText": "outbreak dynamics",
+      "tag": "button",
+      "rect": {
+        "x": 43,
+        "y": 232.59,
+        "width": 130.06,
+        "height": 32,
+        "right": 173.06,
+        "bottom": 264.59
+      }
+    },
+    {
+      "id": "#_r_2g_",
+      "text": "Confirmed cases",
+      "normalizedText": "confirmed cases",
+      "tag": "h3",
+      "rect": {
+        "x": 56,
+        "y": 327.59,
+        "width": 1256,
+        "height": 20.39,
+        "right": 1312,
+        "bottom": 347.98
+      }
+    },
+    {
+      "id": "#_r_2k_",
+      "text": "Daily confirmed cases",
+      "normalizedText": "daily confirmed cases",
+      "tag": "h3",
+      "rect": {
+        "x": 56,
+        "y": 761.59,
+        "width": 1256,
+        "height": 20.39,
+        "right": 1312,
+        "bottom": 781.98
+      }
+    },
+    {
+      "id": "#_r_2o_",
+      "text": "Daily cases and deaths",
+      "normalizedText": "daily cases and deaths",
+      "tag": "h3",
+      "rect": {
+        "x": 56,
+        "y": 1195.59,
+        "width": 1256,
+        "height": 20.39,
+        "right": 1312,
+        "bottom": 1215.98
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(8)",
+      "text": "Health-system pressure and coordination Capacity, occupancy, admissions, delayed care, and testing.",
+      "normalizedText": "health system pressure and coordination capacity occupancy admissions delayed care and testing",
+      "tag": "div",
+      "rect": {
+        "x": 43,
+        "y": 4667.59,
+        "width": 1354,
+        "height": 57,
+        "right": 1397,
+        "bottom": 4724.59
+      }
+    },
+    {
+      "id": "h2:nth(9)",
+      "text": "Health-system pressure and coordination",
+      "normalizedText": "health system pressure and coordination",
+      "tag": "h2",
+      "rect": {
+        "x": 43,
+        "y": 4667.59,
+        "width": 1354,
+        "height": 32,
+        "right": 1397,
+        "bottom": 4699.59
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(10)",
+      "text": "Health-system pressure and coordination",
+      "normalizedText": "health system pressure and coordination",
+      "tag": "button",
+      "rect": {
+        "x": 43,
+        "y": 4667.59,
+        "width": 256.13,
+        "height": 32,
+        "right": 299.13,
+        "bottom": 4699.59
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(11)",
+      "text": "Environmental surveillance Wastewater signals as a regional early-warning layer.",
+      "normalizedText": "environmental surveillance wastewater signals as a regional early warning layer",
+      "tag": "div",
+      "rect": {
+        "x": 43,
+        "y": 7800.59,
+        "width": 1354,
+        "height": 57,
+        "right": 1397,
+        "bottom": 7857.59
+      }
+    },
+    {
+      "id": "h2:nth(12)",
+      "text": "Environmental surveillance",
+      "normalizedText": "environmental surveillance",
+      "tag": "h2",
+      "rect": {
+        "x": 43,
+        "y": 7800.59,
+        "width": 1354,
+        "height": 32,
+        "right": 1397,
+        "bottom": 7832.59
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(13)",
+      "text": "Environmental surveillance",
+      "normalizedText": "environmental surveillance",
+      "tag": "button",
+      "rect": {
+        "x": 43,
+        "y": 7800.59,
+        "width": 176.59,
+        "height": 32,
+        "right": 219.59,
+        "bottom": 7832.59
+      }
+    },
+    {
+      "id": "div.section-title-block:nth(14)",
+      "text": "Vaccination Current status and uptake over time.",
+      "normalizedText": "vaccination current status and uptake over time",
+      "tag": "div",
+      "rect": {
+        "x": 43,
+        "y": 8763.59,
+        "width": 1354,
+        "height": 57,
+        "right": 1397,
+        "bottom": 8820.59
+      }
+    },
+    {
+      "id": "h2:nth(15)",
+      "text": "Vaccination",
+      "normalizedText": "vaccination",
+      "tag": "h2",
+      "rect": {
+        "x": 43,
+        "y": 8763.59,
+        "width": 1354,
+        "height": 32,
+        "right": 1397,
+        "bottom": 8795.59
+      }
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(16)",
+      "text": "Vaccination",
+      "normalizedText": "vaccination",
+      "tag": "button",
+      "rect": {
+        "x": 43,
+        "y": 8763.59,
+        "width": 86.05,
+        "height": 32,
+        "right": 129.05,
+        "bottom": 8795.59
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.canonical-dashboard-workspace-controls:nth(0)",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.build-command-main-row:nth(1)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.build-section-actions:nth(2)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_confirmed_cases\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_daily_cases_bar\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_new_cases_deaths\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_r_values\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_region_comparison\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_mortality_age\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_case_deltas\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_municipality_choropleth_animation\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_municipality_aggregate\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_population_infection_bubble\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_current_cases_kpi\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "div.build-section-actions:nth(14)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_icu_capacity_bullet\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_hospital_capacity_bullet\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_icu_occupancy\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_hospital_occupancy\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_admissions\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_delayed_healthcare\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_testing_overlay\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_occupancy_collection\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "div.build-section-actions:nth(23)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_wastewater_map\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_wastewater_province\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "div.build-section-actions:nth(26)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_vaccination_current\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    {
+      "id": "[data-panel-id=\"bio_vaccination_rate\"]",
+      "gaps": [],
+      "declaredGap": null,
+      "panelPadding": [
+        12,
+        12,
+        12,
+        12
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.build-command-main-row:nth(4)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "footer.dashboard-footer:nth(51)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div:nth(52)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "nav:nth(53)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "div.build-command-main-row:nth(4)",
+      "strandedInlineSpace": 589.36,
+      "occupiedRatio": 0.57,
+      "crowded": false
+    },
+    {
+      "id": "div.section-header.build-section-header:nth(8)",
+      "strandedInlineSpace": 18,
+      "occupiedRatio": 0.99,
+      "crowded": true
+    },
+    {
+      "id": "div.build-section-actions:nth(10)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.section-header.build-section-header:nth(24)",
+      "strandedInlineSpace": 18,
+      "occupiedRatio": 0.99,
+      "crowded": true
+    },
+    {
+      "id": "div.build-section-actions:nth(26)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.section-header.build-section-header:nth(37)",
+      "strandedInlineSpace": 18,
+      "occupiedRatio": 0.99,
+      "crowded": true
+    },
+    {
+      "id": "div.build-section-actions:nth(39)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.section-header.build-section-header:nth(44)",
+      "strandedInlineSpace": 18,
+      "occupiedRatio": 0.99,
+      "crowded": true
+    },
+    {
+      "id": "div.build-section-actions:nth(46)",
+      "strandedInlineSpace": 0,
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "button.build-section-title-trigger:nth(13)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(14)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(15)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(16)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(17)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.danger:nth(18)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(19)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(20)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(21)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(22)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(23)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.danger:nth(24)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.build-section-title-trigger:nth(25)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(26)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.build-section-move-button:nth(27)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(28)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(29)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary.danger:nth(30)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(31)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "a:nth(32)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "#_r_2o_",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h2:nth(41)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(42)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h2:nth(43)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(44)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h2:nth(45)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(46)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "div.build-command-main-row:nth(4)",
+      "occupiedRatio": 0.57,
+      "crowded": false
+    },
+    {
+      "id": "div.page-stack:nth(6)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.build-section-actions:nth(10)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "section.layout-grid.layout-two-column:nth(11)",
+      "occupiedRatio": 0.97,
+      "crowded": false
+    },
+    {
+      "id": "div.build-section-actions:nth(26)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "section.layout-grid.layout-two-column:nth(27)",
+      "occupiedRatio": 0.97,
+      "crowded": false
+    },
+    {
+      "id": "div.build-section-actions:nth(39)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.build-section-actions:nth(46)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 38,
+    "lowest": [
+      {
+        "id": "p:nth(12)",
+        "text": "National, provincial, and municipal transmission and burden.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(21)",
+        "text": "Capacity, occupancy, admissions, delayed care, and testing.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(27)",
+        "text": "Wastewater signals as a regional early-warning layer.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(33)",
+        "text": "Current status and uptake over time.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "PANDEMIC & DISASTER PREPAREDNESS CENTER",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 17,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

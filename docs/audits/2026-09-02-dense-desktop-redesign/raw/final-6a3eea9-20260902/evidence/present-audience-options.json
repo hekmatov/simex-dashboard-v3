@@ -1,0 +1,514 @@
+{
+  "surface": {
+    "id": "present-audience-options",
+    "family": "present",
+    "owner": "audience-options-dialog",
+    "mode": "present",
+    "state": "audience-options",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 900
+  },
+  "root": {
+    "selector": "[role='dialog']",
+    "tag": "aside",
+    "classes": [
+      "right-side-drawer",
+      "dashboard-dialog",
+      "dashboard-dialog--workspace",
+      "dashboard-dialog--wide",
+      "audience-display-options-drawer"
+    ],
+    "rect": {
+      "x": 1040,
+      "y": 84,
+      "width": 400,
+      "height": 380.98,
+      "right": 1440,
+      "bottom": 464.98
+    },
+    "style": {
+      "display": "grid",
+      "position": "absolute",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": null,
+      "rowGap": null,
+      "columnGap": null,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 1372.48,
+        "y": 101,
+        "width": 50.52,
+        "height": 32,
+        "right": 1423,
+        "bottom": 133
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(1)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1061,
+        "y": 268.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 284.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(2)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1061,
+        "y": 314.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 330.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(3)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1061,
+        "y": 360.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 376.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(4)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 1061,
+        "y": 406.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 422.98
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input:nth(0)",
+      "text": "Dashboard name SimEx Dashboard V3",
+      "glyphRect": {
+        "x": 1061,
+        "y": 268.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 284.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 267.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 305.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 267.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 305.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 38,
+      "singleLine": false,
+      "hasSupplementalCopy": true,
+      "centrelineDelta": 0.5
+    },
+    {
+      "id": "input:nth(1)",
+      "text": "Parent Chrono Group Municipal outbreak playback",
+      "glyphRect": {
+        "x": 1061,
+        "y": 314.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 330.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 313.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 351.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 313.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 351.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 38,
+      "singleLine": false,
+      "hasSupplementalCopy": true,
+      "centrelineDelta": 0.5
+    },
+    {
+      "id": "input:nth(2)",
+      "text": "Scene name No Scene is loaded.",
+      "glyphRect": {
+        "x": 1061,
+        "y": 360.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 376.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 359.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 397.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 359.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 397.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 38,
+      "singleLine": false,
+      "hasSupplementalCopy": true,
+      "centrelineDelta": 0.5
+    },
+    {
+      "id": "input:nth(3)",
+      "text": "Scene date 2020-02-27",
+      "glyphRect": {
+        "x": 1061,
+        "y": 406.98,
+        "width": 16,
+        "height": 16,
+        "right": 1077,
+        "bottom": 422.98
+      },
+      "labelRect": {
+        "x": 1061,
+        "y": 405.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 443.98
+      },
+      "rowRect": {
+        "x": 1061,
+        "y": 405.98,
+        "width": 358,
+        "height": 38,
+        "right": 1419,
+        "bottom": 443.98
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 38,
+      "singleLine": false,
+      "hasSupplementalCopy": true,
+      "centrelineDelta": 0.5
+    }
+  ],
+  "headings": [
+    {
+      "id": "#audience-display-options-drawer-title",
+      "text": "Audience display options",
+      "normalizedText": "audience display options",
+      "tag": "h2",
+      "rect": {
+        "x": 1057,
+        "y": 119,
+        "width": 303.48,
+        "height": 23.98,
+        "right": 1360.48,
+        "bottom": 142.98
+      }
+    },
+    {
+      "id": "legend:nth(1)",
+      "text": "Display on audience",
+      "normalizedText": "display on audience",
+      "tag": "legend",
+      "rect": {
+        "x": 1061,
+        "y": 221.98,
+        "width": 173.56,
+        "height": 19,
+        "right": 1234.56,
+        "bottom": 240.98
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "fieldset.present-audience-information:nth(0)",
+      "gaps": [
+        10,
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "fieldset.present-audience-information:nth(2)",
+      "occupiedRatio": 1,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 14,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(0)",
+        "text": "PRESENT",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#audience-display-options-drawer-description",
+        "text": "Choose which available scene facts appear on the audience display.",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(5)",
+        "text": "Shared information can be hidden without changing its value.",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#present-audience-fact-dashboard_name",
+        "text": "SimEx Dashboard V3",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "#present-audience-fact-parent_chrono_group",
+        "text": "Municipal outbreak playback",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 2,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "present-audience-options:rhythm:1",
+      "surfaceId": "present-audience-options",
+      "owner": "audience-options-dialog",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset.present-audience-information:nth(0) uses off-scale spacing: 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  }
+}

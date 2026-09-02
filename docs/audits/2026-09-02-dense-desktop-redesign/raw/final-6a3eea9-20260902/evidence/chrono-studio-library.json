@@ -1,0 +1,410 @@
+{
+  "surface": {
+    "id": "chrono-studio-library",
+    "family": "temporal",
+    "owner": "chrono-studio",
+    "mode": "build",
+    "state": "library",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": "[role='dialog']",
+    "tag": "aside",
+    "classes": [
+      "build-authoring-auxiliary",
+      "dashboard-dialog",
+      "dashboard-dialog--workspace",
+      "dashboard-dialog--wide"
+    ],
+    "rect": {
+      "x": 56,
+      "y": 174,
+      "width": 980,
+      "height": 702,
+      "right": 1036,
+      "bottom": 876
+    },
+    "style": {
+      "display": "grid",
+      "position": "fixed",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": 0,
+      "padding": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "gap": 14,
+      "rowGap": 14,
+      "columnGap": 14,
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "button.secondary.build-auxiliary-close:nth(0)",
+      "tag": "button",
+      "type": "button",
+      "text": "Close",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 972.48,
+        "y": 189,
+        "width": 48.52,
+        "height": 32,
+        "right": 1021,
+        "bottom": 221
+      },
+      "style": {
+        "display": "block",
+        "position": "absolute",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.temporal-studio__primary-action:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Create Chrono Group",
+      "role": "prominent",
+      "expectedHeight": 36,
+      "rect": {
+        "x": 785.3,
+        "y": 189,
+        "width": 159.7,
+        "height": 36,
+        "right": 945,
+        "bottom": 225
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input:nth(2)",
+      "tag": "input",
+      "type": "search",
+      "text": "",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 84,
+        "y": 306,
+        "width": 484,
+        "height": 32,
+        "right": 568,
+        "bottom": 338
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 16.25,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "clip",
+        "overflowY": "clip",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(3)",
+      "tag": "select",
+      "type": null,
+      "text": "All Ready Needs attention",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 578,
+        "y": 306,
+        "width": 210,
+        "height": 32,
+        "right": 788,
+        "bottom": 338
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "select:nth(4)",
+      "tag": "select",
+      "type": null,
+      "text": "All pages Biomedical Socio-economic",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 798,
+        "y": 306,
+        "width": 210,
+        "height": 32,
+        "right": 1008,
+        "bottom": 338
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 32,
+        "padding": [
+          2,
+          8,
+          2,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-action=\"open-content\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "CHRONO GROUP Municipal outbreak playback 2 member charts · 0 Scenes READY",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 71,
+        "y": 396,
+        "width": 470,
+        "height": 100,
+        "right": 541,
+        "bottom": 496
+      },
+      "style": {
+        "display": "grid",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": 6,
+        "rowGap": 6,
+        "columnGap": 6,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "[data-action=\"open-content\"]",
+      "tag": "button",
+      "type": "button",
+      "text": "CHRONO GROUP National outbreak and health-system playback 5 member charts · 0 Scenes READY",
+      "role": "content",
+      "expectedHeight": null,
+      "rect": {
+        "x": 551,
+        "y": 396,
+        "width": 470,
+        "height": 100,
+        "right": 1021,
+        "bottom": 496
+      },
+      "style": {
+        "display": "grid",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": 6,
+        "rowGap": 6,
+        "columnGap": 6,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [],
+  "headings": [
+    {
+      "id": "#chrono-studio-title",
+      "text": "Chrono Studio",
+      "normalizedText": "chrono studio",
+      "tag": "h2",
+      "rect": {
+        "x": 71,
+        "y": 208,
+        "width": 505.92,
+        "height": 27,
+        "right": 576.92,
+        "bottom": 235
+      }
+    }
+  ],
+  "rhythms": [],
+  "wraps": [],
+  "whitespace": [],
+  "overlaps": [],
+  "clippedElements": [],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "section.chrono-studio.temporal-studio:nth(0)",
+      "occupiedRatio": 1,
+      "crowded": false
+    },
+    {
+      "id": "div.temporal-studio__filters:nth(3)",
+      "occupiedRatio": 0.97,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 13,
+    "lowest": [
+      {
+        "id": "p.eyebrow:nth(1)",
+        "text": "TEMPORAL AUTHORING",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(3)",
+        "text": "Browse saved Chrono Groups, inspect their content, or begin a new group.",
+        "ratio": 6.32,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(247, 242, 232, 1)",
+        "state": "available"
+      },
+      {
+        "id": "span.temporal-content-card__status:nth(10)",
+        "text": "READY",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "span.temporal-content-card__status:nth(12)",
+        "text": "READY",
+        "ratio": 6.53,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(250, 246, 236, 1)",
+        "state": "available"
+      },
+      {
+        "id": "button.temporal-studio__primary-action:nth(4)",
+        "text": "Create Chrono Group",
+        "ratio": 11.87,
+        "foreground": "rgba(255, 253, 248, 1)",
+        "background": "rgba(44, 56, 61, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 1,
+      "visibleStateTextCount": 2
+    }
+  },
+  "findings": [],
+  "categoryCounts": {},
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  }
+}

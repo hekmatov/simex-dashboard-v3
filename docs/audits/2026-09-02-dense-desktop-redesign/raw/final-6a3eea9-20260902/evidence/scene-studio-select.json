@@ -1,0 +1,795 @@
+{
+  "surface": {
+    "id": "scene-studio-select",
+    "family": "temporal",
+    "owner": "scene-studio",
+    "mode": "build",
+    "state": "select-charts-and-frames",
+    "appearance": "light"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1440,
+    "clientHeight": 900,
+    "scrollWidth": 1440,
+    "scrollHeight": 9876
+  },
+  "root": {
+    "selector": ".scene-stage-body[data-stage='select']",
+    "tag": "div",
+    "classes": [
+      "scene-stage-body"
+    ],
+    "rect": {
+      "x": 31,
+      "y": 357,
+      "width": 1378,
+      "height": 1130.75,
+      "right": 1409,
+      "bottom": 1487.75
+    },
+    "style": {
+      "display": "grid",
+      "position": "static",
+      "fontSize": 16,
+      "lineHeight": null,
+      "minHeight": null,
+      "padding": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "gap": 14,
+      "rowGap": 14,
+      "columnGap": 14,
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "flexWrap": "nowrap"
+    }
+  },
+  "scanCompleteness": {
+    "truncated": false,
+    "truncations": []
+  },
+  "controls": [
+    {
+      "id": "input.choice-control:nth(0)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 79,
+        "y": 784.88,
+        "width": 16,
+        "height": 16,
+        "right": 95,
+        "bottom": 800.88
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(1)",
+      "tag": "button",
+      "type": "button",
+      "text": "Inspect observations",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 235.11,
+        "y": 776.88,
+        "width": 142.28,
+        "height": 32,
+        "right": 377.39,
+        "bottom": 808.88
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(2)",
+      "tag": "input",
+      "type": "checkbox",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 79,
+        "y": 1009.88,
+        "width": 16,
+        "height": 16,
+        "right": 95,
+        "bottom": 1025.88
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(3)",
+      "tag": "button",
+      "type": "button",
+      "text": "Inspect observations",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 235.11,
+        "y": 1001.88,
+        "width": 142.28,
+        "height": 32,
+        "right": 377.39,
+        "bottom": 1033.88
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(4)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 51,
+        "y": 1378.75,
+        "width": 16,
+        "height": 16,
+        "right": 67,
+        "bottom": 1394.75
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "input.choice-control:nth(5)",
+      "tag": "input",
+      "type": "radio",
+      "text": "",
+      "role": "glyph",
+      "expectedHeight": 16,
+      "rect": {
+        "x": 51,
+        "y": 1414.75,
+        "width": 16,
+        "height": 16,
+        "right": 67,
+        "bottom": 1430.75
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": null,
+        "minHeight": 16,
+        "padding": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    },
+    {
+      "id": "button.secondary:nth(6)",
+      "tag": "button",
+      "type": "button",
+      "text": "Choose observations",
+      "role": "standard",
+      "expectedHeight": 32,
+      "rect": {
+        "x": 42,
+        "y": 1444.75,
+        "width": 1356,
+        "height": 32,
+        "right": 1398,
+        "bottom": 1476.75
+      },
+      "style": {
+        "display": "block",
+        "position": "static",
+        "fontSize": 13,
+        "lineHeight": 18,
+        "minHeight": 32,
+        "padding": [
+          4,
+          8,
+          4,
+          8
+        ],
+        "gap": null,
+        "rowGap": null,
+        "columnGap": null,
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flexWrap": "nowrap"
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "input.choice-control:nth(0)",
+      "text": "Included in Scene",
+      "glyphRect": {
+        "x": 79,
+        "y": 784.88,
+        "width": 16,
+        "height": 16,
+        "right": 95,
+        "bottom": 800.88
+      },
+      "labelRect": {
+        "x": 70,
+        "y": 778.88,
+        "width": 157.11,
+        "height": 28,
+        "right": 227.11,
+        "bottom": 806.88
+      },
+      "rowRect": {
+        "x": 70,
+        "y": 778.88,
+        "width": 157.11,
+        "height": 28,
+        "right": 227.11,
+        "bottom": 806.88
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(1)",
+      "text": "Included in Scene",
+      "glyphRect": {
+        "x": 79,
+        "y": 1009.88,
+        "width": 16,
+        "height": 16,
+        "right": 95,
+        "bottom": 1025.88
+      },
+      "labelRect": {
+        "x": 70,
+        "y": 1003.88,
+        "width": 157.11,
+        "height": 28,
+        "right": 227.11,
+        "bottom": 1031.88
+      },
+      "rowRect": {
+        "x": 70,
+        "y": 1003.88,
+        "width": 157.11,
+        "height": 28,
+        "right": 227.11,
+        "bottom": 1031.88
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(2)",
+      "text": "Use all observations",
+      "glyphRect": {
+        "x": 51,
+        "y": 1378.75,
+        "width": 16,
+        "height": 16,
+        "right": 67,
+        "bottom": 1394.75
+      },
+      "labelRect": {
+        "x": 42,
+        "y": 1372.75,
+        "width": 1356,
+        "height": 28,
+        "right": 1398,
+        "bottom": 1400.75
+      },
+      "rowRect": {
+        "x": 42,
+        "y": 1372.75,
+        "width": 1356,
+        "height": 28,
+        "right": 1398,
+        "bottom": 1400.75
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    },
+    {
+      "id": "input.choice-control:nth(3)",
+      "text": "Use selected observations",
+      "glyphRect": {
+        "x": 51,
+        "y": 1414.75,
+        "width": 16,
+        "height": 16,
+        "right": 67,
+        "bottom": 1430.75
+      },
+      "labelRect": {
+        "x": 42,
+        "y": 1408.75,
+        "width": 1356,
+        "height": 28,
+        "right": 1398,
+        "bottom": 1436.75
+      },
+      "rowRect": {
+        "x": 42,
+        "y": 1408.75,
+        "width": 1356,
+        "height": 28,
+        "right": 1398,
+        "bottom": 1436.75
+      },
+      "glyphWidth": 16,
+      "glyphHeight": 16,
+      "rowHeight": 28,
+      "singleLine": true,
+      "hasSupplementalCopy": false,
+      "centrelineDelta": 0
+    }
+  ],
+  "headings": [
+    {
+      "id": "h3:nth(0)",
+      "text": "Select charts and frames",
+      "normalizedText": "select charts and frames",
+      "tag": "h3",
+      "rect": {
+        "x": 31,
+        "y": 375.72,
+        "width": 1378,
+        "height": 21,
+        "right": 1409,
+        "bottom": 396.72
+      }
+    },
+    {
+      "id": "h3:nth(1)",
+      "text": "Selected for this Scene",
+      "normalizedText": "selected for this scene",
+      "tag": "h3",
+      "rect": {
+        "x": 59,
+        "y": 513.16,
+        "width": 1322,
+        "height": 21,
+        "right": 1381,
+        "bottom": 534.16
+      }
+    },
+    {
+      "id": "h3:nth(2)",
+      "text": "Needs attention",
+      "normalizedText": "needs attention",
+      "tag": "h3",
+      "rect": {
+        "x": 63,
+        "y": 1095.59,
+        "width": 1318,
+        "height": 21,
+        "right": 1381,
+        "bottom": 1116.59
+      }
+    },
+    {
+      "id": "h3:nth(3)",
+      "text": "Available from parent Chrono Group",
+      "normalizedText": "available from parent chrono group",
+      "tag": "h3",
+      "rect": {
+        "x": 59,
+        "y": 1225.03,
+        "width": 1322,
+        "height": 21,
+        "right": 1381,
+        "bottom": 1246.03
+      }
+    },
+    {
+      "id": "legend:nth(4)",
+      "text": "Source observations",
+      "normalizedText": "source observations",
+      "tag": "legend",
+      "rect": {
+        "x": 42,
+        "y": 1343.75,
+        "width": 146.22,
+        "height": 19,
+        "right": 188.22,
+        "bottom": 1362.75
+      }
+    }
+  ],
+  "rhythms": [
+    {
+      "id": "div.scene-ledger-actions:nth(0)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "div.scene-ledger-actions:nth(1)",
+      "gaps": [
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fieldset.scene-frame-selection:nth(2)",
+      "gaps": [
+        10,
+        8
+      ],
+      "declaredGap": 8,
+      "panelPadding": [
+        10,
+        10,
+        10,
+        10
+      ]
+    }
+  ],
+  "wraps": [
+    {
+      "id": "div.scene-ledger-actions:nth(4)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    },
+    {
+      "id": "div.scene-ledger-actions:nth(7)",
+      "rowCount": 1,
+      "unexpected": false,
+      "flexWrap": "wrap"
+    }
+  ],
+  "whitespace": [
+    {
+      "id": "div.scene-ledger-actions:nth(4)",
+      "strandedInlineSpace": 992.61,
+      "occupiedRatio": 0.24,
+      "crowded": false
+    },
+    {
+      "id": "div.scene-ledger-actions:nth(7)",
+      "strandedInlineSpace": 992.61,
+      "occupiedRatio": 0.24,
+      "crowded": false
+    }
+  ],
+  "overlaps": [],
+  "clippedElements": [
+    {
+      "id": "input.choice-control:nth(2)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(3)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "input.choice-control:nth(4)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "input.choice-control:nth(5)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "button.secondary:nth(6)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(16)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "small:nth(17)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "label.choice-control-row:nth(18)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h3:nth(19)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(20)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "h3:nth(21)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "p:nth(22)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "legend:nth(23)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "label.choice-control-row:nth(24)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    },
+    {
+      "id": "label.choice-control-row:nth(25)",
+      "clippingOwner": "viewport",
+      "axes": [
+        "viewport-block"
+      ],
+      "scrollReachable": true
+    }
+  ],
+  "scrollContainers": [],
+  "repeatedTitles": [],
+  "occupancies": [
+    {
+      "id": "fieldset.scene-frame-selection:nth(8)",
+      "occupiedRatio": 0.98,
+      "crowded": false
+    }
+  ],
+  "operationalContrastSamples": {
+    "measured": 22,
+    "lowest": [
+      {
+        "id": "p:nth(4)",
+        "text": "Full data 2020-02-27–2021-04-17",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "small:nth(5)",
+        "text": "415 observations",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "small:nth(6)",
+        "text": "415 observations",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "p:nth(10)",
+        "text": "Full data 2020-02-27–2021-04-17",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      },
+      {
+        "id": "small:nth(11)",
+        "text": "415 observations",
+        "ratio": 6.93,
+        "foreground": "rgba(85, 90, 85, 1)",
+        "background": "rgba(255, 253, 248, 1)",
+        "state": "available"
+      }
+    ]
+  },
+  "operationalContrastCandidates": [],
+  "visibleSemanticsCandidates": [],
+  "humanReview": {
+    "operationalContrast": {
+      "status": "required",
+      "prompt": "Judge whether selected, inactive, warning, destructive, and primary states remain immediately distinguishable in the existing colour profile; do not use this review to enlarge controls."
+    },
+    "visibleSemantics": {
+      "status": "required",
+      "prompt": "Judge visible label and action meaning, title/group hierarchy, icon meaning, chart units, state distinction, and destructive-action clarity.",
+      "visibleHeadingCount": 5,
+      "visibleStateTextCount": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "scene-studio-select:rhythm:1",
+      "surfaceId": "scene-studio-select",
+      "owner": "scene-studio",
+      "category": "rhythm",
+      "priority": "P2",
+      "evidence": "fieldset.scene-frame-selection:nth(2) uses off-scale spacing: 10px.",
+      "recommendation": "Map visible group gaps and padding to the shared 2/4/8/12/16/24/32px scale."
+    }
+  ],
+  "categoryCounts": {
+    "rhythm": 1
+  },
+  "priorityCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1
+  }
+}
