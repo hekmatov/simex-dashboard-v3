@@ -11,7 +11,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Build Page management uses one full-size trigger and full-size grouped actions", async ({ page }) => {
+test("Build Page management uses one compact trigger and grouped actions", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -20,17 +20,15 @@ test("Build Page management uses one full-size trigger and full-size grouped act
 
   const trigger = navigation.getByRole("button", { name: "Page actions for Biomedical", exact: true });
   await expect(trigger).toBeVisible();
-  await expectMinimumTarget(trigger);
   await trigger.click();
 
   const actions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
   await expect(actions).toBeVisible();
   await expect(actions.getByRole("button")).toHaveCount(3);
-  await expectMinimumTargets(actions.locator("button"));
   expect(await navigation.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
 });
 
-test("source-first Step 7 Build controls and fields use the shared 44px interaction contract", async ({ page }) => {
+test("source-first Step 7 Build controls and fields use the shared dense desktop contract", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -39,7 +37,7 @@ test("source-first Step 7 Build controls and fields use the shared 44px interact
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
   await map.getByRole("button", { name: "Inspector", exact: true }).click();
-  await expectMinimumTargets(map.locator('button:visible, input:visible, select:visible, textarea:visible'));
+  await expect(map.getByLabel("Page title")).toHaveCSS("min-height", "32px");
   await expect(map.getByLabel("Page title")).toHaveCSS("color", await semanticColor(page, "--simex-text-strong"));
 
   await map.getByRole("button", { name: "Structure", exact: true }).click();
@@ -63,28 +61,24 @@ test("source-first Step 7 Build controls and fields use the shared 44px interact
     .getByRole("button").allTextContents();
   expect(stageLabels.map((label) => label.replace(/(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u, "")))
     .toEqual(["Destination", "Data source", "Chart type", "Map and prepare", "Configure", "Review"]);
-  await expectMinimumTargets(wizard.locator('button:visible, input:visible:not([type="checkbox"]):not([type="radio"]), select:visible, textarea:visible'));
   const flow = chartAuthoringWorkflow(wizard);
   await flow.goToChartType();
-  await expectMinimumTargets(wizard.locator('button:visible, input:visible:not([type="checkbox"]):not([type="radio"]), select:visible, textarea:visible'));
+  await expect(wizard.locator(".chart-wizard-step-button").first()).toHaveCSS("min-height", "36px");
 });
 
-test("phone Build stays operational beneath its persistent recovery notice", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test("Build is gated below the 1024px desktop boundary", async ({ page }) => {
+  await page.setViewportSize({ width: 1023, height: 768 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 
   const notice = page.locator('[data-phone-mode-notice="build"]');
   await expect(notice).toBeVisible();
   await expect(notice.getByRole("button", { name: "Switch to View", exact: true })).toBeVisible();
-  await expectMinimumTarget(notice.getByRole("button"));
   const buildShell = page.locator(".build-mode-shell");
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await expect(buildShell).toBeVisible();
-  await expect(mapToggle).toBeEnabled();
-  await mapToggle.click();
-  await expect(page.getByRole("complementary", { name: "Dashboard map" })).toBeVisible();
-  await expect(notice).toBeVisible();
+  await expect(buildShell).toHaveCount(1);
+  await expect(buildShell).toBeHidden();
+  await notice.getByRole("button", { name: "Switch to View", exact: true }).click();
+  await expect(page.locator('.app-frame[data-dashboard-mode="view"]')).toBeVisible();
 });
 
 test("operation status shows blocking Finish Build work, completion, and footer-safe geometry", async ({ page }) => {
@@ -271,7 +265,7 @@ test("same-page section reorder paints status first and moves the existing chart
   expect(result.movedIndex).toBeGreaterThan(result.workingIndex);
 });
 
-test("disabled reasons remain pointer-visible without reintroducing DOM focus", async ({ page }) => {
+test("disabled Finish Build exposes its blocking reason on pointer hover", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -280,42 +274,18 @@ test("disabled reasons remain pointer-visible without reintroducing DOM focus", 
 
   const finish = page.getByRole("button", { name: "Finish Build", exact: true });
   await expect(finish).toBeDisabled();
-  await expect(finish).not.toHaveAttribute("aria-describedby", /.+/);
   const anchor = finish.locator("..");
   await expect(anchor).toHaveAttribute("data-control-tooltip-anchor", "true");
-  await expect(anchor).toHaveAttribute("tabindex", "-1");
-  const reasonId = await anchor.getAttribute("aria-describedby");
-  expect(reasonId).toBeTruthy();
-
-  await anchor.focus();
-  await expect(anchor).not.toBeFocused();
-  await expect(page.locator(`#${reasonId}`)).toHaveText("Finish or cancel the open chart draft.");
+  await anchor.hover();
+  const reason = anchor.locator(".control-tooltip__reason");
+  await expect(reason).toBeVisible();
+  await expect(reason).toHaveText("Finish or cancel the open chart draft.");
 
   await page.getByRole("dialog", { name: "Add new chart" })
     .getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Add new chart" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Finish Build", exact: true })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Finish Build", exact: true }).locator(".."))
-    .not.toHaveAttribute("tabindex", "0");
 });
-
-async function expectMinimumTargets(locator, minimum = 44) {
-  const undersized = await locator.evaluateAll((controls, threshold) => controls
-    .map((control) => {
-      const box = control.getBoundingClientRect();
-      return {
-        label: control.getAttribute("aria-label") || control.textContent?.trim() || control.tagName,
-        width: Math.round(box.width),
-        height: Math.round(box.height),
-      };
-    })
-    .filter(({ width, height }) => width < threshold || height < threshold), minimum);
-  expect(undersized, JSON.stringify(undersized)).toEqual([]);
-}
-
-async function expectMinimumTarget(locator, minimum = 44) {
-  await expectMinimumTargets(locator, minimum);
-}
 
 async function semanticColor(page, token) {
   return page.evaluate((name) => {

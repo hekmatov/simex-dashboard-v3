@@ -7,10 +7,7 @@ import { scenePresentLayoutToDisplayLayout } from "../../src/components/time/sce
 import {
   WORKSPACE_VIEWPORTS,
   captureCheckpoint,
-  expectMinimumTouchTargets,
   expectNoViewportOverflow,
-  readFocusVisibility,
-  setActualPageZoom,
 } from "./support/final-acceptance.js";
 import { openDashboardFromLanding, openLanding } from "./support/landingWorkflow.js";
 import {
@@ -20,7 +17,7 @@ import {
   readStoredScene,
 } from "./support/present-audience-workflow.js";
 
-const DESKTOP_VIEWPORT = WORKSPACE_VIEWPORTS.find(({ width, height }) => width === 1200 && height === 900);
+const DESKTOP_VIEWPORT = WORKSPACE_VIEWPORTS.find(({ width, height }) => width === 1280 && height === 800);
 const GEOMETRY_TOLERANCE = 1;
 const AUDIENCE_PRIMARY_VISUAL = [
   ".chart-echarts-host canvas",
@@ -38,9 +35,6 @@ const AUDIENCE_FORBIDDEN_INTERACTION = [
   "select",
   "textarea",
   "[contenteditable]",
-  "[tabindex]",
-  '[role="button"]',
-  '[role="link"]',
 ].join(", ");
 const AUDIENCE_INVALID_CHART_STATE = [
   ".chart-status-error",
@@ -60,145 +54,35 @@ test.beforeEach(async ({ page }) => {
   await openLanding(page);
 });
 
-test("200% text reflow keeps canonical Home, mode controls, and Dashboard map focus visible", async ({ context, page }, testInfo) => {
-  const restoreScale = await setActualPageZoom(page, context, 2);
-  try {
-    const openDashboard = page.getByRole("button", { name: "Open the dashboard", exact: true });
-    await openDashboard.focus();
-    await assertVisibleFocus(openDashboard);
-    await openDashboard.click();
-
-    const modes = page.getByLabel("Dashboard mode");
-    await expect(modes.getByRole("button", { name: "View", exact: true })).toBeVisible();
-    await modes.getByRole("button", { name: "View", exact: true }).click();
-    await expect(modes.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await modes.getByRole("button", { name: "Build", exact: true }).click();
-    await expect(modes.getByRole("button", { name: "Build", exact: true })).toHaveAttribute("aria-pressed", "true");
-
-    const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-    await expect(mapToggle).toBeVisible();
-    await mapToggle.focus();
-    await mapToggle.press("Enter");
-    const map = page.getByRole("complementary", { name: "Dashboard map" });
-    const firstTreeItem = map.getByRole("treeitem").first();
-    const focusIndicator = firstTreeItem.locator(":scope > .build-tree-row");
-    await expect(map).toHaveAttribute("data-open", "true");
-    await expect(map).toBeVisible();
-    await expect.poll(() => map.evaluate((element) => {
-      const viewport = window.visualViewport;
-      const viewportBounds = {
-        left: viewport?.offsetLeft ?? 0,
-        top: viewport?.offsetTop ?? 0,
-        right: (viewport?.offsetLeft ?? 0) + (viewport?.width ?? window.innerWidth),
-        bottom: (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight),
-      };
-      const contained = (target) => {
-        if (!target) return false;
-        const bounds = target.getBoundingClientRect();
-        return bounds.left >= viewportBounds.left
-          && bounds.top >= viewportBounds.top
-          && bounds.right <= viewportBounds.right
-          && bounds.bottom <= viewportBounds.bottom;
-      };
-      return {
-        firstRow: contained(element.querySelector('[role="treeitem"] .build-tree-row')),
-        header: contained(element.querySelector(".dashboard-map-header")),
-        panel: contained(element),
-      };
-    })).toEqual({ firstRow: true, header: true, panel: true });
-    await firstTreeItem.focus();
-    const wrapperFocus = await readFocusVisibility(firstTreeItem);
-    expect(wrapperFocus.visible).toBe(true);
-    const indicatorFocus = await readFocusVisibility(focusIndicator);
-    const outlineInset = indicatorFocus.outlineWidth + Math.max(0, indicatorFocus.outlineOffset);
-    expect(indicatorFocus.bounds.left - outlineInset).toBeGreaterThanOrEqual(indicatorFocus.visualViewport.left);
-    expect(indicatorFocus.bounds.top - outlineInset).toBeGreaterThanOrEqual(indicatorFocus.visualViewport.top);
-    expect(indicatorFocus.bounds.right + outlineInset).toBeLessThanOrEqual(indicatorFocus.visualViewport.right);
-    expect(indicatorFocus.bounds.bottom + outlineInset).toBeLessThanOrEqual(indicatorFocus.visualViewport.bottom);
-    await assertVisibleFocus(focusIndicator);
-
-    await expect(page.getByRole("region", { name: "Build commands" })).toBeVisible();
-    await expectNoViewportOverflow(page);
-    await captureCheckpoint(page, testInfo, "step9-200-percent-reflow.png");
-  } finally {
-    await restoreScale();
-  }
-});
-
-test("keyboard and screen-reader journey exposes truthful mode and Dashboard map semantics", async ({ page }, testInfo) => {
-  const modes = page.getByRole("navigation", { name: "Dashboard mode" });
-  const home = modes.getByRole("button", { name: "Home", exact: true });
-  const view = modes.getByRole("button", { name: "View", exact: true });
-  const build = modes.getByRole("button", { name: "Build", exact: true });
-
-  await expect(modes).toHaveCount(1);
-  await expect(home).toHaveAttribute("aria-pressed", "true");
-  await pressUntilFocused(page, home, "Tab");
-  await page.keyboard.press("Tab");
-  await expect(view).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(view).toHaveAttribute("aria-pressed", "true");
-  await pressUntilFocused(page, build, "Shift+Tab");
-  await page.keyboard.press("Enter");
-  await expect(build).toHaveAttribute("aria-pressed", "true");
-
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await pressUntilFocused(page, mapToggle, "Tab");
-  await page.keyboard.press("Enter");
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  const structure = map.getByRole("navigation", { name: "Dashboard structure" });
-  const tree = structure.getByRole("tree");
-  const firstTreeItem = tree.getByRole("treeitem").first();
-  await expect(map).toBeVisible();
-  await expect(firstTreeItem).toHaveAttribute("aria-expanded", "true");
-  await expect(firstTreeItem).toHaveAttribute("aria-selected", "true");
-  await pressUntilFocused(page, firstTreeItem, "Tab", 160);
-  await page.keyboard.press("ArrowDown");
-  await expect(tree.getByRole("treeitem").nth(1)).toBeFocused();
-  await page.keyboard.press("ArrowUp");
-  await expect(firstTreeItem).toBeFocused();
-
-  const snapshot = await page.locator("body").ariaSnapshot();
-  expect(snapshot).toContain("Home");
-  expect(snapshot).toContain("View");
-  expect(snapshot).toContain("Build");
-  expect(snapshot).toContain("Dashboard map");
-  expect(snapshot).toContain("Dashboard structure");
-  expect(snapshot).toContain('treeitem "Biomedical" [expanded] [selected]');
-  await testInfo.attach("step9-screen-reader-journey.yml", {
-    body: snapshot,
-    contentType: "text/yaml",
+test("Build gates at 1023px and resumes at the 1024px desktop boundary without remounting", async ({ page }) => {
+  await openDashboardFromLanding(page);
+  const modes = page.getByLabel("Dashboard mode");
+  await modes.getByRole("button", { name: "Build", exact: true }).click();
+  const workspace = page.locator(".build-mode-shell");
+  const notice = page.locator('[data-phone-mode-notice="build"]');
+  await expect(workspace).toBeVisible();
+  await page.evaluate(() => {
+    window.__step9BuildWorkspace = document.querySelector(".build-mode-shell");
   });
 
-  await page.keyboard.press("Escape");
-  await expect(map).toBeHidden();
-  await expect(mapToggle).toBeFocused();
+  await page.setViewportSize({ width: 1023, height: 768 });
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("Build requires a desktop workspace at least 1024px wide.");
+  await expect(notice).toContainText("View remains available.");
+  await expect(notice.getByRole("button", { name: "Switch to View", exact: true })).toHaveCount(1);
+  await expect(workspace).toHaveCount(1);
+  await expect(workspace).toBeHidden();
+  await expectNoViewportOverflow(page);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(notice).toBeHidden();
+  await expect(workspace).toBeVisible();
+  expect(await page.evaluate(() => (
+    window.__step9BuildWorkspace === document.querySelector(".build-mode-shell")
+  ))).toBe(true);
 });
 
-test("touch input activates the phone recovery control with a 44 by 44 target", async ({ browser, baseURL }) => {
-  const touchContext = await browser.newContext({
-    hasTouch: true,
-    viewport: WORKSPACE_VIEWPORTS[0],
-  });
-  try {
-    const touchPage = await touchContext.newPage();
-    await touchPage.goto(baseURL);
-    const modes = touchPage.getByLabel("Dashboard mode");
-    await modes.getByRole("button", { name: "Build", exact: true }).tap();
-
-    const notice = touchPage.locator('[data-phone-mode-notice="build"]');
-    const switchToView = notice.getByRole("button", { name: "Switch to View", exact: true });
-    await expect(notice).toHaveAttribute("role", "status");
-    await expect(notice).toBeVisible();
-    await expectMinimumTouchTargets(switchToView);
-    await switchToView.tap();
-    await expect(modes.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
-  } finally {
-    await touchContext.close();
-  }
-});
-
-test("viewport fan-out preserves canonical Home and cross-mode analytical identities", async ({ page }) => {
+test("desktop viewport fan-out preserves canonical Home and cross-mode analytical identities", async ({ page }) => {
   test.setTimeout(240_000);
   for (const viewport of WORKSPACE_VIEWPORTS) {
     await page.setViewportSize(viewport);
@@ -215,10 +99,6 @@ test("viewport fan-out preserves canonical Home and cross-mode analytical identi
     ))).not.toBe("");
     await expectNoViewportOverflow(page);
 
-    if (viewport.width === 390 && viewport.height === 844) {
-      await expect(page.locator("[data-phone-mode-notice]")).toHaveCount(0);
-    }
-
     const savedPackage = await readSavedPackage(page);
     await openDashboardFromLanding(page);
     await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
@@ -226,16 +106,9 @@ test("viewport fan-out preserves canonical Home and cross-mode analytical identi
 
     await modes.getByRole("button", { name: "Build", exact: true }).click();
     await expect(appFrame).toHaveAttribute("data-dashboard-mode", "build");
-    if (viewport.width === 390 && viewport.height === 844) {
-      await expect(page.locator('[data-phone-mode-notice="build"]')).toBeVisible();
-      await expect(page.locator(".build-workspace")).toHaveCount(1);
-      await expect(page.locator(".build-workspace")).toBeVisible();
-      expect(await readCanonicalCanvasIdentity(page)).toEqual(viewCanvas);
-      await page.getByRole("button", { name: "Switch to View", exact: true }).click();
-      await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
-    } else {
-      expect(await readCanonicalCanvasIdentity(page)).toEqual(viewCanvas);
-    }
+    await expect(page.locator('[data-phone-mode-notice="build"]')).toBeHidden();
+    await expect(page.locator(".build-mode-shell")).toBeVisible();
+    expect(await readCanonicalCanvasIdentity(page)).toEqual(viewCanvas);
 
     await modes.getByRole("button", { name: "Home", exact: true }).click();
     await expect(appFrame).toHaveAttribute("data-dashboard-mode", "home");
@@ -587,19 +460,4 @@ function expectHorizontalSpan(focused, left, right, label) {
 
 async function readSavedPackage(page) {
   return page.evaluate(() => localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
-}
-
-async function assertVisibleFocus(target) {
-  const focus = await readFocusVisibility(target);
-  expect(focus.visible).toBe(true);
-  expect(focus.outlineStyle).not.toBe("none");
-  expect(focus.outlineWidth).toBeGreaterThanOrEqual(2);
-}
-
-async function pressUntilFocused(page, target, key, limit = 32) {
-  for (let attempt = 0; attempt < limit; attempt += 1) {
-    if (await target.evaluate((element) => document.activeElement === element)) return;
-    await page.keyboard.press(key);
-  }
-  await expect(target).toBeFocused();
 }

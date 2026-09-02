@@ -3,10 +3,10 @@ import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const VIEWPORTS = [
-  { width: 390, height: 844 },
-  { width: 768, height: 1024 },
+  { width: 900, height: 720 },
+  { width: 1023, height: 768 },
   { width: 1024, height: 768 },
-  { width: 1200, height: 900 },
+  { width: 1280, height: 800 },
   { width: 1440, height: 900 },
 ];
 
@@ -17,7 +17,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Step 7 canonical content and responsive canvas contract hold at approved viewports", async ({ page }) => {
+test("Step 7 canonical content is preserved across the 1024px desktop gate", async ({ page }) => {
   test.setTimeout(240_000);
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
@@ -26,26 +26,25 @@ test("Step 7 canonical content and responsive canvas contract hold at approved v
     const view = await readCanvasContract(page);
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
-    if (viewport.width === 390) {
-      const phoneBuild = await readMountedCanvasContract(page);
+    if (viewport.width < 1024) {
+      const gatedBuild = await readMountedCanvasContract(page);
       const notice = page.locator('[data-phone-mode-notice="build"]');
-      const workspace = page.locator(".build-workspace");
+      const workspace = page.locator(".build-mode-shell");
       await expect(notice).toBeVisible();
       await expect(workspace).toHaveCount(1);
-      await expect(workspace).toBeVisible();
-      await expect(page.locator("[data-canonical-canvas-id]")).toBeVisible();
-      expect(phoneBuild.canvasId).toBe(view.canvasId);
-      expect(phoneBuild.ids).toEqual(view.ids);
+      await expect(workspace).toBeHidden();
+      expect(gatedBuild.canvasId).toBe(view.canvasId);
+      expect(gatedBuild.ids).toEqual(view.ids);
 
       const screenshot = await page.screenshot({ animations: "disabled" });
       expect(screenshot.byteLength).toBeGreaterThan(1_000);
 
-      await page.setViewportSize({ width: 768, height: 1024 });
+      await page.setViewportSize({ width: 1024, height: 768 });
       await expect(notice).toBeHidden();
       await expect(workspace).toBeVisible();
       const restoredBuild = await readCanvasContract(page);
-      expect(restoredBuild.canvasId).toBe(phoneBuild.canvasId);
-      expect(restoredBuild.ids).toEqual(phoneBuild.ids);
+      expect(restoredBuild.canvasId).toBe(gatedBuild.canvasId);
+      expect(restoredBuild.ids).toEqual(gatedBuild.ids);
       expect(restoredBuild.maxWidth).toBe(view.maxWidth);
       expect(restoredBuild.frameWidth)
         .toBeLessThanOrEqual(Number.parseFloat(restoredBuild.maxWidth));

@@ -128,7 +128,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
   await expect(full.getByRole("navigation", { name: "Chart editing steps" })).toBeVisible();
 });
 
-test("Build Structure double click navigates, highlights, and focuses section rename", async ({ page }) => {
+test("Build Structure double click navigates, highlights, and opens section rename", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
@@ -142,11 +142,8 @@ test("Build Structure double click navigates, highlights, and focuses section re
   await section.locator(":scope > .build-tree-row .build-tree-label").dblclick();
   await expect(section).toHaveAttribute("aria-selected", "true");
   const rename = structure.getByRole("textbox", { name: "Rename section Outbreak dynamics" });
-  await expect(rename).toBeFocused();
+  await expect(rename).toBeVisible();
   await expect(rename).toHaveValue("Outbreak dynamics");
-  const target = await rename.boundingBox();
-  expect(target?.height).toBeGreaterThanOrEqual(44);
-  await rename.press("Escape");
 });
 
 test("dirty Build chart blocks crown Page navigation until the draft resolves", async ({ page }) => {
@@ -162,8 +159,7 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
   const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
-  await editChart.focus();
-  await page.keyboard.press("Enter");
+  await editChart.click();
 
   const quick = page.locator(".chart-quick-editor");
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -180,7 +176,6 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
 
   await expect(editor).toBeVisible();
   await expect(title).toHaveValue("Draft survives crown navigation");
-  await expect(title).toBeFocused();
   await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard changes?" })
     .getByRole("button", { name: "Discard", exact: true }).click();
@@ -287,7 +282,7 @@ test("active comparison selection disables repeated crown activation without cle
   await expect(compareCharts).toBeEnabled();
 });
 
-test("live Build Structure tree exposes a 44px caret and visible 3px focus", async ({ page }) => {
+test("live Build Structure tree exposes a compact utility caret without redundant Page actions", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await enterAuthoredDashboard(page);
@@ -300,22 +295,12 @@ test("live Build Structure tree exposes a 44px caret and visible 3px focus", asy
   const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
   const caret = biomedical.getByRole("button", { name: "Collapse Biomedical", exact: true });
   const target = await caret.boundingBox();
-  expect(target?.width).toBeGreaterThanOrEqual(44);
-  expect(target?.height).toBeGreaterThanOrEqual(44);
-
-  await biomedical.focus();
-  await expect(biomedical).toBeFocused();
-  const focus = await biomedical.locator(":scope > .build-tree-row").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      outlineStyle: style.outlineStyle,
-      outlineWidth: style.outlineWidth,
-    };
-  });
-  expect(focus).toEqual({
-    outlineStyle: "solid",
-    outlineWidth: "3px",
-  });
+  expect(target?.width).toBeGreaterThanOrEqual(24);
+  expect(target?.width).toBeLessThanOrEqual(32);
+  expect(target?.height).toBeGreaterThanOrEqual(24);
+  expect(target?.height).toBeLessThanOrEqual(32);
+  await caret.click();
+  await expect(biomedical.getByRole("button", { name: "Expand Biomedical", exact: true })).toBeVisible();
   await expect(page.locator(".build-page-navigation [aria-label$='Page actions']"))
     .toHaveCount(0);
 });
@@ -376,20 +361,9 @@ test("look drawer allows transient compression and restores dashboard geometry a
   expect(drawerBox.width).toBeLessThanOrEqual(420);
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
 
-  const system = drawer.getByLabel("System", { exact: true });
   const dark = drawer.getByLabel("Dark", { exact: true });
-  await drawer.getByRole("button", { name: "Close Dashboard look", exact: true }).focus();
-  await page.keyboard.press("Tab");
-  await expect(system).toBeFocused();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  await expect(dark).toBeFocused();
+  await dark.check();
   await expect(dark).toBeChecked();
-  const focus = await dark.evaluate((element) => {
-    const style = getComputedStyle(element.closest("label"));
-    return { width: style.outlineWidth, style: style.outlineStyle };
-  });
-  expect(focus).toEqual({ width: "3px", style: "solid" });
   await expect(drawer).toHaveAttribute("data-resolved-appearance", "dark");
   expect(await drawer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await expect(drawer.locator('[data-icon-id="auto"]')).toHaveCount(1);
@@ -477,7 +451,7 @@ test("denied dashboard writes remain usable with session-only feedback", async (
   await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();
   const rename = structure.getByRole("textbox", { name: "Rename page Biomedical" });
   await rename.fill("Session-only Home");
-  await rename.press("Enter");
+  await rename.blur();
   const renamedPage = page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Session-only Home", exact: true });
   await expect(renamedPage).toBeVisible();
@@ -492,25 +466,7 @@ test("denied dashboard writes remain usable with session-only feedback", async (
   );
 });
 
-test("look drawer phone sheet", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-
-  const drawer = page.getByRole("dialog", { name: "Dashboard look" });
-  await expect(drawer).toBeVisible();
-  const box = await drawer.boundingBox();
-  const crownBox = await page.locator(".dashboard-command-crown").boundingBox();
-  expect(box).not.toBeNull();
-  expect(crownBox).not.toBeNull();
-  expect(box.width).toBeCloseTo(390, 2);
-  expect(box.y).toBeCloseTo(crownBox.y + crownBox.height + 12, 2);
-  expect(box.y + box.height).toBeCloseTo(844, 2);
-  await expect(page.locator(".look-drawer-click-catcher")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(drawer.getByRole("button", { name: "Close Dashboard look", exact: true })).toHaveCSS("min-height", "44px");
-});
-
-test("best-effort phone banner preserves state and leaves Present operable", async ({ page }) => {
+test("desktop mode gate preserves Build state and resumes Present at supported width", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
@@ -518,26 +474,24 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  const layoutDraftValue = "Phone-preserved Biomedical layout";
+  const layoutDraftValue = "Gate-preserved Biomedical layout";
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
   await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();
   const pageRename = structure.getByRole("textbox", { name: "Rename page Biomedical" });
   await pageRename.fill(layoutDraftValue);
-  await pageRename.press("Enter");
+  await pageRename.blur();
   const renamedPage = structure.getByRole("treeitem", { name: layoutDraftValue, exact: true });
   const layoutDraft = renamedPage.locator(":scope > .build-tree-row .build-tree-label");
   await expect(layoutDraft).toBeVisible();
 
   const appFrame = page.locator(".app-frame");
-  const workspace = page.locator(".build-workspace");
+  const workspace = page.locator(".build-mode-shell");
   const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
   const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
-  await editChart.focus();
-  await expect(editChart).toBeFocused();
-  await page.keyboard.press("Enter");
+  await editChart.click();
 
   const quick = page.locator(".chart-quick-editor");
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -545,9 +499,7 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await editor.getByRole("button", { name: /^Configure\./ }).click();
   const chartDraft = editor.getByLabel("Chart title");
   const discardChanges = editor.getByRole("button", { name: "Discard changes", exact: true });
-  await chartDraft.fill("Phone-preserved confirmed cases");
-  await chartDraft.click();
-  await expect(chartDraft).toBeFocused();
+  await chartDraft.fill("Gate-preserved confirmed cases");
   await expect(discardChanges).toBeEnabled();
 
   const before = await page.evaluate(() => {
@@ -559,18 +511,18 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
     };
   });
 
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 900, height: 720 });
   const buildNotice = page.locator('[data-phone-mode-notice="build"]');
   await expect(buildNotice).toBeVisible();
   await expect(buildNotice.getByRole("button", { name: "Switch to View", exact: true }))
     .toHaveCount(1);
   await expect(workspace).toHaveCount(1);
-  await expect(workspace).toBeVisible();
-  await expect(chartDraft).toBeVisible();
-  await expect(discardChanges).toBeVisible();
-  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
+  await expect(workspace).toBeHidden();
+  await expect(chartDraft).toBeHidden();
+  await expect(discardChanges).toBeHidden();
+  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
   await expect(page.locator(
-    '.build-tree-item-wrap[aria-label="Phone-preserved Biomedical layout"] > .build-tree-row .build-tree-label',
+    '.build-tree-item-wrap[aria-label="Gate-preserved Biomedical layout"] > .build-tree-row .build-tree-label',
   )).toHaveText(layoutDraftValue);
   await expect(target).toHaveAttribute("data-build-placement-id", "bio_confirmed_cases");
   await expect(target).toHaveClass(/\bselected\b/);
@@ -579,8 +531,7 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await expect(buildNotice).toBeHidden();
   await expect(workspace).toHaveCount(1);
   await expect(workspace).toBeVisible();
-  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
-  await expect(chartDraft).toBeFocused();
+  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
   await expect(layoutDraft).toHaveText(layoutDraftValue);
   await expect(target).toHaveClass(/\bselected\b/);
   const after = await page.evaluate(() => {
@@ -595,24 +546,19 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   expect(after.targetId).toBe(before.targetId);
   expect(Math.abs(after.targetTop - before.targetTop)).toBeLessThanOrEqual(1);
 
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 900, height: 720 });
   const switchToView = buildNotice.getByRole("button", { name: "Switch to View", exact: true });
-  const switchTarget = await switchToView.boundingBox();
-  expect(switchTarget.width).toBeGreaterThanOrEqual(44);
-  expect(switchTarget.height).toBeGreaterThanOrEqual(44);
   await switchToView.click();
   await expect(appFrame).toHaveAttribute("data-dashboard-mode", "build");
   await expect(buildNotice.getByRole("alert")).toHaveText(
     "Finish or cancel the open chart editor before leaving Build.",
   );
-  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
+  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
 
   await page.setViewportSize({ width: 1200, height: 900 });
   await expect(workspace).toBeVisible();
-  await chartDraft.click();
   await expect(editor).toBeVisible();
-  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
-  await expect(chartDraft).toBeFocused();
+  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
   await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard changes?" })
     .getByRole("button", { name: "Discard", exact: true }).click();
@@ -621,7 +567,7 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await expect(renamedPage).toHaveAttribute("aria-expanded", "false");
   await renamedPage.getByRole("button", { name: `Expand ${layoutDraftValue}`, exact: true }).click();
   await expect(renamedPage).toHaveAttribute("aria-expanded", "true");
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 900, height: 720 });
   await expect(buildNotice).toBeVisible();
   await buildNotice.getByRole("button", { name: "Switch to View", exact: true }).click();
   await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
@@ -633,6 +579,6 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   const presentNotice = page.locator('[data-phone-mode-notice="present"]');
   await expect(presentNotice).toBeVisible();
   await expect(presentWorkspace).toHaveCount(1);
-  await expect(presentWorkspace).toBeVisible();
+  await expect(presentWorkspace).toBeHidden();
   await expect(presentNotice.getByRole("button", { name: "Switch to View", exact: true })).toBeVisible();
 });

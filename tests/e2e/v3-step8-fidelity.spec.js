@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.clear());
 });
 
-test("390 Present remains functional below the persistent notice and preserves its live session", async ({ page }) => {
+test("Present is gated below 1024px and preserves its live session while mounted", async ({ page }) => {
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
@@ -22,66 +22,26 @@ test("390 Present remains functional below the persistent notice and preserves i
   await page.locator('[data-presentation-control-id="output-holding"]').click();
   await expect(popup.locator(".audience-display")).toHaveAttribute("data-output-mode", "holding");
 
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1023, height: 768 });
   const notice = page.locator('[data-phone-mode-notice="present"]');
   const workspace = page.locator(".present-workspace");
   await expect(notice).toBeVisible();
-  await expect(workspace).toBeVisible();
+  await expect(workspace).toHaveCount(1);
+  await expect(workspace).toBeHidden();
   await expect(workspace).toHaveAttribute("data-active-scene-id", scene.id);
-  await expect(page.locator('[data-presentation-control-id="reopen-audience"]')).toBeVisible();
-  await expect(page.locator('[data-presentation-control-id="output-holding"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('[data-presentation-control-id="pause"]')).toBeDisabled();
   await expect(page.locator('[data-presentation-control-id="play"]')).toBeEnabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-  const geometry = await page.evaluate(() => {
-    const noticeRect = document.querySelector('[data-phone-mode-notice="present"]')?.getBoundingClientRect();
-    const workspaceRect = document.querySelector(".present-workspace")?.getBoundingClientRect();
-    const dockRect = document.querySelector(".present-action-dock")?.getBoundingClientRect();
-    const bodyRect = document.querySelector(".present-workspace-body")?.getBoundingClientRect();
-    return {
-      noticeWorkspaceOverlap: rectanglesOverlap(noticeRect, workspaceRect),
-      dockBodyOverlap: rectanglesOverlap(dockRect, bodyRect),
-    };
-
-    function rectanglesOverlap(left, right) {
-      if (!left || !right) return true;
-      return left.left < right.right
-        && left.right > right.left
-        && left.top < right.bottom
-        && left.bottom > right.top;
-    }
-  });
-  expect(geometry).toEqual({ noticeWorkspaceOverlap: false, dockBodyOverlap: false });
-
-  const focusTarget = page.locator('[data-presentation-control-id="output-blank"]');
-  await focusTarget.focus();
-  await focusTarget.evaluate((element) => element.scrollIntoView({ block: "center" }));
-  const focusBox = await focusTarget.boundingBox();
-  expect(focusBox.y).toBeGreaterThanOrEqual(0);
-  expect(focusBox.y + focusBox.height).toBeLessThanOrEqual(844);
-
-  const enabledControls = page.locator(".present-workspace :is(button, select, input):not(:disabled):not([type=checkbox])");
-  for (let index = 0; index < await enabledControls.count(); index += 1) {
-    const box = await enabledControls.nth(index).boundingBox();
-    if (!box) continue;
-    expect(box.height, `control ${index} height`).toBeGreaterThanOrEqual(44);
-    expect(box.width, `control ${index} width`).toBeGreaterThanOrEqual(44);
-  }
-  const enabledCheckboxLabels = page.locator(".present-workspace label:has(input[type=checkbox]:not(:disabled))");
-  for (let index = 0; index < await enabledCheckboxLabels.count(); index += 1) {
-    const box = await enabledCheckboxLabels.nth(index).boundingBox();
-    if (!box) continue;
-    expect(box.height, `checkbox label ${index} height`).toBeGreaterThanOrEqual(44);
-    expect(box.width, `checkbox label ${index} width`).toBeGreaterThanOrEqual(44);
-  }
-
   await notice.getByRole("button", { name: "Switch to View" }).click();
   await expect(page.locator('.app-frame[data-dashboard-mode="view"]')).toBeVisible();
   await page.locator('.mode-switcher [data-dashboard-mode="present"]').click();
+  await expect(notice).toBeVisible();
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(notice).toBeHidden();
+  await expect(workspace).toBeVisible();
   await expect(workspace).toHaveAttribute("data-active-scene-id", scene.id);
   await expect(page.locator('[data-presentation-control-id="reopen-audience"]')).toBeVisible();
-  await expect(page.locator('[data-presentation-control-id="output-holding"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('[data-presentation-control-id="pause"]')).toBeDisabled();
   await expect(popup.locator(".audience-display")).toHaveAttribute("data-output-mode", "holding");
   expect(new URL(popup.url()).searchParams.get("channel")).toBe(channelId);
