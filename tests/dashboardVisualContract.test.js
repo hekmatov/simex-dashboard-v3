@@ -233,8 +233,9 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(styleGrammar, /label:has\(input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)[^}]*min-block-size:\s*var\(--simex-control-compact\)/s);
   assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)/s);
   assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\) > label[^}]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)[^}]*min-block-size:\s*var\(--simex-control-compact\)/s);
-  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\)\s*:is\(\s*button,[^{]*\{[^}]*font-size:\s*var\(--simex-control-font-size\)[^}]*line-height:\s*var\(--simex-control-line-height\)[^}]*min-block-size:\s*var\(--simex-control-standard\)/s);
-  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\) \.simex-icon-control[^}]*block-size:\s*var\(--simex-control-utility\)[^}]*inline-size:\s*var\(--simex-control-utility\)/s);
+  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\)\s*:where\(\s*button,[^{]*\{[^}]*font-size:\s*var\(--simex-control-font-size\)[^}]*line-height:\s*var\(--simex-control-line-height\)[^}]*min-block-size:\s*var\(--simex-control-standard\)/s);
+  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\) \.simex-icon-control[^}]*block-size:\s*var\(--simex-control-utility\)[^}]*height:\s*var\(--simex-control-utility\)[^}]*inline-size:\s*var\(--simex-control-utility\)[^}]*min-height:\s*var\(--simex-control-utility\)[^}]*min-width:\s*var\(--simex-control-utility\)[^}]*width:\s*var\(--simex-control-utility\)/s);
+  assert.match(styles, /\.panel-actions \.simex-icon-control,[\s\S]*?\.chart-wizard-footer \.simex-icon-control\s*\{[^}]*flex:\s*0\s+0\s+var\(--simex-control-utility,\s*24px\);/s);
   assert.match(styleGrammar, /build-authoring-auxiliary[^}]*\{[^}]*font-family:\s*var\(--simex-style-body-font/s);
   assert.match(styleGrammar, /build-authoring-auxiliary[^}]*:is\(h1, h2, h3, h4, legend\)[^{]*\{[^}]*font-family:\s*var\(--simex-style-heading-font/s);
 

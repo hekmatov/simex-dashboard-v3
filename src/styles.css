@@ -5509,11 +5509,11 @@ button.danger {
 .panel-actions .simex-icon-control,
 .section-actions .simex-icon-control,
 .chart-wizard-footer .simex-icon-control {
-  flex: 0 0 36px;
+  flex: 0 0 var(--simex-control-utility, 24px);
 }
 
 .source-csv-viewer-action > .simex-icon-control {
-  flex: 0 0 36px;
+  flex: 0 0 var(--simex-control-utility, 24px);
 }
 
 .confirm-dialog .confirm-dialog-error {

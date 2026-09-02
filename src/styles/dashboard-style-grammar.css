@@ -1500,7 +1500,7 @@
   .app-frame,
   .build-authoring-auxiliary,
   .unit-orbit
-) :is(
+) :where(
   button,
   select,
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])
@@ -1519,10 +1519,14 @@
   .unit-orbit
 ) .simex-icon-control {
   block-size: var(--simex-control-utility);
+  height: var(--simex-control-utility);
   inline-size: var(--simex-control-utility);
   min-block-size: var(--simex-control-utility);
   min-inline-size: var(--simex-control-utility);
+  min-height: var(--simex-control-utility);
+  min-width: var(--simex-control-utility);
   padding: 0;
+  width: var(--simex-control-utility);
 }
 
 :is(
