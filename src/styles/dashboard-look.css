@@ -112,13 +112,13 @@
   border: 1px solid var(--simex-border-subtle);
   cursor: pointer;
   display: flex;
-  min-height: var(--simex-control-standard, 32px);
+  min-height: var(--simex-control-compact, 28px);
 }
 
 .look-style-choice > label,
 .look-segmented-options label {
   gap: 8px;
-  padding: 5px 8px;
+  padding: 3px 8px;
 }
 
 .look-style-choice > label:has(input:checked),
@@ -137,8 +137,8 @@
   display: grid;
   gap: 8px;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  min-height: var(--simex-control-prominent, 36px);
-  padding: 5px 8px;
+  min-height: var(--simex-control-compact, 28px);
+  padding: 2px 8px;
 }
 
 .look-profile-copy {
@@ -189,8 +189,8 @@
   cursor: pointer;
   display: flex;
   gap: 8px;
-  min-height: var(--simex-control-standard, 32px);
-  padding: 5px 8px;
+  min-height: var(--simex-control-compact, 28px);
+  padding: 3px 8px;
 }
 
 .look-style-choice:has(input:checked),
@@ -218,7 +218,7 @@
   display: grid;
   gap: var(--simex-gap-choice-label, 8px);
   grid-template-columns: auto auto minmax(0, 1fr);
-  padding: 5px 8px;
+  padding: 3px 8px;
 }
 
 .look-appearance-option .simex-icon {

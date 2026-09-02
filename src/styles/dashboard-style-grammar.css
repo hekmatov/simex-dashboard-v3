@@ -2191,6 +2191,7 @@
   accent-color: var(--simex-selected);
   block-size: var(--simex-choice-glyph);
   inline-size: var(--simex-choice-glyph);
+  margin: 0;
   min-block-size: var(--simex-choice-glyph);
   min-inline-size: var(--simex-choice-glyph);
   padding: 0;

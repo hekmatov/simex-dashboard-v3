@@ -229,7 +229,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
 
   assert.match(styles, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);
   assert.match(styles, /input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\),\s*select,\s*textarea/s);
-  assert.match(styleGrammar, /input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)[^{]*\{[^}]*accent-color:\s*var\(--simex-selected\)[^}]*block-size:\s*var\(--simex-choice-glyph\)[^}]*inline-size:\s*var\(--simex-choice-glyph\)/s);
+  assert.match(styleGrammar, /input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)[^{]*\{[^}]*accent-color:\s*var\(--simex-selected\)[^}]*block-size:\s*var\(--simex-choice-glyph\)[^}]*inline-size:\s*var\(--simex-choice-glyph\)[^}]*margin:\s*0;/s);
   assert.match(styleGrammar, /label:has\(input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)[^}]*min-block-size:\s*var\(--simex-control-compact\)/s);
   assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)/s);
   assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\) > label[^}]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)[^}]*min-block-size:\s*var\(--simex-control-compact\)/s);
