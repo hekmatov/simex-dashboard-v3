@@ -11,7 +11,9 @@ import {
   DASHBOARD_DENSITY_CATEGORIES,
   DASHBOARD_DENSITY_ROLE_OVERRIDES,
   DASHBOARD_DENSITY_SETTLE_STYLE,
+  dashboardDensityAncestorClipsPaintedNode,
   dashboardDensityBoxesStable,
+  dashboardDensityPaintIsCollapsed,
 } from "./e2e/support/dashboard-density-audit.js";
 
 const REQUIRED_FAMILIES = [
@@ -207,7 +209,9 @@ test("role overrides preserve content geometry and classify compact graphical ut
   assert.equal(roleFor(".chart-type-card"), "content");
   assert.equal(roleFor(".build-tree-move-handle"), "utility");
   assert.equal(roleFor(".settings-color-swatch"), "utility");
-  assert.equal(roleFor(".build-more-command-list button"), "compact");
+  assert.equal(roleFor(".build-more-drawer .right-side-drawer__header > button.secondary"), "utility");
+  assert.equal(roleFor(".image-panel-presentation__size button"), "utility");
+  assert.equal(roleFor(".build-more-command-list button"), "standard");
   assert.equal(roleFor(".dashboard-map-region-switch button"), "compact");
   assert.equal(roleFor(".source-content-workspace button:not"), "standard");
 });
@@ -229,6 +233,45 @@ test("render settling disables transitions and requires repeatable geometry", ()
     ),
     false,
   );
+});
+
+test("painted-node visibility only rejects guaranteed hidden or clipped ancestors", () => {
+  const elementRect = { left: 110, right: 130, top: 20, bottom: 40 };
+  const ancestorRect = { left: 0, right: 100, top: 0, bottom: 100 };
+
+  assert.equal(dashboardDensityAncestorClipsPaintedNode({
+    elementRect,
+    ancestorRect,
+    overflowX: "hidden",
+    overflowY: "visible",
+  }), true);
+  assert.equal(dashboardDensityAncestorClipsPaintedNode({
+    elementRect,
+    ancestorRect,
+    overflowX: "auto",
+    overflowY: "visible",
+  }), false);
+  assert.equal(dashboardDensityAncestorClipsPaintedNode({
+    elementRect: { left: 80, right: 120, top: 20, bottom: 40 },
+    ancestorRect,
+    overflowX: "clip",
+    overflowY: "visible",
+  }), false);
+});
+
+test("painted-node visibility rejects clip and clip-path concealment", () => {
+  assert.equal(dashboardDensityPaintIsCollapsed({
+    clip: "rect(0px, 0px, 0px, 0px)",
+    clipPath: "none",
+  }), true);
+  assert.equal(dashboardDensityPaintIsCollapsed({
+    clip: "auto",
+    clipPath: "inset(50%)",
+  }), true);
+  assert.equal(dashboardDensityPaintIsCollapsed({
+    clip: "auto",
+    clipPath: "none",
+  }), false);
 });
 
 test("density classifier does not call scroll-reachable block content clipped", () => {

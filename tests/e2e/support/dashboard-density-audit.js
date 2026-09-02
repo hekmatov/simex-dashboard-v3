@@ -9,6 +9,37 @@ const ROLE_HEIGHTS = Object.freeze({
 
 const SPACING_SCALE = Object.freeze([2, 4, 8, 12, 16, 24, 32]);
 const SIZE_TOLERANCE = 2;
+const DASHBOARD_DENSITY_PAINT_OCCLUDING_OVERFLOWS = Object.freeze(["hidden", "clip"]);
+
+export function dashboardDensityAncestorClipsPaintedNode({
+  elementRect,
+  ancestorRect,
+  overflowX,
+  overflowY,
+} = {}) {
+  if (!elementRect || !ancestorRect) return false;
+  const outsideInline = elementRect.right <= ancestorRect.left + 0.5
+    || elementRect.left >= ancestorRect.right - 0.5;
+  const outsideBlock = elementRect.bottom <= ancestorRect.top + 0.5
+    || elementRect.top >= ancestorRect.bottom - 0.5;
+  return (
+    DASHBOARD_DENSITY_PAINT_OCCLUDING_OVERFLOWS.includes(overflowX) && outsideInline
+  ) || (
+    DASHBOARD_DENSITY_PAINT_OCCLUDING_OVERFLOWS.includes(overflowY) && outsideBlock
+  );
+}
+
+export function dashboardDensityPaintIsCollapsed({ clip = "auto", clipPath = "none" } = {}) {
+  const normalizedClip = String(clip).replace(/\s+/g, "").toLowerCase();
+  const clipNumbers = normalizedClip.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
+  const collapsedRect = normalizedClip.startsWith("rect(")
+    && clipNumbers.length >= 4
+    && Math.abs(clipNumbers[1] - clipNumbers[3]) <= 0.5
+    && Math.abs(clipNumbers[2] - clipNumbers[0]) <= 0.5;
+  const normalizedClipPath = String(clipPath).replace(/\s+/g, "").toLowerCase();
+  const collapsedPath = /^(?:inset\((?:50|100)%\)|circle\(0(?:px|%)?\))$/.test(normalizedClipPath);
+  return collapsedRect || collapsedPath;
+}
 
 export const DASHBOARD_DENSITY_ROLE_OVERRIDES = Object.freeze([
   Object.freeze({
@@ -33,12 +64,13 @@ export const DASHBOARD_DENSITY_ROLE_OVERRIDES = Object.freeze([
       ".build-tree-caret",
       ".build-tree-move-handle",
       ".settings-color-swatch",
+      ".build-more-drawer .right-side-drawer__header > button.secondary",
+      ".image-panel-presentation__size button",
     ].join(","),
   }),
   Object.freeze({
     role: "compact",
     selector: [
-      ".build-more-command-list button",
       ".dashboard-map-region-switch button",
       ".dashboard-map-header > button.secondary",
     ].join(","),
@@ -49,7 +81,10 @@ export const DASHBOARD_DENSITY_ROLE_OVERRIDES = Object.freeze([
   }),
   Object.freeze({
     role: "standard",
-    selector: ".source-content-workspace button:not(.simex-icon-control):not(.danger):not(.destructive):not(.simex-prominent-control):not(.source-content-row):not(.source-content-breadcrumb):not([role='tab']):not([role='menuitem'])",
+    selector: [
+      ".build-more-command-list button",
+      ".source-content-workspace button:not(.simex-icon-control):not(.danger):not(.destructive):not(.simex-prominent-control):not(.source-content-row):not(.source-content-breadcrumb):not([role='tab']):not([role='menuitem'])",
+    ].join(","),
   }),
 ]);
 
@@ -80,8 +115,25 @@ export const DASHBOARD_DENSITY_CATEGORIES = Object.freeze([
 ]);
 
 export async function collectDashboardDensityEvidence(page, entry) {
-  const snapshot = await page.evaluate(({ metadata, rootSelector, roleHeights, roleOverrides }) => {
+  const snapshot = await page.evaluate(({
+    metadata,
+    rootSelector,
+    roleHeights,
+    roleOverrides,
+    paintOccludingOverflows,
+  }) => {
     const round = (value) => Math.round(value * 100) / 100;
+    const paintIsCollapsed = (style) => {
+      const normalizedClip = String(style.clip).replace(/\s+/g, "").toLowerCase();
+      const clipNumbers = normalizedClip.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
+      const collapsedRect = normalizedClip.startsWith("rect(")
+        && clipNumbers.length >= 4
+        && Math.abs(clipNumbers[1] - clipNumbers[3]) <= 0.5
+        && Math.abs(clipNumbers[2] - clipNumbers[0]) <= 0.5;
+      const normalizedClipPath = String(style.clipPath).replace(/\s+/g, "").toLowerCase();
+      const collapsedPath = /^(?:inset\((?:50|100)%\)|circle\(0(?:px|%)?\))$/.test(normalizedClipPath);
+      return collapsedRect || collapsedPath;
+    };
     const visible = (element) => {
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
@@ -90,6 +142,7 @@ export async function collectDashboardDensityEvidence(page, entry) {
       if (!(style.display !== "none"
         && style.visibility !== "hidden"
         && style.contentVisibility !== "hidden"
+        && !paintIsCollapsed(style)
         && Number(style.opacity || 1) > 0
         && rect.width > 0
         && rect.height > 0)) return false;
@@ -103,17 +156,14 @@ export async function collectDashboardDensityEvidence(page, entry) {
           ||
           ancestorStyle.display === "none"
           || ancestorStyle.visibility === "hidden"
+          || paintIsCollapsed(ancestorStyle)
           || Number(ancestorStyle.opacity || 1) <= 0
         ) return false;
         const bounds = ancestor.getBoundingClientRect();
-        if (
-          ["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowX)
-          && (rect.right <= bounds.left + 0.5 || rect.left >= bounds.right - 0.5)
-        ) return false;
-        if (
-          ["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowY)
-          && (rect.bottom <= bounds.top + 0.5 || rect.top >= bounds.bottom - 0.5)
-        ) return false;
+        const outsideInline = rect.right <= bounds.left + 0.5 || rect.left >= bounds.right - 0.5;
+        const outsideBlock = rect.bottom <= bounds.top + 0.5 || rect.top >= bounds.bottom - 0.5;
+        if (paintOccludingOverflows.includes(ancestorStyle.overflowX) && outsideInline) return false;
+        if (paintOccludingOverflows.includes(ancestorStyle.overflowY) && outsideBlock) return false;
         ancestor = ancestor.parentElement;
       }
       if (
@@ -198,7 +248,7 @@ export async function collectDashboardDensityEvidence(page, entry) {
     };
     const renderedTextLineCount = (element) => {
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node) => node.textContent.trim()
+        acceptNode: (node) => node.textContent.trim() && visible(node.parentElement)
           ? NodeFilter.FILTER_ACCEPT
           : NodeFilter.FILTER_REJECT,
       });
@@ -378,7 +428,7 @@ export async function collectDashboardDensityEvidence(page, entry) {
 
     const textLineGeometry = (label) => {
       const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node) => node.textContent.trim()
+        acceptNode: (node) => node.textContent.trim() && visible(node.parentElement)
           ? NodeFilter.FILTER_ACCEPT
           : NodeFilter.FILTER_REJECT,
       });
@@ -400,7 +450,7 @@ export async function collectDashboardDensityEvidence(page, entry) {
     };
     const textBounds = (element) => {
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node) => node.textContent.trim()
+        acceptNode: (node) => node.textContent.trim() && visible(node.parentElement)
           ? NodeFilter.FILTER_ACCEPT
           : NodeFilter.FILTER_REJECT,
       });
@@ -978,6 +1028,7 @@ export async function collectDashboardDensityEvidence(page, entry) {
     rootSelector: entry.root,
     roleHeights: ROLE_HEIGHTS,
     roleOverrides: DASHBOARD_DENSITY_ROLE_OVERRIDES,
+    paintOccludingOverflows: DASHBOARD_DENSITY_PAINT_OCCLUDING_OVERFLOWS,
   });
 
   return classifyDashboardDensitySnapshot(snapshot);
