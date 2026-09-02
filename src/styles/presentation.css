@@ -738,6 +738,71 @@
   min-width: min(280px, 45vw);
 }
 
+@media (min-width: 1024px) {
+  .present-workspace {
+    block-size: calc(
+      100dvh
+      - var(--simex-command-crown-row, 36px)
+      - var(--simex-command-crown-row, 36px)
+    );
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .present-workspace-body {
+    align-items: stretch;
+    min-block-size: 0;
+    overflow: hidden;
+    padding-block: var(--simex-padding-dialog, 16px);
+  }
+
+  .present-context-panel,
+  .present-scene-panel {
+    align-self: stretch;
+    max-block-size: none;
+    min-block-size: 0;
+    position: static;
+    top: auto;
+  }
+
+  .present-context-panel {
+    grid-template-rows: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .present-scene-panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .present-displayed-panel {
+    min-block-size: auto;
+    overflow: visible;
+  }
+
+  .present-action-dock {
+    bottom: auto;
+    position: static;
+  }
+
+  .present-cadence-field {
+    flex: 0 1 136px;
+    inline-size: 136px;
+    max-inline-size: 150px;
+    min-inline-size: 0;
+  }
+
+  .present-cadence-field input {
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+  }
+}
+
 @media (max-width: 899px) {
   .present-workspace {
     padding-inline: 16px;

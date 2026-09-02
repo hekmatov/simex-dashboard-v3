@@ -85,6 +85,83 @@ test("the Build crown stays inside two 36px rows at the minimum desktop width", 
   ))).toBe(0);
 });
 
+test("Present reserves a reachable desktop dock without covering its work controls", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openDashboardFromLanding(page);
+  await enterPresent(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+
+  const geometry = await page.evaluate(() => {
+    const rect = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing geometry target: ${selector}`);
+      const bounds = element.getBoundingClientRect();
+      return {
+        top: bounds.top,
+        right: bounds.right,
+        bottom: bounds.bottom,
+        left: bounds.left,
+        width: bounds.width,
+        height: bounds.height,
+      };
+    };
+
+    return {
+      viewportHeight: window.innerHeight,
+      workspace: rect(".present-workspace"),
+      workRegion: rect(".present-workspace-body"),
+      dock: rect(".present-action-dock"),
+      cadenceLabel: rect(".present-cadence-field"),
+      cadenceInput: rect('[data-presentation-control-id="cadence"]'),
+      play: rect('[data-presentation-control-id="play"]'),
+    };
+  });
+
+  expect(geometry.workRegion.bottom).toBeLessThanOrEqual(geometry.dock.top);
+
+  expect(geometry.cadenceInput.left).toBeGreaterThanOrEqual(geometry.cadenceLabel.left);
+  expect(geometry.cadenceInput.right).toBeLessThanOrEqual(geometry.cadenceLabel.right);
+  expect(rectanglesOverlap(geometry.cadenceInput, geometry.play)).toBe(false);
+
+  expect(geometry.dock.top).toBeGreaterThanOrEqual(geometry.workRegion.top);
+  expect(geometry.dock.bottom).toBeLessThanOrEqual(geometry.viewportHeight);
+  expect(geometry.workspace.bottom).toBeLessThanOrEqual(geometry.viewportHeight);
+
+  const contextPanel = page.locator(".present-context-panel");
+  const compositionLayout = page.locator('[data-presentation-control-id="composition-layout"]');
+  await contextPanel.hover();
+  await page.mouse.wheel(0, 1_000);
+  await expect.poll(() => contextPanel.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+
+  const scrolledGeometry = await page.evaluate(() => {
+    const bounds = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing geometry target: ${selector}`);
+      const rect = element.getBoundingClientRect();
+      return {
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        left: rect.left,
+      };
+    };
+
+    return {
+      workRegion: bounds(".present-workspace-body"),
+      dock: bounds(".present-action-dock"),
+      compositionLayout: bounds('[data-presentation-control-id="composition-layout"]'),
+    };
+  });
+
+  expect(scrolledGeometry.compositionLayout.top)
+    .toBeGreaterThanOrEqual(scrolledGeometry.workRegion.top);
+  expect(scrolledGeometry.compositionLayout.bottom)
+    .toBeLessThanOrEqual(scrolledGeometry.workRegion.bottom);
+  expect(scrolledGeometry.compositionLayout.bottom)
+    .toBeLessThanOrEqual(scrolledGeometry.dock.top);
+});
+
 test("Build metadata persists on save and stays editable after storage fallback", async ({ page }) => {
   const passport = await enterScenarioInspector(page);
   await passport.getByRole("button", { name: /^Edit Program:/ }).click();
@@ -407,6 +484,13 @@ async function expectNoHorizontalOverflow(page) {
   await expect.poll(() => page.evaluate(() => (
     document.documentElement.scrollWidth <= document.documentElement.clientWidth
   ))).toBe(true);
+}
+
+function rectanglesOverlap(first, second) {
+  return first.left < second.right
+    && first.right > second.left
+    && first.top < second.bottom
+    && first.bottom > second.top;
 }
 
 async function installAudienceStateObserver(page) {
