@@ -10,6 +10,58 @@ const ROLE_HEIGHTS = Object.freeze({
 const SPACING_SCALE = Object.freeze([2, 4, 8, 12, 16, 24, 32]);
 const SIZE_TOLERANCE = 2;
 
+export const DASHBOARD_DENSITY_ROLE_OVERRIDES = Object.freeze([
+  Object.freeze({
+    role: "content",
+    selector: [
+      "select[multiple]",
+      "select[size]:not([size='0']):not([size='1'])",
+      ".source-content-row",
+      ".source-content-breadcrumb",
+      ".chart-creation-repair-link",
+      ".settings-color-preset-grid > button",
+      ".settings-gradient-grid > button",
+      ".chart-type-card",
+      ".wizard-choice-card",
+      ".choice-card",
+      ".look-profile-option",
+    ].join(","),
+  }),
+  Object.freeze({
+    role: "utility",
+    selector: [
+      ".build-tree-caret",
+      ".build-tree-move-handle",
+      ".settings-color-swatch",
+    ].join(","),
+  }),
+  Object.freeze({
+    role: "compact",
+    selector: [
+      ".build-more-command-list button",
+      ".dashboard-map-region-switch button",
+      ".dashboard-map-header > button.secondary",
+    ].join(","),
+  }),
+  Object.freeze({
+    role: "prominent",
+    selector: ".source-content-workspace button:is(.danger,.destructive,.simex-prominent-control,[data-simex-control-role='prominent'])",
+  }),
+  Object.freeze({
+    role: "standard",
+    selector: ".source-content-workspace button:not(.simex-icon-control):not(.danger):not(.destructive):not(.simex-prominent-control):not(.source-content-row):not(.source-content-breadcrumb):not([role='tab']):not([role='menuitem'])",
+  }),
+]);
+
+export const DASHBOARD_DENSITY_SETTLE_STYLE = `
+[data-dashboard-density-settled],
+[data-dashboard-density-settled] * {
+  animation: none !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
+}
+`;
+
 export const DASHBOARD_DENSITY_CATEGORIES = Object.freeze([
   "role-size",
   "centreline",
@@ -28,13 +80,16 @@ export const DASHBOARD_DENSITY_CATEGORIES = Object.freeze([
 ]);
 
 export async function collectDashboardDensityEvidence(page, entry) {
-  const snapshot = await page.evaluate(({ metadata, rootSelector, roleHeights }) => {
+  const snapshot = await page.evaluate(({ metadata, rootSelector, roleHeights, roleOverrides }) => {
     const round = (value) => Math.round(value * 100) / 100;
     const visible = (element) => {
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
+      const classes = String(element.className ?? "");
+      if (/\b(?:visually-hidden|sr-only|screen-reader-only)\b/.test(classes)) return false;
       if (!(style.display !== "none"
         && style.visibility !== "hidden"
+        && style.contentVisibility !== "hidden"
         && Number(style.opacity || 1) > 0
         && rect.width > 0
         && rect.height > 0)) return false;
@@ -52,15 +107,19 @@ export async function collectDashboardDensityEvidence(page, entry) {
         ) return false;
         const bounds = ancestor.getBoundingClientRect();
         if (
-          ["hidden", "clip"].includes(ancestorStyle.overflowX)
+          ["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowX)
           && (rect.right <= bounds.left + 0.5 || rect.left >= bounds.right - 0.5)
         ) return false;
         if (
-          ["hidden", "clip"].includes(ancestorStyle.overflowY)
+          ["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowY)
           && (rect.bottom <= bounds.top + 0.5 || rect.top >= bounds.bottom - 0.5)
         ) return false;
         ancestor = ancestor.parentElement;
       }
+      if (
+        ["absolute", "fixed"].includes(style.position)
+        && (rect.right <= 0 || rect.bottom <= 0)
+      ) return false;
       return true;
     };
     const paintedRect = (element) => {
@@ -137,6 +196,24 @@ export async function collectDashboardDensityEvidence(page, entry) {
       const number = Number.parseFloat(value);
       return Number.isFinite(number) ? round(number) : null;
     };
+    const renderedTextLineCount = (element) => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => node.textContent.trim()
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT,
+      });
+      const lineTops = [];
+      let node = walker.nextNode();
+      while (node) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) {
+          if (!lineTops.some((top) => Math.abs(top - rect.top) <= 1)) lineTops.push(rect.top);
+        }
+        node = walker.nextNode();
+      }
+      return lineTops.length;
+    };
     const controlRole = (element) => {
       const tag = element.tagName.toLowerCase();
       const type = String(element.getAttribute("type") ?? "").toLowerCase();
@@ -144,9 +221,15 @@ export async function collectDashboardDensityEvidence(page, entry) {
       const classes = String(element.className ?? "");
       const text = textOf(element);
       const rect = element.getBoundingClientRect();
-      const explicitRole = String(element.dataset.densityRole ?? "").toLowerCase();
+      const explicitRole = String(
+        element.dataset.densityRole
+        ?? element.dataset.simexControlRole
+        ?? "",
+      ).toLowerCase();
       if (Object.hasOwn(roleHeights, explicitRole) || explicitRole === "content") return explicitRole;
       if (["checkbox", "radio"].includes(type) || ["checkbox", "radio"].includes(role)) return "glyph";
+      const override = roleOverrides.find(({ selector }) => element.matches(selector));
+      if (override) return override.role;
       if (
         tag === "textarea"
         || type === "range"
@@ -156,7 +239,7 @@ export async function collectDashboardDensityEvidence(page, entry) {
       if (
         tag === "a"
         && !["button", "menuitem", "tab"].includes(role)
-        && !/button|control|action|secondary|primary|danger/.test(classes)
+        && !/button|control|action/.test(classes)
       ) return "content";
       const childRects = [...element.children]
         .filter(visible)
@@ -187,6 +270,10 @@ export async function collectDashboardDensityEvidence(page, entry) {
           || /content-card|card-button|choice-card|dashboard-card|tile-button|chart-type-card/.test(classes)
           || Boolean(nestedControls)
           || (rect.height > 48 && childBands.length > 1)
+          || (
+            renderedTextLineCount(element) > 1
+            && Boolean(element.closest(".dashboard-dialog__actions"))
+          )
         )
       ) return "content";
       if (tag === "button" && /(?:^|[-_])(?:breadcrumb|repair-link|link-button)(?:$|[-_])/.test(classes)) {
@@ -213,16 +300,6 @@ export async function collectDashboardDensityEvidence(page, entry) {
         /simex-icon-control|icon-button|close-button|__close/.test(classes)
         || (tag === "button" && text.length === 0)
       ) return "utility";
-      if (
-        tag === "button"
-        && element.closest([
-          "[data-right-side-drawer]",
-          ".right-side-drawer",
-          ".look-drawer",
-          ".dashboard-map-panel",
-          ".source-content-workspace",
-        ].join(","))
-      ) return "compact";
       return "standard";
     };
     const styleRecord = (element) => {
@@ -607,9 +684,37 @@ export async function collectDashboardDensityEvidence(page, entry) {
       if (node.matches(".image-crop-preview")) return [];
       const style = getComputedStyle(node);
       const nodeBounds = node.getBoundingClientRect();
+      const descendantRectWithin = (descendant) => {
+        const source = descendant.getBoundingClientRect();
+        const rect = {
+          left: source.left,
+          right: source.right,
+          top: source.top,
+          bottom: source.bottom,
+        };
+        let ancestor = descendant.parentElement;
+        while (ancestor && ancestor !== node) {
+          const ancestorStyle = getComputedStyle(ancestor);
+          const bounds = ancestor.getBoundingClientRect();
+          if (["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowX)) {
+            rect.left = Math.max(rect.left, bounds.left);
+            rect.right = Math.min(rect.right, bounds.right);
+          }
+          if (["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowY)) {
+            rect.top = Math.max(rect.top, bounds.top);
+            rect.bottom = Math.min(rect.bottom, bounds.bottom);
+          }
+          ancestor = ancestor.parentElement;
+        }
+        if (ancestor !== node) return null;
+        rect.width = Math.max(0, rect.right - rect.left);
+        rect.height = Math.max(0, rect.bottom - rect.top);
+        return rect;
+      };
       const visibleDescendantBounds = [...node.querySelectorAll("*")]
         .filter(visible)
-        .map((descendant) => descendant.getBoundingClientRect());
+        .map(descendantRectWithin)
+        .filter((rect) => rect?.width > 0 && rect?.height > 0);
       const explicitTextScroller = ["pre", "code", "table"].includes(node.tagName.toLowerCase())
         || Boolean(node.querySelector(":scope > pre, :scope > code, :scope > table"));
       const paintedOverflowX = visibleDescendantBounds.length
@@ -872,6 +977,7 @@ export async function collectDashboardDensityEvidence(page, entry) {
     },
     rootSelector: entry.root,
     roleHeights: ROLE_HEIGHTS,
+    roleOverrides: DASHBOARD_DENSITY_ROLE_OVERRIDES,
   });
 
   return classifyDashboardDensitySnapshot(snapshot);
@@ -1103,6 +1209,19 @@ export function collapseDashboardDensityFindings(findings = []) {
       instanceIds: group.map(({ id }) => id),
       evidence: `${group.length} matching instances across ${surfaceIds.length} surface${surfaceIds.length === 1 ? "" : "s"}; example: ${first.evidence}`,
     };
+  });
+}
+
+export function dashboardDensityBoxesStable(previous = [], current = [], tolerance = 0.25) {
+  if (previous.length !== current.length) return false;
+  return previous.every((box, index) => {
+    const candidate = current[index];
+    return candidate
+      && ["x", "y", "width", "height"].every((key) => (
+        Number.isFinite(box?.[key])
+        && Number.isFinite(candidate?.[key])
+        && Math.abs(box[key] - candidate[key]) <= tolerance
+      ));
   });
 }
 

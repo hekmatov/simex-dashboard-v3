@@ -10,6 +10,8 @@ import {
   collapseDashboardDensityFindings,
   collectDashboardDensityEvidence,
   DASHBOARD_DENSITY_CATEGORIES,
+  DASHBOARD_DENSITY_SETTLE_STYLE,
+  dashboardDensityBoxesStable,
 } from "./support/dashboard-density-audit.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -127,7 +129,7 @@ test("complete dashboard surface manifest records density evidence", async ({ br
       activePage = setup?.page ?? activePage;
       activePage.on("pageerror", recordPageError);
       await activePage.locator(entry.root).filter({ visible: true }).first().waitFor({ state: "visible" });
-      await settleRenderedSurface(activePage);
+      await settleRenderedSurface(activePage, entry.root);
 
       const evidence = await collectDashboardDensityEvidence(activePage, entry);
       const contractFindings = await collectEntryExpectationFindings(activePage, entry);
@@ -235,11 +237,46 @@ async function requireOkResponse(requestOperation, description, attempts = 3) {
   throw lastError;
 }
 
-async function settleRenderedSurface(page) {
+async function settleRenderedSurface(page, rootSelector) {
+  await page.addStyleTag({ content: DASHBOARD_DENSITY_SETTLE_STYLE });
+  const root = page.locator(rootSelector).filter({ visible: true }).first();
+  await root.evaluate((element) => element.setAttribute("data-dashboard-density-settled", "true"));
   await page.evaluate(async () => {
     await document.fonts?.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
+
+  let previous = [];
+  let stableSamples = 0;
+  const deadline = Date.now() + 3_000;
+  while (Date.now() < deadline) {
+    const current = await root.evaluate((element) => [
+      element,
+      ...element.querySelectorAll([
+        ":scope > *",
+        ".right-side-drawer",
+        ".dashboard-dialog",
+        ".dashboard-dialog__body",
+        ".dashboard-dialog__footer",
+      ].join(",")),
+    ].filter((node) => {
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0
+        && rect.width > 0
+        && rect.height > 0;
+    }).slice(0, 250).map((node) => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    }));
+    stableSamples = dashboardDensityBoxesStable(previous, current) ? stableSamples + 1 : 0;
+    if (stableSamples >= 3) return;
+    previous = current;
+    await page.waitForTimeout(50);
+  }
+  throw new Error(`Rendered audit root did not reach stable geometry: ${rootSelector}`);
 }
 
 async function collectEntryExpectationFindings(page, entry) {

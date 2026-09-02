@@ -1284,6 +1284,10 @@ async function setupFocusedChart(context) {
 async function setupChartConversionDialog({ page }) {
   await page.goto("http://127.0.0.1:4175/tests/e2e/modal-focus-harness.html");
   await loadProductionStyles(page);
+  await page.locator("#root").evaluate((root) => {
+    root.classList.add("app-frame");
+    root.dataset.dashboardMode = "build";
+  });
   await page.getByRole("button", { name: "Open conversion" }).click();
   await page.getByRole("dialog", { name: "Compatible change" }).waitFor();
   return { page };

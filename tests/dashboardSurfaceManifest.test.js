@@ -9,6 +9,9 @@ import {
   collapseDashboardDensityFindings,
   classifyDashboardDensitySnapshot,
   DASHBOARD_DENSITY_CATEGORIES,
+  DASHBOARD_DENSITY_ROLE_OVERRIDES,
+  DASHBOARD_DENSITY_SETTLE_STYLE,
+  dashboardDensityBoxesStable,
 } from "./e2e/support/dashboard-density-audit.js";
 
 const REQUIRED_FAMILIES = [
@@ -190,6 +193,41 @@ test("density classifier reports every geometry category without excluded intera
   assert.doesNotMatch(
     JSON.stringify(result),
     /keyboard|focus|tab[-_ ]?order|focus[-_ ]?ring|aria[-_ ]?(?:label|description|role|state)|assistive/i,
+  );
+});
+
+test("role overrides preserve content geometry and classify compact graphical utilities explicitly", () => {
+  const roleFor = (selectorFragment) => DASHBOARD_DENSITY_ROLE_OVERRIDES
+    .find(({ selector }) => selector.includes(selectorFragment))?.role;
+
+  assert.equal(roleFor("select[multiple]"), "content");
+  assert.equal(roleFor(".source-content-breadcrumb"), "content");
+  assert.equal(roleFor(".source-content-row"), "content");
+  assert.equal(roleFor(".settings-color-preset-grid > button"), "content");
+  assert.equal(roleFor(".chart-type-card"), "content");
+  assert.equal(roleFor(".build-tree-move-handle"), "utility");
+  assert.equal(roleFor(".settings-color-swatch"), "utility");
+  assert.equal(roleFor(".build-more-command-list button"), "compact");
+  assert.equal(roleFor(".dashboard-map-region-switch button"), "compact");
+  assert.equal(roleFor(".source-content-workspace button:not"), "standard");
+});
+
+test("render settling disables transitions and requires repeatable geometry", () => {
+  assert.match(DASHBOARD_DENSITY_SETTLE_STYLE, /animation:\s*none\s*!important/);
+  assert.match(DASHBOARD_DENSITY_SETTLE_STYLE, /transition:\s*none\s*!important/);
+  assert.equal(
+    dashboardDensityBoxesStable(
+      [{ x: 10, y: 20, width: 400, height: 600 }],
+      [{ x: 10.1, y: 20, width: 400, height: 600.2 }],
+    ),
+    true,
+  );
+  assert.equal(
+    dashboardDensityBoxesStable(
+      [{ x: 10, y: 20, width: 400, height: 600 }],
+      [{ x: 12, y: 20, width: 400, height: 600 }],
+    ),
+    false,
   );
 });
 
