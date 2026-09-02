@@ -14,10 +14,13 @@ export default function PhoneModeNotice({ mode, blockedReason = "", onSwitchToVi
       className="phone-mode-banner"
       data-phone-mode-notice={mode}
       role="status"
-      aria-label={`${label} phone support notice`}
+      aria-label={`${label} desktop workspace notice`}
     >
-      <span>{label} is not supported at phone size. View remains available.</span>
-      {blockedReason && <span role="alert">{blockedReason}</span>}
+      <div className="phone-mode-banner__copy">
+        <strong>{label} requires a desktop workspace at least 1024px wide.</strong>
+        <span>View remains available.</span>
+        {blockedReason && <span role="alert">{blockedReason}</span>}
+      </div>
       <button type="button" onClick={onSwitchToView}>Switch to View</button>
     </section>
   );

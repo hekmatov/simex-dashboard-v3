@@ -74,7 +74,7 @@ test("AppFrame crown owns page location without a duplicate View-local row", () 
   assert.equal((html.match(/>Compare charts<\/button>/g) ?? []).length, 1);
 });
 
-test("unsupported phone modes expose one persistent Switch to View action", () => {
+test("desktop-only modes expose one persistent Switch to View action", () => {
   const build = renderAppFrame({
     mode: "build",
     density: "compact",
@@ -99,7 +99,7 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
   assert.doesNotMatch(view, /class="phone-mode-banner"/);
 });
 
-test("best-effort phone notices preserve mounted Build and Present workspaces", () => {
+test("desktop workspace notices preserve mounted Build and Present workspaces", () => {
   for (const [mode, label] of [["build", "Build"], ["present", "Present"]]) {
     const html = renderAppFrame({
       mode,
@@ -113,8 +113,9 @@ test("best-effort phone notices preserve mounted Build and Present workspaces", 
     });
     const notice = html.match(new RegExp(`<section[^>]*data-phone-mode-notice="${mode}"[\\s\\S]*?<\\/section>`))?.[0];
 
-    assert.ok(notice, `${label} renders its persistent phone notice`);
-    assert.match(notice, new RegExp(`${label} is not supported at phone size\\. View remains available\\.`));
+    assert.ok(notice, `${label} renders its desktop workspace notice`);
+    assert.match(notice, new RegExp(`${label} requires a desktop workspace at least 1024px wide\\.`));
+    assert.match(notice, /View remains available\./);
     assert.equal((notice.match(/<button\b/g) ?? []).length, 1);
     assert.equal((notice.match(/>Switch to View<\/button>/g) ?? []).length, 1);
     assert.doesNotMatch(notice, />\s*(Close|Dismiss)\s*</i);

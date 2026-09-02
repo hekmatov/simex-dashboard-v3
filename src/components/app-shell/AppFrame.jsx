@@ -36,33 +36,33 @@ export default function AppFrame({
   lookDrawerOpen = false,
   rightDrawer = null,
 }) {
-  const phoneUnsupported = mode === "build" || mode === "present";
+  const desktopOnlyMode = mode === "build" || mode === "present";
   const frameRef = React.useRef(null);
   const [rightSideDrawerTop, setRightSideDrawerTop] = React.useState(12);
-  const phoneRestorationRef = React.useRef({
+  const compactViewportRestorationRef = React.useRef({
     scrollX: 0,
     scrollY: 0,
   });
 
   React.useEffect(() => {
-    if (!phoneUnsupported || typeof window.matchMedia !== "function") return undefined;
-    const phoneQuery = window.matchMedia("(max-width: 767px)");
-    let phoneLayoutActive = phoneQuery.matches;
+    if (!desktopOnlyMode || typeof window.matchMedia !== "function") return undefined;
+    const desktopGateQuery = window.matchMedia("(max-width: 1023px)");
+    let desktopGateActive = desktopGateQuery.matches;
     let restoreFrame = 0;
 
     const captureSupportedState = () => {
-      if (phoneQuery.matches) return;
-      phoneRestorationRef.current.scrollX = window.scrollX;
-      phoneRestorationRef.current.scrollY = window.scrollY;
+      if (desktopGateQuery.matches) return;
+      compactViewportRestorationRef.current.scrollX = window.scrollX;
+      compactViewportRestorationRef.current.scrollY = window.scrollY;
     };
     const handleViewportChange = ({ matches }) => {
-      const wasPhoneLayoutActive = phoneLayoutActive;
-      phoneLayoutActive = matches;
-      if (matches || !wasPhoneLayoutActive) return;
+      const wasDesktopGateActive = desktopGateActive;
+      desktopGateActive = matches;
+      if (matches || !wasDesktopGateActive) return;
       restoreFrame = window.requestAnimationFrame(() => {
         window.scrollTo({
-          left: phoneRestorationRef.current.scrollX,
-          top: phoneRestorationRef.current.scrollY,
+          left: compactViewportRestorationRef.current.scrollX,
+          top: compactViewportRestorationRef.current.scrollY,
           behavior: "auto",
         });
       });
@@ -70,13 +70,13 @@ export default function AppFrame({
 
     captureSupportedState();
     window.addEventListener("scroll", captureSupportedState, { passive: true });
-    phoneQuery.addEventListener("change", handleViewportChange);
+    desktopGateQuery.addEventListener("change", handleViewportChange);
     return () => {
       window.removeEventListener("scroll", captureSupportedState);
-      phoneQuery.removeEventListener("change", handleViewportChange);
+      desktopGateQuery.removeEventListener("change", handleViewportChange);
       if (restoreFrame) window.cancelAnimationFrame(restoreFrame);
     };
-  }, [phoneUnsupported]);
+  }, [desktopOnlyMode]);
 
   useBrowserLayoutEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -131,7 +131,7 @@ export default function AppFrame({
         "--right-side-drawer-top": `${rightSideDrawerTop}px`,
       }}
     >
-      {phoneUnsupported && <PhoneModeNotice
+      {desktopOnlyMode && <PhoneModeNotice
         mode={mode}
         blockedReason={blockedReason}
         onSwitchToView={() => onModeRequest?.("view")}
