@@ -2,14 +2,39 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
-import { DASHBOARD_VISUAL_CONTRACT } from "../src/theme/dashboardTheme.js";
+import {
+  DASHBOARD_VISUAL_CONTRACT,
+  resolveDashboardTheme,
+} from "../src/theme/dashboardTheme.js";
+import { densityForDashboardMode } from "../src/lib/dashboardMode.js";
 import { auditDashboardStyleSources } from "./e2e/support/dashboard-style-audit.js";
 
 const EXPECTED_CONTRACT = {
   radiusControl: 6,
   radiusSurface: 10,
-  controlMinimum: 44,
-  focusWidth: 3,
+  controls: {
+    choiceGlyph: 16,
+    utility: 24,
+    compact: 28,
+    standard: 32,
+    prominent: 36,
+    commandCrownRow: 36,
+  },
+  typography: {
+    control: { fontSize: 13, lineHeight: 18 },
+    body: { fontSize: 14, lineHeight: 20 },
+    label: { fontSize: 12, lineHeight: 16 },
+  },
+  spacing: {
+    scale: [2, 4, 8, 12, 16, 24, 32],
+    labelControl: 4,
+    choiceLabel: 8,
+    controlGroup: 8,
+    section: 12,
+    panelPadding: 12,
+    dialogPadding: 16,
+    region: 24,
+  },
   neutral: {
     outer: "#e8e9ea",
     surface: "#ffffff",
@@ -18,9 +43,38 @@ const EXPECTED_CONTRACT = {
     muted: "#5a6066",
     border: "#c7cbcf",
     borderStrong: "#747b82",
-    focus: "#155eef",
     active: "#202428",
   },
+};
+
+const EXPECTED_DENSITY_VARIABLES = {
+  "--simex-choice-glyph": "16px",
+  "--simex-control-utility": "24px",
+  "--simex-control-compact": "28px",
+  "--simex-control-standard": "32px",
+  "--simex-control-prominent": "36px",
+  "--simex-command-crown-row": "36px",
+  "--simex-control-font-size": "13px",
+  "--simex-control-line-height": "18px",
+  "--simex-body-font-size": "14px",
+  "--simex-body-line-height": "20px",
+  "--simex-label-font-size": "12px",
+  "--simex-label-line-height": "16px",
+  "--simex-space-1": "2px",
+  "--simex-space-2": "4px",
+  "--simex-space-3": "8px",
+  "--simex-space-4": "12px",
+  "--simex-space-5": "16px",
+  "--simex-space-6": "24px",
+  "--simex-space-7": "32px",
+  "--simex-gap-label-control": "4px",
+  "--simex-gap-choice-label": "8px",
+  "--simex-gap-control-group": "8px",
+  "--simex-gap-section": "12px",
+  "--simex-padding-panel": "12px",
+  "--simex-padding-dialog": "16px",
+  "--simex-gap-region": "24px",
+  "--simex-control-min": "var(--simex-control-standard)",
 };
 
 async function collectStyleBearingSources(directoryUrl, prefix = "src") {
@@ -110,21 +164,38 @@ test("live style-bearing sources contain no active retired dashboard color decla
 test("dashboard visual contract fixes shared component tokens without changing profile data paint", async () => {
   assert.deepEqual(DASHBOARD_VISUAL_CONTRACT, EXPECTED_CONTRACT);
   assert.equal(Object.isFrozen(DASHBOARD_VISUAL_CONTRACT), true);
+  assert.equal(Object.isFrozen(DASHBOARD_VISUAL_CONTRACT.controls), true);
+  assert.equal(Object.isFrozen(DASHBOARD_VISUAL_CONTRACT.typography), true);
+  assert.equal(Object.isFrozen(DASHBOARD_VISUAL_CONTRACT.typography.control), true);
+  assert.equal(Object.isFrozen(DASHBOARD_VISUAL_CONTRACT.spacing), true);
+  assert.equal(Object.isFrozen(DASHBOARD_VISUAL_CONTRACT.spacing.scale), true);
   assert.equal(Object.isFrozen(DASHBOARD_VISUAL_CONTRACT.neutral), true);
 
-  const [tokens, styleGrammar, styles] = await Promise.all([
+  const [tokens, styleGrammar] = await Promise.all([
     readFile(new URL("../src/styles/tokens.css", import.meta.url), "utf8"),
     readFile(new URL("../src/styles/dashboard-style-grammar.css", import.meta.url), "utf8"),
-    readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
   ]);
+  const theme = resolveDashboardTheme({ appearancePreference: "light" });
 
   assert.match(tokens, /--simex-component-control-radius:\s*6px/);
   assert.match(tokens, /--simex-component-surface-radius:\s*10px/);
-  assert.match(tokens, /--simex-component-focus:\s*#155eef/);
-  assert.match(tokens, /--simex-control-min:\s*44px/);
+  for (const [name, value] of Object.entries(EXPECTED_DENSITY_VARIABLES)) {
+    assert.equal(theme.cssVariables[name], value, `${name} theme projection`);
+    assert.match(tokens, new RegExp(`${name.replaceAll("-", "\\-")}:\\s*${value
+      .replaceAll("(", "\\(")
+      .replaceAll(")", "\\)")}`));
+  }
   assert.match(styleGrammar, /var\(--simex-component-surface-radius\)/);
   assert.match(styleGrammar, /var\(--simex-component-control-radius\)/);
-  assert.match(styles, /outline:\s*var\(--simex-component-focus-width\) solid var\(--simex-component-focus\)/);
+  assert.doesNotMatch(JSON.stringify(DASHBOARD_VISUAL_CONTRACT), /focus|keyboard|touch/i);
+  assert.doesNotMatch(tokens, /--simex-control-min:\s*44px/);
+});
+
+test("all operational dashboard modes resolve to compact density while Home stays comfortable", () => {
+  assert.equal(densityForDashboardMode("home"), "comfortable");
+  assert.equal(densityForDashboardMode("view"), "compact");
+  assert.equal(densityForDashboardMode("build"), "compact");
+  assert.equal(densityForDashboardMode("present"), "compact");
 });
 
 test("pending owners and named authoring surfaces consume semantic style and control contracts", async () => {
@@ -158,12 +229,12 @@ test("pending owners and named authoring surfaces consume semantic style and con
 
   assert.match(styles, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);
   assert.match(styles, /input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\),\s*select,\s*textarea/s);
-  assert.match(styleGrammar, /input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)[^{]*\{[^}]*accent-color:\s*var\(--simex-selected\)[^}]*block-size:\s*20px[^}]*inline-size:\s*20px/s);
-  assert.match(styleGrammar, /label:has\(input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*8px[^}]*min-block-size:\s*var\(--simex-control-min/s);
-  assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*8px/s);
-  assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\) > label[^}]*\{[^}]*gap:\s*8px[^}]*min-block-size:\s*var\(--simex-control-min/s);
-  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\)\s*:is\(\s*button,[^{]*\{[^}]*min-block-size:\s*var\(--simex-control-min/s);
-  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\) \.simex-icon-control[^}]*block-size:\s*var\(--simex-control-min[^}]*inline-size:\s*var\(--simex-control-min/s);
+  assert.match(styleGrammar, /input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)[^{]*\{[^}]*accent-color:\s*var\(--simex-selected\)[^}]*block-size:\s*var\(--simex-choice-glyph\)[^}]*inline-size:\s*var\(--simex-choice-glyph\)/s);
+  assert.match(styleGrammar, /label:has\(input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)[^}]*min-block-size:\s*var\(--simex-control-compact\)/s);
+  assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\)[^{]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)/s);
+  assert.match(styleGrammar, /chart-authoring-field:has\(> input:is\(\[type="checkbox"\],\s*\[type="radio"\]\)\) > label[^}]*\{[^}]*gap:\s*var\(--simex-gap-choice-label\)[^}]*min-block-size:\s*var\(--simex-control-compact\)/s);
+  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\)\s*:is\(\s*button,[^{]*\{[^}]*font-size:\s*var\(--simex-control-font-size\)[^}]*line-height:\s*var\(--simex-control-line-height\)[^}]*min-block-size:\s*var\(--simex-control-standard\)/s);
+  assert.match(styleGrammar, /:is\(\s*\.app-frame,\s*\.build-authoring-auxiliary,\s*\.unit-orbit\s*\) \.simex-icon-control[^}]*block-size:\s*var\(--simex-control-utility\)[^}]*inline-size:\s*var\(--simex-control-utility\)/s);
   assert.match(styleGrammar, /build-authoring-auxiliary[^}]*\{[^}]*font-family:\s*var\(--simex-style-body-font/s);
   assert.match(styleGrammar, /build-authoring-auxiliary[^}]*:is\(h1, h2, h3, h4, legend\)[^{]*\{[^}]*font-family:\s*var\(--simex-style-heading-font/s);
 
@@ -190,7 +261,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
 
   assert.doesNotMatch(staticContent, /--simex-surface-muted/);
   assert.match(staticContent, /portable-qmd-composer__toolbar[^}]*button\[aria-pressed="true"\][^{]*\{[^}]*var\(--simex-selected-soft\)[^}]*var\(--simex-selected\)/s);
-  assert.match(staticContent, /portable-qmd-composer__toolbar :is\(button, select\)[^{]*\{[^}]*min-height:\s*44px/s);
+  assert.match(staticContent, /portable-qmd-composer__toolbar :is\(button, select\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-standard/s);
   assert.match(staticContent, /authoring-footprint-grid\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(staticContent, /authoring-footprint-frame\s*\{[^}]*grid-column:\s*span var\(--chart-footprint-columns\)/s);
   assert.ok(staticContent.includes("grid-row: span var(--chart-footprint-row-span);"));
@@ -204,9 +275,8 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(rightDrawer, /box-shadow:\s*var\(--simex-style-shell-shadow\)/);
   assert.match(operationStatus, /border-radius:\s*var\(--simex-style-surface-radius\)/);
   assert.match(sourceViewer, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);
-  assert.match(sourceViewer, /source-viewer-theme-root :is\(button, input\)[^{]*\{[^}]*min-block-size:\s*var\(--simex-control-min/s);
+  assert.match(sourceViewer, /source-viewer-theme-root :is\(button, input\)[^{]*\{[^}]*min-block-size:\s*var\(--simex-control-standard/s);
   assert.match(sourceViewer, /source-viewer-return\s*\{[^}]*background:\s*var\(--simex-surface-panel-alt[^}]*border[^}]*var\(--simex-border-strong[^}]*color:\s*var\(--simex-text-strong/s);
-  assert.match(sourceViewer, /source-viewer-return:focus-visible[^}]*\{[^}]*var\(--simex-focus/s);
   assert.match(iconGlyphs, /font-family:var\(--simex-style-data-font\)/);
   assert.match(buildWorkspace, /dashboardThemeRootProps\(\s*themeProjection,\s*activeAuxiliary !== "source-content"\s*\?\s*\{ display: "none" \}\s*:\s*\{\},?\s*\)/s);
   assert.doesNotMatch(buildWorkspace, /dashboardThemeRootProps\(themeProjection\)\}[\s\S]{0,500}style=\{activeAuxiliary !== "source-content"/);

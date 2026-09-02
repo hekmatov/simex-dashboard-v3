@@ -6,9 +6,7 @@ export const DASHBOARD_STORAGE_KEY =
 export const DASHBOARD_MODE_STORAGE_KEY = "simex-dashboard-ui-mode-v1";
 
 export function densityForDashboardMode(mode) {
-  if (mode === "build") return "compact";
-  if (mode === "present") return "spacious";
-  return "comfortable";
+  return DASHBOARD_MODES_WITHOUT_HOME.includes(mode) ? "compact" : "comfortable";
 }
 
 export function isDashboardMode(mode) {

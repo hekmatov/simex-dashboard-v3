@@ -1490,8 +1490,8 @@
   }
 }
 
-/* Step 7 interaction contract: visual glyphs may stay compact, but every
-   authoring and View action keeps a full keyboard/touch target. */
+/* Dense desktop control roles. Ordinary controls use the standard row while
+   utility, compact, and prominent roles opt into their named geometry. */
 :is(
   .app-frame,
   .build-authoring-auxiliary,
@@ -1501,7 +1501,12 @@
   select,
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])
 ) {
-  min-block-size: var(--simex-control-min, 44px);
+  box-sizing: border-box;
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
+  min-block-size: var(--simex-control-standard);
+  padding-block: var(--simex-space-2);
+  padding-inline: var(--simex-space-3);
 }
 
 :is(
@@ -1509,10 +1514,51 @@
   .build-authoring-auxiliary,
   .unit-orbit
 ) .simex-icon-control {
-  block-size: var(--simex-control-min, 44px);
-  inline-size: var(--simex-control-min, 44px);
-  min-block-size: var(--simex-control-min, 44px);
-  min-inline-size: var(--simex-control-min, 44px);
+  block-size: var(--simex-control-utility);
+  inline-size: var(--simex-control-utility);
+  min-block-size: var(--simex-control-utility);
+  min-inline-size: var(--simex-control-utility);
+  padding: 0;
+}
+
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit
+) :is(
+  .simex-utility-control,
+  [data-simex-control-role="utility"]
+) {
+  min-block-size: var(--simex-control-utility);
+  padding-block: var(--simex-space-1);
+}
+
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit
+) :is(
+  .simex-compact-control,
+  [data-simex-control-role="compact"],
+  [role="menuitem"]
+) {
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
+  min-block-size: var(--simex-control-compact);
+  padding-block: var(--simex-space-1);
+}
+
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit
+) :is(
+  .simex-prominent-control,
+  [data-simex-control-role="prominent"],
+  button.danger,
+  button.destructive
+) {
+  min-block-size: var(--simex-control-prominent);
 }
 
 /* Chart choices are content cards, not square glyph-only controls. */
@@ -2100,9 +2146,7 @@
   font-family: var(--simex-style-data-font);
 }
 
-/* Choice controls keep a native-size glyph while the associated label owns the
-   full touch target. This root list covers app chrome, standalone projections,
-   and generated/portal authoring surfaces without inflating the checkbox. */
+/* Choice controls share the dense desktop 16px glyph and 28px row rhythm. */
 :is(
   .unit-orbit,
   .build-authoring-auxiliary,
@@ -2141,10 +2185,10 @@
   [role="complementary"]
 ) input:is([type="checkbox"], [type="radio"]) {
   accent-color: var(--simex-selected);
-  block-size: 20px;
-  inline-size: 20px;
-  min-block-size: 20px;
-  min-inline-size: 20px;
+  block-size: var(--simex-choice-glyph);
+  inline-size: var(--simex-choice-glyph);
+  min-block-size: var(--simex-choice-glyph);
+  min-inline-size: var(--simex-choice-glyph);
   padding: 0;
 }
 
@@ -2160,24 +2204,22 @@
   [role="complementary"]
 ) label:has(input:is([type="checkbox"], [type="radio"])) {
   align-items: center;
-  gap: 8px;
-  min-block-size: var(--simex-control-min, 44px);
+  gap: var(--simex-gap-choice-label);
+  min-block-size: var(--simex-control-compact);
 }
 
-/* Standard chart toggles keep their label and glyph as separate siblings.
-   Give that associated label the same 44px target and an explicit 8px
-   relationship without enlarging the native 20px checkbox. */
+/* Standard chart toggles keep their label and glyph as separate siblings. */
 :is(.app-frame, .build-authoring-auxiliary, .unit-orbit)
   .chart-authoring-field:has(> input:is([type="checkbox"], [type="radio"])) {
-  gap: 8px;
+  gap: var(--simex-gap-choice-label);
 }
 
 :is(.app-frame, .build-authoring-auxiliary, .unit-orbit)
   .chart-authoring-field:has(> input:is([type="checkbox"], [type="radio"])) > label {
   align-items: center;
   display: flex;
-  gap: 8px;
-  min-block-size: var(--simex-control-min, 44px);
+  gap: var(--simex-gap-choice-label);
+  min-block-size: var(--simex-control-compact);
 }
 
 :is(

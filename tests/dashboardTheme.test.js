@@ -50,6 +50,36 @@ const APPROVED_PROFILE_CATALOGUE = [
   ["utility/monochrome-reserve", "Monochrome"],
 ];
 
+const DENSE_DESKTOP_VARIABLE_NAMES = new Set([
+  "--simex-choice-glyph",
+  "--simex-control-utility",
+  "--simex-control-compact",
+  "--simex-control-standard",
+  "--simex-control-prominent",
+  "--simex-command-crown-row",
+  "--simex-control-font-size",
+  "--simex-control-line-height",
+  "--simex-body-font-size",
+  "--simex-body-line-height",
+  "--simex-label-font-size",
+  "--simex-label-line-height",
+  "--simex-space-1",
+  "--simex-space-2",
+  "--simex-space-3",
+  "--simex-space-4",
+  "--simex-space-5",
+  "--simex-space-6",
+  "--simex-space-7",
+  "--simex-gap-label-control",
+  "--simex-gap-choice-label",
+  "--simex-gap-control-group",
+  "--simex-gap-section",
+  "--simex-padding-panel",
+  "--simex-padding-dialog",
+  "--simex-gap-region",
+  "--simex-control-min",
+]);
+
 test("dashboard configuration accepts only approved saved look values", async () => {
   const dashboard = JSON.parse(await readFile(
     new URL("../public/config/dashboard.json", import.meta.url),
@@ -96,7 +126,8 @@ test("theme resolver exposes the exact renamed style and 13-profile catalogue in
       assert.equal(resolved.resolvedAppearance, appearancePreference);
       assert.equal(
         Object.keys(resolved.cssVariables)
-          .filter((key) => !key.startsWith("--simex-component-") && key !== "--simex-control-min").length,
+          .filter((key) => !key.startsWith("--simex-component-")
+            && !DENSE_DESKTOP_VARIABLE_NAMES.has(key)).length,
         33,
       );
     }

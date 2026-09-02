@@ -145,7 +145,6 @@ export async function expectNoRetiredDashboardStyle(page) {
       return resolved;
     }).filter(Boolean));
     const semanticColors = Object.fromEntries([
-      "--simex-focus",
       "--simex-selected",
       "--simex-selected-soft",
       "--simex-info",
@@ -253,34 +252,6 @@ export async function expectNoRetiredDashboardStyle(page) {
       const style = getComputedStyle(element);
       if (!visible(element, style) || element.classList.contains("visually-hidden")) continue;
       findings.push(...styleHits(element, style, "element"));
-
-      if (element instanceof HTMLInputElement && ["checkbox", "radio"].includes(element.type)) {
-        const rect = element.getBoundingClientRect();
-        const label = element.labels?.[0] ?? element.closest("label");
-        const labelRect = label?.getBoundingClientRect();
-        const labelStyle = label ? getComputedStyle(label) : null;
-        const declaredGaps = [labelStyle?.columnGap, labelStyle?.gap]
-          .map((value) => Number.parseFloat(value || ""))
-          .filter(Number.isFinite);
-        const gap = declaredGaps[0] ?? 0;
-        const geometry = {};
-        if (rect.width < 18 || rect.width > 20) geometry.glyphWidth = rect.width;
-        if (rect.height < 18 || rect.height > 20) geometry.glyphHeight = rect.height;
-        if (!label || !labelRect || labelRect.height < 44) geometry.labelTargetHeight = labelRect?.height ?? 0;
-        if (!Number.isFinite(gap) || gap < 8) geometry.labelGap = Number.isFinite(gap) ? gap : 0;
-        if (Object.keys(geometry).length) {
-          findings.push({ kind: "choice-geometry", ...describe(element), geometry });
-        }
-      } else if (
-        element.matches("button, select, textarea, input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=color])")
-        && element.getBoundingClientRect().height < 44
-      ) {
-        findings.push({
-          kind: "touch-target",
-          ...describe(element),
-          height: element.getBoundingClientRect().height,
-        });
-      }
 
       if (element.matches("[data-pending-work-state]")) {
         const state = element.getAttribute("data-pending-work-state");

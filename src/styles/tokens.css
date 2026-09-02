@@ -11,6 +11,33 @@
   --simex-component-border-strong: #747b82;
   --simex-component-focus: #155eef;
   --simex-component-active: #202428;
+  --simex-choice-glyph: 16px;
+  --simex-control-utility: 24px;
+  --simex-control-compact: 28px;
+  --simex-control-standard: 32px;
+  --simex-control-prominent: 36px;
+  --simex-command-crown-row: 36px;
+  --simex-control-font-size: 13px;
+  --simex-control-line-height: 18px;
+  --simex-body-font-size: 14px;
+  --simex-body-line-height: 20px;
+  --simex-label-font-size: 12px;
+  --simex-label-line-height: 16px;
+  --simex-space-1: 2px;
+  --simex-space-2: 4px;
+  --simex-space-3: 8px;
+  --simex-space-4: 12px;
+  --simex-space-5: 16px;
+  --simex-space-6: 24px;
+  --simex-space-7: 32px;
+  --simex-gap-label-control: 4px;
+  --simex-gap-choice-label: 8px;
+  --simex-gap-control-group: 8px;
+  --simex-gap-section: 12px;
+  --simex-padding-panel: 12px;
+  --simex-padding-dialog: 16px;
+  --simex-gap-region: 24px;
+  --simex-control-min: var(--simex-control-standard);
   /* Evidence Ledger · Brighter Vellum · Light */
   --simex-surface-outer: #eee9de;
   --simex-surface-canvas: #f7f2e8;
@@ -45,6 +72,5 @@
   --simex-data-4: #8b584e;
   --simex-data-5: #77657e;
   --simex-data-6: #7d7457;
-  --simex-control-min: 44px;
   --simex-canonical-canvas-max-width: 1392px;
 }
