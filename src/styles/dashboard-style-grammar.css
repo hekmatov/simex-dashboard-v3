@@ -658,8 +658,12 @@
   background: transparent !important;
   border: 0 !important;
   box-shadow: none;
-  gap: 6px;
-  grid-template-columns: 44px 20px minmax(0, 1fr) 44px;
+  gap: var(--simex-space-2, 4px);
+  grid-template-columns:
+    var(--simex-control-utility, 24px)
+    var(--simex-choice-glyph, 16px)
+    minmax(0, 1fr)
+    var(--simex-control-utility, 24px);
 }
 
 .app-frame .dashboard-map-panel .build-tree-caret {
