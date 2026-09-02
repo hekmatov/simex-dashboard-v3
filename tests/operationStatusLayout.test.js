@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("operation notices stay below an open dashboard dialog", async () => {
+test("operation notices wait visually until an open dashboard dialog closes", async () => {
   const css = await readFile(
     new URL("../src/styles/operation-status.css", import.meta.url),
     "utf8",
@@ -14,6 +14,6 @@ test("operation notices stay below an open dashboard dialog", async () => {
   );
   assert.match(
     css,
-    /body:has\(\.dashboard-dialog-backdrop\) \.operation-status-viewport\s*\{[^}]*z-index:\s*900;/s,
+    /body:has\(\.dashboard-dialog-backdrop\) \.operation-status-viewport\s*\{[^}]*visibility:\s*hidden;/s,
   );
 });

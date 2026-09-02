@@ -11,6 +11,7 @@
 /* Modal work owns the whole visual plane. Keep durable notices mounted, but
    reveal them after the modal closes instead of covering its footer actions. */
 body:has(.dashboard-dialog-backdrop) .operation-status-viewport {
+  visibility: hidden;
   z-index: 900;
 }
 

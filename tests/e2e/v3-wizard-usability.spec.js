@@ -173,6 +173,20 @@ test("Data source composes source tasks vertically and contains their controls",
   expect(geometry.trigger.bottom).toBeLessThanOrEqual(geometry.file.top + 0.5);
 });
 
+test("durable operation notices wait behind the chart wizard instead of covering its footer", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const flow = await openWizard(page);
+  const { wizard } = flow;
+  await flow.goToDataSource();
+  const notice = page.locator('[data-operation-status]').filter({ hasText: "Chart draft" });
+
+  await expect(notice).toHaveCount(1);
+  await expect(wizard.locator(".chart-wizard-footer")).toBeVisible();
+  await expect.poll(() => notice.evaluate((node) => (
+    getComputedStyle(node.closest(".operation-status-viewport")).visibility
+  ))).toBe("hidden");
+});
+
 test("Data source existing CSV actions, blank measurement, and Review repairs are concise and explicit", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   const flow = await openWizard(page);
