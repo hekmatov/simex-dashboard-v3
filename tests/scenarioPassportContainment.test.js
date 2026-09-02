@@ -80,6 +80,19 @@ test("Build anchors Scenario Passport and package actions to the Crown identity"
   assert.doesNotMatch(html, /Save All|Export package/);
 });
 
+test("Scenario Passport keeps the Home checkbox, label, and helper on the dense choice grid", async () => {
+  const css = await readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8");
+
+  assert.match(
+    css,
+    /\.scenario-passport-home\s*>\s*label\s*\{[^}]*align-items:\s*center;[^}]*display:\s*grid;[^}]*gap:\s*var\(--simex-gap-choice-label\);[^}]*grid-template-columns:\s*var\(--simex-choice-glyph\)\s+minmax\(0,\s*1fr\);[^}]*min-height:\s*var\(--simex-control-compact\);/s,
+  );
+  assert.match(
+    css,
+    /\.scenario-passport-home\s*>\s*p\s*\{[^}]*margin:\s*0\s+0\s+0\s+calc\(var\(--simex-choice-glyph\)\s*\+\s*var\(--simex-gap-choice-label\)\);/s,
+  );
+});
+
 test("Scenario drafts omit dashboard-level provenance without changing per-source provenance", () => {
   assert.equal(typeof scenarioModule?.createScenarioDraft, "function");
   const dashboard = {

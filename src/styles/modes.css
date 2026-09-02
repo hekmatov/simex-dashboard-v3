@@ -1565,6 +1565,29 @@
   width: 100%;
 }
 
+.scenario-passport-home {
+  display: grid;
+  gap: var(--simex-gap-label-control);
+  padding: var(--simex-space-3) var(--simex-gap-section) var(--simex-gap-section);
+}
+
+.scenario-passport-home > label {
+  align-items: center;
+  display: grid;
+  gap: var(--simex-gap-choice-label);
+  grid-template-columns: var(--simex-choice-glyph) minmax(0, 1fr);
+  min-height: var(--simex-control-compact);
+}
+
+.scenario-passport-home > label > input {
+  margin: 0;
+}
+
+.scenario-passport-home > p {
+  color: var(--simex-text-muted);
+  margin: 0 0 0 calc(var(--simex-choice-glyph) + var(--simex-gap-choice-label));
+}
+
 .scenario-passport-value {
   background: var(--simex-surface-panel-alt);
   border: 1px solid transparent;
