@@ -261,7 +261,8 @@ test("pending owners and named authoring surfaces consume semantic style and con
 
   assert.doesNotMatch(staticContent, /--simex-surface-muted/);
   assert.match(staticContent, /portable-qmd-composer__toolbar[^}]*button\[aria-pressed="true"\][^{]*\{[^}]*var\(--simex-selected-soft\)[^}]*var\(--simex-selected\)/s);
-  assert.match(staticContent, /portable-qmd-composer__toolbar :is\(button, select\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-standard/s);
+  assert.match(staticContent, /portable-qmd-composer__toolbar select\s*\{[^}]*min-height:\s*var\(--simex-control-standard,\s*32px\)/s);
+  assert.match(staticContent, /portable-qmd-composer__toolbar button\s*\{[^}]*min-height:\s*var\(--simex-control-utility,\s*24px\)[^}]*min-width:\s*var\(--simex-control-utility,\s*24px\)/s);
   assert.match(staticContent, /authoring-footprint-grid\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(staticContent, /authoring-footprint-frame\s*\{[^}]*grid-column:\s*span var\(--chart-footprint-columns\)/s);
   assert.ok(staticContent.includes("grid-row: span var(--chart-footprint-row-span);"));

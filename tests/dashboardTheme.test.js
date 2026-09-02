@@ -307,7 +307,10 @@ test("named V3 surfaces inherit shared style and component variables", async () 
   assert.match(grammar, /--simex-component-surface-radius/);
   assert.match(grammar, /--simex-component-control-radius/);
   assert.match(grammar, /--simex-component-focus/);
-  assert.match(modes, /--simex-control-min/);
+  assert.match(modes, /--simex-control-standard/);
+  assert.match(modes, /--simex-control-compact/);
+  assert.match(modes, /--simex-control-utility/);
+  assert.match(modes, /--simex-command-crown-row/);
   assert.match(presentation, /--simex-component-surface-radius/);
   assert.match(presentation, /--simex-component-control-radius/);
 });
