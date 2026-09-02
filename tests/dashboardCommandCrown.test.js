@@ -69,7 +69,7 @@ test("an empty mode context is omitted until a real projection needs it", async 
   );
   const modeRowRule = crownStyles.match(/\.command-crown-mode-row\s*\{([^}]*)\}/)?.[1] ?? "";
   const locationRowRule = crownStyles.match(/\.dashboard-identity-row\s*\{([^}]*)\}/)?.[1] ?? "";
-  const identitySummaryRule = crownStyles.match(/\.dashboard-identity-summary\s*\{([^}]*)\}/)?.[1] ?? "";
+  const identitySummaryRule = crownStyles.match(/^\.dashboard-identity-summary\s*\{([^}]*)\}/m)?.[1] ?? "";
   const scenarioRule = [...crownStyles.matchAll(/\.dashboard-scenario-trigger\s*\{([^}]*)\}/g)].at(-1)?.[1] ?? "";
   const pageButtonRule = crownStyles.match(/\.dashboard-command-page-scroller button\s*\{([^}]*)\}/)?.[1] ?? "";
 
