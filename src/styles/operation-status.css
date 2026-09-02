@@ -8,6 +8,12 @@
   z-index: 1500;
 }
 
+/* Modal work owns the whole visual plane. Keep durable notices mounted, but
+   reveal them after the modal closes instead of covering its footer actions. */
+body:has(.dashboard-dialog-backdrop) .operation-status-viewport {
+  z-index: 900;
+}
+
 .operation-status-stack {
   display: flex;
   flex-direction: column;
