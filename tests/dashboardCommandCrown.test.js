@@ -67,6 +67,9 @@ test("an empty mode context is omitted until a real projection needs it", async 
     new URL("../src/styles/modes.css", import.meta.url),
     "utf8",
   );
+  const modeRowRule = crownStyles.match(/\.command-crown-mode-row\s*\{([^}]*)\}/)?.[1] ?? "";
+  const locationRowRule = crownStyles.match(/\.dashboard-identity-row\s*\{([^}]*)\}/)?.[1] ?? "";
+  const identitySummaryRule = crownStyles.match(/\.dashboard-identity-summary\s*\{([^}]*)\}/)?.[1] ?? "";
   const scenarioRule = [...crownStyles.matchAll(/\.dashboard-scenario-trigger\s*\{([^}]*)\}/g)].at(-1)?.[1] ?? "";
   const pageButtonRule = crownStyles.match(/\.dashboard-command-page-scroller button\s*\{([^}]*)\}/)?.[1] ?? "";
 
@@ -74,6 +77,12 @@ test("an empty mode context is omitted until a real projection needs it", async 
   assert.doesNotMatch(build, /data-command-crown-layer="context"/);
   assert.match(view, /--dashboard-mode-context-block-size:var\(--simex-command-crown-row\)/);
   assert.match(build, /--dashboard-mode-context-block-size:var\(--simex-command-crown-row\)/);
+  assert.match(modeRowRule, /block-size:\s*var\(--simex-command-crown-row\);/);
+  assert.match(modeRowRule, /box-sizing:\s*border-box;/);
+  assert.match(locationRowRule, /block-size:\s*var\(--simex-command-crown-row\);/);
+  assert.match(locationRowRule, /box-sizing:\s*border-box;/);
+  assert.match(identitySummaryRule, /align-items:\s*center;/);
+  assert.match(identitySummaryRule, /display:\s*flex;/);
   assert.match(scenarioRule, /min-height:\s*var\(--simex-control-standard\);/);
   assert.match(pageButtonRule, /min-height:\s*var\(--simex-control-standard\);/);
   assert.match(pageButtonRule, /min-width:\s*var\(--simex-control-standard\);/);

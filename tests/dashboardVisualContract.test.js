@@ -244,7 +244,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(modes, /data-pending-work-state="error"[^}]*background:\s*var\(--simex-error-soft\)[^}]*var\(--simex-error\)/s);
   assert.match(modes, /build-authoring-auxiliary button,[^{]*build-authoring-auxiliary input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)[^{]*\{[^}]*min-height:\s*var\(--simex-control-standard/s);
   assert.match(modes, /\.build-authoring-auxiliary\s*\{[^}]*border-radius:\s*var\(--simex-style-surface-radius\)[^}]*box-shadow:\s*var\(--simex-style-shell-shadow\)/s);
-  assert.match(modes, /\.build-page-navigation\s*\{[^}]*flex-wrap:\s*nowrap[^}]*overflow:\s*visible/s);
+  assert.match(modes, /\.build-page-navigation\s*\{[^}]*block-size:\s*var\(--simex-command-crown-row\)[^}]*box-sizing:\s*border-box[^}]*flex-wrap:\s*nowrap[^}]*overflow:\s*visible/s);
   assert.match(modes, /\.build-page-tab-scroller\s*\{[^}]*flex:\s*1;[^}]*overflow-x:\s*auto/s);
   assert.doesNotMatch(modes, /\.build-page-navigation\s*\{[^}]*flex-wrap:\s*wrap/s);
   assert.doesNotMatch(modes, /\.build-page-tab-scroller\s*\{[^}]*flex-basis:\s*100%/s);
