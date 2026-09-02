@@ -110,6 +110,69 @@ test("New Chart keeps stable geometry and exposes editable destination placement
   await expect(wizard.locator(".chart-wizard-destination .chart-proof-state")).toHaveCount(0);
 });
 
+test("Data source composes source tasks vertically and contains their controls", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const flow = await openWizard(page);
+  const { wizard } = flow;
+  await flow.goToDataSource();
+
+  const grid = wizard.locator(".chart-wizard-data-source .chart-wizard-source-grid");
+  const cards = grid.locator(":scope > .wizard-choice-card");
+  await expect(cards).toHaveCount(2);
+
+  const existingCard = cards.nth(0);
+  const uploadCard = cards.nth(1);
+  const listbox = existingCard.locator(".accessible-listbox-select");
+  const trigger = existingCard.getByRole("combobox", { name: /^Managed data source\b/ });
+  const uploadInput = uploadCard.getByLabel("CSV file", { exact: true });
+
+  await expect(existingCard).toBeVisible();
+  await expect(uploadCard).toBeVisible();
+  await expect(existingCard.getByRole("heading", {
+    name: "Use an existing CSV",
+    exact: true,
+  })).toBeVisible();
+  await expect(uploadCard.getByRole("heading", {
+    name: "Upload a new CSV",
+    exact: true,
+  })).toBeVisible();
+  await expect(trigger).toBeVisible();
+  await expect(uploadInput).toBeVisible();
+
+  const geometry = await grid.evaluate((node) => {
+    const [existing, upload] = node.querySelectorAll(":scope > .wizard-choice-card");
+    const select = existing.querySelector(".accessible-listbox-select");
+    const button = select.querySelector(".accessible-listbox-trigger");
+    const file = upload.querySelector('input[type="file"]');
+    const rect = (element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        left: bounds.left,
+        top: bounds.top,
+        right: bounds.right,
+        bottom: bounds.bottom,
+        width: bounds.width,
+      };
+    };
+    return {
+      existing: rect(existing),
+      upload: rect(upload),
+      select: rect(select),
+      trigger: rect(button),
+      file: rect(file),
+    };
+  });
+
+  expect(Math.abs(geometry.existing.left - geometry.upload.left)).toBeLessThanOrEqual(1);
+  expect(geometry.existing.bottom).toBeLessThanOrEqual(geometry.upload.top + 0.5);
+  expect(geometry.select.left).toBeGreaterThanOrEqual(geometry.existing.left - 0.5);
+  expect(geometry.select.right).toBeLessThanOrEqual(geometry.existing.right + 0.5);
+  expect(geometry.trigger.left).toBeGreaterThanOrEqual(geometry.existing.left - 0.5);
+  expect(geometry.trigger.right).toBeLessThanOrEqual(geometry.existing.right + 0.5);
+  expect(geometry.trigger.bottom).toBeLessThanOrEqual(geometry.upload.top + 0.5);
+  expect(geometry.trigger.bottom).toBeLessThanOrEqual(geometry.file.top + 0.5);
+});
+
 test("Data source existing CSV actions, blank measurement, and Review repairs are concise and explicit", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   const flow = await openWizard(page);

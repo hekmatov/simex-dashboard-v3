@@ -4857,7 +4857,13 @@ button.danger {
 }
 
 .chart-wizard-data-source .chart-wizard-source-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chart-wizard-data-source .accessible-listbox-select,
+.chart-wizard-data-source .accessible-listbox-trigger {
+  min-width: 0;
+  width: 100%;
 }
 
 .wizard-choice-card {
