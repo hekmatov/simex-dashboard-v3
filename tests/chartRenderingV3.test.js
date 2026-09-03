@@ -2064,17 +2064,23 @@ test("grouped composition lays out non-overlapping pie series", () => {
   assert.match(svg, /Beta/);
 });
 
-test("scatter and bubble encode canonical relationship marks and clusters", () => {
+test("scatter and bubble encode canonical relationship marks, clusters, and requested point labels", () => {
   const prepared = ready([
     { x: 2, y: 5, size: 12, label: "Clinic A", cluster: "North", clusterKey: "North", group: null, groupKey: "" },
     { x: 4, y: 7, size: 30, label: "Clinic B", cluster: "South", clusterKey: "South", group: null, groupKey: "" },
   ]);
-  const scatter = buildRenderModel({ chart: chart("scatter"), prepared });
+  const scatter = buildRenderModel({
+    chart: chart("scatter", {
+      presentation: { title: { align: "left" }, collection: null, labels: { visible: true, position: "bottom" } },
+    }),
+    prepared,
+  });
   const bubble = buildRenderModel({ chart: chart("bubble"), prepared });
 
   assert.equal(scatter.option.series[0].type, "scatter");
   assert.deepEqual(scatter.option.series[0].data[0].value, [2, 5]);
   assert.equal(scatter.option.series.length, 2);
+  assert.deepEqual(scatter.option.series[0].label, { show: true, position: "bottom" });
   assert.equal(typeof bubble.option.series[0].symbolSize, "function");
   assert.deepEqual(bubble.option.series[0].data[0].value, [2, 5, 12]);
 });
@@ -2097,7 +2103,7 @@ test("heatmap and readiness matrix create category grids with continuous or disc
   assert.deepEqual(readiness.option.visualMap.pieces.map(({ value }) => value), [1, 2, 3]);
 });
 
-test("timeline and swimlane encode canonical intervals on time axes and lanes", () => {
+test("timeline and swimlane encode canonical intervals on time axes, lanes, and status colours", () => {
   const prepared = ready([
     { event: "Mobilize", start: "2027-05-01", end: "2027-05-03", lane: "Operations", status: "Active", group: null, groupKey: "" },
     { event: "Report", start: "2027-05-02", end: null, lane: "Planning", status: "Planned", group: null, groupKey: "" },
@@ -2106,11 +2112,13 @@ test("timeline and swimlane encode canonical intervals on time axes and lanes", 
   const swimlane = buildRenderModel({ chart: chart("swimlane"), prepared });
 
   assert.equal(timeline.option.xAxis.type, "time");
-  assert.deepEqual(timeline.option.yAxis.data, ["Events"]);
+  assert.deepEqual(timeline.option.yAxis.data, ["Operations", "Planning"]);
   assert.equal(timeline.option.series[0].type, "custom");
-  assert.deepEqual(timeline.option.series[0].data[0].value.slice(0, 3), ["2027-05-01", "2027-05-03", "Events"]);
+  assert.deepEqual(timeline.option.series.map(({ name }) => name), ["Active", "Planned"]);
+  assert.deepEqual(timeline.option.legend.data, ["Active", "Planned"]);
+  assert.deepEqual(timeline.option.series[0].data[0].value.slice(0, 3), ["2027-05-01", "2027-05-03", "Operations"]);
   assert.deepEqual(swimlane.option.yAxis.data, ["Operations", "Planning"]);
-  assert.equal(swimlane.option.series[0].data[1].name, "Report");
+  assert.equal(swimlane.option.series[1].data[0].name, "Report");
 });
 
 test("timeline custom rendering reads and visibly renders the encoded event label", () => {
@@ -2152,6 +2160,7 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
   assert.deepEqual(gauge.option.series[0].center, ["50%", "54%"]);
   assert.equal(gauge.option.series[0].radius, "52%");
   assert.equal(gauge.option.title.left, "right");
+  assert.equal(gauge.option.series[0].detail.formatter(72), "72\nTarget 80");
   assert.deepEqual(gauge.semanticSummary.items, [{ label: "gauge title", actual: 72, target: 80, time: "2027-05-02" }]);
   assert.equal(bullet.option.series[0].type, "bar");
   assert.deepEqual(bullet.option.series[0].data, [8]);
@@ -2709,12 +2718,14 @@ test("timeline and swimlane playback retain history while identifying observed a
       ], { activeTime }),
     });
 
-    assert.equal(model.option.series[0].data.length, 2);
-    assert.equal(model.option.series[0].data[0].active, false);
-    assert.equal(model.option.series[0].data[1].active, true);
-    assert.equal(model.option.series[0].data[1].temporalStatus, status);
-    assert.equal(model.option.series[0].data[1].provenance.label, expectedLabel);
-    assert.equal(model.option.series[0].data[1].itemStyle.borderType, status === "observed" ? "solid" : "dashed");
+    const events = model.option.series.flatMap(({ data }) => data);
+    assert.equal(events.length, 2);
+    assert.equal(events.find(({ event }) => event === "Mobilize").active, false);
+    const activeEvent = events.find(({ event }) => event === "Activate");
+    assert.equal(activeEvent.active, true);
+    assert.equal(activeEvent.temporalStatus, status);
+    assert.equal(activeEvent.provenance.label, expectedLabel);
+    assert.equal(activeEvent.itemStyle.borderType, status === "observed" ? "solid" : "dashed");
   }
 });
 

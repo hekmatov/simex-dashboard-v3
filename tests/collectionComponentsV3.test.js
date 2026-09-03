@@ -841,6 +841,24 @@ test("CardChartView applies KPI accent palettes and makes delta arrows optional"
   assert.doesNotMatch(splitMetric, /class="chart-card-delta-arrow"/);
 });
 
+test("cards make an assigned target and its change favorability visible", () => {
+  const html = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: { typeId: "deltaCard", title: "Capacity change" },
+    model: {
+      items: [{
+        ...cardItem("capacity", "Capacity", 20),
+        target: 24,
+        delta: { absolute: -4, percentage: -16.67 },
+        direction: "decrease",
+        favorability: "favorable",
+      }],
+    },
+  }));
+
+  assert.match(html, /class="chart-card-target">Target 24<\/span>/);
+  assert.match(html, /data-delta-favorability="favorable"/);
+});
+
 test("cards distinguish playback time from carried measurement provenance", () => {
   const html = renderToStaticMarkup(React.createElement(CardChartView, {
     chart: { title: "Current capacity" },

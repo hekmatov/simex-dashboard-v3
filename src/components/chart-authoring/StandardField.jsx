@@ -267,18 +267,19 @@ function structuredControls(control, value, onChange, field = {}) {
     updateStructuredFieldValue(control, current, path, nextValue)
   );
   if (control === "labels") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, inlineToggle(
+    const controls = new Set(field.controls ?? ["visible", "position", "format"]);
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, controls.has("visible") ? inlineToggle(
       "Show labels",
       current.visible === true,
       (checked) => emit(["visible"], checked)
-    ), /* @__PURE__ */ React.createElement("label", null, "Label position", /* @__PURE__ */ React.createElement("select", {
+    ) : null, controls.has("position") ? /* @__PURE__ */ React.createElement("label", null, "Label position", /* @__PURE__ */ React.createElement("select", {
       value: current.position ?? "",
       onChange: (event) => emit(["position"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))), /* @__PURE__ */ React.createElement("label", null, "Label format", /* @__PURE__ */ React.createElement("input", {
+    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? /* @__PURE__ */ React.createElement("label", null, "Label format", /* @__PURE__ */ React.createElement("input", {
       value: current.format ?? "",
       placeholder: "{value}",
       onChange: (event) => emit(["format"], event.target.value)
-    })));
+    })) : null);
   }
   if (control === "axes") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(
@@ -290,14 +291,15 @@ function structuredControls(control, value, onChange, field = {}) {
       : null);
   }
   if (control === "targets") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("label", null, "Target direction", /* @__PURE__ */ React.createElement("select", {
+    const controls = new Set(field.controls ?? ["direction", "ranges"]);
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, controls.has("direction") ? /* @__PURE__ */ React.createElement("label", null, "Which change is favorable", /* @__PURE__ */ React.createElement("select", {
       value: current.direction ?? "",
       onChange: (event) => emit(["direction"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is good"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is good"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))), /* @__PURE__ */ React.createElement("label", null, "Target ranges", /* @__PURE__ */ React.createElement("input", {
+    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is favorable"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is favorable"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))) : null, controls.has("ranges") ? /* @__PURE__ */ React.createElement("label", null, "Status-band upper limits", /* @__PURE__ */ React.createElement("input", {
       value: Array.isArray(current.ranges) ? current.ranges.filter(Number.isFinite).join(", ") : "",
       placeholder: "50, 80, 100",
       onChange: (event) => emit(["ranges"], commaSeparated(event.target.value).map(Number).filter(Number.isFinite))
-    })));
+    })) : null);
   }
   if (control === "map") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)));

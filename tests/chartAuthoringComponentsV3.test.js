@@ -2539,11 +2539,7 @@ test("fresh geography drafts can select validated GeoJSON before preview readine
       geoSourceId,
       chartId,
     );
-    assert.equal(
-      selectedChart.presentation.map.scale,
-      "sequential",
-      chartId,
-    );
+    assert.equal(selectedChart.presentation.map.scale, undefined, chartId);
 
     const selected = createWizardPreparation({
       chart: selectedChart,
@@ -2566,10 +2562,7 @@ test("fresh geography drafts can select validated GeoJSON before preview readine
     });
     assert.equal(selected.prepared.status, "ready", chartId);
     assert.equal(wizardModel.canCreate, true, chartId);
-    assert.ok(
-      readyModel.sections.some(({ id }) => id === "map"),
-      chartId,
-    );
+    assert.equal(readyModel.sections.some(({ id }) => id === "map"), false, chartId);
 
     const editorHtml = render(React.createElement(ChartEditorV3, {
       chart: selectedChart,
@@ -2781,12 +2774,7 @@ test("property-only GeoJSON joins stay reachable and renderer-ready for both geo
       1,
       typeId,
     );
-    const mapHtml = render(React.createElement(GeneratedFormSection, {
-      section: editor.sections.find(({ id }) => id === "map"),
-      onChange() {},
-    }));
-    assert.match(mapHtml, /Scale/, typeId);
-    assert.doesNotMatch(mapHtml, /Join field|GeoJSON property/, typeId);
+    assert.equal(editor.sections.some(({ id }) => id === "map"), false, typeId);
 
     const changedSource = applyGeographySourceSelection(joined, {
       sourceId: "replacement-boundaries",

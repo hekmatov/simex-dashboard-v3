@@ -104,6 +104,70 @@ test("every chart type explains every data role in the visual language of that c
   }
 });
 
+test("every chart exposes only configuration controls its renderer honors", () => {
+  const expectedControls = {
+    bar: { labels: ["visible", "position", "format"] },
+    groupedBar: { labels: ["visible", "position", "format"] },
+    stackedBar: { labels: ["visible", "position", "format"] },
+    horizontalBar: { labels: ["visible", "position", "format"] },
+    horizontalStackedBar: { labels: ["visible", "position", "format"] },
+    line: { labels: ["visible", "position", "format"] },
+    area: { labels: ["visible", "position", "format"] },
+    mixed: { labels: ["visible", "position", "format"] },
+    pie: { labels: ["visible"] },
+    donut: { labels: ["visible"] },
+    kpi: {},
+    gauge: { targets: ["ranges"] },
+    bullet: {},
+    deltaCard: { targets: ["direction"] },
+    deltaList: { targets: ["direction"] },
+    scatter: { labels: ["visible", "position"] },
+    bubble: { labels: ["visible", "position"] },
+    heatmap: { labels: ["visible"] },
+    readinessMatrix: {},
+    timeline: {},
+    swimlane: {},
+    choroplethMap: {},
+    chronoChoroplethMap: {},
+    mapScatter: {},
+    table: {},
+    image: {},
+    freeText: {},
+  };
+
+  assert.deepEqual(Object.keys(expectedControls).sort(), listChartSchemas().map(({ typeId }) => typeId).sort());
+
+  for (const [typeId, expected] of Object.entries(expectedControls)) {
+    const schema = getChartSchema(typeId);
+    const profile = datasetProfile();
+    const chart = createChartDraft(typeId, {
+      id: `${typeId}-control-contract`,
+      title: `${typeId} control contract`,
+      sourceId: "exercise-data",
+      roles: Object.fromEntries(schema.roles
+        .filter(({ min }) => min > 0)
+        .map(({ id, max }) => [id, max === null ? [{ field: "value" }] : { field: "value" }])),
+    });
+    const model = buildEditorFormModel({
+      chart,
+      profile,
+      prepared: {
+        ...readyPrepared,
+        meta: {
+          ...readyPrepared.meta,
+          formPreparationKey: buildFormPreparationKey({ chart, profile }),
+        },
+      },
+    });
+    const actual = Object.fromEntries(
+      allFields(model)
+        .filter(({ id }) => ["labels", "targets", "map", "timeline"].includes(id))
+        .map(({ id, controls = [] }) => [id, controls]),
+    );
+    assert.deepEqual(actual, expected, typeId);
+  }
+});
+
 test("table row distribution is available in both quick and full appearance forms", () => {
   const chart = createChartDraft("table", {
     id: "exercise-table",

@@ -3099,6 +3099,14 @@ button.danger {
   overflow-wrap: anywhere;
 }
 
+.chart-card-target {
+  color: var(--simex-text-muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .chart-card-delta {
   align-items: center;
   color: var(--simex-text-muted);
@@ -3117,6 +3125,18 @@ button.danger {
 
 .chart-card[data-delta-direction="decrease"] .chart-card-delta {
   color: var(--simex-error);
+}
+
+.chart-card[data-delta-favorability="favorable"] .chart-card-delta {
+  color: var(--simex-success);
+}
+
+.chart-card[data-delta-favorability="unfavorable"] .chart-card-delta {
+  color: var(--simex-error);
+}
+
+.chart-card[data-delta-favorability="neutral"] .chart-card-delta {
+  color: var(--simex-text-muted);
 }
 
 .chart-card-delta-arrow {
@@ -3175,6 +3195,18 @@ button.danger {
 
 .chart-card[data-card-style="directionRail"][data-delta-direction="decrease"] {
   border-left-color: var(--simex-error);
+}
+
+.chart-card[data-card-style="directionRail"][data-delta-favorability="favorable"] {
+  border-left-color: var(--simex-success);
+}
+
+.chart-card[data-card-style="directionRail"][data-delta-favorability="unfavorable"] {
+  border-left-color: var(--simex-error);
+}
+
+.chart-card[data-card-style="directionRail"][data-delta-favorability="neutral"] {
+  border-left-color: var(--simex-border-subtle);
 }
 
 .chart-card[data-card-style="directionRail"] .chart-card-delta {

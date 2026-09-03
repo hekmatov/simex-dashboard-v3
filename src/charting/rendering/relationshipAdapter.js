@@ -11,6 +11,7 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
   );
   const bubble = mark === "bubble";
   const colors = chart.presentation?.series?.colors;
+  const labels = chart.presentation?.labels;
   return {
     kind: "echarts",
     option: {
@@ -38,10 +39,19 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
           group: mark.group,
         })),
         symbolSize: bubble ? bubbleSize : undefined,
+        label: relationshipLabelOption(labels),
         emphasis: { focus: "series" },
       })),
       dataZoom: buildEChartsDataZoom(chart),
     },
+  };
+}
+
+function relationshipLabelOption(labels) {
+  if (!labels) return undefined;
+  return {
+    show: labels.visible === true,
+    position: labels.position ?? "top",
   };
 }
 

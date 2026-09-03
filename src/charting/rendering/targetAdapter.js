@@ -146,7 +146,7 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
             valueAnimation: false,
             fontSize: embedded ? 26 : 32,
             offsetCenter: [0, "38%"],
-            ...(embedded ? {} : { formatter: formatTargetValue }),
+            formatter: (value) => formatGaugeDetail(value, mark.target),
           },
           title: {
             show: !embedded && Boolean(name),
@@ -403,6 +403,13 @@ function formatTargetValue(value) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 2,
   }).format(Number(value));
+}
+
+function formatGaugeDetail(value, target) {
+  const current = formatTargetValue(value);
+  return Number.isFinite(Number(target))
+    ? `${current}\nTarget ${formatTargetValue(target)}`
+    : current;
 }
 
 function titleOption(chart) {

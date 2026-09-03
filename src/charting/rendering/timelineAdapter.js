@@ -3,12 +3,15 @@ import {
   rangeSelectorVisible,
 } from "./zoomOptions.js";
 
+const STATUS_COLORS = ["#2456a6", "#8c4f9d", "#b05c00", "#2f7d4a", "#a12f52", "#4d6470"];
+
 export function buildTimelineRenderModel({ chart, prepared }) {
-  const swimlane = chart.typeId === "swimlane";
   const activeTime = prepared.meta?.activeTime ?? null;
-  const lanes = swimlane
-    ? unique(prepared.marks.map(({ lane }) => lane ?? "Unassigned"))
+  const usesLanes = prepared.marks.some(({ lane }) => nonEmpty(lane));
+  const lanes = usesLanes
+    ? unique(prepared.marks.map(({ lane }) => nonEmpty(lane) ? lane : "Unassigned"))
     : ["Events"];
+  const groups = statusGroups(prepared.marks, chart.title ?? "Events");
   return {
     kind: "echarts",
     option: {
@@ -24,16 +27,36 @@ export function buildTimelineRenderModel({ chart, prepared }) {
       },
       xAxis: { type: "time" },
       yAxis: { type: "category", data: lanes },
-      series: [{
-        name: chart.title ?? "",
+      ...(groups.length > 1 ? {
+        legend: { show: true, data: groups.map(({ name }) => name) },
+      } : {}),
+      series: groups.map(({ name, marks, color }) => ({
+        name,
         type: "custom",
         renderItem: renderInterval,
         encode: { x: [0, 1], y: 2 },
-        data: prepared.marks.map((mark) => timelineDataItem(mark, swimlane, activeTime)),
-      }],
+        ...(color ? { itemStyle: { color } } : {}),
+        data: marks.map((mark) => timelineDataItem(mark, usesLanes, activeTime)),
+      })),
       dataZoom: buildEChartsDataZoom(chart),
     },
   };
+}
+
+function statusGroups(marks, fallbackName) {
+  const hasStatus = marks.some(({ status }) => nonEmpty(status));
+  if (!hasStatus) return [{ name: fallbackName, marks, color: null }];
+  const groups = new Map();
+  for (const mark of marks) {
+    const name = nonEmpty(mark.status) ? String(mark.status) : "Unspecified";
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push(mark);
+  }
+  return [...groups].map(([name, entries], index) => ({
+    name,
+    marks: entries,
+    color: STATUS_COLORS[index % STATUS_COLORS.length],
+  }));
 }
 
 function renderInterval(_params, api) {
@@ -90,13 +113,13 @@ function unique(values) {
   return [...new Set(values)];
 }
 
-function timelineDataItem(mark, swimlane, activeTime) {
+function timelineDataItem(mark, usesLanes, activeTime) {
   const active = Boolean(activeTime && isActiveObservation(mark));
   const provenance = active ? provenanceSummary(mark.temporalProvenance) : null;
   const value = [
     mark.start,
     mark.end ?? mark.start,
-    swimlane ? mark.lane ?? "Unassigned" : "Events",
+    usesLanes ? nonEmpty(mark.lane) ? mark.lane : "Unassigned" : "Events",
     mark.status,
     mark.event,
   ];
@@ -123,6 +146,10 @@ function timelineDataItem(mark, swimlane, activeTime) {
         }
       : {}),
   };
+}
+
+function nonEmpty(value) {
+  return value !== null && value !== undefined && String(value).trim() !== "";
 }
 
 function isActiveObservation(mark) {

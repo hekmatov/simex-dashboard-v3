@@ -540,17 +540,31 @@ function seriesAppearanceField(fieldId, series, referenceLine) {
 }
 
 function labelsFields({ chart, schema }) {
-  if (schema.roles.length === 0) return [];
+  const controls = labelControls(schema);
+  if (controls.length === 0) return [];
   return [{
     id: "labels",
     label: "Labels",
     control: "labels",
     path: ["presentation", "labels"],
     value: chart.presentation?.labels ?? {},
+    controls,
     help: schema.dataFamily === "composition"
-      ? "Controls text shown for slices; it does not change source values."
-      : "Controls text shown with chart marks; it does not create a new series or change source values.",
+      ? "Show or hide category names on slices; it does not change source values."
+      : schema.dataFamily === "relationship"
+        ? "Show or hide each point's Label role beside the point."
+        : schema.dataFamily === "matrix"
+          ? "Show or hide the value inside each cell when the grid has at most 30 cells."
+          : "Control text shown with chart marks; it does not create a new series or change source values.",
   }];
+}
+
+function labelControls(schema) {
+  if (schema.dataFamily === "axis") return ["visible", "position", "format"];
+  if (schema.dataFamily === "composition") return ["visible"];
+  if (schema.dataFamily === "relationship") return ["visible", "position"];
+  if (schema.typeId === "heatmap") return ["visible"];
+  return [];
 }
 
 function axesFields({ chart, schema, prepared }) {
@@ -575,33 +589,31 @@ function axesFields({ chart, schema, prepared }) {
 }
 
 function targetsFields({ chart }) {
+  const controls = chart.typeId === "gauge"
+    ? ["ranges"]
+    : ["deltaCard", "deltaList"].includes(chart.typeId)
+      ? ["direction"]
+      : [];
+  if (controls.length === 0) return [];
   return [{
     id: "targets",
-    label: "Targets and thresholds",
+    label: chart.typeId === "gauge" ? "Gauge status bands" : "Favorable change",
     control: "targets",
     path: ["presentation", "targets"],
     value: chart.presentation?.targets ?? {},
+    controls,
+    help: chart.typeId === "gauge"
+      ? "Enter the upper end of each coloured status band in order. The gauge shows the current value and its optional target together."
+      : "Choose whether an increase or decrease should be shown as favorable for this change chart.",
   }];
 }
 
-function mapFields({ chart }) {
-  return [{
-    id: "map",
-    label: "Map",
-    control: "map",
-    path: ["presentation", "map"],
-    value: chart.presentation?.map ?? {},
-  }];
+function mapFields() {
+  return [];
 }
 
-function timelineFields({ chart }) {
-  return [{
-    id: "timeline",
-    label: "Timeline",
-    control: "timeline",
-    path: ["presentation", "timeline"],
-    value: chart.presentation?.timeline ?? {},
-  }];
+function timelineFields() {
+  return [];
 }
 
 function collectionFields({ chart, schema }) {

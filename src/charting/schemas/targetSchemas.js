@@ -1,10 +1,19 @@
 import { chartSchema, role } from "./schemaTypes.js";
 
 const collectionForm = {
-  sections: ["data", "appearance", "labels", "targets", "collection", "interactions", "advanced"],
+  sections: ["data", "appearance", "collection", "interactions", "advanced"],
 };
 const singleForm = {
-  sections: ["data", "appearance", "labels", "targets", "interactions", "advanced"],
+  sections: ["data", "appearance", "interactions", "advanced"],
+};
+const gaugeForm = {
+  sections: ["data", "appearance", "targets", "collection", "interactions", "advanced"],
+};
+const deltaCollectionForm = {
+  sections: ["data", "appearance", "targets", "collection", "interactions", "advanced"],
+};
+const deltaSingleForm = {
+  sections: ["data", "appearance", "targets", "interactions", "advanced"],
 };
 const collectionCapabilities = { timeSync: true, collection: true, zoom: false };
 const singleCapabilities = { timeSync: true, collection: false, zoom: false };
@@ -43,7 +52,7 @@ export const targetSchemas = [
     description: "Show a current value against configured threshold ranges.",
     sources: ["dataset", "inline"],
     roles: [role("value", "Value", ["number"], 1), role("target", "Target", ["number"], 0), ...identity(), time()],
-    form: collectionForm,
+    form: gaugeForm,
     dataFamily: "target",
     renderer: "target",
     capabilities: collectionCapabilities,
@@ -83,7 +92,7 @@ export const targetSchemas = [
       role("time", "Time", ["temporal"], 1),
       role("target", "Target", ["number"], 0),
     ],
-    form: singleForm,
+    form: deltaSingleForm,
     dataFamily: "target",
     renderer: "target",
     transforms: deltaTransforms,
@@ -104,7 +113,7 @@ export const targetSchemas = [
       role("time", "Time", ["temporal"], 1),
       role("target", "Target", ["number"], 0),
     ],
-    form: collectionForm,
+    form: deltaCollectionForm,
     dataFamily: "target",
     renderer: "target",
     transforms: deltaTransforms,

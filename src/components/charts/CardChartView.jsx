@@ -99,6 +99,9 @@ function CardItem({
     role: nested ? undefined : "listitem",
     "data-card-style": cardPresentation.style,
     ...(direction ? { "data-delta-direction": direction } : {}),
+    ...(["favorable", "unfavorable", "neutral"].includes(item.favorability)
+      ? { "data-delta-favorability": item.favorability }
+      : {}),
     ...(accent ? { style: { "--chart-card-accent": accent } } : {}),
     "aria-label": cardAriaLabel({
       item,
@@ -115,6 +118,9 @@ function CardItem({
   },
     React.createElement("span", { className: "chart-card-label" }, label),
     React.createElement("strong", { className: "chart-card-value" }, formatValue(item.value)),
+    item.target !== null && item.target !== undefined
+      ? React.createElement("span", { className: "chart-card-target" }, `Target ${formatValue(item.target)}`)
+      : null,
     isDelta
       ? React.createElement("span", { className: "chart-card-delta" },
           cardPresentation.showDeltaArrow

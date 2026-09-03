@@ -67,12 +67,8 @@ export function applyGeographySourceSelection(chart, {
   ) {
     throw new Error(`GeoJSON source "${sourceId}" is unavailable or invalid.`);
   }
-  const current = chart.presentation?.map ?? {};
   const mapWithoutJoin = {
     [GEO_SOURCE_FIELD]: sourceId,
-    scale: typeof current.scale === "string" && current.scale.trim()
-      ? current.scale
-      : "sequential",
   };
   const candidate = chartWithMap(chart, mapWithoutJoin);
   const analysis = analyzeGeographyJoin({
