@@ -34,6 +34,22 @@ function previousDeltaTransformations(overrides = {}) {
   };
 }
 
+test("duplicate blockers explain the one-value-per-mark rule and resolution routes", () => {
+  const rows = [{ category: "A", value: 2 }, { category: "A", value: 3 }];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "category" },
+    }),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  const blocker = result.diagnostics.find(({ code }) => code === "duplicate-resolution-required");
+  assert.match(blocker.message, /one value per final chart mark/i);
+  assert.match(blocker.message, /filters, grouping, or aggregation/i);
+});
+
 test("pipeline transformation fixtures use the version 3 shape accepted by chart validation", () => {
   const fixtures = [
     chart("bar", {

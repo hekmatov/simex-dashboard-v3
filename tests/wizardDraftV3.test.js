@@ -65,6 +65,49 @@ test("Add chart retains its exact six-stage contract", () => {
   ]);
 });
 
+test("compatible new-chart type changes retain mappings, filters, and transformations", () => {
+  let state = createWizardState({
+    loadedData: { exercise: loadedRows },
+    profiles: { exercise: profile() },
+  });
+  state = reduceWizardState(state, {
+    type: "selectType",
+    typeId: "line",
+    chart: { id: "retained-type-change", title: "Reported cases" },
+  });
+  state = reduceWizardState(state, { type: "selectSource", sourceId: "exercise" });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "measurements",
+    value: [{ field: "value", axis: "primary" }],
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "observation",
+    value: { field: "reportedAt", interpretation: "temporal", format: "YYYY-MM-DD" },
+  });
+  state = reduceWizardState(state, {
+    type: "updateChart",
+    path: ["transformations"],
+    value: {
+      filters: [{ field: "reportedAt", operator: "equals", value: "2027-05-01" }],
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "zero",
+    },
+  });
+
+  const changed = reduceWizardState(state, { type: "selectType", typeId: "bar" });
+
+  assert.equal(changed.draft.typeId, "bar");
+  assert.deepEqual(changed.draft.roles, state.draft.roles);
+  assert.deepEqual(changed.draft.transformations.filters, state.draft.transformations.filters);
+  assert.equal(changed.draft.transformations.aggregation, "sum");
+  assert.equal(changed.draft.transformations.duplicates, "aggregate");
+  assert.equal(changed.draft.transformations.missingValues, "zero");
+  assert.equal(changed.draft.sourceId, "exercise");
+});
+
 function synchronizedState() {
   let state = createWizardState({
     chronoGroups: [{

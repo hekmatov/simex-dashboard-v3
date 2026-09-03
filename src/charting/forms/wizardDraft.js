@@ -11,6 +11,7 @@ import {
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateChronoGroups } from "../time/chronoGroupModel.js";
+import { applyChartConversion } from "./chartConversion.js";
 
 export const WIZARD_STEPS = Object.freeze([
   "source",
@@ -419,7 +420,7 @@ function selectType(state, action) {
   if (typeof action.typeId !== "string" || action.typeId.trim() === "") {
     throw new Error("A chart type is required.");
   }
-  getChartSchema(action.typeId);
+  const targetSchema = getChartSchema(action.typeId);
   const overrides = isRecord(action.chart) ? action.chart : {};
   const previousDraftId = state.draft?.id ?? null;
   const draftId = overrides.id ?? previousDraftId;
@@ -436,7 +437,7 @@ function selectType(state, action) {
     chartTypeId: action.typeId,
     chartTypeRevision: action.schemaRevision ?? state.chartTypeRevision ?? null,
     discarded: false,
-    draft: createChartDraft(action.typeId, {
+    draft: selectTypeDraft(state.draft, action.typeId, targetSchema, {
       ...overrides,
       ...(draftId ? { id: draftId } : {}),
       ...(sourceId ? { sourceId } : {}),
@@ -450,6 +451,47 @@ function selectType(state, action) {
     pendingSourceChange: null,
     closed: false,
   });
+}
+
+function selectTypeDraft(previousDraft, typeId, targetSchema, overrides) {
+  if (!previousDraft) return createChartDraft(typeId, overrides);
+  const converted = applyChartConversion(previousDraft, typeId, {});
+  if (converted !== previousDraft && converted.typeId === typeId) {
+    return {
+      ...converted,
+      ...overrides,
+      title: nonEmptyString(overrides.title) ? overrides.title : converted.title,
+      description: nonEmptyString(overrides.description)
+        ? overrides.description
+        : converted.description,
+      layout: overrides.layout ?? converted.layout,
+    };
+  }
+  return createChartDraft(typeId, {
+    id: overrides.id ?? previousDraft.id,
+    title: nonEmptyString(overrides.title) ? overrides.title : previousDraft.title,
+    description: nonEmptyString(overrides.description)
+      ? overrides.description
+      : previousDraft.description,
+    sourceId: overrides.sourceId ?? previousDraft.sourceId,
+    layout: overrides.layout ?? previousDraft.layout,
+    transformations: compatibleTransformations(previousDraft.transformations, targetSchema),
+  });
+}
+
+function compatibleTransformations(source = {}, targetSchema) {
+  const capabilityByKey = {
+    filters: "filter",
+    grouping: "group",
+    aggregation: "aggregate",
+    duplicates: "duplicates",
+    missingValues: "missing",
+  };
+  return Object.fromEntries(Object.entries(capabilityByKey).flatMap(([key, capability]) => (
+    targetSchema.transforms.includes(capability) && Object.hasOwn(source, key)
+      ? [[key, structuredClone(source[key])]]
+      : []
+  )));
 }
 
 function selectSource(state, action) {

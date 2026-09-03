@@ -33,6 +33,21 @@ function lineChart(overrides = {}) {
   });
 }
 
+test("axis roles and transformations explain their distinct visual effects", () => {
+  const chart = lineChart();
+  const profile = datasetProfile([
+    { reportedAt: "2027-05-01", value: 10, region: "North", note: "Observed" },
+  ]);
+  const model = buildEditorFormModel({ chart, profile, prepared: preparedFor(chart, profile) });
+  const fields = allFields(model);
+
+  assert.match(fields.find(({ id }) => id === "measurements").help, /values plotted/i);
+  assert.match(fields.find(({ id }) => id === "observation").help, /position each value/i);
+  assert.match(fields.find(({ id }) => id === "cluster").help, /separate visual series/i);
+  assert.match(fields.find(({ id }) => id === "label").help, /does not create a series/i);
+  assert.match(fields.find(({ id }) => id === "grouping").help, /combines rows before rendering/i);
+});
+
 test("table row distribution is available in both quick and full appearance forms", () => {
   const chart = createChartDraft("table", {
     id: "exercise-table",

@@ -77,6 +77,7 @@ function ChartTypePicker({
         "div",
         { className: "chart-type-card-copy" },
         /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-label" }, chart.label),
+        /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-description" }, chart.description),
         compatibilityKnown && chart.compatibility === "incompatible" ? /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-reason" }, chart.reason) : null
       )
     )))

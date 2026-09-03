@@ -4596,7 +4596,8 @@ test("conversion dialog distinguishes compatible and remapped changes and cancel
   );
   assert.match(remapHtml, /Role remapping required/);
   assert.match(remapHtml, /Required role remapping/);
-  assert.match(remapHtml, /presentation\.axes/);
+  assert.match(remapHtml, /Axis settings: Presentation setting is not used by the target chart\./);
+  assert.doesNotMatch(remapHtml, /presentation\.axes/);
   assert.match(remapHtml, /Apply chart type change/);
   assert.match(remapHtml, /disabled/);
 });

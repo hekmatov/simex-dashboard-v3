@@ -163,7 +163,10 @@ export function consolidateCandidates(candidates, keyOf, transformed, mergeCandi
   )];
   const { duplicateStrategy, aggregation } = transformed.config;
   if (duplicateStrategy === "error") {
-    diagnostics.push(error("duplicate-resolution-required", "Choose an explicit duplicate resolution strategy before rendering."));
+    diagnostics.push(error(
+      "duplicate-resolution-required",
+      "This chart needs one value per final chart mark. Use Filters, Grouping, or Aggregation / duplicate resolution to keep or combine the intended rows before rendering.",
+    ));
     return { marks: [], duplicateGroupCount: duplicateGroups.length, diagnostics };
   }
   const method = duplicateStrategy === "aggregate"

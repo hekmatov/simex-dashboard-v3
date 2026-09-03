@@ -61,4 +61,20 @@
 
 ## Implementation summary
 
-Pending implementation. This section will be updated in the implementation commit with files changed and focused verification.
+Implemented in the follow-on authoring slice:
+
+- New-chart compatible type changes now reuse the existing conversion contract, preserving the source, compatible role bindings, filters, aggregation, duplicate strategy, missing-value strategy, presentation, and layout. Incompatible target roles still require remapping rather than being guessed.
+- Every schema-generated data role now has plain-language help. Axis charts explicitly distinguish Measurements, Observation/X-axis, Cluster, Label, and Grouping; filter guidance includes the public-health subject/date use case.
+- Duplicate blockers now state the one-value-per-final-mark rule and name the available routes: Filters, Grouping, Aggregation, or duplicate resolution. The editable duplicate field repeats that context.
+- Labels are hidden for image and free-text types with no chart-data marks. Other label help explains its visible target and that labels do not create series or change values. Temporal axis help separates tick `Label format` from hover date/time format.
+- Chart type cards now show the schema’s purpose description. The edit conversion dialog uses author-facing setting names (for example, “Axis settings”) instead of implementation paths.
+
+Focused verification passed:
+
+```text
+node --test tests/wizardDraftV3.test.js tests/chartDataPipelineV3.test.js tests/chartFormModelV3.test.js tests/chartConversionV3.test.js tests/chartCatalogueSelection.test.js
+# 133 passed
+
+node --test tests/chartAuthoringComponentsV3.test.js
+# 102 passed
+```

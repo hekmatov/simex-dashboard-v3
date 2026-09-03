@@ -126,8 +126,7 @@ export default function ChartConversionDialog({
               removed.map(({ path, label }) => React.createElement(
                 "li",
                 { key: path },
-                React.createElement("code", null, path),
-                React.createElement("span", null, label),
+                React.createElement("span", null, `${settingName(path)}: ${label}`),
               )),
             ),
           )
@@ -258,6 +257,25 @@ function normalizeColumns(columns) {
     return [...columns];
   }
   return [];
+}
+
+function settingName(path) {
+  const names = {
+    "roles.cluster": "Cluster",
+    "roles.label": "Label",
+    "roles.measurements": "Measurements",
+    "roles.observation": "Observation / X-axis",
+    "transformations.filters": "Filters",
+    "transformations.grouping": "Grouping",
+    "transformations.aggregation": "Aggregation",
+    "transformations.duplicates": "Duplicate resolution",
+    "transformations.missingValues": "Missing values",
+    "presentation.axes": "Axis settings",
+    "presentation.labels": "Data labels",
+    "interaction.zoom": "Zoom",
+    "interaction.timeSync": "Synchronized playback",
+  };
+  return names[path] ?? "This setting";
 }
 
 function bindingSummary(assignment) {

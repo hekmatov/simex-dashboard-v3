@@ -279,6 +279,7 @@ function dataFields({
       required: role.min > 0,
       multiple: role.max === null || role.max > 1,
       value: chart.roles?.[role.id],
+      help: roleHelp(schema, role),
       ...(supportsAxisAssignment
         ? { axisOptions: ["primary", "secondary"] }
         : {}),
@@ -363,6 +364,7 @@ function dataFields({
       aggregationPath: ["transformations", "aggregation"],
       duplicateGroupCount: prepared.meta.duplicateGroupCount,
       value: chart.transformations?.duplicates,
+      help: "Multiple source rows describe the same final chart mark. Filter to the intended rows, group them deliberately, or choose how to combine them.",
     });
   }
   return fields;
@@ -537,13 +539,17 @@ function seriesAppearanceField(fieldId, series, referenceLine) {
   };
 }
 
-function labelsFields({ chart }) {
+function labelsFields({ chart, schema }) {
+  if (schema.roles.length === 0) return [];
   return [{
     id: "labels",
     label: "Labels",
     control: "labels",
     path: ["presentation", "labels"],
     value: chart.presentation?.labels ?? {},
+    help: schema.dataFamily === "composition"
+      ? "Controls text shown for slices; it does not change source values."
+      : "Controls text shown with chart marks; it does not create a new series or change source values.",
   }];
 }
 
@@ -562,6 +568,9 @@ function axesFields({ chart, schema, prepared }) {
     value: chart.presentation?.axes ?? {},
     xKind,
     hasSecondary: bindings.some((binding) => binding?.axis === "secondary" || binding?.yAxisIndex === 1),
+    ...(xKind === "temporal"
+      ? { help: "Label format changes X-axis tick text only. Hover date/time controls the value shown when a reader points at a mark." }
+      : {}),
   }];
 }
 
@@ -715,6 +724,7 @@ function transformationFields(schema, chart) {
       control: "filters",
       path: ["transformations", "filters"],
       value: chart.transformations?.filters ?? [],
+      help: "Keep only the source rows that belong in this chart—for example, one behaviour type and one date.",
     },
     group: {
       id: "grouping",
@@ -722,6 +732,7 @@ function transformationFields(schema, chart) {
       control: "grouping",
       path: ["transformations", "grouping"],
       value: chart.transformations?.grouping ?? null,
+      help: "Combines rows before rendering. Unlike Cluster, it does not create visual series; it changes which rows become one mark.",
     },
     aggregate: {
       id: "aggregation",
@@ -729,6 +740,7 @@ function transformationFields(schema, chart) {
       control: "select",
       path: ["transformations", "aggregation"],
       value: chart.transformations?.aggregation ?? null,
+      help: "Choose how numeric rows are combined when grouping or duplicate resolution needs one value.",
       options: selectOptions([
         "sum",
         "mean",
@@ -745,12 +757,32 @@ function transformationFields(schema, chart) {
       control: "select",
       path: ["transformations", "missingValues"],
       value: chart.transformations?.missingValues ?? "gap",
+      help: "Choose whether missing measurements remain gaps, become zero, or are omitted.",
       options: selectOptions(["gap", "zero", "drop"]),
     },
   };
   return schema.transforms
     .filter((transform) => Object.hasOwn(descriptors, transform))
     .map((transform) => descriptors[transform]);
+}
+
+function roleHelp(schema, role) {
+  const axis = schema.dataFamily === "axis";
+  const messages = {
+    measurements: "Choose the numeric values plotted for each observation. Multiple measurements become separate series.",
+    observation: axis
+      ? "Choose the category or time used to position each value on the X-axis."
+      : "Choose the observation used to position each value.",
+    cluster: "Choose a category that creates separate visual series. It does not combine rows; use Grouping to combine rows before rendering.",
+    label: "Choose optional text shown with a mark or in its detail. It does not create a series or change the plotted value.",
+    category: "Choose the category that names each slice or composition part.",
+    value: "Choose the numeric value displayed or encoded by this chart.",
+    x: "Choose the numeric value that positions each point horizontally.",
+    y: "Choose the numeric value that positions each point vertically.",
+    size: "Choose the optional numeric value that controls bubble size.",
+    time: "Choose the date or time used to order, filter, or synchronize this chart.",
+  };
+  return messages[role.id] ?? `Choose the source column used as ${role.label.toLocaleLowerCase()}.`;
 }
 
 function inferredInterpretationAlternatives(column, role) {
