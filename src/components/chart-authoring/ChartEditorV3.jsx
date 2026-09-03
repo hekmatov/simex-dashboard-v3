@@ -564,6 +564,7 @@ export default function ChartEditorV3({
     chart: state.draft,
     charts: allCharts,
     columns: profile?.columns ?? [],
+    rows: safeRows,
     profile,
     diagnostics: prepared?.diagnostics ?? [],
     diagnosticNamespace: state.draft.id,

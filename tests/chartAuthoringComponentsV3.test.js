@@ -87,6 +87,7 @@ const { default: RoleField } = await import(
 );
 const {
   default: StandardField,
+  detectedFilterValues,
   filterForOperator,
   parseTargetRangesInput,
   updateStructuredFieldValue,
@@ -981,6 +982,14 @@ test("target range parsing preserves a trailing comma while retaining completed 
     values: [50, 80, 100],
     complete: true,
   });
+});
+
+test("categorical filters expose unique detected values in source order", () => {
+  assert.deepEqual(detectedFilterValues(
+    [{ name: "region", type: "category" }],
+    "region",
+    [{ region: "North" }, { region: "South" }, { region: "North" }, { region: "" }],
+  ), ["North", "South"]);
 });
 
 test("structured presentation controls emit only validator-approved nested contracts", () => {

@@ -1673,8 +1673,9 @@ export default function ChartWizardV3({
           ? React.createElement(DataRolesStep, {
               section: dataSection,
               prerequisites: active.prerequisites,
-              columns: runtime.profile?.columns ?? [],
-              chart: wizard.draft,
+               columns: runtime.profile?.columns ?? [],
+               rows,
+               chart: wizard.draft,
               profile: runtime.profile,
               diagnostics: runtime.prepared?.diagnostics ?? [],
               diagnosticNamespace: wizard.draft?.id,

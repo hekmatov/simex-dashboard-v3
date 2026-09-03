@@ -16,6 +16,7 @@ function SchemaField({
   value = field?.value,
   onChange = noop,
   columns = [],
+  rows = [],
   chart,
   charts,
   profile,
@@ -116,7 +117,7 @@ function SchemaField({
       }
     );
   }
-  return /* @__PURE__ */ React.createElement(StandardField, { ...shared, columns });
+  return /* @__PURE__ */ React.createElement(StandardField, { ...shared, columns, rows });
 }
 function validField(field) {
   return field !== null && typeof field === "object" && typeof field.id === "string" && typeof field.label === "string";

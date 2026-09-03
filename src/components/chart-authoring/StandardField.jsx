@@ -9,7 +9,8 @@ function StandardField({
   field,
   value = field?.value,
   onChange = noop,
-  columns = []
+  columns = [],
+  rows = []
 } = {}) {
   if (!validField(field)) return null;
   const id = fieldControlId(field);
@@ -23,7 +24,7 @@ function StandardField({
     return /* @__PURE__ */ React.createElement(
       GroupShell,
       { field, className: "chart-authoring-filters" },
-      filterControls(value, columns, onChange)
+      filterControls(value, columns, rows, onChange)
     );
   }
   if (STRUCTURED_CONTROLS.has(field.control)) {
@@ -134,7 +135,7 @@ function GroupShell({ field, children, className = "" }) {
     field.error ? /* @__PURE__ */ React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null
   );
 }
-function filterControls(value, columns, onChange) {
+function filterControls(value, columns, rows, onChange) {
   const filters = Array.isArray(value) ? value.filter(isRecord) : [];
   const options = columnOptions(columns);
   const replace = (index, filter) => onChange(
@@ -183,7 +184,7 @@ function filterControls(value, columns, onChange) {
           ].map(([operator, label]) => /* @__PURE__ */ React.createElement("option", { key: operator, value: operator }, label))
         )
       ),
-      filterOperandControl(filter, (nextFilter) => replace(index, nextFilter)),
+      filterOperandControl(filter, (nextFilter) => replace(index, nextFilter), detectedFilterValues(columns, filter.field, rows), `chart-filter-values-${index}`),
       /* @__PURE__ */ React.createElement(IconControl, {
         interactionId: "editor.remove-measurement",
         className: "secondary",
@@ -224,7 +225,7 @@ function filterForOperator(filter, operator) {
   }
   return { field, operator: nextOperator, value: seed };
 }
-function filterOperandControl(filter, onChange) {
+function filterOperandControl(filter, onChange, suggestions = [], listId = undefined) {
   const normalized = filterForOperator(filter, filter.operator);
   if (normalized.operator === "range") {
     return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
@@ -246,8 +247,26 @@ function filterOperandControl(filter, onChange) {
   }
   return /* @__PURE__ */ React.createElement("label", null, "Value", /* @__PURE__ */ React.createElement("input", {
     value: scalar(normalized.value),
+    list: suggestions.length > 0 ? listId : undefined,
     onChange: (event) => onChange({ ...normalized, value: event.target.value })
-  }));
+  }), suggestions.length > 0 ? /* @__PURE__ */ React.createElement("datalist", { id: listId }, suggestions.map((suggestion) => /* @__PURE__ */ React.createElement("option", { key: `${typeof suggestion}:${String(suggestion)}`, value: String(suggestion) }))) : null);
+}
+
+export function detectedFilterValues(columns, field, rows, limit = 100) {
+  const column = Array.isArray(columns) ? columns.find(({ name }) => name === field) : null;
+  if (column?.type !== "category" || !Array.isArray(rows)) return [];
+  const seen = new Set();
+  const values = [];
+  for (const row of rows) {
+    const value = row?.[field];
+    if (!filterScalar(value) || (typeof value === "string" && value.trim() === "")) continue;
+    const key = `${typeof value}:${String(value)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    values.push(value);
+    if (values.length >= limit) break;
+  }
+  return values;
 }
 function filterSeed(filter) {
   if (filterScalar(filter.value)) return filter.value;
