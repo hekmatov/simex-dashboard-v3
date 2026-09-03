@@ -151,6 +151,7 @@ const {
   createWizardPreparation,
   isChartWizardStateDirty,
   parseUploadedCsvFile,
+  placementMoveSource,
   routeChartWizardCommit,
   submitWizardDraft,
 } = chartWizardModule;
@@ -990,6 +991,15 @@ test("categorical filters expose unique detected values in source order", () => 
     "region",
     [{ region: "North" }, { region: "South" }, { region: "North" }, { region: "" }],
   ), ["North", "South"]);
+});
+
+test("edit placement moves retain the canonical placement identity", () => {
+  assert.deepEqual(placementMoveSource({ placementId: "chart-a", destination: { pageId: "overview", sectionId: "summary" } }), {
+    kind: "panel",
+    pageId: "overview",
+    sectionId: "summary",
+    placementId: "chart-a",
+  });
 });
 
 test("structured presentation controls emit only validator-approved nested contracts", () => {

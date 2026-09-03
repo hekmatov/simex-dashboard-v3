@@ -271,6 +271,20 @@ export function discardConfirmationRequired({ editMode = false, editDirty = fals
   return !editMode || editDirty;
 }
 
+export function placementMoveSource({ placementId, destination } = {}) {
+  if (
+    typeof placementId !== "string" || placementId.trim() === ""
+    || typeof destination?.pageId !== "string" || destination.pageId.trim() === ""
+    || typeof destination?.sectionId !== "string" || destination.sectionId.trim() === ""
+  ) return null;
+  return {
+    kind: "panel",
+    pageId: destination.pageId,
+    sectionId: destination.sectionId,
+    placementId,
+  };
+}
+
 export function chartEditDraftIdentity({ draft = null, chronoGroups = [] } = {}) {
   return stableIdentity({ draft, chronoGroups });
 }
@@ -342,6 +356,7 @@ export default function ChartWizardV3({
   onRestorationChange = noop,
   onSuspendedChange = noop,
   onSaveChanges,
+  onMovePlacement = noop,
   onDiscardChanges = noop,
   onCommitSuccess = noop,
   onCreate,
@@ -1503,6 +1518,12 @@ export default function ChartWizardV3({
               { className: "chart-wizard-step chart-wizard-destination", "aria-labelledby": "chart-destination-heading" },
               React.createElement("h3", { id: "chart-destination-heading" }, "Choose destination and placement"),
               React.createElement("p", null, "Destination stays attached to this chart draft even if you inspect another page."),
+              editMode ? React.createElement("button", {
+                type: "button",
+                className: "secondary",
+                disabled: disabled || submitting || !placementMoveSource({ placementId: editSession?.placementId, destination: wizard.destination ?? destination }),
+                onClick: () => onMovePlacement(placementMoveSource({ placementId: editSession?.placementId, destination: wizard.destination ?? destination })),
+              }, "Move placement…") : null,
               React.createElement(
                 "div",
                 { className: "chart-destination-controls" },

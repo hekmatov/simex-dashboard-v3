@@ -2996,6 +2996,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         }}
         onClose={() => {}}
         onSaveChanges={saveChartEditSession}
+        onMovePlacement={(source) => {
+          if (!source) return;
+          requestPanelMove(source, chartEditSession.draft?.title ?? source.placementId, null);
+        }}
         onDiscardChanges={discardChartEditOwner}
       />}
       {staticWizardTarget && <StaticContentWizard
