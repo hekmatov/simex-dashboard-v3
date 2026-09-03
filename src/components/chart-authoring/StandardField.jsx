@@ -2,7 +2,7 @@ import React from "react";
 import { IconControl } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
 const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
-const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency"]);
+const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]);
 const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
 function StandardField({
@@ -447,7 +447,7 @@ function fontSizeControl(value, onChange) {
 }
 function xAxisControls(value, kind, emit) {
   const ranged = kind === "temporal" || kind === "number";
-  return /* @__PURE__ */ React.createElement("fieldset", { className: "chart-authoring-axis-group dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("legend", null, "X axis"), textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)), ranged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
+  return /* @__PURE__ */ React.createElement("fieldset", { className: "chart-authoring-axis-group dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("legend", null, "X axis"), textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)), kind === "category" ? /* @__PURE__ */ React.createElement(React.Fragment, null, boundedNumericControl("Label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)), inlineToggle("Wrap long labels", value.labelWrap === true, (checked) => emit(["x", "labelWrap"], checked)), value.labelWrap === true ? boundedNumericControl("Wrapped label width", value.labelMaxWidth ?? 96, 40, 240, (nextValue) => emit(["x", "labelMaxWidth"], nextValue)) : null) : null, ranged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
     type: kind === "temporal" ? "datetime-local" : "number",
     value: kind === "number" ? numeric(value.min) : text(value.min),
     onChange: (event) => emit(["x", "min"], kind === "number" ? optionalNumber(event.target.value) : event.target.value)
@@ -640,6 +640,9 @@ function sanitizeXAxis(value) {
     else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
     else if (property === "labelPreset" && nonemptyString(value[property]) && value[property].trim() !== "adaptive") axis[property] = value[property].trim();
     else if (property === "hoverLabelPreset" && nonemptyString(value[property]) && value[property].trim() !== "auto") axis[property] = value[property].trim();
+    else if (property === "labelWrap" && typeof value[property] === "boolean") axis[property] = value[property];
+    else if (property === "labelFontSize" && Number.isInteger(value[property]) && value[property] >= 8 && value[property] <= 20) axis[property] = value[property];
+    else if (property === "labelMaxWidth" && Number.isInteger(value[property]) && value[property] >= 40 && value[property] <= 240) axis[property] = value[property];
   }
   return Object.keys(axis).length > 0 ? axis : void 0;
 }

@@ -484,7 +484,7 @@ function validateAxes(axes, schema, temporalRoles) {
   const x = axes?.x;
   if (x !== undefined) {
     ensureObject(x, "Chart presentation axes x");
-    checkKnownKeys(x, new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency"]), "chart presentation axes x");
+    checkKnownKeys(x, new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]), "chart presentation axes x");
     if (x.title !== undefined && typeof x.title !== "string") throw new Error("Chart presentation axes x title must be a string.");
     validateAxisRange(x, xKind, "X");
     validateTickFrequency(x.tickFrequency, xKind, "X");
@@ -497,6 +497,15 @@ function validateAxes(axes, schema, temporalRoles) {
       if (xKind !== "temporal" || !["auto", "year", "date", "dateTime"].includes(x.hoverLabelPreset)) {
         throw new Error("Chart presentation axes x hoverLabelPreset is unsupported.");
       }
+    }
+    if (x.labelFontSize !== undefined && (xKind !== "category" || !Number.isInteger(x.labelFontSize) || x.labelFontSize < 8 || x.labelFontSize > 20)) {
+      throw new Error("Chart presentation axes x labelFontSize must be an integer from 8 through 20 on category axes.");
+    }
+    if (x.labelWrap !== undefined && (xKind !== "category" || typeof x.labelWrap !== "boolean")) {
+      throw new Error("Chart presentation axes x labelWrap must be boolean on category axes.");
+    }
+    if (x.labelMaxWidth !== undefined && (xKind !== "category" || !Number.isInteger(x.labelMaxWidth) || x.labelMaxWidth < 40 || x.labelMaxWidth > 240)) {
+      throw new Error("Chart presentation axes x labelMaxWidth must be an integer from 40 through 240 on category axes.");
     }
   }
   for (const axisName of ["primary", "secondary"]) {

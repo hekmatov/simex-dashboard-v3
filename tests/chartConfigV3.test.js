@@ -58,6 +58,22 @@ test("chart drafts preserve an optional false title visibility flag", () => {
   assert.equal(validateChartInstance(chart), chart);
 });
 
+test("category axes accept bounded label wrapping and font settings", () => {
+  const chart = createChartDraft("bar", {
+    id: "wrapped-category-axis",
+    title: "Wrapped categories",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "district" },
+    },
+    presentation: {
+      axes: { x: { labelFontSize: 11, labelWrap: true, labelMaxWidth: 96 } },
+    },
+  });
+  assert.doesNotThrow(() => validateChartInstance(chart));
+});
+
 test("chart title visibility rejects non-boolean values", () => {
   const chart = createChartDraft("line", {
     id: "invalid-title-visibility",

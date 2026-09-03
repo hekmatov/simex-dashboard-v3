@@ -52,6 +52,21 @@ export function xAxisPresentation(settings, kind, physicalAxis = "x") {
       ),
     };
   }
+  if (kind === "category") {
+    const fontSize = settings?.labelFontSize;
+    const wrapping = settings?.labelWrap === true;
+    if (Number.isInteger(fontSize) || wrapping) {
+      result.axisLabel = {
+        ...(result.axisLabel ?? {}),
+        ...(Number.isInteger(fontSize) ? { fontSize } : {}),
+        ...(wrapping ? {
+          width: settings?.labelMaxWidth ?? 96,
+          overflow: "break",
+          lineHeight: Math.ceil((fontSize ?? AXIS_FONT_SIZE) * 1.25),
+        } : {}),
+      };
+    }
+  }
   return result;
 }
 
