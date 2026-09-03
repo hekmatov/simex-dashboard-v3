@@ -7,6 +7,14 @@
 - Develop isolated feature work in a dedicated Git worktree under the repository-managed `.worktrees` directory.
 - Do not merge, push, deploy, or update a Cloudflare-published branch without explicit approval.
 
+## Published Main Baseline Policy
+
+- Treat `origin/main` as the canonical source for new task worktrees. Do not use a local `main` branch as a task baseline unless it has just been verified against `origin/main`.
+- Before creating a task worktree, refresh `origin/main` and `public/main`. When the two published repositories are expected to mirror, verify that both point to the same revision before proceeding.
+- Create the task worktree directly from the verified `origin/main` revision, and record that base revision in the task's first durable handoff or audit record.
+- Build, test, and preview only from the task's dedicated worktree; do not infer its base from another open working folder.
+- After an approved remote merge, fast-forward the canonical local `main` checkout to `origin/main`. This refreshes the local anchor but does not replace the required remote-baseline verification for later tasks.
+
 ## Browser Edit Baseline Policy
 
 Browser edit-mode changes are not visible to Git until they are exported as a version 3 bundle and promoted into source files.
