@@ -102,6 +102,38 @@ export function createBuildMoveDragSession() {
   };
 }
 
+export function resolveBuildTreeDropEdge({
+  clientY,
+  rect,
+  sameParent = false,
+  sourceIndex = null,
+  targetIndex = null,
+} = {}) {
+  const top = Number(rect?.top);
+  const height = Number(rect?.height);
+  const pointerY = Number(clientY);
+  if (!Number.isFinite(top) || !Number.isFinite(height) || height <= 0 || !Number.isFinite(pointerY)) {
+    return "after";
+  }
+
+  const midpoint = top + height / 2;
+  const centerBandHalfHeight = Math.min(4, height / 4);
+  if (pointerY < midpoint - centerBandHalfHeight) return "before";
+  if (pointerY > midpoint + centerBandHalfHeight) return "after";
+
+  if (
+    sameParent
+    && Number.isInteger(sourceIndex)
+    && sourceIndex >= 0
+    && Number.isInteger(targetIndex)
+    && targetIndex >= 0
+  ) {
+    if (sourceIndex < targetIndex) return "after";
+    if (sourceIndex > targetIndex) return "before";
+  }
+  return "after";
+}
+
 export function buildSiblingMove(dashboard, source, direction) {
   const normalized = normalizeMoveSource(source);
   if (!normalized || ![-1, 1].includes(direction)) return null;

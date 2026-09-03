@@ -49,7 +49,7 @@ export const CANONICAL_HOME_CONTENT = deepFreeze({
       },
       {
         question: "How do I change the dashboard theme and colours?",
-        answer: "Open Dashboard look from any workspace to choose the appearance, visual style, colour profile, and chart colours. Selections are saved automatically and applied immediately.",
+        answer: "Open Theme from any workspace to choose the appearance, visual style, colour profile, and chart colours. Selections are saved automatically and applied immediately.",
       },
       {
         question: "How do I add source material and supporting content?",

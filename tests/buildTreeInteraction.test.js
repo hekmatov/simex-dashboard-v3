@@ -99,3 +99,67 @@ test("keyboard sibling movement uses the same canonical move contract", () => {
     kind: "panel", pageId: "one", sectionId: "overview", placementId: "first",
   }, -1), null);
 });
+
+test("Build tree drops preserve precise upper and lower row edges", () => {
+  const rect = { top: 240.375, height: 32 };
+
+  assert.equal(interactionModule.resolveBuildTreeDropEdge({
+    clientY: 244.375,
+    rect,
+    sameParent: true,
+    sourceIndex: 0,
+    targetIndex: 1,
+  }), "before");
+  assert.equal(interactionModule.resolveBuildTreeDropEdge({
+    clientY: 268.375,
+    rect,
+    sameParent: true,
+    sourceIndex: 2,
+    targetIndex: 1,
+  }), "after");
+});
+
+test("Build tree drops infer sibling direction inside the row center band", () => {
+  const rect = { top: 240.375, height: 32 };
+
+  assert.equal(interactionModule.resolveBuildTreeDropEdge({
+    clientY: 256.125,
+    rect,
+    sameParent: true,
+    sourceIndex: 0,
+    targetIndex: 1,
+  }), "after");
+  assert.equal(interactionModule.resolveBuildTreeDropEdge({
+    clientY: 256.625,
+    rect,
+    sameParent: true,
+    sourceIndex: 2,
+    targetIndex: 1,
+  }), "before");
+});
+
+test("Build tree center drops without comparable siblings use the deterministic after edge", () => {
+  const rect = { top: 240.375, height: 32 };
+
+  assert.equal(interactionModule.resolveBuildTreeDropEdge({
+    clientY: 256.375,
+    rect,
+    sameParent: false,
+    sourceIndex: 2,
+    targetIndex: 1,
+  }), "after");
+  assert.equal(interactionModule.resolveBuildTreeDropEdge({
+    clientY: 256.375,
+    rect,
+    sameParent: true,
+    sourceIndex: null,
+    targetIndex: 1,
+  }), "after");
+  assert.equal(interactionModule.resolveBuildTreeDropEdge({
+    clientY: 256.375,
+    rect,
+    sameParent: true,
+    sourceIndex: 2,
+    targetIndex: -1,
+  }), "after");
+});

@@ -120,6 +120,9 @@ function resolveGraphic(projection, gridRect, textTheme, measureText) {
 function projectionMetrics(projection, textTheme, measureText) {
   const titleFontFamily = normalizedFontFamily(textTheme.bodyFont);
   const tickFontFamily = normalizedFontFamily(textTheme.dataFont ?? textTheme.bodyFont);
+  const tickFontSize = Number.isFinite(textTheme.tickFontSize) && textTheme.tickFontSize > 0
+    ? textTheme.tickFontSize
+    : TICK_FONT_SIZE;
   const titleNatural = measureText(
     projection.title,
     projection.fontSize,
@@ -128,13 +131,13 @@ function projectionMetrics(projection, textTheme, measureText) {
   );
   const vertical = projection.orientation === "vertical";
   const tickBounds = (projection.tickValues ?? [0]).map((value) => (
-    measureText(formatAxisNumber(value), TICK_FONT_SIZE, 400, tickFontFamily)
+    measureText(formatAxisNumber(value), tickFontSize, 400, tickFontFamily)
   ));
   return {
     titleWidth: vertical ? titleNatural.height : titleNatural.width,
     titleHeight: vertical ? titleNatural.width : titleNatural.height,
     tickWidth: Math.max(0, ...tickBounds.map(({ width }) => width)),
-    tickHeight: Math.max(TICK_FONT_SIZE, ...tickBounds.map(({ height }) => height)),
+    tickHeight: Math.max(tickFontSize, ...tickBounds.map(({ height }) => height)),
   };
 }
 

@@ -17,6 +17,15 @@ const audienceModule = await vite
 const gridModule = await vite
   .ssrLoadModule("/src/components/display/DisplayedChartGrid.jsx")
   .catch(() => null);
+const chartPresentationModule = await vite
+  .ssrLoadModule("/src/components/charts/chartViewPresentation.js")
+  .catch(() => null);
+const appModule = await vite
+  .ssrLoadModule("/src/App.jsx")
+  .catch(() => null);
+const chartThemeContextModule = await vite
+  .ssrLoadModule("/src/theme/DashboardChartThemeContext.jsx")
+  .catch(() => null);
 await vite.close();
 
 const dashboard = {
@@ -149,10 +158,92 @@ test("displayed chart grid preserves one-to-four chart order and selected layout
   assert.match(html, /displayed-chart-grid/);
   assert.match(html, /displayed-count-4/);
   assert.match(html, /layout-grid2x2/);
+  assert.match(html, /class="displayed-chart-cell[^>]*data-dashboard-region="displayed-chart-cell"[^>]*data-dashboard-surface-role="chart-cell"/);
   assert.ok(html.indexOf('data-displayed-chart-id="chart-d"') < html.indexOf('data-displayed-chart-id="chart-b"'));
   assert.ok(html.indexOf('data-displayed-chart-id="chart-b"') < html.indexOf('data-displayed-chart-id="chart-a"'));
   assert.ok(html.indexOf('data-displayed-chart-id="chart-a"') < html.indexOf('data-displayed-chart-id="chart-c"'));
   assert.doesNotMatch(html, /chart-zoom-guard/);
+});
+
+test("Audience presentation scale rejects invalid counts and resolves exact immutable one-to-four tiers", () => {
+  const resolveScale = chartPresentationModule?.resolveAudiencePresentationScale;
+  assert.equal(typeof resolveScale, "function", "Audience count scale must be implemented");
+  const expected = [
+    { count: 1, value: { tier: "distance-large", title: 28, text: 18, value: 40 } },
+    { count: 2, value: { tier: "distance-large", title: 28, text: 18, value: 40 } },
+    { count: 3, value: { tier: "distance-grid", title: 24, text: 16, value: 34 } },
+    { count: 4, value: { tier: "distance-grid", title: 24, text: 16, value: 34 } },
+  ];
+
+  for (const { count, value } of expected) {
+    const resolved = resolveScale("audience", count);
+    assert.deepEqual(resolved, value);
+    assert.equal(Object.isFrozen(resolved), true);
+  }
+  for (const count of [undefined, null, 0, -1, 1.5, 5]) {
+    assert.equal(resolveScale("audience", count), null);
+  }
+  assert.equal(resolveScale("fullscreen", 1), null);
+  assert.equal(resolveScale("view", 4), null);
+});
+
+test("Audience grid derives its tier from filtered valid entries and never leaks it to other surfaces", () => {
+  const filteredAudience = renderToStaticMarkup(React.createElement(gridModule.default, {
+    dashboard,
+    chartIds: ["missing-a", "chart-a", "missing-b"],
+    surface: "audience",
+  }));
+  const fourAudience = renderToStaticMarkup(React.createElement(gridModule.default, {
+    dashboard,
+    chartIds: ["chart-a", "chart-b", "chart-c", "chart-d", "missing-a"],
+    surface: "audience",
+  }));
+  const fullscreen = renderToStaticMarkup(React.createElement(gridModule.default, {
+    dashboard,
+    chartIds: ["chart-a"],
+    surface: "fullscreen",
+  }));
+
+  assert.match(filteredAudience, /displayed-count-1/);
+  assert.match(filteredAudience, /data-audience-scale-tier="distance-large"/);
+  assert.match(fourAudience, /displayed-count-4/);
+  assert.match(fourAudience, /data-audience-scale-tier="distance-grid"/);
+  assert.doesNotMatch(fullscreen, /data-audience-scale-tier/);
+});
+
+test("standalone Audience theme boundary projects the live theme through chart context", () => {
+  const AudienceThemeBoundary = appModule?.AudienceThemeBoundary;
+  const useDashboardChartTheme = chartThemeContextModule?.useDashboardChartTheme;
+  assert.equal(typeof AudienceThemeBoundary, "function", "Audience theme provider boundary must be implemented");
+  assert.equal(typeof useDashboardChartTheme, "function");
+  function ThemeProbe() {
+    const projection = useDashboardChartTheme();
+    return React.createElement("output", {
+      "data-theme-style": projection?.dashboardStyle,
+      "data-theme-color": projection?.cssVariables?.["--simex-text-strong"],
+      "data-theme-key-present": Boolean(projection?.key),
+    });
+  }
+  const renderTheme = (dashboardStyle, color) => renderToStaticMarkup(React.createElement(
+    AudienceThemeBoundary,
+    {
+      theme: {
+        dashboardStyle,
+        dashboardColorProfile: "clinical",
+        chartColorMode: "categorical",
+        appearancePreference: "light",
+        resolvedAppearance: "light",
+        cssVariables: { "--simex-text-strong": color },
+        styleVariables: {},
+      },
+    },
+    React.createElement(ThemeProbe),
+  ));
+
+  assert.match(renderTheme("clinical", "#112233"), /data-theme-style="clinical"/);
+  assert.match(renderTheme("editorial", "#AABBCC"), /data-theme-style="editorial"/);
+  assert.match(renderTheme("editorial", "#AABBCC"), /data-theme-color="#AABBCC"/);
+  assert.match(renderTheme("editorial", "#AABBCC"), /data-theme-key-present="true"/);
 });
 
 test("Audience facts hide independently, collapse the shared header, and never relabel Scenario as Scene", () => {
@@ -375,6 +466,233 @@ test("Audience uses saved permille date geometry and preserves direct-seek trace
   assert.match(html, /2027-03-15/);
 });
 
+test("Audience pointer movement uses the date label's actual travel area and preserves its width", () => {
+  assert.equal(
+    typeof audienceModule?.moveAudienceDatePositionByPointer,
+    "function",
+    "Audience pointer movement must be available as a pure geometry operation",
+  );
+
+  const moved = audienceModule.moveAudienceDatePositionByPointer(
+    { x_permille: 125, y_permille: 250, width_permille: 375 },
+    { x: 100, y: 108 },
+    { width: 800, height: 600, labelHeight: 60 },
+  );
+
+  assert.deepEqual(moved, {
+    x_permille: 250,
+    y_permille: 450,
+    width_permille: 375,
+  });
+});
+
+test("Audience pointer movement clamps the complete date label inside every canvas edge", () => {
+  const move = audienceModule?.moveAudienceDatePositionByPointer;
+  assert.equal(typeof move, "function");
+
+  assert.deepEqual(move(
+    { x_permille: 600, y_permille: 900, width_permille: 375 },
+    { x: 200, y: 108 },
+    { width: 800, height: 600, labelHeight: 60 },
+  ), {
+    x_permille: 625,
+    y_permille: 1000,
+    width_permille: 375,
+  });
+  assert.deepEqual(move(
+    { x_permille: 125, y_permille: 250, width_permille: 375 },
+    { x: -200, y: -135 },
+    { width: 800, height: 600, labelHeight: 60 },
+  ), {
+    x_permille: 0,
+    y_permille: 0,
+    width_permille: 375,
+  });
+});
+
+test("Audience date drag commits the source captured at pointer-down when the source changes before release", () => {
+  const begin = audienceModule?.beginAudienceDateDrag;
+  const move = audienceModule?.moveAudienceDateDrag;
+  const complete = audienceModule?.completeAudienceDateDrag;
+  assert.equal(typeof begin, "function");
+  assert.equal(typeof move, "function");
+  assert.equal(typeof complete, "function");
+
+  const sourceAtPointerDown = {
+    kind: "scene",
+    scene_id: "scene-a",
+    chrono_group_id: "epidemic-time",
+  };
+  const sourceAtPointerUp = {
+    kind: "scene",
+    scene_id: "scene-b",
+    chrono_group_id: "epidemic-time",
+  };
+  const drag = begin({
+    pointer: { pointerId: 11, isPrimary: true, button: 0, x: 100, y: 100 },
+    source: sourceAtPointerDown,
+    position: { x_permille: 125, y_permille: 250, width_permille: 375 },
+    bounds: { width: 800, height: 600, labelHeight: 60 },
+  });
+  const moved = move(drag, { pointerId: 11, isPrimary: true, x: 200, y: 208 });
+  const commit = complete(moved, {
+    pointerId: 11,
+    isPrimary: true,
+    button: 0,
+    x: 200,
+    y: 208,
+    source: sourceAtPointerUp,
+  });
+
+  assert.deepEqual(commit, {
+    source: sourceAtPointerDown,
+    datePosition: {
+      x_permille: 250,
+      y_permille: 450,
+      width_permille: 375,
+    },
+  });
+});
+
+test("Audience date drag accepts only the primary left pointer and retains one pointer owner", () => {
+  const begin = audienceModule?.beginAudienceDateDrag;
+  const move = audienceModule?.moveAudienceDateDrag;
+  const complete = audienceModule?.completeAudienceDateDrag;
+  assert.equal(typeof begin, "function");
+  assert.equal(typeof move, "function");
+  assert.equal(typeof complete, "function");
+  const input = {
+    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "epidemic-time" },
+    position: { x_permille: 125, y_permille: 250, width_permille: 375 },
+    bounds: { width: 800, height: 600, labelHeight: 60 },
+  };
+
+  assert.equal(begin({
+    ...input,
+    pointer: { pointerId: 1, isPrimary: true, button: 2, x: 100, y: 100 },
+  }), null);
+  assert.equal(begin({
+    ...input,
+    pointer: { pointerId: 2, isPrimary: false, button: 0, x: 100, y: 100 },
+  }), null);
+
+  const owned = begin({
+    ...input,
+    pointer: { pointerId: 3, isPrimary: true, button: 0, x: 100, y: 100 },
+  });
+  assert.equal(begin({
+    ...input,
+    pointer: { pointerId: 4, isPrimary: true, button: 0, x: 120, y: 120 },
+  }, owned), owned);
+  assert.equal(move(owned, { pointerId: 4, isPrimary: true, x: 300, y: 300 }), owned);
+  assert.equal(complete(owned, { pointerId: 4, isPrimary: true, button: 0 }), null);
+});
+
+test("Audience rolls an optimistic date drag back when transport rejects it or the connection stops being live", () => {
+  const resolve = audienceModule?.resolveAudienceDateOptimisticPosition;
+  assert.equal(typeof resolve, "function");
+  const source = { kind: "scene", scene_id: "scene-a", chrono_group_id: "epidemic-time" };
+  const authoritativePosition = {
+    x_permille: 125,
+    y_permille: 250,
+    width_permille: 375,
+  };
+  const optimisticPosition = {
+    x_permille: 250,
+    y_permille: 450,
+    width_permille: 375,
+  };
+
+  assert.deepEqual(resolve({
+    authoritativePosition,
+    optimisticPosition,
+    transportResult: null,
+    connectionLive: true,
+    acceptedEcho: null,
+    source,
+  }), authoritativePosition);
+  assert.deepEqual(resolve({
+    authoritativePosition,
+    optimisticPosition,
+    transportResult: { sequence: 14 },
+    connectionLive: false,
+    acceptedEcho: null,
+    source,
+  }), authoritativePosition);
+});
+
+test("Audience retains an optimistic date position after the controller echoes that exact commit", () => {
+  const resolve = audienceModule?.resolveAudienceDateOptimisticPosition;
+  assert.equal(typeof resolve, "function");
+  const source = { kind: "scene", scene_id: "scene-a", chrono_group_id: "epidemic-time" };
+  const authoritativePosition = {
+    x_permille: 125,
+    y_permille: 250,
+    width_permille: 375,
+  };
+  const optimisticPosition = {
+    x_permille: 250,
+    y_permille: 450,
+    width_permille: 375,
+  };
+
+  assert.deepEqual(resolve({
+    authoritativePosition,
+    optimisticPosition,
+    transportResult: null,
+    connectionLive: false,
+    source,
+    acceptedEcho: { source, datePosition: optimisticPosition },
+  }), optimisticPosition);
+});
+
+test("Audience retains an optimistic date position while an accepted outbound move awaits its echo", () => {
+  const resolve = audienceModule?.resolveAudienceDateOptimisticPosition;
+  assert.equal(typeof resolve, "function");
+  const source = { kind: "scene", scene_id: "scene-a", chrono_group_id: "epidemic-time" };
+  const authoritativePosition = {
+    x_permille: 125,
+    y_permille: 250,
+    width_permille: 375,
+  };
+  const optimisticPosition = {
+    x_permille: 250,
+    y_permille: 450,
+    width_permille: 375,
+  };
+
+  assert.deepEqual(resolve({
+    authoritativePosition,
+    optimisticPosition,
+    transportResult: { sequence: 14 },
+    connectionLive: true,
+    acceptedEcho: null,
+    source,
+  }), optimisticPosition);
+});
+
+test("Audience makes the live date directly draggable only when position updates can be sent", () => {
+  const projection = audienceProjection({
+    epoch: Date.UTC(2027, 2, 15),
+    datePosition: { x_permille: 125, y_permille: 250, width_permille: 375 },
+  });
+  const passive = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    projection,
+  }));
+  const live = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    projection,
+    onDatePositionChange() {},
+  }));
+
+  assert.doesNotMatch(passive, /data-audience-date-draggable="true"/);
+  assert.match(live, /<time[^>]*data-audience-date-draggable="true"[^>]*>2027-03-15<\/time>/);
+  assert.doesNotMatch(live, /tabindex=|role="button"/i);
+});
+
 test("Audience keeps the exact y=1000 date endpoint inside its surface with a proportional self-anchor", () => {
   const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
     dashboard,
@@ -490,6 +808,128 @@ test("presentation CSS reserves passive Image loading/error geometry in 1/2/4-ce
   assert.match(css, /\.audience-static-image-cell :is\([\s\S]*\.chart-image-pending,[\s\S]*\.static-content-state/);
   assert.match(css, /\.chart-image-actions,[\s\S]*\.static-content-state__actions[\s\S]*display: none/);
 });
+
+test("Audience stacking isolates charts below the draggable date and keeps safety overlays above it", async () => {
+  const css = await readFile(new URL("../src/styles/presentation.css", import.meta.url), "utf8");
+  const chartGrid = declarationsForExactSelector(
+    css,
+    '.audience-display > .displayed-chart-grid[data-display-surface="audience"]',
+  );
+  const date = declarationsForExactSelector(css, ".audience-scene-date");
+  const blackout = declarationsForExactSelector(css, ".audience-blackout");
+  const connection = declarationsForExactSelector(
+    css,
+    ".audience-display > .presentation-connection-indicator",
+  );
+
+  assert.equal(chartGrid.get("isolation"), "isolate");
+  assert.equal(chartGrid.get("position"), "relative");
+  assert.ok(
+    Number(chartGrid.get("z-index")) < Number(date.get("z-index"))
+      && Number(date.get("z-index")) < Number(blackout.get("z-index"))
+      && Number(blackout.get("z-index")) < Number(connection.get("z-index")),
+    "Expected chart grid < draggable date < blackout < connection indicator",
+  );
+});
+
+test("Audience count tiers expose and consume distance-safe DOM text variables across chart families", async () => {
+  const css = await readFile(new URL("../src/styles/presentation.css", import.meta.url), "utf8");
+  assert.match(css, /data-audience-scale-tier="distance-large"[\s\S]*--audience-title-size:\s*28px[\s\S]*--audience-text-size:\s*18px[\s\S]*--audience-value-size:\s*40px/);
+  assert.match(css, /data-audience-scale-tier="distance-grid"[\s\S]*--audience-title-size:\s*24px[\s\S]*--audience-text-size:\s*16px[\s\S]*--audience-value-size:\s*34px/);
+  for (const family of [
+    "chart-view-title",
+    "chart-view-description",
+    "chart-view-provenance",
+    "chart-card-label",
+    "chart-card-value",
+    "chart-card-delta",
+    "chart-target-collection-label",
+    "chart-table-view",
+    "chart-image-view",
+    "chart-status-error",
+    "chart-status-empty",
+    "chart-status-partial",
+    "chart-state-surface",
+    "chart-state-plate",
+    "chart-data-state-boundary__feedback",
+    "chart-embedded-echarts-host",
+    "free-text-chart-view",
+  ]) {
+    assert.match(css, new RegExp(`data-display-surface="audience"[\\s\\S]*\\.${family}`), family);
+  }
+  assert.match(css, /\.chart-table-view :is\(th, td\)[\s\S]*padding:\s*var\(--audience-table-cell-padding\)/);
+});
+
+test("Audience collection titles resolve wrapping above the global single-line ellipsis cascade", async () => {
+  const [globalCss, presentationCss] = await Promise.all([
+    readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/presentation.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.deepEqual(resolveAudienceCollectionTitleCascade(globalCss, presentationCss), {
+    overflow: "visible",
+    "text-overflow": "clip",
+    "white-space": "normal",
+  });
+});
+
+function resolveAudienceCollectionTitleCascade(globalCss, presentationCss) {
+  const winning = new Map();
+  let sourceOrder = 0;
+  for (const source of [globalCss, presentationCss]) {
+    for (const { selector, declarations } of parseCssRules(source)) {
+      sourceOrder += 1;
+      const normalizedSelector = selector.replace(/\s+/g, " ").trim();
+      if (!normalizedSelector.endsWith(".collection-display-header .chart-view-title")) continue;
+      if (normalizedSelector.includes("[data-display-surface=")
+        && !normalizedSelector.includes('[data-display-surface="audience"]')) continue;
+      const specificity = selectorSpecificity(normalizedSelector);
+      for (const property of ["overflow", "text-overflow", "white-space"]) {
+        if (!declarations.has(property)) continue;
+        const candidate = { specificity, sourceOrder, value: declarations.get(property) };
+        const current = winning.get(property);
+        if (!current || compareCascadePriority(candidate, current) > 0) winning.set(property, candidate);
+      }
+    }
+  }
+  return Object.fromEntries([...winning].map(([property, { value }]) => [property, value]));
+}
+
+function parseCssRules(source) {
+  const clean = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  return [...clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body]) => ({
+    selector: selector.trim(),
+    declarations: new Map(body.split(";").flatMap((declaration) => {
+      const colon = declaration.indexOf(":");
+      if (colon < 0) return [];
+      return [[declaration.slice(0, colon).trim().toLowerCase(), declaration.slice(colon + 1).trim()]];
+    })),
+  }));
+}
+
+function declarationsForExactSelector(source, expectedSelector) {
+  const expected = expectedSelector.replace(/\s+/g, " ").trim();
+  const rule = parseCssRules(source).find(({ selector }) => (
+    selector.split(",").some((part) => part.replace(/\s+/g, " ").trim() === expected)
+  ));
+  assert.ok(rule, `Missing CSS rule for ${expectedSelector}`);
+  return rule.declarations;
+}
+
+function selectorSpecificity(selector) {
+  const ids = (selector.match(/#[\w-]+/g) ?? []).length;
+  const classesAndAttributes = (selector.match(/\.[\w-]+|\[[^\]]+\]/g) ?? []).length;
+  return [ids, classesAndAttributes, 0];
+}
+
+function compareCascadePriority(left, right) {
+  for (let index = 0; index < left.specificity.length; index += 1) {
+    if (left.specificity[index] !== right.specificity[index]) {
+      return left.specificity[index] - right.specificity[index];
+    }
+  }
+  return left.sourceOrder - right.sourceOrder;
+}
 
 function audienceProjection({
   items = defaultItems,

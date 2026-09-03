@@ -10,7 +10,7 @@
     <script src="%BASE_URL%vendor/three.min.js"></script>
     <script src="%BASE_URL%vendor/vanta.net.min.js"></script>
     <script>
-      if (window.location.port === "5173" && "serviceWorker" in navigator) {
+      if ("%MODE%" === "development" && "serviceWorker" in navigator) {
         Promise.all([
           navigator.serviceWorker.getRegistrations()
             .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister()))),

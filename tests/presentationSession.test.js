@@ -41,6 +41,13 @@ function consumeEffects(state) {
 function presentationState(overrides = {}) {
   return {
     dashboard_revision: "dashboard-1",
+    theme: {
+      dashboard_style: "evidence-ledger",
+      dashboard_color_profile: "signal-instrument/calibrated-steel",
+      chart_color_mode: "profile",
+      appearance_preference: "light",
+      resolved_appearance: "light",
+    },
     source: {
       kind: "scene",
       scene_id: "scene-001",

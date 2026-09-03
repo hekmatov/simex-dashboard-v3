@@ -1,10 +1,7 @@
-import React from "react";
-import { createPortal } from "react-dom";
-
 import { adaptSceneAudienceToPresentation } from "../../lib/presentationProtocol.js";
-import CompositionControls from "./CompositionControls.jsx";
 import ConnectionIndicator from "./ConnectionIndicator.jsx";
 import PresentationSourcePicker from "./PresentationSourcePicker.jsx";
+import { createPresentationThemeSnapshot } from "../../theme/dashboardTheme.js";
 
 const DEFAULT_AUDIENCE = Object.freeze({
   date_position: Object.freeze({
@@ -58,6 +55,7 @@ export function buildPresentationState({
   audienceFacts,
   outputMode = "active",
   blackout = false,
+  themeProjection,
 }) {
   const scene = playback.activeScene ?? null;
   const implicitEmptyDefaultGroup = (
@@ -104,6 +102,7 @@ export function buildPresentationState({
 
   return {
     dashboard_revision: revisionParts.join(":") || "dashboard",
+    theme: createPresentationThemeSnapshot(themeProjection),
     source,
     composition: {
       active_page_id: activePageId ?? dashboard?.pages?.[0]?.id ?? "dashboard",
@@ -185,23 +184,17 @@ export default function PresentationController({
   playback,
   presentationState,
   sourceEligibility = { status: "valid", reason: null },
-  compositionHost = null,
-  onSaveSceneDatePosition,
 }) {
-  const [compositionSaving, setCompositionSaving] = React.useState(false);
   const session = runtime.sessionState;
-  const hasActiveSession = session.lifecycle !== "ended";
   const hasClock = playback.clock.length > 0;
   const atFirst = !hasClock || playback.activeIndex <= 0;
   const atLast = !hasClock || playback.activeIndex >= playback.clock.length - 1;
 
   const selectScene = (sceneId) => {
-    if (compositionSaving) return;
     runtime.dispatch({ type: "SELECT_SCENE", sceneId });
     playback.dispatch({ type: "setScene", sceneId });
   };
   const selectGroup = (groupId) => {
-    if (compositionSaving) return;
     runtime.dispatch({ type: "SELECT_CHRONO_GROUP", groupId });
     playback.dispatch({ type: "setGroup", groupId });
   };
@@ -217,39 +210,26 @@ export default function PresentationController({
   const blackout = (active) => runtime.dispatch({ type: "SET_BLACKOUT", active });
 
   return (
-    <>
-      {compositionHost && createPortal(
-        <CompositionControls
-          scene={playback.activeScene}
-          onSaveSceneDatePosition={onSaveSceneDatePosition}
-          onSavingChange={setCompositionSaving}
-        />,
-        compositionHost,
-      )}
-      <section className="presentation-controller" aria-label="Presenter controller">
+    <section className="presentation-controller" aria-label="Presenter controller">
       <ConnectionIndicator connection={session.connection} />
-      <div className="presentation-controller__source">
+      <div
+        className="presentation-controller__source"
+        data-dashboard-painted-boundary="true"
+      >
         <PresentationSourcePicker
           scenes={playback.scenes}
           groups={playback.groups}
           activeSceneId={playback.activeSceneId}
           activeGroupId={playback.activeGroupId}
-          disabled={compositionSaving}
           onSelectScene={selectScene}
           onSelectGroup={selectGroup}
         />
-        <button
-          type="button"
-          data-presentation-control-id={hasActiveSession ? "reopen-audience" : "open-new-session"}
-          onClick={() => hasActiveSession
-            ? runtime.reopenAudience()
-            : runtime.openNewSession(presentationState, { sourceSelection: sourceEligibility })}
-        >
-          {hasActiveSession ? "Reopen audience display" : "Open new audience session"}
-        </button>
       </div>
 
-      <div className="presentation-controller__timeline">
+      <div
+        className="presentation-controller__timeline"
+        data-dashboard-painted-boundary="true"
+      >
         <button type="button" className="secondary" data-presentation-control-id="previous" disabled={atFirst} onClick={() => playbackAction({ type: "PREVIOUS" }, { type: "previous", clockLength: playback.clock.length })}>Previous</button>
         <label className="present-field present-time-slider">
           <span>Presentation time</span>
@@ -269,21 +249,23 @@ export default function PresentationController({
         <button type="button" className="secondary" data-presentation-control-id="pause" disabled={!playback.playing} onClick={() => playbackAction({ type: "PAUSE" }, { type: "pause" })}>Pause</button>
       </div>
 
-      <div className="presentation-controller__output">
+      <div
+        className="presentation-controller__output"
+        data-dashboard-painted-boundary="true"
+      >
         <button type="button" className="secondary" data-presentation-control-id="output-active" aria-pressed={session.output === "active"} onClick={() => output("active")}>Active</button>
         <button type="button" className="secondary" data-presentation-control-id="output-holding" aria-pressed={session.output === "holding"} onClick={() => output("holding")}>Holding</button>
         <button type="button" className="secondary" data-presentation-control-id="output-blank" aria-pressed={session.output === "blank"} onClick={() => output("blank")}>Blank</button>
         <button type="button" className="secondary" data-presentation-control-id="blackout" disabled={session.blackout} onClick={() => blackout(true)}>Blackout</button>
         <button type="button" className="secondary" data-presentation-control-id="restore" disabled={!session.blackout} onClick={() => blackout(false)}>Restore</button>
-        <button type="button" className="secondary" data-presentation-control-id="end" disabled={!hasActiveSession} onClick={runtime.end}>End presentation</button>
+        <button type="button" className="secondary" data-presentation-control-id="end" disabled={session.lifecycle === "ended"} onClick={runtime.end}>End presentation</button>
       </div>
       {session.rejectionReason && (
         <p className="present-connection-error" role="status">
           {session.rejectionReason.message}
         </p>
       )}
-      </section>
-    </>
+    </section>
   );
 }
 

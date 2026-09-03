@@ -50,6 +50,8 @@ test("approved look drawer exposes all values with immediate persistence and no 
   }));
 
   assert.match(html, /role="dialog"/);
+  assert.match(html, />Theme<\/h2>/);
+  assert.doesNotMatch(html, />Dashboard look<\/h2>/);
   assert.match(html, /aria-modal="true"/);
   assert.match(html, /class="[^"]*\blook-drawer-click-catcher\b[^"]*"/);
   assert.doesNotMatch(html, /scrim|backdrop-filter|opacity:/i);
@@ -143,7 +145,7 @@ test("system appearance keeps the already-resolved dashboard appearance", () => 
   });
 });
 
-test("rapid dashboard look previews coalesce into one latest-value commit", async () => {
+test("rapid Theme previews coalesce into one latest-value commit", async () => {
   assert.equal(typeof lookModel.createDashboardLookCommitScheduler, "function");
   if (typeof lookModel.createDashboardLookCommitScheduler !== "function") return;
   let nextTimerId = 0;
@@ -176,7 +178,7 @@ test("rapid dashboard look previews coalesce into one latest-value commit", asyn
   assert.deepEqual(committed, [preview]);
 });
 
-test("closing Dashboard Look dismisses immediately while the latest selection flushes in background", async () => {
+test("closing Theme dismisses immediately while the latest selection flushes in background", async () => {
   assert.equal(typeof lookModel.closeDashboardLookInBackground, "function");
   if (typeof lookModel.closeDashboardLookInBackground !== "function") return;
   let releaseCommit;

@@ -282,6 +282,8 @@ test("pending owners and named authoring surfaces consume semantic style and con
 
   assert.doesNotMatch(sourceContent, /--color-(?:text|border|surface)/);
   assert.doesNotMatch(sourceContent, /var\(--simex-(?:surface|border)(?:,|\))/);
+  assert.match(sourceContent, /\.build-authoring-auxiliary--source-content\s*\{[^}]*overflow:\s*hidden/s);
+  assert.match(sourceContent, /\.build-authoring-auxiliary--source-content\s*>\s*\.source-content-workspace\.dashboard-dialog\s*\{[^}]*block-size:\s*auto;[^}]*height:\s*auto;[^}]*min-block-size:\s*0;/s);
   assert.match(rightDrawer, /box-shadow:\s*var\(--simex-style-shell-shadow\)/);
   assert.match(operationStatus, /border-radius:\s*var\(--simex-style-surface-radius\)/);
   assert.match(sourceViewer, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);

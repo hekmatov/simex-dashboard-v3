@@ -13,6 +13,7 @@ import {
   sortSourceRows,
 } from "./sourceViewerSort.js";
 import { dashboardThemeRootProps } from "../theme/dashboardThemeRoot.js";
+import { dashboardOwnedRegionProps } from "../theme/dashboardRegionRegistry.js";
 
 const PAGE_SIZE = 100;
 
@@ -175,7 +176,10 @@ export default function SourceCsvViewer() {
           ),
           React.createElement(
             "div",
-            { className: "source-viewer-table-wrap" },
+            {
+              className: "source-viewer-table-wrap",
+              ...dashboardOwnedRegionProps("source-viewer-table-register"),
+            },
             React.createElement(
               "table",
               null,

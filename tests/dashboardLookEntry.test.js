@@ -36,27 +36,27 @@ const dashboard = {
   pages: [page],
 };
 
-test("View projects Dashboard look before Compare charts in the shared crown", () => {
+test("View projects Theme before Compare charts in the shared crown", () => {
   const html = renderCrown("view", React.createElement(
     React.Fragment,
     null,
-    React.createElement("button", { type: "button" }, "Dashboard look"),
+    React.createElement("button", { type: "button" }, "Theme"),
     React.createElement("button", { type: "button" }, "Chrono view"),
     React.createElement("button", { type: "button" }, "Compare charts"),
   ));
 
   assert.match(
     html,
-    /data-command-crown-pinned-actions="true"[\s\S]*>Dashboard look<\/button>[\s\S]*>Compare charts<\/button>/,
+    /data-command-crown-pinned-actions="true"[\s\S]*>Theme<\/button>[\s\S]*>Compare charts<\/button>/,
   );
 });
 
-test("Build projects exactly one Dashboard look and Add Page in the shared crown", () => {
+test("Build projects exactly one Theme and Add Page in the shared crown", () => {
   const crown = renderCrown("build", React.createElement(
     React.Fragment,
     null,
     React.createElement("button", { type: "button" }, "Add Page"),
-    React.createElement("button", { type: "button" }, "Dashboard look"),
+    React.createElement("button", { type: "button" }, "Theme"),
   ));
   const workspace = withBrowserGlobals(() => renderToStaticMarkup(React.createElement(BuildWorkspace, {
     dashboard,
@@ -70,10 +70,10 @@ test("Build projects exactly one Dashboard look and Add Page in the shared crown
     onOpenDashboardLook: () => {},
   })));
 
-  assert.equal((crown.match(/>Dashboard look<\/button>/g) ?? []).length, 1);
+  assert.equal((crown.match(/>Theme<\/button>/g) ?? []).length, 1);
   assert.equal((crown.match(/>Add Page<\/button>/g) ?? []).length, 1);
   assert.match(crown, /data-command-crown-pinned-actions="true"/);
-  assert.doesNotMatch(workspace, />Dashboard look<\/button>/);
+  assert.doesNotMatch(workspace, />Theme<\/button>/);
 });
 
 function renderCrown(mode, pageActions) {

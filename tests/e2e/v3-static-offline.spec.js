@@ -7,7 +7,9 @@ import {
   openAudienceSession,
 } from "./support/present-audience-workflow.js";
 
-test("production View launches from the built static output", async ({ page }) => {
+test("production View launches from the built static output", {
+  tag: "@production-static",
+}, async ({ page }) => {
   await page.goto("/");
   await expect(page.locator('button[data-dashboard-mode="view"]')).toBeVisible();
   await openDashboardPage(page, "biomedical");
@@ -15,7 +17,9 @@ test("production View launches from the built static output", async ({ page }) =
   await expect(page.locator('[data-panel-id="bio_confirmed_cases"] [data-canonical-runtime-ledger]')).toBeVisible();
 });
 
-test("installed production package opens its first Present and Audience from the cold offline runtime graph", async ({ context, page }) => {
+test("installed production package opens its first Present and Audience from the cold offline runtime graph", {
+  tag: "@production-static",
+}, async ({ context, page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
   await openDashboardPage(page, "biomedical");

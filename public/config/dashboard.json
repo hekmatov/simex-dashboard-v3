@@ -10,7 +10,7 @@
   "layout": "two-column",
   "globalStyles": {
     "dashboardStyle": "evidence-ledger",
-    "dashboardColorProfile": "evidence-ledger/brighter-vellum",
+    "dashboardColorProfile": "signal-instrument/calibrated-steel",
     "chartColorMode": "profile",
     "accessibility": {
       "enabled": false

@@ -272,15 +272,11 @@ test("removing a page also removes its synchronized chart memberships", async ({
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build" }).click();
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
-  await navigation.getByRole("button", {
-    name: "Page actions for Biomedical",
-    exact: true,
-  }).click();
-  await navigation.getByRole("button", { name: "Edit Page Biomedical" }).click();
-  const orbit = page.getByLabel("Page Orbit for Biomedical");
-  await orbit.getByRole("button", { name: "Remove Page", exact: true }).click();
-  await orbit.getByLabel("I understand these named consequences.").check();
-  await orbit.getByRole("button", { name: "Confirm", exact: true }).click();
+  await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
+  const actions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
+  await actions.getByRole("button", { name: "Remove", exact: true }).click();
+  await actions.getByLabel("I understand these named consequences.").check();
+  await actions.getByRole("button", { name: "Confirm", exact: true }).click();
   const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
   await layoutOwner.getByRole("button", {
     name: "Save Layout Changes",

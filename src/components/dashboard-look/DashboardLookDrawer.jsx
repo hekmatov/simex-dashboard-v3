@@ -76,7 +76,7 @@ export default function DashboardLookDrawer({
   return (
     <RightSideDrawer
       id="look-drawer"
-      title="Dashboard look"
+      title="Theme"
       open
       onClose={onCancel}
       modality="dialog"

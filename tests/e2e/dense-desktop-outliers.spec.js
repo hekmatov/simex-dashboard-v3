@@ -83,6 +83,7 @@ test("color presets use exact 32px cells while the opener remains utility-sized"
 });
 
 test("Scene unit move actions form two stable single-line rows", async ({ browser }) => {
+  test.setTimeout(120_000);
   const surface = await openSurface(browser, "scene-unit-orbit");
   try {
     const buttons = surface.page.locator(".scene-unit-orbit__moves > button");

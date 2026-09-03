@@ -17,6 +17,39 @@ test("static-build verifier is available", () => {
   assert.equal(typeof verifierModule?.verifyV3StaticBuild, "function");
 });
 
+test("development bootstrap clears stale SimEx service-worker state on any review port", async () => {
+  const html = await readFile("index.html", "utf8");
+  const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  const cleanupScript = inlineScripts
+    .map(([, source]) => source)
+    .find((source) => source.includes("navigator.serviceWorker.getRegistrations"));
+  assert.ok(cleanupScript, "index.html must provide the pre-module service-worker cleanup");
+  assert.ok(
+    html.indexOf(cleanupScript) < html.indexOf('type="module" src="%BASE_URL%src/main.jsx"'),
+    "development cleanup must execute before the application module graph loads",
+  );
+
+  const development = await runBootstrapCleanup(cleanupScript, {
+    mode: "development",
+    port: "4190",
+  });
+  assert.deepEqual(development, {
+    unregistered: ["worker-a", "worker-b"],
+    deletedCaches: ["simex-dashboard-old", "simex-dashboard-current"],
+    reloads: 1,
+  });
+
+  const production = await runBootstrapCleanup(cleanupScript, {
+    mode: "production",
+    port: "5173",
+  });
+  assert.deepEqual(production, {
+    unregistered: [],
+    deletedCaches: [],
+    reloads: 0,
+  });
+});
+
 test("both Cloudflare production build paths finalize the verified runtime manifest", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   const scripts = packageJson.scripts;
@@ -91,6 +124,7 @@ test("finalizes a transitive runtime precache manifest from the verified build g
     "./data/data-sources.generated.json",
     "./index.html",
     "./integration/quorum-chart-catalogue.json",
+    "./licenses/Inter-OFL-1.1.txt",
     "./manifest.webmanifest",
     "./portable-dashboard-data.js",
     "./runtime-precache-manifest.js",
@@ -389,6 +423,7 @@ async function staticFixture(t, {
     "config/dataset-profiles.json": "{}",
     "data/data-sources.generated.json": "{}",
     "integration/quorum-chart-catalogue.json": "{}",
+    "licenses/Inter-OFL-1.1.txt": "Inter font license fixture",
     "vendor/three.min.js": "",
     "vendor/vanta.net.min.js": "",
   };
@@ -523,4 +558,49 @@ function createServiceWorkerStore({ globalMatch = true } = {}) {
 function normalizeCacheKey(value) {
   const url = typeof value === "string" ? value : value.url;
   return url.startsWith("http") ? new URL(url).pathname.replace(/^\//, "./") : url;
+}
+
+async function runBootstrapCleanup(source, { mode, port }) {
+  const unregistered = [];
+  const deletedCaches = [];
+  let reloads = 0;
+  const serviceWorker = {
+    controller: {},
+    async getRegistrations() {
+      return ["worker-a", "worker-b"].map((id) => ({
+        async unregister() {
+          unregistered.push(id);
+          return true;
+        },
+      }));
+    },
+  };
+  const caches = {
+    async keys() {
+      return ["simex-dashboard-old", "unrelated-cache", "simex-dashboard-current"];
+    },
+    async delete(key) {
+      deletedCaches.push(key);
+      return true;
+    },
+  };
+  const location = {
+    port,
+    protocol: "http:",
+    reload() {
+      reloads += 1;
+    },
+  };
+  const window = { caches, location };
+
+  vm.runInNewContext(source.replaceAll("%MODE%", mode), {
+    caches,
+    document: { write() {} },
+    navigator: { serviceWorker },
+    Promise,
+    window,
+  }, { filename: "index.html#service-worker-cleanup" });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  return { unregistered, deletedCaches, reloads };
 }

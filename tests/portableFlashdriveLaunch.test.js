@@ -138,7 +138,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
     const choice = page.locator('[data-presentable-item-id="ps04_image_panel"]');
     await choice.getByRole("checkbox").check();
     const audiencePromise = context.waitForEvent("page");
-    await page.getByRole("button", { name: "Open new audience session" }).click();
+    await page.getByRole("button", { name: "Open audience display", exact: true }).click();
     const audience = await audiencePromise;
     await audience.waitForLoadState("domcontentloaded");
     await assertVisible(audience.locator(`img[alt="${IMAGE_ALT}"]`));

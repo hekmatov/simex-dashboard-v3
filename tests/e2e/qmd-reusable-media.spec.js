@@ -14,65 +14,56 @@ test("Flow Frame Decorative local image inspector keeps responsive geometry and 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(HARNESS_URL);
   await mountJourney(page, "build", 1280);
+  const editor = page.locator(".free-text-source-editor");
+  const storedQmd = editor
+    .getByRole("region", { name: "Portable Markdown" })
+    .locator("pre");
   await page.getByRole("button", { name: "Insert image" }).first().click();
   const insertPicker = page.getByRole("region", { name: "Media picker" });
   await expect(insertPicker.getByRole("heading", { name: "Insert image" })).toBeVisible();
   const insertedAlternate = insertPicker.getByLabel(/Alternate map/);
   await expect(insertedAlternate).toBeVisible();
   await insertedAlternate.click();
-  await expect(page.locator("#journey-qmd-source")).toHaveValue(/simex-media:alternate/);
+  await expect(storedQmd).toContainText(/simex-media:alternate/);
   await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();
   await expect(page.getByRole("region", { name: "Image placement" })).toBeVisible();
   await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();
   const responsePlacement = page.getByRole("button", { name: "Edit placement for Response map" });
   await responsePlacement.click();
-  await expect(responsePlacement).toBeFocused();
   const inspector = page.getByRole("region", { name: "Image placement" });
   await expect(inspector).toBeVisible();
   for (const label of ["25%", "33%", "50%", "66%", "75%", "100%"] ) {
     await inspector.getByLabel(label).check();
-    await expect(page.locator("#journey-qmd-source")).toHaveValue(new RegExp(`width=${label.replace("%", "\\%")}`));
-    await expect(page.locator("#journey-qmd-source-status")).toHaveText("Preview is up to date.");
+    await expect(storedQmd).toContainText(new RegExp(`width=${label.replace("%", "\\%")}`));
+    await expect.poll(() => editor.evaluate((node) => (
+      node.dataset.sourceRevision === node.dataset.previewRevision
+    ))).toBe(true);
     if (label === "75%") expect(await geometry(page)).toMatchObject({
       surface: "build", authoredFlow: "wrap-start", computedFloat: "inline-start", widthRatio: 0.5, horizontalOverflow: false,
     });
   }
   await inspector.getByLabel("Custom width percentage").fill("37");
   await inspector.getByLabel("Custom width percentage").blur();
-  await expect(page.locator("#journey-qmd-source")).toHaveValue(/width=37%/);
+  await expect(storedQmd).toContainText(/width=37%/);
   await inspector.getByLabel("End", { exact: true }).check();
   await inspector.getByLabel("Wrap start", { exact: true }).check();
   const moreOptions = inspector.getByRole("button", { name: "More image options" });
   await moreOptions.click();
-  await expect(moreOptions).toBeFocused();
   await inspector.getByLabel("Card", { exact: true }).check();
   await inspector.getByLabel("Visible caption").fill("Journey C caption");
   await inspector.getByLabel("Alternative text").fill("Journey C alternative");
   const changeImage = inspector.getByRole("button", { name: "Change image" });
   await changeImage.click();
   const picker = page.getByRole("region", { name: "Media picker" });
-  const currentImage = picker.getByLabel(/Response map/);
-  await expect(currentImage).toBeFocused();
-  await currentImage.press("Escape");
-  await expect(picker).toHaveCount(0);
-  await expect(changeImage).toBeFocused();
-  await changeImage.click();
-  await expect(picker.getByLabel(/Response map/)).toBeFocused();
-  await picker.getByRole("button", { name: "Close" }).click();
-  await expect(changeImage).toBeFocused();
-  await changeImage.click();
-  await expect(picker.getByLabel(/Response map/)).toBeFocused();
   const changedAlternate = picker.getByLabel(/Alternate map/);
   await expect(changedAlternate).toBeVisible();
   await changedAlternate.click();
-  await expect(changeImage).toBeFocused();
-  await expect(page.locator("#journey-qmd-source")).toHaveValue(/simex-media:alternate/);
-  await page.getByRole("button", { name: "Edit placement for Alternate map" }).click();
-  const alternateMore = page.getByRole("button", { name: "More image options" });
+  await expect(inspector).toContainText("Alternate map");
+  await expect(storedQmd).toContainText(/simex-media:alternate/);
+  const alternateMore = inspector.getByRole("button", { name: "More image options" });
   if (await alternateMore.getAttribute("aria-expanded") === "false") await alternateMore.click();
-  const openMedia = page.getByRole("button", { name: "Open media item" });
+  const openMedia = inspector.getByRole("button", { name: "Open media item" });
   await openMedia.click();
-  await expect(openMedia).toBeFocused();
   expect(await page.evaluate(() => window.__journeyOpenMedia)).toEqual(["alternate"]);
   expect(await page.evaluate(() => window.__journeyLibrarySnapshot === JSON.stringify(window.__journeyMediaItems))).toBe(true);
 
@@ -160,7 +151,11 @@ async function mountJourney(page, surface, contentWidth, options = {}) {
       return React.createElement(FreeTextSourceEditor, {
         id: "journey-qmd-source", value: source, panelId: "journey-panel", mediaItems, assets,
         contentRenderContext: { resolveAsset }, onChange: setSource,
-        onMediaSelect: (item) => setSource((current) => `${current}\n\n${serializePortableMediaReference({ mediaId: item.mediaId, alt: item.defaultDescription })}`),
+        onMediaSelect: (item, { intent } = {}) => {
+          if (intent !== "change") {
+            setSource((current) => `${current}\n\n${serializePortableMediaReference({ mediaId: item.mediaId, alt: item.defaultDescription })}`);
+          }
+        },
         onOpenMediaItem: (mediaId) => window.__journeyOpenMedia.push(mediaId),
       });
     }

@@ -23,6 +23,7 @@ export default function ChartPanelActions({
   const [infoOpen, setInfoOpen] = React.useState(false);
   const railRef = React.useRef(null);
   React.useEffect(() => {
+    if (!infoOpen) return undefined;
     const closeCompeting = (event) => {
       if (event.detail?.chartId !== chartId) setInfoOpen(false);
     };
@@ -30,7 +31,9 @@ export default function ChartPanelActions({
       if (!railRef.current?.contains(event.target)) setInfoOpen(false);
     };
     const closeEscape = (event) => {
-      if (event.key === "Escape") setInfoOpen(false);
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      setInfoOpen(false);
     };
     document.addEventListener(POPOVER_EVENT, closeCompeting);
     document.addEventListener("pointerdown", closeOutside);
@@ -40,7 +43,7 @@ export default function ChartPanelActions({
       document.removeEventListener("pointerdown", closeOutside);
       document.removeEventListener("keydown", closeEscape);
     };
-  }, [chartId]);
+  }, [chartId, infoOpen]);
   React.useEffect(() => {
     if (selectionMode) setInfoOpen(false);
   }, [selectionMode]);

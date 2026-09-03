@@ -28,10 +28,6 @@ const operationStatusModule = await vite
   .ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx")
   .catch(() => null);
 await vite.close();
-const presentWorkspaceSource = await readFile(
-  new URL("../src/components/presentation/PresentWorkspace.jsx", import.meta.url),
-  "utf8",
-);
 
 const dashboard = {
   title: "Response overview",
@@ -185,7 +181,7 @@ test("Present workspace exposes the moderator scene controls without permission 
 
   const html = renderPresent(presentModule.default);
 
-  assert.match(html, />Open new audience session<\/button>/);
+  assert.match(html, /class="[^"]*present-status-actions[^"]*"[\s\S]*>Open audience display<\/button>/);
   assert.match(html, /Audience display not open/);
   assert.match(html, /Biomedical \/ Overview/);
   assert.match(html, />Cases</);
@@ -196,7 +192,6 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /aria-label="Presentation source"/);
   assert.match(html, /aria-label="Presentation time"/);
   assert.match(html, />Audience display options<\/button>/);
-  assert.doesNotMatch(presentWorkspaceSource, /present-audience-information/);
   assert.doesNotMatch(html, /aria-label="Current page"/);
   assert.doesNotMatch(html, /aria-label="Display Page"/);
   assert.match(html, /Response overview/);
@@ -205,7 +200,120 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, />Blackout<\/button>/);
   assert.match(html, />Restore<\/button>/);
   assert.match(html, />End presentation<\/button>/);
+  assert.equal((html.match(/data-dashboard-painted-boundary="true"/g) ?? []).length, 3);
   assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /permission|role|authoriz|access control/i);
+});
+
+test("Present contains no date-position editor or composition mount point", () => {
+  const html = renderPresent(presentModule.default);
+
+  assert.doesNotMatch(html, /presentation-composition-host/);
+  assert.doesNotMatch(html, /data-presentation-composition-id="date-position"/);
+  assert.doesNotMatch(html, /data-presentation-control-id="date-position-(?:x|y|width|save|cancel|handle)"/);
+  assert.doesNotMatch(
+    html.replace(/<[^>]+>/g, " "),
+    /Audience date position|Horizontal position|Vertical position|Date width|Save date position|Cancel/i,
+  );
+});
+
+test("Present keeps the useful holding-state message without duplicate page summaries", () => {
+  const html = renderPresent(presentModule.default, {
+    displayState: {
+      display_revision: 2,
+      displayed_chart_ids: [],
+      layout: "solo",
+    },
+  });
+
+  assert.match(html, /Holding scene — no charts selected\./);
+  assert.doesNotMatch(html, /Biomedical: holding scene/);
+  assert.doesNotMatch(html, /class="present-scene-summary"/);
+});
+
+test("Audience monitor uses the accepted session snapshot and falls back locally only before one exists", () => {
+  const resolveMonitorState = presentModule?.resolveAudienceMonitorPresentationState;
+  assert.equal(typeof resolveMonitorState, "function");
+  const localPresentationState = {
+    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "epidemic-time" },
+    audience: {
+      date_position: { x_permille: 680, y_permille: 40, width_permille: 280 },
+    },
+  };
+  const acceptedPresentationState = {
+    ...localPresentationState,
+    audience: {
+      date_position: { x_permille: 125, y_permille: 250, width_permille: 280 },
+    },
+  };
+
+  assert.equal(resolveMonitorState({
+    acceptedPresentationState,
+    localPresentationState,
+  }), acceptedPresentationState);
+  assert.equal(resolveMonitorState({
+    acceptedPresentationState: null,
+    localPresentationState,
+  }), localPresentationState);
+});
+
+test("Present starts Chrono Groups collapsed and keeps the requested status-action order", () => {
+  const html = renderPresent(presentModule.default);
+  const actions = html.match(/<div class="present-status-actions">([\s\S]*?)<\/div>/)?.[1] ?? "";
+  const labels = [...actions.matchAll(/<button[^>]*>([^<]+)<\/button>/g)]
+    .map(([, label]) => label.trim());
+
+  assert.deepEqual(labels, [
+    "Open audience display",
+    "Audience display options",
+    "Chrono Groups",
+    "Theme",
+  ]);
+  assert.match(
+    actions,
+    /data-presentation-control-id="chrono-groups"[^>]*aria-controls="present-chrono-groups"[^>]*aria-expanded="false"[^>]*aria-pressed="false"/,
+  );
+  assert.match(
+    html,
+    /<section class="present-action-dock"[^>]*id="present-chrono-groups"[^>]*hidden=""/,
+  );
+});
+
+test("top Present status action reuses session lifecycle identity and switches to Reopen only while a session exists", () => {
+  const ended = renderPresent(presentModule.default);
+  const active = renderPresent(presentModule.default, {
+    runtime: {
+      sessionState: {
+        lifecycle: "active",
+        connection: "connected",
+        output: "active",
+        playback: "paused",
+        blackout: false,
+        rejectionReason: null,
+      },
+      hasSession: true,
+      openNewSession() {},
+      reopenAudience() {},
+      dispatch() {},
+    },
+  });
+  assert.match(ended, /data-presentation-control-id="open-new-session"[\s\S]*>Open audience display<\/button>/);
+  assert.doesNotMatch(ended, />Open new audience session<\/button>/);
+  assert.match(active, /data-presentation-control-id="reopen-audience"[\s\S]*>Reopen audience display<\/button>/);
+  for (const html of [ended, active]) {
+    const lowerController = html.slice(html.indexOf('class="presentation-controller"'));
+    assert.equal((lowerController.match(/data-presentation-control-id="(?:open-new-session|reopen-audience)"/g) ?? []).length, 0);
+  }
+});
+
+test("Present status geometry and each approved visual grammar expose a distinctive semantic style signal", async () => {
+  const [presentationCss, grammarCss] = await Promise.all([
+    readFile(new URL("../src/styles/presentation.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/dashboard-style-grammar.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(presentationCss, /\.present-status-strip\s*\{[\s\S]*?border:\s*1px solid var\(--simex-border-subtle\)[\s\S]*?padding:\s*8px 12px/);
+  assert.match(grammarCss, /data-dashboard-style="evidence-ledger"[\s\S]*?\.present-selected-chart[\s\S]*?background-image:\s*linear-gradient/);
+  assert.match(grammarCss, /data-dashboard-style="humanist-standard"[\s\S]*?\.present-workspace[\s\S]*?border-radius:\s*calc\(/);
+  assert.match(grammarCss, /data-dashboard-style="signal-instrument"[\s\S]*?\.present-workspace[\s\S]*?\.presentation-controller__source[\s\S]*?--simex-decorated-edge-inline-start:\s*3px/);
 });
 
 test("Audience display options drawer preserves the live audience-fact values", () => {

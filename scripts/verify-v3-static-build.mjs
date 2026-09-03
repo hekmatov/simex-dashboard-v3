@@ -21,6 +21,7 @@ const REQUIRED_PACKAGE_ASSETS = Object.freeze([
   "config/dataset-profiles.json",
   "data/data-sources.generated.json",
   "integration/quorum-chart-catalogue.json",
+  "licenses/Inter-OFL-1.1.txt",
   "vendor/three.min.js",
   "vendor/vanta.net.min.js",
 ]);

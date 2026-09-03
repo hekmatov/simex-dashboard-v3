@@ -1,10 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
+const RADIUS_VARIABLE_BY_SURFACE_ROLE = Object.freeze({
+  surface: "--simex-style-surface-radius",
+  panel: "--simex-style-panel-radius",
+  editor: "--simex-style-panel-radius",
+  dialog: "--simex-style-panel-radius",
+});
+
 test("catalogue exposes the exact renamed styles and profiles without retired choices", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Theme" });
   await expect(look.locator('input[name="dashboard-style"]')).toHaveCount(3);
   await expect(look.locator('input[name="dashboard-profile"]')).toHaveCount(13);
   for (const label of [
@@ -26,11 +33,11 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Theme" });
   await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
-  await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+  await look.getByRole("button", { name: "Close Theme", exact: true }).click();
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
@@ -38,7 +45,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
   let surface = page.locator(".build-authoring-auxiliary");
   await expect(surface).toBeVisible();
-  await expectSelectedThemeChrome(surface);
+  await expectSelectedThemeChrome(surface, "editor");
   await expectNoRetiredDashboardPaint(surface);
   await surface.getByRole("button", { name: "Close", exact: true }).click();
 
@@ -48,7 +55,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
   surface = page.locator(".build-authoring-auxiliary");
   await expect(surface).toBeVisible();
-  await expectSelectedThemeChrome(surface);
+  await expectSelectedThemeChrome(surface, "editor");
   await expectNoRetiredDashboardPaint(surface);
   await surface.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
@@ -56,14 +63,14 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await page.locator(".dashboard-scenario-trigger").click();
   const passport = page.getByRole("complementary", { name: "Scenario Passport" });
   await expect(passport).toBeVisible();
-  await expectSelectedThemeChrome(passport);
+  await expectSelectedThemeChrome(passport, "panel");
   await expectNoRetiredDashboardPaint(passport);
   await passport.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByRole("button", { name: "Add chart", exact: true }).click();
   const wizard = page.locator(".chart-wizard");
   await expect(wizard).toBeVisible();
-  await expectSelectedThemeChrome(wizard);
+  await expectSelectedThemeChrome(wizard, "dialog");
   await expectNoRetiredDashboardPaint(wizard);
   const wizardParts = await wizard.evaluate((node) => {
     const tokenPaint = (variable) => {
@@ -127,7 +134,7 @@ test("Unit Orbit retains the selected theme outside AppFrame", async ({ page }) 
   await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
   const orbit = page.locator(".unit-orbit");
   await expect(orbit).toBeVisible();
-  await expectSelectedThemeChrome(orbit);
+  await expectSelectedThemeChrome(orbit, "panel");
 });
 
 test("View Chrono and Present controls contain no retired dashboard paint", async ({ page }) => {
@@ -150,11 +157,11 @@ test("View Chrono and Present controls contain no retired dashboard paint", asyn
 test("standalone source viewer receives the selected dashboard style", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Theme" });
   await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
-  await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+  await look.getByRole("button", { name: "Close Theme", exact: true }).click();
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
@@ -170,8 +177,10 @@ test("standalone source viewer receives the selected dashboard style", async ({ 
   await viewer.close();
 });
 
-async function expectSelectedThemeChrome(locator) {
-  const result = await locator.evaluate((node) => {
+async function expectSelectedThemeChrome(locator, surfaceRole) {
+  const radiusVariable = RADIUS_VARIABLE_BY_SURFACE_ROLE[surfaceRole];
+  if (!radiusVariable) throw new Error(`Unknown dashboard surface role: ${surfaceRole}`);
+  const result = await locator.evaluate((node, expectedRadiusVariable) => {
     const app = document.querySelector(".app-frame");
     const tokenPaint = (variable) => {
       const probe = document.createElement("span");
@@ -193,18 +202,14 @@ async function expectSelectedThemeChrome(locator) {
           : "--simex-surface-panel",
       ),
       expectedText: tokenPaint("--simex-text-strong"),
-      expectedRadius: getComputedStyle(node).getPropertyValue(
-        node.classList.contains("dashboard-dialog")
-          ? "--simex-style-panel-radius"
-          : "--simex-style-surface-radius",
-      ).trim(),
+      expectedRadius: getComputedStyle(node).getPropertyValue(expectedRadiusVariable).trim(),
       expectedFont: getComputedStyle(app).fontFamily,
       background: style.backgroundColor,
       color: style.color,
       borderRadius: style.borderRadius,
       fontFamily: style.fontFamily,
     };
-  });
+  }, radiusVariable);
   expect(result.surfaceStyle).toBe(result.appStyle);
   expect(result.surfaceProfile).toBe(result.appProfile);
   expect(result.background).toBe(result.expectedBackground);

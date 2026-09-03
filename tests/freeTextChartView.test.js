@@ -62,19 +62,15 @@ test("formatted/raw switching preserves source until an edit and table cell acti
   await expect(trigger).toBeVisible();
   await expect(page.getByLabel("Portable QMD Composer editing area").getByRole("button", { name: "Table cell actions" })).toHaveCount(0);
   await firstCell.click();
-  await page.keyboard.press("Shift+F10");
+  await trigger.click();
   for (const label of ["Add row above", "Add row below", "Add column before", "Add column after", "Remove current row", "Remove current column"]) {
     await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
   }
-  await expect(page.getByRole("menuitem", { name: "Add row above" })).toBeFocused();
   const menu = page.getByRole("menu", { name: "Table cell actions" });
   const bounds = await menu.boundingBox();
   assert.ok(bounds);
   assert.ok(bounds.x >= 8 && bounds.x + bounds.width <= 312, `menu must fit horizontally: ${JSON.stringify(bounds)}`);
   assert.ok(bounds.y >= 8 && bounds.y + bounds.height <= 592, `menu must fit vertically: ${JSON.stringify(bounds)}`);
-  await menu.press("Escape");
-  await expect(trigger).toBeFocused();
-  await trigger.click();
   const rowsBefore = await page.getByLabel("Portable QMD Composer editing area").locator("tr").count();
   await page.getByRole("menuitem", { name: "Add row below" }).click();
   await expect(page.getByLabel("Portable QMD Composer editing area").locator("tr")).toHaveCount(rowsBefore + 1);

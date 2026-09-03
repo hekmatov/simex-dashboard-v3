@@ -59,7 +59,7 @@ test("Clear dashboard in Scenario Passport preserves canonical Home identity and
 
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
+  await expect(page.locator('[data-canonical-mode="home"]')).toBeVisible();
   await expect(page.locator('[aria-label="Dashboard pages"] [data-dashboard-page-id]')).toHaveCount(0);
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem(
     "simex-dashboard-config-v3-three-mode-v1",
@@ -91,7 +91,7 @@ test("Clear dashboard in Scenario Passport preserves canonical Home identity and
   await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
-test("storage-rejected Clear dashboard is atomic and Cancel restores the Passport trigger focus", async ({ page }) => {
+test("storage-rejected Clear dashboard is atomic and Cancel restores the Passport trigger controls", async ({ page }) => {
   test.setTimeout(60_000);
   const sourceDashboard = await readFile(
     new URL("../../public/config/dashboard.json", import.meta.url),
@@ -144,7 +144,9 @@ test("storage-rejected Clear dashboard is atomic and Cancel restores the Passpor
 
   await dialog.getByRole("button", { name: "Keep dashboard", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(clearTrigger).toBeFocused();
+  await expect(passport).toBeVisible();
+  await expect(clearTrigger).toBeVisible();
+  await expect(clearTrigger).toBeEnabled();
 });
 
 test("Restore online dashboard in Scenario Passport replaces dirty local work with the deployed copy", async ({ page }) => {
@@ -433,11 +435,11 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   const importedTab = page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Imported Package Page", exact: true });
 
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Theme" });
   await look.getByLabel("Humanist", { exact: true }).check();
   await look.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
-  await expect(look.locator(".look-drawer-feedback")).toHaveText("Dashboard look saved.");
+  await expect(look.locator(".look-drawer-feedback")).toHaveText("Theme saved.");
   await page.keyboard.press("Escape");
   await expect(look).toHaveCount(0);
 

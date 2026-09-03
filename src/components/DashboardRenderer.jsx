@@ -428,6 +428,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const presentationRuntime = usePresentationRuntime(presentableItemIndex, {
     enabled: mode === "present",
     playback,
+    onSaveSceneDatePosition: saveSceneDatePosition,
   });
   const presentationCompositionReady = presentationSceneTransitionReady(
     appliedScenePresentSignature,
@@ -2595,7 +2596,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         presentableItemIndex={presentableItemIndex}
         accessibilityEnabled={accessibilityEnabled}
         themeProjection={themeProjection}
-        onSaveSceneDatePosition={saveSceneDatePosition}
       />
     );
   }

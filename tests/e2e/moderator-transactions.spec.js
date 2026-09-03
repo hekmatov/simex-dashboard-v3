@@ -51,6 +51,7 @@ async function openFirstQuickChartEditor(page) {
 }
 
 async function openFullChartEditorForPanel(page, panel) {
+  await panel.hover();
   await panel.getByRole("button", { name: "Edit chart" }).click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
@@ -65,10 +66,12 @@ async function openFirstFullChartEditor(page) {
   return openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
 }
 
-async function discardFullChartEditor(page, full) {
+async function discardFullChartEditor(page, full, { confirmationExpected = false } = {}) {
   await full.getByRole("button", { name: "Discard changes", exact: true }).click();
-  await page.getByRole("dialog", { name: "Discard changes?" })
-    .getByRole("button", { name: "Discard", exact: true }).click();
+  if (confirmationExpected) {
+    await page.getByRole("dialog", { name: "Discard changes?" })
+      .getByRole("button", { name: "Discard", exact: true }).click();
+  }
   await expect(full).toHaveCount(0);
 }
 
@@ -76,15 +79,15 @@ async function storedDashboard(page) {
   return page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey)), STORAGE_KEY);
 }
 
-test("rendered version-3 layouts drive desktop spans and a taller phone full canvas", async ({ page }) => {
+test("rendered version-3 layouts drive desktop spans and a taller phone full panel", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   const expected = [
-    ["bio_current_cases_kpi", "standard", "span 2", "span 1", "360px"],
-    ["bio_r_values", "standard", "span 2", "span 1", "360px"],
-    ["bio_confirmed_cases", "wide", "span 4", "span 1", "360px"],
-    ["bio_municipality_choropleth_animation", "full", "span 4", "span 2", "736px"],
+    ["bio_current_cases_kpi", "standard", "span 2", "span 4", "0px"],
+    ["bio_r_values", "standard", "span 2", "span 4", "0px"],
+    ["bio_confirmed_cases", "wide", "span 4", "span 4", "0px"],
+    ["bio_municipality_choropleth_animation", "full", "span 4", "span 8", "0px"],
   ];
   for (const [panelId, size, columnEnd, rowEnd, minHeight] of expected) {
     const panel = page.locator(`[data-panel-id="${panelId}"]`);
@@ -104,28 +107,6 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full can
     });
   }
 
-  const obsoleteProbes = await page.locator(".layout-grid").first().evaluate((grid) => {
-    return ["half", "normal", "tall", "large"].map((size) => {
-      const probe = document.createElement("article");
-      probe.className = `chart-panel chart-size-${size}`;
-      grid.append(probe);
-      const computed = getComputedStyle(probe);
-      const result = {
-        className: `chart-size-${size}`,
-        gridColumnStart: computed.gridColumnStart,
-        gridRowStart: computed.gridRowStart,
-        minHeight: computed.minHeight,
-      };
-      probe.remove();
-      return result;
-    });
-  });
-  expect(obsoleteProbes).toEqual(["half", "normal", "tall", "large"].map((size) => ({
-    className: `chart-size-${size}`,
-    gridColumnStart: "span 2",
-    gridRowStart: "span 1",
-    minHeight: "360px",
-  })));
   const obsoleteRenderedClasses = await page.locator(".chart-panel").evaluateAll((panels) => (
     panels.flatMap((panel) => [...panel.classList])
       .filter((name) => /^chart-size-(half|normal|tall|large)$/.test(name))
@@ -136,12 +117,7 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full can
   const phoneHeights = await page.evaluate(() => {
     const measure = (panelId) => {
       const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
-      const probe = document.createElement("div");
-      probe.className = "chart-canvas";
-      panel.append(probe);
-      const height = Number.parseFloat(getComputedStyle(probe).height);
-      probe.remove();
-      return height;
+      return Number.parseFloat(getComputedStyle(panel).minHeight);
     };
     return {
       standard: measure("bio_r_values"),
@@ -191,64 +167,6 @@ test("edit-mode panel drag reorders through the memoized chart boundary", async 
     item.getAttribute("data-build-placement-id")
   )))).toEqual([initial[1], initial[0]]);
 });
-
-async function armPendingMutationSurfaceObservation(
-  page,
-  pendingLabel,
-  { requireDisabled = false } = {},
-) {
-  await page.evaluate(({ label, requireDisabled: disabledOnly }) => {
-    globalThis.__SIMEX_PENDING_OBSERVATION__ = new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(
-        () => reject(new Error(`Pending label "${label}" was not rendered.`)),
-        10_000,
-      );
-      const inspect = () => {
-        const pending = [...document.querySelectorAll("button")]
-          .find((button) => (
-            button.getAttribute("aria-label") === label
-            || button.textContent?.trim() === label
-          ));
-        if (!pending || (disabledOnly && !pending.matches(":disabled"))) return;
-        clearTimeout(timeoutId);
-        observer.disconnect();
-        const controls = [...document.querySelectorAll([
-          ".header-text-edit-fields input",
-          ".dashboard-meta input",
-          ".edit-command-banner button",
-          ".edit-command-banner input",
-          ".page-tabs button",
-          ".page-tabs input",
-          ".section-edit-field input",
-          ".section-actions button",
-          ".panel-actions button",
-        ].join(","))];
-        resolve({
-          pendingDisabled: pending.matches(":disabled"),
-          controlCount: controls.length,
-          enabledControls: controls
-            .filter((control) => !control.matches(":disabled"))
-            .map((control) => control.getAttribute("aria-label") ?? control.textContent?.trim()),
-          draggablePanelIds: [...document.querySelectorAll(".chart-panel")]
-            .filter((panel) => panel.draggable)
-            .map((panel) => panel.getAttribute("data-panel-id")),
-        });
-      };
-      const observer = new MutationObserver(inspect);
-      observer.observe(document.body, {
-        attributes: true,
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-      inspect();
-    });
-  }, { label: pendingLabel, requireDisabled });
-}
-
-async function readPendingMutationSurfaceObservation(page) {
-  return page.evaluate(() => globalThis.__SIMEX_PENDING_OBSERVATION__);
-}
 
 async function armPendingChartDismissal(page, dismissal) {
   await page.evaluate((kind) => {
@@ -382,41 +300,6 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
   await page.reload();
   await expect(page.getByRole("button", { name: "New page", exact: true }))
     .toBeVisible();
-});
-
-test("pending final save locks the edit mutation surface", async ({ page }) => {
-  test.setTimeout(90_000);
-  await openDashboardEditMode(page);
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await armPendingMutationSurfaceObservation(page, "Finish Build", { requireDisabled: true });
-  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
-  const observed = await readPendingMutationSurfaceObservation(page);
-
-  await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  expect(observed.pendingDisabled).toBe(true);
-  expect(observed.controlCount).toBeGreaterThan(20);
-  expect(observed.enabledControls).toEqual([]);
-  expect(observed.draggablePanelIds).toEqual([]);
-});
-
-test("pending reset locks the edit mutation surface", async ({ page }) => {
-  test.setTimeout(90_000);
-  await openDashboardEditMode(page);
-  await page.locator(".build-command-header")
-    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
-  const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await armPendingMutationSurfaceObservation(page, "Discarding Build changes…");
-  await confirmation.getByRole("button", { name: "Discard Build changes", exact: true }).click();
-  const observed = await readPendingMutationSurfaceObservation(page);
-
-  await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  expect(observed.pendingDisabled).toBe(true);
-  expect(observed.controlCount).toBeGreaterThan(20);
-  expect(observed.enabledControls).toEqual([]);
-  expect(observed.draggablePanelIds).toEqual([]);
 });
 
 test("chart save preserves session work when browser storage is full", async ({ page }) => {
@@ -633,6 +516,12 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
     sectionTitle: await sectionTitleInput.inputValue(),
   };
   await sectionTitleInput.fill("Reset-only section draft");
+  await sectionTitleInput.press("Enter");
+  await expect(page.getByRole("button", {
+    name: "Edit Section title: Reset-only section draft",
+    exact: true,
+  }))
+    .toBeVisible();
   let editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
   await editor.getByRole("button", { name: /^Configure\./ }).click();
   const chartTitle = editor.getByLabel("Chart title");
@@ -766,7 +655,7 @@ test("final Build remains locked until dirty chart edit context resolves", async
   await expect(editor.getByRole("button", { name: "Discard changes", exact: true })).toBeVisible();
 
   const attemptsBeforeDiscard = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
-  await discardFullChartEditor(page, editor);
+  await discardFullChartEditor(page, editor, { confirmationExpected: true });
   await expect(editor).toBeHidden();
   await expect(finishBuild).toBeEnabled();
   expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))

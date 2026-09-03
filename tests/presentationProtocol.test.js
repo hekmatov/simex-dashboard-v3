@@ -4,9 +4,13 @@ import { buildContentDependencyGraph } from "../src/content-library/contentDepen
 
 import {
   PRESENTATION_PROTOCOL_VERSION,
+  PRESENTATION_THEME_PROTOCOL_VERSION,
   adaptSceneAudienceToPresentation,
   makePresentationMessage,
+  makePresentationThemeMessage,
   parsePresentationMessage,
+  parsePresentationThemeMessage,
+  presentationThemeChannelName,
   validatePresentationAction,
   validatePresentationState,
 } from "../src/lib/presentationProtocol.js";
@@ -21,6 +25,13 @@ const presentableItemIndex = new Map([
 
 const state = {
   dashboard_revision: "dashboard-r17",
+  theme: {
+    dashboard_style: "humanist-standard",
+    dashboard_color_profile: "humanist-standard/open-forum",
+    chart_color_mode: "standard",
+    appearance_preference: "system",
+    resolved_appearance: "dark",
+  },
   source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
   composition: {
     active_page_id: "biomedical",
@@ -71,11 +82,95 @@ test("protocol v3 creates clone-isolated envelopes for ready, state, heartbeat, 
     const message = makePresentationMessage({
       sessionId: "session-001", sequence, type, payload, presentableItemIndex,
     });
+    const wirePayload = type === "state" ? structuredClone(payload) : payload;
+    if (type === "state") delete wirePayload.theme;
     assert.deepEqual(message, {
-      protocol_version: 3, session_id: "session-001", sequence, type, payload,
+      protocol_version: 3, session_id: "session-001", sequence, type, payload: wirePayload,
     });
     if (type === "state") assert.notStrictEqual(message.payload, payload);
   }
+});
+
+test("Audience date movement uses an exact clone-isolated source-bound envelope", () => {
+  const payload = {
+    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    date_position: { x_permille: 515, y_permille: 260 },
+  };
+  const message = makePresentationMessage({
+    sessionId: "session-001",
+    sequence: 5,
+    type: "audience-date-position",
+    payload,
+    presentableItemIndex,
+  });
+
+  assert.deepEqual(message, {
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 5,
+    type: "audience-date-position",
+    payload: {
+      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      date_position: { x_permille: 515, y_permille: 260 },
+    },
+  });
+  assert.notStrictEqual(message.payload, payload);
+  assert.notStrictEqual(message.payload.source, payload.source);
+  assert.notStrictEqual(message.payload.date_position, payload.date_position);
+
+  payload.source.scene_id = "scene-mutated";
+  payload.date_position.x_permille = 0;
+  assert.equal(message.payload.source.scene_id, "scene-a");
+  assert.equal(message.payload.date_position.x_permille, 515);
+
+  const parsed = parsePresentationMessage(message, {
+    sessionId: "session-001",
+    lastSequence: 4,
+    presentableItemIndex,
+  });
+  message.payload.date_position.y_permille = 0;
+  assert.equal(parsed.payload.date_position.y_permille, 260);
+});
+
+test("Audience date movement rejects malformed, extra, and out-of-bounds payloads", () => {
+  const envelope = {
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 5,
+    type: "audience-date-position",
+    payload: {
+      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      date_position: { x_permille: 515, y_permille: 260 },
+    },
+  };
+
+  for (const [payload, code] of [
+    [null, "invalid_object"],
+    [{ ...envelope.payload, extra: true }, "unknown_field"],
+    [{
+      ...envelope.payload,
+      source: { ...envelope.payload.source, page_id: "biomedical" },
+    }, "unknown_field"],
+    [{
+      ...envelope.payload,
+      date_position: { x_permille: 515, y_permille: 260, width_permille: 280 },
+    }, "unknown_field"],
+    [{
+      ...envelope.payload,
+      date_position: { x_permille: 1001, y_permille: 260 },
+    }, "invalid_date_position"],
+    [{
+      ...envelope.payload,
+      date_position: { x_permille: 515.5, y_permille: 260 },
+    }, "invalid_date_position"],
+  ]) assert.throws(
+    () => parsePresentationMessage({ ...envelope, payload }, {
+      sessionId: "session-001",
+      lastSequence: 4,
+      presentableItemIndex,
+    }),
+    protocolError(code),
+  );
 });
 
 test("saved Scene Audience date geometry adapts explicitly from camelCase to wire snake_case", () => {
@@ -102,6 +197,67 @@ test("presentation state enforces every exact field and authored-only matching t
   assert.throws(() => validatePresentationState({
     ...state, temporalReview: [],
   }, { presentableItemIndex }), protocolError("unknown_field"));
+});
+
+test("presentation state accepts only an exact approved semantic theme snapshot", () => {
+  assert.deepEqual(validatePresentationState(state, { presentableItemIndex }).theme, state.theme);
+  for (const theme of [
+    { ...state.theme, dashboard_style: "rounded-modern" },
+    { ...state.theme, dashboard_color_profile: "custom/arbitrary-css" },
+    { ...state.theme, chart_color_mode: "custom" },
+    { ...state.theme, appearance_preference: "sepia" },
+    { ...state.theme, resolved_appearance: "system" },
+    { ...state.theme, css_variables: { "--simex-accent": "hotpink" } },
+  ]) {
+    assert.throws(
+      () => validatePresentationState({ ...state, theme }, { presentableItemIndex }),
+      (error) => ["invalid_theme", "unknown_field"].includes(error.code),
+    );
+  }
+});
+
+test("protocol v3 remains wire-compatible while exact Theme snapshots use an isolated sidecar", () => {
+  const legacyState = structuredClone(state);
+  delete legacyState.theme;
+  assert.strictEqual(validatePresentationState(legacyState, { presentableItemIndex }), legacyState);
+
+  const stateMessage = makePresentationMessage({
+    sessionId: "session-001",
+    sequence: 2,
+    type: "state",
+    payload: state,
+    presentableItemIndex,
+  });
+  assert.deepEqual(stateMessage.payload, legacyState);
+  assert.deepEqual(parsePresentationMessage(stateMessage, {
+    sessionId: "session-001",
+    presentableItemIndex,
+  }).payload, legacyState);
+
+  assert.equal(PRESENTATION_THEME_PROTOCOL_VERSION, 1);
+  assert.equal(presentationThemeChannelName("session-001"), "simex-presentation-theme-v1-session-001");
+  const themeMessage = makePresentationThemeMessage({
+    sessionId: "session-001",
+    sequence: 1,
+    payload: state.theme,
+  });
+  assert.deepEqual(parsePresentationThemeMessage(themeMessage, {
+    sessionId: "session-001",
+    lastSequence: 0,
+  }), {
+    protocol_version: 1,
+    session_id: "session-001",
+    sequence: 1,
+    type: "theme",
+    payload: state.theme,
+  });
+  assert.throws(
+    () => parsePresentationThemeMessage({
+      ...themeMessage,
+      payload: { ...state.theme, css_variables: { "--simex-accent": "hotpink" } },
+    }),
+    protocolError("unknown_field"),
+  );
 });
 
 test("presentation state requires the accepted payload shape and rejects the legacy composition-items shape", () => {

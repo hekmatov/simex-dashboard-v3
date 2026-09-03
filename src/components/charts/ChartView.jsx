@@ -8,6 +8,7 @@ import { serializeCanonicalRuntimeLedger } from "../../charting/rendering/canoni
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import { resolveChartDataState } from "../../charting/data/chartDataState.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
+import { dashboardOwnedRegionProps } from "../../theme/dashboardRegionRegistry.js";
 import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import ChartDataStateBoundary from "./ChartDataStateBoundary.jsx";
 import CardChartView from "./CardChartView.jsx";
@@ -75,6 +76,7 @@ export function renderChartContent(props, interactionMode) {
       provenance,
       zoomEnabled,
       accessibilityEnabled: false,
+      audienceScale: props.audienceScale,
       mapBudgetRequest: props.mapBudgetRequest,
       onVisualChange: props.onVisualChange,
     });
@@ -92,6 +94,7 @@ export function renderChartContent(props, interactionMode) {
       provenance,
       accessibilityEnabled: false,
       interactionMode,
+      audienceScale: props.audienceScale,
     });
     else if (model.kind === "table") view = React.createElement(TableChartView, { model, chart: props.chart, provenance });
     else if (model.kind === "image") view = React.createElement(ImageChartView, {
@@ -101,6 +104,7 @@ export function renderChartContent(props, interactionMode) {
       zoomEnabled,
       interactionMode,
       surface: props.surface,
+      audienceScale: props.audienceScale,
       onRetry: props.onImageRetry,
       onReplace: props.onImageReplace,
       onEdit: props.onImageEdit,
@@ -286,6 +290,7 @@ export function presentationFrameProps(chart, canonicalPlotId) {
   );
   return {
     className: "chart-view-frame",
+    ...dashboardOwnedRegionProps("chart-view-frame"),
     "data-canonical-plot-id": canonicalPlotId ?? chart?.id,
     "data-title-align": align,
     style: {

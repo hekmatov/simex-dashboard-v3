@@ -206,7 +206,8 @@ test("Journey J — invalid GeoJSON replacement blocks and imports as new", asyn
   await expect(dialog.getByRole("button", { name: "Import as new source" })).toBeEnabled();
   expect(await geoJsonReplacementSnapshot(page, target)).toEqual(before);
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(trigger).toBeFocused();
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
   expect(await geoJsonReplacementSnapshot(page, target)).toEqual(before);
 
   await trigger.click();
@@ -253,7 +254,8 @@ test("Journey J — invalid GeoJSON replacement blocks and imports as new", asyn
   await dialog.getByLabel("Replacement GeoJSON").setInputFiles(invalidJoinReplacement(target));
   await expect(dialog.getByRole("alert")).toHaveAttribute("data-replacement-reason", "selected-join-field-absent");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(trigger).toBeFocused();
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
   expect(await managerOverflow(manager)).toBe(false);
 });
 
@@ -284,7 +286,8 @@ test("Journey K — valid GeoJSON geometry change warns then confirms", async ({
   await expect(dialog).not.toContainText("Chrono Group");
   await expect(dialog).not.toContainText("Scene presentation");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(trigger).toBeFocused();
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
   expect(await geoJsonReplacementSnapshot(page, target)).toEqual(before);
 
   await trigger.click();

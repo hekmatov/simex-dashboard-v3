@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import OperationStatusProvider from "./components/app-shell/OperationStatusProvider.jsx";
 import { registerServiceWorker } from "./serviceWorkerRegistration.js";
+import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles.css";
 import "./styles/modes.css";

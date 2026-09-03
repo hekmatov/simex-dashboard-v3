@@ -1,7 +1,21 @@
+import {
+  APPEARANCE_PREFERENCES,
+  CHART_COLOR_MODES,
+  DASHBOARD_COLOR_PROFILES,
+  DASHBOARD_STYLES,
+} from "../theme/dashboardTheme.js";
+
 export const PRESENTATION_PROTOCOL_VERSION = 3;
+export const PRESENTATION_THEME_PROTOCOL_VERSION = 1;
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
-const MESSAGE_TYPES = new Set(["ready", "state", "heartbeat", "ended"]);
+const MESSAGE_TYPES = new Set([
+  "ready",
+  "state",
+  "heartbeat",
+  "ended",
+  "audience-date-position",
+]);
 const OUTPUT_MODES = new Set(["holding", "blank", "active"]);
 const TRACE_MODES = new Set(["reveal", "full"]);
 const LAYOUTS_BY_COUNT = Object.freeze({
@@ -13,10 +27,11 @@ const LAYOUTS_BY_COUNT = Object.freeze({
 });
 
 const ENVELOPE_FIELDS = ["protocol_version", "session_id", "sequence", "type", "payload"];
-const STATE_FIELDS = [
+const LEGACY_STATE_FIELDS = [
   "dashboard_revision", "source", "composition", "timeline", "matching",
   "output_mode", "blackout", "audience", "payload",
 ];
+const STATE_FIELDS = ["dashboard_revision", "theme", ...LEGACY_STATE_FIELDS.slice(1)];
 const SOURCE_FIELDS = ["kind", "scene_id", "chrono_group_id"];
 const COMPOSITION_FIELDS = ["active_page_id", "displayed_chart_ids", "layout"];
 const PAYLOAD_FIELDS = ["items", "audience_facts"];
@@ -30,8 +45,16 @@ const PERIOD_FIELDS = ["start", "end"];
 const MATCHING_FIELDS = ["use_authored_settings"];
 const AUDIENCE_FIELDS = ["date_position"];
 const DATE_POSITION_FIELDS = ["x_permille", "y_permille", "width_permille"];
+const DATE_MOVEMENT_FIELDS = ["x_permille", "y_permille"];
+const AUDIENCE_DATE_POSITION_MESSAGE_FIELDS = ["source", "date_position"];
 const CHART_ITEM_FIELDS = ["kind", "chart_id"];
 const IMAGE_ITEM_FIELDS = ["kind", "panel_id", "media_id", "revision"];
+const THEME_FIELDS = [
+  "dashboard_style", "dashboard_color_profile", "chart_color_mode",
+  "appearance_preference", "resolved_appearance",
+];
+const DASHBOARD_STYLE_IDS = new Set(DASHBOARD_STYLES.map(({ id }) => id));
+const DASHBOARD_COLOR_PROFILE_IDS = new Set(DASHBOARD_COLOR_PROFILES.map(({ id }) => id));
 
 const VALUELESS_ACTIONS = new Set(["PREVIOUS", "NEXT", "PLAY", "PAUSE", "END"]);
 const IDENTIFIER_ACTIONS = new Set(["SELECT_SCENE", "SELECT_CHRONO_GROUP"]);
@@ -74,14 +97,29 @@ export function makePresentationMessage({
   payload,
   presentableItemIndex,
 }) {
+  if (type === "state") {
+    validatePresentationState(payload, { presentableItemIndex });
+  }
   const message = {
     protocol_version: PRESENTATION_PROTOCOL_VERSION,
     session_id: sessionId,
     sequence,
     type,
-    payload: clone(payload),
+    payload: type === "state" ? legacyWireState(payload) : clone(payload),
   };
   validateMessage(message, { presentableItemIndex });
+  return message;
+}
+
+export function makePresentationThemeMessage({ sessionId, sequence, payload }) {
+  const message = {
+    protocol_version: PRESENTATION_THEME_PROTOCOL_VERSION,
+    session_id: sessionId,
+    sequence,
+    type: "theme",
+    payload: clone(payload),
+  };
+  validatePresentationThemeMessage(message);
   return message;
 }
 
@@ -94,10 +132,26 @@ export function parsePresentationMessage(
   return message;
 }
 
+export function parsePresentationThemeMessage(
+  value,
+  { sessionId, lastSequence } = {},
+) {
+  const message = clone(value);
+  validatePresentationThemeMessage(message, { sessionId, lastSequence });
+  return message;
+}
+
 export function validatePresentationState(state, { presentableItemIndex } = {}) {
   assertPlainObject(state, "presentation state", "payload");
-  assertExactFields(state, STATE_FIELDS, "presentation state", "payload");
+  const hasTheme = Object.hasOwn(state, "theme");
+  assertExactFields(
+    state,
+    hasTheme ? STATE_FIELDS : LEGACY_STATE_FIELDS,
+    "presentation state",
+    "payload",
+  );
   assertRevision(state.dashboard_revision);
+  if (hasTheme) validateTheme(state.theme);
   validateSource(state.source);
   validatePayload(state.payload, { presentableItemIndex });
   validateComposition(state.composition, {
@@ -114,6 +168,56 @@ export function validatePresentationState(state, { presentableItemIndex } = {}) 
   }
   validateAudience(state.audience);
   return state;
+}
+
+export function presentationThemeChannelName(sessionId) {
+  assertIdentifier(sessionId, "session ID", "session_id");
+  return `simex-presentation-theme-v${PRESENTATION_THEME_PROTOCOL_VERSION}-${sessionId}`;
+}
+
+function validatePresentationThemeMessage(message, { sessionId, lastSequence } = {}) {
+  assertPlainObject(message, "presentation theme message", "message");
+  assertExactFields(message, ENVELOPE_FIELDS, "presentation theme message", "message");
+  if (message.protocol_version !== PRESENTATION_THEME_PROTOCOL_VERSION) {
+    reject("protocol_mismatch", "unsupported presentation theme protocol version", "message.protocol_version");
+  }
+  assertIdentifier(message.session_id, "session ID", "message.session_id");
+  if (sessionId !== undefined && message.session_id !== sessionId) {
+    reject("session_mismatch", "unexpected presentation session", "message.session_id");
+  }
+  if (!Number.isSafeInteger(message.sequence) || message.sequence < 1) {
+    reject("invalid_sequence", "presentation theme sequence must be a positive integer", "message.sequence");
+  }
+  if (lastSequence !== undefined && message.sequence <= lastSequence) {
+    reject("non_monotonic_sequence", "presentation theme sequence must increase", "message.sequence");
+  }
+  if (message.type !== "theme") {
+    reject("unsupported_message_type", "unsupported presentation theme message type", "message.type");
+  }
+  validateTheme(message.payload);
+}
+
+function legacyWireState(state) {
+  const snapshot = clone(state);
+  delete snapshot.theme;
+  return snapshot;
+}
+
+function validateTheme(theme) {
+  assertPlainObject(theme, "presentation theme", "payload.theme");
+  assertExactFields(theme, THEME_FIELDS, "presentation theme", "payload.theme");
+  const valid = DASHBOARD_STYLE_IDS.has(theme.dashboard_style)
+    && DASHBOARD_COLOR_PROFILE_IDS.has(theme.dashboard_color_profile)
+    && CHART_COLOR_MODES.includes(theme.chart_color_mode)
+    && APPEARANCE_PREFERENCES.includes(theme.appearance_preference)
+    && ["light", "dark"].includes(theme.resolved_appearance)
+    && (
+      theme.appearance_preference === "system"
+      || theme.appearance_preference === theme.resolved_appearance
+    );
+  if (!valid) {
+    reject("invalid_theme", "presentation theme must use an approved exact snapshot", "payload.theme");
+  }
 }
 
 export function validatePresentationAction(
@@ -206,8 +310,36 @@ function validateMessage(message, { sessionId, lastSequence, presentableItemInde
   }
   if (message.type === "state") {
     validatePresentationState(message.payload, { presentableItemIndex });
+  } else if (message.type === "audience-date-position") {
+    validateAudienceDatePositionMessage(message.payload);
   } else if (message.payload !== null) {
     reject("invalid_message_payload", `${message.type} presentation payload must be null`, "message.payload");
+  }
+}
+
+function validateAudienceDatePositionMessage(payload) {
+  assertPlainObject(payload, "Audience date-position message", "message.payload");
+  assertExactFields(
+    payload,
+    AUDIENCE_DATE_POSITION_MESSAGE_FIELDS,
+    "Audience date-position message",
+    "message.payload",
+  );
+  validateSource(payload.source);
+  validateDateMovement(payload.date_position, "message.payload.date_position");
+}
+
+function validateDateMovement(position, path) {
+  assertPlainObject(position, "Audience date movement", path);
+  assertExactFields(position, DATE_MOVEMENT_FIELDS, "Audience date movement", path);
+  for (const key of DATE_MOVEMENT_FIELDS) {
+    if (!Number.isInteger(position[key]) || position[key] < 0 || position[key] > 1000) {
+      reject(
+        "invalid_date_position",
+        "Audience date movement must use integer permille values",
+        `${path}.${key}`,
+      );
+    }
   }
 }
 
@@ -366,21 +498,24 @@ function validateMatching(matching) {
 function validateAudience(audience) {
   assertPlainObject(audience, "presentation Audience settings", "payload.audience");
   assertExactFields(audience, AUDIENCE_FIELDS, "presentation Audience settings", "payload.audience");
-  const position = audience.date_position;
-  assertPlainObject(position, "presentation Audience date position", "payload.audience.date_position");
+  validateDatePosition(audience.date_position, "payload.audience.date_position");
+}
+
+function validateDatePosition(position, path) {
+  assertPlainObject(position, "presentation Audience date position", path);
   assertExactFields(
     position,
     DATE_POSITION_FIELDS,
     "presentation Audience date position",
-    "payload.audience.date_position",
+    path,
   );
   for (const key of DATE_POSITION_FIELDS) {
     if (!Number.isInteger(position[key]) || position[key] < 0 || position[key] > 1000) {
-      reject("invalid_date_position", "Audience date position must use integer permille values", `payload.audience.date_position.${key}`);
+      reject("invalid_date_position", "Audience date position must use integer permille values", `${path}.${key}`);
     }
   }
   if (position.width_permille < 1 || position.x_permille + position.width_permille > 1000) {
-    reject("invalid_date_position", "Audience date position must fit within the Audience canvas", "payload.audience.date_position");
+    reject("invalid_date_position", "Audience date position must fit within the Audience canvas", path);
   }
 }
 

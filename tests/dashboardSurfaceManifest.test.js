@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  DASHBOARD_SURFACE_MANIFEST,
-  summarizeDashboardSurfaceManifest,
+  DASHBOARD_JOURNEY_MANIFEST,
+  summarizeDashboardJourneyManifest,
 } from "./e2e/support/dashboard-surface-manifest.js";
+import { DASHBOARD_JOURNEY_PRIMARY_ROLES } from "../src/theme/dashboardSurfaceRoles.js";
 import {
   collapseDashboardDensityFindings,
   classifyDashboardDensitySnapshot,
@@ -13,7 +14,15 @@ import {
   DASHBOARD_DENSITY_SETTLE_STYLE,
   dashboardDensityAncestorClipsPaintedNode,
   dashboardDensityBoxesStable,
+  dashboardDensityClearanceBoundaryStart,
+  dashboardDensityCustomEdgePaintIsVisible,
+  dashboardDensityEdgeDecorationDepth,
+  dashboardDensityEdgeDepthOverride,
+  dashboardDensityHasBackgroundImagePaint,
+  dashboardDensityVisibleBorderDepth,
+  classifyDashboardEdgeClearance,
   dashboardDensityPaintIsCollapsed,
+  collectDashboardDensityEvidence,
 } from "./e2e/support/dashboard-density-audit.js";
 
 const REQUIRED_FAMILIES = [
@@ -33,7 +42,7 @@ const REQUIRED_FAMILIES = [
   "source-viewer",
   "operation-status",
   "recovery",
-  "desktop-gate",
+  "desktop-recommendation",
   "image-editor",
   "structure-management",
   "package-management",
@@ -47,7 +56,7 @@ const REQUIRED_EXECUTABLE_STATES = Object.freeze({
   "dashboard-map-inspector": "context-inspector",
   "build-unit-orbit": "selected-chart",
   "build-page-actions": "page-actions",
-  "build-page-orbit": "page-command-orbit",
+  "build-page-command-form": "page-command-form",
   "section-command-dialog": "move-section",
   "chart-wizard-destination": "destination",
   "chart-wizard-data-source": "data-source",
@@ -77,14 +86,15 @@ const REQUIRED_EXECUTABLE_STATES = Object.freeze({
   "chart-comparison-dialog": "two-chart-comparison",
   "chart-state-recovery-harness": "error-and-partial",
   "operation-status-notice": "completed-scenario-save",
-  "build-below-desktop-gate": "below-1024",
-  "present-below-desktop-gate": "below-1024",
+  "present-standard": "composition-chrono-controls",
+  "build-below-desktop-recommendation": "below-1024-recommendation",
+  "present-below-desktop-recommendation": "below-1024-recommendation",
 });
 
-test("surface manifest accounts for every approved desktop family and viewport", () => {
-  const summary = summarizeDashboardSurfaceManifest(DASHBOARD_SURFACE_MANIFEST);
+test("journey manifest accounts for every approved desktop family and viewport", () => {
+  const summary = summarizeDashboardJourneyManifest(DASHBOARD_JOURNEY_MANIFEST);
 
-  assert.equal(summary.total, DASHBOARD_SURFACE_MANIFEST.length);
+  assert.equal(summary.total, DASHBOARD_JOURNEY_MANIFEST.length);
   assert.equal(summary.duplicateIds.length, 0);
   assert.deepEqual(summary.invalidEntries, []);
   assert.deepEqual(
@@ -101,14 +111,28 @@ test("surface manifest accounts for every approved desktop family and viewport",
   assert.ok(summary.intentionallyOutOfScope >= 1);
 });
 
+test("journey manifest assigns one primary role for contact-sheet grouping without claiming region closure", () => {
+  const roleBySurfaceId = new Map(
+    Object.entries(DASHBOARD_JOURNEY_PRIMARY_ROLES)
+      .flatMap(([role, surfaceIds]) => surfaceIds.map((surfaceId) => [surfaceId, role])),
+  );
+
+  assert.deepEqual(
+    DASHBOARD_JOURNEY_MANIFEST
+      .filter(({ surfaceRole, id }) => surfaceRole !== roleBySurfaceId.get(id))
+      .map(({ id }) => id),
+    [],
+  );
+});
+
 test("every required distinct state is executable and every alias declares bounded equivalence", () => {
-  const byId = new Map(DASHBOARD_SURFACE_MANIFEST.map((entry) => [entry.id, entry]));
+  const byId = new Map(DASHBOARD_JOURNEY_MANIFEST.map((entry) => [entry.id, entry]));
 
   for (const [id, state] of Object.entries(REQUIRED_EXECUTABLE_STATES)) {
     assert.equal(byId.get(id)?.disposition, "executable", `${id} must be rendered, not aliased`);
     assert.equal(byId.get(id)?.state, state, `${id} must exercise the curated ${state} state`);
   }
-  for (const entry of DASHBOARD_SURFACE_MANIFEST.filter(({ disposition }) => disposition === "coverage-alias")) {
+  for (const entry of DASHBOARD_JOURNEY_MANIFEST.filter(({ disposition }) => disposition === "coverage-alias")) {
     assert.ok(entry.equivalence?.basis, `${entry.id} must state why its geometry is equivalent`);
     assert.ok(entry.equivalence?.categories?.length, `${entry.id} must bound the categories covered by its alias`);
   }
@@ -129,6 +153,12 @@ test("density classifier reports every geometry category without excluded intera
       { id: "primary", role: "standard", expectedHeight: 32, rect: { x: 0, y: 0, width: 100, height: 44 } },
       { id: "secondary", role: "standard", expectedHeight: 32, rect: { x: 110, y: 0, width: 100, height: 32 } },
     ],
+    edgeClearances: [{
+      boundaryId: "fixture rail",
+      edge: "inline-start",
+      decorationDepth: 3,
+      clearances: [{ contentId: "fixture label", clearance: 3 }],
+    }],
     choices: [
       { id: "choice", singleLine: true, centrelineDelta: 4, glyphHeight: 20, rowHeight: 44 },
     ],
@@ -177,6 +207,7 @@ test("density classifier reports every geometry category without excluded intera
   assert.deepEqual(
     [
       "role-size",
+      "edge-clearance",
       "centreline",
       "rhythm",
       "wrap",
@@ -214,6 +245,115 @@ test("role overrides preserve content geometry and classify compact graphical ut
   assert.equal(roleFor(".build-more-command-list button"), "standard");
   assert.equal(roleFor(".dashboard-map-region-switch button"), "compact");
   assert.equal(roleFor(".source-content-workspace button:not"), "standard");
+});
+
+test("edge clearance requires decoration depth plus four pixels for every painted edge", () => {
+  const failures = classifyDashboardEdgeClearance({
+    edges: [
+      {
+        boundaryId: "Instrument rail",
+        edge: "inline-start",
+        decorationDepth: 3,
+        clearances: [{ contentId: "instrument label", clearance: 3 }],
+      },
+      {
+        boundaryId: "Ledger border",
+        edge: "block-start",
+        decorationDepth: 1,
+        clearances: [{ contentId: "ledger heading", clearance: 4 }],
+      },
+      {
+        boundaryId: "Inset panel",
+        edge: "inline-end",
+        decorationDepth: 3,
+        clearances: [{ contentId: "inset control", clearance: 8 }],
+      },
+    ],
+  });
+
+  assert.deepEqual(failures.map(({ boundaryId, edge, contentId }) => ({ boundaryId, edge, contentId })), [
+    { boundaryId: "Instrument rail", edge: "inline-start", contentId: "instrument label" },
+    { boundaryId: "Ledger border", edge: "block-start", contentId: "ledger heading" },
+  ]);
+});
+
+test("edge clearance exemption only skips its named edge", () => {
+  const failures = classifyDashboardEdgeClearance({
+    edges: [
+      {
+        boundaryId: "full-bleed card",
+        edge: "inline-start",
+        decorationDepth: 3,
+        exempt: true,
+        clearances: [{ contentId: "bleeding image", clearance: 0 }],
+      },
+      {
+        boundaryId: "full-bleed card",
+        edge: "block-start",
+        decorationDepth: 3,
+        clearances: [{ contentId: "card title", clearance: 0 }],
+      },
+    ],
+  });
+
+  assert.deepEqual(failures.map(({ boundaryId, edge, contentId }) => ({ boundaryId, edge, contentId })), [
+    { boundaryId: "full-bleed card", edge: "block-start", contentId: "card title" },
+  ]);
+});
+
+test("edge decoration depths ignore inherited custom values without local paint and controls start at their parent", () => {
+  assert.equal(dashboardDensityEdgeDecorationDepth({
+    borderDepth: 0,
+    customDepth: 3,
+    hasLocalDecorationPaint: false,
+  }), 0);
+  assert.equal(dashboardDensityEdgeDecorationDepth({
+    borderDepth: 0,
+    customDepth: 3,
+    hasLocalDecorationPaint: true,
+  }), 3);
+  assert.equal(dashboardDensityEdgeDecorationDepth({
+    borderDepth: 1,
+    customDepth: 3,
+    hasLocalDecorationPaint: false,
+  }), 1);
+
+  const parent = { parentElement: null };
+  const control = { parentElement: parent };
+  assert.equal(dashboardDensityClearanceBoundaryStart(control, { contentKind: "control" }), parent);
+  assert.equal(dashboardDensityClearanceBoundaryStart(control, { contentKind: "text" }), control);
+});
+
+test("local decorated-edge depths override style-level fallbacks per edge", () => {
+  assert.equal(dashboardDensityEdgeDepthOverride({ localDepth: 1, styleDepth: 0 }), 1);
+  assert.equal(dashboardDensityEdgeDepthOverride({ localDepth: null, styleDepth: 3 }), 3);
+});
+
+test("decorated edge paint ignores invisible borders and unrelated shadows", () => {
+  assert.equal(dashboardDensityVisibleBorderDepth({ width: 3, style: "solid", color: "rgba(0, 0, 0, 0)" }), 0);
+  assert.equal(dashboardDensityVisibleBorderDepth({ width: 3, style: "none", color: "rgb(0, 0, 0)" }), 0);
+  assert.equal(dashboardDensityVisibleBorderDepth({ width: 1, style: "solid", color: "rgb(0, 0, 0)" }), 1);
+  assert.equal(dashboardDensityHasBackgroundImagePaint("none, none"), false);
+  assert.equal(dashboardDensityCustomEdgePaintIsVisible({
+    backgroundImage: "none, none",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+    allowBoxShadow: false,
+  }), false);
+  assert.equal(dashboardDensityEdgeDecorationDepth({
+    borderDepth: 0,
+    customDepth: 3,
+    hasLocalDecorationPaint: false,
+  }), 0);
+  assert.equal(dashboardDensityCustomEdgePaintIsVisible({
+    backgroundImage: "none",
+    boxShadow: "inset 0 0 0 1px rgb(0, 0, 0)",
+    allowBoxShadow: true,
+  }), true);
+  assert.equal(dashboardDensityEdgeDecorationDepth({
+    borderDepth: 0,
+    customDepth: 1,
+    hasLocalDecorationPaint: true,
+  }), 1);
 });
 
 test("render settling disables transitions and requires repeatable geometry", () => {
@@ -416,4 +556,39 @@ test("audit summary collapses repeated per-instance candidates without losing me
   assert.equal(collapsed[0].occurrenceCount, 2);
   assert.deepEqual(collapsed[0].surfaceIds, ["surface-a", "surface-b"]);
   assert.equal(collapsed[0].instanceIds.length, 2);
+});
+
+test("density collector preserves region closure evidence beside geometry findings", async () => {
+  const snapshot = await collectDashboardDensityEvidence({
+    evaluate: async (browserCollector) => {
+      const collectorSource = browserCollector.toString();
+      assert.match(collectorSource, /ownedRegions,/);
+      assert.match(collectorSource, /const visibleBorderDepth =/);
+      assert.doesNotMatch(
+        collectorSource,
+        /dashboardDensity(?:EdgeDepthOverride|CustomEdgePaintIsVisible|VisibleBorderDepth|EdgeDecorationDepth|ClearanceBoundaryStart)/,
+      );
+      return {
+        surface: { id: "build-standard", owner: "BuildWorkspace" },
+        controls: [], choices: [], rhythms: [], wraps: [], whitespace: [], overlaps: [],
+        clippedElements: [], scrollContainers: [], repeatedTitles: [], occupancies: [],
+        operationalContrastCandidates: [], visibleSemanticsCandidates: [],
+        regionCandidates: [{
+          id: "unowned-command-bar",
+          signals: ["named-structure", "distinct-paint", "multi-action"],
+          containingRegions: [{ regionId: "build-workspace-shell", distance: 1 }],
+          exemption: null,
+        }],
+        mountedRegions: [],
+      };
+    },
+  }, {
+    id: "build-standard",
+    family: "build",
+    owner: "BuildWorkspace",
+    root: ".build-workspace-authoring-root",
+  });
+
+  assert.deepEqual(snapshot.findings, []);
+  assert.equal(snapshot.regionCoverage.failures.some(({ type }) => type === "UNOWNED"), true);
 });

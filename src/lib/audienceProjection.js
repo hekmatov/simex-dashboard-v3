@@ -52,6 +52,7 @@ export function projectPresentationState(state) {
     mode: snapshot.output_mode,
     blackout: snapshot.blackout,
     dashboardRevision: snapshot.dashboard_revision,
+    theme: snapshot.theme,
     source: snapshot.source,
     composition: snapshot.composition,
     timeline: snapshot.timeline,

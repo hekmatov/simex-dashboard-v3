@@ -59,7 +59,10 @@ test("Build main row has the exact compact command order and ownership", () => {
   const html = renderWorkspace();
   const actionOrder = [...html.matchAll(/data-build-command-action="([^"]+)"/g)]
     .map((match) => match[1]);
-  assert.match(html, /aria-label="Build commands"/);
+  assert.match(
+    html,
+    /<section(?=[^>]*\baria-label="Build commands")(?=[^>]*\bdata-dashboard-region="build-command-header")(?=[^>]*\bdata-dashboard-surface-role="command-bar")(?=[^>]*\bdata-dashboard-material="flat")[^>]*>/,
+  );
   assert.deepEqual(actionOrder, [
     "add-chart",
     "add-text-image",

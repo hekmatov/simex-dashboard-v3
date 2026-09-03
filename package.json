@@ -6,7 +6,9 @@
   "scripts": {
     "test": "node --test --test-concurrency=1",
     "test:unit": "node --test",
-    "test:e2e": "playwright test",
+    "test:e2e": "pnpm test:e2e:source && pnpm test:e2e:static",
+    "test:e2e:source": "playwright test",
+    "test:e2e:static": "playwright test --config=playwright.static.config.js",
     "test:e2e:dev": "playwright test --max-failures=1",
     "audit:ui:density": "playwright test tests/e2e/dashboard-density-audit.spec.js --project=chromium --output=test-results/playwright-density",
     "test:e2e:package": "playwright test --config=playwright.static.config.js --grep \"production View launches from the built static output\"",

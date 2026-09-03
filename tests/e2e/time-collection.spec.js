@@ -95,9 +95,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
 
 test("default synchronized playback keeps line history, bar and map snapshots, and reopens at the same time", async ({
   page,
-  request,
 }) => {
-  await installAccessibilityEnabledDashboard(page, request);
   await openDashboard(page);
   const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
   await chronoButton.click();
@@ -107,6 +105,7 @@ test("default synchronized playback keeps line history, bar and map snapshots, a
   const frameValues = await controls.locator("datalist option")
     .evaluateAll((options) => options.map((option) => option.value));
   await frame.fill(frameValues[0]);
+  const firstEpochMs = Number(frameValues[0]);
   const firstTime = (await controls.locator(".playback-current-time time").textContent()).trim();
   await expect(page.locator(".dashboard-workspace")).toBeVisible();
 
@@ -117,14 +116,15 @@ test("default synchronized playback keeps line history, bar and map snapshots, a
   const line = view.locator(
     '[data-panel-id="bio_municipality_aggregate"]',
   );
-  await expect(map.locator(".chart-view-summary")).toContainText(firstTime);
-  await expect(line.locator(".chart-view-summary")).toContainText(firstTime);
+  await expectRuntimeTime(map, firstEpochMs);
+  await expectRuntimeTime(line, firstEpochMs);
 
   await controls.getByRole("button", { name: "Next frame" }).click();
+  const secondEpochMs = Number(await frame.inputValue());
   const secondTime = (await controls.locator(".playback-current-time time").textContent()).trim();
   expect(secondTime).not.toBe(firstTime);
-  await expect(map.locator(".chart-view-summary")).toContainText(secondTime);
-  await expect(line.locator(".chart-view-summary")).toContainText(secondTime);
+  await expectRuntimeTime(map, secondEpochMs);
+  await expectRuntimeTime(line, secondEpochMs);
 
   await chronoButton.click();
   await expect(controls).toHaveCount(0);
@@ -139,14 +139,18 @@ test("default synchronized playback keeps line history, bar and map snapshots, a
   const nationalFrameValues = await controls.locator("datalist option")
     .evaluateAll((options) => options.map((option) => option.value));
   await frame.fill(nationalFrameValues[0]);
+  const nationalEpochMs = Number(nationalFrameValues[0]);
   const nationalTime = (await controls.locator(".playback-current-time time").textContent()).trim();
   const national = page.locator('[data-chrono-section="national_outbreak"]');
-  await expect(national.locator(
-    '[data-panel-id="bio_confirmed_cases"] .chart-view-summary',
-  )).toContainText(nationalTime);
-  await expect(national.locator(
-    '[data-panel-id="bio_daily_cases_bar"] .chart-view-summary',
-  )).toContainText(nationalTime);
+  await expectRuntimeTime(
+    national.locator('[data-panel-id="bio_confirmed_cases"]'),
+    nationalEpochMs,
+  );
+  await expectRuntimeTime(
+    national.locator('[data-panel-id="bio_daily_cases_bar"]'),
+    nationalEpochMs,
+  );
+  await expect(controls.locator(".playback-current-time time")).toHaveText(nationalTime);
 });
 
 test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
@@ -187,13 +191,15 @@ test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
   await expect(guard.getByText("Hold Ctrl while scrolling to zoom"))
     .toBeVisible();
   await fullscreen.getByRole("button", {
-    name: "Exit focus",
+    name: "Exit fullscreen",
   }).click();
 });
 
-test("chart accessibility is off by default and controlled from edit mode", async ({
+test("legacy accessibility preferences cannot restore removed chart summaries or controls", async ({
   page,
+  request,
 }) => {
+  await installAccessibilityEnabledDashboard(page, request);
   await openDashboard(page);
   const chart = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
@@ -201,13 +207,10 @@ test("chart accessibility is off by default and controlled from edit mode", asyn
   await page.getByRole("button", { name: "Build" }).click();
   await page.getByRole("button", { name: "More", exact: true }).click();
   const more = page.getByRole("dialog", { name: "More Build commands" });
-  const toggle = more.getByRole("checkbox", {
-    name: /Chart accessibility/,
-  });
-  await expect(toggle).not.toBeChecked();
-  await toggle.check();
-  await expect(chart.locator(".chart-view-summary")).toHaveCount(1);
-  await toggle.uncheck();
+  await expect(more.locator('[data-build-more-command="scene-studio"]')).toHaveCount(1);
+  await expect(more.locator("[data-build-more-command]")).toHaveCount(1);
+  await expect(more.locator('[data-build-more-command="chart-accessibility"]')).toHaveCount(0);
+  await expect(more.getByRole("checkbox")).toHaveCount(0);
   await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
 });
 
@@ -220,18 +223,18 @@ test("matching policies produce policy-specific live values", async ({
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
   await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
-  await controls.getByLabel("Playback frame").fill(String(Date.parse("2027-02-22T00:00:00.000Z")));
+  const activeEpochMs = Date.parse("2027-02-22T00:00:00.000Z");
+  await controls.getByLabel("Playback frame").fill(String(activeEpochMs));
   await expect(controls.locator(".playback-current-time time")).toHaveText("2027-02-22");
   const view = page.locator('[data-chrono-section="national_outbreak"]');
 
-  for (const [chartId, expected] of [
-    ["e2e_last_known", "value at 2027-02-22: 1"],
-    ["e2e_nearest", "value at 2027-02-22: 7"],
-    ["e2e_interpolate", "value at 2027-02-22: 5"],
+  for (const [chartId, expectedValue] of [
+    ["e2e_last_known", 1],
+    ["e2e_nearest", 7],
+    ["e2e_interpolate", 5],
   ]) {
     const panel = view.locator(`[data-panel-id="${chartId}"]`);
-    await panel.scrollIntoViewIfNeeded();
-    await expect(panel.locator(".chart-view-summary")).toContainText(expected);
+    await expectRuntimeSeriesValue(panel, activeEpochMs, expectedValue);
   }
 });
 
@@ -420,6 +423,35 @@ async function openDashboard(page) {
   await enterAuthoredDashboard(page);
 }
 
+async function readRuntimeLedger(panel) {
+  const serialized = await panel.locator("[data-canonical-runtime-ledger]")
+    .first()
+    .getAttribute("data-canonical-runtime-ledger");
+  if (!serialized) return null;
+  try {
+    return JSON.parse(serialized);
+  } catch {
+    return null;
+  }
+}
+
+async function expectRuntimeTime(panel, expectedEpochMs) {
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator("[data-canonical-runtime-ledger]").first()).toBeVisible();
+  await expect.poll(async () => (
+    (await readRuntimeLedger(panel))?.time?.activeEpochMs ?? null
+  )).toBe(expectedEpochMs);
+}
+
+async function expectRuntimeSeriesValue(panel, expectedEpochMs, expectedValue) {
+  await expectRuntimeTime(panel, expectedEpochMs);
+  await expect.poll(async () => (
+    (await readRuntimeLedger(panel))?.series?.some(({ values }) => (
+      Array.isArray(values) && values.flat(Infinity).includes(expectedValue)
+    )) ?? false
+  )).toBe(true);
+}
+
 async function installScenarioDashboard(page, request, configure) {
   const response = await request.get("/config/dashboard.json");
   expect(response.ok()).toBe(true);
@@ -434,7 +466,6 @@ async function installScenarioDashboard(page, request, configure) {
 }
 
 function addTemporalMatchingScenarios(dashboard) {
-  dashboard.globalStyles.accessibility = { enabled: true };
   const sparseSourceId = "e2e_sparse_r_values";
   dashboard.dataSources[sparseSourceId] = uploadedCsv(
     "sparse-r-values.csv",

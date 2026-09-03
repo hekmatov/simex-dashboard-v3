@@ -83,7 +83,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
     name: "Focus chart",
   }).click();
   await expect(page.locator(`[data-displayed-chart-id="${FIRST_CHART}"]`)).toBeVisible();
-  await page.getByRole("button", { name: "Exit focus" }).click();
+  await page.getByRole("button", { name: "Exit fullscreen" }).click();
 
   const fullscreenButton = firstPanel.getByRole("button", {
     name: "Focus chart",
@@ -213,7 +213,7 @@ test("reconnect snapshot wins without silently reopening a closed chart", async 
     chart_ids: [FIRST_CHART],
     expected_display_revision: 0,
   });
-  await page.getByRole("button", { name: "Exit focus" }).click();
+  await page.getByRole("button", { name: "Exit fullscreen" }).click();
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(0);
 
   await control(request, "disconnect");

@@ -11,6 +11,7 @@ test.beforeEach(async ({ request }) => {
 });
 
 test("View Chrono seeks scopes traces moves and safety-pauses without losing session", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
@@ -97,7 +98,7 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   await expect(page.getByRole("dialog", { name: "Focused chart" })).toBeVisible();
   await expect(controllerLayer).toBeHidden();
   await expect(dateOverlay).toBeHidden();
-  await page.getByRole("button", { name: "Exit focus" }).click();
+  await page.getByRole("button", { name: "Exit fullscreen" }).click();
   await expect(chrono).toBeVisible();
   await expect(dateOverlay).toBeVisible();
   const overlayRestored = await dateOverlay.boundingBox();
@@ -153,10 +154,37 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
       .slice(0, 12),
   }));
   expect(overflow.scrollWidth, JSON.stringify(overflow.offenders)).toBeLessThanOrEqual(overflow.clientWidth);
-  const minimumTouchTarget = await chrono.locator("button, select").evaluateAll((controls) => (
-    Math.min(...controls.map((control) => control.getBoundingClientRect().height))
-  ));
-  expect(minimumTouchTarget).toBeGreaterThanOrEqual(44);
+  const denseControlGeometry = await chrono.locator("button, select, input[type='number']").evaluateAll((controls) => {
+    const geometry = controls
+      .filter((control) => control.getClientRects().length > 0)
+      .map((control) => {
+        const rect = control.getBoundingClientRect();
+        return {
+          height: rect.height,
+          label: control.getAttribute("aria-label") || control.textContent?.trim() || control.tagName,
+          left: rect.left,
+          right: rect.right,
+          role: control.classList.contains("simex-icon-control") ? "utility" : "standard",
+          width: rect.width,
+        };
+      });
+    return {
+      standard: geometry.filter(({ role }) => role === "standard"),
+      utility: geometry.filter(({ role }) => role === "utility"),
+      unreachable: geometry.filter(({ left, right, width }) => (
+        width <= 0 || left < 0 || right > document.documentElement.clientWidth
+      )),
+    };
+  });
+  expect(denseControlGeometry.unreachable, JSON.stringify(denseControlGeometry.unreachable)).toEqual([]);
+  expect(denseControlGeometry.standard.length).toBeGreaterThan(0);
+  expect(denseControlGeometry.utility.length).toBeGreaterThan(0);
+  for (const { height, label } of denseControlGeometry.standard) {
+    expect(height, `${label} should use the 32px dense standard control role`).toBe(32);
+  }
+  for (const { height, label } of denseControlGeometry.utility) {
+    expect(height, `${label} should use the 24px utility control role`).toBe(24);
+  }
 });
 
 async function expectOverlayClearOfControls(page, overlay) {

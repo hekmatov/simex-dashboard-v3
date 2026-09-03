@@ -1,8 +1,10 @@
 import React from "react";
 
 import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
+import { dashboardOwnedRegionProps } from "../../theme/dashboardRegionRegistry.js";
 
 import ChartView from "../charts/ChartView.jsx";
+import { resolveAudiencePresentationScale } from "../charts/chartViewPresentation.js";
 
 export default function DisplayedChartGrid({
   dashboard,
@@ -26,7 +28,8 @@ export default function DisplayedChartGrid({
     .map((item) => ({ item, chart: findChart(dashboard, presentationItemId(item)) }))
     .filter(({ chart }) => Boolean(chart));
   const charts = entries.map(({ chart }) => chart);
-  const count = charts.length;
+  const count = entries.length;
+  const audienceScale = resolveAudiencePresentationScale(surface, entries.length);
   const className = [
     "displayed-chart-grid",
     `displayed-count-${count}`,
@@ -39,12 +42,16 @@ export default function DisplayedChartGrid({
     <div
       className={className}
       data-display-surface={surface}
+      data-audience-scale-tier={audienceScale?.tier}
       data-layout-system={layoutSystem ?? (surface === "audience" ? "presentation" : undefined)}
     >
       {entries.map(({ item, chart }, index) => {
         const cellProps = getCellProps?.(chart, index, charts) ?? {};
         const suppliedClassName = cellProps.className;
         const attributes = { ...cellProps };
+        const regionProps = dashboardOwnedRegionProps(
+          surface === "fullscreen" ? "fullscreen-chart-cell" : "displayed-chart-cell",
+        );
         delete attributes.className;
         return (
           <section
@@ -60,6 +67,7 @@ export default function DisplayedChartGrid({
                 ? `audience-static-image-${staticAssetReadiness.get(item.panel_id)?.status ?? "loading"}`
                 : "",
             ].filter(Boolean).join(" ")}
+            {...regionProps}
             key={chart.id}
             data-displayed-chart-id={chart.id}
             data-presentation-item-kind={item.kind}
@@ -88,6 +96,7 @@ export default function DisplayedChartGrid({
               timeContextAuthority={timeContextAuthority}
               interactionMode={surface === "audience" ? "passive" : "active"}
               surface={surface}
+              audienceScale={audienceScale}
               onVisualChange={onVisualChange}
             />
           </section>

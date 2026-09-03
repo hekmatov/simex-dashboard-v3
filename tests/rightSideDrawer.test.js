@@ -22,6 +22,10 @@ const drawerSource = await readFile(
   new URL("../src/components/common/RightSideDrawer.jsx", import.meta.url),
   "utf8",
 );
+const modalFocusSource = await readFile(
+  new URL("../src/components/common/ModalFocusScope.jsx", import.meta.url),
+  "utf8",
+);
 const drawerStyles = await readFile(
   new URL("../src/styles/right-side-drawer.css", import.meta.url),
   "utf8",
@@ -58,14 +62,16 @@ test("shared right drawer renders dialog and complementary modality contracts", 
   assert.doesNotMatch(complementary, /right-side-drawer-click-catcher/);
 });
 
-test("shared right drawer closes through pointer click-away and close-button paths only", () => {
+test("shared right drawer supports normal pointer and Escape dismissal without managed focus", () => {
   assert.equal(typeof drawerModule.requestRightSideDrawerClose, "function");
   const reasons = [];
-  for (const reason of ["click-away", "close-button"]) {
+  for (const reason of ["click-away", "close-button", "escape"]) {
     drawerModule.requestRightSideDrawerClose((value) => reasons.push(value), reason);
   }
-  assert.deepEqual(reasons, ["click-away", "close-button"]);
-  assert.doesNotMatch(drawerSource, /addEventListener\("keydown"/);
+  assert.deepEqual(reasons, ["click-away", "close-button", "escape"]);
+  assert.match(modalFocusSource, /addEventListener\("keydown"/);
+  assert.match(modalFocusSource, /event\.key !== "Escape"/);
+  assert.doesNotMatch(modalFocusSource, /event\.key === "Tab"|\.focus\(/);
 });
 
 test("shared right drawer never restores focus to the invoking control", () => {

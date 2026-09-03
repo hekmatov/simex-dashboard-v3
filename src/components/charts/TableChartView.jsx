@@ -5,6 +5,7 @@ import {
   chartTitleVisible,
   titleContainerProps,
 } from "./chartViewPresentation.js";
+import { dashboardOwnedRegionProps } from "../../theme/dashboardRegionRegistry.js";
 
 export default function TableChartView({ model, chart = {}, provenance }) {
   const columns = Array.isArray(model.columns) ? model.columns : [];
@@ -28,6 +29,7 @@ export default function TableChartView({ model, chart = {}, provenance }) {
   return React.createElement("section", {
     className: `chart-table-view chart-table-view--${rowDistribution}`,
     "aria-label": title,
+    ...dashboardOwnedRegionProps("chart-table-register"),
     ...titleContainerProps(chart),
   },
     React.createElement("h3", { className: chartTitleClassName(chart) }, title),

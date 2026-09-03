@@ -43,6 +43,13 @@ test("projects an accepted state envelope without changing authored order, timel
     width_permille: 321,
   });
   assert.deepEqual(result.projection.matching, { use_authored_settings: true });
+  assert.deepEqual(result.projection.theme, {
+    dashboard_style: "signal-instrument",
+    dashboard_color_profile: "signal-instrument/calibrated-steel",
+    chart_color_mode: "profile",
+    appearance_preference: "light",
+    resolved_appearance: "light",
+  });
   assert.deepEqual(result.lastValid, result.projection);
 
   message.payload.composition.displayed_chart_ids.reverse();
@@ -148,6 +155,13 @@ function presentationState({
 } = {}) {
   return {
     dashboard_revision: "dashboard-r1",
+    theme: {
+      dashboard_style: "signal-instrument",
+      dashboard_color_profile: "signal-instrument/calibrated-steel",
+      chart_color_mode: "profile",
+      appearance_preference: "light",
+      resolved_appearance: "light",
+    },
     source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
     composition: {
       active_page_id: "biomedical",

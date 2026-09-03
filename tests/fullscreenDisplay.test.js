@@ -142,7 +142,7 @@ test("ordinary chart focus control uses the Fullscreen tooltip while retaining i
   assert.doesNotMatch(html, /data-icon-tooltip="Focus"/);
 });
 
-test("fullscreen comparison preserves ordered charts without autofocus or keyboard reordering", () => {
+test("fullscreen comparison preserves ordered charts with native pointer reordering and no custom keyboard shortcuts", () => {
   assert.ok(displayModule, "fullscreen display must be implemented");
   const html = renderToStaticMarkup(
     React.createElement(displayModule.default, {
@@ -158,13 +158,13 @@ test("fullscreen comparison preserves ordered charts without autofocus or keyboa
   );
 
   assert.equal((html.match(/multi-fullscreen-cell/g) ?? []).length, 2);
-  assert.equal((html.match(/chart-view-frame/g) ?? []).length, 2);
+  assert.equal((html.match(/class="chart-view-frame"/g) ?? []).length, 2);
   assert.equal((html.match(/chart-card-view/g) ?? []).length, 2);
+  assert.equal((html.match(/draggable="true"/g) ?? []).length, 2);
   assert.ok(html.indexOf('data-displayed-chart-id="chart-b"') < html.indexOf('data-displayed-chart-id="chart-a"'));
   assert.match(html, /aria-label="Move Chart B next"/);
   assert.match(html, /aria-label="Move Chart A previous"/);
   assert.match(html, /aria-label="Chart comparison"/);
-  assert.match(html, /tabindex="-1"/);
   assert.match(html, /data-fullscreen-exit="true"[^>]*aria-label="Exit comparison"/);
   assert.doesNotMatch(html, />Exit comparison<\/button>/);
   assert.match(html, /data-icon-id="close"/);

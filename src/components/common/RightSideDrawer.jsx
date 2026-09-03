@@ -1,7 +1,6 @@
 import React from "react";
 
 import ModalFocusScope from "./ModalFocusScope.jsx";
-import { pointerControlProps } from "./PointerInteractionMode.js";
 
 export const RIGHT_SIDE_DRAWER_CHANGE_EVENT = "simex:right-side-drawer-change";
 export const RIGHT_SIDE_DRAWER_SELECTOR = '[data-right-side-drawer][data-open="true"]';
@@ -95,7 +94,6 @@ export default function RightSideDrawer({
         {headerActions}
         <button
           type="button"
-          {...pointerControlProps}
           className={closeClassName}
           aria-label={`Close ${title}`}
           onClick={() => requestRightSideDrawerClose(latestClose.current, "close-button")}

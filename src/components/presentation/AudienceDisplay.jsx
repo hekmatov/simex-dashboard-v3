@@ -5,6 +5,88 @@ import { buildMemberTimeContexts } from "../playback/PlaybackProvider.jsx";
 import ConnectionIndicator from "./ConnectionIndicator.jsx";
 import useAudienceStaticAssetReadiness from "./useAudienceStaticAssetReadiness.js";
 
+export function moveAudienceDatePositionByPointer(position, movement, bounds) {
+  const surfaceWidth = Math.max(1, Number(bounds?.width) || 0);
+  const surfaceHeight = Math.max(1, Number(bounds?.height) || 0);
+  const labelHeight = Math.max(0, Number(bounds?.labelHeight) || 0);
+  const verticalTravel = Math.max(1, surfaceHeight - labelHeight);
+  const widthPermille = clampInteger(position?.width_permille, 1, 1000);
+  return {
+    x_permille: clampInteger(
+      Number(position?.x_permille) + ((Number(movement?.x) || 0) / surfaceWidth) * 1000,
+      0,
+      1000 - widthPermille,
+    ),
+    y_permille: clampInteger(
+      Number(position?.y_permille) + ((Number(movement?.y) || 0) / verticalTravel) * 1000,
+      0,
+      1000,
+    ),
+    width_permille: widthPermille,
+  };
+}
+
+export function beginAudienceDateDrag({ pointer, source, position, bounds }, activeDrag = null) {
+  if (activeDrag) return activeDrag;
+  if (pointer?.isPrimary === false || pointer?.button !== 0) return null;
+  if (!Number.isFinite(pointer?.x) || !Number.isFinite(pointer?.y)) return null;
+  return {
+    pointerId: pointer.pointerId,
+    pointerX: pointer.x,
+    pointerY: pointer.y,
+    source: clone(source),
+    position: clone(position),
+    latestPosition: clone(position),
+    bounds: clone(bounds),
+  };
+}
+
+export function moveAudienceDateDrag(drag, pointer) {
+  if (!drag || drag.pointerId !== pointer?.pointerId || pointer?.isPrimary === false) {
+    return drag;
+  }
+  return {
+    ...drag,
+    latestPosition: moveAudienceDatePositionByPointer(
+      drag.position,
+      {
+        x: pointer.x - drag.pointerX,
+        y: pointer.y - drag.pointerY,
+      },
+      drag.bounds,
+    ),
+  };
+}
+
+export function completeAudienceDateDrag(drag, pointer) {
+  if (
+    !drag
+    || drag.pointerId !== pointer?.pointerId
+    || pointer?.isPrimary === false
+    || pointer?.button !== 0
+    || datePositionSignature(drag.latestPosition) === datePositionSignature(drag.position)
+  ) return null;
+  return {
+    source: clone(drag.source),
+    datePosition: clone(drag.latestPosition),
+  };
+}
+
+export function resolveAudienceDateOptimisticPosition({
+  authoritativePosition,
+  optimisticPosition,
+  transportResult,
+  connectionLive,
+  acceptedEcho,
+  source,
+}) {
+  const echoMatches = acceptedEcho
+    && presentationSourceSignature(acceptedEcho.source) === presentationSourceSignature(source)
+    && datePositionSignature(acceptedEcho.datePosition) === datePositionSignature(optimisticPosition);
+  const moveWasSent = connectionLive && transportResult !== null;
+  return clone(echoMatches || moveWasSent ? optimisticPosition : authoritativePosition);
+}
+
 export default function AudienceDisplay(props) {
   return <AudienceRenderBoundary {...props} />;
 }
@@ -60,6 +142,7 @@ export function AudienceProjectionSurface({
   projection,
   contentRenderContext,
   onVisualChange,
+  onDatePositionChange,
   renderStatus = "current",
 }) {
   const items = projection?.kind === "output" ? projection.payload.items : [];
@@ -105,7 +188,6 @@ export function AudienceProjectionSurface({
   const sceneDate = projection.mode === "active" && facts.scene_date
     ? canonicalTime(activeEpochMs)
     : null;
-  const dateStyle = datePositionStyle(projection.audience.date_position);
 
   return (
     <main
@@ -143,18 +225,159 @@ export function AudienceProjectionSurface({
         />
       )}
       {sceneDate && (
-        <time
-          className="audience-scene-date"
+        <AudienceSceneDate
+          date={sceneDate}
           dateTime={new Date(activeEpochMs).toISOString()}
-          style={dateStyle}
-        >
-          {sceneDate}
-        </time>
+          position={projection.audience.date_position}
+          source={projection.source}
+          onDatePositionChange={connectionStatus === "connected"
+            ? onDatePositionChange
+            : null}
+        />
       )}
       {projection.blackout && <div className="audience-blackout" aria-hidden="true" />}
       <ConnectionIndicator connection={connectionStatus} />
     </main>
   );
+}
+
+function AudienceSceneDate({ date, dateTime, position, source, onDatePositionChange }) {
+  const sourceSignature = presentationSourceSignature(source);
+  const authoritativeSignature = datePositionSignature(position);
+  const dragRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const [livePosition, setLivePosition] = React.useState(() => ({
+    sourceSignature,
+    value: clone(position),
+  }));
+  const visiblePosition = livePosition.sourceSignature === sourceSignature
+    ? livePosition.value
+    : position;
+  const draggable = typeof onDatePositionChange === "function";
+
+  React.useEffect(() => {
+    if (
+      dragRef.current
+      && presentationSourceSignature(dragRef.current.source) !== sourceSignature
+    ) {
+      dragRef.current = null;
+      setDragging(false);
+    }
+    if (!dragRef.current) {
+      setLivePosition({ sourceSignature, value: clone(position) });
+    }
+  }, [authoritativeSignature, sourceSignature]);
+
+  React.useEffect(() => {
+    if (draggable) return;
+    dragRef.current = null;
+    setDragging(false);
+    setLivePosition({ sourceSignature, value: clone(position) });
+  }, [authoritativeSignature, draggable, position, sourceSignature]);
+
+  const startDrag = (event) => {
+    const surface = event.currentTarget.closest?.(".audience-display")
+      ?? event.currentTarget.parentElement;
+    const surfaceBounds = surface?.getBoundingClientRect?.();
+    const labelBounds = event.currentTarget.getBoundingClientRect?.();
+    if (!surfaceBounds?.width || !surfaceBounds?.height) return;
+    const drag = beginAudienceDateDrag({
+      pointer: pointerEvent(event),
+      source,
+      position: visiblePosition,
+      bounds: {
+        width: surfaceBounds.width,
+        height: surfaceBounds.height,
+        labelHeight: labelBounds?.height ?? 0,
+      },
+    }, dragRef.current);
+    if (!drag || drag === dragRef.current) return;
+    dragRef.current = drag;
+    setDragging(true);
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+  const moveDrag = (event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const next = moveAudienceDateDrag(drag, pointerEvent(event));
+    if (next === drag) return;
+    dragRef.current = next;
+    setLivePosition({
+      sourceSignature: presentationSourceSignature(next.source),
+      value: next.latestPosition,
+    });
+    event.preventDefault();
+  };
+  const finishDrag = (event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const commit = completeAudienceDateDrag(drag, pointerEvent(event));
+    let transportResult = null;
+    if (commit) {
+      try {
+        transportResult = onDatePositionChange(
+          clone(commit.datePosition),
+          clone(commit.source),
+        );
+      } catch {
+        transportResult = null;
+      }
+    }
+    const resolvedPosition = resolveAudienceDateOptimisticPosition({
+      authoritativePosition: position,
+      optimisticPosition: commit?.datePosition ?? drag.position,
+      transportResult,
+      connectionLive: draggable,
+      acceptedEcho: null,
+      source: drag.source,
+    });
+    dragRef.current = null;
+    setDragging(false);
+    setLivePosition({ sourceSignature, value: resolvedPosition });
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  };
+  const cancelDrag = (event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    setDragging(false);
+    setLivePosition({
+      sourceSignature: presentationSourceSignature(drag.source),
+      value: clone(drag.position),
+    });
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  };
+
+  const pointerHandlers = draggable ? {
+    onPointerDown: startDrag,
+    onPointerMove: moveDrag,
+    onPointerUp: finishDrag,
+    onPointerCancel: cancelDrag,
+  } : {};
+
+  return (
+    <time
+      className="audience-scene-date"
+      data-audience-date-draggable={draggable ? "true" : undefined}
+      data-dragging={dragging ? "true" : "false"}
+      dateTime={dateTime}
+      style={datePositionStyle(visiblePosition)}
+      {...pointerHandlers}
+    >
+      {date}
+    </time>
+  );
+}
+
+function pointerEvent(event) {
+  return {
+    pointerId: event.pointerId,
+    isPrimary: event.isPrimary,
+    button: event.button,
+    x: event.clientX,
+    y: event.clientY,
+  };
 }
 
 function AudienceHeader({ dashboardName, context, sceneName }) {
@@ -208,6 +431,20 @@ function datePositionStyle(position) {
     transform: `translateY(-${position.y_permille / 10}%)`,
     width: `${position.width_permille / 10}%`,
   };
+}
+
+function datePositionSignature(position) {
+  return `${position?.x_permille}:${position?.y_permille}:${position?.width_permille}`;
+}
+
+function presentationSourceSignature(source) {
+  return `${source?.kind ?? ""}:${source?.scene_id ?? ""}:${source?.chrono_group_id ?? ""}`;
+}
+
+function clampInteger(value, minimum, maximum) {
+  const integer = Math.round(Number(value));
+  if (!Number.isFinite(integer)) return minimum;
+  return Math.max(minimum, Math.min(maximum, integer));
 }
 
 function canonicalTime(epochMs) {

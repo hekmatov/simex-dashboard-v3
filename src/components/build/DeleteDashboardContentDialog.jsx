@@ -45,7 +45,7 @@ export default function DeleteDashboardContentDialog({
         </header>
         <div className="confirm-dialog-body dashboard-dialog__body">
           <p id="delete-dashboard-content-description">
-            Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes. Canonical Home remains available. Dashboard Look and identity settings are preserved.
+            Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes. Canonical Home remains available. Theme and identity settings are preserved.
           </p>
           <ul className="delete-dashboard-content-summary" aria-label="Content to delete">
             {consequences.map((label) => <li key={label}>{label}</li>)}

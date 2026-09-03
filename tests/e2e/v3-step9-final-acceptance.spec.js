@@ -54,12 +54,12 @@ test.beforeEach(async ({ page }) => {
   await openLanding(page);
 });
 
-test("Build gates at 1023px and resumes at the 1024px desktop boundary without remounting", async ({ page }) => {
+test("Build shows a recommendation at 1023px and removes it at 1024px without remounting", async ({ page }) => {
   await openDashboardFromLanding(page);
   const modes = page.getByLabel("Dashboard mode");
   await modes.getByRole("button", { name: "Build", exact: true }).click();
   const workspace = page.locator(".build-mode-shell");
-  const notice = page.locator('[data-phone-mode-notice="build"]');
+  const notice = page.locator('[data-desktop-width-notice="build"]');
   await expect(workspace).toBeVisible();
   await page.evaluate(() => {
     window.__step9BuildWorkspace = document.querySelector(".build-mode-shell");
@@ -67,11 +67,10 @@ test("Build gates at 1023px and resumes at the 1024px desktop boundary without r
 
   await page.setViewportSize({ width: 1023, height: 768 });
   await expect(notice).toBeVisible();
-  await expect(notice).toContainText("Build requires a desktop workspace at least 1024px wide.");
-  await expect(notice).toContainText("View remains available.");
-  await expect(notice.getByRole("button", { name: "Switch to View", exact: true })).toHaveCount(1);
-  await expect(workspace).toHaveCount(1);
-  await expect(workspace).toBeHidden();
+  await expect(notice).toHaveText("A minimum width of 1024px is recommended for Build.");
+  await expect(notice.getByRole("button")).toHaveCount(0);
+  await expect(workspace).toBeVisible();
+  await expect(page.locator('[data-build-command-action="add-chart"]')).toBeEnabled();
   await expectNoViewportOverflow(page);
 
   await page.setViewportSize({ width: 1024, height: 768 });
@@ -106,7 +105,7 @@ test("desktop viewport fan-out preserves canonical Home and cross-mode analytica
 
     await modes.getByRole("button", { name: "Build", exact: true }).click();
     await expect(appFrame).toHaveAttribute("data-dashboard-mode", "build");
-    await expect(page.locator('[data-phone-mode-notice="build"]')).toBeHidden();
+    await expect(page.locator('[data-desktop-width-notice="build"]')).toBeHidden();
     await expect(page.locator(".build-mode-shell")).toBeVisible();
     expect(await readCanonicalCanvasIdentity(page)).toEqual(viewCanvas);
 
@@ -131,19 +130,12 @@ test("1920 Audience preserves room-distance composition through the public workf
   );
 
   await enterPresentWithScene(page, scene);
+  const savedScene = await readStoredScene(page, scene.id);
   const authoredDatePosition = {
     xPermille: 0,
     yPermille: 1000,
-    widthPermille: 280,
+    widthPermille: savedScene.audience.datePosition.widthPermille,
   };
-  await page.locator('[data-presentation-control-id="date-position-x"]').fill(String(authoredDatePosition.xPermille));
-  await page.locator('[data-presentation-control-id="date-position-y"]').fill(String(authoredDatePosition.yPermille));
-  await page.locator('[data-presentation-control-id="date-position-width"]').fill(String(authoredDatePosition.widthPermille));
-  await page.locator('[data-presentation-control-id="date-position-save"]').click();
-  await expect(page.getByText("Unsaved position", { exact: true })).toHaveCount(0);
-  await expect.poll(() => readStoredScene(page, scene.id)).toMatchObject({
-    audience: { datePosition: authoredDatePosition },
-  });
   let popup;
   let checkpointPath;
   try {
@@ -161,6 +153,10 @@ test("1920 Audience preserves room-distance composition through the public workf
     const cells = grid.locator("[data-displayed-chart-id]");
 
     await expect(audience).toBeVisible();
+    await dragAudienceDateToPosition(popup, authoredDatePosition);
+    await expect.poll(() => readStoredScene(page, scene.id)).toMatchObject({
+      audience: { datePosition: authoredDatePosition },
+    });
     await expect(grid).toBeVisible();
     await expect(header).toBeVisible();
     await expect(title).toBeVisible();
@@ -175,7 +171,7 @@ test("1920 Audience preserves room-distance composition through the public workf
       left: "0%",
       top: "100%",
       transform: "translateY(-100%)",
-      width: "28%",
+      width: `${authoredDatePosition.widthPermille / 10}%`,
     });
     await expect(cells).toHaveCount(savedChartIds.length);
     expect(await grid.evaluate((element) => [...element.classList])).toEqual(expect.arrayContaining([
@@ -460,4 +456,31 @@ function expectHorizontalSpan(focused, left, right, label) {
 
 async function readSavedPackage(page) {
   return page.evaluate(() => localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
+}
+
+async function dragAudienceDateToPosition(popup, target) {
+  const date = popup.locator(".audience-scene-date");
+  await expect(date).toHaveAttribute("data-audience-date-draggable", "true");
+  const [audienceBounds, dateBounds, current] = await Promise.all([
+    popup.locator(".audience-display").boundingBox(),
+    date.boundingBox(),
+    date.evaluate((element) => ({
+      xPermille: Number.parseFloat(element.style.left) * 10,
+      yPermille: Number.parseFloat(element.style.top) * 10,
+    })),
+  ]);
+  expect(audienceBounds && dateBounds).toBeTruthy();
+  const movement = {
+    x: ((target.xPermille - current.xPermille) / 1000) * audienceBounds.width,
+    y: ((target.yPermille - current.yPermille) / 1000)
+      * Math.max(1, audienceBounds.height - dateBounds.height),
+  };
+  const start = {
+    x: dateBounds.x + dateBounds.width / 2,
+    y: dateBounds.y + dateBounds.height / 2,
+  };
+  await popup.mouse.move(start.x, start.y);
+  await popup.mouse.down();
+  await popup.mouse.move(start.x + movement.x, start.y + movement.y, { steps: 8 });
+  await popup.mouse.up();
 }

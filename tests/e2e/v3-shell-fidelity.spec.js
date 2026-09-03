@@ -191,7 +191,7 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
   await enterAuthoredDashboard(page);
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
 
-  await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
+  await expect(pinned.getByRole("button", { name: "Theme", exact: true }))
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
     .toHaveCount(1);
@@ -205,7 +205,7 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
   const anchoredPages = page.locator('[data-build-page-navigation="anchored"]');
   await expect(anchoredPages.getByRole("button", { name: "Add page", exact: true }))
     .toHaveCount(1);
-  await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
+  await expect(pinned.getByRole("button", { name: "Theme", exact: true }))
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Dashboard map", exact: true }))
     .toHaveCount(1);
@@ -352,9 +352,9 @@ test("look drawer allows transient compression and restores dashboard geometry a
   await page.evaluate(() => window.scrollTo(0, 700));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   const scrollBefore = await page.evaluate(() => window.scrollY);
-  const trigger = page.getByRole("button", { name: "Dashboard look", exact: true });
+  const trigger = page.getByRole("button", { name: "Theme", exact: true });
   await trigger.evaluate((button) => button.click());
-  const drawer = page.getByRole("dialog", { name: "Dashboard look" });
+  const drawer = page.getByRole("dialog", { name: "Theme" });
   await expect(drawer).toBeVisible();
   const drawerBox = await drawer.boundingBox();
   expect(drawerBox.width).toBeGreaterThanOrEqual(380);
@@ -370,7 +370,7 @@ test("look drawer allows transient compression and restores dashboard geometry a
   await expect(drawer.locator('[data-icon-id="appearanceLight"]')).toHaveCount(1);
   await expect(drawer.locator('[data-icon-id="appearanceDark"]')).toHaveCount(1);
 
-  await drawer.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+  await drawer.getByRole("button", { name: "Close Theme", exact: true }).click();
   await expect(drawer).toHaveCount(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
 
@@ -383,7 +383,7 @@ test("look drawer allows transient compression and restores dashboard geometry a
   expect(open.sections).toEqual(before.sections);
   expect(open.panels).toEqual(before.panels);
 
-  await drawer.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+  await drawer.getByRole("button", { name: "Close Theme", exact: true }).click();
   await expect(drawer).toHaveCount(0);
   const restored = await readCanvasState(page);
   expect(restored.frame).toEqual(before.frame);
@@ -393,7 +393,7 @@ test("look drawer allows transient compression and restores dashboard geometry a
   expect(restored.panels).toEqual(before.panels);
 });
 
-test("denied Dashboard Look and appearance writes remain live with session-only feedback", async ({ page }) => {
+test("denied Theme and appearance writes remain live with session-only feedback", async ({ page }) => {
   await page.addInitScript(() => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function denyLookPersistence(key, value) {
@@ -408,8 +408,8 @@ test("denied Dashboard Look and appearance writes remain live with session-only 
   });
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const drawer = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "Theme" });
   const feedback = drawer.locator(".look-drawer-feedback");
 
   await drawer.getByLabel("Humanist", { exact: true }).check();
@@ -417,7 +417,7 @@ test("denied Dashboard Look and appearance writes remain live with session-only 
     "data-dashboard-style", "humanist-standard",
   );
   await expect(feedback).toHaveText(
-    "Dashboard look applied for this session but cannot be retained after reload.",
+"Theme applied for this session but cannot be retained after reload.",
   );
   await expect(feedback).not.toContainText("saved");
 
@@ -466,7 +466,7 @@ test("denied dashboard writes remain usable with session-only feedback", async (
   );
 });
 
-test("desktop mode gate preserves Build state and resumes Present at supported width", async ({ page }) => {
+test("desktop width recommendation leaves Build and Present visible and usable", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
@@ -474,8 +474,10 @@ test("desktop mode gate preserves Build state and resumes Present at supported w
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  const layoutDraftValue = "Gate-preserved Biomedical layout";
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const layoutDraftValue = "Width-preserved Biomedical layout";
+  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await mapToggle.click();
+  const mapPanel = page.locator("#dashboard-map-panel");
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
   await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();
@@ -485,6 +487,13 @@ test("desktop mode gate preserves Build state and resumes Present at supported w
   const renamedPage = structure.getByRole("treeitem", { name: layoutDraftValue, exact: true });
   const layoutDraft = renamedPage.locator(":scope > .build-tree-row .build-tree-label");
   await expect(layoutDraft).toBeVisible();
+  const crownPages = page.locator(".dashboard-command-page-scroller");
+  const renamedCrownPage = crownPages.getByRole("button", { name: layoutDraftValue, exact: true });
+  const canonicalFrame = page.locator(".canonical-dashboard-frame");
+  await mapPanel.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
+  await expect(mapPanel).toHaveAttribute("data-open", "false");
+  await expect(renamedCrownPage).toBeVisible();
+  await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");
 
   const appFrame = page.locator(".app-frame");
   const workspace = page.locator(".build-mode-shell");
@@ -499,7 +508,7 @@ test("desktop mode gate preserves Build state and resumes Present at supported w
   await editor.getByRole("button", { name: /^Configure\./ }).click();
   const chartDraft = editor.getByLabel("Chart title");
   const discardChanges = editor.getByRole("button", { name: "Discard changes", exact: true });
-  await chartDraft.fill("Gate-preserved confirmed cases");
+  await chartDraft.fill("Width-preserved confirmed cases");
   await expect(discardChanges).toBeEnabled();
 
   const before = await page.evaluate(() => {
@@ -512,27 +521,26 @@ test("desktop mode gate preserves Build state and resumes Present at supported w
   });
 
   await page.setViewportSize({ width: 900, height: 720 });
-  const buildNotice = page.locator('[data-phone-mode-notice="build"]');
+  const buildNotice = page.locator('[data-desktop-width-notice="build"]');
   await expect(buildNotice).toBeVisible();
-  await expect(buildNotice.getByRole("button", { name: "Switch to View", exact: true }))
-    .toHaveCount(1);
-  await expect(workspace).toHaveCount(1);
-  await expect(workspace).toBeHidden();
-  await expect(chartDraft).toBeHidden();
-  await expect(discardChanges).toBeHidden();
-  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
-  await expect(page.locator(
-    '.build-tree-item-wrap[aria-label="Gate-preserved Biomedical layout"] > .build-tree-row .build-tree-label',
-  )).toHaveText(layoutDraftValue);
+  await expect(buildNotice).toHaveText("A minimum width of 1024px is recommended for Build.");
+  await expect(buildNotice.getByRole("button")).toHaveCount(0);
+  await expect(workspace).toBeVisible();
+  await expect(editor).toBeVisible();
+  await expect(chartDraft).toBeVisible();
+  await expect(discardChanges).toBeVisible();
+  await expect(chartDraft).toHaveValue("Width-preserved confirmed cases");
+  await expect(renamedCrownPage).toHaveText(layoutDraftValue);
+  await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");
   await expect(target).toHaveAttribute("data-build-placement-id", "bio_confirmed_cases");
   await expect(target).toHaveClass(/\bselected\b/);
 
   await page.setViewportSize({ width: 1200, height: 900 });
   await expect(buildNotice).toBeHidden();
-  await expect(workspace).toHaveCount(1);
   await expect(workspace).toBeVisible();
-  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
-  await expect(layoutDraft).toHaveText(layoutDraftValue);
+  await expect(chartDraft).toHaveValue("Width-preserved confirmed cases");
+  await expect(renamedCrownPage).toHaveText(layoutDraftValue);
+  await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");
   await expect(target).toHaveClass(/\bselected\b/);
   const after = await page.evaluate(() => {
     const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
@@ -546,39 +554,36 @@ test("desktop mode gate preserves Build state and resumes Present at supported w
   expect(after.targetId).toBe(before.targetId);
   expect(Math.abs(after.targetTop - before.targetTop)).toBeLessThanOrEqual(1);
 
-  await page.setViewportSize({ width: 900, height: 720 });
-  const switchToView = buildNotice.getByRole("button", { name: "Switch to View", exact: true });
-  await switchToView.click();
-  await expect(appFrame).toHaveAttribute("data-dashboard-mode", "build");
-  await expect(buildNotice.getByRole("alert")).toHaveText(
-    "Finish or cancel the open chart editor before leaving Build.",
-  );
-  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
-
-  await page.setViewportSize({ width: 1200, height: 900 });
-  await expect(workspace).toBeVisible();
   await expect(editor).toBeVisible();
-  await expect(chartDraft).toHaveValue("Gate-preserved confirmed cases");
+  await expect(chartDraft).toHaveValue("Width-preserved confirmed cases");
   await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard changes?" })
     .getByRole("button", { name: "Discard", exact: true }).click();
   await expect(editor).toHaveCount(0);
+  await mapToggle.click();
+  await expect(mapPanel).toHaveAttribute("data-open", "true");
+  await expect(layoutDraft).toHaveText(layoutDraftValue);
   await renamedPage.getByRole("button", { name: `Collapse ${layoutDraftValue}`, exact: true }).click();
   await expect(renamedPage).toHaveAttribute("aria-expanded", "false");
   await renamedPage.getByRole("button", { name: `Expand ${layoutDraftValue}`, exact: true }).click();
   await expect(renamedPage).toHaveAttribute("aria-expanded", "true");
+  await mapPanel.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
+  await expect(mapPanel).toHaveAttribute("data-open", "false");
   await page.setViewportSize({ width: 900, height: 720 });
   await expect(buildNotice).toBeVisible();
-  await buildNotice.getByRole("button", { name: "Switch to View", exact: true }).click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
   await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
 
   const presentMode = page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Present", exact: true });
   await presentMode.click();
   const presentWorkspace = page.locator(".present-workspace");
-  const presentNotice = page.locator('[data-phone-mode-notice="present"]');
+  const presentNotice = page.locator('[data-desktop-width-notice="present"]');
   await expect(presentNotice).toBeVisible();
-  await expect(presentWorkspace).toHaveCount(1);
-  await expect(presentWorkspace).toBeHidden();
-  await expect(presentNotice.getByRole("button", { name: "Switch to View", exact: true })).toBeVisible();
+  await expect(presentNotice).toHaveText("A minimum width of 1024px is recommended for Present.");
+  await expect(presentWorkspace).toBeVisible();
+  const chronoGroups = page.getByRole("button", { name: "Chrono Groups", exact: true });
+  await expect(chronoGroups).toBeEnabled();
+  await chronoGroups.click();
+  await expect(page.locator(".present-action-dock")).toBeVisible();
 });

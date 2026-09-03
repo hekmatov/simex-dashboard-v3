@@ -71,6 +71,13 @@ test("strict state projection uses authored matching and explicit Scene Audience
     },
     outputMode: "active",
     blackout: false,
+    themeProjection: {
+      dashboardStyle: "humanist-standard",
+      dashboardColorProfile: "humanist-standard/open-forum",
+      chartColorMode: "standard",
+      appearancePreference: "system",
+      resolvedAppearance: "dark",
+    },
   });
 
   assert.deepEqual(projected.matching, { use_authored_settings: true });
@@ -95,6 +102,13 @@ test("strict state projection uses authored matching and explicit Scene Audience
     { kind: "chart", chart_id: "chart-a" },
     { kind: "chart", chart_id: "chart-b" },
   ]);
+  assert.deepEqual(projected.theme, {
+    dashboard_style: "humanist-standard",
+    dashboard_color_profile: "humanist-standard/open-forum",
+    chart_color_mode: "standard",
+    appearance_preference: "system",
+    resolved_appearance: "dark",
+  });
 });
 
 test("source eligibility distinguishes valid authored sources from Needs-attention", () => {
@@ -286,7 +300,7 @@ test("END effects guard each adapter and always consume effects after disposal",
   ]);
 });
 
-test("controller exposes source, playback, output, session, and terminal controls without matching override", () => {
+test("lower controller exposes source, playback, output, and terminal controls without the Audience lifecycle action", () => {
   assert.equal(typeof controllerModule?.default, "function");
   const html = renderToStaticMarkup(React.createElement(controllerModule.default, {
     runtime: {
@@ -310,11 +324,12 @@ test("controller exposes source, playback, output, session, and terminal control
   }));
 
   for (const controlId of [
-    "open-new-session", "source", "previous", "seek", "next",
+    "source", "previous", "seek", "next",
     "trace-reveal", "trace-full", "cadence", "play", "pause",
     "output-active", "output-holding", "output-blank", "blackout", "restore", "end",
   ]) {
     assert.match(html, new RegExp(`data-presentation-control-id="${controlId}"`), controlId);
   }
+  assert.doesNotMatch(html, /open-new-session|reopen-audience|Open audience display|Reopen audience display/);
   assert.doesNotMatch(html, /matching override|session_override|SET_MATCHING_OVERRIDE/i);
 });

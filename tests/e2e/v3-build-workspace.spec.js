@@ -64,10 +64,10 @@ test("layout and selected-chart drafts stay independent through layout discard",
   await mapToggle.click();
   const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
-  await page.getByRole("gridcell", {
-    name: "Set chart size to 3 columns by 1 row",
-    exact: true,
-  }).click();
+  const editor = page.getByRole("complementary", {
+    name: "Chart settings for Trust in institutions over time",
+  });
+  await editor.locator(".chart-footprint-control").getByLabel("Width").selectOption("3");
 
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
   const chartOwner = page.locator('[data-pending-work-id="chart-edit:socio_trust_trend"]');
@@ -78,18 +78,15 @@ test("layout and selected-chart drafts stay independent through layout discard",
   await expect(chartOwner).toHaveAttribute("data-pending-work-state", "dirty");
   await expect(chartOwner).toHaveAttribute("data-pending-work-activity", "suspended");
   await chartOwner.getByRole("button", { name: "Resume Chart changes", exact: true }).click();
-  const editor = page.getByRole("complementary", {
-    name: "Chart settings for Trust in institutions over time",
-  });
   await expect(editor).toBeVisible();
   await expect(chartOwner).toHaveAttribute("data-pending-work-activity", "active");
-  await expect(editor.getByRole("gridcell", {
-    name: "Set chart size to 3 columns by 1 row",
-    exact: true,
-  })).toBeFocused();
+  await expect(editor.locator(".chart-footprint-control").getByLabel("Width"))
+    .toHaveValue("3");
+  await expect(editor.locator(".chart-footprint-control").getByLabel("Row height"))
+    .toHaveValue("1");
 });
 
-test("drag and Move panel controls use the handle while the canvas article stays fixed", async ({ page }) => {
+test("native drag and Move panel controls use the handle while the canvas article stays fixed", async ({ page }) => {
   await openBiomedicalBuild(page);
   const panels = page.locator('[data-build-placement-id]');
   expect(await panels.count()).toBeGreaterThan(1);
@@ -100,17 +97,14 @@ test("drag and Move panel controls use the handle while the canvas article stays
 
   const handle = source.getByRole("button", { name: /^Move panel / });
   await expect(handle).toHaveAttribute("draggable", "true");
-  await handle.focus();
-  await expect(handle).toBeFocused();
   const targetBox = await target.boundingBox();
   expect(targetBox).toBeTruthy();
-  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
-  const dropSurface = target;
-  const pointer = { clientX: targetBox.x + targetBox.width / 2, clientY: targetBox.y + targetBox.height * 0.75, dataTransfer };
-  await handle.dispatchEvent("dragstart", { dataTransfer });
-  await dropSurface.dispatchEvent("dragover", pointer);
-  await dropSurface.dispatchEvent("drop", pointer);
-  await handle.dispatchEvent("dragend", { dataTransfer });
+  await handle.dragTo(target, {
+    targetPosition: {
+      x: targetBox.width / 2,
+      y: targetBox.height * 0.75,
+    },
+  });
   const reordered = await page.locator('[data-build-placement-id]').evaluateAll((items) => items.map((item) => item.dataset.buildPlacementId));
   expect(reordered.indexOf(sourceId)).toBeGreaterThan(0);
   const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
@@ -147,16 +141,15 @@ test("More opens Scene Studio without losing dirty pending work", async ({ page 
 
   const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
-  await page.getByRole("gridcell", {
-    name: "Set chart size to 3 columns by 1 row",
-    exact: true,
-  }).click();
+  const editor = page.getByRole("complementary", {
+    name: "Chart settings for Trust in institutions over time",
+  });
+  await editor.locator(".chart-footprint-control").getByLabel("Width").selectOption("3");
   await page.getByRole("button", { name: "More", exact: true }).click();
 
   const more = page.getByRole("dialog", { name: "More Build commands" });
   await expect(more).toBeVisible();
   await expect(more.getByRole("button", { name: "Scene Studio", exact: true })).toBeVisible();
-  await expect(more.getByRole("checkbox", { name: /Chart accessibility/ })).toBeVisible();
   await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
 
   const scene = page.getByRole("dialog", { name: "Scene Studio authoring" });
@@ -192,7 +185,8 @@ test("compact command row and More expose exact Stage 3 ownership", async ({ pag
   await commands.getByRole("button", { name: "More", exact: true }).click();
   const more = page.getByRole("dialog", { name: "More Build commands" });
   await expect(more.locator('[data-build-more-command="scene-studio"]')).toHaveCount(1);
-  await expect(more.locator('[data-build-more-command="chart-accessibility"]')).toHaveCount(1);
+  await expect(more.locator('[data-build-more-command]')).toHaveCount(1);
+  await expect(more.locator('[data-build-more-command="chart-accessibility"]')).toHaveCount(0);
   await expect(more.getByRole("button", { name: /Upload Dashboard Package|Clear dashboard/ })).toHaveCount(0);
 });
 

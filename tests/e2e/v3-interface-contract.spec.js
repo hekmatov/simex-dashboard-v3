@@ -11,20 +11,20 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Build Page management uses one compact trigger and grouped actions", async ({ page }) => {
+test("Build Page management uses the selected Page tab as its one grouped-actions trigger", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
-  await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
 
-  const trigger = navigation.getByRole("button", { name: "Page actions for Biomedical", exact: true });
+  const trigger = navigation.getByRole("button", { name: "Biomedical", exact: true });
   await expect(trigger).toBeVisible();
   await trigger.click();
 
   const actions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
   await expect(actions).toBeVisible();
-  await expect(actions.getByRole("button")).toHaveCount(3);
+  await expect(actions.getByRole("button")).toHaveText(["Rename", "Move earlier", "Move later", "Merge", "Remove"]);
+  await expect(navigation.getByRole("button", { name: "Page actions for Biomedical", exact: true })).toHaveCount(0);
   expect(await navigation.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
 });
 
@@ -66,19 +66,19 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
   await expect(wizard.locator(".chart-wizard-step-button").first()).toHaveCSS("min-height", "36px");
 });
 
-test("Build is gated below the 1024px desktop boundary", async ({ page }) => {
+test("Build remains usable below the recommended 1024px desktop width", async ({ page }) => {
   await page.setViewportSize({ width: 1023, height: 768 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 
-  const notice = page.locator('[data-phone-mode-notice="build"]');
+  const notice = page.locator('[data-desktop-width-notice="build"]');
   await expect(notice).toBeVisible();
-  await expect(notice.getByRole("button", { name: "Switch to View", exact: true })).toBeVisible();
+  await expect(notice).toHaveText("A minimum width of 1024px is recommended for Build.");
+  await expect(notice).toHaveCSS("font-size", "12px");
+  await expect(notice.getByRole("button")).toHaveCount(0);
   const buildShell = page.locator(".build-mode-shell");
-  await expect(buildShell).toHaveCount(1);
-  await expect(buildShell).toBeHidden();
-  await notice.getByRole("button", { name: "Switch to View", exact: true }).click();
-  await expect(page.locator('.app-frame[data-dashboard-mode="view"]')).toBeVisible();
+  await expect(buildShell).toBeVisible();
+  await expect(page.locator('[data-build-command-action="add-chart"]')).toBeEnabled();
 });
 
 test("operation status shows blocking Finish Build work, completion, and footer-safe geometry", async ({ page }) => {
@@ -130,11 +130,15 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   await restoreDialog.getByRole("button", { name: "Restore online dashboard", exact: true }).click();
   const failedRestoreNotice = page.locator('[data-operation-status="failed"]')
     .filter({ hasText: "Restoring online dashboard" });
-  await expect(failedRestoreNotice).toBeVisible();
+  await expect(failedRestoreNotice).toHaveCount(1);
+  await expect(failedRestoreNotice).toBeHidden();
   await restoreDialog.getByRole("button", { name: "Keep local dashboard", exact: true }).click();
+  await expect(failedRestoreNotice).toBeVisible();
   await passport.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
+  await mapToggle.click();
+  const mapDrawer = page.locator("#dashboard-map-panel");
   const moveSection = page.getByRole("button", {
     name: "Move Outbreak dynamics later",
     exact: true,
@@ -174,10 +178,12 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   expect(integratedGeometry.footerGap).toBeGreaterThanOrEqual(15);
   console.log("stage12-1440-geometry", JSON.stringify(integratedGeometry));
   await layoutOwner.getByRole("button", { name: "Discard Layout Changes", exact: true }).click();
+  await mapDrawer.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
+  await expect(mapDrawer).toHaveAttribute("data-open", "false");
 
   await page.setViewportSize({ width: 820, height: 900 });
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const lookDrawer = page.getByRole("dialog", { name: "Dashboard look", exact: true });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const lookDrawer = page.getByRole("dialog", { name: "Theme", exact: true });
   await expect(lookDrawer).toBeVisible();
   await expect.poll(async () => page.evaluate(() => {
     const viewportBox = document.querySelector(".operation-status-viewport")?.getBoundingClientRect();
@@ -188,7 +194,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
     .toBeGreaterThanOrEqual(399);
 });
 
-test("same-page section reorder paints status first and moves the existing chart DOM without chart work", async ({ page }) => {
+test("same-page section reorder paints status first and preserves the React-owned chart surface", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -197,20 +203,20 @@ test("same-page section reorder paints status first and moves the existing chart
 
   const section = page.locator('[data-canonical-section-id="outbreak_dynamics"]');
   const panel = section.locator("[data-panel-id]").first();
-  await expect(panel.locator("canvas").first()).toBeAttached();
+  const chartFrame = panel.locator(".chart-view-frame");
+  const chartHost = panel.locator(".chart-echarts-host");
+  await expect(chartFrame).toBeAttached();
+  await expect(chartHost).toBeAttached();
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await panel.evaluate((panelNode) => {
     const sectionNode = panelNode.closest("[data-canonical-section-id]");
     window.__sectionZeroWorkProbe = {
       sectionNode,
       panelNode,
-      canvasNode: panelNode.querySelector("canvas"),
-      panelMutations: 0,
+      chartFrameNode: panelNode.querySelector(".chart-view-frame"),
+      chartHostNode: panelNode.querySelector(".chart-echarts-host"),
       lifecycle: [],
     };
-    new MutationObserver((records) => {
-      window.__sectionZeroWorkProbe.panelMutations += records.length;
-    }).observe(panelNode, { attributes: true, childList: true, subtree: true });
     const record = () => {
       const currentSections = [...document.querySelectorAll("[data-canonical-section-id]")]
         .map((candidate) => candidate.getAttribute("data-canonical-section-id"));
@@ -234,12 +240,16 @@ test("same-page section reorder paints status first and moves the existing chart
   await expect.poll(() => page.locator("[data-canonical-section-id]").evaluateAll(
     (nodes) => nodes.map((node) => node.getAttribute("data-canonical-section-id")).slice(0, 2),
   )).toEqual(["health_system", "outbreak_dynamics"]);
+  const mapDrawer = page.locator("#dashboard-map-panel");
+  await mapDrawer.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
+  await expect(mapDrawer).toHaveAttribute("data-open", "false");
 
   const result = await page.evaluate(() => {
     const probe = window.__sectionZeroWorkProbe;
     const currentSection = document.querySelector('[data-canonical-section-id="outbreak_dynamics"]');
     const currentPanel = currentSection?.querySelector("[data-panel-id]");
-    const currentCanvas = currentPanel?.querySelector("canvas");
+    const currentChartFrame = currentPanel?.querySelector(".chart-view-frame");
+    const currentChartHost = currentPanel?.querySelector(".chart-echarts-host");
     const workingIndex = probe.lifecycle.findIndex(({ status }) => status === "working");
     const movedIndex = probe.lifecycle.findIndex(({ order }) => (
       order[0] === "health_system" && order[1] === "outbreak_dynamics"
@@ -247,8 +257,8 @@ test("same-page section reorder paints status first and moves the existing chart
     return {
       sameSection: probe.sectionNode === currentSection,
       samePanel: probe.panelNode === currentPanel,
-      sameCanvas: probe.canvasNode === currentCanvas,
-      panelMutations: probe.panelMutations,
+      sameChartFrame: probe.chartFrameNode === currentChartFrame,
+      sameChartHost: probe.chartHostNode === currentChartHost,
       workingIndex,
       movedIndex,
     };
@@ -256,8 +266,8 @@ test("same-page section reorder paints status first and moves the existing chart
   expect(result).toEqual({
     sameSection: true,
     samePanel: true,
-    sameCanvas: true,
-    panelMutations: 0,
+    sameChartFrame: true,
+    sameChartHost: true,
     workingIndex: expect.any(Number),
     movedIndex: expect.any(Number),
   });
@@ -269,8 +279,14 @@ test("disabled Finish Build exposes its blocking reason on pointer hover", async
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Add new chart" })).toBeVisible();
+  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  await target.scrollIntoViewIfNeeded();
+  await target.hover();
+  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByLabel("Chart title").fill("Pending quick title");
+  await expect(quick).toHaveAttribute("data-chart-edit-dirty", "true");
 
   const finish = page.getByRole("button", { name: "Finish Build", exact: true });
   await expect(finish).toBeDisabled();
@@ -281,10 +297,11 @@ test("disabled Finish Build exposes its blocking reason on pointer hover", async
   await expect(reason).toBeVisible();
   await expect(reason).toHaveText("Finish or cancel the open chart draft.");
 
-  await page.getByRole("dialog", { name: "Add new chart" })
-    .getByRole("button", { name: "Close", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Add new chart" })).toBeHidden();
-  await expect(page.getByRole("button", { name: "Finish Build", exact: true })).toBeEnabled();
+  await quick.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(quick).toHaveAttribute("data-chart-edit-dirty", "false");
+  await expect(finish).toBeEnabled();
+  await quick.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(quick).toHaveCount(0);
 });
 
 async function semanticColor(page, token) {

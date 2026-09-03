@@ -19,6 +19,7 @@ export default function ImageChartView({
   chart = {},
   interactionMode = "active",
   surface = "view",
+  audienceScale = null,
   zoomEnabled = interactionMode === "active",
   onRetry,
   onReplace,
@@ -64,6 +65,9 @@ export default function ImageChartView({
   }
 
   const title = String(chart.title ?? "").trim();
+  const titleStyle = audienceScale
+    ? { ...imageTitleStyle(chart), fontSize: `${audienceScale.title}px` }
+    : imageTitleStyle(chart);
   const accessibleName = title || String(model?.alt ?? "").trim() || "Image";
   const crop = safeCrop(model?.crop);
   const rotation = safeRotation(model?.rotation);
@@ -174,7 +178,7 @@ export default function ImageChartView({
         : undefined}
       {...titleContainerProps(chart)}
     >
-      {title ? <ChartHeading chart={chart} titleStyle={imageTitleStyle(chart)} /> : null}
+      {title ? <ChartHeading chart={chart} titleStyle={titleStyle} /> : null}
       <div
         className="chart-image-viewport"
         style={{ backgroundColor: resolveImageViewportBackground(chart) }}

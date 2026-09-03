@@ -42,6 +42,7 @@ export function ImageSourceEditor({
             mediaItems={mediaItems}
             assets={assets}
             mode="image"
+            selectedMediaId={source.mediaId ?? null}
             disabled={disabled}
             onSelect={onMediaSelect}
             onCreateLocal={onMediaCreate}

@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { createSerializedDashboardCommitController } from "../src/lib/dashboardCommitController.js";
 
@@ -12,9 +10,6 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const compositionModule = await vite.ssrLoadModule(
-  "/src/components/presentation/CompositionControls.jsx",
-).catch(() => null);
 const controllerModule = await vite.ssrLoadModule(
   "/src/components/presentation/PresentationController.jsx",
 ).catch(() => null);
@@ -29,143 +24,6 @@ const savedPosition = Object.freeze({
   xPermille: 680,
   yPermille: 40,
   widthPermille: 280,
-});
-
-test("date-position draft clamps drag and keyboard movement to the Audience canvas", () => {
-  assert.equal(typeof compositionModule?.createCompositionDraft, "function");
-  let draft = compositionModule.createCompositionDraft(savedPosition);
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SET_DATE_POSITION",
-    value: { xPermille: 940.4, yPermille: -18, widthPermille: 300.8 },
-  });
-  assert.deepEqual(draft.value, {
-    xPermille: 699,
-    yPermille: 0,
-    widthPermille: 301,
-  });
-  assert.equal(draft.status, "dirty");
-
-  assert.deepEqual(compositionModule.moveDatePositionByKeyboard(draft.value, {
-    key: "ArrowRight",
-    shiftKey: false,
-  }), { xPermille: 699, yPermille: 0, widthPermille: 301 });
-  assert.deepEqual(compositionModule.moveDatePositionByKeyboard(draft.value, {
-    key: "ArrowDown",
-    shiftKey: true,
-  }), { xPermille: 699, yPermille: 1, widthPermille: 301 });
-});
-
-test("Cancel restores the saved baseline and save failure retains a retryable dirty draft", () => {
-  let draft = compositionModule.createCompositionDraft(savedPosition);
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SET_DATE_POSITION",
-    value: { xPermille: 120, yPermille: 250, widthPermille: 420 },
-  });
-  draft = compositionModule.reduceCompositionDraft(draft, { type: "SAVE_REQUESTED" });
-  assert.equal(draft.status, "saving");
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SAVE_FAILED",
-    error: new Error("storage failed"),
-  });
-  assert.equal(draft.status, "error");
-  assert.equal(draft.dirty, true);
-  assert.equal(draft.error.retryable, true);
-  assert.match(draft.error.message, /storage failed/);
-  assert.deepEqual(draft.value, {
-    xPermille: 120,
-    yPermille: 250,
-    widthPermille: 420,
-  });
-
-  draft = compositionModule.reduceCompositionDraft(draft, { type: "CANCEL" });
-  assert.equal(draft.status, "clean");
-  assert.equal(draft.dirty, false);
-  assert.deepEqual(draft.value, savedPosition);
-});
-
-test("successful save accepts only the persisted position as the next clean baseline", () => {
-  let draft = compositionModule.createCompositionDraft(savedPosition);
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SET_DATE_POSITION",
-    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
-  });
-  draft = compositionModule.reduceCompositionDraft(draft, { type: "SAVE_REQUESTED" });
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SAVE_SUCCEEDED",
-    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
-  });
-
-  assert.equal(draft.status, "clean");
-  assert.equal(draft.dirty, false);
-  assert.deepEqual(draft.baseline, {
-    xPermille: 125,
-    yPermille: 250,
-    widthPermille: 375,
-  });
-});
-
-test("Scene switch ignores the old request completion and resets to the new saved Scene", () => {
-  let draft = compositionModule.createCompositionDraft(savedPosition, "scene-a");
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SET_DATE_POSITION",
-    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
-  });
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SAVE_REQUESTED",
-    requestToken: 1,
-    sceneId: "scene-a",
-  });
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "RESET_BASELINE",
-    sceneId: "scene-b",
-    value: { xPermille: 300, yPermille: 60, widthPermille: 240 },
-  });
-  const afterLateSuccess = compositionModule.reduceCompositionDraft(draft, {
-    type: "SAVE_SUCCEEDED",
-    requestToken: 1,
-    sceneId: "scene-a",
-    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
-  });
-
-  assert.deepEqual(afterLateSuccess, draft);
-  assert.equal(afterLateSuccess.sceneId, "scene-b");
-  assert.deepEqual(afterLateSuccess.value, {
-    xPermille: 300,
-    yPermille: 60,
-    widthPermille: 240,
-  });
-});
-
-test("date edits are disabled during a save and failure restores retryable submitted state", () => {
-  let draft = compositionModule.createCompositionDraft(savedPosition, "scene-a");
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SET_DATE_POSITION",
-    value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
-  });
-  draft = compositionModule.reduceCompositionDraft(draft, {
-    type: "SAVE_REQUESTED",
-    requestToken: 7,
-    sceneId: "scene-a",
-  });
-  const duringSave = compositionModule.reduceCompositionDraft(draft, {
-    type: "SET_DATE_POSITION",
-    value: { xPermille: 400, yPermille: 300, widthPermille: 200 },
-  });
-  assert.deepEqual(duringSave, draft);
-
-  const failed = compositionModule.reduceCompositionDraft(duringSave, {
-    type: "SAVE_FAILED",
-    requestToken: 7,
-    sceneId: "scene-a",
-    error: new Error("durable storage failed"),
-  });
-  assert.equal(failed.status, "error");
-  assert.equal(failed.dirty, true);
-  assert.deepEqual(failed.value, {
-    xPermille: 125,
-    yPermille: 250,
-    widthPermille: 375,
-  });
 });
 
 test("targeted date persistence rejects non-durable storage and preserves the accepted dashboard", async () => {
@@ -221,17 +79,6 @@ test("targeted durable persistence commits the complete dashboard instead of the
   assert.deepEqual(persistedCandidate.scenes[1], dashboard.scenes[1]);
 });
 
-test("PresentationController owns the narrow date save route and disables source switching while saving", async () => {
-  const source = await import("node:fs/promises").then(({ readFile }) => readFile(
-    new URL("../src/components/presentation/PresentationController.jsx", import.meta.url),
-    "utf8",
-  ));
-  assert.match(source, /onSaveSceneDatePosition/);
-  assert.match(source, /<CompositionControls/);
-  assert.match(source, /onSavingChange=\{setCompositionSaving\}/);
-  assert.match(source, /<PresentationSourcePicker[\s\S]*disabled=\{compositionSaving\}/);
-});
-
 test("the Scene mutation changes one camelCase datePosition and preserves every unrelated field", () => {
   assert.equal(typeof mutationModule?.mutateSceneDatePosition, "function");
   const dashboard = dashboardFixture();
@@ -275,7 +122,7 @@ test("the targeted mutation rejects missing or no-longer-valid Scenes without pa
   assert.deepEqual(dashboard, invalidBefore);
 });
 
-test("unsaved date edits never enter the strict state while saved camelCase maps to snake_case", () => {
+test("saved Scene date position maps from dashboard camelCase to Audience wire format", () => {
   const dashboard = dashboardFixture();
   const scene = dashboard.scenes[0];
   const playback = {
@@ -288,13 +135,6 @@ test("unsaved date edits never enter the strict state while saved camelCase maps
     speed: 1,
     traceMode: "reveal",
   };
-  const draft = compositionModule.reduceCompositionDraft(
-    compositionModule.createCompositionDraft(scene.audience.datePosition),
-    {
-      type: "SET_DATE_POSITION",
-      value: { xPermille: 125, yPermille: 250, widthPermille: 375 },
-    },
-  );
   const projected = controllerModule.buildPresentationState({
     dashboard,
     activePageId: "page-a",
@@ -307,36 +147,11 @@ test("unsaved date edits never enter the strict state while saved camelCase maps
     audienceFacts: {},
   });
 
-  assert.equal(draft.dirty, true);
   assert.deepEqual(projected.audience.date_position, {
     x_permille: 680,
     y_permille: 40,
     width_permille: 280,
   });
-});
-
-test("composition controls expose an explicit dirty Save/Cancel boundary for saved Scenes only", () => {
-  const html = renderToStaticMarkup(React.createElement(compositionModule.default, {
-    scene: dashboardFixture().scenes[0],
-    onSaveSceneDatePosition() {},
-  }));
-  assert.match(html, /data-presentation-composition-id="date-position"/);
-  assert.match(html, /data-presentation-control-id="date-position-save"/);
-  assert.match(html, /data-presentation-control-id="date-position-cancel"/);
-  assert.match(html, /Audience date position/);
-  assert.doesNotMatch(html, /session_override|matching override/i);
-});
-
-test("date-position editor keeps the y=1000 endpoint visible with a proportional self-anchor", () => {
-  const scene = dashboardFixture().scenes[0];
-  scene.audience.datePosition = { xPermille: 125, yPermille: 1000, widthPermille: 375 };
-  const html = renderToStaticMarkup(React.createElement(compositionModule.default, {
-    scene,
-    onSaveSceneDatePosition() {},
-  }));
-
-  assert.match(html, /top:100%/);
-  assert.match(html, /transform:translateY\(-100%\)/);
 });
 
 function dashboardFixture() {

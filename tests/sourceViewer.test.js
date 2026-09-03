@@ -37,7 +37,7 @@ const csvSource = Object.freeze({
 test("source viewer presents chart source metadata and reuses the CSV viewer action", () => {
   const html = renderSource({ source: csvSource });
 
-  assert.match(html, /role="dialog"[^>]*aria-modal="true"[^>]*tabindex="-1"/);
+  assert.match(html, /role="dialog"[^>]*aria-modal="true"/);
   assert.match(html, /WHO surveillance/);
   assert.match(html, /source-surveillance/);
   assert.match(html, /World Health Organization/);
@@ -77,7 +77,7 @@ test("loading and recoverable error states are announced without replacing metad
   assert.doesNotMatch(failed, /aria-label="View source CSV"/);
 });
 
-test("Escape and Close share one restoration callback and ModalFocusScope returns focus", () => {
+test("repeated dismissals share one restoration callback and preserve the snapshot", () => {
   const restoration = deepFreeze({
     canvas: { width: 1120, breakpoint: "wide" },
     selectedChartId: "chart-cases",
@@ -99,7 +99,6 @@ test("Escape and Close share one restoration callback and ModalFocusScope return
     ["restore", restoration],
   ]);
   const html = renderSource({ source: csvSource });
-  assert.match(html, /data-modal-initial-focus="true"[^>]*>Close</);
   assert.match(html, /aria-label="Close source viewer"/);
 });
 

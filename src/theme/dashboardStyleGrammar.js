@@ -1,8 +1,11 @@
 const MONO_FONT_STACK = "ui-monospace, SFMono-Regular, Consolas, monospace";
+const SURFACE_ROLES = Object.freeze([
+  "shell", "command-bar", "panel", "editor", "dialog", "drawer", "menu", "status", "table", "chart-cell",
+]);
 
 const STYLE_GRAMMARS = Object.freeze({
   "evidence-ledger": Object.freeze({
-    bodyFont: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    bodyFont: '"SimEx Inter", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     headingFont: 'Georgia, "Times New Roman", serif',
     dataFont: 'Georgia, "Times New Roman", serif',
     headingWeight: "500",
@@ -13,6 +16,15 @@ const STYLE_GRAMMARS = Object.freeze({
     transitionDuration: "140ms",
     shadow: Object.freeze({ light: "none", dark: "none" }),
     shellShadow: Object.freeze({ light: "none", dark: "none" }),
+    roleBackground: "none",
+    registerBackground: "repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--simex-border-subtle) 32px)",
+    roleBorder: "var(--simex-border-strong)",
+    roleDivider: "var(--simex-border-strong)",
+    roleRail: "none",
+    edgeBlockStart: "0px",
+    edgeInlineEnd: "0px",
+    edgeBlockEnd: "0px",
+    edgeInlineStart: "0px",
   }),
   "humanist-standard": Object.freeze({
     bodyFont: 'Segoe UI Variable Text, "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
@@ -25,13 +37,22 @@ const STYLE_GRAMMARS = Object.freeze({
     surfaceRadius: "18px",
     transitionDuration: "180ms",
     shadow: Object.freeze({
-      light: "0 8px 20px rgb(36 57 52 / 10%)",
-      dark: "0 10px 24px rgb(0 0 0 / 24%)",
+      light: "0 8px 20px color-mix(in srgb, var(--simex-text-strong) 10%, transparent)",
+      dark: "0 10px 24px color-mix(in srgb, var(--simex-surface-outer) 24%, transparent)",
     }),
     shellShadow: Object.freeze({
-      light: "0 16px 38px rgb(25 55 48 / 12%)",
-      dark: "0 16px 38px rgb(25 55 48 / 12%)",
+      light: "0 16px 38px color-mix(in srgb, var(--simex-text-strong) 12%, transparent)",
+      dark: "0 16px 38px color-mix(in srgb, var(--simex-surface-outer) 48%, transparent)",
     }),
+    roleBackground: "linear-gradient(color-mix(in srgb, var(--simex-surface-panel-alt) 28%, transparent), color-mix(in srgb, var(--simex-surface-panel-alt) 28%, transparent))",
+    registerBackground: "none",
+    roleBorder: "color-mix(in srgb, var(--simex-border-subtle) 78%, transparent)",
+    roleDivider: "color-mix(in srgb, var(--simex-border-subtle) 64%, transparent)",
+    roleRail: "none",
+    edgeBlockStart: "0px",
+    edgeInlineEnd: "0px",
+    edgeBlockEnd: "0px",
+    edgeInlineStart: "0px",
   }),
   "signal-instrument": Object.freeze({
     bodyFont: 'Segoe UI Variable Text, "Segoe UI", ui-sans-serif, system-ui, sans-serif',
@@ -44,13 +65,22 @@ const STYLE_GRAMMARS = Object.freeze({
     surfaceRadius: "6px",
     transitionDuration: "95ms",
     shadow: Object.freeze({
-      light: "0 1px 2px rgb(19 38 45 / 14%), inset 0 1px 0 rgb(255 255 255 / 55%)",
-      dark: "0 1px 2px rgb(0 0 0 / 38%), inset 0 1px 0 rgb(255 255 255 / 6%)",
+      light: "0 1px 2px color-mix(in srgb, var(--simex-text-strong) 14%, transparent), inset 0 1px 0 color-mix(in srgb, var(--simex-surface-panel) 55%, transparent)",
+      dark: "0 1px 2px color-mix(in srgb, var(--simex-surface-outer) 38%, transparent), inset 0 1px 0 color-mix(in srgb, var(--simex-text-strong) 6%, transparent)",
     }),
     shellShadow: Object.freeze({
-      light: "0 4px 12px rgb(19 38 45 / 14%), inset 0 1px 0 rgb(255 255 255 / 45%)",
-      dark: "0 4px 12px rgb(0 0 0 / 32%), inset 0 1px 0 rgb(255 255 255 / 6%)",
+      light: "0 4px 12px color-mix(in srgb, var(--simex-text-strong) 14%, transparent), inset 0 1px 0 color-mix(in srgb, var(--simex-surface-panel) 45%, transparent)",
+      dark: "0 4px 12px color-mix(in srgb, var(--simex-surface-outer) 32%, transparent), inset 0 1px 0 color-mix(in srgb, var(--simex-text-strong) 6%, transparent)",
     }),
+    roleBackground: "linear-gradient(to bottom, var(--simex-border-subtle) 0 1px, transparent 1px 100%)",
+    registerBackground: "none",
+    roleBorder: "var(--simex-border-strong)",
+    roleDivider: "var(--simex-border-subtle)",
+    roleRail: "linear-gradient(to right, var(--simex-accent) 0 3px, transparent 3px 100%)",
+    edgeBlockStart: "1px",
+    edgeInlineEnd: "0px",
+    edgeBlockEnd: "0px",
+    edgeInlineStart: "3px",
   }),
 });
 
@@ -73,5 +103,17 @@ export function resolveDashboardStyleGrammar(
     "--simex-style-transition-duration": grammar.transitionDuration,
     "--simex-style-panel-shadow": grammar.shadow[appearance],
     "--simex-style-shell-shadow": grammar.shellShadow[appearance],
+    "--simex-style-role-border": grammar.roleBorder,
+    "--simex-style-role-divider": grammar.roleDivider,
+    "--simex-style-role-rail": grammar.roleRail,
+    "--simex-style-edge-block-start": grammar.edgeBlockStart,
+    "--simex-style-edge-inline-end": grammar.edgeInlineEnd,
+    "--simex-style-edge-block-end": grammar.edgeBlockEnd,
+    "--simex-style-edge-inline-start": grammar.edgeInlineStart,
+    "--simex-material-ledger-register-background": grammar.registerBackground,
+    ...Object.fromEntries(SURFACE_ROLES.map((role) => [
+      `--simex-role-${role}-background`,
+      grammar.roleBackground,
+    ])),
   });
 }

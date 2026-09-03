@@ -164,17 +164,37 @@ test("chart Save commits its working toast before dashboard busy state", async (
   expect(ordering.toastDelivery).toBeLessThan(ordering.busyDelivery);
 });
 
-test("operation feedback stays visually above an overlapping Quick Edit surface", async ({ page }) => {
-  await page.setViewportSize({ width: 790, height: 864 });
+test("failed operation feedback stays visually above an overlapping Quick Edit surface", async ({ page }) => {
   await enterBiomedicalBuild(page);
+  await page.setViewportSize({ width: 790, height: 864 });
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await panel.hover();
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
+  await page.evaluate(() => {
+    const stringify = JSON.stringify;
+    JSON.stringify = function failToastProbeOnce(value, ...args) {
+      if (
+        globalThis.__SIMEX_FAIL_TOAST_PROBE_ONCE__ === true
+        && value?.pages?.some(({ sections }) => sections?.some(({ panels }) => (
+          panels?.some((placement) => (
+            (placement.chart ?? placement)?.title === "Toast stacking probe"
+          ))
+        )))
+      ) {
+        globalThis.__SIMEX_FAIL_TOAST_PROBE_ONCE__ = false;
+        throw new Error("Dashboard persistence is temporarily unavailable.");
+      }
+      return stringify.call(this, value, ...args);
+    };
+    globalThis.__SIMEX_FAIL_TOAST_PROBE_ONCE__ = true;
+  });
   await quick.getByLabel("Chart title").fill("Toast stacking probe");
+  await quick.getByRole("button", { name: "Save", exact: true }).click();
 
   const notice = page.locator(".operation-status-notice")
-    .filter({ hasText: "Updating chart draft" });
+    .filter({ hasText: "Dashboard persistence is temporarily unavailable." });
   await expect(notice).toBeVisible();
   const stacking = await notice.evaluate((node) => {
     const noticeBounds = node.getBoundingClientRect();

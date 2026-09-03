@@ -8,9 +8,69 @@ import {
   readAuthoredAsset,
   stageAuthoredAsset,
 } from "../src/static-content/assets/browserAuthoredAssetStore.js";
+import { resolveBrowserAuthoredAssetFromSources } from "../src/static-content/assets/browserAuthoredAssetRuntime.js";
 
 const PNG_BYTES = new Uint8Array([137, 80, 78, 71, 1, 2, 3, 4]);
 const PNG_SHA = "cc1cdcbcf0bdb70801a2f0777e9f9c85571461df7f96d1d3f1476f420df37e38";
+
+test("durable authored media resolves from the browser store instead of a transitional session URL", async () => {
+  const calls = [];
+  const resolved = await resolveBrowserAuthoredAssetFromSources("asset-replacement", {
+    storageState: "durable",
+  }, {
+    resolveSessionAsset() {
+      calls.push("session");
+      return { url: "blob:session-replacement" };
+    },
+    createObjectUrlLease: async () => {
+      calls.push("durable");
+      return { url: "blob:durable-replacement", release() {} };
+    },
+  });
+
+  assert.equal(resolved.url, "blob:durable-replacement");
+  assert.deepEqual(calls, ["durable"]);
+});
+
+test("staged authored media continues to resolve from its session URL", async () => {
+  const calls = [];
+  const session = { url: "blob:session-draft" };
+  const resolved = await resolveBrowserAuthoredAssetFromSources("asset-draft", {
+    storageState: "staged",
+  }, {
+    resolveSessionAsset() {
+      calls.push("session");
+      return session;
+    },
+    createObjectUrlLease: async () => {
+      calls.push("durable");
+      return { url: "blob:durable-draft", release() {} };
+    },
+  });
+
+  assert.equal(resolved, session);
+  assert.deepEqual(calls, ["session"]);
+});
+
+test("an explicitly durable asset surfaces a store failure instead of returning a revocable session URL", async () => {
+  const calls = [];
+  await assert.rejects(
+    () => resolveBrowserAuthoredAssetFromSources("asset-missing", {
+      storageState: "durable",
+    }, {
+      resolveSessionAsset() {
+        calls.push("session");
+        return { url: "blob:session-missing" };
+      },
+      createObjectUrlLease: async () => {
+        calls.push("durable");
+        throw new Error("durable bytes are unavailable");
+      },
+    }),
+    /durable bytes are unavailable/,
+  );
+  assert.deepEqual(calls, ["durable"]);
+});
 
 test("authored bytes stage once by hash and become durable only after dashboard commit", async () => {
   const adapter = createMemoryAdapter();

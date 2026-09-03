@@ -1,12 +1,22 @@
-# Dense Desktop Surface Inventory
+# Dense Desktop Journey/State Inventory
 
-**Coverage authority:** `tests/e2e/support/dashboard-surface-manifest.js`  
-**Final artifact:** `final-6a3eea9-20260902`  
-**Accounting:** 71 total = 64 executed + 6 bounded aliases + 1 intentionally out of scope
+**Journey reachability authority:** `tests/e2e/support/dashboard-surface-manifest.js`
 
-Every executed surface was inspected for role sizing, choice centreline, rhythm, wrapping, whitespace, overlap, clipping, overflow, repeated titles, same-role variance, occupancy, operational contrast, human-visible semantics, and the desktop support contract. The collector contains no keyboard, focus, tab-order, ARIA, screen-reader, or assistive-technology fields.
+**Owned visual-region authority:** `src/theme/dashboardRegionRegistry.js`
 
-| # | Surface | Family | Owner | State | Viewport | Disposition |
+**Historical browser artifact:** `final-6a3eea9-20260902`
+
+**Current journey catalogue:** 71 total = 64 executable + 6 bounded aliases + 1 intentionally out of scope
+
+**Current amendment browser status:** deferred; journey/style and region/style renders remain pending
+
+In the historical artifact, every then-executable journey was scanned for role sizing, choice centreline, rhythm, wrapping, whitespace, overlap, clipping, overflow, repeated titles, same-role variance, occupancy, operational contrast, human-visible semantics, and the desktop support contract. Controls inside a broad journey root were historically measured but their enclosing nested visual regions were not necessarily given independent ownership or style evidence.
+
+The missed persistent Build command header demonstrated that journey completion and descendant scanning do not prove visual-region closure. The owned-region registry and independent closure sentinel now supply that second coverage layer. This table remains a journey/state inventory; it must not be cited as an exhaustive surface census. The collector contains no keyboard, focus, tab-order, ARIA-quality, screen-reader, or assistive-technology fields.
+
+The table follows the current journey manifest. Its `executed` labels record the historical browser artifact, not current-amendment browser execution. One catalogue entry changed after that artifact: current `build-page-command-form` replaces historical `build-page-orbit`. That current journey is executable but has no amendment browser render yet; the old Page Orbit capture is retained only as historical evidence.
+
+| # | Journey/state | Family | Setup owner | State | Viewport | Historical evidence / current catalogue status |
 |---:|---|---|---|---|---:|---|
 | 1 | `landing-standard` | landing | `app-shell` | landing | 1280x720 | executed |
 | 2 | `home-standard` | home | `home-workspace` | showcase | 1440x900 | executed |
@@ -21,7 +31,7 @@ Every executed surface was inspected for role sizing, choice centreline, rhythm,
 | 11 | `dashboard-map-inspector` | structure-management | `dashboard-map` | context-inspector | 1440x900 | executed |
 | 12 | `build-unit-orbit` | structure-management | `unit-orbit` | selected-chart | 1440x900 | executed |
 | 13 | `build-page-actions` | structure-management | `anchored-page-navigation` | page-actions | 1440x900 | executed |
-| 14 | `build-page-orbit` | structure-management | `page-orbit` | page-command-orbit | 1440x900 | executed |
+| 14 | `build-page-command-form` | structure-management | `anchored-page-navigation` | page-command-form | 1440x900 | current executable; amendment render pending (historical evidence remains under `build-page-orbit`) |
 | 15 | `section-command-dialog` | structure-management | `section-structure-command-dialog` | move-section | 1440x900 | executed |
 | 16 | `build-more-menu` | build | `build-command-crown` | more-commands | 1280x720 | executed |
 | 17 | `dashboard-look-standard` | dashboard-look | `dashboard-look-drawer` | profile-options | 1440x900 | executed |
@@ -70,8 +80,8 @@ Every executed surface was inspected for role sizing, choice centreline, rhythm,
 | 60 | `audience-1920` | audience | `audience-display` | live-1920 | 1920x1080 | executed |
 | 61 | `source-viewer-standard` | source-viewer | `source-viewer` | biomedical-csv | 1440x900 | executed |
 | 62 | `application-recovery` | recovery | `application-recovery` | configuration-unavailable | 1280x720 | executed |
-| 63 | `build-below-desktop-gate` | desktop-gate | `app-shell-mode-gate` | below-1024 | 900x720 | executed |
-| 64 | `present-below-desktop-gate` | desktop-gate | `app-shell-mode-gate` | below-1024 | 900x720 | executed |
+| 63 | `build-below-desktop-recommendation` | desktop-recommendation | `app-shell-width-advisory` | below-1024 | 900x720 | current executable; amendment render pending (historical hard-gate evidence is superseded) |
+| 64 | `present-below-desktop-recommendation` | desktop-recommendation | `app-shell-width-advisory` | below-1024 | 900x720 | current executable; amendment render pending (historical hard-gate evidence is superseded) |
 | 65 | `chart-editor-modal-contract` | chart-editor | `chart-editor-modal` | alternate-modal-host | 1440x900 | alias → `full-chart-editor-configure` |
 | 66 | `build-move-dialog-contract` | structure-management | `build-move-dialog` | move-destination | 1440x900 | alias → `build-create-page-dialog` |
 | 67 | `build-move-confirmation-contract` | structure-management | `build-move-confirmation-dialog` | move-consequences | 1440x900 | alias → `delete-dashboard-content-dialog` |
@@ -93,4 +103,4 @@ Every executed surface was inspected for role sizing, choice centreline, rhythm,
 
 ## Intentional exclusion
 
-`mobile-view-custom-design` is reserved for a future purpose-built View-only mobile design. It is not graded by this desktop redesign. This exclusion does not apply to the below-1024 Build and Present gates, which were executed and passed.
+`mobile-view-custom-design` is reserved for a future purpose-built View-only mobile design. It is not graded by this desktop redesign. Below 1024px, Build and Present remain available behind a compact recommendation, but their narrow-width internal composition is not graded by the desktop redesign.

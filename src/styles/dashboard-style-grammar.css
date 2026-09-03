@@ -534,7 +534,6 @@
 
 .app-frame .present-workspace :is(
   .present-status-strip p,
-  .present-scene-summary,
   .present-holding-scene,
   .present-chart-limit-status,
   .audience-snapshot-heading > span,
@@ -568,6 +567,74 @@
 .app-frame .present-chart-order {
   background: var(--simex-accent);
   color: var(--simex-on-accent);
+}
+
+/* Present keeps one dense geometry while each approved style supplies a
+   deliberate surface grammar through the shared semantic palette. */
+.app-frame[data-dashboard-style="evidence-ledger"] .present-workspace :is(
+  .present-status-strip,
+  .present-context-panel,
+  .present-scene-panel,
+  .present-selected-chart,
+  .present-chart-group,
+  .presentation-controller__source,
+  .presentation-controller__timeline,
+  .presentation-controller__output
+) {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] .present-selected-chart {
+  background-image: linear-gradient(
+    var(--simex-border-strong),
+    var(--simex-border-strong)
+  );
+  background-position: top;
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .present-workspace :is(
+  .present-status-strip,
+  .present-context-panel,
+  .present-scene-panel
+) {
+  border-radius: calc(var(--simex-style-panel-radius) + 4px);
+  box-shadow: inset 0 0 0 1px var(--simex-border-subtle);
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .present-workspace :is(
+  .presentation-controller__source,
+  .presentation-controller__timeline,
+  .presentation-controller__output
+) {
+  background: var(--simex-surface-panel-alt);
+  border-radius: calc(var(--simex-style-control-radius) + 2px);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .present-workspace :is(
+  .presentation-controller__source,
+  .presentation-controller__timeline,
+  .presentation-controller__output
+) {
+  --simex-decorated-edge-block-end: 1px;
+  --simex-decorated-edge-block-start: 1px;
+  --simex-decorated-edge-inline-end: 1px;
+  --simex-decorated-edge-inline-start: 3px;
+  box-shadow:
+    inset 3px 0 0 var(--simex-accent),
+    inset 0 0 0 1px var(--simex-border-strong);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .present-workspace :is(
+  .present-status-strip,
+  .present-chart-order,
+  .present-chart-limit-status,
+  .presentation-controller
+) {
+  font-family: var(--simex-style-data-font);
+  font-variant-numeric: tabular-nums lining-nums;
 }
 .app-frame[data-dashboard-style="evidence-ledger"] .build-tree-group{--build-tree-line:var(--simex-border-strong);--build-tree-line-width:1px;--build-tree-elbow-radius:0}.app-frame[data-dashboard-style="humanist-standard"] .build-tree-group{--build-tree-line:color-mix(in srgb,var(--simex-border-subtle) 72%,transparent);--build-tree-line-width:1px;--build-tree-elbow-radius:6px}.app-frame[data-dashboard-style="signal-instrument"] .build-tree-group{--build-tree-line:var(--simex-accent);--build-tree-line-width:2px;--build-tree-elbow-radius:0}
 
@@ -862,7 +929,7 @@
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   bottom: 0;
   content: "";
-  left: 22px;
+  left: calc(var(--simex-control-utility, 24px) / 2);
   pointer-events: none;
   position: absolute;
   top: calc(50% + 8px);
@@ -874,7 +941,7 @@
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   content: "";
   height: calc(100% + 6px);
-  left: -2px;
+  left: calc((var(--simex-control-utility, 24px) / 2) - 24px);
   pointer-events: none;
   position: absolute;
   top: 0;
@@ -890,7 +957,7 @@
   border-bottom: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   border-radius: 0 0 0 var(--build-tree-elbow-radius, 0);
   height: 22px;
-  left: -2px;
+  left: calc((var(--simex-control-utility, 24px) / 2) - 24px);
   pointer-events: none;
   top: 0;
   width: 24px;
@@ -2034,9 +2101,8 @@
   .showcase-faq,
   .showcase-resources
 ) {
-  border-top: 1px solid var(--simex-border-strong);
   border-radius: 0;
-  box-shadow: none;
+  box-shadow: inset 0 1px 0 var(--simex-border-strong);
 }
 
 .app-frame[data-dashboard-style="evidence-ledger"] :is(
@@ -2051,12 +2117,6 @@
   box-shadow: none;
 }
 
-.app-frame[data-dashboard-style="humanist-standard"] .showcase-landing {
-  display: grid;
-  gap: 24px;
-  padding: 0 24px 24px;
-}
-
 .app-frame[data-dashboard-style="humanist-standard"] .showcase-landing > :is(
   .showcase-hero,
   .showcase-proof-grid,
@@ -2065,19 +2125,14 @@
   .showcase-faq,
   .showcase-resources
 ) {
-  border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-style-surface-radius);
-  box-shadow: var(--simex-style-panel-shadow);
-  margin: 0;
+  box-shadow:
+    inset 0 0 0 1px var(--simex-border-subtle),
+    var(--simex-style-panel-shadow);
 }
 
 .app-frame[data-dashboard-style="humanist-standard"] .showcase-section {
   background: var(--simex-surface-panel-alt);
-  padding: 48px;
-}
-
-.app-frame[data-dashboard-style="humanist-standard"] .showcase-section + .showcase-section {
-  padding-top: 48px;
 }
 
 .app-frame[data-dashboard-style="humanist-standard"] :is(
@@ -2086,16 +2141,10 @@
   .showcase-faq details
 ) {
   border-radius: var(--simex-style-panel-radius);
-  padding: 24px;
 }
 
 .app-frame[data-dashboard-style="signal-instrument"] .showcase-hero {
-  border-bottom: 2px solid var(--simex-border-strong);
-  min-height: 320px;
-}
-
-.app-frame[data-dashboard-style="signal-instrument"] .showcase-hero-copy {
-  padding: clamp(28px, 4vw, 40px);
+  box-shadow: inset 0 -2px 0 var(--simex-border-strong);
 }
 
 .app-frame[data-dashboard-style="signal-instrument"] .showcase-hero h1 {
@@ -2107,21 +2156,9 @@
   .showcase-faq,
   .showcase-resources
 ) {
-  border-left: 4px solid var(--simex-accent);
-  border-top: 1px solid var(--simex-border-strong);
-  padding: 28px 32px;
-}
-
-.app-frame[data-dashboard-style="signal-instrument"] .showcase-section + .showcase-section {
-  padding-top: 28px;
-}
-
-.app-frame[data-dashboard-style="signal-instrument"] :is(
-  .showcase-capability-grid,
-  .showcase-route-grid,
-  .showcase-faq-items
-) {
-  gap: 8px;
+  box-shadow:
+    inset 4px 0 0 var(--simex-accent),
+    inset 0 1px 0 var(--simex-border-strong);
 }
 
 .app-frame[data-dashboard-style="signal-instrument"] :is(
@@ -2131,17 +2168,6 @@
 ) {
   border-radius: var(--simex-style-control-radius);
   box-shadow: none;
-  padding: 14px;
-}
-
-.app-frame[data-dashboard-style="signal-instrument"] .showcase-route {
-  gap: 8px;
-  min-height: 180px;
-  padding: 18px;
-}
-
-.app-frame[data-dashboard-style="signal-instrument"] .showcase-proof-grid > div {
-  padding: 14px 18px;
 }
 
 .app-frame[data-dashboard-style="signal-instrument"] :is(
@@ -2246,37 +2272,274 @@
   outline-offset: 2px;
 }
 
-.app-frame[data-dashboard-style="signal-instrument"] :is(
-  .showcase-tour,
-  .showcase-status
-) {
-  margin: 0 32px 28px;
+/* Shared surface-role grammar. Theme roots project the same semantic paint
+   variables, and these late grouped selectors apply them without changing
+   composition or component dimensions. */
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root,
+  .chart-state-recovery-harness
+)[data-dashboard-style] {
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-body-font);
 }
 
-@media (max-width: 640px) {
-  .app-frame[data-dashboard-style="humanist-standard"] .showcase-landing {
-    gap: 12px;
-    padding: 0 12px 12px;
-  }
+:is(
+  .app-frame,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style],
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  [data-canonical-mode="home"],
+  [data-canonical-mode="view"],
+  .build-workspace-authoring-root,
+  .present-workspace,
+  .audience-display,
+  .source-viewer-shell
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-shell-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+}
 
-  .app-frame[data-dashboard-style="humanist-standard"] .showcase-section,
-  .app-frame[data-dashboard-style="humanist-standard"] .showcase-section + .showcase-section {
-    padding: 28px 18px;
-  }
+.unit-orbit[data-dashboard-style],
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .dashboard-header,
+  .chart-panel,
+  .build-side-sheet,
+  .present-context-panel,
+  .present-scene-panel,
+  .scenario-passport-popover
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-panel-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
 
-  .app-frame[data-dashboard-style="signal-instrument"] :is(
-    .showcase-section,
-    .showcase-faq,
-    .showcase-resources
-  ),
-  .app-frame[data-dashboard-style="signal-instrument"] .showcase-section + .showcase-section {
-    padding: 24px 18px;
-  }
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .dashboard-command-crown,
+  [data-dashboard-region="build-command-header"],
+  .build-command-header,
+  .build-page-navigation,
+  .build-page-tabs[data-build-page-navigation="anchored"],
+  .playback-controls,
+  .playback-controls--floating,
+  .present-action-dock
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-command-bar-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
 
-  .app-frame[data-dashboard-style="signal-instrument"] :is(
-    .showcase-tour,
-    .showcase-status
-  ) {
-    margin: 0 18px 24px;
-  }
+.build-authoring-auxiliary[data-dashboard-style],
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .chart-authoring-section,
+  .chart-authoring-section-advanced,
+  .chart-wizard-workbench,
+  .chart-editor-form,
+  .source-content-workspace,
+  .static-content-dialog__body
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-editor-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
+
+:is(
+  .dashboard-dialog[data-dashboard-style]:not(.right-side-drawer),
+  .scene-observation-dialog[data-dashboard-style] > .dashboard-dialog
+),
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .dashboard-dialog:not(.right-side-drawer),
+  .scene-observation-dialog > .dashboard-dialog
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-dialog-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+}
+
+:is(
+  [data-right-side-drawer="dashboard-map-panel"][data-dashboard-style],
+  [data-right-side-drawer="look-drawer"][data-dashboard-style],
+  [data-right-side-drawer="build-more-drawer"][data-dashboard-style]
+),
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  [data-right-side-drawer="dashboard-map-panel"],
+  [data-right-side-drawer="look-drawer"],
+  [data-right-side-drawer="build-more-drawer"],
+  .look-drawer,
+  .build-more-drawer
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-drawer-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+}
+
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .accessible-listbox-popup,
+  .accessible-listbox-option,
+  .chart-export-menu,
+  .build-page-action-menu,
+  .playback-menu,
+  .settings-color-popover,
+  .settings-color-palette
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-menu-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-control-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
+
+.chart-state-recovery-harness[data-dashboard-style],
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .desktop-width-notice,
+  .operation-status-notice,
+  .chart-status-empty,
+  .chart-status-error,
+  .chart-status-partial,
+  .static-content-state,
+  .present-status-strip
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-status-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
+
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .chart-table-view,
+  .source-viewer-table-wrap
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-table-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  font-family: var(--simex-style-data-font);
+}
+
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] [data-dashboard-material="ledger-register"][data-dashboard-surface-role="table"] {
+  background-image: var(--simex-style-role-rail), var(--simex-material-ledger-register-background), var(--simex-role-table-background);
+}
+
+:is(
+  .app-frame,
+  .build-authoring-auxiliary,
+  .unit-orbit,
+  .operation-status-viewport,
+  .audience-theme-root,
+  .application-recovery,
+  .source-viewer-theme-root
+)[data-dashboard-style] :is(
+  .displayed-chart-cell,
+  .chart-view-frame,
+  .chart-card,
+  .fullscreen-panel,
+  .multi-fullscreen-cell
+) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-chart-cell-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
 }

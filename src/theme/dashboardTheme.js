@@ -171,7 +171,7 @@ export const CHART_COLOR_MODES = Object.freeze(["profile", "standard"]);
 
 const DEFAULTS = Object.freeze({
   dashboardStyle: "evidence-ledger",
-  dashboardColorProfile: "evidence-ledger/brighter-vellum",
+  dashboardColorProfile: "signal-instrument/calibrated-steel",
   chartColorMode: "profile",
 });
 
@@ -259,6 +259,38 @@ export function createDashboardThemeProjection(theme = {}) {
     ...Object.entries(cssVariables).sort(([left], [right]) => left.localeCompare(right)),
   ]);
   return Object.freeze({ ...metadata, cssVariables, key });
+}
+
+export function createPresentationThemeSnapshot(theme = {}) {
+  const resolved = (
+    includesId(DASHBOARD_STYLES, theme.dashboardStyle)
+    && PROFILE_TOKENS.has(theme.dashboardColorProfile)
+    && CHART_COLOR_MODES.includes(theme.chartColorMode)
+    && APPEARANCE_PREFERENCES.includes(theme.appearancePreference)
+    && ["light", "dark"].includes(theme.resolvedAppearance)
+  ) ? theme : resolveDashboardTheme();
+  return Object.freeze({
+    dashboard_style: resolved.dashboardStyle,
+    dashboard_color_profile: resolved.dashboardColorProfile,
+    chart_color_mode: resolved.chartColorMode,
+    appearance_preference: resolved.appearancePreference,
+    resolved_appearance: resolved.resolvedAppearance,
+  });
+}
+
+export function resolvePresentationThemeSnapshot(snapshot, fallbackTheme = null) {
+  if (!snapshot || typeof snapshot !== "object") {
+    return fallbackTheme ?? resolveDashboardTheme();
+  }
+  return resolveDashboardTheme({
+    globalStyles: {
+      dashboardStyle: snapshot.dashboard_style,
+      dashboardColorProfile: snapshot.dashboard_color_profile,
+      chartColorMode: snapshot.chart_color_mode,
+    },
+    appearancePreference: snapshot.appearance_preference,
+    prefersDark: snapshot.resolved_appearance === "dark",
+  });
 }
 
 export function readAppearancePreference(storage = browserStorage) {

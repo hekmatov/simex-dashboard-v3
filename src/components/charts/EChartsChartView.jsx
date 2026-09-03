@@ -13,7 +13,7 @@ import { mapBudgetNotice, useBuildMapBudgetSlot } from "../build/BuildMapBudgetC
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
 const NOOP = () => {};
-const DEFAULT_CHART_TEXT_THEME = Object.freeze({
+export const DEFAULT_CHART_TEXT_THEME = Object.freeze({
   textStrong: "#18334E",
   textMuted: "#49627A",
   borderSubtle: "#C7CBCF",
@@ -24,6 +24,7 @@ const DEFAULT_CHART_TEXT_THEME = Object.freeze({
   headingFont: "inherit",
   dataFont: "inherit",
   typographyKey: "",
+  audienceTier: "",
   dataColors: Object.freeze([
     "#4E79A7",
     "#F28E2B",
@@ -42,6 +43,7 @@ export default function EChartsChartView({
   accessibilityEnabled = false,
   runtimeError: suppliedRuntimeError = null,
   mapBudgetRequest = null,
+  audienceScale = null,
   onVisualChange,
 }) {
   const hostRef = React.useRef(null);
@@ -53,9 +55,10 @@ export default function EChartsChartView({
   const descriptionId = React.useId();
   const summaryId = React.useId();
   const typographyKey = dashboardChartTheme?.key ?? "";
+  const audienceTier = audienceScale?.tier ?? "";
   const presentedModel = React.useMemo(
-    () => applyEChartsPresentation(model, chart, false, textTheme),
-    [model, chart, textTheme],
+    () => applyEChartsPresentation(model, chart, false, textTheme, audienceScale),
+    [model, chart, textTheme, audienceScale],
   );
   const activeError = suppliedRuntimeError ?? runtimeError;
   const mapBudget = useBuildMapBudgetSlot({
@@ -69,34 +72,13 @@ export default function EChartsChartView({
   React.useEffect(() => {
     const host = hostRef.current;
     if (!host || typeof window === "undefined") return;
-    const style = window.getComputedStyle(host);
-    const next = {
-      textStrong: style.getPropertyValue("--simex-text-strong").trim()
-        || DEFAULT_CHART_TEXT_THEME.textStrong,
-      textMuted: style.getPropertyValue("--simex-text-muted").trim()
-        || DEFAULT_CHART_TEXT_THEME.textMuted,
-      borderSubtle: style.getPropertyValue("--simex-border-subtle").trim()
-        || DEFAULT_CHART_TEXT_THEME.borderSubtle,
-      gridline: style.getPropertyValue("--simex-gridline").trim()
-        || DEFAULT_CHART_TEXT_THEME.gridline,
-      surfacePanel: style.getPropertyValue("--simex-surface-panel").trim()
-        || DEFAULT_CHART_TEXT_THEME.surfacePanel,
-      surfacePanelAlt: style.getPropertyValue("--simex-surface-panel-alt").trim()
-        || DEFAULT_CHART_TEXT_THEME.surfacePanelAlt,
-      bodyFont: style.getPropertyValue("--simex-style-body-font").trim()
-        || DEFAULT_CHART_TEXT_THEME.bodyFont,
-      headingFont: style.getPropertyValue("--simex-style-heading-font").trim()
-        || DEFAULT_CHART_TEXT_THEME.headingFont,
-      dataFont: style.getPropertyValue("--simex-style-data-font").trim()
-        || DEFAULT_CHART_TEXT_THEME.dataFont,
+    const next = readChartTextTheme(
+      window.getComputedStyle(host),
       typographyKey,
-      dataColors: [1, 2, 3, 4, 5, 6].map((index) => (
-        style.getPropertyValue(`--simex-data-${index}`).trim()
-          || DEFAULT_CHART_TEXT_THEME.dataColors[index - 1]
-      )),
-    };
+      audienceTier,
+    );
     setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
-  }, [typographyKey]);
+  }, [audienceTier, typographyKey]);
 
   React.useEffect(() => {
     const host = hostRef.current;
@@ -164,6 +146,7 @@ export function applyEChartsPresentation(
   chart = {},
   accessibilityEnabled = false,
   textTheme = DEFAULT_CHART_TEXT_THEME,
+  audienceScale = null,
 ) {
   const option = model.option && typeof model.option === "object" && !Array.isArray(model.option)
     ? model.option
@@ -194,16 +177,29 @@ export function applyEChartsPresentation(
     { themeDefault: "transparent" },
   );
   const valueAxisTitleProjection = Array.isArray(model.valueAxisTitleProjection)
-    ? model.valueAxisTitleProjection
+    ? audienceScale
+      ? model.valueAxisTitleProjection.map((projection) => (
+          projection && typeof projection === "object"
+            ? {
+                ...projection,
+                fontSize: audienceScale.text,
+                ...(Array.isArray(projection.tickValues)
+                  ? { tickValues: [...projection.tickValues] }
+                  : {}),
+              }
+            : projection
+        ))
+      : model.valueAxisTitleProjection
     : [];
-  const valueAxisTitleTextTheme = { bodyFont, dataFont, textMuted };
+  const valueAxisTitleTextTheme = {
+    bodyFont,
+    dataFont,
+    textMuted,
+    ...(audienceScale ? { tickFontSize: audienceScale.text } : {}),
+  };
   const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
   const grid = normalizedGrid(option.grid, titleGutters);
-  return {
-    ...model,
-    valueAxisTitleProjection,
-    valueAxisTitleTextTheme,
-    option: {
+  const presentedOption = {
       ...optionWithoutBackground,
       ...(grid === undefined ? {} : { grid }),
       color: Array.isArray(option.color) && option.color.length > 0 ? option.color : dataColors,
@@ -233,13 +229,53 @@ export function applyEChartsPresentation(
         : { tooltip: normalizedTooltip(option.tooltip, textStrong, borderSubtle, surfacePanel, bodyFont) }),
       ...(option.series === undefined
         ? {}
-        : { series: normalizedSeries(option.series, textStrong, textMuted, surfacePanelAlt, bodyFont, dataFont) }),
+        : {
+            series: normalizedSeries(
+              option.series,
+              textStrong,
+              textMuted,
+              surfacePanelAlt,
+              bodyFont,
+              dataFont,
+              audienceScale,
+            ),
+          }),
       aria: {
         ...(option.aria ?? {}),
         enabled: false,
       },
       ...(backgroundColor ? { backgroundColor } : {}),
-    },
+    };
+  return {
+    ...model,
+    valueAxisTitleProjection,
+    valueAxisTitleTextTheme,
+    option: audienceScale
+      ? normalizeAudienceOption(presentedOption, audienceScale)
+      : presentedOption,
+  };
+}
+
+export function readChartTextTheme(computedStyle, typographyKey = "", audienceTier = "") {
+  const token = (name, fallback) => {
+    const value = computedStyle?.getPropertyValue?.(name);
+    return typeof value === "string" && value.trim() ? value.trim() : fallback;
+  };
+  return {
+    textStrong: token("--simex-text-strong", DEFAULT_CHART_TEXT_THEME.textStrong),
+    textMuted: token("--simex-text-muted", DEFAULT_CHART_TEXT_THEME.textMuted),
+    borderSubtle: token("--simex-border-subtle", DEFAULT_CHART_TEXT_THEME.borderSubtle),
+    gridline: token("--simex-gridline", DEFAULT_CHART_TEXT_THEME.gridline),
+    surfacePanel: token("--simex-surface-panel", DEFAULT_CHART_TEXT_THEME.surfacePanel),
+    surfacePanelAlt: token("--simex-surface-panel-alt", DEFAULT_CHART_TEXT_THEME.surfacePanelAlt),
+    bodyFont: token("--simex-style-body-font", DEFAULT_CHART_TEXT_THEME.bodyFont),
+    headingFont: token("--simex-style-heading-font", DEFAULT_CHART_TEXT_THEME.headingFont),
+    dataFont: token("--simex-style-data-font", DEFAULT_CHART_TEXT_THEME.dataFont),
+    typographyKey,
+    audienceTier,
+    dataColors: [1, 2, 3, 4, 5, 6].map((index) => (
+      token(`--simex-data-${index}`, DEFAULT_CHART_TEXT_THEME.dataColors[index - 1])
+    )),
   };
 }
 
@@ -258,6 +294,147 @@ export function sameChartTextTheme(current = {}, next = {}) {
     if (current[key] !== next[key]) return false;
   }
   return true;
+}
+
+const AUDIENCE_TEXT_ROLE_KEYS = new Set([
+  "axisLabel",
+  "axisName",
+  "dayLabel",
+  "edgeLabel",
+  "endLabel",
+  "label",
+  "monthLabel",
+  "nameTextStyle",
+  "subtextStyle",
+  "textStyle",
+  "upperLabel",
+  "yearLabel",
+]);
+
+function normalizeAudienceOption(option, scale) {
+  const normalized = normalizeAudienceTextTree(option, scale);
+  const withAxisSpacing = normalizeAudienceAxisSpacing(normalized, scale);
+  if (withAxisSpacing.legend === undefined) return withAxisSpacing;
+  const normalizeLegend = (legend) => (
+    legend && typeof legend === "object" && !Array.isArray(legend)
+      ? {
+          ...legend,
+          itemWidth: Math.round(scale.text * 1.5),
+          itemHeight: scale.text,
+          itemGap: scale.text,
+        }
+      : legend
+  );
+  return {
+    ...withAxisSpacing,
+    legend: Array.isArray(withAxisSpacing.legend)
+      ? withAxisSpacing.legend.map(normalizeLegend)
+      : normalizeLegend(withAxisSpacing.legend),
+  };
+}
+
+function normalizeAudienceAxisSpacing(option, scale) {
+  const axisKeys = ["xAxis", "yAxis", "singleAxis", "parallelAxis", "angleAxis", "radiusAxis"];
+  const normalizeAxis = (axis) => {
+    if (!isPlainObject(axis)) return axis;
+    const labelMargin = Math.round(scale.text * 0.55);
+    const nameGap = Math.round(scale.text * 1.7);
+    return {
+      ...axis,
+      axisLabel: {
+        ...(axis.axisLabel ?? {}),
+        fontSize: scale.text,
+        margin: Number.isFinite(axis.axisLabel?.margin)
+          ? Math.max(axis.axisLabel.margin, labelMargin)
+          : labelMargin,
+      },
+      nameTextStyle: {
+        ...(axis.nameTextStyle ?? {}),
+        fontSize: scale.text,
+      },
+      nameGap: Number.isFinite(axis.nameGap) ? Math.max(axis.nameGap, nameGap) : nameGap,
+    };
+  };
+  return Object.fromEntries(Object.entries(option).map(([key, value]) => [
+    key,
+    axisKeys.includes(key)
+      ? Array.isArray(value) ? value.map(normalizeAxis) : normalizeAxis(value)
+      : value,
+  ]));
+}
+
+function normalizeAudienceTextTree(value, scale, path = []) {
+  if (Array.isArray(value)) {
+    return value.map((child, index) => normalizeAudienceTextTree(child, scale, [...path, index]));
+  }
+  if (!isPlainObject(value)) return value;
+  const normalized = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "renderItem" && value.type === "custom" && typeof child === "function") {
+      normalized[key] = wrapAudienceRenderItem(child, scale.text);
+      continue;
+    }
+    const next = normalizeAudienceTextTree(child, scale, [...path, key]);
+    const roleSize = audienceTextRoleSize(key, path, value, scale);
+    normalized[key] = roleSize === null ? next : withAudienceFontSize(next, roleSize);
+  }
+  return normalized;
+}
+
+function audienceTextRoleSize(key, path, parent, scale) {
+  if (key === "detail" && path.includes("series")) return scale.value;
+  if (key === "title" && path.includes("series")) return scale.text;
+  if (key === "style" && visibleGraphicText(parent)) return scale.text;
+  if (!AUDIENCE_TEXT_ROLE_KEYS.has(key)) return null;
+  if (key === "textStyle" && path[0] === "title") return scale.title;
+  return scale.text;
+}
+
+function withAudienceFontSize(value, fontSize) {
+  if (Array.isArray(value)) return value.map((entry) => withAudienceFontSize(entry, fontSize));
+  if (!isPlainObject(value)) return value;
+  return {
+    ...value,
+    fontSize,
+    ...(isPlainObject(value.rich)
+      ? {
+          rich: Object.fromEntries(Object.entries(value.rich).map(([key, style]) => [
+            key,
+            isPlainObject(style) ? { ...style, fontSize } : style,
+          ])),
+        }
+      : {}),
+  };
+}
+
+function wrapAudienceRenderItem(renderItem, textSize) {
+  return function audienceRenderItem(...args) {
+    return normalizeCustomGraphic(renderItem.apply(this, args), textSize);
+  };
+}
+
+function normalizeCustomGraphic(value, textSize) {
+  if (Array.isArray(value)) return value.map((child) => normalizeCustomGraphic(child, textSize));
+  if (!isPlainObject(value)) return value;
+  const normalized = Object.fromEntries(Object.entries(value).map(([key, child]) => [
+    key,
+    normalizeCustomGraphic(child, textSize),
+  ]));
+  if (isPlainObject(normalized.style) && visibleGraphicText(normalized)) {
+    normalized.style = withAudienceFontSize(normalized.style, textSize);
+  }
+  return normalized;
+}
+
+function visibleGraphicText(value) {
+  return value?.type === "text"
+    || (isPlainObject(value?.style) && Object.hasOwn(value.style, "text"));
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 export function createEChartsLifecycle({
@@ -447,24 +624,45 @@ function normalizedTooltip(value, textColor, borderColor, backgroundColor, bodyF
   };
 }
 
-function normalizedSeries(value, textStrong, textMuted, surfaceAlt, bodyFont, dataFont) {
+function normalizedSeries(value, textStrong, textMuted, surfaceAlt, bodyFont, dataFont, audienceScale) {
   if (!Array.isArray(value)) return value;
   return value.map((series) => {
     if (!series || typeof series !== "object") return series;
+    const materializeAudienceGaugeText = series.type === "gauge" && audienceScale;
     return {
       ...series,
       ...(series.label === undefined
         ? {}
         : { label: { ...series.label, color: textStrong, fontFamily: dataFont } }),
-      ...(series.detail === undefined
+      ...(series.detail === undefined && !materializeAudienceGaugeText
         ? {}
-        : { detail: { ...series.detail, color: textStrong, fontFamily: dataFont } }),
-      ...(series.axisLabel === undefined
+        : {
+            detail: {
+              ...(series.detail ?? {}),
+              color: textStrong,
+              fontFamily: dataFont,
+              ...(materializeAudienceGaugeText ? { fontSize: audienceScale.value } : {}),
+            },
+          }),
+      ...(series.axisLabel === undefined && !materializeAudienceGaugeText
         ? {}
-        : { axisLabel: { ...series.axisLabel, fontFamily: dataFont } }),
-      ...(series.title === undefined
+        : {
+            axisLabel: {
+              ...(series.axisLabel ?? {}),
+              fontFamily: dataFont,
+              ...(materializeAudienceGaugeText ? { fontSize: audienceScale.text } : {}),
+            },
+          }),
+      ...(series.title === undefined && !materializeAudienceGaugeText
         ? {}
-        : { title: { ...series.title, color: textMuted, fontFamily: bodyFont } }),
+        : {
+            title: {
+              ...(series.title ?? {}),
+              color: textMuted,
+              fontFamily: bodyFont,
+              ...(materializeAudienceGaugeText ? { fontSize: audienceScale.text } : {}),
+            },
+          }),
       ...(series.type === "gauge" && series.axisLine?.lineStyle?.color === undefined
         ? {
             axisLine: {

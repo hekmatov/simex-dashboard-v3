@@ -38,9 +38,9 @@ The switcher exposes four modes:
 - **Present**: control saved audience output and open the passive Audience
   window on the same computer and origin.
 
-Below 768 CSS pixels, View remains the supported workspace. Build and Present
-can stay mounted to preserve work but show a persistent **Switch to View**
-notice; it neither redirects nor discards drafts.
+Below 1024 CSS pixels, Build and Present remain available but show a small
+notice recommending a minimum width of 1024 pixels. The notice does not hide
+the workspace, redirect the user, or discard drafts.
 
 ## View
 
@@ -146,9 +146,13 @@ allowed layout, control playback, and open/reopen the Audience display. Present
 also controls blackout and which available facts appear on Audience.
 
 Audience is passive, same-computer, same-origin output. It renders the latest
-valid projection and retains last-valid output if a new render fails. It is not
-a second authoring or persistence surface. A Scene must be saved, valid, and
-launch-eligible before it can be used for Present/Audience.
+valid projection and retains last-valid output if a new render fails. Its one
+direct-manipulation exception is the Scene date: drag the date on the Audience
+display to reposition it. A successful connected drag automatically saves the
+new horizontal and vertical coordinates to the owning Scene while preserving
+the configured date width. Audience is not otherwise an authoring surface. A
+Scene must be saved, valid, and launch-eligible before it can be used for
+Present/Audience.
 
 ## Packages, migration, and persistence
 

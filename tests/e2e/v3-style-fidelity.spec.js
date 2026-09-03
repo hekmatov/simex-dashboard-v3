@@ -6,7 +6,8 @@ const NATIVE_STYLES = Object.freeze([
   Object.freeze({
     id: "evidence-ledger", label: "Ledger",
     profile: "evidence-ledger/brighter-vellum",
-    shellRadius: "0px", surfaceRadius: "2px", panelRadius: "2px", controlRadius: "2px",
+    shellRadius: "2px", surfaceRadius: "2px", panelRadius: "2px", controlRadius: "2px",
+    presentStatusRadius: "0px", presentPanelRadius: "0px", presentGroupRadius: "0px",
     panelShadow: "none", shellShadow: "none",
     sectionPaint: "rgb(247, 242, 232)",
     canvasPaint: "rgb(247, 242, 232)", panelPaint: "rgb(255, 253, 248)",
@@ -17,8 +18,10 @@ const NATIVE_STYLES = Object.freeze([
     id: "humanist-standard", label: "Humanist",
     profile: "humanist-standard/common-ground",
     shellRadius: "18px", surfaceRadius: "18px", panelRadius: "14px", controlRadius: "10px",
-    panelShadow: "rgba(36, 57, 52, 0.1) 0px 8px 20px 0px",
-    shellShadow: "rgba(25, 55, 48, 0.12) 0px 16px 38px 0px",
+    presentStatusRadius: "18px", presentPanelRadius: "18px", presentGroupRadius: "10px",
+    panelShadow: "rgba(29, 43, 42, 0.1) 0px 8px 20px 0px",
+    shellShadow: "rgba(29, 43, 42, 0.12) 0px 16px 38px 0px",
+    darkShellShadow: "rgba(18, 26, 24, 0.48) 0px 16px 38px 0px",
     sectionPaint: "color(srgb 0.946824 0.964549 0.949804)",
     canvasPaint: "rgb(240, 245, 241)", panelPaint: "rgb(252, 253, 251)",
     panelAltPaint: "rgb(242, 247, 243)", accentSoftPaint: "rgb(220, 235, 229)",
@@ -28,8 +31,9 @@ const NATIVE_STYLES = Object.freeze([
     id: "signal-instrument", label: "Instrument",
     profile: "signal-instrument/calibrated-steel",
     shellRadius: "6px", surfaceRadius: "6px", panelRadius: "4px", controlRadius: "3px",
-    panelShadow: "rgba(19, 38, 45, 0.14) 0px 1px 2px 0px, rgba(255, 255, 255, 0.55) 0px 1px 0px 0px inset",
-    shellShadow: "rgba(19, 38, 45, 0.14) 0px 4px 12px 0px, rgba(255, 255, 255, 0.45) 0px 1px 0px 0px inset",
+    presentStatusRadius: "4px", presentPanelRadius: "4px", presentGroupRadius: "3px",
+    panelShadow: "rgba(23, 37, 43, 0.14) 0px 1px 2px 0px, rgba(248, 250, 249, 0.55) 0px 1px 0px 0px inset",
+    shellShadow: "rgba(23, 37, 43, 0.14) 0px 4px 12px 0px, rgba(248, 250, 249, 0.45) 0px 1px 0px 0px inset",
     sectionPaint: "color(srgb 0.925882 0.94549 0.946902)",
     canvasPaint: "rgb(232, 237, 239)", panelPaint: "rgb(248, 250, 249)",
     panelAltPaint: "rgb(237, 242, 242)", accentSoftPaint: "rgb(215, 230, 232)",
@@ -132,12 +136,12 @@ test("target collections inherit dark shared surfaces and text", async ({ page }
   });
 
   expect(paints).toEqual({
-    expectedPanel: "#25231d",
-    expectedStrong: "#f5efe4",
-    expectedMuted: "#c9c1b3",
-    itemBackground: "rgb(37, 35, 29)",
-    titleColor: "rgb(245, 239, 228)",
-    labelColor: "rgb(245, 239, 228)",
+    expectedPanel: "#162126",
+    expectedStrong: "#edf4f5",
+    expectedMuted: "#bac8cb",
+    itemBackground: "rgb(22, 33, 38)",
+    titleColor: "rgb(237, 244, 245)",
+    labelColor: "rgb(237, 244, 245)",
   });
 });
 
@@ -204,15 +208,21 @@ test("native style signatures resolve real shell, section, panel, and control pa
         headerBottomToPanelBorder: panelRect.top - headerRect.bottom,
       };
     });
-    expect(metrics.shell).toEqual({
+    expect({
+      ...metrics.shell,
+      boxShadow: normalizeBoxShadow(metrics.shell.boxShadow),
+    }).toEqual({
       borderRadius: style.shellRadius,
-      boxShadow: style.shellShadow,
+      boxShadow: normalizeBoxShadow(style.shellShadow),
       borderTopWidth: "1px",
       borderTopStyle: "solid",
     });
-    expect(metrics.panel).toEqual({
+    expect({
+      ...metrics.panel,
+      boxShadow: normalizeBoxShadow(metrics.panel.boxShadow),
+    }).toEqual({
       borderRadius: style.panelRadius,
-      boxShadow: style.panelShadow,
+      boxShadow: normalizeBoxShadow(style.panelShadow),
       borderTopWidth: "1px",
       borderTopStyle: "solid",
       padding: "12px",
@@ -269,6 +279,7 @@ test("section headers adapt only to title and description content", async ({ pag
 });
 
 test("Humanist contours retain accepted translucency and steady shell elevation", async ({ page }) => {
+  const humanistStyle = NATIVE_STYLES.find(({ id }) => id === "humanist-standard");
   await openBiomedicalLook(page);
   await page.getByLabel("Humanist", { exact: true }).check();
   await page.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
@@ -285,6 +296,14 @@ test("Humanist contours retain accepted translucency and steady shell elevation"
         probe.remove();
         return color;
       };
+      const resolve = (variable) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(${variable})`;
+        app.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
       return {
         actual: {
           shell: getComputedStyle(document.querySelector(".canonical-dashboard-frame")).borderTopColor,
@@ -293,7 +312,7 @@ test("Humanist contours retain accepted translucency and steady shell elevation"
           sectionTop: getComputedStyle(sections[1].querySelector(".section-header")).borderTopColor,
         },
         expected: {
-          shell: mix("--simex-border-strong", 78),
+          shell: resolve("--simex-style-role-divider"),
           panel: mix("--simex-border-subtle", 82),
           sectionBottom: mix("--simex-border-subtle", 75),
           sectionTop: mix("--simex-border-strong", 70),
@@ -305,7 +324,11 @@ test("Humanist contours retain accepted translucency and steady shell elevation"
     expect(metrics.actual.sectionBottom).toBe(metrics.expected.sectionBottom);
     expect(metrics.actual.sectionTop).toBe(metrics.expected.sectionTop);
     expect(metrics.actual.panel).toMatch(/\/ 0\.82\)$/);
-    expect(metrics.shellShadow).toBe("rgba(25, 55, 48, 0.12) 0px 16px 38px 0px");
+    expect(normalizeBoxShadow(metrics.shellShadow)).toEqual(
+      normalizeBoxShadow(
+        appearance === "Dark" ? humanistStyle.darkShellShadow : humanistStyle.shellShadow,
+      ),
+    );
   }
 });
 
@@ -340,7 +363,7 @@ test("Dashboard map clears actionable Build controls without command overflow an
     .getByRole("button", { name: "Build", exact: true }).click();
 
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
-  const look = pinned.getByRole("button", { name: "Dashboard look", exact: true });
+  const look = pinned.getByRole("button", { name: "Theme", exact: true });
   const toggle = pinned.getByRole("button", { name: "Dashboard map", exact: true });
   const drawer = page.locator(".dashboard-map-panel");
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
@@ -401,7 +424,7 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
     "Ledger",
     "evidence-ledger/brighter-vellum",
   );
-  await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+  await look.getByRole("button", { name: "Close Theme", exact: true }).click();
   await expect(look).toBeHidden();
 
   await page.getByLabel("Dashboard mode")
@@ -483,7 +506,8 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
   for (const style of NATIVE_STYLES) {
     await openBiomedicalLook(page);
     const look = await selectAutoSavedLook(page, style.label, style.profile);
-    await look.getByRole("button", { name: "Close Dashboard look", exact: true }).click();
+    const roleDividerPaint = await readResolvedThemeColor(page, "--simex-style-role-divider");
+    await look.getByRole("button", { name: "Close Theme", exact: true }).click();
     await expect(look).toBeHidden();
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "View", exact: true }).click();
@@ -534,13 +558,13 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     expect(buildChrome.layer).toMatchObject({
       backgroundColor: style.panelPaint,
       borderRadius: style.surfaceRadius,
-      borderTopColor: style.borderPaint,
+      borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     expect(buildChrome.structure).toMatchObject({
       backgroundColor: style.panelAltPaint,
       borderRadius: style.panelRadius,
-      borderTopColor: style.borderPaint,
+      borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     await dashboardMap.getByRole("button", { name: "Inspector", exact: true }).click();
@@ -550,7 +574,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     expect(inspectorChrome.inspector).toMatchObject({
       backgroundColor: style.panelAltPaint,
       borderRadius: style.panelRadius,
-      borderTopColor: style.borderPaint,
+      borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     for (const control of [buildChrome.look, buildChrome.chronoGroups]) {
@@ -579,32 +603,36 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     });
     expect(presentChrome.workspace).toMatchObject({
       backgroundColor: style.canvasPaint,
+      borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     expect(presentChrome.status).toMatchObject({
       backgroundColor: style.panelPaint,
-      borderRadius: style.surfaceRadius,
-      borderTopColor: style.borderPaint,
+      borderRadius: style.presentStatusRadius,
+      borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     for (const surface of [presentChrome.context, presentChrome.scene]) {
       expect(surface).toMatchObject({
         backgroundColor: style.panelPaint,
-        borderRadius: style.panelRadius,
-        borderTopColor: style.borderPaint,
+        borderRadius: style.presentPanelRadius,
+        borderTopColor: roleDividerPaint,
         color: style.textPaint,
       });
     }
-    for (const surface of [presentChrome.snapshot, presentChrome.group]) {
-      expect(surface).toMatchObject({
-        backgroundColor: style.panelAltPaint,
-        borderRadius: style.controlRadius,
-        borderTopColor: style.borderPaint,
-      });
-    }
+    expect(presentChrome.snapshot).toMatchObject({
+      backgroundColor: style.panelAltPaint,
+      borderRadius: style.controlRadius,
+      borderTopColor: style.borderPaint,
+    });
+    expect(presentChrome.group).toMatchObject({
+      backgroundColor: style.panelAltPaint,
+      borderRadius: style.presentGroupRadius,
+      borderTopColor: style.borderPaint,
+    });
     expect(presentChrome.dock).toMatchObject({
       backgroundColor: style.panelPaint,
-      borderTopColor: style.borderPaint,
+      borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     expect(presentChrome.look).toMatchObject({
@@ -684,12 +712,12 @@ async function openBiomedicalLook(page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Dashboard look" })).toBeVisible();
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Theme" })).toBeVisible();
 }
 
 async function selectAutoSavedLook(page, styleLabel, profileId) {
-  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  const look = page.getByRole("dialog", { name: "Theme" });
   const feedback = look.locator(".look-drawer-feedback");
   const style = look.getByLabel(styleLabel, { exact: true });
   if (await style.isChecked()) {
@@ -697,12 +725,12 @@ async function selectAutoSavedLook(page, styleLabel, profileId) {
       ? "Ledger"
       : "Humanist";
     await look.getByLabel(alternative, { exact: true }).check();
-    await expect(feedback).toHaveText("Dashboard look saved.");
+    await expect(feedback).toHaveText("Theme saved.");
   }
   await style.check();
-  await expect(feedback).toHaveText("Dashboard look saved.");
+  await expect(feedback).toHaveText("Theme saved.");
   await look.locator(`[data-profile-option="${profileId}"] input`).check();
-  await expect(feedback).toHaveText("Dashboard look saved.");
+  await expect(feedback).toHaveText("Theme saved.");
 
   const light = look.getByLabel("Light", { exact: true });
   if (!(await light.isChecked())) {
@@ -729,6 +757,71 @@ async function readChrome(page, selectors) {
       }];
     },
   )), selectors);
+}
+
+async function readResolvedThemeColor(page, variableName) {
+  return page.evaluate((name) => {
+    const root = document.querySelector(".app-frame");
+    const probe = document.createElement("span");
+    probe.style.color = `var(${name})`;
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    root.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, variableName);
+}
+
+function normalizeBoxShadow(value) {
+  const shadow = String(value).trim();
+  if (shadow === "none") return [];
+  return splitCssList(shadow).map((layer) => {
+    const colorMatch = layer.match(/^(rgba?\([^)]*\)|color\(srgb\s+[^)]*\))\s+/i);
+    if (!colorMatch) throw new Error(`Unsupported box-shadow color syntax: ${layer}`);
+    return {
+      color: normalizeShadowColor(colorMatch[1]),
+      geometry: layer.slice(colorMatch[0].length).trim().split(/\s+/),
+    };
+  });
+}
+
+function normalizeShadowColor(value) {
+  if (value.toLowerCase().startsWith("color(srgb")) {
+    const [channelsText, alphaText = "1"] = value
+      .slice("color(srgb".length, -1)
+      .trim()
+      .split(/\s*\/\s*/);
+    const channels = channelsText.split(/\s+/).map((channel) => (
+      Math.round(Number.parseFloat(channel) * 255)
+    ));
+    if (channels.length !== 3 || channels.some((channel) => !Number.isFinite(channel))) {
+      throw new Error(`Invalid srgb box-shadow color: ${value}`);
+    }
+    return [...channels, Number.parseFloat(alphaText)];
+  }
+
+  const channels = value.match(/[+-]?(?:\d+\.?\d*|\.\d+)/g)?.map(Number) ?? [];
+  if (channels.length < 3 || channels.length > 4 || channels.some((channel) => !Number.isFinite(channel))) {
+    throw new Error(`Invalid rgb box-shadow color: ${value}`);
+  }
+  return [...channels.slice(0, 3), channels[3] ?? 1];
+}
+
+function splitCssList(value) {
+  const layers = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] === "(") depth += 1;
+    if (value[index] === ")") depth -= 1;
+    if (value[index] === "," && depth === 0) {
+      layers.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  layers.push(value.slice(start).trim());
+  return layers;
 }
 
 function rgb(hex) {

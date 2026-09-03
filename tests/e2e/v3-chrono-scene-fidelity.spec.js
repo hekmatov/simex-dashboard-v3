@@ -363,7 +363,7 @@ test("012-temporal-content: libraries filter, open read-first pages, and restore
   await sceneAuxiliary.getByRole("button", { name: /Arrange and configure/ }).click();
   await expect(sceneAuxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
   await sceneAuxiliary.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Dashboard look", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Theme", exact: true })).toBeEnabled();
   const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
   const resumeScene = pendingWork.getByRole("button", { name: "Resume Scene Studio changes", exact: true });
   await expect(resumeScene).toBeVisible();

@@ -14,29 +14,25 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.clear());
 });
 
-test("Present is gated below 1024px and preserves its live session while mounted", async ({ page }) => {
+test("Present remains usable below the recommended 1024px width and preserves its live session", async ({ page }) => {
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
   const { popup, channelId } = await openAudienceSession(page);
-  await page.locator('[data-presentation-control-id="output-holding"]').click();
-  await expect(popup.locator(".audience-display")).toHaveAttribute("data-output-mode", "holding");
 
   await page.setViewportSize({ width: 1023, height: 768 });
-  const notice = page.locator('[data-phone-mode-notice="present"]');
+  const notice = page.locator('[data-desktop-width-notice="present"]');
   const workspace = page.locator(".present-workspace");
   await expect(notice).toBeVisible();
-  await expect(workspace).toHaveCount(1);
-  await expect(workspace).toBeHidden();
+  await expect(notice).toHaveText("A minimum width of 1024px is recommended for Present.");
+  await expect(workspace).toBeVisible();
   await expect(workspace).toHaveAttribute("data-active-scene-id", scene.id);
+  await page.locator('[data-presentation-control-id="output-holding"]').click();
+  await expect(popup.locator(".audience-display")).toHaveAttribute("data-output-mode", "holding");
   await expect(page.locator('[data-presentation-control-id="pause"]')).toBeDisabled();
   await expect(page.locator('[data-presentation-control-id="play"]')).toBeEnabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
-  await notice.getByRole("button", { name: "Switch to View" }).click();
-  await expect(page.locator('.app-frame[data-dashboard-mode="view"]')).toBeVisible();
-  await page.locator('.mode-switcher [data-dashboard-mode="present"]').click();
-  await expect(notice).toBeVisible();
   await page.setViewportSize({ width: 1024, height: 768 });
   await expect(notice).toBeHidden();
   await expect(workspace).toBeVisible();
@@ -160,39 +156,52 @@ test("Audience preserves canonical passive geometry across the Step 8 viewport f
   await popup.close();
 });
 
-test("date-position endpoints remain fully visible in the editor and Audience", async ({ page }) => {
+test("date-position endpoints remain fully visible after direct Audience dragging", async ({ page }) => {
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
   const { popup } = await openAudienceSession(page);
-  const yPosition = page.locator('[data-presentation-control-id="date-position-y"]');
+  const date = popup.locator(".audience-scene-date");
+  await expect(date).toHaveAttribute("data-audience-date-draggable", "true");
 
   for (const yPermille of [0, 1000]) {
-    await yPosition.fill(String(yPermille));
-    await page.locator('[data-presentation-control-id="date-position-save"]').click();
-    await expect(page.getByText("Unsaved position", { exact: true })).toHaveCount(0);
-    await expect.poll(() => popup.locator(".audience-scene-date").evaluate((element) => element.style.top))
+    await dragAudienceDateToY(popup, yPermille);
+    await expect.poll(() => date.evaluate((element) => element.style.top))
       .toBe(`${yPermille / 10}%`);
 
     const geometry = await Promise.all([
-      page.locator(".presentation-date-position-stage").boundingBox(),
-      page.locator('[data-presentation-control-id="date-position-handle"]').boundingBox(),
       popup.locator(".audience-display").boundingBox(),
-      popup.locator(".audience-scene-date").boundingBox(),
+      date.boundingBox(),
     ]);
-    const [stage, handle, audience, date] = geometry;
-    expect(stage && handle && audience && date).toBeTruthy();
-    expect(handle.x).toBeGreaterThanOrEqual(stage.x);
-    expect(handle.y).toBeGreaterThanOrEqual(stage.y);
-    expect(handle.x + handle.width).toBeLessThanOrEqual(stage.x + stage.width);
-    expect(handle.y + handle.height).toBeLessThanOrEqual(stage.y + stage.height);
-    expect(date.x).toBeGreaterThanOrEqual(audience.x);
-    expect(date.y).toBeGreaterThanOrEqual(audience.y);
-    expect(date.x + date.width).toBeLessThanOrEqual(audience.x + audience.width);
-    expect(date.y + date.height).toBeLessThanOrEqual(audience.y + audience.height);
+    const [audienceBounds, dateBounds] = geometry;
+    expect(audienceBounds && dateBounds).toBeTruthy();
+    expect(dateBounds.x).toBeGreaterThanOrEqual(audienceBounds.x);
+    expect(dateBounds.y).toBeGreaterThanOrEqual(audienceBounds.y);
+    expect(dateBounds.x + dateBounds.width).toBeLessThanOrEqual(audienceBounds.x + audienceBounds.width);
+    expect(dateBounds.y + dateBounds.height).toBeLessThanOrEqual(audienceBounds.y + audienceBounds.height);
   }
   await popup.close();
 });
+
+async function dragAudienceDateToY(popup, yPermille) {
+  const date = popup.locator(".audience-scene-date");
+  const [audienceBounds, dateBounds, top] = await Promise.all([
+    popup.locator(".audience-display").boundingBox(),
+    date.boundingBox(),
+    date.evaluate((element) => Number.parseFloat(element.style.top) * 10),
+  ]);
+  expect(audienceBounds && dateBounds).toBeTruthy();
+  const verticalTravel = Math.max(1, audienceBounds.height - dateBounds.height);
+  const movementY = ((yPermille - top) / 1000) * verticalTravel;
+  const start = {
+    x: dateBounds.x + dateBounds.width / 2,
+    y: dateBounds.y + dateBounds.height / 2,
+  };
+  await popup.mouse.move(start.x, start.y);
+  await popup.mouse.down();
+  await popup.mouse.move(start.x, start.y + movementY, { steps: 6 });
+  await popup.mouse.up();
+}
 
 async function assertAudiencePassiveAndBounded(popup, scene, viewport = null) {
   const audience = popup.locator(".audience-display");

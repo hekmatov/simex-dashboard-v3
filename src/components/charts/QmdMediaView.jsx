@@ -7,7 +7,8 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
   const local = mediaItem?.current?.kind === "asset" || mediaItem?.current?.kind === "package";
   const healthy = local && mediaItem?.health === "ready";
   const assetId = mediaItem?.current?.kind === "asset" ? mediaItem.current.assetId : null;
-  const assetPresent = assetId ? Boolean(valueForId(assets, assetId)) : true;
+  const assetManifest = assetId ? valueForId(assets, assetId) : null;
+  const assetPresent = assetId ? Boolean(assetManifest) : true;
   const packagedPath = mediaItem?.current?.kind === "package" && isContainedPackageImagePath(mediaItem.current.path)
     ? mediaItem.current.path
     : null;
@@ -20,7 +21,7 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
     setLease(null);
     setResolutionFailed(false);
     if (!healthy || !assetId || !assetPresent || typeof resolveAsset !== "function") return undefined;
-    Promise.resolve(resolveAsset(assetId)).then((next) => {
+    Promise.resolve(resolveAsset(assetId, assetManifest)).then((next) => {
       acquired = next;
       if (!current) {
         acquired = null;
@@ -39,7 +40,7 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
       current = false;
       acquired?.release?.();
     };
-  }, [assetId, assetPresent, healthy, mediaItem?.revision, resolveAsset]);
+  }, [assetId, assetManifest?.storageState, assetPresent, healthy, mediaItem?.revision, resolveAsset]);
 
   const src = packagedPath ?? lease?.url ?? null;
   const available = healthy && assetPresent && !resolutionFailed && (packagedPath || assetId);

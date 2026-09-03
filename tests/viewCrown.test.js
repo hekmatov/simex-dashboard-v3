@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
@@ -74,7 +75,7 @@ test("AppFrame crown owns page location without a duplicate View-local row", () 
   assert.equal((html.match(/>Compare charts<\/button>/g) ?? []).length, 1);
 });
 
-test("desktop-only modes expose one persistent Switch to View action", () => {
+test("desktop workspaces expose a compact width recommendation without an action", () => {
   const build = renderAppFrame({
     mode: "build",
     density: "compact",
@@ -92,14 +93,15 @@ test("desktop-only modes expose one persistent Switch to View action", () => {
     children: React.createElement("div", null, "View workspace"),
   });
 
-  assert.match(build, /class="phone-mode-banner"/);
-  assert.match(build, />Switch to View<\/button>/);
+  assert.match(build, /class="desktop-width-notice"/);
+  assert.match(build, /A minimum width of 1024px is recommended for Build\./);
+  assert.doesNotMatch(build, />Switch to View<\/button>/);
   assert.match(build, /data-command-crown-layer="mode"[\s\S]*data-command-crown-layer="location"/);
   assert.doesNotMatch(build, /data-command-crown-layer="context"/);
-  assert.doesNotMatch(view, /class="phone-mode-banner"/);
+  assert.doesNotMatch(view, /class="desktop-width-notice"/);
 });
 
-test("desktop workspace notices preserve mounted Build and Present workspaces", () => {
+test("desktop workspace recommendations preserve mounted Build and Present workspaces", () => {
   for (const [mode, label] of [["build", "Build"], ["present", "Present"]]) {
     const html = renderAppFrame({
       mode,
@@ -111,17 +113,14 @@ test("desktop workspace notices preserve mounted Build and Present workspaces", 
       onPageRequest: () => {},
       children: React.createElement("main", { className: `${mode}-workspace` }, `${label} workspace`),
     });
-    const notice = html.match(new RegExp(`<section[^>]*data-phone-mode-notice="${mode}"[\\s\\S]*?<\\/section>`))?.[0];
+    const notice = html.match(new RegExp(`<p[^>]*data-desktop-width-notice="${mode}"[\\s\\S]*?<\\/p>`))?.[0];
 
-    assert.ok(notice, `${label} renders its desktop workspace notice`);
-    assert.match(notice, new RegExp(`${label} requires a desktop workspace at least 1024px wide\\.`));
-    assert.match(notice, /View remains available\./);
-    assert.equal((notice.match(/<button\b/g) ?? []).length, 1);
-    assert.equal((notice.match(/>Switch to View<\/button>/g) ?? []).length, 1);
-    assert.doesNotMatch(notice, />\s*(Close|Dismiss)\s*</i);
+    assert.ok(notice, `${label} renders its desktop width recommendation`);
+    assert.match(notice, new RegExp(`A minimum width of 1024px is recommended for ${label}\\.`));
+    assert.doesNotMatch(notice, /<button\b/);
     assert.match(
       html,
-      new RegExp(`data-phone-mode-notice="${mode}"[\\s\\S]*data-command-crown-layer="mode"[\\s\\S]*class="${mode}-workspace"`),
+      new RegExp(`data-desktop-width-notice="${mode}"[\\s\\S]*data-command-crown-layer="mode"[\\s\\S]*class="${mode}-workspace"`),
     );
   }
 
@@ -130,7 +129,15 @@ test("desktop workspace notices preserve mounted Build and Present workspaces", 
     onModeRequest: () => {},
     children: React.createElement("div", null, "View workspace"),
   });
-  assert.doesNotMatch(view, /data-phone-mode-notice=/);
+  assert.doesNotMatch(view, /data-desktop-width-notice=/);
+});
+
+test("the below-1024 recommendation never hides the workspace", async () => {
+  const css = await readFile(new URL("../src/styles/desktop-mode-gate.css", import.meta.url), "utf8");
+
+  assert.match(css, /@media \(max-width:\s*1023px\)[\s\S]*?\.desktop-width-notice\s*\{[\s\S]*?display:\s*block/);
+  assert.doesNotMatch(css, />\s*:not\([^)]*desktop-width-notice/);
+  assert.doesNotMatch(css, /display:\s*none\s*!important/);
 });
 
 test("ordinary View preserves an empty Section and routes its exact recovery action to Build", () => {

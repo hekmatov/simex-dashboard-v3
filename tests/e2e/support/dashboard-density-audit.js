@@ -1,3 +1,7 @@
+import { DASHBOARD_OWNED_REGION_REGISTRY } from "../../../src/theme/dashboardRegionRegistry.js";
+import { DASHBOARD_JOURNEY_MANIFEST } from "./dashboard-surface-manifest.js";
+import { classifyDashboardRegionClosure } from "./dashboard-region-closure.js";
+
 const ROLE_HEIGHTS = Object.freeze({
   glyph: 16,
   utility: 24,
@@ -10,6 +14,25 @@ const ROLE_HEIGHTS = Object.freeze({
 const SPACING_SCALE = Object.freeze([2, 4, 8, 12, 16, 24, 32]);
 const SIZE_TOLERANCE = 2;
 const DASHBOARD_DENSITY_PAINT_OCCLUDING_OVERFLOWS = Object.freeze(["hidden", "clip"]);
+const DASHBOARD_DENSITY_APPLICATION_OWNER_SELECTOR = "[data-dashboard-application], #root";
+const DASHBOARD_DENSITY_EXPLICIT_PORTAL_SELECTOR = [
+  "[data-dashboard-portal]",
+  "[data-dashboard-overlay]",
+  "[data-right-side-drawer]",
+  ".dashboard-dialog",
+  ".right-side-drawer",
+].join(",");
+const DASHBOARD_DENSITY_EXTERNAL_PORTAL_QUERY = [
+  "dialog",
+  "[role='dialog']",
+  "[role='menu']",
+  "[role='listbox']",
+  "[aria-modal='true']",
+  "[popover]",
+  "aside",
+  "section",
+  "div",
+].join(",");
 
 export function dashboardDensityAncestorClipsPaintedNode({
   elementRect,
@@ -99,6 +122,7 @@ export const DASHBOARD_DENSITY_SETTLE_STYLE = `
 
 export const DASHBOARD_DENSITY_CATEGORIES = Object.freeze([
   "role-size",
+  "edge-clearance",
   "centreline",
   "rhythm",
   "wrap",
@@ -114,6 +138,109 @@ export const DASHBOARD_DENSITY_CATEGORIES = Object.freeze([
   "desktop-support-contract",
 ]);
 
+export function dashboardDensityEdgeDecorationDepth({
+  borderDepth = 0,
+  customDepth = 0,
+  hasLocalDecorationPaint = false,
+} = {}) {
+  const measuredBorder = Number.isFinite(borderDepth) && borderDepth > 0 ? borderDepth : 0;
+  const measuredCustom = hasLocalDecorationPaint && Number.isFinite(customDepth) && customDepth > 0
+    ? customDepth
+    : 0;
+  return Math.max(measuredBorder, measuredCustom);
+}
+
+export function dashboardDensityEdgeDepthOverride({ localDepth = null, styleDepth = 0 } = {}) {
+  return Number.isFinite(localDepth) && localDepth >= 0 ? localDepth : styleDepth;
+}
+
+export function dashboardDensityVisibleBorderDepth({ width = 0, style = "none", color = "transparent" } = {}) {
+  const normalizedColor = String(color).replace(/\s+/g, "").toLowerCase();
+  const transparent = normalizedColor === "transparent"
+    || /^rgba\([^)]*,0\)$/.test(normalizedColor)
+    || /\/0(?:\)|$)/.test(normalizedColor);
+  return Number.isFinite(width) && width > 0 && !["none", "hidden"].includes(style) && !transparent
+    ? width
+    : 0;
+}
+
+export function dashboardDensityHasBackgroundImagePaint(backgroundImage = "none") {
+  return !/^none(?:\s*,\s*none)*$/i.test(String(backgroundImage).trim());
+}
+
+export function dashboardDensityCustomEdgePaintIsVisible({
+  backgroundImage = "none",
+  boxShadow = "none",
+  allowBoxShadow = false,
+} = {}) {
+  return dashboardDensityHasBackgroundImagePaint(backgroundImage)
+    || (allowBoxShadow && String(boxShadow).trim().toLowerCase() !== "none");
+}
+
+export function dashboardDensityClearanceBoundaryStart(element, { contentKind = "text" } = {}) {
+  return contentKind === "control" ? element?.parentElement ?? null : element;
+}
+
+export function classifyDashboardEdgeClearance({
+  edges = [],
+  minimumClearance = 4,
+  tolerance = 0.5,
+} = {}) {
+  return edges.flatMap((edge) => {
+    if (edge.exempt || !Number.isFinite(edge.decorationDepth)) return [];
+    const requiredClearance = edge.decorationDepth + minimumClearance;
+    return (edge.clearances ?? []).flatMap(({ contentId, clearance }) => (
+      Number.isFinite(clearance) && clearance + tolerance < requiredClearance
+        ? [{
+          boundaryId: edge.boundaryId,
+          edge: edge.edge,
+          contentId,
+          clearance: round(clearance),
+          decorationDepth: round(edge.decorationDepth),
+          requiredClearance: round(requiredClearance),
+        }]
+        : []
+    ));
+  });
+}
+
+export function dashboardRegionCandidateRequiresOwnBoundary(signals = []) {
+  const present = new Set(signals);
+  return ["sticky-fixed", "dialog", "drawer", "menu", "status", "table", "chart-cell"]
+    .some((signal) => present.has(signal))
+    || (present.has("toolbar-navigation")
+      && (present.has("distinct-paint") || present.has("multi-action")))
+    || (present.has("named-structure") && present.has("distinct-paint"));
+}
+
+export function dashboardRegionDirectStyleSignature({
+  role = "",
+  material = "flat",
+  roleRuleMatches = [],
+  materialRuleMatches = [],
+} = {}) {
+  if (!role || roleRuleMatches.length === 0) return "";
+  if (material !== "flat" && materialRuleMatches.length === 0) return "";
+  return [...roleRuleMatches, ...materialRuleMatches].join(" | ");
+}
+
+export function dashboardDensityExternalPortalCandidateRequiresScope({
+  outsideJourneyRoot = false,
+  withinApplicationOwner = false,
+  explicitDashboardOwnership = false,
+  role = "",
+  tag = "",
+  position = "static",
+  topLayer = false,
+} = {}) {
+  if (!outsideJourneyRoot || (!withinApplicationOwner && !explicitDashboardOwnership)) return false;
+  return explicitDashboardOwnership
+    || topLayer
+    || tag === "dialog"
+    || ["dialog", "menu", "listbox"].includes(role)
+    || position === "fixed";
+}
+
 export async function collectDashboardDensityEvidence(page, entry) {
   const snapshot = await page.evaluate(({
     metadata,
@@ -121,8 +248,55 @@ export async function collectDashboardDensityEvidence(page, entry) {
     roleHeights,
     roleOverrides,
     paintOccludingOverflows,
+    applicationOwnerSelector,
+    explicitPortalSelector,
+    externalPortalQuery,
+    ownedRegions,
   }) => {
     const round = (value) => Math.round(value * 100) / 100;
+    const colorIsTransparent = (color = "transparent") => {
+      const normalized = String(color).replace(/\s+/g, "").toLowerCase();
+      return normalized === "transparent"
+        || /^rgba\([^)]*,0(?:\.0+)?\)$/.test(normalized)
+        || /\/0(?:\.0+)?(?:\)|$)/.test(normalized);
+    };
+    const hasBackgroundImagePaint = (backgroundImage = "none") => (
+      !/^none(?:\s*,\s*none)*$/i.test(String(backgroundImage).trim())
+    );
+    const customEdgePaintIsVisible = ({
+      backgroundImage = "none",
+      boxShadow = "none",
+      allowBoxShadow = false,
+    } = {}) => hasBackgroundImagePaint(backgroundImage)
+      || (allowBoxShadow && String(boxShadow).trim().toLowerCase() !== "none");
+    const visibleBorderDepth = ({
+      width = 0,
+      style = "none",
+      color = "transparent",
+    } = {}) => (
+      Number.isFinite(width)
+        && width > 0
+        && !["none", "hidden"].includes(String(style).toLowerCase())
+        && !colorIsTransparent(color)
+        ? width
+        : 0
+    );
+    const edgeDepthOverride = ({ localDepth = null, styleDepth = 0 } = {}) => (
+      Number.isFinite(localDepth) && localDepth >= 0 ? localDepth : styleDepth
+    );
+    const edgeDecorationDepth = ({
+      borderDepth = 0,
+      customDepth = 0,
+      hasLocalDecorationPaint = false,
+    } = {}) => Math.max(
+      Number.isFinite(borderDepth) && borderDepth > 0 ? borderDepth : 0,
+      hasLocalDecorationPaint && Number.isFinite(customDepth) && customDepth > 0
+        ? customDepth
+        : 0,
+    );
+    const clearanceBoundaryStart = (element, { contentKind = "text" } = {}) => (
+      contentKind === "control" ? element?.parentElement ?? null : element
+    );
     const paintIsCollapsed = (style) => {
       const normalizedClip = String(style.clip).replace(/\s+/g, "").toLowerCase();
       const clipNumbers = normalizedClip.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
@@ -963,6 +1137,346 @@ export async function collectDashboardDensityEvidence(page, entry) {
       /notice|warning|status|error/.test(String(element.className ?? ""))
     )).length;
 
+    const regionSelectors = (region) => [region.selector, ...(region.liveSelectors ?? [])]
+      .filter(Boolean);
+    const visiblePortalRoots = ownedRegions
+      .filter(({ lifecycle }) => lifecycle === "portal")
+      .flatMap(regionSelectors)
+      .flatMap((selector) => [...document.querySelectorAll(selector)])
+      .filter(visible);
+    const applicationOwner = root.closest(applicationOwnerSelector)
+      ?? document.querySelector(applicationOwnerSelector);
+    const explicitPortalElements = [...document.querySelectorAll(explicitPortalSelector)];
+    const applicationPortalElements = applicationOwner
+      ? [...applicationOwner.querySelectorAll(externalPortalQuery)]
+      : [];
+    const externalPortalElements = [...new Set([
+      ...explicitPortalElements,
+      ...applicationPortalElements,
+    ])].filter((element) => {
+      if (!visible(element) || root === element || root.contains(element)) return false;
+      const style = getComputedStyle(element);
+      const tag = element.tagName.toLowerCase();
+      const role = String(element.getAttribute("role") ?? "").toLowerCase();
+      const withinApplicationOwner = Boolean(applicationOwner?.contains(element));
+      const explicitDashboardOwnership = element.matches(explicitPortalSelector);
+      let topLayer = false;
+      try {
+        topLayer = element.matches(":modal, :popover-open");
+      } catch {
+        topLayer = false;
+      }
+      return (withinApplicationOwner || explicitDashboardOwnership) && (
+        explicitDashboardOwnership
+        || topLayer
+        || tag === "dialog"
+        || ["dialog", "menu", "listbox"].includes(role)
+        || style.position === "fixed"
+      );
+    });
+    const scopeRoots = [...new Set([root, ...visiblePortalRoots, ...externalPortalElements])];
+    const isInScope = (element) => scopeRoots.some((scope) => (
+      scope === element || scope.contains(element) || element.contains(scope)
+    ));
+    const distanceTo = (element, boundary) => {
+      let distance = 0;
+      let current = element;
+      while (current && current !== boundary) {
+        current = current.parentElement;
+        distance += 1;
+      }
+      return current === boundary ? distance : null;
+    };
+    const directStyleRuleMatches = (element, variableName) => {
+      const matches = [];
+      const visit = (ruleList) => {
+        for (const rule of [...(ruleList ?? [])]) {
+          if (typeof rule.selectorText === "string" && rule.style) {
+            const backgroundImage = rule.style.getPropertyValue("background-image").trim();
+            if (backgroundImage.includes(`var(${variableName})`)) {
+              try {
+                if (element.matches(rule.selectorText)) {
+                  matches.push(`${rule.selectorText} -> ${backgroundImage}`);
+                }
+              } catch {
+                // Ignore selectors unsupported by the current browser engine.
+              }
+            }
+          }
+          try {
+            if (rule.cssRules) visit(rule.cssRules);
+          } catch {
+            // Ignore inaccessible cross-origin or conditional rule lists.
+          }
+        }
+      };
+      for (const styleSheet of [...document.styleSheets]) {
+        try {
+          visit(styleSheet.cssRules);
+        } catch {
+          // Only same-origin dashboard stylesheets can prove owned-region paint.
+        }
+      }
+      return [...new Set(matches)].slice(0, 8);
+    };
+    const mountedRegionElements = ownedRegions.flatMap((region) => {
+      const elements = [...new Set(regionSelectors(region)
+        .flatMap((selector) => [...document.querySelectorAll(selector)]))]
+        .filter((element) => visible(element) && isInScope(element));
+      return elements.map((element) => ({
+          regionId: region.id,
+          element,
+          role: element.dataset.dashboardSurfaceRole ?? region.role,
+          material: element.dataset.dashboardMaterial ?? region.material,
+          roleRuleMatches: directStyleRuleMatches(
+            element,
+            `--simex-role-${region.role}-background`,
+          ),
+          materialRuleMatches: region.material === "flat"
+            ? []
+            : directStyleRuleMatches(
+                element,
+                `--simex-material-${region.material}-background`,
+              ),
+        }));
+    });
+    const candidateElements = [...scopeRoots.flatMap((scope) => [
+      scope,
+      ...scope.querySelectorAll([
+        "section", "header", "nav", "aside", "[role='toolbar']", "[role='navigation']",
+        "[role='dialog']", "[role='menu']", "[role='status']", "table", "[data-dashboard-region]",
+        "[data-dashboard-surface-role='chart-cell']", "[data-dashboard-material]",
+      ].join(",")),
+    ]), ...externalPortalElements].filter((element) => visible(element));
+    const discoveredRegionCandidateElements = new Set();
+    const regionCandidates = [...new Set(candidateElements)].flatMap((element, index) => {
+      const style = getComputedStyle(element);
+      const signals = [];
+      const tag = element.tagName.toLowerCase();
+      const role = String(element.getAttribute("role") ?? "").toLowerCase();
+      if (["section", "header", "nav", "aside"].includes(tag) || element.hasAttribute("aria-label") || element.hasAttribute("data-dashboard-region")) signals.push("named-structure");
+      if (["toolbar", "navigation"].includes(role) || tag === "nav") signals.push("toolbar-navigation");
+      if (["sticky", "fixed"].includes(style.position)) signals.push("sticky-fixed");
+      const hasVisibleBorder = ["top", "right", "bottom", "left"].some((side) => (
+        visibleBorderDepth({
+          width: Number.parseFloat(style.getPropertyValue(`border-${side}-width`)),
+          style: style.getPropertyValue(`border-${side}-style`),
+          color: style.getPropertyValue(`border-${side}-color`),
+        }) > 0
+      ));
+      if (
+        !colorIsTransparent(style.backgroundColor)
+        || hasBackgroundImagePaint(style.backgroundImage)
+        || hasVisibleBorder
+        || style.boxShadow !== "none"
+      ) signals.push("distinct-paint");
+      const directActions = [...element.children].filter((child) => child.matches("button, a[href], [role='button'], [role='menuitem']") && visible(child));
+      if (directActions.length >= 2) signals.push("multi-action");
+      if (role === "dialog" || tag === "dialog" || element.getAttribute("aria-modal") === "true") signals.push("dialog");
+      if (/drawer/.test(String(element.className ?? ""))) signals.push("drawer");
+      if (role === "menu" || role === "listbox") signals.push("menu");
+      if (role === "status" || /status|notice|warning|error/.test(String(element.className ?? ""))) signals.push("status");
+      if (tag === "table" || /table/.test(String(element.className ?? ""))) signals.push("table");
+      if (element.dataset.dashboardSurfaceRole === "chart-cell") signals.push("chart-cell");
+      if (!signals.length) return [];
+      discoveredRegionCandidateElements.add(element);
+      const containingRegions = mountedRegionElements.flatMap(({ regionId, element: boundary }) => {
+        const distance = distanceTo(element, boundary);
+        return distance === null ? [] : [{ regionId, distance }];
+      });
+      return [{
+        id: nodeId(element, index),
+        signals: [...new Set(signals)],
+        containingRegions,
+        exemption: null,
+      }];
+    });
+
+    const numericStyleValue = (value) => {
+      const number = Number.parseFloat(value);
+      return Number.isFinite(number) && number > 0 ? round(number) : 0;
+    };
+    const optionalNumericStyleValue = (value) => {
+      const source = String(value ?? "").trim();
+      if (!source) return null;
+      const number = Number.parseFloat(source);
+      return Number.isFinite(number) && number >= 0 ? round(number) : null;
+    };
+    const edgeClearanceExemptions = (element) => new Set(
+      String(
+        element.getAttribute("data-density-edge-clearance-exempt")
+        ?? element.getAttribute("data-edge-clearance-exempt")
+        ?? "",
+      ).split(/\s*,\s*/).filter(Boolean),
+    );
+    const paintedEdges = (element) => {
+      const style = getComputedStyle(element);
+      const direction = style.direction === "rtl" ? "rtl" : "ltr";
+      const physicalInlineStart = direction === "rtl" ? "right" : "left";
+      const physicalInlineEnd = direction === "rtl" ? "left" : "right";
+      const localDepth = (edge) => optionalNumericStyleValue(
+        style.getPropertyValue(`--simex-decorated-edge-${edge}`),
+      );
+      const customDepth = (edge) => {
+        const local = localDepth(edge);
+        const styleDepth = optionalNumericStyleValue(
+          style.getPropertyValue(`--simex-style-edge-${edge}`),
+        ) ?? 0;
+        return {
+          depth: edgeDepthOverride({ localDepth: local, styleDepth }),
+          hasDecorationPaint: customEdgePaintIsVisible({
+            backgroundImage: style.backgroundImage,
+            boxShadow: style.boxShadow,
+            allowBoxShadow: local !== null,
+          }),
+        };
+      };
+      const borderDepth = (side) => visibleBorderDepth({
+        width: numericStyleValue(style.getPropertyValue(`border-${side}-width`)),
+        style: style.getPropertyValue(`border-${side}-style`),
+        color: style.getPropertyValue(`border-${side}-color`),
+      });
+      const records = [
+        {
+          edge: "inline-start",
+          side: physicalInlineStart,
+          decorationDepth: (() => {
+            const custom = customDepth("inline-start");
+            return edgeDecorationDepth({
+              borderDepth: borderDepth(physicalInlineStart),
+              customDepth: custom.depth,
+              hasLocalDecorationPaint: custom.hasDecorationPaint,
+            });
+          })(),
+        },
+        {
+          edge: "inline-end",
+          side: physicalInlineEnd,
+          decorationDepth: (() => {
+            const custom = customDepth("inline-end");
+            return edgeDecorationDepth({
+              borderDepth: borderDepth(physicalInlineEnd),
+              customDepth: custom.depth,
+              hasLocalDecorationPaint: custom.hasDecorationPaint,
+            });
+          })(),
+        },
+        {
+          edge: "block-start",
+          side: "top",
+          decorationDepth: (() => {
+            const custom = customDepth("block-start");
+            return edgeDecorationDepth({
+              borderDepth: borderDepth("top"),
+              customDepth: custom.depth,
+              hasLocalDecorationPaint: custom.hasDecorationPaint,
+            });
+          })(),
+        },
+        {
+          edge: "block-end",
+          side: "bottom",
+          decorationDepth: (() => {
+            const custom = customDepth("block-end");
+            return edgeDecorationDepth({
+              borderDepth: borderDepth("bottom"),
+              customDepth: custom.depth,
+              hasLocalDecorationPaint: custom.hasDecorationPaint,
+            });
+          })(),
+        },
+      ];
+      const exemptions = edgeClearanceExemptions(element);
+      return records
+        .filter(({ decorationDepth }) => decorationDepth > 0)
+        .map((record) => ({ ...record, exempt: exemptions.has(record.edge) }));
+    };
+    const explicitPaintedBoundaries = scopeRoots.flatMap((scope) => [
+      ...scope.querySelectorAll("[data-dashboard-painted-boundary]"),
+    ]);
+    const boundaryElements = [...new Set([
+      ...scopeRoots,
+      ...mountedRegionElements.map(({ element }) => element),
+      ...discoveredRegionCandidateElements,
+      ...explicitPaintedBoundaries,
+    ])].filter(visible);
+    const decoratedBoundaries = new Map(boundaryElements.flatMap((element, index) => {
+      const edges = paintedEdges(element);
+      return edges.length ? [[element, { id: nodeId(element, index), element, edges }]] : [];
+    }));
+    const nearestDecoratedBoundary = (element) => {
+      let current = element;
+      while (current) {
+        const boundary = decoratedBoundaries.get(current);
+        if (boundary) return boundary;
+        current = current.parentElement;
+      }
+      return null;
+    };
+    const clearanceAt = (rect, boundaryRect, side) => ({
+      left: rect.left - boundaryRect.left,
+      right: boundaryRect.right - rect.right,
+      top: rect.top - boundaryRect.top,
+      bottom: boundaryRect.bottom - rect.bottom,
+    })[side];
+    const edgeClearanceByBoundary = new Map();
+    const recordClearance = (element, contentId, rect, contentKind = "text") => {
+      const boundary = nearestDecoratedBoundary(
+        clearanceBoundaryStart(element, { contentKind }),
+      );
+      if (!boundary || !rect || rect.width <= 0 || rect.height <= 0) return;
+      const boundaryRect = boundary.element.getBoundingClientRect();
+      for (const edge of boundary.edges) {
+        const clearance = clearanceAt(rect, boundaryRect, edge.side);
+        if (!Number.isFinite(clearance)) continue;
+        const key = `${boundary.id}:${edge.edge}`;
+        const record = edgeClearanceByBoundary.get(key) ?? {
+          boundaryId: boundary.id,
+          edge: edge.edge,
+          decorationDepth: edge.decorationDepth,
+          exempt: edge.exempt,
+          clearances: [],
+        };
+        record.clearances.push({ contentId, clearance: round(clearance) });
+        edgeClearanceByBoundary.set(key, record);
+      }
+    };
+    const scopedControlNodes = [...new Set(scopeRoots.flatMap((scope) => (
+      [...scope.querySelectorAll([
+        "button", "input:not([type='hidden'])", "select", "textarea", "a[href]",
+        "[role='button']", "[role='menuitem']", "[role='option']", "[role='tab']",
+        "[role='switch']", "[role='checkbox']", "[role='radio']", "[role='combobox']",
+      ].join(","))]
+    )))].filter(visible);
+    scopedControlNodes.forEach((element, index) => {
+      recordClearance(element, nodeId(element, index), element.getBoundingClientRect(), "control");
+    });
+    const textClearanceNodes = [];
+    const seenTextClearanceNodes = new Set();
+    for (const scope of scopeRoots) {
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => node.textContent.trim() && visible(node.parentElement)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT,
+      });
+      let node = walker.nextNode();
+      while (node && textClearanceNodes.length < 1200) {
+        if (!seenTextClearanceNodes.has(node)) {
+          seenTextClearanceNodes.add(node);
+          textClearanceNodes.push(node);
+        }
+        node = walker.nextNode();
+      }
+    }
+    textClearanceNodes.forEach((node, index) => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const rect of range.getClientRects()) {
+        recordClearance(node.parentElement, `${nodeId(node.parentElement, index)}:text`, rect);
+      }
+    });
+    const edgeClearances = [...edgeClearanceByBoundary.values()];
+
     const rootRect = rectOf(root);
     return {
       surface: metadata,
@@ -1003,6 +1517,9 @@ export async function collectDashboardDensityEvidence(page, entry) {
       },
       operationalContrastCandidates,
       visibleSemanticsCandidates,
+      edgeClearances,
+      regionCandidates,
+      mountedRegions: mountedRegionElements.map(({ element, ...mounted }) => mounted),
       humanReview: {
         operationalContrast: {
           status: "required",
@@ -1029,9 +1546,31 @@ export async function collectDashboardDensityEvidence(page, entry) {
     roleHeights: ROLE_HEIGHTS,
     roleOverrides: DASHBOARD_DENSITY_ROLE_OVERRIDES,
     paintOccludingOverflows: DASHBOARD_DENSITY_PAINT_OCCLUDING_OVERFLOWS,
+    ownedRegions: DASHBOARD_OWNED_REGION_REGISTRY,
+    applicationOwnerSelector: DASHBOARD_DENSITY_APPLICATION_OWNER_SELECTOR,
+    explicitPortalSelector: DASHBOARD_DENSITY_EXPLICIT_PORTAL_SELECTOR,
+    externalPortalQuery: DASHBOARD_DENSITY_EXTERNAL_PORTAL_QUERY,
   });
 
-  return classifyDashboardDensitySnapshot(snapshot);
+  const regionCandidates = (snapshot.regionCandidates ?? []).map((candidate) => ({
+    ...candidate,
+    requiresOwnBoundary: dashboardRegionCandidateRequiresOwnBoundary(candidate.signals),
+  }));
+  const mountedRegions = (snapshot.mountedRegions ?? []).map((region) => ({
+    ...region,
+    styleSignature: dashboardRegionDirectStyleSignature(region),
+  }));
+  const density = classifyDashboardDensitySnapshot({ ...snapshot, regionCandidates, mountedRegions });
+  return {
+    ...density,
+    regionCoverage: classifyDashboardRegionClosure({
+      journeyId: entry.id,
+      registry: DASHBOARD_OWNED_REGION_REGISTRY,
+      candidates: regionCandidates,
+      mountedRegions,
+      knownJourneyIds: DASHBOARD_JOURNEY_MANIFEST.map(({ id }) => id),
+    }),
+  };
 }
 
 export function classifyDashboardDensitySnapshot(snapshot) {
@@ -1059,6 +1598,17 @@ export function classifyDashboardDensitySnapshot(snapshot) {
         `Move ${control.id} to the shared ${control.role} height instead of preserving a local minimum.`,
       );
     }
+  }
+
+  for (const failure of classifyDashboardEdgeClearance({
+    edges: snapshot.edgeClearances ?? [],
+  })) {
+    add(
+      "edge-clearance",
+      "P1",
+      `${failure.boundaryId} ${failure.edge} decoration is ${failure.decorationDepth}px deep, but ${failure.contentId} has only ${failure.clearance}px clearance (${failure.requiredClearance}px required).`,
+      `Inset ${failure.contentId} to at least ${failure.requiredClearance}px from the ${failure.edge} painted edge, or declare an explicit ${failure.edge} full-bleed exemption.`,
+    );
   }
 
   const byRole = new Map();

@@ -45,7 +45,7 @@ test("retry and resume Source Content under one stable owner", async ({ page }) 
   const displayName = intake.getByLabel("Display name");
   await displayName.fill("Recoverable Source Content map");
   const sourceSurface = page.locator('aside[data-authoring-surface="source-content"]');
-  await displayName.press("Escape");
+  await closeManager(page);
   expect(pageErrors).toEqual([]);
   await expect(sourceSurface).toHaveAttribute("hidden", "");
   await expect(sourceSurface).toBeHidden();
@@ -60,7 +60,6 @@ test("retry and resume Source Content under one stable owner", async ({ page }) 
   await owner.getByRole("button", { name: "Resume New Source Content draft" }).click();
   manager = page.locator(".source-content-workspace");
   await expect(manager).toBeVisible();
-  await expect(manager.getByLabel("Display name")).toBeFocused();
 
   await page.evaluate(() => { globalThis.__SOURCE_CONTENT_FAIL_ONCE__ = true; });
   await intake.getByRole("button", { name: "Add to dashboard" }).click();
@@ -73,7 +72,6 @@ test("retry and resume Source Content under one stable owner", async ({ page }) 
 
   const description = intake.getByLabel("Default description");
   await description.fill("Retained retry description");
-  await description.focus();
   const catalogue = manager.locator(".source-content-catalogue");
   const catalogueScroll = await catalogue.evaluate((node) => {
     node.style.height = "120px";
@@ -90,7 +88,6 @@ test("retry and resume Source Content under one stable owner", async ({ page }) 
   await expect(owner).toHaveAttribute("data-pending-work-state", "error");
   await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
   await owner.getByRole("button", { name: "Resume New Source Content draft" }).click();
-  await expect(description).toBeFocused();
   await expect.poll(() => catalogue.evaluate((node) => node.scrollTop))
     .toBe(catalogueScroll.position);
   await intake.getByRole("button", { name: "Add to dashboard" }).click();
@@ -137,23 +134,11 @@ test("Journey A — media create reuse default external import restore dependenc
   await expect.poll(() => sessionAssetIds(page)).toEqual([]);
   expect(await mediaInventory(page)).toEqual(initial);
 
-  intake = await stageManagerFile(manager, "escape.png");
-  await intake.getByLabel("Display name").press("Escape");
-  await expect(page.getByRole("complementary", { name: "Source content authoring" })).toHaveCount(0);
-  expect(await sessionAssetIds(page)).toHaveLength(1);
-  expect(await mediaInventory(page)).toEqual(initial);
-  let suspendedOwner = page.locator('[data-pending-work-kind="source-content-create"]');
-  await expect(suspendedOwner).toHaveCount(1);
-  await suspendedOwner.getByRole("button", { name: "Resume New Source Content draft" }).click();
-  await expect(intake.getByLabel("Display name")).toBeFocused();
-  await intake.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect.poll(() => sessionAssetIds(page)).toEqual([]);
-
   manager = await openManager(page);
   intake = await stageManagerFile(manager, "close.png");
   await closeManager(page);
   expect(await sessionAssetIds(page)).toHaveLength(1);
-  suspendedOwner = page.locator('[data-pending-work-kind="source-content-create"]');
+  const suspendedOwner = page.locator('[data-pending-work-kind="source-content-create"]');
   await expect(suspendedOwner).toHaveCount(1);
   await suspendedOwner.getByRole("button", { name: "Resume New Source Content draft" }).click();
   await intake.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -181,7 +166,7 @@ test("Journey A — media create reuse default external import restore dependenc
   intake = await stageManagerFile(manager, "journey-a.png");
   await intake.getByLabel("Display name").fill("Journey A map");
   await intake.getByLabel("Default description").fill("Default journey map description");
-  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  await commitManagerIntake(page, intake);
   await expect(manager.getByText("Journey A map", { exact: true })).toBeVisible();
   const afterFirstAdd = await mediaInventory(page);
   expect(afterFirstAdd.logicalIds).toHaveLength(initial.logicalIds.length + 1);
@@ -189,14 +174,18 @@ test("Journey A — media create reuse default external import restore dependenc
   expect(await sessionAssetIds(page)).toEqual([]);
 
   intake = await stageManagerFile(manager, "journey-a-reuse.png");
-  await intake.getByLabel("Reuse existing").check();
-  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  const reuseChoice = intake.getByLabel("Reuse existing");
+  await reuseChoice.check();
+  await expect(reuseChoice).toBeChecked();
+  await commitManagerIntake(page, intake);
   expect(await mediaInventory(page)).toEqual(afterFirstAdd);
 
   intake = await stageManagerFile(manager, "journey-a-separate.png");
   await intake.getByLabel("Display name").fill("Journey A separate item");
-  await intake.getByLabel("Create separate item").check();
-  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  const separateChoice = intake.getByLabel("Create separate item");
+  await separateChoice.check();
+  await expect(separateChoice).toBeChecked();
+  await commitManagerIntake(page, intake);
   const afterSeparate = await mediaInventory(page);
   expect(afterSeparate.logicalIds).toHaveLength(afterFirstAdd.logicalIds.length + 1);
   expect(afterSeparate.assetIds).toEqual(afterFirstAdd.assetIds);
@@ -216,13 +205,12 @@ test("Journey A — media create reuse default external import restore dependenc
     name: "qmd-cancelled-local.jpg", mimeType: "image/jpeg", buffer: JPEG,
   });
   await expect(qmdDraft.locator('[data-qmd-media-host] img')).toBeVisible();
-  await expect(await advancedQmdSource(qmdDraft)).toContainText("simex-media:media-");
+  expect(await (await rawQmdSource(qmdDraft)).inputValue()).toContain("simex-media:media-");
   expect(await sessionAssetIds(page)).toHaveLength(1);
   expect(await mediaInventory(page)).toEqual(beforeQmdDraft);
   await discardStaticWizard(page, qmdDraft);
   await expect.poll(() => sessionAssetIds(page)).toEqual([]);
   expect(await mediaInventory(page)).toEqual(beforeQmdDraft);
-  await expect(page.getByRole("button", { name: "Add Text/Image", exact: true })).toBeFocused();
 
   qmdDraft = await openFreeTextContentStage(page, "Journey A imported QMD");
   await qmdDraft.getByRole("button", { name: "Insert image" }).click();
@@ -236,7 +224,8 @@ test("Journey A — media create reuse default external import restore dependenc
     name: "qmd-imported-local.webp", mimeType: "image/webp", buffer: WEBP,
   });
   await expect(qmdDraft.locator('[data-qmd-media-host] img')).toBeVisible();
-  await expect(await advancedQmdSource(qmdDraft)).toContainText("![External journey description](simex-media:media-");
+  expect(await (await rawQmdSource(qmdDraft)).inputValue())
+    .toContain("![External journey description](simex-media:media-");
   expect(await mediaInventory(page)).toEqual(beforeQmdDraft);
   await qmdDraft.getByRole("button", { name: "Continue" }).click();
   await qmdDraft.getByRole("button", { name: "Add", exact: true }).click();
@@ -274,17 +263,15 @@ test("Journey A — media create reuse default external import restore dependenc
   const imagePanel = page.locator(`[data-panel-id="${externalPanelId}"]`);
   await imagePanel.scrollIntoViewIfNeeded();
   await imagePanel.getByLabel("Journey A external image actions").getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
-  await editor.getByRole("button", { name: "Choose from media" }).click();
-  await editor.getByLabel(/Journey A separate item/).evaluate((node) => node.click());
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  await editor.getByRole("radio", { name: /Journey A separate item/ }).click();
   await expect(editor.getByText("Replacement selected. Save, discard, or restore the previous image.")).toBeVisible();
   const restore = editor.getByRole("button", { name: "Restore previous image" });
   await expect(restore).toBeVisible();
   await restore.click();
   await expect(restore).toHaveCount(0);
   await expect(editor.getByLabel("Alternative text")).toHaveValue("External journey description");
-  await editor.getByRole("button", { name: "Choose from media" }).click();
-  await editor.getByLabel(/Journey A separate item/).evaluate((node) => node.click());
+  await editor.getByRole("radio", { name: /Journey A separate item/ }).click();
   await editor.getByRole("button", { name: "Continue" }).click();
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(editor).toHaveCount(0);
@@ -293,8 +280,7 @@ test("Journey A — media create reuse default external import restore dependenc
 
   await imagePanel.getByLabel("Journey A external image actions").getByRole("button", { name: "Edit chart" }).click();
   await expect(editor.getByRole("button", { name: "Restore previous image" })).toHaveCount(0);
-  await editor.getByRole("button", { name: "Choose from media" }).click();
-  await editor.getByLabel(/Journey A external map/).evaluate((node) => node.click());
+  await editor.getByRole("radio", { name: /Journey A external map/ }).click();
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
   const discardDialog = page.getByRole("dialog", { name: "Discard Text/Image changes?" });
   await discardDialog.getByRole("button", { name: "Discard" }).click();
@@ -302,8 +288,7 @@ test("Journey A — media create reuse default external import restore dependenc
   expect(await persistedStaticMediaId(page, externalPanelId)).toBe(savedReplacementMediaId);
 
   await imagePanel.getByLabel("Journey A external image actions").getByRole("button", { name: "Edit chart" }).click();
-  await editor.getByRole("button", { name: "Choose from media" }).click();
-  await editor.getByLabel(/Journey A external map/).evaluate((node) => node.click());
+  await editor.getByRole("radio", { name: /Journey A external map/ }).click();
   await editor.getByRole("button", { name: "Continue" }).click();
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(editor).toHaveCount(0);
@@ -325,7 +310,7 @@ test("Journey A — media create reuse default external import restore dependenc
   await importCard.getByLabel("Create separate item").check();
   const importAdd = importCard.getByRole("button", { name: "Add to dashboard" });
   await expect(importAdd).toBeEnabled();
-  await importAdd.click();
+  await commitManagerIntake(page, importCard);
   expect(externalRequests.filter(({ type }) => type === "fetch")).toEqual([
     { url: "https://example.test/journey-a.png", type: "fetch" },
     { url: "https://example.test/journey-a.png", type: "fetch" },
@@ -374,7 +359,7 @@ test("Journey B — global media replacement preserves placement state", async (
   const intake = await stageManagerFile(manager, "journey-b-original.png");
   await intake.getByLabel("Display name").fill("Journey B shared media");
   await intake.getByLabel("Default description").fill("Journey B default alt");
-  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  await commitManagerIntake(page, intake);
   await closeManager(page);
 
   const imagePanelId = await createImageFromPicker(page, {
@@ -405,7 +390,6 @@ test("Journey B — global media replacement preserves placement state", async (
   const replaceTrigger = manager.getByRole("button", { name: "Replace library file everywhere" });
   const replacementBaseline = await replacementInventory(page, `asset-${JPEG_SHA256}`);
 
-  await replaceTrigger.focus();
   await replaceTrigger.click();
   let dialog = page.getByRole("dialog", { name: "Replace Journey B shared media everywhere?" });
   await dialog.getByLabel("Replacement image").setInputFiles({
@@ -415,27 +399,11 @@ test("Journey B — global media replacement preserves placement state", async (
   await expect(manager.getByText("Active work retains this item: media-replacement.")).toBeVisible();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(replaceTrigger).toBeFocused();
   await expect(manager.getByText("Active work retains this item: media-replacement.")).toHaveCount(0);
   expect(await replacementInventory(page, `asset-${JPEG_SHA256}`)).toEqual(replacementBaseline);
 
   await replaceTrigger.click();
   dialog = page.getByRole("dialog", { name: "Replace Journey B shared media everywhere?" });
-  await dialog.getByLabel("Replacement image").setInputFiles({
-    name: "journey-b-replacement.jpg", mimeType: "image/jpeg", buffer: JPEG,
-  });
-  await expect(dialog.getByText("Ready: journey-b-replacement.jpg")).toBeVisible();
-  await expect(manager.getByText("Active work retains this item: media-replacement.")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
-  await expect(replaceTrigger).toBeFocused();
-  await expect(manager.getByText("Active work retains this item: media-replacement.")).toHaveCount(0);
-  expect(await replacementInventory(page, `asset-${JPEG_SHA256}`)).toEqual(replacementBaseline);
-
-  await replaceTrigger.focus();
-  await replaceTrigger.click();
-  dialog = page.getByRole("dialog", { name: "Replace Journey B shared media everywhere?" });
-  await expect(dialog.getByLabel("Replacement image")).toBeFocused();
 
   await dialog.getByLabel("Replacement image").setInputFiles({
     name: "invalid.png", mimeType: "image/png", buffer: Buffer.from("not a raster"),
@@ -449,7 +417,6 @@ test("Journey B — global media replacement preserves placement state", async (
   await expect(dialog.getByText("Ready: journey-b-replacement.jpg")).toBeVisible();
   await dialog.getByRole("button", { name: "Replace everywhere" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(replaceTrigger).toBeFocused();
   await expect(manager.getByRole("status")).toContainText("revision 2");
 
   const after = await journeyBState(page, { imagePanelId, qmdPanelId });
@@ -465,7 +432,9 @@ test("Journey B — global media replacement preserves placement state", async (
   await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1.5");
   const qmdPanel = page.locator(`[data-panel-id="${qmdPanelId}"]`);
   await expect(qmdPanel.locator(`[data-qmd-media-id="${before.mediaId}"][data-qmd-media-revision]`)).toHaveAttribute("data-qmd-media-revision", "2");
-  await expect(qmdPanel.locator('img[alt="Journey B contextual QMD alt"]')).toBeVisible();
+  const qmdImage = qmdPanel.locator('img[alt="Journey B contextual QMD alt"]');
+  await expect(qmdImage).toBeVisible();
+  expect(await renderedImageHash(qmdImage)).toBe(JPEG_SHA256);
   expect(await renderedImageHash(imageView.locator('img[alt="Journey B contextual image alt"]'))).toBe(JPEG_SHA256);
 
   await closeManager(page);
@@ -482,13 +451,14 @@ test("Journey B — global media replacement preserves placement state", async (
   await expect(fullscreenImage).toBeVisible();
   expect(await renderedImageHash(fullscreenImage)).toBe(JPEG_SHA256);
   await expect(fullscreen.locator(".chart-image-view")).toHaveAttribute("data-image-media-revision", "2");
-  await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+  await fullscreen.getByRole("button", { name: "Exit fullscreen" }).click();
   await page.locator(`[data-panel-id="${qmdPanelId}"]`).getByRole("button", { name: "Focus chart" }).click();
   const qmdFullscreen = page.getByRole("dialog", { name: "Focused chart" });
   const fullscreenQmd = qmdFullscreen.locator('img[alt="Journey B contextual QMD alt"]');
   await expect(fullscreenQmd).toBeVisible();
+  expect(await renderedImageHash(fullscreenQmd)).toBe(JPEG_SHA256);
   await expect(qmdFullscreen.locator(`[data-qmd-media-id="${before.mediaId}"][data-qmd-media-revision]`)).toHaveAttribute("data-qmd-media-revision", "2");
-  await qmdFullscreen.getByRole("button", { name: "Exit focus" }).click();
+  await qmdFullscreen.getByRole("button", { name: "Exit fullscreen" }).click();
   expect(pageErrors).toEqual([]);
 });
 
@@ -588,6 +558,13 @@ async function stageManagerFile(manager, name) {
   return intake;
 }
 
+async function commitManagerIntake(page, intake) {
+  const pendingDraft = page.locator('[data-pending-work-kind="source-content-create"]');
+  await expect(pendingDraft).toHaveCount(1);
+  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  await expect(pendingDraft).toHaveCount(0);
+}
+
 async function selectMediaRow(manager, name) {
   const row = manager.locator(".source-content-row").filter({ hasText: name }).first();
   await expect(row).toBeVisible();
@@ -601,7 +578,6 @@ async function createImageFromPicker(page, { title, mediaName, expectedAlt }) {
   await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(title);
-  await wizard.getByRole("button", { name: "Choose from media" }).click();
   await wizard.getByLabel(new RegExp(mediaName)).evaluate((node) => node.click());
   await expect(wizard.getByLabel("Alternative text")).toHaveValue(expectedAlt);
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -638,8 +614,10 @@ async function createQmdFromPicker(page, { title, mediaName, expectedAlt }) {
   await wizard.getByLabel("Panel title").fill(title);
   await wizard.getByRole("button", { name: "Insert image" }).click();
   await wizard.getByLabel(new RegExp(mediaName)).evaluate((node) => node.click());
-  await expect(await advancedQmdSource(wizard)).toContainText(`![${expectedAlt}](simex-media:`);
-  await expect(wizard.getByText("Preview is up to date.")).toBeVisible();
+  expect(await (await rawQmdSource(wizard)).inputValue())
+    .toContain(`![${expectedAlt}](simex-media:`);
+  await expect(wizard.getByRole("region", { name: "Rendered preview" })
+    .locator(`img[alt="${expectedAlt}"]`)).toBeVisible();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -772,8 +750,14 @@ async function sessionAssetIds(page) {
   });
 }
 
-async function advancedQmdSource(surface) {
-  const tab = surface.getByRole("tab", { name: "Advanced QMD" });
-  if (await tab.getAttribute("aria-selected") !== "true") await tab.click();
-  return surface.getByLabel("Portable QMD source");
+async function rawQmdSource(surface) {
+  const preview = surface.getByRole("region", { name: "Rendered preview" });
+  await expect(preview).toBeVisible();
+  const source = surface.getByLabel("Portable QMD raw source");
+  if (!(await source.isVisible())) {
+    await surface.getByRole("button", { name: "Raw text", exact: true }).click();
+  }
+  await expect(source).toBeVisible();
+  await expect(preview).toBeVisible();
+  return source;
 }

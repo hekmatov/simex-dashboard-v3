@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 
+import { dashboardOwnedRegionProps } from "../../theme/dashboardRegionRegistry.js";
 import ControlTooltip from "../common/ControlTooltip.jsx";
 import BuildMoreDrawer from "./BuildMoreDrawer.jsx";
 
@@ -23,7 +24,11 @@ export default function BuildCommandHeader({
   const [moreOpen, setMoreOpen] = useState(false);
 
   return (
-    <section className="build-command-header" aria-label="Build commands">
+    <section
+      className="build-command-header"
+      aria-label="Build commands"
+      {...dashboardOwnedRegionProps("build-command-header")}
+    >
       <div className="build-command-main-row" role="toolbar" aria-label="Primary Build commands">
         <ControlTooltip disabled={locked} reason={disabledReason}>
           <button type="button" className="secondary" data-build-command-action="add-chart" disabled={locked} onClick={onAddChart}>

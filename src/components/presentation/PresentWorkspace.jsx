@@ -21,11 +21,10 @@ export default function PresentWorkspace({
   accessibilityEnabled,
   themeProjection,
   contentRenderContext,
-  onSaveSceneDatePosition,
 }) {
   const playback = usePlayback();
-  const [compositionHost, setCompositionHost] = React.useState(null);
   const [audienceOptionsOpen, setAudienceOptionsOpen] = React.useState(false);
+  const [chronoControlsOpen, setChronoControlsOpen] = React.useState(false);
   const playbackDispatchRef = React.useRef(playback.dispatch);
   playbackDispatchRef.current = playback.dispatch;
   const playbackViewOwner = `present:${React.useId()}`;
@@ -104,6 +103,7 @@ export default function PresentWorkspace({
       ? sessionState.output
       : "active",
     blackout: sessionState.blackout,
+    themeProjection,
   }), [
     activePage?.id,
     audienceFacts,
@@ -114,6 +114,7 @@ export default function PresentWorkspace({
     presentableItemIndex,
     sessionState.blackout,
     sessionState.output,
+    themeProjection,
   ]);
 
   React.useEffect(() => {
@@ -149,15 +150,16 @@ export default function PresentWorkspace({
       <section className="present-status-strip" aria-label="Audience display connection">
         <div>
           <strong>{connectionStatusLabel(connectionStatus)}</strong>
-          <p>{sceneSummary(activePage, selectedCharts)}</p>
         </div>
         <div className="present-status-actions">
           <button
             type="button"
-            className="secondary dashboard-look-trigger"
-            onClick={onOpenDashboardLook}
+            data-presentation-control-id={hasSession ? "reopen-audience" : "open-new-session"}
+            onClick={() => hasSession
+              ? runtime.reopenAudience()
+              : runtime.openNewSession(presentationState, { sourceSelection: sourceEligibility })}
           >
-            Dashboard look
+            {hasSession ? "Reopen audience display" : "Open audience display"}
           </button>
           <button
             type="button"
@@ -168,6 +170,24 @@ export default function PresentWorkspace({
             onClick={() => setAudienceOptionsOpen(true)}
           >
             Audience display options
+          </button>
+          <button
+            type="button"
+            className="secondary present-chrono-groups-trigger"
+            data-presentation-control-id="chrono-groups"
+            aria-controls="present-chrono-groups"
+            aria-expanded={chronoControlsOpen}
+            aria-pressed={chronoControlsOpen}
+            onClick={() => setChronoControlsOpen((open) => !open)}
+          >
+            Chrono Groups
+          </button>
+          <button
+            type="button"
+            className="secondary dashboard-look-trigger"
+            onClick={onOpenDashboardLook}
+          >
+            Theme
           </button>
         </div>
         {connectionError && <p className="present-connection-error" role="status">{connectionError}</p>}
@@ -180,17 +200,17 @@ export default function PresentWorkspace({
 
       <div className="present-workspace-body">
         <aside className="present-context-panel" aria-label="Presentation context">
-          <div className="present-context-controls">
-            <AudienceSnapshotMonitor
-              dashboard={dashboard}
-              connectionLabel={connectionStatusLabel(connectionStatus)}
-              presentationState={presentationState}
-              playing={playback.playing}
-              themeProjection={themeProjection}
-              contentRenderContext={contentRenderContext}
-            />
-            <div className="presentation-composition-host" ref={setCompositionHost} />
-          </div>
+          <AudienceSnapshotMonitor
+            dashboard={dashboard}
+            connectionLabel={connectionStatusLabel(connectionStatus)}
+            presentationState={resolveAudienceMonitorPresentationState({
+              acceptedPresentationState: runtime.acceptedPresentationState,
+              localPresentationState: presentationState,
+            })}
+            playing={playback.playing}
+            themeProjection={themeProjection}
+            contentRenderContext={contentRenderContext}
+          />
           <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">
             <div className="present-panel-heading">
               <div>
@@ -263,7 +283,6 @@ export default function PresentWorkspace({
               ))}
             </div>
           </section>
-          <p className="present-scene-summary">{sceneSummary(activePage, selectedCharts)}</p>
         </aside>
 
         <section className="present-scene-panel" aria-label="Choose charts for the audience scene">
@@ -315,14 +334,17 @@ export default function PresentWorkspace({
         </section>
       </div>
 
-      <section className="present-action-dock" aria-label="Presentation controls">
+      <section
+        className="present-action-dock"
+        id="present-chrono-groups"
+        aria-label="Presentation controls"
+        hidden={!chronoControlsOpen}
+      >
         <PresentationController
           runtime={{ ...runtime, sessionState }}
           playback={playback}
           presentationState={presentationState}
           sourceEligibility={sourceEligibility}
-          compositionHost={compositionHost}
-          onSaveSceneDatePosition={onSaveSceneDatePosition}
         />
       </section>
       <AudienceDisplayOptionsDrawer
@@ -404,6 +426,13 @@ export function presentChartLabel(chart = {}) {
     : String(chart.id ?? "").trim() || "Panel";
 }
 
+export function resolveAudienceMonitorPresentationState({
+  acceptedPresentationState,
+  localPresentationState,
+}) {
+  return acceptedPresentationState ?? localPresentationState;
+}
+
 export function projectPresentableItems(itemIds, presentableItemIndex) {
   return itemIds.map(
     (itemId) => structuredClone(presentableItemIndex.get(itemId).descriptor),
@@ -455,10 +484,4 @@ function connectionStatusLabel(status) {
   if (status === "ended") return "Audience display ended";
   if (status === "error") return "Audience display unavailable";
   return "Audience display not open";
-}
-
-function sceneSummary(activePage, selectedCharts) {
-  const pageLabel = activePage?.label ?? activePage?.title ?? activePage?.id ?? "Current page";
-  if (selectedCharts.length === 0) return `${pageLabel}: holding scene`;
-  return `${pageLabel}: ${selectedCharts.length} chart${selectedCharts.length === 1 ? "" : "s"} selected`;
 }

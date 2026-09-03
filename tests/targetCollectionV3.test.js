@@ -17,6 +17,10 @@ export async function load(url, context, nextLoad) {
 }
 `)}`, import.meta.url);
 
+const {
+  updateEmbeddedEChartsLifecycle,
+} = await import("../src/components/charts/EmbeddedEChartsItem.jsx");
+
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
@@ -498,4 +502,92 @@ test("the target collection view renders detached identity without injecting hid
   assert.equal((html.match(/class="chart-view-title"/g) ?? []).length, 1);
   assert.equal((html.match(/Source: Operations register/g) ?? []).length, 0);
   assert.deepEqual(model, modelBefore);
+});
+
+test("embedded target ECharts normalizes gauge and bullet text before every fake lifecycle update", () => {
+  assert.equal(typeof updateEmbeddedEChartsLifecycle, "function", "embedded presentation boundary must be implemented");
+  const gauge = {
+    kind: "echarts",
+    option: {
+      textStyle: { fontSize: 6 },
+      series: [{
+        type: "gauge",
+        title: { fontSize: 6 },
+        detail: { fontSize: 6 },
+        axisLabel: { fontSize: 6 },
+      }],
+    },
+  };
+  const bullet = {
+    kind: "echarts",
+    option: {
+      textStyle: { fontSize: 6 },
+      xAxis: { axisLabel: { fontSize: 6 } },
+      series: [
+        { type: "bar", label: { show: true, fontSize: 6 } },
+        { type: "scatter", label: { show: true, fontSize: 6 } },
+      ],
+    },
+  };
+  const gaugeBefore = structuredClone(gauge);
+  const bulletBefore = structuredClone(bullet);
+  const updates = [];
+  const lifecycle = { update(model) { updates.push(model); } };
+
+  updateEmbeddedEChartsLifecycle(lifecycle, gauge, {
+    textStrong: "#112233",
+    textMuted: "#445566",
+    typographyKey: "theme-a",
+  }, { tier: "distance-large", title: 28, text: 18, value: 40 });
+  updateEmbeddedEChartsLifecycle(lifecycle, gauge, {
+    textStrong: "#F1F2F3",
+    textMuted: "#C1C2C3",
+    typographyKey: "theme-b",
+  }, { tier: "distance-grid", title: 24, text: 16, value: 34 });
+  updateEmbeddedEChartsLifecycle(lifecycle, bullet, {
+    textStrong: "#F1F2F3",
+    textMuted: "#C1C2C3",
+    typographyKey: "theme-b",
+  }, { tier: "distance-grid", title: 24, text: 16, value: 34 });
+
+  assert.equal(updates.length, 3);
+  assert.notEqual(updates[0], gauge);
+  assert.notEqual(updates[0].option, gauge.option);
+  assert.equal(updates[0].option.series[0].title.fontSize, 18);
+  assert.equal(updates[0].option.series[0].detail.fontSize, 40);
+  assert.equal(updates[0].option.series[0].axisLabel.fontSize, 18);
+  assert.equal(updates[0].option.series[0].detail.color, "#112233");
+  assert.equal(updates[1].option.series[0].title.fontSize, 16);
+  assert.equal(updates[1].option.series[0].detail.fontSize, 34);
+  assert.equal(updates[1].option.series[0].detail.color, "#F1F2F3");
+  assert.equal(updates[2].option.xAxis.axisLabel.fontSize, 16);
+  assert.equal(updates[2].option.series[0].label.fontSize, 16);
+  assert.equal(updates[2].option.series[1].label.fontSize, 16);
+  assert.deepEqual(gauge, gaugeBefore);
+  assert.deepEqual(bullet, bulletBefore);
+});
+
+test("target collections pass the Audience scale through every embedded chart host", async () => {
+  const {
+    default: TargetCollectionChartView,
+  } = await import("../src/components/charts/TargetCollectionChartView.jsx");
+  const model = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([
+      { entity: "Clinic A", value: 72, target: 80 },
+      { entity: "Clinic B", value: 55, target: 70 },
+    ]),
+  });
+  const audience = renderToStaticMarkup(React.createElement(TargetCollectionChartView, {
+    model,
+    chart: chart("gauge"),
+    audienceScale: Object.freeze({ tier: "distance-large", title: 28, text: 18, value: 40 }),
+  }));
+  const ordinary = renderToStaticMarkup(React.createElement(TargetCollectionChartView, {
+    model,
+    chart: chart("gauge"),
+  }));
+
+  assert.equal((audience.match(/data-audience-scale-tier="distance-large"/g) ?? []).length, 2);
+  assert.doesNotMatch(ordinary, /data-audience-scale-tier/);
 });

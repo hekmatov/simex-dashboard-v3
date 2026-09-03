@@ -2,11 +2,13 @@ import React from "react";
 
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
 import { IconControl } from "../common/SimExIcon.js";
+import { getInteraction } from "../../iconography/iconCatalog.js";
 
 const PERSISTENCE_PENDING_REASON = "Wait for the current chart operation to finish.";
 
 export default function EditSessionActions({
   className = "",
+  leadingAction = null,
   valid = false,
   submitting = false,
   disabled = false,
@@ -32,6 +34,15 @@ export default function EditSessionActions({
     React.createElement(
       "div",
       { className: ["chart-editor-actions", className].filter(Boolean).join(" ") },
+      leadingAction && typeof leadingAction === "object"
+        && typeof leadingAction.interactionId === "string"
+        && leadingAction.interactionId.trim() !== ""
+        && getInteraction(leadingAction.interactionId)
+        ? React.createElement(IconControl, {
+            ...leadingAction,
+            className: ["chart-editor-leading-action", leadingAction.className].filter(Boolean).join(" "),
+          })
+        : null,
       React.createElement(IconControl, {
         interactionId: "editor.save-changes",
         type: "submit",

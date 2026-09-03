@@ -1,11 +1,19 @@
 import React from "react";
 
-import { createEChartsLifecycle } from "./EChartsChartView.jsx";
+import { useDashboardChartTheme } from "../../theme/DashboardChartThemeContext.jsx";
+import {
+  applyEChartsPresentation,
+  createEChartsLifecycle,
+  DEFAULT_CHART_TEXT_THEME,
+  readChartTextTheme,
+  sameChartTextTheme,
+} from "./EChartsChartView.jsx";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
 
 export default function EmbeddedEChartsItem({
   model,
+  audienceScale = null,
   runtimeError: suppliedRuntimeError = null,
   createLifecycle = createEmbeddedEChartsLifecycle,
 }) {
@@ -15,6 +23,10 @@ export default function EmbeddedEChartsItem({
   const currentModelRef = React.useRef(model);
   const failedModelRef = React.useRef(null);
   const [runtimeError, setRuntimeError] = React.useState(null);
+  const [textTheme, setTextTheme] = React.useState(DEFAULT_CHART_TEXT_THEME);
+  const dashboardChartTheme = useDashboardChartTheme();
+  const typographyKey = dashboardChartTheme?.key ?? "";
+  const audienceTier = audienceScale?.tier ?? "";
   const modelError = invalidModelError(model);
   const activeError = suppliedRuntimeError
     ?? modelError
@@ -32,6 +44,17 @@ export default function EmbeddedEChartsItem({
       setRuntimeError(null);
     }
   }, [model, modelError, runtimeError, suppliedRuntimeError]);
+
+  React.useEffect(() => {
+    const host = hostRef.current;
+    if (!host || typeof window === "undefined") return;
+    const next = readChartTextTheme(
+      window.getComputedStyle(host),
+      typographyKey,
+      audienceTier,
+    );
+    setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
+  }, [audienceTier, typographyKey]);
 
   React.useEffect(() => {
     const host = hostRef.current;
@@ -61,8 +84,13 @@ export default function EmbeddedEChartsItem({
       lifecycleFactoryRef.current = createLifecycle;
       lifecycle.mount(host);
     }
-    lifecycleRef.current.update(model);
-  }, [activeError, createLifecycle, model]);
+    updateEmbeddedEChartsLifecycle(
+      lifecycleRef.current,
+      model,
+      textTheme,
+      audienceScale,
+    );
+  }, [activeError, audienceScale, createLifecycle, model, textTheme]);
 
   React.useEffect(() => () => {
     disposeCurrentLifecycle(lifecycleRef, lifecycleFactoryRef);
@@ -79,8 +107,26 @@ export default function EmbeddedEChartsItem({
   return React.createElement("div", {
     ref: hostRef,
     className: "chart-embedded-echarts-host",
+    "data-audience-scale-tier": audienceScale?.tier,
     "aria-hidden": true,
   });
+}
+
+export function updateEmbeddedEChartsLifecycle(
+  lifecycle,
+  model,
+  textTheme = DEFAULT_CHART_TEXT_THEME,
+  audienceScale = null,
+) {
+  const presented = applyEChartsPresentation(
+    model,
+    {},
+    false,
+    textTheme,
+    audienceScale,
+  );
+  lifecycle?.update?.(presented);
+  return presented;
 }
 
 function disposeCurrentLifecycle(lifecycleRef, lifecycleFactoryRef) {

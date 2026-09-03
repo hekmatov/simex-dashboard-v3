@@ -1,25 +1,45 @@
 # Final UI Review — Dense Desktop Redesign
 
-**Verdict:** Ready for user review  
-**Final product commit:** `6a3eea9`  
-**Branch:** `codex/dense-ui-audit`  
-**Audit artifact:** `final-6a3eea9-20260902`  
-**External-browser review target:** `http://127.0.0.1:4190/`  
-**Automated audit origin:** `http://127.0.0.1:4173/`
+## Current cross-style and Audience amendment status
 
-## Outcome
+- **Current amendment verdict:** Ledger material and audit-coverage correction implemented; 60/60 targeted deterministic contract checks pass
+- **Journey accounting:** 71 journeys × 3 styles = 213 journey/style cells
+- **Owned-region accounting:** 45 region variants × 3 styles = 135 region/style cells
+- **Rendered disposition:** `PENDING_RENDER` for executable journey and region variants
+- **Browser/E2E status:** Intentionally deferred by the user while the amendment batch remains open
+- **Local review server reachability (current, nonvisual):** `http://127.0.0.1:4190/` responded with HTTP 200 after the targeted verification run; this is not browser-render evidence
+- **Narrow-width contract amendment:** Build and Present remain visible below 1024px with a compact width recommendation; the historical hard-gate evidence below is superseded for the current candidate
 
-The dashboard now reads as a dense desktop operations application. The 44px touch-first minimum no longer governs ordinary desktop controls; command crowns, forms, dialogs, menus, drawers, source workspaces, temporal tools, and Present controls use a role-based 16/24/28/32/36px grammar. Choice glyphs and copy share one alignment model, duplicated authoring headings have been removed, and task groups use deliberate stacks or grids instead of accidental horizontal crowding.
+The coverage model now distinguishes journey reachability from owned visual-region closure. The shared grammar has ten roles, including `command-bar`; Ledger's repeating ruling is an explicit material limited to chart-table and Source Viewer table registers. The collector independently discovers named, paint-bearing, sticky/fixed, multi-action, overlay, status, table, and chart-cell candidates and classifies unowned, ambiguous, missing, unwitnessed, and unstyled regions. This deterministic boundary does not establish the real cascade, computed geometry, mounted candidate closure, canvas repaint, or rendered contact-sheet results.
 
-The final candidate meets the acceptance gate: every inventory entry is accounted for, no setup or runtime failure occurred, no scan was truncated, and no P0 or unresolved systemic P1 remains.
+The correction was prompted by a concrete historical gap: the Build command header's controls were incidentally scanned beneath the broad Build journey root, but the enclosing bar had no independent owner, region role, material policy, or style witness. Consequently, the earlier 71-entry completion claim was valid for journeys only, not for exhaustive visual regions.
 
-This is a visual layout, operational-contrast, and human-visible-semantics review. It is not an accessibility audit. Keyboard navigation, focus presentation, tab order, ARIA, screen-reader behavior, assistive-technology grading, touch-first target sizing, and zoom/reflow are not included.
+The earlier 64 screenshots below are historical density evidence only. They do not cover the pending 192 executable journey/style renders (64 executable journeys × 3 styles), the 135 region/style cells, or the enlarged Audience charts. In particular, the historical artifact contains `build-page-orbit`; the current manifest replaces it with `build-page-command-form`. That old capture is not being relabelled as a current render of the replacement journey.
 
-## Final coverage and measured result
+Keyboard and focus behavior, assistive-technology semantics, touch-first sizing, mobile design, and responsive Build/Present behavior remain explicit exclusions from this visual amendment.
+
+## Historical density verdict — commit `6a3eea9`
+
+- **Historical verdict:** Ready for user review
+- **Historical product commit:** `6a3eea9`
+- **Historical branch:** `codex/dense-ui-audit`
+- **Historical audit artifact:** `final-6a3eea9-20260902`
+- **Historical external-browser review target:** `http://127.0.0.1:4190/`
+- **Historical automated audit origin:** `http://127.0.0.1:4173/`
+
+## Historical density outcome
+
+At commit `6a3eea9`, the dashboard read as a dense desktop operations application. The 44px touch-first minimum no longer governed ordinary desktop controls; command crowns, forms, dialogs, menus, drawers, source workspaces, temporal tools, and Present controls used a role-based 16/24/28/32/36px grammar. Choice glyphs and copy shared one alignment model, duplicated authoring headings had been removed, and task groups used deliberate stacks or grids instead of accidental horizontal crowding.
+
+That historical density candidate met its journey-level acceptance gate: every listed journey entry was accounted for, no setup or runtime failure occurred, no scan was truncated, and no P0 or unresolved systemic P1 remained. It did not yet prove owned-region closure.
+
+That was a visual layout, operational-contrast, and human-visible-semantics review. It was not an accessibility audit. Keyboard navigation, focus presentation, tab order, ARIA, screen-reader behavior, assistive-technology grading, touch-first target sizing, mobile design, responsive Build/Present behavior, and zoom/reflow were not included.
+
+## Historical coverage and measured result
 
 | Measure | Result |
 |---|---:|
-| Manifest entries | 71 |
+| Journey manifest entries | 71 |
 | Executed and inspected | 64 |
 | Bounded coverage aliases | 6 |
 | Intentional out-of-scope entry | 1 |
@@ -33,19 +53,19 @@ This is a visual layout, operational-contrast, and human-visible-semantics revie
 
 The six aliases are explicit component/geometry equivalences, not silent omissions. The single out-of-scope entry is a future purpose-built mobile View layout. Build and Present were separately executed at 900×720 to prove that their workspaces remain mounted for state continuity but all workspace chrome is hidden behind the unsupported-mode notice below 1024px.
 
-## What changed
+## What the historical density slice changed
 
 - Replaced the blanket 44px desktop control rule with 16px choice glyphs, 24px utilities, 28px compact/choice rows, 32px ordinary fields/actions, and 36px prominent/destructive actions and command-crown rows.
 - Reduced control typography and internal padding around the approved 13px/18px control rhythm while preserving existing colour profiles and radii.
 - Unified generated and literal checkbox/radio layouts across chart authoring, Dashboard Look, Scenario Passport, deletion confirmations, Present, static content, and temporal/scene surfaces.
 - Removed duplicate field/section headings such as repeated `Axes` and `Labels` and separated chart identity/type from footprint composition.
 - Compressed the Build crown to two stable 36px rows at compact and standard desktop widths; isolated View, Build, and Present action geometry so one mode cannot inflate another.
-- Reworked Dashboard Map, Unit Orbit, Page Orbit, Source Content, Chrono/Scene, text/image, and chart-authoring arrangements into compact task-owned stacks and balanced grids.
+- Reworked Dashboard Map, Unit Orbit, the then-current Page Orbit, Source Content, Chrono/Scene, text/image, and chart-authoring arrangements into compact task-owned stacks and balanced grids.
 - Corrected source-picker overflow, choice first-line alignment, compact Chrono date geometry, wizard-tab wrapping, utility sizing, and content-sized More/Audience drawers.
 - Prevented durable operation notices from painting above modal work, while retaining visible/dismissible status on non-modal canvases.
 - Added the hard Build/Present support gate below 1024px and retained 1024, 1280, 1440, 1920, and Audience evidence.
 
-## P2 disposition: all 44 systemic observations
+## Historical P2 disposition: all 44 systemic observations
 
 The automated collector intentionally reports localized deviations as P2 even when they are visually coherent. Every one of the 44 systemic observations (106 raw candidates) was reviewed against its screenshot and evidence.
 
@@ -90,7 +110,7 @@ The 24 actionable P2 observations are token-purity opportunities rather than rem
 
 No genuine task-level visual defect remains in these surfaces. The residuals do not reproduce the original problems: control sizes are role-appropriate, choices align, titles are unambiguous, content is reachable, and task groups do not collide or clip.
 
-## Operational contrast review
+## Historical operational contrast review
 
 Operational contrast was assessed only as immediate state and hierarchy legibility; it did not alter control sizes or spacing. The collector sampled 1,021 visible text/state pairs across the 64 executed states. It raised zero automated candidates; the lowest reported operational ratio was 5.72. That number is used as a visual triage signal, not as an accessibility conformance claim.
 
@@ -104,28 +124,28 @@ Human review of all 64 screenshots confirmed that:
 
 Result: **pass; no operational-contrast residual.**
 
-## Human-visible semantics review
+## Historical human-visible semantics review
 
 The collector recorded 213 visible headings and 28 explicit state-text instances and raised zero semantics candidates. Human review confirmed one clear title per logical region, non-repeating subtitles/legends, understandable action labels, visible destructive consequences, distinct status wording, and chart context/units where the product surface exposes them. Icon-only utilities remain visually grouped with their chart or editing context.
 
 Result: **pass; no human-visible-semantics residual.** Machine semantics and assistive behavior were not graded.
 
-## Visual geometry review
+## Historical visual geometry review
 
-All final screenshots were inspected, including compact/standard/wide View, dark View, Build at 1024 and 1440, Dashboard Map/Inspector, Unit/Page Orbit, every chart-wizard stage, open listbox, full/quick chart editors, palette and conversion dialogs, text/image and static-image editors, source workspaces, Chrono/Scene authoring, package/recovery/destructive dialogs, status surfaces, fullscreen/comparison, Present pressure/standard/options, Audience 1280/1920, source viewer, application recovery, and both below-desktop gates.
+All historical density screenshots were inspected, including compact/standard/wide View, dark View, Build at 1024 and 1440, Dashboard Map/Inspector, Unit Orbit, the historical Page Orbit, every chart-wizard stage, open listbox, full/quick chart editors, palette and conversion dialogs, text/image and static-image editors, source workspaces, Chrono/Scene authoring, package/recovery/destructive dialogs, status surfaces, fullscreen/comparison, Present pressure/standard/options, Audience 1280/1920, source viewer, application recovery, and both below-desktop gates. The current `build-page-command-form` replacement is part of the pending amendment browser/render work, not this historical screenshot set.
 
 No remaining overlap, clipping, unreachable overflow, accidental wrap, repeated-title, choice-centreline, or stranded-whitespace defect was observed. Sparse Audience canvases are intentional room-display composition. Status toasts on non-modal canvases are transient, dismissible operational overlays; they do not cover modal navigation or actions.
 
-## Verification record
+## Historical verification record
 
 - Immutable complete run: `DASHBOARD_DENSITY_AUDIT_PHASE=final`, artifact `final-6a3eea9-20260902`.
-- Complete browser manifest: 71/71 accounted, 64/64 executable states inspected, 0 setup failures, 0 incomplete scans.
+- Historical then-current browser manifest: 71/71 accounted, 64/64 executable states inspected, 0 setup failures, 0 incomplete scans.
 - Focused manifest/collector contract check: 12/12 tests passed.
 - Audit categories on every executable state: role size, choice centreline, rhythm, wrapping, whitespace, overlap, clipping, overflow, repeated titles, same-role variance, occupancy, operational contrast, visible semantics, and desktop support contract.
 - Raw evidence: [`raw/final-6a3eea9-20260902/audit-summary.json`](raw/final-6a3eea9-20260902/audit-summary.json).
 - Screenshot index: [`SCREENSHOT-MANIFEST.md`](SCREENSHOT-MANIFEST.md).
-- Coverage authority: [`SURFACE-INVENTORY.md`](SURFACE-INVENTORY.md).
+- Current journey catalogue: [`SURFACE-INVENTORY.md`](SURFACE-INVENTORY.md). Historical evidence remains the immutable raw artifact and screenshot index above.
 
-## Review handoff
+## Historical review handoff
 
-Serve the final worktree at `http://127.0.0.1:4190/` and open that address in an external browser. The audited product state is commit `6a3eea9` on `codex/dense-ui-audit`. The automated audit used the same worktree at the ephemeral Playwright origin `http://127.0.0.1:4173/`.
+The historical external-review target was `http://127.0.0.1:4190/`, and the audited product state was commit `6a3eea9` on `codex/dense-ui-audit`. The historical automated audit used the same worktree at the ephemeral Playwright origin `http://127.0.0.1:4173/`. Those historical URLs are not current visual evidence. Current local-server reachability is reported separately at the top of this document; browser/E2E execution and all amendment journey/style and region/style renders remain intentionally deferred.

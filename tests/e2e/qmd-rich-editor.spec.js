@@ -8,7 +8,7 @@ test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
 });
 
-test("Composer semantic text style, keyboard formatting, underline, Panel size, and Preview", async ({ page }) => {
+test("Composer keyboard formatting, semantic styles, footprint, and always-visible preview", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 800 });
   const wizard = await openTextImageComposer(page);
   const title = "Operational response note";
@@ -24,20 +24,34 @@ test("Composer semantic text style, keyboard formatting, underline, Panel size, 
   await wizard.getByLabel("Semantic text style").selectOption("lead");
   await expect(composer.locator('p[data-simex-text-style="lead"]')).toContainText("Operational response");
 
-  await expect(wizard.getByRole("grid", { name: "Panel size: 2 columns by 1 row" })).toBeVisible();
-  await wizard.getByRole("gridcell", { name: "Set panel size to 4 columns by 2 rows" }).click();
-  await expect(wizard.getByRole("grid", { name: "Panel size: 4 columns by 2 rows" })).toBeVisible();
+  const panelSize = wizard.getByRole("region", { name: "Panel size" });
+  const width = panelSize.getByLabel("Width");
+  const rowHeight = panelSize.getByLabel("Row height");
+  await expect(width).toHaveValue("2");
+  await expect(rowHeight).toHaveValue("1");
+  await expect(panelSize.getByRole("img", {
+    name: "Panel size: 2 columns by 100% of a row",
+  })).toBeVisible();
+  await width.selectOption("4");
+  await rowHeight.selectOption("2");
+  await expect(width).toHaveValue("4");
+  await expect(rowHeight).toHaveValue("2");
+  await expect(panelSize.getByRole("img", {
+    name: "Panel size: 4 columns by 200% of a row",
+  })).toBeVisible();
 
-  await wizard.getByRole("tab", { name: "Preview" }).click();
-  const preview = wizard.getByRole("tabpanel", { name: "Preview" });
+  const preview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(preview).toBeVisible();
   await expect(preview).toContainText("Operational response");
   await expect(preview.locator("u")).toContainText("Operational response");
-  const advancedTab = wizard.getByRole("tab", { name: "Advanced QMD" });
-  await expect(advancedTab).toBeVisible();
-  await advancedTab.focus();
-  await advancedTab.press("Enter");
-  await expect(wizard.getByLabel("Portable QMD source")).toHaveValue(/::: \{\.simex-text-lead\}[\s\S]*\+\+\*\*Operational response\*\*\+\+/);
-  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+  await wizard.getByRole("button", { name: "Raw text", exact: true }).click();
+  await expect(wizard.getByLabel("Portable QMD raw source")).toHaveValue(/::: \{\.simex-text-lead\}[\s\S]*\+\+\*\*Operational response\*\*\+\+/);
+  await expect(wizard.getByRole("region", { name: "Portable Markdown" }).locator("pre"))
+    .toContainText(/::: \{\.simex-text-lead\}[\s\S]*\+\+\*\*Operational response\*\*\+\+/);
+  await expect(preview).toContainText("Operational response");
+  await wizard.getByRole("button", { name: "Formatted text", exact: true }).click();
+  await expect(composer).toBeVisible();
+  await expect(preview).toBeVisible();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -64,24 +78,38 @@ test("sanitized paste keeps visible text and removes hostile formatting", async 
   await expect(composer.locator("strong")).toContainText("Safe emphasis");
   await expect(composer.locator('script,iframe,form,input,img,a,[style],[class~="owned"],[onclick],[onerror]')).toHaveCount(0);
   await expect(wizard.locator(".portable-qmd-composer__announcement")).toContainText(/unsupported paste formatting was removed/i);
+  const preview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText("Safe emphasis");
+  await expect(preview).toContainText("unsafe link text");
   expect(await page.evaluate(() => window.__owned)).toBeUndefined();
   expect(unsafeRequests).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
 
-test("Advanced QMD preserves unsupported source untouched", async ({ page }) => {
+test("Raw text preserves unsupported source untouched", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
   const wizard = await openTextImageComposer(page);
   const unsupported = "::: {.callout-warning}\nExact unsupported source.\n:::";
-  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
-  const source = wizard.getByLabel("Portable QMD source");
+  await wizard.getByRole("button", { name: "Raw text", exact: true }).click();
+  const source = wizard.getByLabel("Portable QMD raw source");
   await source.fill(unsupported);
   await expect(source).toHaveValue(unsupported);
-  await expect(wizard.getByText(/Advanced QMD preserves exact authored source/i)).toBeVisible();
-  await expect(wizard.getByRole("tab", { name: "Advanced QMD" })).toHaveAttribute("aria-selected", "true");
+  await expect(wizard.getByText(/Raw text avoids formatted-editor rewrites/i)).toBeVisible();
+  await expect(wizard.getByRole("region", { name: "Portable Markdown" }).locator("pre"))
+    .toHaveText(unsupported);
+  const preview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText("Exact unsupported source");
+  await wizard.getByRole("button", { name: "Formatted text", exact: true }).click();
+  await expect(wizard.getByLabel("Portable QMD Composer editing area"))
+    .toContainText("Exact unsupported source");
+  await expect(preview).toBeVisible();
+  await wizard.getByRole("button", { name: "Raw text", exact: true }).click();
+  await expect(source).toHaveValue(unsupported);
 });
 
-test("resume Text/Image restores the current surface, focus, and scroll", async ({ page }) => {
+test("resume Text/Image restores the current editing surface and scroll", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 600 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
@@ -98,35 +126,30 @@ test("resume Text/Image restores the current surface, focus, and scroll", async 
   await wizard.getByLabel("Portable QMD Composer editing area").fill("Resume proof");
   const pending = page.locator('[data-pending-work-kind="text-image-create"]');
   await expect(pending).toHaveAttribute("data-pending-work-activity", "active");
-  await expect(pending).toHaveAttribute("data-pending-work-surface", "composer");
-  await wizard.getByRole("tab", { name: "Preview" }).click();
-  await expect(pending).toHaveAttribute("data-pending-work-surface", "preview");
-  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
-  const source = wizard.getByLabel("Portable QMD source");
-  await source.focus();
+  await wizard.getByRole("button", { name: "Raw text", exact: true }).click();
+  const source = wizard.getByLabel("Portable QMD raw source");
   const body = wizard.locator(".static-content-dialog__body");
   await body.evaluate((node) => { node.scrollTop = Math.min(220, node.scrollHeight - node.clientHeight); node.dispatchEvent(new Event("scroll", { bubbles: true })); });
   const capturedScroll = await body.evaluate((node) => node.scrollTop);
   expect(capturedScroll).toBeGreaterThan(0);
-  await expect(pending).toHaveAttribute("data-pending-work-surface", "advanced");
 
-  await wizard.getByRole("button", { name: "Close Text/Image editor" }).focus();
-  await pending.getByRole("button", { name: /Focus New Text\/Image draft/ }).evaluate((node) => node.click());
-  await expect(source).toBeFocused();
-  expect(await body.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
-  await source.press("Escape");
+  await wizard.getByRole("button", { name: "Close Text/Image editor" }).click();
   await expect(wizard).toHaveCount(0);
 
   await expect(pending).toHaveAttribute("data-pending-work-activity", "suspended");
-  await expect(pending).toHaveAttribute("data-pending-work-surface", "advanced");
   await pending.getByRole("button", { name: /Resume New Text\/Image draft/ }).click();
 
   wizard = page.getByRole("dialog", { name: "Add Text/Image" });
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByRole("tab", { name: "Advanced QMD" })).toHaveAttribute("aria-selected", "true");
-  await expect(wizard.getByLabel("Portable QMD source")).toBeFocused();
+  await expect(wizard.getByLabel("Portable QMD raw source")).toBeVisible();
   expect(await wizard.locator(".static-content-dialog__body").evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
-  await expect(wizard.getByLabel("Portable QMD source")).toHaveValue("Resume proof");
+  await expect(wizard.getByLabel("Portable QMD raw source")).toHaveValue("Resume proof");
+  const preview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText("Resume proof");
+  await wizard.getByRole("button", { name: "Formatted text", exact: true }).click();
+  await expect(wizard.getByLabel("Portable QMD Composer editing area")).toContainText("Resume proof");
+  await expect(preview).toBeVisible();
 });
 
 async function openTextImageComposer(page) {

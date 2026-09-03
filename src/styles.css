@@ -1460,6 +1460,14 @@ th {
   gap: var(--simex-space-2);
 }
 
+.chart-authoring-field-label {
+  min-width: 0;
+}
+
+.chart-authoring-field-required-marker {
+  white-space: nowrap;
+}
+
 .settings-color-preset-grid {
   display: grid;
   gap: var(--simex-space-2);
@@ -2733,6 +2741,12 @@ button.danger {
 .chart-view-summary,
 .chart-view-provenance {
   margin: 0;
+}
+
+.chart-view-heading,
+.collection-display-header {
+  box-sizing: border-box;
+  padding: var(--simex-space-3, 8px);
 }
 
 .chart-view-title {

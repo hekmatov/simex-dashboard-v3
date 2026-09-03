@@ -307,7 +307,6 @@ export default function BuildWorkspace({
     ...captureBuildCanvasState({
       layout: dashboard,
       selection,
-      focusId: document.activeElement?.id || null,
       scrollTop: window.scrollY,
       scrollLeft: window.scrollX,
       effectiveCanvasWidth: document.querySelector(".canonical-dashboard-frame")?.clientWidth ?? window.innerWidth,
@@ -331,7 +330,6 @@ export default function BuildWorkspace({
       window.requestAnimationFrame(() => {
         if (restoration.chartEditorOpen) onResumeChartEditor?.();
         window.scrollTo({ top: commands.scrollTop, left: commands.scrollLeft, behavior: "auto" });
-        if (commands.focusId) document.getElementById(commands.focusId)?.focus();
       });
     });
   }, [dashboard, onResumeChartEditor, chooseSelection]);

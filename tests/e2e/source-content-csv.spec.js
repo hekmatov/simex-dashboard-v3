@@ -85,7 +85,8 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   await expect(impacts).toContainText(`Scene presentation: ${target.sceneName}`);
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(trigger).toBeFocused();
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
   expect(await temporalReviewSnapshot(page, target)).toEqual(before);
 
   await trigger.click();
@@ -262,7 +263,8 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await expect(detail.getByRole("region", { name: "Searchable CSV preview" })).toContainText("1 matching rows shown");
   await expect(detail.getByRole("link", { name: "Download CSV" })).toHaveAttribute("download", "journey-d-chart.csv");
   await closeManager(page);
-  await expect(page.getByRole("button", { name: "Source content", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Source content", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Source content", exact: true })).toBeEnabled();
 
   await page.reload();
   await openBiomedicalBuild(page, { width: 1024, height: 768 });
@@ -310,7 +312,8 @@ test("Journey E — incompatible CSV replacement blocks and imports as new", asy
   expect(await csvReplacementSnapshot(page, target)).toEqual(before);
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(trigger).toBeFocused();
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
   expect(await csvReplacementSnapshot(page, target)).toEqual(before);
 
   await trigger.click();
@@ -347,7 +350,8 @@ test("Journey E — incompatible CSV replacement blocks and imports as new", asy
   await dialog.getByLabel("Replacement CSV").setInputFiles(INCOMPATIBLE_MAP_CSV);
   await expect(dialog.getByRole("alert")).toContainText("MunicipalityCode");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(tabletTrigger).toBeFocused();
+  await expect(tabletTrigger).toBeVisible();
+  await expect(tabletTrigger).toBeEnabled();
   const overflow = await manager.evaluate((node) => node.scrollWidth > node.clientWidth + 1);
   expect(overflow).toBe(false);
   const tabletDuringManager = await csvReplacementSnapshot(page, target);

@@ -105,7 +105,7 @@ function StandardField({
 function FieldShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
   const id = fieldControlId(field);
-  return /* @__PURE__ */ React.createElement("div", { className: `chart-authoring-field ${className}`.trim(), "data-field-id": field.id, "aria-invalid": fieldHasError(field) ? "true" : void 0 }, /* @__PURE__ */ React.createElement("label", { htmlFor: id }, field.label, field.required ? /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true" }, " *") : null), field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null, children, field.help ? /* @__PURE__ */ React.createElement("small", { id: `${id}-help` }, field.help) : null, field.error ? /* @__PURE__ */ React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null);
+  return /* @__PURE__ */ React.createElement("div", { className: `chart-authoring-field ${className}`.trim(), "data-field-id": field.id, "aria-invalid": fieldHasError(field) ? "true" : void 0 }, /* @__PURE__ */ React.createElement("label", { htmlFor: id }, React.createElement("span", { className: "chart-authoring-field-label" }, field.label, requiredMarker(field))), field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null, children, field.help ? /* @__PURE__ */ React.createElement("small", { id: `${id}-help` }, field.help) : null, field.error ? /* @__PURE__ */ React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null);
 }
 function GroupShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
@@ -123,8 +123,10 @@ function GroupShell({ field, children, className = "" }) {
       : /* @__PURE__ */ React.createElement(
           "legend",
           null,
-          field.label,
-          field.required ? /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true" }, " *") : null
+          React.createElement("span", { className: "chart-authoring-field-label" },
+            field.label,
+            requiredMarker(field)
+          )
         ),
     field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null,
     children,
@@ -342,6 +344,11 @@ function BooleanFieldShell({ field, control }) {
       field.error ? React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null,
     ),
   );
+}
+function requiredMarker(field) {
+  return field.required
+    ? React.createElement("span", { className: "chart-authoring-field-required-marker", "aria-hidden": "true" }, "\u00a0*")
+    : null;
 }
 function selectControl(label, value, options, onChange) {
   return React.createElement("label", null, label, React.createElement("select", {

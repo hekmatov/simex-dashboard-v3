@@ -4,7 +4,6 @@ import { createPortal } from "react-dom";
 import { getInteraction } from "../../iconography/iconCatalog.js";
 import { ICON_GLYPHS, getIconGlyph } from "../../iconography/iconGlyphs.js";
 import ControlTooltip from "./ControlTooltip.js";
-import { pointerControlProps, suppressPointerControlFocus } from "./PointerInteractionMode.js";
 
 export const SimExIcon = React.memo(function SimExIcon({
   iconId,
@@ -85,7 +84,6 @@ export const IconControl = React.memo(function IconControl({
         ...restButtonProps,
         ref: workflowDisabled ? undefined : tooltipState.anchorRef,
         type,
-        ...pointerControlProps,
         className: joinClassNames("simex-icon-control", className),
         disabled: isDisabled,
         "aria-disabled": isDisabled || undefined,
@@ -100,7 +98,6 @@ export const IconControl = React.memo(function IconControl({
         "data-icon-selected": isPressed === true ? "true" : undefined,
         onMouseEnter: chainHandlers(onMouseEnter, tooltipState.show),
         onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hide),
-        onMouseDown: suppressPointerControlFocus,
         onFocus,
         onBlur: chainHandlers(onBlur, tooltipState.hide),
         onKeyDown,
@@ -161,7 +158,6 @@ export const IconSummary = React.memo(function IconSummary({
       {
         ...forwardedSummaryProps,
         ref: tooltipState.anchorRef,
-        ...pointerControlProps,
         className: joinClassNames("simex-icon-control", className),
         "aria-label": resolvedLabel,
         "aria-describedby": tooltipState.open ? tooltipState.id : undefined,
@@ -172,7 +168,6 @@ export const IconSummary = React.memo(function IconSummary({
         "data-icon-status": interaction.status,
         onMouseEnter: chainHandlers(onMouseEnter, tooltipState.show),
         onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hide),
-        onMouseDown: suppressPointerControlFocus,
         onFocus,
         onBlur: chainHandlers(onBlur, tooltipState.hide),
         onKeyDown,

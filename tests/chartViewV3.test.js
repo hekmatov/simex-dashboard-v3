@@ -15,7 +15,10 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const { default: ChartView } = await vite.ssrLoadModule("/src/components/charts/ChartView.jsx");
+const {
+  default: ChartView,
+  renderChartContent,
+} = await vite.ssrLoadModule("/src/components/charts/ChartView.jsx");
 const { default: CardChartView } = await vite.ssrLoadModule("/src/components/charts/CardChartView.jsx");
 const { default: EChartsChartView, createEChartsLifecycle } = await vite.ssrLoadModule("/src/components/charts/EChartsChartView.jsx");
 const { default: ImageChartView } = await vite.ssrLoadModule("/src/components/charts/ImageChartView.jsx");
@@ -390,6 +393,75 @@ test("standalone Image ChartView owns one styled heading above its viewport", ()
   assert.doesNotMatch(html, /background-color:#AABBCC|<figcaption/);
 });
 
+test("ChartView passes the same Audience scale object to ECharts, target collections, and Image rendering", () => {
+  const audienceScale = Object.freeze({ tier: "distance-large", title: 28, text: 18, value: 40 });
+  const renderedChild = (typeId, model) => {
+    const chart = {
+      id: `audience-${typeId}`,
+      typeId,
+      title: `${typeId} title`,
+      interaction: { zoom: { enabled: false } },
+    };
+    const rows = [];
+    const datasetProfile = {};
+    const renderContext = {};
+    const props = {
+      chart,
+      rows,
+      datasetProfile,
+      renderContext,
+      audienceScale,
+      surface: "audience",
+    };
+    props.resolvedRendering = {
+      status: "available",
+      model,
+      prepared: { status: "ready", marks: [] },
+      schema: { capabilities: { zoom: false } },
+      inputKey: {
+        chart,
+        rows,
+        datasetProfile,
+        geoData: undefined,
+        timeContext: undefined,
+        renderContext,
+      },
+    };
+    return renderChartContent(props, "passive").props.children;
+  };
+
+  for (const [typeId, model] of [
+    ["line", { kind: "echarts", option: { series: [] } }],
+    ["gauge", { kind: "targetCollection", items: [], presentation: {} }],
+    ["image", { kind: "image", src: "/maps/audience.png" }],
+  ]) {
+    assert.equal(renderedChild(typeId, model).props.audienceScale, audienceScale, typeId);
+  }
+});
+
+test("Audience Image title override is authoritative while non-Audience authored sizing is unchanged", () => {
+  const chart = {
+    title: "Response map",
+    presentation: { title: { align: "left", fontSize: 12, bold: true } },
+  };
+  const model = { src: "/maps/response.png", alt: "Response map", fit: "contain" };
+  const audience = renderToStaticMarkup(React.createElement(ImageChartView, {
+    chart,
+    model,
+    surface: "audience",
+    audienceScale: Object.freeze({ tier: "distance-large", title: 28, text: 18, value: 40 }),
+  }));
+  const view = renderToStaticMarkup(React.createElement(ImageChartView, {
+    chart,
+    model,
+    surface: "view",
+  }));
+
+  assert.match(audience, /font-size:28px/);
+  assert.doesNotMatch(audience, /font-size:12px/);
+  assert.match(view, /font-size:12px/);
+});
+
 test("image zoom affordances consume ChartView's authoritative schema and interaction gate", () => {
   const rows = [{ src: "/maps/readiness.png", alt: "Readiness map" }];
   const enabled = renderToStaticMarkup(React.createElement(ChartView, {
@@ -567,6 +639,7 @@ test("custom DOM chart families apply aligned titles and normalized backgrounds"
   }));
 
   assert.match(opaqueCard, /class="chart-view-frame"[^>]*data-title-align="right"[^>]*style="text-align:right;background-color:#A1B2C3"/);
+  assert.match(opaqueCard, /class="chart-view-frame"[^>]*data-dashboard-region="chart-view-frame"[^>]*data-dashboard-surface-role="chart-cell"/);
   assert.match(opaqueCard, /class="chart-card-view"[^>]*data-title-align="right"[^>]*style="text-align:right"/);
   assert.match(transparentTable, /class="chart-view-frame"[^>]*data-title-align="center"[^>]*style="text-align:center;background-color:transparent"/);
   assert.match(transparentTable, /class="chart-table-view chart-table-view--regular"[^>]*data-title-align="center"[^>]*style="text-align:center"/);

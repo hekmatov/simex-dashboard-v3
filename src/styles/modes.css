@@ -298,11 +298,6 @@
   width: var(--simex-control-utility);
 }
 
-.build-page-action-trigger {
-  flex: 0 0 auto;
-  min-height: var(--simex-control-standard);
-}
-
 .build-page-action-menu {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-strong);
@@ -310,9 +305,12 @@
   box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 8px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px;
   position: fixed;
-  width: 220px;
+  width: min(300px, calc(100vw - 16px));
   z-index: 1210;
 }
 
@@ -335,46 +333,6 @@
   display: inline-flex;
   flex: 0 0 auto;
   gap: 6px;
-}
-
-.build-page-orbit {
-  background: var(--simex-surface-panel, #fff);
-  border: 1px solid var(--simex-border-strong, #9aa9b5);
-  border-radius: 8px;
-  box-shadow: var(--simex-style-panel-shadow);
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  position: fixed;
-  inset-block-start: 124px;
-  inset-inline-start: min(36vw, 430px);
-  max-height: calc(100vh - 148px);
-  overflow: auto;
-  width: min(300px, calc(100vw - 24px));
-  z-index: 1210;
-}
-
-.build-page-orbit h2,
-.build-page-orbit p {
-  margin: 0;
-}
-
-.build-page-orbit label {
-  display: grid;
-  font-size: 13px;
-  font-weight: 700;
-  gap: 5px;
-}
-
-.build-page-orbit input {
-  min-height: var(--simex-control-standard);
-  width: 100%;
-}
-
-.build-page-orbit-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
 }
 
 .build-workspace-authoring-root,
@@ -1170,14 +1128,9 @@
 }
 
 .mode-switcher button:focus-visible,
-.view-shell button:focus-visible,
-.phone-mode-banner button:focus-visible {
+.view-shell button:focus-visible {
   outline: 3px solid var(--simex-focus);
   outline-offset: 2px;
-}
-
-.phone-mode-banner {
-  display: none;
 }
 
 .view-shell {
@@ -1360,41 +1313,10 @@
 }
 
 @media (max-width: 767px) {
-  .phone-mode-banner {
-    align-items: center;
-    background: var(--simex-warning-soft);
-    border-bottom: 1px solid var(--simex-warning);
-    color: var(--simex-text-strong);
-    display: flex;
-    gap: 12px;
-    justify-content: space-between;
-    min-height: 56px;
-    padding: 6px 10px;
-    position: relative;
-    z-index: 1301;
-  }
-
-  .app-frame:is(
-    [data-dashboard-mode="build"],
-    [data-dashboard-mode="present"]
-  ) > .mode-switch-error {
-    display: none;
-  }
-
   /* Let empty View action-rail space pass through to the phone crown while
      retaining direct pointer actions on the rail's own controls. */
   .canonical-dashboard-frame.view-shell .view-page-actions {
     pointer-events: none;
-  }
-
-  .phone-mode-banner button {
-    background: var(--simex-accent);
-    border-radius: 2px;
-    color: var(--simex-on-accent);
-    flex: 0 0 auto;
-    font: inherit;
-    min-height: var(--simex-control-standard);
-    min-width: var(--simex-control-standard);
   }
 
   .app-frame-bar {
@@ -1729,8 +1651,7 @@
 .view-shell button:focus-visible,
 .build-workspace button:focus-visible,
 .build-mode-shell button:focus-visible,
-.build-shell button:focus-visible,
-.phone-mode-banner button:focus-visible {
+.build-shell button:focus-visible {
   outline: 3px solid var(--simex-focus, #f2b541);
   outline-offset: 2px;
 }

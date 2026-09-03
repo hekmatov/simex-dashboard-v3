@@ -1,4 +1,5 @@
-.build-authoring-auxiliary--source-content { box-sizing: border-box; grid-template-rows: auto minmax(0, 1fr); height: calc(100dvh - 198px); left: 16px; max-height: calc(100dvh - 198px); overflow: visible; right: 16px; width: auto; }
+.build-authoring-auxiliary--source-content { box-sizing: border-box; grid-template-rows: auto minmax(0, 1fr); height: calc(100dvh - 198px); left: 16px; max-height: calc(100dvh - 198px); overflow: hidden; right: 16px; width: auto; }
+.build-authoring-auxiliary--source-content > .source-content-workspace.dashboard-dialog { block-size: auto; height: auto; min-block-size: 0; }
 .source-content-workspace { box-sizing: border-box; width: 100%; height: 100%; min-height: 0; max-height: none; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: var(--simex-gap-section, 12px); }
 .source-content-workspace__header { display: flex; align-items: end; justify-content: space-between; gap: var(--simex-gap-region, 24px); }
 .source-content-workspace__header h2, .source-content-catalogue__header h3, .source-content-detail h3 { margin: 0; }

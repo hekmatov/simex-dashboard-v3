@@ -30,7 +30,6 @@ export default function ControlTooltip({
         : explanationAnchor
           ? "explanation"
           : undefined,
-      tabIndex: disabledAnchor ? -1 : undefined,
       "aria-describedby": disabledAnchor ? reasonId : undefined,
     },
     describedChild,

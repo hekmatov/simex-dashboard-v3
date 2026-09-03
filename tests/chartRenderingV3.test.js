@@ -25,6 +25,7 @@ export async function load(url, context, nextLoad) {
 const {
   applyEChartsPresentation,
   createEChartsLifecycle,
+  readChartTextTheme,
   sameChartTextTheme,
 } = await import("../src/components/charts/EChartsChartView.jsx");
 
@@ -72,6 +73,16 @@ function renderSvg(option, width = 640, height = 400) {
   try {
     instance.setOption(option);
     return instance.renderToSVGString();
+  } finally {
+    instance.dispose();
+  }
+}
+
+function inspectResolvedOption(option, inspect) {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width: 640, height: 400 });
+  try {
+    instance.setOption(option);
+    return inspect(instance.getModel());
   } finally {
     instance.dispose();
   }
@@ -638,6 +649,429 @@ test("equivalent chart text themes compare data palettes by value", () => {
   assert.equal(sameChartTextTheme(current, next), true);
   assert.equal(sameChartTextTheme(current, { ...next, dataColors: ["#4E79A7", "#E15759"] }), false);
   assert.equal(sameChartTextTheme(current, { ...next, typographyKey: "fonts-v2" }), false);
+});
+
+test("Audience ECharts normalization overrides every visible text role without mutating authored input", () => {
+  const calls = [];
+  const generated = {
+    type: "group",
+    children: [
+      { type: "text", style: { text: "Custom label", fontSize: 5, fill: "#123456" } },
+      { type: "rect", shape: { width: 12, height: 8 }, style: { fill: "#654321" } },
+    ],
+  };
+  function renderItem(...args) {
+    calls.push({ receiver: this, args });
+    return generated;
+  }
+  const model = {
+    kind: "echarts",
+    valueAxisTitleProjection: [{
+      id: "primary",
+      physicalAxis: "y",
+      side: "left",
+      title: "Cases",
+      position: "center",
+      orientation: "horizontal",
+      fontSize: 9,
+      bold: false,
+      tickValues: [0, 100],
+    }],
+    option: {
+      textStyle: { fontSize: 7 },
+      title: { text: "Capacity", subtext: "Current", textStyle: { fontSize: 8 }, subtextStyle: { fontSize: 6 } },
+      legend: { itemWidth: 3, itemHeight: 2, itemGap: 1, textStyle: { fontSize: 6 } },
+      xAxis: {
+        name: "Period",
+        axisLabel: { fontSize: 5 },
+        nameTextStyle: { fontSize: 5 },
+        axisPointer: { label: { fontSize: 5 } },
+      },
+      yAxis: {
+        name: "Cases",
+        axisLabel: { fontSize: 5 },
+        nameTextStyle: { fontSize: 5 },
+        axisPointer: { label: { fontSize: 5 } },
+      },
+      axisPointer: { label: { fontSize: 5 } },
+      tooltip: { textStyle: { fontSize: 5 } },
+      visualMap: { text: ["High", "Low"], textStyle: { fontSize: 5 } },
+      geo: { label: { fontSize: 5 }, emphasis: { label: { fontSize: 5 } } },
+      radar: { axisName: { fontSize: 5 } },
+      calendar: { dayLabel: { fontSize: 5 }, monthLabel: { fontSize: 5 }, yearLabel: { fontSize: 5 } },
+      singleAxis: { axisLabel: { fontSize: 5 }, nameTextStyle: { fontSize: 5 } },
+      parallelAxis: { axisLabel: { fontSize: 5 }, nameTextStyle: { fontSize: 5 } },
+      angleAxis: { axisLabel: { fontSize: 5 }, nameTextStyle: { fontSize: 5 } },
+      radiusAxis: { axisLabel: { fontSize: 5 }, nameTextStyle: { fontSize: 5 } },
+      dataZoom: { textStyle: { fontSize: 5 } },
+      graphic: { type: "text", style: { text: "Annotation", fontSize: 5 } },
+      series: [{
+        type: "gauge",
+        label: { fontSize: 4 },
+        edgeLabel: { fontSize: 4 },
+        upperLabel: { fontSize: 4 },
+        detail: { fontSize: 4 },
+        title: { fontSize: 4 },
+        axisLabel: { fontSize: 4 },
+        emphasis: { label: { fontSize: 4 } },
+        markLine: { label: { fontSize: 4 }, emphasis: { label: { fontSize: 4 } } },
+        markPoint: { label: { fontSize: 4 }, emphasis: { label: { fontSize: 4 } } },
+        markArea: { label: { fontSize: 4 }, emphasis: { label: { fontSize: 4 } } },
+      }, {
+        type: "custom",
+        renderItem,
+      }],
+    },
+  };
+  const cloneWithFunctions = (value) => {
+    if (Array.isArray(value)) return value.map(cloneWithFunctions);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, cloneWithFunctions(child)]));
+  };
+  const before = cloneWithFunctions(model);
+  const chartConfig = { presentation: { title: { align: "left" } } };
+  const large = applyEChartsPresentation(model, chartConfig, false, {}, Object.freeze({
+    tier: "distance-large",
+    title: 28,
+    text: 18,
+    value: 40,
+  }));
+  const grid = applyEChartsPresentation(model, chartConfig, false, {}, Object.freeze({
+    tier: "distance-grid",
+    title: 24,
+    text: 16,
+    value: 34,
+  }));
+  const ordinary = applyEChartsPresentation(model, chartConfig, false, {});
+
+  assert.deepEqual(model, before);
+  assert.notEqual(large, model);
+  assert.notEqual(large.option, model.option);
+  assert.notEqual(large.option.series, model.option.series);
+  assert.equal(large.option.textStyle.fontSize, 18);
+  assert.equal(large.option.title.textStyle.fontSize, 28);
+  assert.equal(large.option.title.subtextStyle.fontSize, 18);
+  assert.equal(large.option.legend.textStyle.fontSize, 18);
+  assert.ok(large.option.legend.itemWidth >= 18);
+  assert.ok(large.option.legend.itemHeight >= 18);
+  assert.ok(large.option.legend.itemGap >= 18);
+  for (const axis of [large.option.xAxis, large.option.yAxis]) {
+    assert.equal(axis.axisLabel.fontSize, 18);
+    assert.equal(axis.nameTextStyle.fontSize, 18);
+    assert.equal(axis.axisPointer.label.fontSize, 18);
+    assert.ok(axis.axisLabel.margin >= 9);
+    assert.ok(axis.nameGap >= 27);
+  }
+  assert.equal(large.option.axisPointer.label.fontSize, 18);
+  assert.equal(large.option.tooltip.textStyle.fontSize, 18);
+  assert.equal(large.option.series[0].label.fontSize, 18);
+  assert.equal(large.option.series[0].edgeLabel.fontSize, 18);
+  assert.equal(large.option.series[0].upperLabel.fontSize, 18);
+  assert.equal(large.option.series[0].detail.fontSize, 40);
+  assert.equal(large.option.series[0].title.fontSize, 18);
+  assert.equal(large.option.series[0].axisLabel.fontSize, 18);
+  assert.equal(large.option.series[0].emphasis.label.fontSize, 18);
+  for (const role of ["markLine", "markPoint", "markArea"]) {
+    assert.equal(large.option.series[0][role].label.fontSize, 18);
+    assert.equal(large.option.series[0][role].emphasis.label.fontSize, 18);
+  }
+  assert.equal(large.option.visualMap.textStyle.fontSize, 18);
+  assert.equal(large.option.geo.label.fontSize, 18);
+  assert.equal(large.option.geo.emphasis.label.fontSize, 18);
+  assert.equal(large.option.radar.axisName.fontSize, 18);
+  assert.equal(large.option.calendar.dayLabel.fontSize, 18);
+  assert.equal(large.option.calendar.monthLabel.fontSize, 18);
+  assert.equal(large.option.calendar.yearLabel.fontSize, 18);
+  assert.equal(large.option.singleAxis.axisLabel.fontSize, 18);
+  assert.equal(large.option.parallelAxis.nameTextStyle.fontSize, 18);
+  assert.equal(large.option.angleAxis.axisLabel.fontSize, 18);
+  assert.equal(large.option.radiusAxis.nameTextStyle.fontSize, 18);
+  assert.equal(large.option.dataZoom.textStyle.fontSize, 18);
+  assert.equal(large.option.graphic.style.fontSize, 18);
+  assert.notEqual(large.valueAxisTitleProjection, model.valueAxisTitleProjection);
+  assert.notEqual(large.valueAxisTitleProjection[0], model.valueAxisTitleProjection[0]);
+  assert.equal(large.valueAxisTitleProjection[0].fontSize, 18);
+  assert.equal(large.valueAxisTitleTextTheme.tickFontSize, 18);
+
+  const receiver = { id: "custom-renderer" };
+  const params = { dataIndex: 2 };
+  const api = { value() { return 1; } };
+  const custom = large.option.series[1].renderItem.call(receiver, params, api);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].receiver, receiver);
+  assert.deepEqual(calls[0].args, [params, api]);
+  assert.notEqual(custom, generated);
+  assert.notEqual(custom.children[0], generated.children[0]);
+  assert.notEqual(custom.children[0].style, generated.children[0].style);
+  assert.equal(custom.children[0].style.fontSize, 18);
+  assert.equal(generated.children[0].style.fontSize, 5);
+  assert.deepEqual(generated.children[1].shape, { width: 12, height: 8 });
+
+  assert.equal(grid.option.title.textStyle.fontSize, 24);
+  assert.equal(grid.option.textStyle.fontSize, 16);
+  assert.equal(grid.option.series[0].detail.fontSize, 34);
+  assert.equal(grid.valueAxisTitleProjection[0].fontSize, 16);
+  assert.equal(grid.valueAxisTitleTextTheme.tickFontSize, 16);
+  assert.equal(ordinary.option.textStyle.fontSize, 7);
+  assert.equal(ordinary.option.legend.textStyle.fontSize, 6);
+  assert.equal(ordinary.option.series[0].detail.fontSize, 4);
+  assert.equal(ordinary.option.visualMap.textStyle.fontSize, 5);
+  assert.equal(ordinary.option.series[1].renderItem, renderItem);
+  assert.equal(ordinary.valueAxisTitleProjection, model.valueAxisTitleProjection);
+});
+
+test("Audience materializes alternate-axis text tiers when authored style objects are omitted", () => {
+  const model = {
+    kind: "echarts",
+    option: {
+      singleAxis: { name: "Sequence" },
+      parallel: {},
+      parallelAxis: { dim: 0, name: "Capacity" },
+      polar: {},
+      angleAxis: { name: "Angle" },
+      radiusAxis: { name: "Radius" },
+      series: [],
+    },
+  };
+  const before = structuredClone(model);
+  const chartConfig = { presentation: { title: { align: "left" } } };
+  const large = applyEChartsPresentation(model, chartConfig, false, {}, {
+    tier: "distance-large",
+    title: 28,
+    text: 18,
+    value: 40,
+  });
+  const grid = applyEChartsPresentation(model, chartConfig, false, {}, {
+    tier: "distance-grid",
+    title: 24,
+    text: 16,
+    value: 34,
+  });
+  const ordinary = applyEChartsPresentation(model, chartConfig, false, {});
+  const axisKeys = ["singleAxis", "parallelAxis", "angleAxis", "radiusAxis"];
+
+  assert.deepEqual(inspectResolvedOption(model.option, (resolved) => Object.fromEntries(
+    axisKeys.map((key) => [key, resolved.getComponent(key, 0).getModel("axisLabel").get("fontSize")]),
+  )), {
+    singleAxis: 12,
+    parallelAxis: 12,
+    angleAxis: 12,
+    radiusAxis: 12,
+  });
+  for (const key of axisKeys) {
+    assert.deepEqual(large.option[key].axisLabel, { fontSize: 18, margin: 10 });
+    assert.deepEqual(large.option[key].nameTextStyle, { fontSize: 18 });
+    assert.equal(large.option[key].nameGap, 31);
+    assert.deepEqual(grid.option[key].axisLabel, { fontSize: 16, margin: 9 });
+    assert.deepEqual(grid.option[key].nameTextStyle, { fontSize: 16 });
+    assert.equal(grid.option[key].nameGap, 27);
+    assert.equal(ordinary.option[key].axisLabel, undefined);
+    assert.equal(ordinary.option[key].nameTextStyle, undefined);
+    assert.equal(ordinary.option[key].nameGap, undefined);
+  }
+  assert.deepEqual(inspectResolvedOption(large.option, (resolved) => Object.fromEntries(
+    axisKeys.map((key) => [key, resolved.getComponent(key, 0).getModel("axisLabel").get("fontSize")]),
+  )), {
+    singleAxis: 18,
+    parallelAxis: 18,
+    angleAxis: 18,
+    radiusAxis: 18,
+  });
+  assert.deepEqual(inspectResolvedOption(grid.option, (resolved) => Object.fromEntries(
+    axisKeys.map((key) => [key, resolved.getComponent(key, 0).getModel("axisLabel").get("fontSize")]),
+  )), {
+    singleAxis: 16,
+    parallelAxis: 16,
+    angleAxis: 16,
+    radiusAxis: 16,
+  });
+  assert.deepEqual(model, before);
+});
+
+test("Audience materializes omitted gauge text tiers without adding roles to non-gauge series", () => {
+  const model = {
+    kind: "echarts",
+    option: {
+      series: [
+        { type: "gauge", data: [{ value: 72, name: "Capacity" }] },
+        { type: "pie", data: [{ value: 28, name: "Remaining" }] },
+      ],
+    },
+  };
+  const before = structuredClone(model);
+  const chartConfig = { presentation: { title: { align: "left" } } };
+  const readGaugeText = (resolved) => {
+    const gauge = resolved.getSeriesByIndex(0);
+    return {
+      detail: gauge.getModel("detail").get("fontSize"),
+      title: gauge.getModel("title").get("fontSize"),
+      axisLabel: gauge.getModel("axisLabel").get("fontSize"),
+    };
+  };
+  const large = applyEChartsPresentation(model, chartConfig, false, {}, {
+    tier: "distance-large",
+    title: 28,
+    text: 18,
+    value: 40,
+  });
+  const grid = applyEChartsPresentation(model, chartConfig, false, {}, {
+    tier: "distance-grid",
+    title: 24,
+    text: 16,
+    value: 34,
+  });
+  const ordinary = applyEChartsPresentation(model, chartConfig, false, {});
+
+  assert.deepEqual(inspectResolvedOption(model.option, readGaugeText), {
+    detail: 30,
+    title: 16,
+    axisLabel: 12,
+  });
+  assert.deepEqual({
+    detail: large.option.series[0].detail.fontSize,
+    title: large.option.series[0].title.fontSize,
+    axisLabel: large.option.series[0].axisLabel.fontSize,
+  }, { detail: 40, title: 18, axisLabel: 18 });
+  assert.deepEqual({
+    detail: grid.option.series[0].detail.fontSize,
+    title: grid.option.series[0].title.fontSize,
+    axisLabel: grid.option.series[0].axisLabel.fontSize,
+  }, { detail: 34, title: 16, axisLabel: 16 });
+  assert.deepEqual(inspectResolvedOption(large.option, readGaugeText), {
+    detail: 40,
+    title: 18,
+    axisLabel: 18,
+  });
+  assert.deepEqual(inspectResolvedOption(grid.option, readGaugeText), {
+    detail: 34,
+    title: 16,
+    axisLabel: 16,
+  });
+  for (const role of ["label", "detail", "title", "axisLabel"]) {
+    assert.equal(Object.hasOwn(large.option.series[1], role), false);
+    assert.equal(Object.hasOwn(grid.option.series[1], role), false);
+    assert.equal(Object.hasOwn(ordinary.option.series[1], role), false);
+  }
+  for (const role of ["detail", "title", "axisLabel"]) {
+    assert.equal(Object.hasOwn(ordinary.option.series[0], role), false);
+  }
+  assert.deepEqual(model, before);
+});
+
+test("Audience axis-title gutters measure tier tick and title fonts while ordinary defaults remain 12 and 14", () => {
+  const projection = {
+    id: "primary",
+    physicalAxis: "y",
+    side: "left",
+    title: "Cases",
+    position: "center",
+    orientation: "horizontal",
+    fontSize: 18,
+    bold: false,
+    tickValues: [0, 100],
+  };
+  const measured = [];
+  const measureText = (text, fontSize) => {
+    measured.push({ text: String(text), fontSize });
+    return { width: fontSize * 2, height: fontSize };
+  };
+  const theme = { bodyFont: "Audience Body", dataFont: "Audience Data", tickFontSize: 18 };
+  const gutters = valueAxisTitleGutters(projection, theme, measureText);
+  const graphic = resolveValueAxisTitleGraphics({
+    projection,
+    gridRect: { x: 120, y: 60, width: 320, height: 180 },
+    textTheme: theme,
+    measureText,
+  })[0];
+
+  assert.ok(gutters.left > 0);
+  assert.equal(graphic.children[0].style.fontSize, 18);
+  assert.equal(measured.filter(({ text }) => text === "Cases").every(({ fontSize }) => fontSize === 18), true);
+  assert.equal(measured.filter(({ text }) => text !== "Cases").every(({ fontSize }) => fontSize === 18), true);
+
+  const ordinaryMeasurements = [];
+  valueAxisTitleGutters({ ...projection, fontSize: 14 }, {}, (text, fontSize) => {
+    ordinaryMeasurements.push({ text: String(text), fontSize });
+    return { width: fontSize * 2, height: fontSize };
+  });
+  assert.equal(ordinaryMeasurements.find(({ text }) => text === "Cases").fontSize, 14);
+  assert.equal(ordinaryMeasurements.find(({ text }) => text === "100").fontSize, 12);
+});
+
+test("Audience tier and dashboard theme key changes produce fresh fake-lifecycle options and axis graphics", () => {
+  assert.equal(typeof readChartTextTheme, "function", "shared computed-style theme reader must be implemented");
+  const styleFor = (values) => ({
+    getPropertyValue(name) { return values[name] ?? ""; },
+  });
+  const light = readChartTextTheme(styleFor({
+    "--simex-text-strong": "#112233",
+    "--simex-text-muted": "#445566",
+  }), "theme-light", "distance-large");
+  const dark = readChartTextTheme(styleFor({
+    "--simex-text-strong": "#F1F2F3",
+    "--simex-text-muted": "#C1C2C3",
+  }), "theme-dark", "distance-grid");
+  assert.equal(light.typographyKey, "theme-light");
+  assert.equal(light.audienceTier, "distance-large");
+  assert.equal(dark.typographyKey, "theme-dark");
+  assert.equal(dark.audienceTier, "distance-grid");
+  assert.equal(sameChartTextTheme(light, dark), false);
+
+  const calls = [];
+  const instance = {
+    setOption(option) { calls.push(option); },
+    getModel() {
+      return {
+        getComponent() {
+          return { coordinateSystem: { getRect: () => ({ x: 100, y: 40, width: 300, height: 160 }) } };
+        },
+      };
+    },
+    on() {},
+    off() {},
+    dispose() {},
+  };
+  const lifecycle = createEChartsLifecycle({
+    echartsApi: {
+      getInstanceByDom() { return null; },
+      init() { return instance; },
+      registerMap() {},
+    },
+    windowTarget: { addEventListener() {}, removeEventListener() {} },
+    ResizeObserverCtor: null,
+  });
+  const source = {
+    kind: "echarts",
+    option: { textStyle: { fontSize: 5 }, series: [] },
+    valueAxisTitleProjection: [{
+      id: "primary",
+      physicalAxis: "y",
+      side: "left",
+      title: "Cases",
+      position: "center",
+      orientation: "horizontal",
+      fontSize: 9,
+      tickValues: [0, 100],
+    }],
+  };
+  lifecycle.mount({});
+  lifecycle.update(applyEChartsPresentation(source, {}, false, light, {
+    tier: "distance-large", title: 28, text: 18, value: 40,
+  }));
+  lifecycle.update(applyEChartsPresentation(source, {}, false, dark, {
+    tier: "distance-grid", title: 24, text: 16, value: 34,
+  }));
+  lifecycle.dispose();
+
+  assert.equal(calls.length, 4);
+  assert.equal(calls[0].textStyle.fontSize, 18);
+  assert.equal(calls[0].textStyle.color, "#112233");
+  assert.equal(calls[1].graphic[0].children[0].style.fontSize, 18);
+  assert.equal(calls[1].graphic[0].$action, "replace");
+  assert.equal(calls[2].textStyle.fontSize, 16);
+  assert.equal(calls[2].textStyle.color, "#F1F2F3");
+  assert.equal(calls[3].graphic[0].children[0].style.fontSize, 16);
+  assert.equal(calls[3].graphic[0].$action, "replace");
 });
 
 test("axis series honor validated label visibility, position, and formatting", () => {

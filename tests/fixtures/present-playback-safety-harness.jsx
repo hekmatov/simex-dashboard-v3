@@ -118,7 +118,14 @@ function RuntimeProbe() {
     playback,
   });
   const presentationState = React.useMemo(() => ({
-    dashboard_revision: "playback-safety-fixture",
+      dashboard_revision: "playback-safety-fixture",
+      theme: {
+        dashboard_style: "evidence-ledger",
+        dashboard_color_profile: "signal-instrument/calibrated-steel",
+        chart_color_mode: "profile",
+        appearance_preference: "light",
+        resolved_appearance: "light",
+      },
     source: {
       kind: "Chrono Group",
       scene_id: null,

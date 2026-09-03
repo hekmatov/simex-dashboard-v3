@@ -20,6 +20,7 @@ const {
   default: MediaPicker,
   createLocalMediaCandidate,
   importExternalMediaFile,
+  mediaPickerError,
   partitionMediaPickerItems,
 } = pickerModule;
 const { buildManagerMediaDraft, updateManagerMediaChoice } = catalogueModule;
@@ -70,6 +71,33 @@ test("Image picker may select the original external identity", () => {
   assert.equal(groups.selectable.some(({ mediaId }) => mediaId === "external"), true);
   const html = renderToStaticMarkup(React.createElement(MediaPicker, { mediaItems, mode: "image" }));
   assert.match(html, /value="external"/);
+});
+
+test("shared media chooser preserves structured intake rejection classifications", () => {
+  const validation = mediaPickerError(Object.assign(new Error("Rejected upload"), {
+    validation: {
+      errors: [{ code: "media-type-mismatch", message: "The declared image type does not match its file signature." }],
+    },
+  }));
+  assert.deepEqual(validation, {
+    code: "media-type-mismatch",
+    message: "The declared image type does not match its file signature.",
+  });
+
+  assert.deepEqual(mediaPickerError(new Error("Direct import failed.")), {
+    code: null,
+    message: "Direct import failed.",
+  });
+});
+
+test("Image picker mirrors the saved selection so a restored replacement can be chosen again", () => {
+  const html = renderToStaticMarkup(React.createElement(MediaPicker, {
+    mediaItems,
+    mode: "image",
+    selectedMediaId: "external",
+  }));
+  assert.match(html, /<input(?=[^>]*type="radio")(?=[^>]*value="external")(?=[^>]*checked="")[^>]*>/);
+  assert.doesNotMatch(html, /<input(?=[^>]*type="radio")(?=[^>]*value="stored")(?=[^>]*checked="")[^>]*>/);
 });
 
 test("Image picker excludes every unhealthy or invalid identity and explains why it is unavailable", () => {

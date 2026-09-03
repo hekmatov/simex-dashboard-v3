@@ -17,14 +17,126 @@ test.beforeEach(async ({ page, request }) => {
   await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
 });
 
-test("anchored Page and Section commands preview and discard through the live layout draft", async ({ page }) => {
+test("selected Page tab toggles its five-action menu while inactive Pages only navigate", async ({ page }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
-  await navigation.getByRole("button", { name: "Page actions for Biomedical", exact: true }).click();
-  await expect(navigation.getByRole("group", { name: "Biomedical Page actions", exact: true })).toBeVisible();
-  await navigation.getByRole("button", { name: "Edit Page Biomedical" }).click();
-  const orbit = page.getByLabel("Page Orbit for Biomedical");
-  await expect(orbit.getByRole("button")).toHaveText(["Rename Page", "Merge Page", "Remove Page", "Close"]);
-  await orbit.getByRole("button", { name: "Close" }).click();
+  const biomedical = navigation.getByRole("button", { name: "Biomedical", exact: true });
+  const socioEconomic = navigation.getByRole("button", { name: "Socio-economic", exact: true });
+
+  await socioEconomic.click();
+  await expect(socioEconomic).toHaveAttribute("aria-current", "page");
+  await expect(navigation.getByRole("group", { name: "Biomedical Page actions", exact: true })).toHaveCount(0);
+  await socioEconomic.click();
+
+  const actions = navigation.getByRole("group", { name: "Socio-economic Page actions", exact: true });
+  await expect(actions).toBeVisible();
+  await expect(actions.getByRole("button")).toHaveText(["Rename", "Move earlier", "Move later", "Merge", "Remove"]);
+  await expect(navigation.getByRole("button", { name: /Page actions/ })).toHaveCount(0);
+  await expect(page.getByLabel(/Page Orbit/)).toHaveCount(0);
+  await expect(actions.getByRole("button", { name: /Edit Page/ })).toHaveCount(0);
+  await socioEconomic.click();
+  await expect(actions).toHaveCount(0);
+  await socioEconomic.click();
+  await expect(actions).toBeVisible();
+
+  await biomedical.click();
+  await expect(biomedical).toHaveAttribute("aria-current", "page");
+  await expect(actions).toHaveCount(0);
+  await biomedical.click();
+  const biomedicalActions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
+  await expect(biomedicalActions).toBeVisible();
+
+  await biomedicalActions.getByRole("button", { name: "Rename", exact: true }).click();
+  await expect(biomedicalActions.locator(".build-page-command-form")).toBeVisible();
+  await biomedicalActions.getByLabel("Page name").fill("Unsaved Biomedical name");
+  await socioEconomic.click();
+  await expect(biomedicalActions).toHaveCount(0);
+  await expect(socioEconomic).toHaveAttribute("aria-current", "page");
+  await socioEconomic.click();
+  await expect(actions).toBeVisible();
+  await expect(actions.locator(".build-page-command-form")).toHaveCount(0);
+  await expect(actions.getByRole("button")).toHaveText(["Rename", "Move earlier", "Move later", "Merge", "Remove"]);
+
+  await biomedical.click();
+  await biomedical.click();
+  await expect(biomedicalActions).toBeVisible();
+  await biomedicalActions.getByRole("button", { name: "Rename", exact: true }).click();
+  await expect(biomedicalActions.locator(".build-page-command-form")).toBeVisible();
+  await biomedicalActions.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(biomedicalActions.getByRole("button")).toHaveText(["Rename", "Move earlier", "Move later", "Merge", "Remove"]);
+
+  await biomedicalActions.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(biomedicalActions.getByRole("button", { name: "Confirm", exact: true })).toBeDisabled();
+  await biomedicalActions.getByLabel("I understand these named consequences.").check();
+  await expect(biomedicalActions.getByRole("button", { name: "Confirm", exact: true })).toBeEnabled();
+  const reachable = await biomedicalActions.locator(".build-page-command-form").evaluate((form) => {
+    const styles = getComputedStyle(form.closest(".build-page-action-menu"));
+    return {
+      bottom: form.getBoundingClientRect().bottom,
+      maxHeight: styles.maxHeight,
+      overflowY: styles.overflowY,
+    };
+  });
+  expect(reachable.bottom).toBeLessThanOrEqual(720);
+  expect(reachable.maxHeight).not.toBe("none");
+  expect(["auto", "scroll"]).toContain(reachable.overflowY);
+  await biomedicalActions.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await biomedicalActions.getByRole("button", { name: "Remove", exact: true }).click();
+  await biomedicalActions.getByLabel("Content disposition").selectOption({ index: 1 });
+  await biomedicalActions.getByLabel("I understand these named consequences.").check();
+  await socioEconomic.click();
+  await expect(biomedicalActions).toHaveCount(0);
+  await biomedical.click();
+  await biomedical.click();
+  await biomedicalActions.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(biomedicalActions.getByLabel("Content disposition")).toHaveValue("delete-charts");
+  await expect(biomedicalActions.getByLabel("I understand these named consequences.")).not.toBeChecked();
+  await expect(biomedicalActions.getByRole("button", { name: "Confirm", exact: true })).toBeDisabled();
+  await biomedicalActions.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await biomedicalActions.getByRole("button", { name: "Move later", exact: true }).click();
+  await expect(biomedicalActions).toHaveCount(0);
+});
+
+test("successful Page Rename and Merge confirmations close their in-menu forms", async ({ page }) => {
+  const navigation = page.locator('[data-build-page-navigation="anchored"]');
+  const actions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
+  await expect(actions).toBeVisible();
+  await actions.getByRole("button", { name: "Rename", exact: true }).click();
+  await actions.getByLabel("Page name").fill("Epidemiological briefing");
+  await actions.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(actions).toHaveCount(0);
+
+  const renamed = navigation.getByRole("button", { name: "Epidemiological briefing", exact: true });
+  await expect(renamed).toHaveAttribute("aria-current", "page");
+  await renamed.click();
+  const renamedActions = navigation.getByRole("group", { name: "Epidemiological briefing Page actions", exact: true });
+  await renamedActions.getByRole("button", { name: "Merge", exact: true }).click();
+  await expect(renamedActions.locator(".build-page-command-form")).toBeVisible();
+  await renamedActions.getByLabel("I understand these named consequences.").check();
+  await renamedActions.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(renamedActions).toHaveCount(0);
+});
+
+test("Page actions retain the final-page protections", async ({ page }) => {
+  const navigation = page.locator('[data-build-page-navigation="anchored"]');
+  const biomedicalActions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
+  await expect(biomedicalActions).toBeVisible();
+  await biomedicalActions.getByRole("button", { name: "Remove", exact: true }).click();
+  await biomedicalActions.getByLabel("I understand these named consequences.").check();
+  await biomedicalActions.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(biomedicalActions).toHaveCount(0);
+
+  const socioEconomic = navigation.getByRole("button", { name: "Socio-economic", exact: true });
+  await expect(socioEconomic).toHaveAttribute("aria-current", "page");
+  await socioEconomic.click();
+  const actions = navigation.getByRole("group", { name: "Socio-economic Page actions", exact: true });
+  await expect(actions.getByRole("button", { name: "Merge", exact: true })).toBeDisabled();
+  await expect(actions.getByRole("button", { name: "Remove", exact: true })).toBeDisabled();
+});
+
+test("anchored Section commands preview and discard through the live layout draft", async ({ page }) => {
+  const navigation = page.locator('[data-build-page-navigation="anchored"]');
 
   await page.getByRole("button", { name: "Move Outbreak dynamics to Page" }).click();
   const move = page.getByRole("dialog", { name: "move Outbreak dynamics" });

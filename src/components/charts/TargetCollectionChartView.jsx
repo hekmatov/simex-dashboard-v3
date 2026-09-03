@@ -14,6 +14,7 @@ export default function TargetCollectionChartView({
   provenance,
   accessibilityEnabled: _accessibilityEnabled = false,
   interactionMode = "active",
+  audienceScale = null,
 }) {
   const accessibilityEnabled = false;
   const titleId = React.useId();
@@ -57,11 +58,12 @@ export default function TargetCollectionChartView({
     renderItem: (item) => React.createElement(TargetCollectionItem, {
       item,
       accessibilityEnabled,
+      audienceScale,
     }),
   })));
 }
 
-function TargetCollectionItem({ item, accessibilityEnabled }) {
+function TargetCollectionItem({ item, accessibilityEnabled, audienceScale }) {
   const labelId = React.useId();
   const summaryId = React.useId();
   const label = displayText(item.label, "Target");
@@ -94,7 +96,7 @@ function TargetCollectionItem({ item, accessibilityEnabled }) {
         className: "chart-view-title--visually-hidden",
       }, summary)
     : null,
-  React.createElement(EmbeddedEChartsItem, { model: item.model }));
+  React.createElement(EmbeddedEChartsItem, { model: item.model, audienceScale }));
 }
 
 

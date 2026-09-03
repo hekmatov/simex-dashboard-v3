@@ -134,7 +134,7 @@ test("theme resolver exposes the exact renamed style and 13-profile catalogue in
   }
 });
 
-test("obsolete cosmetic profiles normalize to Vellum before strict validation without losing dashboard content", async () => {
+test("new, missing, and obsolete theme state resolves to Ledger with Steel without replacing explicit choices", async () => {
   const shipped = JSON.parse(await readFile(
     new URL("../public/config/dashboard.json", import.meta.url),
     "utf8",
@@ -146,7 +146,7 @@ test("obsolete cosmetic profiles normalize to Vellum before strict validation wi
     },
     {
       dashboardStyle: "evidence-ledger",
-      dashboardColorProfile: "evidence-ledger/brighter-vellum",
+      dashboardColorProfile: "signal-instrument/calibrated-steel",
     },
   );
 
@@ -166,7 +166,7 @@ test("obsolete cosmetic profiles normalize to Vellum before strict validation wi
     const normalized = normalizeDashboardBoundary(candidate);
 
     assert.equal(normalized.globalStyles.dashboardStyle, "evidence-ledger");
-    assert.equal(normalized.globalStyles.dashboardColorProfile, "evidence-ledger/brighter-vellum");
+    assert.equal(normalized.globalStyles.dashboardColorProfile, "signal-instrument/calibrated-steel");
     assert.deepEqual({
       title: normalized.title,
       pages: normalized.pages,
@@ -177,6 +177,29 @@ test("obsolete cosmetic profiles normalize to Vellum before strict validation wi
     assert.doesNotThrow(() => validateDashboardStructure(normalized));
   }
 
+  assert.deepEqual(
+    {
+      dashboardStyle: themeModule.resolveDashboardTheme().dashboardStyle,
+      dashboardColorProfile: themeModule.resolveDashboardTheme().dashboardColorProfile,
+    },
+    {
+      dashboardStyle: "evidence-ledger",
+      dashboardColorProfile: "signal-instrument/calibrated-steel",
+    },
+  );
+  const explicit = themeModule.resolveDashboardTheme({
+    globalStyles: {
+      dashboardStyle: "humanist-standard",
+      dashboardColorProfile: "humanist-standard/open-forum",
+      chartColorMode: "standard",
+    },
+    appearancePreference: "dark",
+  });
+  assert.equal(explicit.dashboardStyle, "humanist-standard");
+  assert.equal(explicit.dashboardColorProfile, "humanist-standard/open-forum");
+  assert.equal(explicit.chartColorMode, "standard");
+  assert.equal(explicit.resolvedAppearance, "dark");
+
   for (const dashboardColorProfile of [
     "humanist-standard/quiet-commons",
     "utility/chromatic-polarity",
@@ -185,6 +208,22 @@ test("obsolete cosmetic profiles normalize to Vellum before strict validation wi
     invalid.globalStyles.dashboardColorProfile = dashboardColorProfile;
     assert.throws(() => validateDashboardStructure(invalid), /dashboard color profile/i);
   }
+});
+
+test("Audience reconstructs an exact System theme snapshot with the sender's resolved appearance", () => {
+  const resolved = themeModule.resolvePresentationThemeSnapshot({
+    dashboard_style: "humanist-standard",
+    dashboard_color_profile: "humanist-standard/open-forum",
+    chart_color_mode: "standard",
+    appearance_preference: "system",
+    resolved_appearance: "dark",
+  });
+
+  assert.equal(resolved.dashboardStyle, "humanist-standard");
+  assert.equal(resolved.dashboardColorProfile, "humanist-standard/open-forum");
+  assert.equal(resolved.chartColorMode, "standard");
+  assert.equal(resolved.appearancePreference, "system");
+  assert.equal(resolved.resolvedAppearance, "dark");
 });
 
 test("Profile and Standard chart colours are independent across Light, Dark, and System appearance", () => {
@@ -331,10 +370,11 @@ test("standalone Audience and its snapshot portal project active theme metadata 
   assert.match(renderer, /<PresentWorkspace[\s\S]*themeProjection=\{themeProjection\}/);
   assert.match(present, /<AudienceSnapshotMonitor[\s\S]*themeProjection=\{themeProjection\}/);
   assert.match(app, /className="audience-theme-root"/);
-  assert.match(app, /data-dashboard-style=\{dashboardTheme\.dashboardStyle\}/);
-  assert.match(app, /data-dashboard-color-profile=\{dashboardTheme\.dashboardColorProfile\}/);
-  assert.match(app, /data-resolved-appearance=\{dashboardTheme\.resolvedAppearance\}/);
-  assert.match(app, /style=\{\{ \.\.\.dashboardTheme\.cssVariables, \.\.\.dashboardTheme\.styleVariables \}\}/);
+  assert.match(app, /resolvePresentationThemeSnapshot\(audienceProjection\?\.theme, dashboardTheme\)/);
+  assert.match(app, /data-dashboard-style=\{audienceDashboardTheme\.dashboardStyle\}/);
+  assert.match(app, /data-dashboard-color-profile=\{audienceDashboardTheme\.dashboardColorProfile\}/);
+  assert.match(app, /data-resolved-appearance=\{audienceDashboardTheme\.resolvedAppearance\}/);
+  assert.match(app, /style=\{\{ \.\.\.audienceDashboardTheme\.cssVariables, \.\.\.audienceDashboardTheme\.styleVariables \}\}/);
   assert.match(snapshot, /\{typeof document !== "undefined" && createPortal\(/);
   assert.match(snapshot, /data-dashboard-style=\{themeProjection\.dashboardStyle\}/);
   assert.match(snapshot, /data-dashboard-color-profile=\{themeProjection\.dashboardColorProfile\}/);

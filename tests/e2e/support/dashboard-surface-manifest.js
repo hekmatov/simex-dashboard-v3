@@ -1,26 +1,31 @@
 import { openChartAuthoring } from "./chart-authoring-workflow.js";
 import { openDashboardPage } from "./landingWorkflow.js";
+import { dashboardJourneyGroupingRoleFor } from "../../../src/theme/dashboardSurfaceRoles.js";
 
 const DESKTOP_STANDARD = Object.freeze({ width: 1440, height: 900 });
 const DESKTOP_COMPACT = Object.freeze({ width: 1024, height: 768 });
 const DESKTOP_PRESSURE = Object.freeze({ width: 1280, height: 720 });
 const DESKTOP_WIDE = Object.freeze({ width: 1920, height: 1080 });
-const BELOW_DESKTOP = Object.freeze({ width: 900, height: 720 });
+const BELOW_RECOMMENDED_DESKTOP = Object.freeze({ width: 900, height: 720 });
+const CHART_STATE_HARNESS_ROOT = '.chart-state-recovery-harness[data-dashboard-style][data-dashboard-surface-role="status"]';
 
 const executable = (definition) => Object.freeze({
   appearance: "light",
   ...definition,
+  surfaceRole: dashboardJourneyGroupingRoleFor(definition.id),
   disposition: "executable",
 });
 
 const outOfScope = (definition) => Object.freeze({
   ...definition,
+  surfaceRole: dashboardJourneyGroupingRoleFor(definition.id),
   disposition: "intentionally-out-of-scope",
 });
 
 const coverageAlias = (definition) => Object.freeze({
   appearance: "light",
   ...definition,
+  surfaceRole: dashboardJourneyGroupingRoleFor(definition.id),
   disposition: "coverage-alias",
 });
 
@@ -29,7 +34,7 @@ const aliasEquivalence = (basis, categories) => Object.freeze({
   categories: Object.freeze(categories),
 });
 
-export const DASHBOARD_SURFACE_MANIFEST = Object.freeze([
+export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
   executable({
     id: "landing-standard",
     family: "landing",
@@ -162,14 +167,14 @@ export const DASHBOARD_SURFACE_MANIFEST = Object.freeze([
     setup: setupBuildPageActions,
   }),
   executable({
-    id: "build-page-orbit",
+    id: "build-page-command-form",
     family: "structure-management",
-    owner: "page-orbit",
+    owner: "anchored-page-navigation",
     mode: "build",
-    state: "page-command-orbit",
+    state: "page-command-form",
     viewport: DESKTOP_STANDARD,
-    root: "[aria-label='Page Orbit for Biomedical']",
-    setup: setupBuildPageOrbit,
+    root: "[role='group'][aria-label='Biomedical Page actions'] .build-page-command-form",
+    setup: setupBuildPageCommandForm,
   }),
   executable({
     id: "section-command-dialog",
@@ -578,7 +583,7 @@ export const DASHBOARD_SURFACE_MANIFEST = Object.freeze([
     mode: "harness",
     state: "error-and-partial",
     viewport: DESKTOP_PRESSURE,
-    root: "#root",
+    root: CHART_STATE_HARNESS_ROOT,
     setup: setupChartStateHarness,
   }),
   executable({
@@ -596,10 +601,10 @@ export const DASHBOARD_SURFACE_MANIFEST = Object.freeze([
     family: "present",
     owner: "present-workspace",
     mode: "present",
-    state: "composition",
+    state: "composition-chrono-controls",
     viewport: DESKTOP_STANDARD,
     root: ".present-workspace",
-    setup: setupPresent,
+    setup: setupPresentChronoControls,
   }),
   executable({
     id: "present-audience-options",
@@ -652,31 +657,33 @@ export const DASHBOARD_SURFACE_MANIFEST = Object.freeze([
     setup: setupRecovery,
   }),
   executable({
-    id: "build-below-desktop-gate",
-    family: "desktop-gate",
-    owner: "app-shell-mode-gate",
+    id: "build-below-desktop-recommendation",
+    family: "desktop-recommendation",
+    owner: "app-shell-width-advisory",
     mode: "build",
-    state: "below-1024",
-    viewport: BELOW_DESKTOP,
-    root: ".app-frame",
-    setup: setupBuildGate,
+    state: "below-1024-recommendation",
+    viewport: BELOW_RECOMMENDED_DESKTOP,
+    root: '[data-desktop-width-notice="build"]',
+    setup: setupBuildRecommendation,
     expectations: Object.freeze({
-      visible: ".phone-mode-banner, [data-phone-mode-notice]",
-      hidden: "[data-canonical-mode='build'] .build-workspace",
+      notice: '[data-desktop-width-notice="build"]',
+      workspace: ".canonical-dashboard-frame.build-workspace",
+      enabledControl: '[data-build-command-action="add-chart"]:not(:disabled)',
     }),
   }),
   executable({
-    id: "present-below-desktop-gate",
-    family: "desktop-gate",
-    owner: "app-shell-mode-gate",
+    id: "present-below-desktop-recommendation",
+    family: "desktop-recommendation",
+    owner: "app-shell-width-advisory",
     mode: "present",
-    state: "below-1024",
-    viewport: BELOW_DESKTOP,
-    root: ".app-frame",
-    setup: setupPresentGate,
+    state: "below-1024-recommendation",
+    viewport: BELOW_RECOMMENDED_DESKTOP,
+    root: '[data-desktop-width-notice="present"]',
+    setup: setupPresentRecommendation,
     expectations: Object.freeze({
-      visible: ".phone-mode-banner, [data-phone-mode-notice]",
-      hidden: ".present-workspace",
+      notice: '[data-desktop-width-notice="present"]',
+      workspace: ".present-workspace",
+      enabledControl: '[data-presentation-control-id="chrono-groups"]:not(:disabled)',
     }),
   }),
   coverageAlias({
@@ -752,10 +759,10 @@ export const DASHBOARD_SURFACE_MANIFEST = Object.freeze([
     state: "dialog-modality",
     viewport: DESKTOP_STANDARD,
     aliasOf: "dashboard-look-standard",
-    equivalence: aliasEquivalence("Dashboard Look is the concrete production instance of the registered right-side drawer.", [
+    equivalence: aliasEquivalence("Theme is the concrete production instance of the registered right-side drawer.", [
       "role-size", "centreline", "rhythm", "wrap", "whitespace", "overlap", "clipping", "overflow", "repeated-title", "same-role-variance", "occupancy",
     ]),
-    reason: "Dashboard Look is the stable production journey for the registered right-side drawer dialog modality.",
+    reason: "Theme is the stable production journey for the registered right-side drawer dialog modality.",
   }),
   outOfScope({
     id: "mobile-view-custom-design",
@@ -769,7 +776,11 @@ export const DASHBOARD_SURFACE_MANIFEST = Object.freeze([
   }),
 ]);
 
-export function summarizeDashboardSurfaceManifest(manifest = DASHBOARD_SURFACE_MANIFEST) {
+// Compatibility alias for existing audit journeys. New coverage code should
+// use the journey name so this catalogue is not mistaken for region closure.
+export const DASHBOARD_SURFACE_MANIFEST = DASHBOARD_JOURNEY_MANIFEST;
+
+export function summarizeDashboardJourneyManifest(manifest = DASHBOARD_JOURNEY_MANIFEST) {
   const ids = manifest.map(({ id }) => id);
   const duplicateIds = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))].sort();
   const invalidEntries = manifest.flatMap((entry) => {
@@ -805,6 +816,8 @@ export function summarizeDashboardSurfaceManifest(manifest = DASHBOARD_SURFACE_M
     invalidEntries,
   });
 }
+
+export const summarizeDashboardSurfaceManifest = summarizeDashboardJourneyManifest;
 
 async function setupLanding({ page }) {
   await page.goto("/");
@@ -875,16 +888,16 @@ async function setupBuildUnitOrbit(context) {
 async function setupBuildPageActions(context) {
   const { page } = await setupBuild(context);
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
-  await navigation.getByRole("button", { name: "Page actions for Biomedical", exact: true }).click();
+  await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
   await navigation.getByRole("group", { name: "Biomedical Page actions", exact: true }).waitFor();
   return { page };
 }
 
-async function setupBuildPageOrbit(context) {
+async function setupBuildPageCommandForm(context) {
   const { page } = await setupBuildPageActions(context);
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
-  await navigation.getByRole("button", { name: "Edit Page Biomedical" }).click();
-  await page.getByLabel("Page Orbit for Biomedical").waitFor();
+  await navigation.getByRole("button", { name: "Rename", exact: true }).click();
+  await navigation.locator(".build-page-command-form").waitFor();
   return { page };
 }
 
@@ -904,8 +917,8 @@ async function setupBuildMore(context) {
 
 async function setupDashboardLook({ page }) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  await page.getByRole("dialog", { name: "Dashboard look" }).waitFor();
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  await page.getByRole("dialog", { name: "Theme" }).waitFor();
   return { page };
 }
 
@@ -1317,9 +1330,11 @@ async function loadProductionStyles(page) {
   }
 }
 
-async function setupChartStateHarness({ page }) {
-  await page.goto("http://127.0.0.1:4175/tests/e2e/chart-state-harness.html");
+async function setupChartStateHarness({ page, dashboardStyle = "evidence-ledger" }) {
+  const query = new URLSearchParams({ dashboardStyle }).toString();
+  await page.goto(`http://127.0.0.1:4175/tests/e2e/chart-state-harness.html?${query}`);
   await loadProductionStyles(page);
+  await page.locator(CHART_STATE_HARNESS_ROOT).waitFor();
   await page.locator("[data-canonical-panel-id='recovery-proof']").waitFor();
   await page.locator("[data-canonical-panel-id='partial-proof']").waitFor();
   return { page };
@@ -1329,6 +1344,13 @@ async function setupPresent(context) {
   const page = await openBiomedical(context);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
   await page.locator(".present-workspace").waitFor();
+  return { page };
+}
+
+async function setupPresentChronoControls(context) {
+  const { page } = await setupPresent(context);
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  await page.locator(".present-action-dock").waitFor();
   return { page };
 }
 
@@ -1371,16 +1393,16 @@ async function setupRecovery({ page }) {
   return { page };
 }
 
-async function setupBuildGate(context) {
+async function setupBuildRecommendation(context) {
   const page = await openBiomedical(context);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.locator(".app-frame").waitFor();
+  await page.locator('[data-desktop-width-notice="build"]').waitFor();
   return { page };
 }
 
-async function setupPresentGate(context) {
+async function setupPresentRecommendation(context) {
   const page = await openBiomedical(context);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
-  await page.locator(".app-frame").waitFor();
+  await page.locator('[data-desktop-width-notice="present"]').waitFor();
   return { page };
 }

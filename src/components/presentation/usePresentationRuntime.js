@@ -15,13 +15,25 @@ export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
 });
 const AUDIENCE_FACT_KEYS = new Set(Object.keys(DEFAULT_AUDIENCE_FACTS));
 
+export function persistAudienceDatePositionForSource(source, datePosition, persist) {
+  if (source?.kind !== "scene" || typeof persist !== "function") return null;
+  return persist(source.scene_id, {
+    xPermille: datePosition.x_permille,
+    yPermille: datePosition.y_permille,
+    widthPermille: datePosition.width_permille,
+  });
+}
+
 export default function usePresentationRuntime(presentableItemIndex, {
   enabled: playbackSafetyEnabled = false,
   playback = null,
+  onSaveSceneDatePosition = null,
 } = {}) {
   const playbackSafetyOwner = `present-session:${React.useId()}`;
   const playbackRef = React.useRef(playback);
   playbackRef.current = playback;
+  const saveSceneDatePositionRef = React.useRef(onSaveSceneDatePosition);
+  saveSceneDatePositionRef.current = onSaveSceneDatePosition;
   const playbackSafetyEnabledRef = React.useRef(playbackSafetyEnabled);
   playbackSafetyEnabledRef.current = playbackSafetyEnabled;
   const controllerRef = React.useRef(null);
@@ -36,6 +48,7 @@ export default function usePresentationRuntime(presentableItemIndex, {
   sessionStateRef.current = sessionState;
   const [connectionError, setConnectionError] = React.useState("");
   const [audienceFacts, setAudienceFacts] = React.useState(() => ({ ...DEFAULT_AUDIENCE_FACTS }));
+  const [acceptedPresentationState, setAcceptedPresentationState] = React.useState(null);
 
   const reduceSession = React.useCallback((current, action) => reducePresentationSession(
     current,
@@ -111,6 +124,16 @@ export default function usePresentationRuntime(presentableItemIndex, {
     const type = ({ connected: "CONNECTED", connecting: "CONNECTING", disconnected: "CONNECTION_LOST", reconnecting: "RECONNECTING" })[status];
     if (type) dispatch({ type, ...guard });
   }, [dispatch]);
+  const onAudienceDatePositionChange = React.useCallback(({ source, datePosition }) => {
+    return persistAudienceDatePositionForSource(
+      source,
+      datePosition,
+      saveSceneDatePositionRef.current,
+    );
+  }, []);
+  const onAcceptedStateChange = React.useCallback((next) => {
+    setAcceptedPresentationState(next);
+  }, []);
 
   const finishFailedStartup = React.useCallback((opened, controller, audienceWindow = null) => {
     let failed = reduceSession(opened, { type: "END" });
@@ -127,6 +150,7 @@ export default function usePresentationRuntime(presentableItemIndex, {
     for (const action of actions) failed = reduceSession(failed, action);
     controllerRef.current = null;
     audienceWindowRef.current = null;
+    setAcceptedPresentationState(null);
     sessionStateRef.current = failed;
     setSessionState(failed);
     return failed;
@@ -150,6 +174,7 @@ export default function usePresentationRuntime(presentableItemIndex, {
     }
     sessionStateRef.current = opened;
     setSessionState(opened);
+    setAcceptedPresentationState(null);
     const guard = { sessionId, channelGeneration: opened.channelGeneration };
     let controller;
     let outcome;
@@ -158,6 +183,8 @@ export default function usePresentationRuntime(presentableItemIndex, {
         sessionId,
         getPresentableItemIndex: () => presentableItemIndexRef.current,
         onConnectionChange: (status) => connectionAction(status, guard),
+        onAudienceDatePositionChange,
+        onAcceptedStateChange,
       });
       controller.start();
       controllerRef.current = controller;
@@ -184,7 +211,15 @@ export default function usePresentationRuntime(presentableItemIndex, {
     setConnectionError("");
     dispatch({ type: "WINDOW_OPENED", ...guard });
     return outcome;
-  }, [connectionAction, dispatch, finishFailedStartup, publishOutcome, reduceSession]);
+  }, [
+    connectionAction,
+    dispatch,
+    finishFailedStartup,
+    onAudienceDatePositionChange,
+    onAcceptedStateChange,
+    publishOutcome,
+    reduceSession,
+  ]);
 
   const reopenAudience = React.useCallback(() => {
     const session = sessionStateRef.current;
@@ -219,6 +254,7 @@ export default function usePresentationRuntime(presentableItemIndex, {
     audienceWindowRef.current = next.closeOutcome === "succeeded" ? null : audienceWindow;
     sessionStateRef.current = next;
     setSessionState(next);
+    setAcceptedPresentationState(null);
     setConnectionError("");
   }, [reduceSession, synchronizePlayback]);
 
@@ -260,6 +296,7 @@ export default function usePresentationRuntime(presentableItemIndex, {
     connectionStatus: sessionState.connection, connectionError,
     hasSession: sessionState.lifecycle !== "ended",
     audienceFacts, setAudienceFactVisible,
+    acceptedPresentationState,
     blackout: sessionState.blackout,
     setBlackout: (active) => dispatch({ type: "SET_BLACKOUT", active }),
     dispatch, publish, open: openNewSession, openNewSession, reopenAudience, end,

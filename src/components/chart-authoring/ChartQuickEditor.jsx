@@ -9,7 +9,6 @@ import {
 import ChartFootprintPicker from "./ChartFootprintPicker.jsx";
 import EditSessionActions from "./EditSessionActions.jsx";
 import GeneratedFormSection from "./GeneratedFormSection.jsx";
-import ControlTooltip from "../common/ControlTooltip.js";
 
 const DANGEROUS_PATH_SEGMENTS = new Set([
   "__proto__",
@@ -93,6 +92,14 @@ export default function ChartQuickEditor({
         ),
         React.createElement(EditSessionActions, {
           className: "chart-quick-editor-actions",
+          leadingAction: {
+            interactionId: "shell.open-editable-tab",
+            ariaLabel: "Open full editor",
+            tooltip: "Open full editor",
+            disabled: locked || !fullEditorAvailable,
+            disabledReason: fullEditorAvailable ? "" : FULL_EDITOR_UNAVAILABLE_REASON,
+            onClick: invokeWhileUnlocked(onOpenFullEditor),
+          },
           valid: model.valid && dirty,
           submitting: saving,
           disabled,
@@ -139,23 +146,6 @@ export default function ChartQuickEditor({
               chart,
               onChange: changeDraft,
             }),
-          ),
-          React.createElement(
-            ControlTooltip,
-            {
-              disabled: !fullEditorAvailable,
-              reason: FULL_EDITOR_UNAVAILABLE_REASON,
-            },
-            React.createElement(
-              "button",
-              {
-                type: "button",
-                className: "secondary chart-quick-editor-open-full",
-                disabled: locked || !fullEditorAvailable,
-                onClick: invokeWhileUnlocked(onOpenFullEditor),
-              },
-              "Open full editor",
-            ),
           ),
         ),
         session.error
@@ -245,16 +235,12 @@ function isRecord(value) {
 function quickControlSemanticId(control) {
   if (control.dataset?.controlTooltipAnchor === "true") {
     const ownedControl = control.querySelector?.(
-      "[data-icon-control], .chart-quick-editor-open-full",
+      "[data-icon-control]",
     );
-    const ownedId = ownedControl?.dataset?.iconControl
-      || (ownedControl?.classList?.contains("chart-quick-editor-open-full")
-        ? "open-full-editor"
-        : "disabled-control");
+    const ownedId = ownedControl?.dataset?.iconControl || "disabled-control";
     return `${safeControlId(ownedId)}-reason`;
   }
   if (control.dataset?.iconControl) return safeControlId(control.dataset.iconControl);
-  if (control.classList?.contains("chart-quick-editor-open-full")) return "open-full-editor";
   if (control.matches?.("[role='gridcell'][data-columns][data-rows]")) {
     return `footprint-${control.dataset.columns}x${control.dataset.rows}`;
   }

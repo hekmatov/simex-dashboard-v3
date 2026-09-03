@@ -281,29 +281,49 @@ async function settleRenderedSurface(page, rootSelector) {
 
 async function collectEntryExpectationFindings(page, entry) {
   if (!entry.expectations) return [];
-  const state = await page.evaluate(({ visibleSelector, hiddenSelector }) => {
+  const state = await page.evaluate(({
+    noticeSelector,
+    workspaceSelector,
+    enabledControlSelector,
+  }) => {
     const isVisible = (node) => {
+      if (!node) return false;
       const style = getComputedStyle(node);
       const rect = node.getBoundingClientRect();
       return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
     };
+    const notice = document.querySelector(noticeSelector);
+    const workspace = document.querySelector(workspaceSelector);
+    const enabledControl = document.querySelector(enabledControlSelector);
+    const noticeStyle = notice ? getComputedStyle(notice) : null;
+    const noticeRect = notice?.getBoundingClientRect();
     return {
-      expectedVisible: [...document.querySelectorAll(visibleSelector)].some(isVisible),
-      expectedHidden: ![...document.querySelectorAll(hiddenSelector)].some(isVisible),
+      noticeVisible: isVisible(notice),
+      noticeCompact: isVisible(notice)
+        && Number.parseFloat(noticeStyle.fontSize) <= 12
+        && noticeRect.height <= 24,
+      workspaceVisible: isVisible(workspace),
+      enabledControlVisible: isVisible(enabledControl),
     };
   }, {
-    visibleSelector: entry.expectations.visible,
-    hiddenSelector: entry.expectations.hidden,
+    noticeSelector: entry.expectations.notice,
+    workspaceSelector: entry.expectations.workspace,
+    enabledControlSelector: entry.expectations.enabledControl,
   });
-  if (state.expectedVisible && state.expectedHidden) return [];
+  if (state.noticeVisible && state.noticeCompact && state.workspaceVisible && state.enabledControlVisible) return [];
   return [{
     id: `${entry.id}:desktop-support-contract`,
     surfaceId: entry.id,
     owner: entry.owner,
     category: "desktop-support-contract",
     priority: "P0",
-    evidence: `Below 1024px: gate visible=${state.expectedVisible}; internal workspace hidden=${state.expectedHidden}.`,
-    recommendation: "Keep the workspace mounted for state continuity but hide all workspace chrome behind the unsupported-mode notice.",
+    evidence: [
+      `Below 1024px: recommendation visible=${state.noticeVisible}`,
+      `compact=${state.noticeCompact}`,
+      `workspace visible=${state.workspaceVisible}`,
+      `enabled control visible=${state.enabledControlVisible}.`,
+    ].join("; "),
+    recommendation: "Keep the width recommendation compact while leaving the workspace and its primary controls available.",
   }];
 }
 

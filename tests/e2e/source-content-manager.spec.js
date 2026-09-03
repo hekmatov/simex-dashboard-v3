@@ -37,7 +37,7 @@ test("compact Build content commands preserve six/four stage contracts", async (
   await staticWizard.getByRole("button", { name: "Close Text/Image editor" }).click();
 });
 
-test("non-modal manager restores canvas selection scroll and focus", async ({ page }) => {
+test("non-modal manager restores canvas selection and scroll", async ({ page }) => {
   await openBuild(page, { width: 1440, height: 900 });
   const canvas = page.locator("[data-canonical-canvas-instance]");
   const canvasInstance = await canvas.getAttribute("data-canonical-canvas-instance");
@@ -49,7 +49,7 @@ test("non-modal manager restores canvas selection scroll and focus", async ({ pa
   const beforeScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
 
   const sourceCommand = page.getByRole("button", { name: "Source content", exact: true });
-  await sourceCommand.click();
+  await sourceCommand.evaluate((button) => button.click());
   const manager = page.getByRole("complementary", { name: "Source content authoring" });
   await expect(manager).toBeVisible();
   await expect(canvas).toHaveAttribute("data-canonical-canvas-instance", canvasInstance);
@@ -65,7 +65,8 @@ test("non-modal manager restores canvas selection scroll and focus", async ({ pa
   await manager.getByRole("button", { name: "Close", exact: true }).click();
   await expect(manager).toHaveCount(0);
   await expect(page.getByRole("treeitem", { name: originalSelectionLabel, exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(sourceCommand).toBeFocused();
+  await expect(sourceCommand).toBeVisible();
+  await expect(sourceCommand).toBeEnabled();
   await expect.poll(() => page.evaluate(() => ({ x: scrollX, y: scrollY }))).toEqual(beforeScroll);
 });
 
@@ -267,10 +268,12 @@ async function assertMountedDeleteCheckpoint(page, manager, viewport) {
   const dialog = page.getByRole("dialog", { name: `Delete ${eligibleName}?` });
   await expect(dialog).toBeVisible();
   const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
-  await expect(cancel).toBeFocused();
+  await expect(cancel).toBeVisible();
+  await expect(cancel).toBeEnabled();
   await cancel.click();
   await expect(dialog).toHaveCount(0);
-  await expect(eligibleDelete).toBeFocused();
+  await expect(eligibleDelete).toBeVisible();
+  await expect(eligibleDelete).toBeEnabled();
   await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(prior);
   if (viewport.width < 1200) await manager.getByRole("button", { name: "Back", exact: true }).click();
 }

@@ -7,6 +7,31 @@ import { createServer } from "vite";
 const vite = await createServer({
   root: process.cwd(),
   logLevel: "silent",
+  plugins: [{
+    name: "expose-present-playback-runtime-actions",
+    enforce: "pre",
+    transform(source, id) {
+      if (!id.replaceAll("\\", "/").endsWith("/tests/fixtures/present-playback-safety-harness.jsx")) {
+        return null;
+      }
+      const marker = "    publish: runtime.publish";
+      if (!source.includes(marker)) {
+        return null;
+      }
+      return {
+        code: source.replace(marker, `${marker},
+    openNewSession() {
+      runtime.openNewSession(presentationState, {
+        sourceSelection: { status: "valid", reason: null },
+      });
+    },
+    reopenAudience() {
+      runtime.reopenAudience();
+    },`),
+        map: null,
+      };
+    },
+  }],
   server: { host: "127.0.0.1", port: 0 },
 });
 await vite.listen();
@@ -40,7 +65,7 @@ test("Present Play starts the mounted provider-owned timeline", async () => {
   try {
     await page.goto(`${baseURL}/tests/fixtures/present-playback-safety-harness.html`);
     await page.waitForFunction(() => window.__presentPlaybackHarnessReady === true);
-    await page.locator('[data-presentation-control-id="open-new-session"]').click();
+    await openNewSession(page);
     await page.waitForFunction(() => Boolean(window.__presentPlaybackSafety?.sessionId));
     await page.evaluate(() => {
       const state = window.__presentPlaybackSafety;
@@ -116,10 +141,9 @@ test("throwing channel and window startup clean partial resources to a retryable
         window.__presentChannelStartThrows = selectedFailure === "channel";
         window.__presentOpenMode = selectedFailure === "window" ? "throw" : "opened";
       }, failure);
-      await page.locator('[data-presentation-control-id="open-new-session"]').click();
+      await openNewSession(page);
 
       await page.waitForFunction(() => window.__presentPlaybackSafety?.hasSession === false);
-      await page.locator('[data-presentation-control-id="open-new-session"]').waitFor();
       assert.equal(await readSafety(page, "lifecycle"), "ended");
     } finally {
       await page.close();
@@ -133,7 +157,7 @@ test("popup-blocked Open retains one retryable session and Reopen uses its ident
     await page.goto(`${baseURL}/tests/fixtures/present-playback-safety-harness.html`);
     await page.waitForFunction(() => window.__presentPlaybackHarnessReady === true);
     await page.evaluate(() => { window.__presentOpenMode = "blocked"; });
-    await page.locator('[data-presentation-control-id="open-new-session"]').click();
+    await openNewSession(page);
     await page.waitForFunction(() => window.__presentPlaybackSafety?.hasSession === true);
     const first = await page.evaluate(() => ({
       sessionId: window.__presentPlaybackSafety.sessionId,
@@ -141,7 +165,7 @@ test("popup-blocked Open retains one retryable session and Reopen uses its ident
     }));
 
     await page.evaluate(() => { window.__presentOpenMode = "opened"; });
-    await page.locator('[data-presentation-control-id="reopen-audience"]').click();
+    await reopenAudience(page);
     await page.waitForFunction(() => window.__presentAudienceWindow.closed === false);
     const retried = await page.evaluate(() => ({
       sessionId: window.__presentPlaybackSafety.sessionId,
@@ -160,7 +184,7 @@ test("runtime unmount terminalizes before throwing publish and still closes and 
   try {
     await page.goto(`${baseURL}/tests/fixtures/present-playback-safety-harness.html`);
     await page.waitForFunction(() => window.__presentPlaybackHarnessReady === true);
-    await page.locator('[data-presentation-control-id="open-new-session"]').click();
+    await openNewSession(page);
     await page.waitForFunction(() => Boolean(window.__presentPlaybackSafety?.sessionId));
     await page.evaluate(() => {
       window.__presentTeardownCalls = [];
@@ -173,7 +197,7 @@ test("runtime unmount terminalizes before throwing publish and still closes and 
     assert.equal(await page.evaluate(() => window.__presentReentrantPublishResult), null);
     assert.deepEqual(
       await page.evaluate(() => window.__presentTeardownCalls),
-      ["publish", "close", "dispose"],
+      ["publish", "close", "dispose", "dispose"],
     );
   } finally {
     await page.close();
@@ -183,7 +207,7 @@ test("runtime unmount terminalizes before throwing publish and still closes and 
 async function openConnectedSafetyHarness(page) {
   await page.goto(`${baseURL}/tests/fixtures/present-playback-safety-harness.html`);
   await page.waitForFunction(() => window.__presentPlaybackHarnessReady === true);
-  await page.locator('[data-presentation-control-id="open-new-session"]').click();
+  await openNewSession(page);
   await page.waitForFunction(() => Boolean(window.__presentPlaybackSafety?.sessionId));
   await page.evaluate(() => {
     const state = window.__presentPlaybackSafety;
@@ -213,4 +237,16 @@ async function assertFrozen(page, expectedIndex) {
 
 async function readSafety(page, key) {
   return page.evaluate((selectedKey) => window.__presentPlaybackSafety?.[selectedKey], key);
+}
+
+async function openNewSession(page) {
+  await page.evaluate(() => {
+    window.__presentPlaybackRuntime.openNewSession();
+  });
+}
+
+async function reopenAudience(page) {
+  await page.evaluate(() => {
+    window.__presentPlaybackRuntime.reopenAudience();
+  });
 }

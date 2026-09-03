@@ -71,6 +71,7 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await expect(audience.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
 
   const beforeTime = await audienceImageSnapshot(audience, imagePanelId);
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
   await page.locator('[data-presentation-control-id="source"]')
     .selectOption(`group:${authored.chronoGroupId}`);
   await expect.poll(() => observedControllerStateSequence(page))
@@ -190,12 +191,15 @@ async function createFreeText(page) {
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(FREE_TEXT_TITLE);
-  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
-  await wizard.getByLabel("Portable QMD source").fill([
+  const renderedPreview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(renderedPreview).toBeVisible();
+  await wizard.getByRole("button", { name: "Raw text", exact: true }).click();
+  await wizard.getByLabel("Portable QMD raw source").fill([
     "## Internal runbook",
     "<script>globalThis.__mustRemainInert = true</script>",
     "![remote](https://example.test/must-not-load.png)",
   ].join("\n"));
+  await expect(renderedPreview).toContainText("Internal runbook");
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -466,27 +470,19 @@ async function removeDurableImageAsset(page, panelId) {
     const placement = dashboard.dataSources[panel.sourceId];
     const assetId = dashboard.contentLibrary.mediaItems[placement.mediaId].current.assetId;
     const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
-    globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__ = await store.read(assetId);
-    await store.remove(assetId);
+    globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__ = await store.snapshot([assetId]);
+    await store.restore(new Map([[assetId, null]]));
     return assetId;
   }, { key: STORAGE_KEY, requestedPanelId: panelId });
 }
 
 async function restoreDurableImageAsset(page, expectedAssetId) {
   const restored = await page.evaluate(async () => {
-    const asset = globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__;
+    const snapshot = globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__;
     const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
-    const transactionId = `audience-reconnect-${Date.now()}`;
-    const staged = await store.stage({
-      bytes: asset.bytes,
-      mediaType: asset.mediaType,
-      width: asset.width,
-      height: asset.height,
-      transactionId,
-    });
-    await store.commit(staged.assetId, { transactionId });
+    await store.restore(snapshot);
     delete globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__;
-    return staged.assetId;
+    return [...snapshot.keys()][0];
   });
   expect(restored).toBe(expectedAssetId);
 }

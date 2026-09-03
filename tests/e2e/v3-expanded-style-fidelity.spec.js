@@ -35,8 +35,8 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
   await expect(page.locator('[data-canonical-mode="home"]')).toBeVisible();
 
   for (const style of STYLE_OPTIONS) {
-    await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-    const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Theme" });
     await look.getByLabel(style.label, { exact: true }).check();
     await look.locator(`[data-profile-option="${style.profile}"] input`).check();
     await page.keyboard.press("Escape");
@@ -80,8 +80,8 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Theme" });
   await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await page.keyboard.press("Escape");
@@ -220,7 +220,7 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   await expect(owner.getByRole("button", { name: "Retry Save", exact: true })).toBeVisible();
   const failedNotice = page.locator('[data-operation-status="failed"]')
     .filter({ hasText: "Dashboard persistence is temporarily unavailable." });
-  await expect(failedNotice).toBeVisible();
+  await expect(failedNotice).toBeHidden();
   await expect(failedNotice.locator("p"))
     .toHaveText("Dashboard persistence is temporarily unavailable.");
   const error = await observePendingOwnerStyle(page, ownerId, "error");
@@ -235,9 +235,13 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   expect(error.actionCopy.join(" ")).toContain("Retry Save");
   expect(error.geometry).toEqual(active.geometry);
   await expectNoRetiredDashboardStyle(page);
+
+  await page.keyboard.press("Escape");
+  await expect(full).toHaveCount(0);
+  await expect(failedNotice).toBeVisible();
 });
 
-test("Text/Image Composer, sanitized notice, Preview, Advanced QMD, and Panel size use semantic contracts", async ({ page }) => {
+test("Text/Image Composer, sanitized notice, rendered preview, raw source, and Panel size use semantic contracts", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
@@ -261,37 +265,32 @@ test("Text/Image Composer, sanitized notice, Preview, Advanced QMD, and Panel si
   });
   await expect(wizard.locator(".portable-qmd-composer__announcement"))
     .toContainText(/unsupported paste formatting was removed/i);
-  await expect(wizard.getByRole("grid", { name: /Panel size:/ })).toBeVisible();
-  await wizard.getByRole("gridcell", { name: "Set panel size to 4 columns by 2 rows" }).click();
+  const width = wizard.getByRole("combobox", { name: "Width", exact: true });
+  const rowHeight = wizard.getByRole("combobox", { name: "Row height", exact: true });
+  await expect(width).toHaveValue("2");
+  await expect(rowHeight).toHaveValue("1");
+  await expect(wizard.getByRole("img", { name: "Panel size: 2 columns by 100% of a row" })).toBeVisible();
+  await width.selectOption("4");
+  await rowHeight.selectOption("2");
+  await expect(wizard.getByRole("img", { name: "Panel size: 4 columns by 200% of a row" })).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
 
-  const boldControl = wizard.getByRole("tabpanel", { name: "Composer" }).getByRole("button", { name: "Bold" });
+  const boldControl = wizard.getByRole("button", { name: "Bold", exact: true });
   await boldControl.evaluate((node) => { node.style.fontFamily = "Times New Roman"; });
   const toolbarFontFailure = await captureStyleAuditFailure(page);
   expect(toolbarFontFailure).toContain("fontFamily");
   await boldControl.evaluate((node) => { node.style.removeProperty("font-family"); });
   await expectNoRetiredDashboardStyle(page);
 
-  await wizard.getByRole("tab", { name: "Preview" }).click();
-  await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(/Operational response|Safe paste/);
+  const renderedPreview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(renderedPreview).toContainText(/Operational response|Safe paste/);
   await expectNoRetiredDashboardStyle(page);
 
-  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
-  const advancedSource = wizard.getByLabel("Portable QMD source");
-  const advancedHelp = wizard.getByText(/Advanced QMD preserves exact authored source/);
-  const insertImage = wizard.getByRole("button", { name: "Insert image", exact: true });
-  await expect(advancedSource).toBeVisible();
-  const advancedGeometry = await Promise.all([
-    advancedSource.boundingBox(),
-    advancedHelp.boundingBox(),
-    insertImage.boundingBox(),
-  ]);
-  expect(advancedGeometry.every(Boolean)).toBe(true);
-  const [sourceBox, helpBox, insertBox] = advancedGeometry;
-  expect(sourceBox.height).toBeGreaterThanOrEqual(180);
-  expect(helpBox.y).toBeGreaterThanOrEqual(sourceBox.y + sourceBox.height + 8);
-  expect(insertBox.y).toBeGreaterThanOrEqual(helpBox.y + helpBox.height + 8);
-  await expectNoRetiredDashboardStyle(page);
+  await wizard.getByRole("button", { name: "Raw text", exact: true }).click();
+  const rawSource = wizard.getByLabel("Portable QMD raw source", { exact: true });
+  await expect(rawSource).toBeVisible();
+  await expect(rawSource).toHaveValue(/Operational response|Safe paste/);
+  await expect(renderedPreview).toContainText(/Operational response|Safe paste/);
 });
 
 test("Present, Audience options, and standalone Audience use selected style", async ({ page }) => {

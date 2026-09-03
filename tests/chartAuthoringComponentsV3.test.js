@@ -1288,6 +1288,7 @@ test("generated fields associate labels, help, and errors with their control", (
   }));
 
   assert.match(html, /for="chart-field-title"/);
+  assert.match(html, /<span class="chart-authoring-field-required-marker"[^>]*> \*<\/span>/);
   assert.match(html, /aria-describedby="chart-field-title-help chart-field-title-error"/);
   assert.match(html, /role="alert"/);
 });
@@ -1317,9 +1318,9 @@ test("multi-control authoring fields use fieldset and legend semantics", () => {
     onChange() {},
   }));
 
-  assert.match(role, /<fieldset[^>]*>.*<legend>Measurements<\/legend>/);
-  assert.match(collection, /<fieldset[^>]*>.*<legend>Collection display<\/legend>/);
-  assert.match(delta, /<fieldset[^>]*>.*<legend>Comparison<\/legend>/);
+  assert.match(role, /<fieldset[^>]*>.*<legend><span[^>]*>Measurements<\/span><\/legend>/);
+  assert.match(collection, /<fieldset[^>]*>.*<legend><span[^>]*>Collection display<\/span><\/legend>/);
+  assert.match(delta, /<fieldset[^>]*>.*<legend><span[^>]*>Comparison<\/span><\/legend>/);
 });
 
 test("preview uses the shared chart renderer for ready data and bounds actionable failures", () => {
@@ -1756,7 +1757,7 @@ test("a structured field omits only the legend that duplicates its section headi
   assert.match(duplicate, /<legend>X axis<\/legend>/);
   assert.match(duplicate, /<legend>Primary axis<\/legend>/);
   assert.match(duplicate, /<legend>Secondary axis<\/legend>/);
-  assert.match(distinct, /<h3[^>]*>Appearance<\/h3>[\s\S]*<legend>Axes<\/legend>/);
+  assert.match(distinct, /<h3[^>]*>Appearance<\/h3>[\s\S]*<legend><span[^>]*>Axes<\/span><\/legend>/);
 });
 
 test("the full editor separates chart identity and type from footprint controls", () => {
@@ -3158,6 +3159,65 @@ test("chart editor actions lock while persistence is pending", () => {
   );
 });
 
+test("chart editor actions place the full-editor glyph immediately before Save", () => {
+  let opened = 0;
+  const html = render(React.createElement(EditSessionActions, {
+    valid: true,
+    leadingAction: {
+      interactionId: "shell.open-editable-tab",
+      ariaLabel: "Open full editor",
+      tooltip: "Open full editor",
+      onClick() { opened += 1; },
+    },
+    onSave() {},
+  }));
+  const openIndex = html.indexOf('data-icon-control="shell.open-editable-tab"');
+  const saveIndex = html.indexOf('data-icon-control="editor.save-changes"');
+  assert.ok(openIndex >= 0);
+  assert.ok(saveIndex > openIndex);
+  assert.deepEqual(
+    [...html.matchAll(/data-icon-control="([^"]+)"/g)].map((match) => match[1]).slice(0, 2),
+    ["shell.open-editable-tab", "editor.save-changes"],
+  );
+  assert.match(html, /aria-label="Open full editor"/);
+  assert.match(html, /data-icon-tooltip="Open full editor"/);
+
+  const tree = EditSessionActions({
+    valid: true,
+    leadingAction: {
+      interactionId: "shell.open-editable-tab",
+      ariaLabel: "Open full editor",
+      tooltip: "Open full editor",
+      onClick() { opened += 1; },
+    },
+    onSave() {},
+  });
+  const open = findElement(tree, (element) => (
+    element.type === IconControl && element.props.interactionId === "shell.open-editable-tab"
+  ));
+  assert.ok(open);
+  open.props.onClick();
+  assert.equal(opened, 1);
+});
+
+test("chart editor actions fail closed for a malformed leading action", () => {
+  for (const leadingAction of [{}, { interactionId: "stale.unknown-action" }]) {
+    assert.doesNotThrow(() => render(React.createElement(EditSessionActions, {
+      valid: true,
+      leadingAction,
+      onSave() {},
+    })));
+    const html = render(React.createElement(EditSessionActions, {
+      valid: true,
+      leadingAction,
+      onSave() {},
+    }));
+    assert.doesNotMatch(html, /data-icon-control="undefined"/);
+    assert.doesNotMatch(html, /data-icon-control="stale\.unknown-action"/);
+    assert.equal((html.match(/data-icon-control="/g) ?? []).length, 3);
+  }
+});
+
 test("pending chart persistence disables and guards removal", () => {
   let removals = 0;
   const tree = EditSessionActions({
@@ -3217,7 +3277,8 @@ test("quick editor renders the complete controlled surface without full-editor o
   assert.match(html, /Series colors/);
   assert.match(html, /Reference line color/);
   assert.match(html, /Chart size/);
-  assert.match(html, />Open full editor<\/button>/);
+  assert.match(html, /data-icon-control="shell.open-editable-tab"/);
+  assert.doesNotMatch(html, /chart-quick-editor-open-full/);
   assert.match(html, /aria-label="Save"/);
   assert.match(html, /aria-label="Reset"/);
   assert.match(html, /aria-label="Close"/);
@@ -3314,9 +3375,7 @@ test("quick editor emits detached draft changes and delegates every session acti
     element.type === EditSessionActions
   ));
   const form = findElement(tree, (element) => element.type === "form");
-  const openFull = findElement(tree, (element) => (
-    element.type === "button" && element.props.children === "Open full editor"
-  ));
+  const openFull = editActions.props.leadingAction;
 
   quickSection.props.onChange(["title"], "Detached title");
   quickSection.props.onChange(
@@ -3328,7 +3387,7 @@ test("quick editor emits detached draft changes and delegates every session acti
   editActions.props.onRequestReset();
   editActions.props.onCancel();
   editActions.props.onRemove();
-  openFull.props.onClick();
+  openFull.onClick();
 
   assert.equal(prevented, 1);
   assert.deepEqual(actions, ["save", "reset", "close", "remove", "full"]);
@@ -3365,23 +3424,21 @@ test("quick editor guards clean and externally locked actions while preserving f
     onOpenFullEditor() { actions.push("full"); },
   });
   const form = findElement(lockedTree, (element) => element.type === "form");
-  const openFull = findElement(lockedTree, (element) => (
-    element.type === "button" && element.props.children === "Open full editor"
-  ));
   const editActions = findElement(lockedTree, (element) => (
     element.type === EditSessionActions
   ));
+  const openFull = editActions.props.leadingAction;
   const lockedAside = findElement(lockedTree, (element) => element.type === "aside");
 
   form.props.onSubmit({ preventDefault() {} });
-  openFull.props.onClick();
+  openFull.onClick();
   assert.deepEqual(actions, []);
-  assert.equal(openFull.props.disabled, true);
+  assert.equal(openFull.disabled, true);
   assert.equal(editActions.props.disabled, true);
   assert.equal(lockedAside.props.inert, true);
 });
 
-test("saving quick editor keeps pointer-only reason anchors exposed while controls stay locked", () => {
+test("saving quick editor keeps hover reason anchors exposed while controls stay locked", () => {
   const clean = createChartEditSession({
     placementId: "placement-line",
     chart: validLineChart(),
@@ -3408,16 +3465,23 @@ test("saving quick editor keeps pointer-only reason anchors exposed while contro
   });
   const savingAside = findElement(tree, (element) => element.type === "aside");
   const aside = html.match(/<aside\b[^>]*>/)?.[0] ?? "";
-  const reasonIds = [...html.matchAll(
-    /data-control-tooltip-kind="disabled" tabindex="-1" aria-describedby="([^"]+)"/g,
-  )].map((match) => match[1]);
+  const reasonAnchors = [...html.matchAll(
+    /<span class="control-tooltip"[^>]*data-control-tooltip-kind="disabled"[^>]*>/g,
+  )].map((match) => match[0]);
+  const reasonIds = reasonAnchors.map(
+    (anchor) => anchor.match(/aria-describedby="([^"]+)"/)?.[1],
+  );
 
   assert.match(aside, /aria-busy="true"/);
   assert.match(aside, /data-chart-edit-status="saving"/);
   assert.equal(savingAside.props.inert, undefined);
   assert.doesNotMatch(aside, /\sinert(?:=|\s|>)/);
   assert.equal(reasonIds.length, 4);
+  for (const reasonAnchor of reasonAnchors) {
+    assert.doesNotMatch(reasonAnchor, /tabindex=/);
+  }
   for (const reasonId of reasonIds) {
+    assert.ok(reasonId);
     assert.match(
       html,
       new RegExp(`id="${reasonId}" role="tooltip"[^>]*>Wait for the current chart operation to finish\\.`),
@@ -3446,14 +3510,12 @@ test("quick editor fails closed when durable and full-editor authorities are abs
     },
   );
   const tree = ChartQuickEditor({ session });
-  const openFull = findElement(tree, (element) => (
-    element.type === "button" && element.props.children === "Open full editor"
-  ));
   const editActions = findElement(tree, (element) => (
     element.type === EditSessionActions
   ));
+  const openFull = editActions.props.leadingAction;
 
-  assert.equal(openFull.props.disabled, true);
+  assert.equal(openFull.disabled, true);
   assert.equal(editActions.props.saveDisabled, true);
   assert.equal(editActions.props.removeDisabled, true);
   assert.match(editActions.props.saveDisabledReason, /unavailable/i);

@@ -60,16 +60,16 @@ export function createDashboardLookCommitScheduler({
   onError = () => {},
 } = {}) {
   if (!Number.isFinite(delay) || delay < 0) {
-    throw new RangeError("Dashboard look commit delay must be non-negative.");
+    throw new RangeError("Theme commit delay must be non-negative.");
   }
   if (
     typeof timerTarget?.setTimeout !== "function"
     || typeof timerTarget?.clearTimeout !== "function"
   ) {
-    throw new TypeError("Dashboard look commits require timer support.");
+    throw new TypeError("Theme commits require timer support.");
   }
   if (typeof onCommit !== "function") {
-    throw new TypeError("Dashboard look commits require an onCommit callback.");
+    throw new TypeError("Theme commits require an onCommit callback.");
   }
 
   let timerId = null;
@@ -95,7 +95,7 @@ export function createDashboardLookCommitScheduler({
 
   return Object.freeze({
     schedule(value) {
-      if (disposed) throw new Error("Dashboard look commit scheduler is disposed.");
+      if (disposed) throw new Error("Theme commit scheduler is disposed.");
       pending = structuredClone(value);
       clearTimer();
       timerId = timerTarget.setTimeout(commitLatest, delay);
@@ -114,13 +114,13 @@ export function createDashboardLookCommitScheduler({
 
 export function closeDashboardLookInBackground({ scheduler, onApply, onCanonicalize = () => {}, onClose }) {
   if (typeof onApply !== "function") {
-    throw new TypeError("Closing Dashboard Look requires an onApply callback.");
+    throw new TypeError("Closing Theme requires an onApply callback.");
   }
   if (typeof onClose !== "function") {
-    throw new TypeError("Closing Dashboard Look requires an onClose callback.");
+    throw new TypeError("Closing Theme requires an onClose callback.");
   }
   if (typeof scheduler?.flush !== "function") {
-    throw new TypeError("Closing Dashboard Look requires a commit scheduler.");
+    throw new TypeError("Closing Theme requires a commit scheduler.");
   }
   const applied = onApply();
   onCanonicalize(applied);

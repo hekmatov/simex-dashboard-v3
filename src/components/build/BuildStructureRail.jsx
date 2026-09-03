@@ -11,6 +11,7 @@ import {
   encodeBuildMovePayload,
   focusedTreeKeyAfterCollapse,
   moveSourceForNode,
+  resolveBuildTreeDropEdge,
   selectionKey,
   visibleBuildTreeNodes,
 } from "./buildTreeInteraction.js";
@@ -156,7 +157,12 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
         event.preventDefault();
         event.stopPropagation();
         const rect = event.currentTarget.getBoundingClientRect();
-        setDropIndicator({ key: node.key, edge: event.clientY < rect.top + rect.height / 2 ? "before" : "after" });
+        const edge = resolveBuildTreeDropEdge({
+          clientY: event.clientY,
+          rect,
+          ...treeDropSiblingContext(dashboard, source, node),
+        });
+        setDropIndicator({ key: node.key, edge });
         event.dataTransfer.dropEffect = "move";
       }}
       onDrop={(event) => {
@@ -164,7 +170,11 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
         if (!legalDrop(source, node)) return;
         event.preventDefault();
         event.stopPropagation();
-        const edge = dropIndicator?.key === node.key ? dropIndicator.edge : "after";
+        const edge = resolveBuildTreeDropEdge({
+          clientY: event.clientY,
+          rect: event.currentTarget.getBoundingClientRect(),
+          ...treeDropSiblingContext(dashboard, source, node),
+        });
         const move = moveForTreeDrop(dashboard, source, node, edge);
         setDropIndicator(null);
         dragSessionRef.current.clear();
@@ -279,4 +289,40 @@ function moveForTreeDrop(dashboard, source, node, edge) {
     ? (section?.panels ?? []).length
     : (section?.panels ?? []).findIndex(({ id }) => id === node.placementId) + (edge === "after" ? 1 : 0);
   return canonicalMove(source, { pageId: node.pageId, sectionId: node.sectionId, index });
+}
+
+function treeDropSiblingContext(dashboard, source, node) {
+  if (source?.kind === "page" && node?.kind === "page") {
+    return {
+      sameParent: true,
+      sourceIndex: (dashboard.pages ?? []).findIndex(({ id }) => id === source.pageId),
+      targetIndex: (dashboard.pages ?? []).findIndex(({ id }) => id === node.pageId),
+    };
+  }
+
+  if (source?.kind === "section" && node?.kind === "section" && source.pageId === node.pageId) {
+    const page = (dashboard.pages ?? []).find(({ id }) => id === node.pageId);
+    return {
+      sameParent: true,
+      sourceIndex: (page?.sections ?? []).findIndex(({ id }) => id === source.sectionId),
+      targetIndex: (page?.sections ?? []).findIndex(({ id }) => id === node.sectionId),
+    };
+  }
+
+  if (
+    source?.kind === "panel"
+    && node?.kind === "chart"
+    && source.pageId === node.pageId
+    && source.sectionId === node.sectionId
+  ) {
+    const page = (dashboard.pages ?? []).find(({ id }) => id === node.pageId);
+    const section = (page?.sections ?? []).find(({ id }) => id === node.sectionId);
+    return {
+      sameParent: true,
+      sourceIndex: (section?.panels ?? []).findIndex(({ id }) => id === source.placementId),
+      targetIndex: (section?.panels ?? []).findIndex(({ id }) => id === node.placementId),
+    };
+  }
+
+  return { sameParent: false, sourceIndex: null, targetIndex: null };
 }

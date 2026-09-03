@@ -17,7 +17,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Step 7 canonical content is preserved across the 1024px desktop gate", async ({ page }) => {
+test("Step 7 canonical content remains available across the recommended 1024px boundary", async ({ page }) => {
   test.setTimeout(240_000);
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
@@ -26,38 +26,26 @@ test("Step 7 canonical content is preserved across the 1024px desktop gate", asy
     const view = await readCanvasContract(page);
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
+    const build = await readCanvasContract(page);
+    const notice = page.locator('[data-desktop-width-notice="build"]');
+    const workspace = page.locator(".build-mode-shell");
+
+    expect(build.canvasId).toBe(view.canvasId);
+    expect(build.ids).toEqual(view.ids);
+    expect(build.maxWidth).toBe(view.maxWidth);
+    expect(build.frameWidth).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
+    await expect(workspace).toBeVisible();
+
     if (viewport.width < 1024) {
-      const gatedBuild = await readMountedCanvasContract(page);
-      const notice = page.locator('[data-phone-mode-notice="build"]');
-      const workspace = page.locator(".build-mode-shell");
       await expect(notice).toBeVisible();
-      await expect(workspace).toHaveCount(1);
-      await expect(workspace).toBeHidden();
-      expect(gatedBuild.canvasId).toBe(view.canvasId);
-      expect(gatedBuild.ids).toEqual(view.ids);
-
-      const screenshot = await page.screenshot({ animations: "disabled" });
-      expect(screenshot.byteLength).toBeGreaterThan(1_000);
-
-      await page.setViewportSize({ width: 1024, height: 768 });
-      await expect(notice).toBeHidden();
-      await expect(workspace).toBeVisible();
-      const restoredBuild = await readCanvasContract(page);
-      expect(restoredBuild.canvasId).toBe(gatedBuild.canvasId);
-      expect(restoredBuild.ids).toEqual(gatedBuild.ids);
-      expect(restoredBuild.maxWidth).toBe(view.maxWidth);
-      expect(restoredBuild.frameWidth)
-        .toBeLessThanOrEqual(Number.parseFloat(restoredBuild.maxWidth));
+      await expect(notice).toHaveText("A minimum width of 1024px is recommended for Build.");
+      await expect(page.locator('[data-build-command-action="add-chart"]')).toBeEnabled();
     } else {
-      const build = await readCanvasContract(page);
-      expect(build.canvasId).toBe(view.canvasId);
-      expect(build.ids).toEqual(view.ids);
-      expect(build.maxWidth).toBe(view.maxWidth);
-      expect(build.frameWidth).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
-      await expect(page.locator('[data-phone-mode-notice="build"]')).toBeHidden();
-      const screenshot = await page.screenshot({ animations: "disabled" });
-      expect(screenshot.byteLength).toBeGreaterThan(10_000);
+      await expect(notice).toBeHidden();
     }
+
+    const screenshot = await page.screenshot({ animations: "disabled" });
+    expect(screenshot.byteLength).toBeGreaterThan(10_000);
   }
 
   const footer = page.locator(".dashboard-footer");

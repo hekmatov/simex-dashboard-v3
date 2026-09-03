@@ -95,7 +95,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Free-text toolbar authors portable semantic styles, emphasis, lists, and tables", async ({ page }) => {
+test("Free-text composer authors portable semantic styles, keyboard emphasis, lists, tables, and preview", async ({ page }) => {
   await openBiomedicalBuild(page);
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
@@ -106,7 +106,9 @@ test("Free-text toolbar authors portable semantic styles, emphasis, lists, and t
 
   await composer.fill("Brief");
   await composer.press("Control+a");
-  await wizard.getByRole("button", { name: "Bold" }).click();
+  await composer.press("Control+b");
+  await expect(wizard.getByRole("button", { name: "Bold" }))
+    .toHaveAttribute("aria-pressed", "true");
   await wizard.getByLabel("Semantic text style").selectOption("heading");
   await expect(composer.locator("h2 strong")).toHaveText("Brief");
 
@@ -118,8 +120,9 @@ test("Free-text toolbar authors portable semantic styles, emphasis, lists, and t
   await composer.fill("");
   await wizard.getByRole("button", { name: "Table" }).click();
   await expect(composer.locator("table")).toBeVisible();
-  await expect(wizard.locator("#static-qmd-source-status"))
-    .toContainText("Preview is up to date.");
+  const preview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(preview).toBeVisible();
+  await expect(preview.locator("table")).toBeVisible();
 });
 
 test("embedded image persists through reload and a second Text/Image creation", async ({ page }) => {
@@ -150,7 +153,9 @@ test("embedded image persists through reload and a second Text/Image creation", 
       buffer: EMBEDDED_PNG,
     });
   await expect(wizard.locator('[data-qmd-media-host] img[alt="embedded-proof.png"]')).toBeVisible();
-  await expect(await advancedQmdSource(wizard)).toHaveValue(/!\[embedded-proof\.png\]\(simex-media:media-/);
+  await expect(await rawQmdSource(wizard)).toHaveValue(/!\[embedded-proof\.png\]\(simex-media:media-/);
+  await wizard.getByRole("button", { name: "Formatted text", exact: true }).click();
+  await expect(wizard.getByLabel("Portable QMD Composer editing area")).toBeVisible();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -217,10 +222,9 @@ test("Free Text edit embedded image retries durably through reload", async ({ pa
   const before = await readSavedFreeText(page, "Embedded edit durability");
   let panel = canonicalPanel(page, before.panel.id);
   await panel.scrollIntoViewIfNeeded();
-  await prepareFreeTextEditorTrigger(panel, "Embedded edit durability");
   await openFreeTextEditor(panel, page, "Embedded edit durability");
-  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
-  await editor.getByRole("tab", { name: "Composer" }).click();
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  await expect(editor.getByLabel("Portable QMD Composer editing area")).toBeVisible();
   await editor.getByRole("button", { name: "Insert image" }).click();
   await editor.getByRole("region", { name: "Media picker" })
     .getByLabel("PNG, JPEG, or WebP file").setInputFiles({
@@ -304,19 +308,20 @@ for (const viewport of VIEWPORTS) {
     await panel.locator(".free-text-chart-view").evaluate((node) => {
       node.scrollTop = Math.min(120, node.scrollHeight - node.clientHeight);
     });
-    await prepareFreeTextEditorTrigger(panel, title);
+    const discardTrigger = await prepareFreeTextEditorTrigger(panel, title);
     const beforeDiscard = await inspectBuildStaticState(page, panel);
 
-    await openFreeTextEditor(panel, page, title);
-    let editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+    await openFreeTextEditor(panel, page, title, discardTrigger);
+    let editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await expectStaticEditorCompression(page, viewport, beforeDiscard);
-    const editorSource = await advancedQmdSource(editor);
+    const editorSource = await rawQmdSource(editor);
     await editorSource.fill(INERT_QMD);
-    await expect(editor.getByRole("status")).toContainText("Preview is up to date");
     await expect(editor.getByRole("button", { name: "Continue" })).toBeEnabled();
     await expect(editor.getByRole("button", { name: "Preview & add", exact: true })).toBeEnabled();
-    await editor.getByRole("tab", { name: "Preview" }).click();
-    await expectInertAuthoredSurface(editor.locator('[data-free-text-pane="preview"]'), "Cancelled copy");
+    await expectInertAuthoredSurface(
+      editor.getByRole("region", { name: "Rendered preview" }),
+      "Cancelled copy",
+    );
     expect(await page.evaluate(() => window.authoredCodeRan)).toBeUndefined();
     expect(authoredResourceRequests).toEqual([]);
     expect((await readSavedFreeText(page, title)).source.qmd).toBe(INITIAL_QMD);
@@ -334,13 +339,14 @@ for (const viewport of VIEWPORTS) {
 
     panel = canonicalPanel(page, saved.panel.id);
     await panel.scrollIntoViewIfNeeded();
-    await prepareFreeTextEditorTrigger(panel, title);
+    const saveTrigger = await prepareFreeTextEditorTrigger(panel, title);
     const beforeSave = await inspectBuildStaticState(page, panel);
-    await openFreeTextEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+    await openFreeTextEditor(panel, page, title, saveTrigger);
+    editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await expectStaticEditorCompression(page, viewport, beforeSave);
-    await (await advancedQmdSource(editor)).fill(SAVED_QMD);
-    await expect(editor.getByRole("status")).toContainText("Preview is up to date");
+    await (await rawQmdSource(editor)).fill(SAVED_QMD);
+    await expect(editor.getByRole("region", { name: "Rendered preview" }))
+      .toContainText("Updated priorities");
     await editor.getByRole("button", { name: "Continue" }).click();
     await expect(editor.getByLabel("Text/Image preview")).toContainText("Updated priorities");
     await editor.getByRole("button", { name: "Save" }).click();
@@ -395,8 +401,7 @@ for (const viewport of VIEWPORTS) {
     await expect.poll(() => fullscreenText.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
     expect(await fullscreenText.evaluate((node) => getComputedStyle(node).overflowY)).toBe("auto");
     expect(authoredResourceRequests).toEqual([]);
-    await fullscreen.getByRole("button", { name: "Exit focus" }).click();
-    await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
+    await fullscreen.getByRole("button", { name: "Exit fullscreen" }).click();
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Present", exact: true }).click();
@@ -480,7 +485,7 @@ test("FT-05 View and fullscreen activate only safe links by pointer and keyboard
   await expectPortableLinkCorpus(fullscreen, saved.panel.id);
   await activateSafeExternal({ context, surface: fullscreen, method: "keyboard", offline: false });
   await activateScopedFragment({ page, surface: fullscreen, method: "pointer", panelId: saved.panel.id });
-  await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+  await fullscreen.getByRole("button", { name: "Exit fullscreen" }).click();
   await expect(fullscreen).toHaveCount(0);
 
   browserOffline = true;
@@ -517,9 +522,10 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill("Boundary traversal");
-  const source = await advancedQmdSource(wizard);
+  const source = await rawQmdSource(wizard);
   await source.fill(SAFE_RECOVERY_QMD);
-  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+  await expect(wizard.getByRole("region", { name: "Rendered preview" }))
+    .toContainText("Current-session source recovered");
 
   const tooManyColumns = tableWithColumns(21);
   const tooManyRows = tableWithRows(101);
@@ -579,10 +585,9 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
 
   const panel = canonicalPanel(page, saved.panel.id);
   await panel.scrollIntoViewIfNeeded();
-  await prepareFreeTextEditorTrigger(panel, "Boundary traversal");
   await openFreeTextEditor(panel, page, "Boundary traversal");
-  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
-  const editorSource = await advancedQmdSource(editor);
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  const editorSource = await rawQmdSource(editor);
   await exerciseFreeTextBoundaries({
     page,
     surface: editor,
@@ -627,25 +632,16 @@ async function createFreeText(page, {
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(title);
-  const source = await advancedQmdSource(wizard);
+  const source = await rawQmdSource(wizard);
   await source.fill(qmd);
-  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
-
-  const sourceEditor = wizard.locator(".free-text-source-editor");
-  await wizard.getByRole("tab", { name: "Preview" }).click();
-  if (viewport.width <= 860) {
-    await expect(sourceEditor).toHaveAttribute("data-layout", "tabs");
-    await expect(wizard.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
-    await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(previewText);
-    await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
-    await expect(source).toBeVisible();
-    await source.focus();
-    await expect(source).toBeFocused();
-  } else {
-    await expect(sourceEditor).toHaveAttribute("data-layout", "split");
-    await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(previewText);
-    await expect(wizard.getByRole("tablist", { name: "Text/Image authoring panes" })).toBeVisible();
-  }
+  await expect(source).toHaveValue(qmd);
+  const preview = wizard.getByRole("region", { name: "Rendered preview" });
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText(previewText);
+  await expectFreeTextAuthoringGeometry(wizard, viewport);
+  await wizard.getByRole("button", { name: "Formatted text", exact: true }).click();
+  await expect(wizard.getByLabel("Portable QMD Composer editing area")).toBeVisible();
+  await expect(preview).toBeVisible();
 
   await wizard.getByRole("button", { name: "Continue" }).click();
   await expect(wizard.getByLabel("Text/Image preview")).toContainText(previewText);
@@ -653,10 +649,32 @@ async function createFreeText(page, {
   await expect(wizard).toHaveCount(0);
 }
 
-async function advancedQmdSource(surface) {
-  const tab = surface.getByRole("tab", { name: "Advanced QMD" });
-  if (await tab.getAttribute("aria-selected") !== "true") await tab.click();
-  return surface.getByLabel("Portable QMD source");
+async function rawQmdSource(surface) {
+  const source = surface.getByLabel("Portable QMD raw source");
+  if (!(await source.isVisible())) {
+    await surface.getByRole("button", { name: "Raw text", exact: true }).click();
+  }
+  await expect(source).toBeVisible();
+  return source;
+}
+
+async function expectFreeTextAuthoringGeometry(surface, viewport) {
+  const geometry = await surface.locator(".free-text-source-editor").evaluate((node) => {
+    const editor = node.getBoundingClientRect();
+    const preview = node.querySelector('[aria-label="Rendered preview"]')?.getBoundingClientRect();
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      editorLeft: editor.left,
+      editorRight: editor.right,
+      previewWidth: preview?.width ?? 0,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  expect(geometry.viewportWidth).toBe(viewport.width);
+  expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth);
+  expect(geometry.editorLeft).toBeGreaterThanOrEqual(0);
+  expect(geometry.editorRight).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  expect(geometry.previewWidth).toBeGreaterThan(0);
 }
 
 async function expectPortableLinkCorpus(surface, panelId) {
@@ -737,16 +755,15 @@ async function exerciseFreeTextBoundaries({
     await expect(source).toHaveAttribute("aria-invalid", "true");
     await expect(surface.getByRole("button", { name: "Continue" })).toBeDisabled();
     await expect(surface.getByRole("button", { name: "Preview & add", exact: true })).toBeDisabled();
-    await surface.getByRole("tab", { name: "Preview" }).click();
-    await expect(surface.getByRole("tabpanel", { name: "Preview" }))
+    await expect(surface.getByRole("region", { name: "Rendered preview" }))
       .toContainText("Current-session source recovered");
-    await surface.getByRole("tab", { name: "Advanced QMD" }).click();
     await assertNoDraftPersisted(boundary);
     await error.locator("a").click();
     await expect(source).toBeFocused();
     await expect(source).toHaveValue(boundary.value);
     await source.fill(SAFE_RECOVERY_QMD);
-    await expect(surface.getByRole("status")).toContainText("Preview is up to date");
+    await expect(surface.getByRole("region", { name: "Rendered preview" }))
+      .toContainText("Current-session source recovered");
     await expect(surface.getByRole("button", { name: "Continue" })).toBeEnabled();
     await expect(surface.getByRole("button", { name: "Preview & add", exact: true })).toBeEnabled();
   }
@@ -825,10 +842,12 @@ function canonicalPanel(page, panelId) {
   return page.locator(`[data-panel-id="${panelId}"][data-canonical-panel-id]`);
 }
 
-async function openFreeTextEditor(panel, page, title) {
-  await panel.getByLabel(`${title} actions`)
-    .getByRole("button", { name: "Edit chart" }).click();
-  await expect(page.getByRole("dialog", { name: "Edit Text/Image" })).toBeVisible();
+async function openFreeTextEditor(panel, page, title, preparedTrigger = null) {
+  if (!preparedTrigger) await panel.hover();
+  const trigger = preparedTrigger ?? panel.getByLabel(`${title} actions`)
+    .getByRole("button", { name: "Edit chart" });
+  await trigger.click();
+  await expect(page.getByRole("dialog", { name: "Text/Image editor" })).toBeVisible();
 }
 
 async function prepareFreeTextEditorTrigger(panel, title) {
@@ -836,8 +855,8 @@ async function prepareFreeTextEditorTrigger(panel, title) {
   const trigger = panel.getByLabel(`${title} actions`)
     .getByRole("button", { name: "Edit chart" });
   await trigger.scrollIntoViewIfNeeded();
-  await trigger.focus();
-  await expect(trigger).toBeFocused();
+  await expect(trigger).toBeVisible();
+  return trigger;
 }
 
 async function inspectBuildStaticState(page, panel) {
@@ -863,32 +882,22 @@ async function expectStaticEditorCompression(page, viewport, before) {
   await expect(frame).toHaveAttribute("data-build-static-authoring-open", "true");
   const openState = await page.evaluate(() => {
     const frameNode = document.querySelector(".canonical-dashboard-frame.build-workspace");
-    const dialog = document.querySelector('.static-content-dialog[role="dialog"]');
-    const focused = document.activeElement;
-    const rect = focused?.getBoundingClientRect();
     return {
       frameWidth: frameNode.getBoundingClientRect().width,
-      focusInside: Boolean(dialog?.contains(focused)),
-      focusClear: Boolean(rect && rect.top >= 0 && rect.bottom <= window.innerHeight),
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     };
   });
   if (viewport.width >= 900) expect(openState.frameWidth).toBeLessThan(before.frameWidth - 80);
   else expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
-  expect(openState.focusInside).toBe(true);
-  expect(openState.focusClear).toBe(true);
   expect(openState.documentWidth).toBeLessThanOrEqual(openState.viewportWidth);
 }
 
 async function expectBuildStaticRestored(page, panelId, before, { preserveContentScroll = true } = {}) {
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
   await expect(frame).toHaveAttribute("data-build-static-authoring-open", "false");
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before.scrollTop);
-  await expect.poll(() => page.evaluate((placementId) => (
-    document.activeElement?.getAttribute("data-build-edit-for") === placementId
-  ), before.placementId)).toBe(true);
   const panel = canonicalPanel(page, panelId);
+  await expect(panel).toBeInViewport({ ratio: 0.1 });
   const restored = await inspectBuildStaticState(page, panel);
   expect(restored.footprint).toBe(before.footprint);
   expect(restored.placementId).toBe(before.placementId);

@@ -108,6 +108,7 @@ import {
   createDashboardThemeProjection,
   persistAppearancePreference,
   readAppearancePreference,
+  resolvePresentationThemeSnapshot,
   resolveDashboardTheme,
 } from "./theme/dashboardTheme.js";
 import {
@@ -119,10 +120,21 @@ import {
   dashboardLookUpdates,
 } from "./theme/dashboardLookDraft.js";
 import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.jsx";
-import { PointerInteractionBoundary } from "./components/common/PointerInteractionMode.js";
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 export { validateConfigurationForPersistence };
+
+export function AudienceThemeBoundary({ theme, children }) {
+  const projection = React.useMemo(
+    () => createDashboardThemeProjection(theme),
+    [theme],
+  );
+  return (
+    <DashboardChartThemeProvider projection={projection}>
+      {children}
+    </DashboardChartThemeProvider>
+  );
+}
 
 export function createDurableContentDraftCommit(persist, context = {}) {
   if (typeof persist !== "function") throw new TypeError("A dashboard persistence function is required.");
@@ -152,7 +164,7 @@ const SESSION_ONLY_MESSAGES = Object.freeze({
   dashboardAssetStorage: "Uploaded dashboard sources are available for this session but browser asset storage is unavailable.",
   dashboardAssetStorageFull: "Browser asset storage is full. Dashboard changes and uploaded sources remain available for this session only.",
   dashboardStorageFull: "Browser storage is full. Dashboard changes remain available for this session only.",
-  dashboardLook: "Dashboard look applied for this session but cannot be retained after reload.",
+  dashboardLook: "Theme applied for this session but cannot be retained after reload.",
   appearance: "Appearance applied for this session but cannot be retained after reload.",
   deviceLayout: "Device layout is applied for this session but cannot be retained after reload.",
   deviceLayoutStorageFull: "Browser storage is full. Device layout is applied for this session but cannot be retained after reload.",
@@ -232,6 +244,7 @@ function AppContent() {
   ));
   const displayStateRef = React.useRef(displayState);
   const audienceLastValidProjectionRef = React.useRef(null);
+  const audienceChannelRef = React.useRef(null);
   const dashboardRef = React.useRef(null);
   const trackedDatasetProfilesRef = React.useRef({});
   const dashboardCommitControllerRef = React.useRef(null);
@@ -290,17 +303,23 @@ function AppContent() {
     () => createDashboardThemeProjection(dashboardTheme),
     [dashboardTheme],
   );
+  const audienceDashboardTheme = React.useMemo(
+    () => resolvePresentationThemeSnapshot(audienceProjection?.theme, dashboardTheme),
+    [audienceProjection?.theme, dashboardTheme],
+  );
 
-  if (lookCommitSchedulerRef.current === null) {
-    lookCommitSchedulerRef.current = createDashboardLookCommitScheduler({
+  React.useEffect(() => {
+    const scheduler = createDashboardLookCommitScheduler({
       onCommit: commitDashboardLookPreview,
       onError: () => setLookSavingScope(""),
     });
-  }
-
-  React.useEffect(() => () => {
-    const scheduler = lookCommitSchedulerRef.current;
-    void scheduler?.flush().finally(() => scheduler.dispose());
+    lookCommitSchedulerRef.current = scheduler;
+    return () => {
+      if (lookCommitSchedulerRef.current === scheduler) {
+        lookCommitSchedulerRef.current = null;
+      }
+      void scheduler.flush().finally(() => scheduler.dispose());
+    };
   }, []);
 
   React.useEffect(
@@ -371,12 +390,12 @@ function AppContent() {
 
   const commandCrownPageActions = mode === "home" ? (
     <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
-      Dashboard look
+      Theme
     </button>
   ) : mode === "view" ? (
     <>
       <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
-        Dashboard look
+        Theme
       </button>
       <PlaybackPageActions />
       <button
@@ -397,7 +416,7 @@ function AppContent() {
         disabled={modeDisabled || buildDraftLocked}
         onClick={openDashboardLook}
       >
-        Dashboard look
+        Theme
       </button>
       <button
         type="button"
@@ -507,14 +526,32 @@ function AppContent() {
           audienceLastValidProjectionRef.current = result.lastValid;
           setAudienceProjection(result.projection);
         },
+        onThemeChange: (theme) => {
+          const applyTheme = (projection) => projection?.kind === "output"
+            ? Object.freeze({ ...projection, theme: Object.freeze(structuredClone(theme)) })
+            : projection;
+          audienceLastValidProjectionRef.current = applyTheme(
+            audienceLastValidProjectionRef.current,
+          );
+          setAudienceProjection(applyTheme);
+        },
         onConnectionChange: setAudienceConnectionStatus,
       });
       channel.start();
+      audienceChannelRef.current = channel;
     } catch {
+      audienceChannelRef.current = null;
       setAudienceConnectionStatus("waiting");
     }
-    return () => channel?.dispose();
+    return () => {
+      if (audienceChannelRef.current === channel) audienceChannelRef.current = null;
+      channel?.dispose();
+    };
   }, [dashboard, dashboardEntry.channelId, dashboardEntry.surface, presentableItemIndex]);
+
+  const publishAudienceDatePosition = React.useCallback((datePosition, pointerDownSource) => (
+    audienceChannelRef.current?.publishDatePosition(datePosition, pointerDownSource) ?? null
+  ), []);
 
   React.useEffect(() => () => {
     dashboardCommitControllerRef.current?.dispose();
@@ -1024,7 +1061,7 @@ function AppContent() {
   async function commitDashboardLookPreview(nextPreview) {
     const status = beginOperation({
       key: "dashboard-look",
-      label: "Saving dashboard look",
+      label: "Saving theme",
       priority: true,
     });
     setLookSavingScope("auto");
@@ -1039,7 +1076,7 @@ function AppContent() {
         };
       }, persistDashboardLookConfiguration);
       const message = lastDashboardPersistenceRef.current
-        ? "Dashboard look saved."
+        ? "Theme saved."
         : SESSION_ONLY_MESSAGES.dashboardLook;
       setLookStatus(message);
       status.succeed(message);
@@ -1562,33 +1599,39 @@ function AppContent() {
   if (dashboardEntry.surface === "audience") {
     if (!dashboard || error) {
       return (
-        <main className="audience-display audience-display-waiting">
-          <section className="status-panel" role="status">
-            <h1>Audience display is waiting for a valid dashboard.</h1>
-          </section>
-        </main>
+        <AudienceThemeBoundary theme={audienceDashboardTheme}>
+          <main className="audience-display audience-display-waiting">
+            <section className="status-panel" role="status">
+              <h1>Audience display is waiting for a valid dashboard.</h1>
+            </section>
+          </main>
+        </AudienceThemeBoundary>
       );
     }
     return (
-      <div
-        className="audience-theme-root"
-        data-dashboard-style={dashboardTheme.dashboardStyle}
-        data-dashboard-color-profile={dashboardTheme.dashboardColorProfile}
-        data-resolved-appearance={dashboardTheme.resolvedAppearance}
-        style={{ ...dashboardTheme.cssVariables, ...dashboardTheme.styleVariables }}
-      >
-        <AudienceDisplay
-          dashboard={dashboard}
-          contentRenderContext={{
-            mediaItems: dashboard.contentLibrary?.mediaItems ?? {},
-            assets: dashboard.assets ?? {},
-            resolveAsset: resolveBrowserAuthoredAsset,
-            requestRepair() {},
-          }}
-          connectionStatus={audienceConnectionStatus}
-          projection={audienceProjection}
-        />
-      </div>
+      <AudienceThemeBoundary theme={audienceDashboardTheme}>
+        <div
+          className="audience-theme-root"
+          data-dashboard-style={audienceDashboardTheme.dashboardStyle}
+          data-dashboard-color-profile={audienceDashboardTheme.dashboardColorProfile}
+          data-chart-color-mode={audienceDashboardTheme.chartColorMode}
+          data-resolved-appearance={audienceDashboardTheme.resolvedAppearance}
+          style={{ ...audienceDashboardTheme.cssVariables, ...audienceDashboardTheme.styleVariables }}
+        >
+          <AudienceDisplay
+            dashboard={dashboard}
+            contentRenderContext={{
+              mediaItems: dashboard.contentLibrary?.mediaItems ?? {},
+              assets: dashboard.assets ?? {},
+              resolveAsset: resolveBrowserAuthoredAsset,
+              requestRepair() {},
+            }}
+            connectionStatus={audienceConnectionStatus}
+            projection={audienceProjection}
+            onDatePositionChange={publishAudienceDatePosition}
+          />
+        </div>
+      </AudienceThemeBoundary>
     );
   }
 
@@ -1895,11 +1938,7 @@ function AppContent() {
 }
 
 export default function App() {
-  return (
-    <PointerInteractionBoundary>
-      <AppContent />
-    </PointerInteractionBoundary>
-  );
+  return <AppContent />;
 }
 
 export function saveScenarioPassportDurably({ controller, persist, value }) {

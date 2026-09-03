@@ -32,7 +32,7 @@ test("the builder FAQ provides practical first-time orientation", () => {
   const faqCopy = JSON.stringify(CANONICAL_HOME_CONTENT.faq).toLowerCase();
   assert.match(faqCopy, /add chart/);
   assert.match(faqCopy, /pages.*sections/);
-  assert.match(faqCopy, /dashboard look/);
+  assert.match(faqCopy, /open theme/);
   assert.match(faqCopy, /qmd/);
   assert.match(faqCopy, /chrono studio/);
   assert.match(faqCopy, /audience display/);

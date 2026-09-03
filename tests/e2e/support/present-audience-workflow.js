@@ -48,6 +48,9 @@ export async function installAudienceFaultInstrumentation(context) {
               }
             }
           }
+          if (data?.protocol_version === 1 && data.type === "theme") {
+            window.__audienceTestTransport.lastThemeMessage = structuredClone(data);
+          }
         });
       }
 
@@ -100,7 +103,11 @@ export async function createSavedPresentationScene(page, {
 
 export async function enterPresentWithScene(page, scene) {
   await page.locator('[data-dashboard-mode="present"]').click();
-  await page.locator('[data-presentation-control-id="source"]').selectOption(`scene:${scene.id}`);
+  const source = page.locator('[data-presentation-control-id="source"]');
+  if (!(await source.isVisible())) {
+    await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  }
+  await source.selectOption(`scene:${scene.id}`);
   await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", scene.id);
   for (const chartId of scene.present.chartIds) {
     await expect(page.locator(`.present-selected-chart[data-displayed-chart-id="${cssEscape(chartId)}"]`)).toBeVisible();
@@ -112,6 +119,9 @@ export async function openAudienceSession(page, { waitForBaseline = true } = {})
   await page.locator('[data-presentation-control-id="open-new-session"]').click();
   const popup = await popupPromise;
   await popup.waitForLoadState("domcontentloaded");
+  await popup.waitForURL((url) => Boolean(url.searchParams.get("channel")), {
+    timeout: 20_000,
+  });
   const channelId = new URL(popup.url()).searchParams.get("channel");
   expect(channelId).toBeTruthy();
   if (waitForBaseline) {
@@ -139,6 +149,15 @@ export async function readLastAcceptedAudienceState(popup) {
   ))).not.toBeNull();
   return popup.evaluate(() => structuredClone(
     window.__audienceTestTransport.lastStateMessage.payload,
+  ));
+}
+
+export async function readLastAcceptedAudienceTheme(popup) {
+  await expect.poll(() => popup.evaluate(() => (
+    window.__audienceTestTransport?.lastThemeMessage?.payload ?? null
+  ))).not.toBeNull();
+  return popup.evaluate(() => structuredClone(
+    window.__audienceTestTransport.lastThemeMessage.payload,
   ));
 }
 

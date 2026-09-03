@@ -7,6 +7,7 @@ import {
   installAudienceFaultInstrumentation,
   LIVE_APP_URL,
   openAudienceSession,
+  readLastAcceptedAudienceTheme,
   readLastAcceptedAudienceState,
   readStoredDashboard,
   readStoredScene,
@@ -37,6 +38,34 @@ test("END closes Audience and terminates the old channel", async ({ page }) => {
   const second = await openAudienceSession(page);
   expect(second.channelId).not.toBe(first.channelId);
   await second.popup.close();
+});
+
+test("an already-open Audience display follows live semantic Theme changes", async ({ context, page }) => {
+  test.setTimeout(120_000);
+  await installAudienceFaultInstrumentation(context);
+  const scene = await createSavedPresentationScene(page);
+  await enterPresentWithScene(page, scene);
+  const session = await openAudienceSession(page);
+  const audienceRoot = session.popup.locator(".audience-theme-root");
+
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const theme = page.getByRole("dialog", { name: "Theme" });
+  await theme.getByRole("radio", { name: "Humanist", exact: true }).check();
+  await theme.getByRole("radio", { name: "Forum", exact: true }).check();
+  await theme.getByRole("radio", { name: "Dark", exact: true }).check();
+
+  await expect(audienceRoot).toHaveAttribute("data-dashboard-style", "humanist-standard");
+  await expect(audienceRoot).toHaveAttribute("data-dashboard-color-profile", "humanist-standard/open-forum");
+  await expect(audienceRoot).toHaveAttribute("data-resolved-appearance", "dark");
+  expect(await readLastAcceptedAudienceState(session.popup)).not.toHaveProperty("theme");
+  await expect.poll(() => readLastAcceptedAudienceTheme(session.popup)).toEqual({
+    dashboard_style: "humanist-standard",
+    dashboard_color_profile: "humanist-standard/open-forum",
+    chart_color_mode: "profile",
+    appearance_preference: "dark",
+    resolved_appearance: "dark",
+  });
+  await session.popup.close();
 });
 
 test("Audience remains passive and last-valid through invalid output and reconnect", async ({ context, page }) => {
@@ -100,7 +129,7 @@ test("Audience surface remaining after denied close shows neutral Ended projecti
   await second.popup.close({ runBeforeUnload: false });
 });
 
-test("Present composes output and saves Scene date position through its owner", async ({ context, page }) => {
+test("Present composes output and Audience dragging saves the Scene date position", async ({ context, page }) => {
   test.setTimeout(120_000);
   await installAudienceFaultInstrumentation(context);
   const scene = await createSavedPresentationScene(page);
@@ -130,8 +159,7 @@ test("Present composes output and saves Scene date position through its owner", 
   if (displayedIds.length > 1) {
     const removedId = displayedIds.at(-1);
     const remove = page.locator(`[data-presentation-item-action="remove"][data-presentation-item-id="${cssEscape(removedId)}"]`);
-    await remove.focus();
-    await remove.press("Enter");
+    await remove.click();
     await expect(session.popup.locator(`[data-displayed-chart-id="${cssEscape(removedId)}"]`)).toHaveCount(0);
     const layout = page.locator('[data-presentation-control-id="composition-layout"]');
     const choices = await layout.locator("option").evaluateAll((options) => options.map(({ value }) => value));
@@ -139,55 +167,77 @@ test("Present composes output and saves Scene date position through its owner", 
   }
   expect(await readStoredScene(page, scene.id)).toEqual(savedBefore);
 
-  await page.locator('[data-presentation-control-id="date-position-x"]').fill("125");
-  await page.locator('[data-presentation-control-id="date-position-y"]').fill("250");
-  await page.locator('[data-presentation-control-id="date-position-width"]').fill("375");
-  await expect(page.getByText("Unsaved position", { exact: true })).toBeVisible();
+  await expect(date).toHaveAttribute("data-audience-date-draggable", "true");
+  const surfaceBounds = await session.popup.locator(".audience-display").boundingBox();
+  const dateBounds = await date.boundingBox();
+  expect(surfaceBounds).not.toBeNull();
+  expect(dateBounds).not.toBeNull();
+  const movement = { x: -96, y: 72 };
+  const expectedPosition = {
+    xPermille: clampInteger(
+      savedBefore.audience.datePosition.xPermille + (movement.x / surfaceBounds.width) * 1000,
+      0,
+      1000 - savedBefore.audience.datePosition.widthPermille,
+    ),
+    yPermille: clampInteger(
+      savedBefore.audience.datePosition.yPermille
+        + (movement.y / Math.max(1, surfaceBounds.height - dateBounds.height)) * 1000,
+      0,
+      1000,
+    ),
+    widthPermille: savedBefore.audience.datePosition.widthPermille,
+  };
+  const dragStart = {
+    x: dateBounds.x + dateBounds.width / 2,
+    y: dateBounds.y + dateBounds.height / 2,
+  };
+  await session.popup.mouse.move(dragStart.x, dragStart.y);
+  await session.popup.mouse.down();
+  await session.popup.mouse.move(
+    dragStart.x + movement.x,
+    dragStart.y + movement.y,
+    { steps: 6 },
+  );
+  await session.popup.mouse.up();
 
-  expect(await readStoredScene(page, scene.id)).toEqual(savedBefore);
-  accepted = await readLastAcceptedAudienceState(session.popup);
-  expect(accepted.audience.date_position).toEqual({
-    x_permille: savedBefore.audience.datePosition.xPermille,
-    y_permille: savedBefore.audience.datePosition.yPermille,
-    width_permille: savedBefore.audience.datePosition.widthPermille,
-  });
-
-  await page.locator('[data-presentation-control-id="date-position-save"]').click();
-  await expect(page.getByText("Unsaved position", { exact: true })).toHaveCount(0);
   const storedAfter = await expect.poll(() => readStoredDashboard(page)).toMatchObject({
     scenes: expect.arrayContaining([
       expect.objectContaining({
         id: scene.id,
         audience: {
           ...savedBefore.audience,
-          datePosition: { xPermille: 125, yPermille: 250, widthPermille: 375 },
+          datePosition: expectedPosition,
         },
       }),
     ]),
   }).then(() => readStoredDashboard(page));
   const expectedStored = structuredClone(storedBefore);
-  expectedStored.scenes.find(({ id }) => id === scene.id).audience.datePosition = {
-    xPermille: 125,
-    yPermille: 250,
-    widthPermille: 375,
-  };
+  expectedStored.scenes.find(({ id }) => id === scene.id).audience.datePosition = expectedPosition;
   expect(storedAfter).toEqual(expectedStored);
 
   await expect.poll(async () => (
     await readLastAcceptedAudienceState(session.popup)
   ).audience.date_position).toEqual({
-    x_permille: 125,
-    y_permille: 250,
-    width_permille: 375,
+    x_permille: expectedPosition.xPermille,
+    y_permille: expectedPosition.yPermille,
+    width_permille: expectedPosition.widthPermille,
   });
   expect(await date.evaluate((element) => ({
     left: element.style.left,
     top: element.style.top,
     width: element.style.width,
-  }))).toEqual({ left: "12.5%", top: "25%", width: "37.5%" });
+  }))).toEqual({
+    left: `${expectedPosition.xPermille / 10}%`,
+    top: `${expectedPosition.yPermille / 10}%`,
+    width: `${expectedPosition.widthPermille / 10}%`,
+  });
   await session.popup.close();
 });
 
 function cssEscape(value) {
   return String(value).replace(/["\\]/g, "\\$&");
+}
+
+function clampInteger(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, Math.round(Number(value))));
 }

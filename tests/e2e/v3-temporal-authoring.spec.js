@@ -34,15 +34,27 @@ test("Chrono Studio and Scene Studio navigate through content before editing and
   const primaryActions = contentActionGeometry.find(({ name }) => name === "primary");
   const managementActions = contentActionGeometry.find(({ name }) => name === "management");
   expect(primaryActions.right).toBeLessThanOrEqual(managementActions.left);
-  expect(Math.abs(primaryActions.top - managementActions.top)).toBeLessThanOrEqual(1);
+  const primaryCenter = (primaryActions.top + primaryActions.bottom) / 2;
+  const managementCenter = (managementActions.top + managementActions.bottom) / 2;
+  expect(Math.abs(primaryCenter - managementCenter)).toBeLessThanOrEqual(1);
   const contentActionsBox = await auxiliary.locator(".temporal-content-page__actions").evaluate((actions) => {
     const rect = actions.getBoundingClientRect();
     return { height: rect.height };
   });
   expect(contentActionsBox.height).toBeLessThanOrEqual(70);
-  for (const button of await auxiliary.locator("[data-content-action-group] button").all()) {
-    expect((await button.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  const contentActionButtons = await auxiliary.locator("[data-content-action-group] button").evaluateAll((buttons) => (
+    buttons.map((button) => ({
+      height: button.getBoundingClientRect().height,
+      label: button.textContent?.trim() ?? "",
+    }))
+  ));
+  const ordinaryActions = contentActionButtons.filter(({ label }) => label !== "Remove");
+  const removeAction = contentActionButtons.find(({ label }) => label === "Remove");
+  expect(ordinaryActions.length).toBeGreaterThan(0);
+  for (const { height, label } of ordinaryActions) {
+    expect(height, `${label} should use the 32px dense standard control role`).toBe(32);
   }
+  expect(removeAction?.height, "Remove should use the 36px prominent destructive role").toBe(36);
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
   const stages = auxiliary.getByRole("navigation", { name: "Chrono Group stages" });
   const expectedStageLabels = ["Name and period", "Choose charts", "Set defaults", "Review"];

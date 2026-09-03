@@ -10,21 +10,19 @@ const pageNav = await vite.ssrLoadModule("/src/components/build/BuildPageNavigat
 const canvas = await vite.ssrLoadModule("/src/components/dashboard/DashboardCanvas.jsx");
 await vite.close();
 
-test("active Page owns one Page-actions trigger, a bounded Orbit, and pinned Add Page", () => {
+test("active Page owns its only trigger and pinned Add Page without rendering obsolete action surfaces", () => {
   const dashboard = fixture();
   const html = renderToStaticMarkup(React.createElement(pageNav.default, {
     dashboard,
     pages: dashboard.pages,
     activePageId: "biomedical",
-    initialOrbitPageId: "biomedical",
   }));
   assert.ok(html.indexOf("build-page-add-pinned") > html.indexOf("build-page-tab-scroller"), "Add Page must sit after the scrolling tab collection");
-  assert.match(html, /aria-label="Page actions for Biomedical"/);
+  assert.match(html, /aria-current="page"[\s\S]*>Biomedical<\//);
+  assert.doesNotMatch(html, />Page actions<\//);
   assert.doesNotMatch(html, /Biomedical Page commands/);
-  assert.match(html, /aria-label="Page Orbit for Biomedical"/);
-  assert.match(html, />Rename Page</);
-  assert.match(html, />Merge Page</);
-  assert.match(html, />Remove Page</);
+  assert.doesNotMatch(html, /Page Orbit/);
+  assert.doesNotMatch(html, /Edit Page/);
   assert.match(html, />Add page</);
 });
 

@@ -19,6 +19,13 @@ function presentationState(item = { kind: "chart", chart_id: "chart-a" }) {
   const itemId = item.kind === "chart" ? item.chart_id : item.panel_id;
   return {
     dashboard_revision: "dashboard-r17",
+    theme: {
+      dashboard_style: "evidence-ledger",
+      dashboard_color_profile: "signal-instrument/calibrated-steel",
+      chart_color_mode: "profile",
+      appearance_preference: "light",
+      resolved_appearance: "light",
+    },
     source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
     composition: { active_page_id: "biomedical", displayed_chart_ids: [itemId], layout: "solo" },
     payload: {
@@ -111,13 +118,17 @@ function createChannel(name) { return new FakeBroadcastChannel(name); }
 function setup({
   getPresentableItemIndex = () => presentableItemIndex,
   validateSourceSelection = () => ({ accepted: true }),
+  onAudienceDatePositionChange = () => {},
+  onAcceptedStateChange = () => {},
 } = {}) {
   FakeBroadcastChannel.reset();
   const scheduler = new FakeScheduler();
   const states = [];
   const ended = [];
   const acceptedMessages = [];
+  const themes = [];
   const rejections = [];
+  const controllerRejections = [];
   const statuses = [];
   const controller = createPresentationControllerChannel({
     sessionId: "session-001",
@@ -126,6 +137,11 @@ function setup({
     getPresentableItemIndex,
     validateSourceSelection,
     onConnectionChange: (status) => statuses.push(status),
+    onAudienceDatePositionChange,
+    onAcceptedStateChange,
+    onMessageRejected: (reason, lastValidSnapshot) => {
+      controllerRejections.push({ reason, lastValidSnapshot });
+    },
   });
   const audience = createPresentationAudienceChannel({
     sessionId: "session-001",
@@ -133,17 +149,569 @@ function setup({
     scheduler,
     getPresentableItemIndex,
     onStateChange: (next) => states.push(next),
+    onThemeChange: (next) => themes.push(next),
     onMessageAccepted: (message) => acceptedMessages.push(message),
     onEnded: (terminalMessage) => ended.push(terminalMessage),
     onConnectionChange: (status) => statuses.push(`audience:${status}`),
     onMessageRejected: (reason, lastValidSnapshot) => rejections.push({ reason, lastValidSnapshot }),
   });
-  return { audience, controller, scheduler, states, ended, acceptedMessages, rejections, statuses };
+  return {
+    audience,
+    controller,
+    scheduler,
+    states,
+    themes,
+    ended,
+    acceptedMessages,
+    rejections,
+    controllerRejections,
+    statuses,
+  };
 }
 
 function audienceTransport() {
   return [...FakeBroadcastChannel.channels.get("simex-presentation-session-001")].at(-1);
 }
+
+test("new Audience accepts a legacy v3 state with no Theme field", () => {
+  const { audience, states, rejections } = setup();
+  audience.start();
+  const sender = createChannel("simex-presentation-session-001");
+  const legacyState = presentationState();
+  delete legacyState.theme;
+
+  sender.postMessage({
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 1,
+    type: "state",
+    payload: legacyState,
+  });
+
+  assert.deepEqual(states, [legacyState]);
+  assert.deepEqual(rejections, []);
+  sender.close();
+  audience.dispose();
+});
+
+test("Audience date movement immediately updates controller output with clone-safe source context", () => {
+  const updates = [];
+  const desired = { x_permille: 515, y_permille: 260 };
+  const { audience, controller, states, controllerRejections } = setup({
+    onAudienceDatePositionChange: (update) => {
+      updates.push(structuredClone(update));
+      update.source.scene_id = "scene-mutated";
+      update.datePosition.x_permille = 0;
+    },
+  });
+  controller.start();
+  audience.start();
+  controller.publish(presentationState());
+  const pointerDownSource = audience.getLastValidSnapshot().source;
+
+  const outbound = audience.publishDatePosition(desired, pointerDownSource);
+
+  assert.deepEqual(outbound, {
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 2,
+    type: "audience-date-position",
+    payload: {
+      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      date_position: { x_permille: 515, y_permille: 260 },
+    },
+  });
+  assert.deepEqual(updates, [{
+    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
+  }]);
+  assert.equal(states.length, 2);
+  assert.deepEqual(states.at(-1).audience.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  });
+  assert.deepEqual(controller.getLastValidSnapshot().source, {
+    kind: "scene",
+    scene_id: "scene-a",
+    chrono_group_id: "group-a",
+  });
+  assert.equal(controller.getLastValidSnapshot().audience.date_position.x_permille, 515);
+  assert.deepEqual(controllerRejections, []);
+
+  desired.x_permille = 0;
+  assert.equal(outbound.payload.date_position.x_permille, 515);
+  assert.equal(controller.getLastValidSnapshot().audience.date_position.x_permille, 515);
+  audience.dispose();
+  controller.dispose();
+});
+
+test("Scene date movement is accepted only after persistence succeeds and reverts after rejection", async () => {
+  let rejectPersistence;
+  const persistence = new Promise((_resolve, reject) => {
+    rejectPersistence = reject;
+  });
+  void persistence.catch(() => undefined);
+  const acceptedStates = [];
+  const { audience, controller, states, controllerRejections } = setup({
+    onAudienceDatePositionChange: () => persistence,
+    onAcceptedStateChange: (next) => acceptedStates.push(next),
+  });
+  controller.start();
+  audience.start();
+  const initial = presentationState();
+  controller.publish(initial);
+
+  audience.publishDatePosition(
+    { x_permille: 515, y_permille: 260 },
+    audience.getLastValidSnapshot().source,
+  );
+
+  assert.equal(states.length, 1, "pending persistence must not produce an accepted echo");
+  assert.deepEqual(controller.getLastValidSnapshot(), initial);
+  assert.deepEqual(acceptedStates, [initial]);
+
+  rejectPersistence(new Error("Browser dashboard storage is unavailable."));
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(states.length, 2, "a rejected save must republish the durable position");
+  assert.deepEqual(states.at(-1), initial);
+  assert.deepEqual(controller.getLastValidSnapshot(), initial);
+  assert.deepEqual(acceptedStates, [initial]);
+  assert.deepEqual(
+    controllerRejections.map(({ reason }) => reason),
+    [{
+      code: "presentation_rejected",
+      message: "Browser dashboard storage is unavailable.",
+    }],
+  );
+  audience.dispose();
+  controller.dispose();
+});
+
+test("rapid Scene date releases serialize persistence before accepting the latest position", async () => {
+  let resolveFirstPersistence;
+  const firstPersistence = new Promise((resolve) => {
+    resolveFirstPersistence = resolve;
+  });
+  const saves = [];
+  const { audience, controller, states } = setup({
+    onAudienceDatePositionChange: ({ datePosition }) => {
+      saves.push(structuredClone(datePosition));
+      return saves.length === 1 ? firstPersistence : Promise.resolve();
+    },
+  });
+  controller.start();
+  audience.start();
+  controller.publish(presentationState());
+  const source = audience.getLastValidSnapshot().source;
+
+  audience.publishDatePosition({ x_permille: 515, y_permille: 260 }, source);
+  audience.publishDatePosition({ x_permille: 530, y_permille: 275 }, source);
+
+  assert.deepEqual(saves, [{
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  }]);
+  assert.equal(states.length, 1);
+
+  resolveFirstPersistence();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(saves, [
+    { x_permille: 515, y_permille: 260, width_permille: 280 },
+    { x_permille: 530, y_permille: 275, width_permille: 280 },
+  ]);
+  assert.equal(states.length, 3);
+  assert.deepEqual(states.at(-1).audience.date_position, {
+    x_permille: 530,
+    y_permille: 275,
+    width_permille: 280,
+  });
+  audience.dispose();
+  controller.dispose();
+});
+
+test("a queued Scene release keeps its receipt-time source after the controller switches Scenes", async () => {
+  let resolveFirstPersistence;
+  const firstPersistence = new Promise((resolve) => {
+    resolveFirstPersistence = resolve;
+  });
+  const saves = [];
+  const { audience, controller, states, controllerRejections } = setup({
+    onAudienceDatePositionChange: (update) => {
+      saves.push(structuredClone(update));
+      return saves.length === 1 ? firstPersistence : Promise.resolve();
+    },
+  });
+  controller.start();
+  audience.start();
+  const sceneA = presentationState();
+  controller.publish(sceneA);
+  const sceneASource = audience.getLastValidSnapshot().source;
+  audience.publishDatePosition({ x_permille: 515, y_permille: 260 }, sceneASource);
+  audience.publishDatePosition({ x_permille: 530, y_permille: 275 }, sceneASource);
+  const sceneB = {
+    ...presentationState(),
+    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+  };
+
+  controller.publish(sceneB);
+  resolveFirstPersistence();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(saves, [
+    {
+      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
+    },
+    {
+      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      datePosition: { x_permille: 530, y_permille: 275, width_permille: 280 },
+    },
+  ]);
+  assert.deepEqual(controllerRejections, []);
+  assert.equal(states.length, 2, "settled Scene A saves must not echo over active Scene B");
+  assert.deepEqual(states.at(-1), sceneB);
+
+  const returnedToSceneA = controller.publish(sceneA);
+  assert.deepEqual(returnedToSceneA.lastValidSnapshot.audience.date_position, {
+    x_permille: 530,
+    y_permille: 275,
+    width_permille: 280,
+  });
+  assert.deepEqual(states.at(-1).audience.date_position, {
+    x_permille: 530,
+    y_permille: 275,
+    width_permille: 280,
+  });
+  audience.dispose();
+  controller.dispose();
+});
+
+test("disposing the controller prevents a captured queued release from starting persistence", async () => {
+  let resolveFirstPersistence;
+  const firstPersistence = new Promise((resolve) => {
+    resolveFirstPersistence = resolve;
+  });
+  const saves = [];
+  const { audience, controller } = setup({
+    onAudienceDatePositionChange: (update) => {
+      saves.push(structuredClone(update));
+      return saves.length === 1 ? firstPersistence : Promise.resolve();
+    },
+  });
+  controller.start();
+  audience.start();
+  controller.publish(presentationState());
+  const source = audience.getLastValidSnapshot().source;
+  audience.publishDatePosition({ x_permille: 515, y_permille: 260 }, source);
+  audience.publishDatePosition({ x_permille: 530, y_permille: 275 }, source);
+
+  controller.dispose();
+  resolveFirstPersistence();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(saves, [{
+    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
+  }]);
+  audience.dispose();
+});
+
+test("Audience date release carries its pointer-down source across a mid-drag source change", () => {
+  const updates = [];
+  const { audience, controller, states, controllerRejections } = setup({
+    onAudienceDatePositionChange: (update) => updates.push(update),
+  });
+  controller.start();
+  audience.start();
+  controller.publish(presentationState());
+  const pointerDownSource = audience.getLastValidSnapshot().source;
+  const sceneB = {
+    ...presentationState(),
+    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+  };
+  controller.publish(sceneB);
+
+  const outbound = audience.publishDatePosition(
+    { x_permille: 515, y_permille: 260 },
+    pointerDownSource,
+  );
+
+  assert.deepEqual(outbound.payload.source, {
+    kind: "scene",
+    scene_id: "scene-a",
+    chrono_group_id: "group-a",
+  });
+  assert.deepEqual(updates, []);
+  assert.deepEqual(
+    controllerRejections.map(({ reason }) => reason.code),
+    ["stale_audience_source"],
+  );
+  assert.equal(states.length, 2);
+  assert.deepEqual(controller.getLastValidSnapshot(), sceneB);
+  pointerDownSource.scene_id = "scene-mutated";
+  assert.equal(outbound.payload.source.scene_id, "scene-a");
+  audience.dispose();
+  controller.dispose();
+});
+
+test("reverse date movement cannot replace the controller's authoritative date width", () => {
+  const updates = [];
+  const { audience, controller, states, controllerRejections } = setup({
+    onAudienceDatePositionChange: (update) => updates.push(update),
+  });
+  controller.start();
+  audience.start();
+  controller.publish(presentationState());
+  const pointerDownSource = audience.getLastValidSnapshot().source;
+
+  const outbound = audience.publishDatePosition({
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 400,
+  }, pointerDownSource);
+
+  assert.deepEqual(outbound.payload.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+  });
+  assert.deepEqual(updates, [{
+    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
+  }]);
+  assert.deepEqual(states.at(-1).audience.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  });
+  assert.deepEqual(controllerRejections, []);
+  audience.dispose();
+  controller.dispose();
+});
+
+test("controller reports clone-isolated accepted snapshots immediately after raw-group date movement", () => {
+  const monitoredSnapshots = [];
+  const movementUpdates = [];
+  const { audience, controller, states } = setup({
+    onAcceptedStateChange: (next) => {
+      monitoredSnapshots.push(structuredClone(next));
+      next.source.chrono_group_id = "group-mutated";
+      next.audience.date_position.x_permille = 0;
+    },
+    onAudienceDatePositionChange: (update) => movementUpdates.push(update),
+  });
+  controller.start();
+  audience.start();
+  const rawGroup = {
+    ...presentationState(),
+    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "group-a" },
+  };
+
+  controller.publish(rawGroup);
+  assert.deepEqual(monitoredSnapshots, [rawGroup]);
+  const pointerDownSource = audience.getLastValidSnapshot().source;
+  audience.publishDatePosition(
+    { x_permille: 515, y_permille: 260 },
+    pointerDownSource,
+  );
+
+  assert.equal(monitoredSnapshots.length, 2);
+  assert.deepEqual(monitoredSnapshots.at(-1).source, {
+    kind: "Chrono Group",
+    scene_id: null,
+    chrono_group_id: "group-a",
+  });
+  assert.deepEqual(monitoredSnapshots.at(-1).audience.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  });
+  assert.deepEqual(movementUpdates, [{
+    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "group-a" },
+    datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
+  }]);
+  assert.deepEqual(states.at(-1).audience.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  });
+  assert.deepEqual(controller.getLastValidSnapshot().source, {
+    kind: "Chrono Group",
+    scene_id: null,
+    chrono_group_id: "group-a",
+  });
+  assert.equal(controller.getLastValidSnapshot().audience.date_position.x_permille, 515);
+  audience.dispose();
+  controller.dispose();
+});
+
+test("controller retains each Audience date override only for its matching presentation source", () => {
+  const { audience, controller, states } = setup();
+  controller.start();
+  audience.start();
+  const sceneA = presentationState();
+  controller.publish(sceneA);
+  audience.publishDatePosition(
+    { x_permille: 515, y_permille: 260 },
+    audience.getLastValidSnapshot().source,
+  );
+
+  const sameSourceNextFrame = {
+    ...sceneA,
+    timeline: { ...sceneA.timeline, frame_index: 1 },
+  };
+  const sameSourceOutcome = controller.publish(sameSourceNextFrame);
+  assert.equal(sameSourceOutcome.accepted, true);
+  assert.deepEqual(sameSourceOutcome.lastValidSnapshot.audience.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  });
+  assert.deepEqual(states.at(-1).audience.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  });
+
+  const sceneB = {
+    ...presentationState(),
+    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+  };
+  const otherSourceOutcome = controller.publish(sceneB);
+  assert.equal(otherSourceOutcome.accepted, true);
+  assert.deepEqual(otherSourceOutcome.lastValidSnapshot.audience.date_position, {
+    x_permille: 680,
+    y_permille: 40,
+    width_permille: 280,
+  });
+
+  const returnToSceneA = controller.publish(sceneA);
+  assert.equal(returnToSceneA.accepted, true);
+  assert.deepEqual(returnToSceneA.lastValidSnapshot.audience.date_position, {
+    x_permille: 515,
+    y_permille: 260,
+    width_permille: 280,
+  });
+  audience.dispose();
+  controller.dispose();
+});
+
+test("controller consumes and rejects stale-source Audience date movement without replaying it", () => {
+  const updates = [];
+  const { audience, controller, states, controllerRejections } = setup({
+    onAudienceDatePositionChange: (update) => updates.push(update),
+  });
+  controller.start();
+  audience.start();
+  controller.publish(presentationState());
+  const sceneB = {
+    ...presentationState(),
+    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+  };
+  controller.publish(sceneB);
+  const sender = createChannel("simex-presentation-session-001");
+  const stale = {
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 2,
+    type: "audience-date-position",
+    payload: {
+      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      date_position: { x_permille: 515, y_permille: 260 },
+    },
+  };
+
+  sender.postMessage(stale);
+  sender.postMessage(stale);
+
+  assert.deepEqual(updates, []);
+  assert.deepEqual(
+    controllerRejections.map(({ reason }) => reason.code),
+    ["stale_audience_source", "duplicate_or_out_of_order"],
+  );
+  assert.equal(states.length, 2);
+  assert.deepEqual(controller.getLastValidSnapshot(), sceneB);
+  sender.close();
+  audience.dispose();
+  controller.dispose();
+});
+
+test("themed publication keeps the v3 state legacy-safe and enriches only new Audience peers", () => {
+  const { audience, controller, states, themes } = setup();
+  const mainMessages = [];
+  const themeMessages = [];
+  const mainObserver = createChannel("simex-presentation-session-001");
+  const themeObserver = createChannel("simex-presentation-theme-v1-session-001");
+  mainObserver.onmessage = ({ data }) => mainMessages.push(data);
+  themeObserver.onmessage = ({ data }) => themeMessages.push(data);
+  controller.start();
+  audience.start();
+
+  const themedState = presentationState();
+  controller.publish(themedState);
+
+  const wireState = mainMessages.find(({ type }) => type === "state");
+  assert.ok(wireState);
+  assert.equal(Object.hasOwn(wireState.payload, "theme"), false);
+  assert.deepEqual(themeMessages.at(-1), {
+    protocol_version: 1,
+    session_id: "session-001",
+    sequence: 1,
+    type: "theme",
+    payload: themedState.theme,
+  });
+  assert.deepEqual(themes, [themedState.theme]);
+  assert.deepEqual(states, [themedState]);
+
+  mainObserver.close();
+  themeObserver.close();
+  audience.dispose();
+  controller.dispose();
+});
+
+test("Audience applies an isolated Theme whether state or Theme arrives first", () => {
+  for (const order of ["state-first", "theme-first"]) {
+    const { audience, states, themes } = setup();
+    audience.start();
+    const mainSender = createChannel("simex-presentation-session-001");
+    const themeSender = createChannel("simex-presentation-theme-v1-session-001");
+    const themedState = presentationState();
+    const legacyState = structuredClone(themedState);
+    delete legacyState.theme;
+    const stateMessage = {
+      protocol_version: 3,
+      session_id: "session-001",
+      sequence: 1,
+      type: "state",
+      payload: legacyState,
+    };
+    const themeMessage = {
+      protocol_version: 1,
+      session_id: "session-001",
+      sequence: 1,
+      type: "theme",
+      payload: themedState.theme,
+    };
+
+    if (order === "state-first") {
+      mainSender.postMessage(stateMessage);
+      themeSender.postMessage(themeMessage);
+      assert.deepEqual(states, [legacyState, themedState]);
+    } else {
+      themeSender.postMessage(themeMessage);
+      mainSender.postMessage(stateMessage);
+      assert.deepEqual(states, [themedState]);
+    }
+    assert.deepEqual(themes, [themedState.theme]);
+
+    mainSender.close();
+    themeSender.close();
+    audience.dispose();
+  }
+});
 
 test("controller validates before publication and never reconciles an invalid selection", () => {
   const { audience, controller, states } = setup();
@@ -602,7 +1170,9 @@ test("a post-timeout controller heartbeat cannot reconnect without a ready-trigg
   });
   assert.equal(statuses.at(-1), "connected");
   assert.equal(sent.filter(({ type }) => type === "state").length, 3);
-  assert.deepEqual(sent.at(-1).payload, presentationState());
+  const legacyWireState = presentationState();
+  delete legacyWireState.theme;
+  assert.deepEqual(sent.at(-1).payload, legacyWireState);
 
   audience.close();
   observer.close();

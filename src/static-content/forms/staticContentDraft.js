@@ -222,7 +222,7 @@ export function reduceStaticContentDraft(state, action = {}) {
         : state.assets;
       validateMediaItem(mediaItem, { assets });
       const isNewPlacement = state.mode === "create"
-        && (!state.baseline?.mediaItem || state.baseline.mediaItem.health === "needs-relink");
+        && (!state.mediaItem || state.mediaItem.health === "needs-relink");
       const preservedAlt = isNewPlacement
         ? initialNonDecorativeAlt(mediaItem)
         : state.source.decorative ? "" : state.source.alt;

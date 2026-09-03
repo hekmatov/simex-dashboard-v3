@@ -6,7 +6,7 @@ import { serializeDashboardBundle } from "../../src/charting/config/dashboardBun
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { openAudienceSession } from "./support/present-audience-workflow.js";
 
-const APP_URL = "http://127.0.0.1:4173/";
+const APP_URL = "/";
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 const IMAGE_TITLE = "Portable local image";
@@ -59,10 +59,9 @@ test("production StrictMode root keeps the reloaded durable Image URL active", a
   }, activeUrl)).toBe(true);
 });
 
-test("bundle v6 restores local Image and Free-text in a fresh offline browser context", async ({
-  browser,
-  page,
-}, testInfo) => {
+test("bundle v6 restores local Image and Free-text in a fresh offline browser context", {
+  tag: "@production-static",
+}, async ({ browser, page }, testInfo) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await openBiomedicalBuild(page);
@@ -109,7 +108,10 @@ test("bundle v6 restores local Image and Free-text in a fresh offline browser co
   corrupt.assetPayloads[assetId].base64 = flipBase64Byte(corrupt.assetPayloads[assetId].base64);
   await writeFile(corruptPath, JSON.stringify(corrupt));
 
-  const freshContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const freshContext = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL,
+    viewport: { width: 1440, height: 900 },
+  });
   try {
     const importedPage = await freshContext.newPage();
     await importedPage.goto(APP_URL);
@@ -156,7 +158,7 @@ test("bundle v6 restores local Image and Free-text in a fresh offline browser co
     await imagePanel.getByRole("button", { name: "Focus chart" }).click();
     const fullscreen = importedPage.getByRole("dialog", { name: "Focused chart" });
     await expect(fullscreen.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
-    await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+    await fullscreen.getByRole("button", { name: "Exit fullscreen" }).click();
 
     await importedPage.setViewportSize({ width: 768, height: 900 });
     await scrollPanelIntoView(importedPage, authored.text.panel.id);
@@ -205,7 +207,10 @@ test("package import quota failure preserves the prior dashboard and authored st
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
   await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
 
-  const freshContext = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+  const freshContext = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL,
+    viewport: { width: 1024, height: 768 },
+  });
   try {
     const importedPage = await freshContext.newPage();
     await importedPage.goto(APP_URL);
@@ -268,8 +273,8 @@ test("Image replacement and panel removal retain reusable durable media bytes", 
   await firstPanel.hover();
   await firstPanel.getByLabel(`${firstTitle} actions`)
     .getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
-  await editor.locator("#static-image-file").setInputFiles({
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  await editor.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
     name: "replacement.png",
     mimeType: "image/png",
     buffer: REPLACEMENT_PNG,
@@ -339,7 +344,10 @@ test("asset commit failure restores the prior dashboard and authored store atomi
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
   await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
 
-  const freshContext = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+  const freshContext = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL,
+    viewport: { width: 1024, height: 768 },
+  });
   try {
     const importedPage = await freshContext.newPage();
     await importedPage.goto(APP_URL);
@@ -400,9 +408,14 @@ async function createFreeText(page) {
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill(TEXT_TITLE);
-  await wizard.getByRole("tab", { name: "Advanced QMD" }).click();
-  await wizard.getByLabel("Portable QMD source").fill(TEXT_QMD);
-  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+  await wizard.getByRole("button", { name: "Raw text", exact: true }).click();
+  const source = wizard.getByLabel("Portable QMD raw source");
+  await source.fill(TEXT_QMD);
+  await expect(source).toHaveValue(TEXT_QMD);
+  await expect(wizard.getByRole("region", { name: "Rendered preview" }))
+    .toContainText("Offline priorities");
+  await wizard.getByRole("button", { name: "Formatted text", exact: true }).click();
+  await expect(wizard.getByLabel("Portable QMD Composer editing area")).toBeVisible();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -450,7 +463,7 @@ async function removePanel(page, panelId, title) {
 async function expectRejectedImport(page, path, message) {
   await packageInput(page).setInputFiles(path);
   await expect(page.getByRole("dialog", { name: "Review package contents" })).toHaveCount(0);
-  await expect(page.getByText(message)).toBeVisible();
+  await expect(page.getByLabel("Operation status").getByText(message)).toBeVisible();
 }
 
 function packageInput(page) {

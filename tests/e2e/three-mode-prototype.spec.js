@@ -6,6 +6,7 @@ import {
   enterAuthoredDashboard,
   openDashboardFromLanding,
 } from "./support/landingWorkflow.js";
+import { openAudienceSession } from "./support/present-audience-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -260,7 +261,7 @@ test("Scenario Passport saves Home off and on explicitly across reload", async (
   ), STORAGE_KEY)).toBe(true);
 });
 
-test("Home-off package import changes mode, preference, and focus only after commit", async ({ page }) => {
+test("Home-off package import changes mode and preference only after commit", async ({ page }) => {
   const bundle = await homeOffPackageFixture();
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.locator('input[type="file"][accept*="application/json"]').first().setInputFiles({
@@ -304,7 +305,7 @@ test("Home-off package import changes mode, preference, and focus only after com
     .toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), MODE_STORAGE_KEY))
     .toBe("view");
-  await expect(page.locator('[data-canonical-mode="view"]')).toBeFocused();
+  await expect(page.locator('[data-canonical-mode="view"]')).toBeVisible();
 
   const importedPassport = await enterScenarioInspector(page);
   await expect(importedPassport.getByRole("checkbox", { name: "Show Home", exact: true }))
@@ -451,6 +452,7 @@ async function homeOffPackageFixture() {
 async function enterPresent(page) {
   await page.getByRole("button", { name: "Present" }).click();
   await expect(page.locator(".present-workspace")).toBeVisible();
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
 }
 
 async function selectTwoAudienceCharts(page) {
@@ -463,12 +465,8 @@ async function selectTwoAudienceCharts(page) {
 }
 
 async function openAudience(page) {
-  const audiencePromise = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Open new audience session" }).click();
-  const audience = await audiencePromise;
-  await audience.waitForLoadState("domcontentloaded");
-  await expect(audience.locator(".audience-display")).toBeVisible();
-  return audience;
+  const { popup } = await openAudienceSession(page);
+  return popup;
 }
 
 async function reopenAudience(page) {

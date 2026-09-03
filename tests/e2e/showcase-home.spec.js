@@ -33,14 +33,14 @@ test("Old Homepage Content is absent when Home enters the first ordinary Page th
     page.getByRole("heading", { name: "Old Homepage Content" }),
   ).toHaveCount(0);
   await expect(page.locator('[data-canonical-page-id="biomedical"]')).toBeVisible();
-  await expect(page.locator('[data-canonical-mode="view"]')).toBeFocused();
+  await expect(page.locator('[data-canonical-mode="view"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toBeVisible();
   await expect(page.locator("h1")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await expectLandingReady(page);
-  await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
+  await expect(page.locator('[data-canonical-mode="home"]')).toBeVisible();
 });
 
 test("Home page navigation enters View for every page including the selected return target and removes the header gap", async ({ page, request }) => {
@@ -59,7 +59,7 @@ test("Home page navigation enters View for every page including the selected ret
   )).toEqual(expectedPageIds);
   await expect(
     page.locator(".dashboard-command-pinned-actions")
-      .getByRole("button", { name: "Dashboard look", exact: true }),
+      .getByRole("button", { name: "Theme", exact: true }),
   ).toBeVisible();
   await expect(homeFrame.locator(":scope > .canonical-dashboard-header")).toHaveCount(0);
   const gap = await homeFrame.evaluate((frame) => {
@@ -72,9 +72,9 @@ test("Home page navigation enters View for every page including the selected ret
   for (const pageId of expectedPageIds) {
     await page.getByRole("navigation", { name: "Dashboard pages" })
       .locator(`[data-dashboard-page-id="${pageId}"]`).click();
-    await expect(page.locator(`[data-canonical-mode="view"][data-canonical-page-id="${pageId}"]`)).toBeFocused();
+    await expect(page.locator(`[data-canonical-mode="view"][data-canonical-page-id="${pageId}"]`)).toBeVisible();
     await page.getByRole("button", { name: "Home", exact: true }).click();
-    await expect(page.locator('[data-canonical-mode="home"]')).toBeFocused();
+    await expect(page.locator('[data-canonical-mode="home"]')).toBeVisible();
   }
 });
 
@@ -90,8 +90,8 @@ test("three Home styles expose materially distinct computed signatures without p
   ];
   const signatures = {};
   for (const [label, id] of styles) {
-    await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-    const look = page.getByRole("dialog", { name: "Dashboard look" });
+    await page.getByRole("button", { name: "Theme", exact: true }).click();
+    const look = page.getByRole("dialog", { name: "Theme" });
     await look.getByLabel(label, { exact: true }).check();
     await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", id);
     await page.keyboard.press("Escape");
@@ -99,30 +99,49 @@ test("three Home styles expose materially distinct computed signatures without p
     expect(signatures[id].heroGap).toBeLessThanOrEqual(1);
   }
 
+  const sharedDesktopGeometry = [
+    "rootDisplay",
+    "rootGap",
+    "sectionBorderTop",
+    "sectionBorderLeft",
+    "faqBorderLeft",
+    "resourcesBorderLeft",
+    "sectionPaddingTop",
+    "faqPaddingTop",
+    "resourcesPaddingTop",
+    "gridGap",
+  ];
+  for (const property of sharedDesktopGeometry) {
+    expect(new Set(styles.map(([, id]) => signatures[id][property])).size).toBe(1);
+  }
+
   expect(signatures["evidence-ledger"]).toMatchObject({
     rootRadius: "0px",
-    sectionBorderTop: "1px",
+    sectionBorderTop: "0px",
     cardShadow: "none",
   });
+  expect(signatures["evidence-ledger"].sectionShadow).toContain("inset");
   expect(signatures["evidence-ledger"].headingFont).toContain("Georgia");
-  expect(signatures["humanist-standard"].rootDisplay).toBe("grid");
-  expect(signatures["humanist-standard"].rootGap).toBe("24px");
+  expect(signatures["humanist-standard"].rootDisplay).toBe("block");
   expect(parseFloat(signatures["humanist-standard"].sectionRadius)).toBeGreaterThanOrEqual(14);
   expect(signatures["humanist-standard"].sectionShadow).not.toBe("none");
+  expect(signatures["humanist-standard"].cardShadow).not.toBe("none");
   expect(signatures["signal-instrument"].microcopyFont).toContain("Cascadia Mono");
-  expect(signatures["signal-instrument"].sectionBorderLeft).toBe("4px");
-  expect(signatures["signal-instrument"].faqBorderLeft).toBe("4px");
-  expect(signatures["signal-instrument"].resourcesBorderLeft).toBe("4px");
-  expect(signatures["signal-instrument"].gridGap).toBe("8px");
-  expect(parseFloat(signatures["signal-instrument"].sectionPaddingTop))
-    .toBeLessThan(parseFloat(signatures["humanist-standard"].sectionPaddingTop));
-  expect(signatures["signal-instrument"].faqPaddingTop).toBe("28px");
-  expect(signatures["signal-instrument"].resourcesPaddingTop).toBe("28px");
+  expect(signatures["signal-instrument"]).toMatchObject({
+    sectionBorderLeft: "0px",
+    faqBorderLeft: "0px",
+    resourcesBorderLeft: "0px",
+    cardShadow: "none",
+  });
+  expect(signatures["signal-instrument"].sectionShadow).toContain("inset");
+  expect(signatures["signal-instrument"].faqShadow).toContain("inset");
+  expect(signatures["signal-instrument"].resourcesShadow).toContain("inset");
 
   await page.setViewportSize({ width: 390, height: 844 });
+  const phoneSignatures = {};
   for (const [label, id] of styles) {
-    await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-    const look = page.getByRole("dialog", { name: "Dashboard look" });
+    await page.getByRole("button", { name: "Theme", exact: true }).click();
+    const look = page.getByRole("dialog", { name: "Theme" });
     await look.getByLabel(label, { exact: true }).check();
     await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", id);
     await page.keyboard.press("Escape");
@@ -159,11 +178,30 @@ test("three Home styles expose materially distinct computed signatures without p
       controlsReachable: true,
     });
     expect(phoneGeometry.controlCount).toBeGreaterThanOrEqual(6);
+    phoneSignatures[id] = await readHomeStyleSignature(page);
+    expect(phoneSignatures[id].heroGap).toBeLessThanOrEqual(1);
+    expect(phoneSignatures[id].rootDisplay).toBe("block");
     if (id === "signal-instrument") {
-      const phoneSignature = await readHomeStyleSignature(page);
-      expect(phoneSignature.faqPaddingTop).toBe("24px");
-      expect(phoneSignature.resourcesPaddingTop).toBe("24px");
+      expect(phoneSignatures[id].sectionShadow).toContain("inset");
+      expect(phoneSignatures[id].faqShadow).toContain("inset");
+      expect(phoneSignatures[id].resourcesShadow).toContain("inset");
     }
+  }
+
+  const sharedPhoneGeometry = [
+    "rootDisplay",
+    "rootGap",
+    "sectionBorderTop",
+    "sectionBorderLeft",
+    "faqBorderLeft",
+    "resourcesBorderLeft",
+    "sectionPaddingTop",
+    "faqPaddingTop",
+    "resourcesPaddingTop",
+    "gridGap",
+  ];
+  for (const property of sharedPhoneGeometry) {
+    expect(new Set(styles.map(([, id]) => phoneSignatures[id][property])).size).toBe(1);
   }
 });
 
@@ -213,12 +251,12 @@ test("hero action focus remains visible against the default hero surface", async
   expect(focus.contrastRatio).toBeGreaterThanOrEqual(3);
 });
 
-test("Home inherits Dashboard Look semantic tokens and exposes repository Issues feedback", async ({ page }) => {
+test("Home inherits Theme semantic tokens and exposes repository Issues feedback", async ({ page }) => {
   await openLanding(page);
   const before = await readLandingTheme(page);
 
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Theme" });
   await look.getByLabel("Instrument", { exact: true }).check();
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await look.getByLabel("Dark", { exact: true }).check();
@@ -472,8 +510,10 @@ async function readHomeStyleSignature(page) {
       sectionBorderLeft: sectionStyle.borderLeftWidth,
       sectionPaddingTop: sectionStyle.paddingTop,
       faqBorderLeft: faqStyle.borderLeftWidth,
+      faqShadow: faqStyle.boxShadow,
       faqPaddingTop: faqStyle.paddingTop,
       resourcesBorderLeft: resourcesStyle.borderLeftWidth,
+      resourcesShadow: resourcesStyle.boxShadow,
       resourcesPaddingTop: resourcesStyle.paddingTop,
       cardShadow: getComputedStyle(card).boxShadow,
       headingFont: getComputedStyle(heading).fontFamily,

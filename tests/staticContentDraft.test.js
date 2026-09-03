@@ -373,6 +373,37 @@ test("media selection prefills only a new Image placement and preserves existing
   assert.equal(edited.source.alt, "Placement-owned description");
 });
 
+test("a second media choice in a new Image draft is a replacement and resets image transforms", () => {
+  const first = mediaItem();
+  const second = { ...mediaItem(), mediaId: "media-replacement", displayName: "Replacement map" };
+  let draft = createStaticContentDraft({
+    mode: "create", stage: "content", destination: { pageId: "page-a", sectionId: "section-a" },
+    contentTypeId: "image", panel: panel(), assets: {},
+  });
+  draft = reduceStaticContentDraft(draft, { type: "selectMediaItem", mediaItem: first });
+  draft = reduceStaticContentDraft(draft, { type: "setImageAlt", alt: "Placement-owned description" });
+  draft = reduceStaticContentDraft(draft, {
+    type: "setImageTransform",
+    crop: { x: 120, y: 80, width: 700, height: 800 },
+    rotation: 90,
+    fit: "cover",
+  });
+  draft = reduceStaticContentDraft(draft, { type: "selectMediaItem", mediaItem: second });
+
+  assert.deepEqual({ crop: draft.source.crop, rotation: draft.source.rotation, fit: draft.source.fit }, {
+    crop: { x: 0, y: 0, width: 1000, height: 1000 }, rotation: 0, fit: "contain",
+  });
+  assert.equal(draft.source.mediaId, second.mediaId);
+  assert.equal(draft.source.alt, "Placement-owned description");
+  assert.equal(draft.imageEditing.altReviewRequired, true);
+  assert.equal(draft.imageEditing.replacementUndo.mediaItem.mediaId, first.mediaId);
+  assert.equal(draft.imageEditing.replacementUndo.source.crop.x, 120);
+
+  draft = reduceStaticContentDraft(draft, { type: "undoImageReplacement" });
+  assert.equal(draft.source.mediaId, first.mediaId);
+  assert.equal(draft.source.crop.x, 120);
+});
+
 test("QMD draft media stays draft-owned without changing the exact finalized payload", () => {
   let draft = createStaticContentDraft({
     stage: "content",

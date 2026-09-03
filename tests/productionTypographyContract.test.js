@@ -12,6 +12,12 @@ const STYLE_GRAMMAR_EXCEPTION = Object.freeze({
   properties: Object.freeze(["bodyFont", "headingFont", "dataFont"]),
   reason: "dashboard typography role definitions",
 });
+const BUNDLED_FONT_FACE_EXCEPTION = Object.freeze({
+  path: "src/styles/fonts.css",
+  properties: Object.freeze(["font-family"]),
+  value: '"SimEx Inter"',
+  reason: "repository-owned font-face family declaration",
+});
 const KATEX_EXCEPTION = Object.freeze({
   path: "node_modules/katex/dist/katex.css",
   reason: "dependency-owned mathematical glyph CSS",
@@ -26,10 +32,53 @@ test("dashboard style grammars project the shared mono font token", () => {
   }
 });
 
+test("Ledger resolves its UI typography through the repository-owned Inter family", () => {
+  assert.match(
+    resolveDashboardStyleGrammar("evidence-ledger")["--simex-style-body-font"],
+    /^"SimEx Inter", Inter, /,
+  );
+});
+
+test("the repository-owned Inter asset is a licensed WOFF2 variable font", async () => {
+  const [font, license, distributedLicense, staticBuildVerifier] = await Promise.all([
+    readOptional(new URL("../src/assets/fonts/InterVariable.woff2", import.meta.url)),
+    readOptional(new URL("../src/assets/fonts/LICENSE.txt", import.meta.url), "utf8"),
+    readOptional(new URL("../public/licenses/Inter-OFL-1.1.txt", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/verify-v3-static-build.mjs", import.meta.url), "utf8"),
+  ]);
+
+  assert.ok(font, "the Inter WOFF2 asset should be stored in the repository");
+  assert.equal(font.subarray(0, 4).toString("ascii"), "wOF2");
+  assert.ok(font.byteLength > 250_000, "the official variable font should not be an empty placeholder or tiny subset");
+  assert.match(license ?? "", /SIL OPEN FONT LICENSE Version 1\.1/);
+  assert.match(license ?? "", /Copyright \(c\) 2016 The Inter Project Authors/);
+  assert.equal(distributedLicense, license, "the packaged Inter license should match the source license");
+  assert.match(staticBuildVerifier, /"licenses\/Inter-OFL-1\.1\.txt"/);
+});
+
+test("both browser entrypoints load one local Inter font-face contract", async () => {
+  const [fontCss, dashboardEntry, sourceViewerEntry] = await Promise.all([
+    readOptional(new URL("../src/styles/fonts.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/main.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/source-viewer/main.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(fontCss ?? "", /font-family:\s*"SimEx Inter"/);
+  assert.match(fontCss ?? "", /url\("\.\.\/assets\/fonts\/InterVariable\.woff2"\)/);
+  assert.match(fontCss ?? "", /font-weight:\s*100 900/);
+  assert.doesNotMatch(fontCss ?? "", /https?:\/\//);
+  assert.match(dashboardEntry, /import "\.\/styles\/fonts\.css";/);
+  assert.match(sourceViewerEntry, /import "\.\.\/styles\/fonts\.css";/);
+});
+
 test("authored typography uses dashboard tokens outside the style grammar", async () => {
   const result = await scanAuthoredTypography();
 
-  assert.deepEqual(result.exceptions, [STYLE_GRAMMAR_EXCEPTION, KATEX_EXCEPTION]);
+  assert.deepEqual(result.exceptions, [
+    STYLE_GRAMMAR_EXCEPTION,
+    BUNDLED_FONT_FACE_EXCEPTION,
+    KATEX_EXCEPTION,
+  ]);
   assert.deepEqual(result.violations, []);
   assert.equal(
     result.declarations.filter(({ path: declarationPath }) => (
@@ -87,7 +136,7 @@ async function scanAuthoredTypography() {
 
   return {
     declarations,
-    exceptions: [STYLE_GRAMMAR_EXCEPTION, KATEX_EXCEPTION],
+    exceptions: [STYLE_GRAMMAR_EXCEPTION, BUNDLED_FONT_FACE_EXCEPTION, KATEX_EXCEPTION],
     violations,
   };
 }
@@ -191,8 +240,12 @@ function insideString(index, strings) {
 }
 
 function isAllowedRawBoundary(relativePath, declaration) {
-  return relativePath === STYLE_GRAMMAR_EXCEPTION.path
+  const isStyleGrammarRole = relativePath === STYLE_GRAMMAR_EXCEPTION.path
     && STYLE_GRAMMAR_EXCEPTION.properties.includes(declaration.property);
+  const isBundledFontFace = relativePath === BUNDLED_FONT_FACE_EXCEPTION.path
+    && BUNDLED_FONT_FACE_EXCEPTION.properties.includes(declaration.property)
+    && declaration.value === BUNDLED_FONT_FACE_EXCEPTION.value;
+  return isStyleGrammarRole || isBundledFontFace;
 }
 
 function usesDashboardFontToken({ value }, source) {
@@ -203,7 +256,7 @@ function usesDashboardFontToken({ value }, source) {
     `\\bconst\\s+${normalizedValue}\\s*=\\s*normalizedFontFamily\\(textTheme\\?\\.${normalizedValue}`,
   );
   const computedToken = new RegExp(
-    `${normalizedValue}:\\s*style\\.getPropertyValue\\("--simex-style-[a-z-]+-font"\\)`,
+    `${normalizedValue}:\\s*(?:style\\.getPropertyValue|token)\\("--simex-style-[a-z-]+-font"`,
   );
   return tokenBackedRole.test(source) && computedToken.test(source);
 }
@@ -213,4 +266,13 @@ function unwrapExpression(value) {
   const pairs = [["\"", "\""], ["'", "'"], ["`", "`"], ["{", "}"]];
   const pair = pairs.find(([start, end]) => trimmed.startsWith(start) && trimmed.endsWith(end));
   return pair ? trimmed.slice(1, -1).trim() : trimmed;
+}
+
+async function readOptional(fileUrl, encoding) {
+  try {
+    return await readFile(fileUrl, encoding);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
 }

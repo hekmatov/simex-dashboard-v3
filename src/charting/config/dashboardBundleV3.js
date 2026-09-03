@@ -465,7 +465,7 @@ function normalizeRetiredDashboardLook(config) {
     globalStyles: {
       ...config.globalStyles,
       dashboardStyle: "evidence-ledger",
-      dashboardColorProfile: "evidence-ledger/brighter-vellum",
+      dashboardColorProfile: "signal-instrument/calibrated-steel",
     },
   };
 }

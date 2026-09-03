@@ -61,7 +61,9 @@ function ColorField({
       if (!colorFieldRef.current?.contains(event.target)) setPaletteOpen(false);
     }
     function closeOnEscape(event) {
-      if (event.key === "Escape") setPaletteOpen(false);
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      setPaletteOpen(false);
     }
     document.addEventListener("pointerdown", closeOnOutsidePointer);
     document.addEventListener("keydown", closeOnEscape);

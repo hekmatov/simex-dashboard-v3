@@ -23,7 +23,7 @@ const [
 ]);
 await vite.close();
 
-test("workflow-disabled controls expose their reason from a pointer-only wrapper, never the native control", () => {
+test("workflow-disabled controls expose their reason without changing native tab order", () => {
   const html = renderToStaticMarkup(React.createElement(
     ControlTooltip,
     { disabled: true, reason: "Finish or cancel the open chart draft." },
@@ -32,7 +32,7 @@ test("workflow-disabled controls expose their reason from a pointer-only wrapper
 
   const describedBy = html.match(/data-control-tooltip-anchor="true"[^>]*aria-describedby="([^"]+)"/)?.[1];
   assert.ok(describedBy);
-  assert.match(html, /data-control-tooltip-anchor="true"[^>]*tabindex="-1"/);
+  assert.doesNotMatch(html, /tabindex=/);
   assert.match(html, new RegExp(`<span id="${describedBy}" role="tooltip"`));
   assert.match(html, /<button type="button" disabled="">Finish Build<\/button>/);
   assert.doesNotMatch(html, /<button[^>]+aria-describedby/);
@@ -67,7 +67,7 @@ test("ModeSwitcher applies one disabled-reason wrapper per workflow-disabled act
   }));
 
   assert.equal((disabledHtml.match(/data-control-tooltip-anchor="true"/g) ?? []).length, 2);
-  assert.equal((disabledHtml.match(/tabindex="-1"/g) ?? []).length, 2);
+  assert.doesNotMatch(disabledHtml, /tabindex=/);
   assert.doesNotMatch(disabledHtml, /<button[^>]+aria-describedby/);
   assert.equal((enabledHtml.match(/data-control-tooltip-anchor="false"/g) ?? []).length, 2);
   assert.doesNotMatch(enabledHtml, /tabindex=/);
@@ -84,7 +84,8 @@ test("IconControl opts into the workflow-disabled anchor without explaining intr
     disabled: true,
   }));
 
-  assert.match(workflowDisabled, /data-control-tooltip-anchor="true"[^>]*tabindex="-1"/);
+  assert.match(workflowDisabled, /data-control-tooltip-anchor="true"/);
+  assert.doesNotMatch(workflowDisabled, /tabindex=/);
   assert.match(workflowDisabled, /role="tooltip"/);
   assert.doesNotMatch(workflowDisabled, /<button[^>]+aria-describedby/);
   assert.doesNotMatch(ordinaryDisabled, /data-control-tooltip-anchor="true"/);
@@ -102,8 +103,11 @@ test("open chart work explains the Build actions it workflow-disables", () => {
 
   assert.match(
     html,
-    /data-control-tooltip-anchor="true"[^>]*tabindex="-1"[^>]*>[\s\S]*?<button[^>]*disabled=""[^>]*>Finish Build<\/button>/,
+    /data-control-tooltip-anchor="true"[^>]*>[\s\S]*?<button[^>]*disabled=""[^>]*>Finish Build<\/button>/,
   );
+  for (const wrapper of html.match(/<span class="control-tooltip"[^>]*>/g) ?? []) {
+    assert.doesNotMatch(wrapper, /tabindex=/);
+  }
   assert.doesNotMatch(html, /<button[^>]+aria-describedby/);
   assert.match(html, /role="tooltip"[^>]*>Finish or cancel the open chart draft\.<\/span>/);
 });

@@ -1,73 +1,27 @@
-/* Build and Present are desktop operational workspaces. Keep their mounted
-   state intact below the support boundary, but replace the interface with a
-   single explicit route back to View. */
+/* Build and Present remain available at narrow widths. Below the preferred
+   desktop boundary, show one small advisory without displacing the workspace. */
+.desktop-width-notice {
+  display: none;
+}
+
 @media (max-width: 1023px) {
   .app-frame:is(
     [data-dashboard-mode="build"],
     [data-dashboard-mode="present"]
-  ) {
-    min-height: 100dvh;
-    padding: clamp(16px, 4vw, 32px);
-  }
-
-  .app-frame:is(
-    [data-dashboard-mode="build"],
-    [data-dashboard-mode="present"]
-  ) > :not(.phone-mode-banner) {
-    display: none !important;
-  }
-
-  .app-frame:is(
-    [data-dashboard-mode="build"],
-    [data-dashboard-mode="present"]
-  ) > .phone-mode-banner {
-    align-items: center;
-    align-self: start;
-    background: var(--simex-warning-soft);
+  ) > .desktop-width-notice {
+    background-color: var(--simex-warning-soft);
     border: 1px solid var(--simex-warning);
     border-radius: var(--simex-style-surface-radius);
     color: var(--simex-text-strong);
-    display: grid;
-    gap: var(--simex-padding-dialog, 16px);
-    grid-template-columns: minmax(0, 1fr) auto;
-    margin: clamp(24px, 10vh, 80px) auto 0;
-    max-width: 680px;
-    min-height: 0;
-    padding: var(--simex-padding-dialog, 16px);
+    display: block;
+    font-family: var(--simex-style-body-font);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    margin: 4px 8px;
+    max-width: calc(100% - 16px);
+    padding: 3px 7px;
     position: relative;
-    width: min(100%, 680px);
+    width: fit-content;
     z-index: 1301;
-  }
-
-  .phone-mode-banner__copy {
-    display: grid;
-    gap: var(--simex-space-2, 4px);
-    min-width: 0;
-  }
-
-  .phone-mode-banner__copy > :is(strong, span) {
-    margin: 0;
-  }
-
-  .phone-mode-banner button {
-    background: var(--simex-accent);
-    border-radius: var(--simex-style-control-radius);
-    color: var(--simex-on-accent);
-    min-height: var(--simex-control-standard, 32px);
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 560px) {
-  .app-frame:is(
-    [data-dashboard-mode="build"],
-    [data-dashboard-mode="present"]
-  ) > .phone-mode-banner {
-    align-items: stretch;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .phone-mode-banner button {
-    justify-self: start;
   }
 }

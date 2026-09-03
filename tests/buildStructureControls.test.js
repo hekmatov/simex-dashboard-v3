@@ -9,7 +9,7 @@ const pageNavigationModule = await vite.ssrLoadModule("/src/components/build/Bui
 const structureRailModule = await vite.ssrLoadModule("/src/components/build/BuildStructureRail.jsx").catch(() => null);
 await vite.close();
 
-test("Build Page navigation keeps draggable tabs and exposes one active-Page actions trigger", () => {
+test("Build Page navigation keeps draggable tabs and makes the active Page tab the only actions trigger", () => {
   assert.equal(typeof pageNavigationModule?.default, "function");
   const html = renderToStaticMarkup(React.createElement(pageNavigationModule.default, {
     pages: [{ id: "home", label: "Home" }, { id: "biomedical", label: "Biomedical" }],
@@ -19,9 +19,20 @@ test("Build Page navigation keeps draggable tabs and exposes one active-Page act
   }));
   assert.match(html, /class="build-page-tab-scroller"[\s\S]*Home[\s\S]*Biomedical/);
   assert.match(html, /draggable="true"/);
-  assert.match(html, /Page actions for Biomedical/);
+  assert.match(html, /aria-current="page"[\s\S]*>Biomedical<\//);
+  assert.doesNotMatch(html, />Page actions<\//);
   assert.doesNotMatch(html, /Biomedical Page commands/);
+  assert.doesNotMatch(html, /Page Orbit/);
   assert.match(html, /build-page-add-pinned/);
+});
+
+test("closing Page actions clears the command, value, and acknowledgement state", () => {
+  assert.deepEqual(pageNavigationModule.clearPageActionState(), {
+    pageActionMenu: null,
+    command: null,
+    value: "",
+    acknowledged: false,
+  });
 });
 
 test("Build Structure is a Page-first accessible tree with aligned type icons", () => {

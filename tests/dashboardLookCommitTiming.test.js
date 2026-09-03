@@ -7,7 +7,7 @@ import {
 } from "../src/theme/dashboardLookDraft.js";
 import { createSerializedDashboardCommitController } from "../src/lib/dashboardCommitController.js";
 
-test("closing Dashboard Look canonicalizes the live selection before closing or persisting", async () => {
+test("closing Theme canonicalizes the live selection before closing or persisting", async () => {
   let releasePersistence;
   let closed = false;
   let canonicalLook = null;

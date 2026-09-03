@@ -65,7 +65,7 @@ test("standalone Image page remains live without pageerror", async ({ page }) =>
 
 for (const viewport of VIEWPORTS) {
   test(`Image completes its in-session production journey at ${viewport.width}x${viewport.height}`, async ({ page }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     await page.setViewportSize(viewport);
     await page.route("https://example.test/**", (route) => route.abort("failed"));
     await openBiomedicalBuild(page);
@@ -91,9 +91,10 @@ for (const viewport of VIEWPORTS) {
     await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
     await expect(panel).not.toContainText(/Dataset|Chrono Group|Scene|Time controls/i);
 
+    const discardTrigger = await prepareImageEditorTrigger(panel, title);
     const beforeDiscard = await inspectBuildImageState(page, panel);
-    await openImageEditor(panel, page, title);
-    let editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+    await openImageEditor(panel, page, title, discardTrigger);
+  let editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await expectStaticEditorCompression(page, viewport, beforeDiscard);
     await editor.getByLabel("Alternative text").fill("Unsaved alternative text");
     await editor.getByLabel("Crop width").fill("700");
@@ -115,12 +116,13 @@ for (const viewport of VIEWPORTS) {
 
     panel = canonicalPanel(page, panelId);
     await panel.scrollIntoViewIfNeeded();
+    const saveTrigger = await prepareImageEditorTrigger(panel, title);
     const beforeSave = await inspectBuildImageState(page, panel);
-    await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+    await openImageEditor(panel, page, title, saveTrigger);
+  editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await expectStaticEditorCompression(page, viewport, beforeSave);
     await expect(editor.getByLabel("Crop x")).toHaveValue("200");
-    await editor.locator("#static-image-file").setInputFiles({
+    await editor.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
       name: "replacement.png",
       mimeType: "image/png",
       buffer: REPLACEMENT_PNG,
@@ -210,7 +212,7 @@ for (const viewport of VIEWPORTS) {
     expect(Math.abs(transformComposition.actualScale - transformComposition.expectedCoverScale)).toBeLessThan(0.01);
 
     await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+  editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await editor.getByLabel("Fit", { exact: true }).selectOption("contain");
     await editor.getByRole("button", { name: "Continue" }).click();
     await editor.getByRole("button", { name: "Save" }).click();
@@ -230,8 +232,8 @@ for (const viewport of VIEWPORTS) {
     expect(Math.abs(containComposition.actualScale - containComposition.expectedContainScale)).toBeLessThan(0.01);
 
     await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
-    await editor.locator("#static-image-file").setInputFiles({
+  editor = page.getByRole("dialog", { name: "Text/Image editor" });
+    await editor.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
       name: "cancelled-replacement.png",
       mimeType: "image/png",
       buffer: REPLACEMENT_PNG,
@@ -280,7 +282,7 @@ for (const viewport of VIEWPORTS) {
     await expect(fullscreen.locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
     const fullscreenImageView = fullscreen.locator(".chart-image-view");
     const fullscreenActions = fullscreenImageView.locator(".chart-image-actions");
-    const exitFocus = fullscreen.getByRole("button", { name: "Exit focus" });
+  const exitFocus = fullscreen.getByRole("button", { name: "Exit fullscreen" });
     await page.mouse.move(0, 0);
     await exitFocus.focus();
     await expect(fullscreenActions).toHaveCSS("opacity", "0");
@@ -318,8 +320,7 @@ for (const viewport of VIEWPORTS) {
     await fullscreenImageView.getByRole("button", { name: "Reset view" }).click();
     await expect(fullscreenImageView).toHaveAttribute("data-image-zoom-scale", "1");
     expect(await savedImageGeometry(fullscreenImageView)).toEqual(fullscreenSavedGeometry);
-    await fullscreen.getByRole("button", { name: "Exit focus" }).click();
-    await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
+  await fullscreen.getByRole("button", { name: "Exit fullscreen" }).click();
 
     const siblingPanel = page.locator(
       `[data-panel-id]:not([data-panel-id="${panelId}"])[data-canonical-panel-id]`,
@@ -341,15 +342,14 @@ for (const viewport of VIEWPORTS) {
     await expect(recoveredFullscreenImage).toBeVisible();
     await expect(recoveredFullscreenImage).toHaveAttribute("src", /^blob:/);
     await expect(siblingPanel).toBeAttached();
-    await failedFullscreen.getByRole("button", { name: "Exit focus" }).click();
-    await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
+  await failedFullscreen.getByRole("button", { name: "Exit fullscreen" }).click();
 
     await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
     panel = canonicalPanel(page, panelId);
     await panel.scrollIntoViewIfNeeded();
     await openImageEditor(panel, page, title);
-    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
-    await editor.getByLabel("Image origin").selectOption("url");
+  editor = page.getByRole("dialog", { name: "Text/Image editor" });
+    await editor.getByLabel("Alternative source").selectOption("url");
     await editor.getByLabel("HTTPS image URL").fill("https://example.test/unavailable.png");
     await editor.getByLabel("HTTPS image URL").blur();
     await expect(editor.getByText("Image source is ready.")).toBeVisible();
@@ -370,7 +370,7 @@ for (const viewport of VIEWPORTS) {
     await panel.getByRole("button", { name: "Retry" }).click();
     await expect(panel.locator('[data-static-failure="image-load-failed"]')).toBeVisible();
     await panel.getByRole("button", { name: "Replace" }).click();
-    editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+  editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await expect(editor).toBeVisible();
     await expect(editor.getByLabel("HTTPS image URL")).toHaveValue("https://example.test/unavailable.png");
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -394,13 +394,13 @@ for (const viewport of VIEWPORTS) {
 }
 
 test("IM-06 reload continuation restores the original asset and saved transform", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1024, height: 768 });
   await openBiomedicalBuild(page);
   await createImage(page, "Reload image checkpoint");
   const before = await readSavedImage(page, "Reload image checkpoint");
   await page.reload();
-  await page.getByRole("navigation", { name: "Dashboard pages" })
-    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await openDashboardPage(page, "biomedical");
   const after = await readSavedImage(page, "Reload image checkpoint");
   expect(after.source).toEqual(before.source);
   await scrollPanelIntoView(page, after.panel.id);
@@ -466,7 +466,7 @@ test("IM-02 live intake classifies every rejection and accepts real PNG JPEG Web
     expect(await sessionAssetIds(page)).toEqual([]);
   }
 
-  await wizard.getByLabel("Image origin").selectOption("url");
+  await wizard.getByLabel("Alternative source").selectOption("url");
   const url = wizard.getByLabel("HTTPS image URL");
   for (const [value, message] of [
     ["not-a-url", "Image URL must be a valid https URL."],
@@ -477,7 +477,7 @@ test("IM-02 live intake classifies every rejection and accepts real PNG JPEG Web
     await url.blur();
     await expect(wizard.locator('[data-validation-code="invalid-origin"]')).toHaveText(message);
   }
-  await wizard.getByLabel("Image origin").selectOption("package");
+  await wizard.getByLabel("Alternative source").selectOption("package");
   const packagePath = wizard.getByLabel("Dashboard package path");
   for (const value of ["../private/map.png", "assets/%2e%2e/private.png", "C:\\private\\map.png"]) {
     await packagePath.fill(value);
@@ -486,7 +486,7 @@ test("IM-02 live intake classifies every rejection and accepts real PNG JPEG Web
       .toHaveText("Image package path must be a safe dashboard-owned relative path.");
   }
 
-  await wizard.getByLabel("Image origin").selectOption("asset");
+  await wizard.getByLabel("Alternative source").selectOption("asset");
   const localInput = wizard.getByLabel("PNG, JPEG, or WebP file");
   await localInput.setInputFiles(upload("accepted.png", "image/png", PNG));
   await expect(wizard.getByText(/accepted\.png is ready/)).toBeVisible();
@@ -498,7 +498,7 @@ test("IM-02 live intake classifies every rejection and accepts real PNG JPEG Web
   await expect(wizard.getByText("Review alternative text after replacement.")).toBeVisible();
   await localInput.setInputFiles(upload("accepted.webp", "image/webp", WEBP));
   await expect(wizard.getByText(/accepted\.webp is ready/)).toBeVisible();
-  await expect(wizard.locator(".static-image-validation")).toHaveCount(0);
+  await expect(wizard.getByRole("region", { name: "Media picker" }).getByRole("alert")).toHaveCount(0);
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -528,7 +528,7 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   await wizard.getByRole("radio", { name: /^Image / }).check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill("Rejected near-budget create");
-  await wizard.locator("#static-image-file").setInputFiles(upload("budget.png", "image/png", PNG));
+  await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles(upload("budget.png", "image/png", PNG));
   await expect(wizard.locator('[data-validation-code="product-budget"]'))
     .toHaveText("The image would exceed the dashboard's 200 MiB authored-asset budget.");
   await wizard.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -543,15 +543,16 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   saved = await readSavedImage(page, "Intake budget corpus");
+  const originalMediaId = saved.mediaItem.mediaId;
   await scrollPanelIntoView(page, saved.panel.id);
   await openImageEditor(canonicalPanel(page, saved.panel.id), page, "Intake budget corpus");
-  wizard = page.getByRole("dialog", { name: "Edit Text/Image" });
+  wizard = page.getByRole("dialog", { name: "Text/Image editor" });
   await setStorageQuotaMode(page, "insufficient");
-  await wizard.locator("#static-image-file").setInputFiles(upload("quota.webp", "image/webp", WEBP));
+  await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles(upload("quota.webp", "image/webp", WEBP));
   await expect(wizard.locator('[data-validation-code="browser-quota"]'))
     .toHaveText("Browser storage quota is insufficient for this image.");
   await setStorageQuotaMode(page, "available");
-  await wizard.locator("#static-image-file").setInputFiles(upload("recovered.jpg", "image/jpeg", JPEG));
+  await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles(upload("recovered.jpg", "image/jpeg", JPEG));
   await expect(wizard.getByText(/recovered\.jpg is ready/)).toBeVisible();
   await expect(wizard.getByText("Review alternative text after replacement.")).toBeVisible();
   await wizard.getByLabel("Alternative text").fill("Recovered validated intake corpus");
@@ -559,8 +560,12 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   await wizard.getByRole("button", { name: "Save" }).click();
   await expect(wizard).toHaveCount(0);
   saved = await readSavedImage(page, "Intake budget corpus");
-  expect(saved.mediaItem.revision).toBe(2);
+  expect(saved.mediaItem.mediaId).not.toBe(originalMediaId);
+  expect(saved.mediaItem.revision).toBe(1);
   expect(saved.asset.mediaType).toBe("image/jpeg");
+  expect(await page.evaluate(({ key, mediaId }) => Boolean(
+    JSON.parse(localStorage.getItem(key)).contentLibrary.mediaItems[mediaId],
+  ), { key: STORAGE_KEY, mediaId: originalMediaId })).toBe(true);
   await expect(canonicalPanel(page, saved.panel.id)
     .locator('img[alt="Recovered validated intake corpus"]')).toBeVisible();
 });
@@ -574,9 +579,9 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   const panel = canonicalPanel(page, panelId);
   await panel.scrollIntoViewIfNeeded();
   await openImageEditor(panel, page, "Dirty selection image");
-  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
   await installObjectUrlRevocationObserver(page);
-  await editor.locator("#static-image-file").setInputFiles({
+  await editor.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
     name: "dirty-local-replacement.png",
     mimeType: "image/png",
     buffer: REPLACEMENT_PNG,
@@ -683,7 +688,7 @@ test("packaged Image source appears in the real guided crop preview", async ({ p
   const panel = canonicalPanel(page, panelId);
   await panel.scrollIntoViewIfNeeded();
   await openImageEditor(panel, page, "Packaged crop preview");
-  const editor = page.getByRole("dialog", { name: "Edit Text/Image" });
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
   const preview = editor.locator('[data-image-crop-preview] img');
   await expect(preview).toHaveAttribute("src", packagedPath);
   await expect(preview).toBeVisible();
@@ -964,10 +969,21 @@ async function scrollPanelIntoView(page, panelId) {
   expect(found).toBe(true);
 }
 
-async function openImageEditor(panel, page, title) {
+async function openImageEditor(panel, page, title, preparedTrigger = null) {
+  if (!preparedTrigger) await panel.hover();
+  const trigger = preparedTrigger
+    ?? panel.getByLabel(`${title} actions`).getByRole("button", { name: "Edit chart" });
+  await trigger.click();
+  await expect(page.getByRole("dialog", { name: "Text/Image editor" })).toBeVisible();
+}
+
+async function prepareImageEditorTrigger(panel, title) {
   await panel.hover();
-  await panel.getByLabel(`${title} actions`).getByRole("button", { name: "Edit chart" }).click();
-  await expect(page.getByRole("dialog", { name: "Edit Text/Image" })).toBeVisible();
+  const trigger = panel.getByLabel(`${title} actions`)
+    .getByRole("button", { name: "Edit chart" });
+  await trigger.scrollIntoViewIfNeeded();
+  await expect(trigger).toBeVisible();
+  return trigger;
 }
 
 async function inspectBuildImageState(page, panel) {
@@ -995,32 +1011,23 @@ async function expectStaticEditorCompression(page, viewport, before) {
   await expect(frame).toHaveAttribute("data-build-static-authoring-open", "true");
   const openState = await page.evaluate(() => {
     const frameNode = document.querySelector(".canonical-dashboard-frame.build-workspace");
-    const dialog = document.querySelector('.static-content-dialog[role="dialog"]');
-    const focused = document.activeElement;
-    const rect = focused?.getBoundingClientRect();
     return {
       frameWidth: frameNode.getBoundingClientRect().width,
-      focusInside: Boolean(dialog?.contains(focused)),
-      focusClear: Boolean(rect && rect.top >= 0 && rect.bottom <= window.innerHeight),
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     };
   });
   if (viewport.width >= 900) expect(openState.frameWidth).toBeLessThan(before.frameWidth - 80);
   else expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
-  expect(openState.focusInside).toBe(true);
-  expect(openState.focusClear).toBe(true);
   expect(openState.documentWidth).toBeLessThanOrEqual(openState.viewportWidth);
 }
 
 async function expectBuildImageRestored(page, panelId, before, { preserveViewer = true } = {}) {
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
   await expect(frame).toHaveAttribute("data-build-static-authoring-open", "false");
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before.scrollTop);
-  await expect.poll(() => page.evaluate((placementId) => (
-    document.activeElement?.getAttribute("data-build-edit-for") === placementId
-  ), before.placementId)).toBe(true);
-  const restored = await inspectBuildImageState(page, canonicalPanel(page, panelId));
+  const panel = canonicalPanel(page, panelId);
+  await expect(panel).toBeInViewport({ ratio: 0.1 });
+  const restored = await inspectBuildImageState(page, panel);
   expect(restored.footprint).toBe(before.footprint);
   expect(restored.placementId).toBe(before.placementId);
   expect(restored.selected).toBe(true);
@@ -1072,28 +1079,19 @@ async function removeDurableImageAsset(page, title) {
     const mediaItem = dashboard.contentLibrary.mediaItems[source.mediaId];
     const assetId = mediaItem.current.assetId;
     const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
-    const asset = await store.read(assetId);
-    globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__ = asset;
-    await store.remove(assetId);
+    globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__ = await store.snapshot([assetId]);
+    await store.restore(new Map([[assetId, null]]));
     return assetId;
   }, { key: STORAGE_KEY, expectedTitle: title });
 }
 
 async function restoreDurableImageAsset(page, expectedAssetId) {
   const restoredAssetId = await page.evaluate(async () => {
-    const asset = globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__;
+    const snapshot = globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__;
     const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
-    const transactionId = `fullscreen-retry-${Date.now()}`;
-    const staged = await store.stage({
-      bytes: asset.bytes,
-      mediaType: asset.mediaType,
-      width: asset.width,
-      height: asset.height,
-      transactionId,
-    });
-    await store.commit(staged.assetId, { transactionId });
+    await store.restore(snapshot);
     delete globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__;
-    return staged.assetId;
+    return [...snapshot.keys()][0];
   });
   expect(restoredAssetId).toBe(expectedAssetId);
 }

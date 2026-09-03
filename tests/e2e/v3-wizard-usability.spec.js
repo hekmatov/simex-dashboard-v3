@@ -101,10 +101,15 @@ test("New Chart keeps stable geometry and exposes editable destination placement
   await expect(wizard.getByLabel("Destination page")).toBeEnabled();
   await expect(wizard.getByLabel("Destination section")).toBeEnabled();
   await expect(wizard.getByLabel("Insertion")).toBeEnabled();
-  await expect(wizard.getByRole("grid", { name: /Chart size:/ })).toBeVisible();
-  await wizard.getByRole("gridcell", { name: "Set chart size to 3 columns by 2 rows" }).click();
-  await expect(wizard.getByRole("gridcell", { name: "Set chart size to 3 columns by 2 rows" }))
-    .toHaveAttribute("aria-pressed", "true");
+  const footprint = wizard.getByRole("region", { name: "Footprint" });
+  await expect(footprint).toBeVisible();
+  await footprint.getByLabel("Width").selectOption("3");
+  await footprint.getByLabel("Row height").selectOption("2");
+  await expect(footprint.getByLabel("Width")).toHaveValue("3");
+  await expect(footprint.getByLabel("Row height")).toHaveValue("2");
+  await expect(footprint.getByRole("img", {
+    name: "Chart size: 3 columns by 200% of a row",
+  })).toBeVisible();
   await wizard.getByLabel("Insertion").selectOption("before");
   await expect(wizard.getByLabel("Placement anchor")).toBeEnabled();
   await expect(wizard.locator(".chart-wizard-destination .chart-proof-state")).toHaveCount(0);

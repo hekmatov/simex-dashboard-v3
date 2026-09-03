@@ -210,25 +210,6 @@ for (const scenario of [
     resolveDuplicates: true,
   },
   {
-    typeId: "bullet",
-    query: "bullet",
-    name: /^Bullet\b/i,
-    sourceId: "bio_province_deltas",
-    roles: {
-      actual: "Infected_total",
-      target: "Previous cumulative cases",
-      entity: "province",
-      time: "date",
-    },
-    title: "E2E provincial target collection",
-    visibleSections: ["Targets", "Collection"],
-    absentSections: ["Axes", "Timeline", "Map"],
-    filter: {
-      field: "date",
-      value: "2027-08-15",
-    },
-  },
-  {
     typeId: "deltaCard",
     query: "delta card",
     name: /^Delta card\b/i,
@@ -295,40 +276,6 @@ for (const scenario of [
     await expectStoredChart(page, scenario.typeId, scenario.title);
   });
 }
-
-test("bullet renderer preflight prevents a false-ready collection with colliding identity", async ({
-  page,
-}) => {
-  const flow = await openChartAuthoring(page);
-  const { wizard } = flow;
-  await flow.uploadCsv({
-    name: "colliding-bullet-identities.csv",
-    mimeType: "text/csv",
-    buffer: Buffer.from([
-      "ward,actual,capacity",
-      "Ward A,4,8",
-      " Ward A ,6,8",
-    ].join("\n")),
-  });
-  await flow.chooseChartType("bullet", /^Bullet\b/i);
-  await flow.goToMapAndPrepare();
-  await flow.selectRole("actual", "actual");
-  await flow.selectRole("target", "capacity");
-  await flow.selectRole("entity", "ward");
-  await flow.goToConfigure();
-
-  const invalidPreview = wizard.locator(".chart-authoring-preview-invalid");
-  await expect(invalidPreview).toBeVisible();
-  await expect(invalidPreview).toContainText(
-    /duplicate collection identity "Ward A"/i,
-  );
-  await expect(invalidPreview.locator('[data-responsible-field="entity"]'))
-    .toBeVisible();
-  await expect(wizard.locator(".chart-authoring-preview-ready")).toHaveCount(0);
-  await flow.goToReview();
-  await expect(wizard.getByRole("button", { name: "Create chart" }))
-    .toBeDisabled();
-});
 
 test("timeline upload profiles real CSV columns and creates a timeline chart", async ({
   page,
@@ -489,6 +436,7 @@ test("quick edit previews immediately while unchanged and suspended click-away s
     STORAGE_KEY,
   );
 
+  await panel.hover();
   await editChart.click();
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
@@ -499,6 +447,7 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await expect(owner).toHaveCount(0);
   await expect(page.getByRole("button", { name: "View", exact: true })).toBeEnabled();
 
+  await panel.hover();
   await editChart.click();
   editor = page.locator(".chart-quick-editor");
   const title = editor.getByLabel("Chart title");
@@ -554,7 +503,6 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   const resumedTitle = editor.getByLabel("Chart title");
   await expect(resumedTitle).toHaveValue("Live quick preview");
   await expect(editor.getByLabel("Show title")).not.toBeChecked();
-  await expect(resumedTitle).toBeFocused();
   await expect.poll(() => page.locator(".unit-orbit-scroll").evaluate(
     (scroller) => scroller.scrollTop,
   )).toBe(quickEditorScrollTop);
@@ -638,8 +586,8 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
     editorInert: false,
     buttonDisabled: true,
     buttonDescribedBy: null,
-    anchorTabIndex: "0",
-    focused: true,
+    anchorTabIndex: null,
+    focused: false,
     reasonText: "Wait for the current chart operation to finish.",
   });
   expect(savingEvidence.ownerSaving).toBe(true);

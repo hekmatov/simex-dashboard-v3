@@ -15,6 +15,7 @@ export default function MediaPicker({
   assets = {},
   mode = "qmd",
   action = "insert",
+  selectedMediaId = null,
   disabled = false,
   onSelect,
   onCreateLocal,
@@ -23,13 +24,13 @@ export default function MediaPicker({
   const groups = partitionMediaPickerItems(mediaItems, { mode });
   const [importingId, setImportingId] = React.useState(null);
   const [status, setStatus] = React.useState("");
-  const [error, setError] = React.useState("");
+  const [error, setError] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
 
   const acceptFile = async (file, externalItem = null) => {
     if (!file || disabled) return;
     setBusy(true);
-    setError("");
+    setError(null);
     setStatus("Validating local media…");
     try {
       const candidate = await stageLocalMediaFile({
@@ -42,7 +43,7 @@ export default function MediaPicker({
       setStatus(`${candidate.mediaItem.displayName} is ready in this panel draft.`);
       setImportingId(null);
     } catch (caught) {
-      setError(caught?.message ?? "The image could not be imported.");
+      setError(mediaPickerError(caught, "The image could not be imported."));
       setStatus("");
     } finally {
       setBusy(false);
@@ -52,13 +53,13 @@ export default function MediaPicker({
   const importDirect = async (item) => {
     if (disabled) return;
     setBusy(true);
-    setError("");
+    setError(null);
     setStatus("Requesting the external image from this browser…");
     try {
       const file = await importExternalMediaFile(item);
       await acceptFile(file, item);
     } catch (caught) {
-      setError(caught?.message ?? "Direct import failed. Choose a local file upload instead.");
+      setError(mediaPickerError(caught, "Direct import failed. Choose a local file upload instead."));
       setStatus("");
       setBusy(false);
     }
@@ -80,6 +81,7 @@ export default function MediaPicker({
                 type="radio"
                 name="media-picker-selection"
                 value={item.mediaId}
+                checked={item.mediaId === selectedMediaId}
                 disabled={disabled}
                 onChange={() => void onSelect?.(item)}
               />
@@ -147,10 +149,18 @@ export default function MediaPicker({
         </section>
       )}
       {status && <p role="status" aria-live="polite">{status}</p>}
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert" data-validation-code={error.code || undefined}>{error.message}</p>}
       {onCancel && <button type="button" className="secondary" disabled={disabled} onClick={onCancel}>Close media picker</button>}
     </section>
   );
+}
+
+export function mediaPickerError(caught, fallback = "The image could not be imported.") {
+  const validationError = caught?.validation?.errors?.[0];
+  return Object.freeze({
+    code: validationError?.code ?? null,
+    message: validationError?.message ?? caught?.message ?? fallback,
+  });
 }
 
 export function partitionMediaPickerItems(mediaItems = {}, { mode = "qmd" } = {}) {

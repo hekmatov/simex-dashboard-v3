@@ -2,7 +2,7 @@ import React from "react";
 
 import DashboardCommandCrown from "./DashboardCommandCrown.jsx";
 import OperationStatusViewport from "./OperationStatusViewport.jsx";
-import PhoneModeNotice from "./PhoneModeNotice.jsx";
+import DesktopWidthNotice from "./DesktopWidthNotice.jsx";
 import { rightSideDrawerTopFromCrown } from "../common/RightSideDrawer.jsx";
 
 const useBrowserLayoutEffect = typeof window === "undefined"
@@ -36,47 +36,9 @@ export default function AppFrame({
   lookDrawerOpen = false,
   rightDrawer = null,
 }) {
-  const desktopOnlyMode = mode === "build" || mode === "present";
+  const showsDesktopWidthNotice = mode === "build" || mode === "present";
   const frameRef = React.useRef(null);
   const [rightSideDrawerTop, setRightSideDrawerTop] = React.useState(12);
-  const compactViewportRestorationRef = React.useRef({
-    scrollX: 0,
-    scrollY: 0,
-  });
-
-  React.useEffect(() => {
-    if (!desktopOnlyMode || typeof window.matchMedia !== "function") return undefined;
-    const desktopGateQuery = window.matchMedia("(max-width: 1023px)");
-    let desktopGateActive = desktopGateQuery.matches;
-    let restoreFrame = 0;
-
-    const captureSupportedState = () => {
-      if (desktopGateQuery.matches) return;
-      compactViewportRestorationRef.current.scrollX = window.scrollX;
-      compactViewportRestorationRef.current.scrollY = window.scrollY;
-    };
-    const handleViewportChange = ({ matches }) => {
-      const wasDesktopGateActive = desktopGateActive;
-      desktopGateActive = matches;
-      if (matches || !wasDesktopGateActive) return;
-      restoreFrame = window.requestAnimationFrame(() => {
-        window.scrollTo({
-          left: compactViewportRestorationRef.current.scrollX,
-          top: compactViewportRestorationRef.current.scrollY,
-          behavior: "auto",
-        });
-      });
-    };
-
-    captureSupportedState();
-    window.addEventListener("scroll", captureSupportedState, { passive: true });
-    desktopGateQuery.addEventListener("change", handleViewportChange);
-    return () => {
-      window.removeEventListener("scroll", captureSupportedState);
-      desktopGateQuery.removeEventListener("change", handleViewportChange);
-      if (restoreFrame) window.cancelAnimationFrame(restoreFrame);
-    };
-  }, [desktopOnlyMode]);
 
   useBrowserLayoutEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -131,11 +93,7 @@ export default function AppFrame({
         "--right-side-drawer-top": `${rightSideDrawerTop}px`,
       }}
     >
-      {desktopOnlyMode && <PhoneModeNotice
-        mode={mode}
-        blockedReason={blockedReason}
-        onSwitchToView={() => onModeRequest?.("view")}
-      />}
+      {showsDesktopWidthNotice && <DesktopWidthNotice mode={mode} />}
       <DashboardCommandCrown
         mode={mode}
         availableModes={availableModes}
