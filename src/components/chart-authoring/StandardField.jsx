@@ -261,6 +261,58 @@ function filterSeed(filter) {
 function filterScalar(value) {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 }
+
+function TargetRangesControl({ ranges, onChange }) {
+  const normalized = Array.isArray(ranges) ? ranges.filter(Number.isFinite) : [];
+  const canonical = normalized.join(", ");
+  const [rawValue, setRawValue] = React.useState(canonical);
+  const committedValue = React.useRef(canonical);
+
+  React.useEffect(() => {
+    if (committedValue.current === canonical) return;
+    committedValue.current = canonical;
+    setRawValue(canonical);
+  }, [canonical]);
+
+  const commit = (value) => {
+    const parsed = parseTargetRangesInput(value);
+    if (parsed.complete) onChange(parsed.values);
+    return parsed;
+  };
+
+  return /* @__PURE__ */ React.createElement("label", null, "Status-band upper limits", /* @__PURE__ */ React.createElement("input", {
+    value: rawValue,
+    placeholder: "50, 80, 100",
+    onChange: (event) => {
+      const value = event.target.value;
+      setRawValue(value);
+      commit(value);
+    },
+    onBlur: () => {
+      if (!commit(rawValue).complete) setRawValue(canonical);
+    }
+  }));
+}
+
+export function parseTargetRangesInput(value) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return { values: [], complete: true };
+  }
+  const trailingDelimiter = /,\s*$/.test(value);
+  const tokens = value.split(",").map((token) => token.trim());
+  const values = tokens.flatMap((token) => {
+    if (token === "") return [];
+    const parsed = Number(token);
+    return Number.isFinite(parsed) ? [parsed] : [];
+  });
+  return {
+    values,
+    complete: !trailingDelimiter && tokens.every((token) => (
+      token !== "" && Number.isFinite(Number(token))
+    )),
+  };
+}
+
 function structuredControls(control, value, onChange, field = {}) {
   const current = sanitizeStructuredValue(control, value);
   const emit = (path, nextValue) => onChange(
@@ -295,11 +347,10 @@ function structuredControls(control, value, onChange, field = {}) {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, controls.has("direction") ? /* @__PURE__ */ React.createElement("label", null, "Which change is favorable", /* @__PURE__ */ React.createElement("select", {
       value: current.direction ?? "",
       onChange: (event) => emit(["direction"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is favorable"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is favorable"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))) : null, controls.has("ranges") ? /* @__PURE__ */ React.createElement("label", null, "Status-band upper limits", /* @__PURE__ */ React.createElement("input", {
-      value: Array.isArray(current.ranges) ? current.ranges.filter(Number.isFinite).join(", ") : "",
-      placeholder: "50, 80, 100",
-      onChange: (event) => emit(["ranges"], commaSeparated(event.target.value).map(Number).filter(Number.isFinite))
-    })) : null);
+    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is favorable"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is favorable"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))) : null, controls.has("ranges") ? /* @__PURE__ */ React.createElement(TargetRangesControl, {
+      ranges: current.ranges,
+      onChange: (nextRanges) => emit(["ranges"], nextRanges)
+    }) : null);
   }
   if (control === "map") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)));

@@ -88,6 +88,7 @@ const { default: RoleField } = await import(
 const {
   default: StandardField,
   filterForOperator,
+  parseTargetRangesInput,
   updateStructuredFieldValue,
 } = await import(
   "../src/components/chart-authoring/StandardField.jsx"
@@ -969,6 +970,17 @@ test("filter controls select a source column and emit the curated filter contrac
   }));
   assert.match(populated, /Filter column/);
   assert.doesNotMatch(populated, /\[object Object\]/);
+});
+
+test("target range parsing preserves a trailing comma while retaining completed thresholds", () => {
+  assert.deepEqual(parseTargetRangesInput("50, "), {
+    values: [50],
+    complete: false,
+  });
+  assert.deepEqual(parseTargetRangesInput("50, 80, 100"), {
+    values: [50, 80, 100],
+    complete: true,
+  });
 });
 
 test("structured presentation controls emit only validator-approved nested contracts", () => {
