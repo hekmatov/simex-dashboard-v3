@@ -2280,6 +2280,20 @@ test("data roles render measurements first and duplicate controls only for corre
   assert.match(withDuplicates, /Duplicate observations/);
 });
 
+test("duplicate resolution shows the chart's unresolved error state instead of an unapplied choice", () => {
+  const html = render(React.createElement(StandardField, {
+    field: {
+      id: "duplicates",
+      label: "Duplicate observations",
+      control: "duplicates",
+      value: null,
+    },
+  }));
+
+  assert.match(html, /<option value="error" selected="">Flag as an error<\/option>/);
+  assert.doesNotMatch(html, /<option value="first" selected="">Use first observation<\/option>/);
+});
+
 test("style and layout starts with the actual preview and separates advanced controls", () => {
   const rows = [{ period: "May", capacity: 4 }];
   const chart = validLineChart();

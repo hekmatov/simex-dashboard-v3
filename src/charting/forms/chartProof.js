@@ -8,6 +8,7 @@ export function requestRenderProof({
   const revision = `render:${draftRevision ?? "unknown"}:${inputHash}`;
   const causalError = preparedData?.error ?? null;
   const rendererReadyCount = causalError ? 0 : effectiveOutputCount(preparedData);
+  const preparationErrors = preparationDiagnostics(preparedData, chart);
   const errors = [];
   if (causalError) {
     errors.push({
@@ -16,6 +17,8 @@ export function requestRenderProof({
       stage: causalError.stage ?? "configure-chart",
       retryable: causalError.retryable !== false,
     });
+  } else if (preparationErrors.length > 0) {
+    errors.push(...preparationErrors);
   } else if (rendererReadyCount <= 0) {
     errors.push({
       code: "render-empty",
@@ -35,6 +38,56 @@ export function requestRenderProof({
       ? { ...structuredClone(previousProof), current: false }
       : null,
   };
+}
+
+function preparationDiagnostics(preparedData, chart) {
+  const diagnostics = Array.isArray(preparedData?.diagnostics)
+    ? preparedData.diagnostics
+    : [];
+  const duplicateCount = diagnostics.find(({ code }) => code === "duplicate-observations")
+    ?.duplicateGroupCount;
+  return diagnostics
+    .filter(({ severity }) => severity === "error")
+    .map((diagnostic) => ({
+      code: diagnostic.code ?? "chart-data-invalid",
+      message: diagnostic.code === "duplicate-resolution-required"
+        ? duplicateResolutionMessage({ diagnostic, duplicateCount, chart })
+        : diagnostic.message ?? "Chart preparation needs attention.",
+      stage: diagnostic.stage ?? "map-and-prepare-data",
+      retryable: true,
+    }));
+}
+
+function duplicateResolutionMessage({ diagnostic, duplicateCount, chart }) {
+  const fields = duplicateMarkFields(chart);
+  const count = Number.isFinite(duplicateCount) ? duplicateCount : null;
+  const identity = fields.length > 0
+    ? ` defined by ${listText(fields)}`
+    : "";
+  const prefix = count === null
+    ? "Some plotted marks"
+    : `${count} plotted mark${count === 1 ? "" : "s"}`;
+  return `${prefix}${identity} have multiple source rows. ${diagnostic.message ?? "Choose how to resolve duplicate observations."}`;
+}
+
+function duplicateMarkFields(chart) {
+  const roles = chart?.roles ?? {};
+  return ["observation", "cluster", "label", "measurements"]
+    .flatMap((role) => bindingFields(roles[role]))
+    .filter((field, index, fields) => fields.indexOf(field) === index);
+}
+
+function bindingFields(binding) {
+  if (Array.isArray(binding)) return binding.flatMap(bindingFields);
+  return typeof binding?.field === "string" && binding.field.trim()
+    ? [binding.field.trim()]
+    : [];
+}
+
+function listText(values) {
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
 }
 
 export function deriveCreateProofState({

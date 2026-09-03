@@ -78,3 +78,22 @@ node --test tests/wizardDraftV3.test.js tests/chartDataPipelineV3.test.js tests/
 node --test tests/chartAuthoringComponentsV3.test.js
 # 102 passed
 ```
+
+## Follow-up: real stacked-bar creation journey
+
+The audit was extended beyond schema inspection by completing this exact authoring journey in the local application:
+
+1. Select **Simulation exercise socio-economic behaviour dataset**.
+2. Select **Stacked bar**.
+3. Map **Percentage** to Measurements, **Question** to Observation / X-axis, and **Answer** to Cluster.
+
+That mapping is initially blocked because its 550 source rows contain 50 repeated Question–Answer mark combinations. A stacked bar needs one number for each final coloured segment; the repeated combinations also vary by behaviour type and survey date. The intended Adherence chart filters to `behaviour type = adherence` and one date, leaving 20 unambiguous segments.
+
+Two faults made this especially hard to understand:
+
+- The proof area replaced the preparation diagnostic with a generic empty-preview message.
+- The duplicate-resolution selector visually displayed **Use first observation** even when no choice had been applied; preparation therefore still used the safe error strategy.
+
+The follow-up implementation keeps the diagnostic in the proof area, including the affected mark fields and duplicate count. It also displays **Flag as an error** until the author explicitly selects a duplicate-handling choice. This makes the blocked state truthful and points the author to filters, grouping, aggregation, or an intentional duplicate strategy.
+
+Role descriptions are now chart-type-specific for all 25 data-backed chart types and every role declared by each schema. For example, Stacked bar Cluster says that its categories become coloured segments inside each bar, rather than referring to “visual series.” The automated form-model test enumerates the full schema registry so a newly added chart type cannot retain generic role text.

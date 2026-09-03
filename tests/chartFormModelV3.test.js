@@ -11,7 +11,7 @@ import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
-import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
+import { getChartSchema, listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
 
 function lineChart(overrides = {}) {
   return createChartDraft("line", {
@@ -41,11 +41,67 @@ test("axis roles and transformations explain their distinct visual effects", () 
   const model = buildEditorFormModel({ chart, profile, prepared: preparedFor(chart, profile) });
   const fields = allFields(model);
 
-  assert.match(fields.find(({ id }) => id === "measurements").help, /values plotted/i);
-  assert.match(fields.find(({ id }) => id === "observation").help, /position each value/i);
-  assert.match(fields.find(({ id }) => id === "cluster").help, /separate visual series/i);
-  assert.match(fields.find(({ id }) => id === "label").help, /does not create a series/i);
+  assert.match(fields.find(({ id }) => id === "measurements").help, /height of the line points/i);
+  assert.match(fields.find(({ id }) => id === "observation").help, /left-to-right position/i);
+  assert.match(fields.find(({ id }) => id === "cluster").help, /separate coloured line/i);
+  assert.match(fields.find(({ id }) => id === "label").help, /line point is hovered or selected/i);
   assert.match(fields.find(({ id }) => id === "grouping").help, /combines rows before rendering/i);
+  assert.doesNotMatch(fields.find(({ id }) => id === "grouping").help, /visual series/i);
+});
+
+test("every chart type explains every data role in the visual language of that chart", () => {
+  const expectedVisualCopy = {
+    bar: { measurements: /height of each bar/i, observation: /along the bottom/i, cluster: /coloured bar beside/i, label: /bar is hovered or selected/i },
+    groupedBar: { measurements: /height of each bar/i, observation: /one group of bars/i, cluster: /side-by-side bars/i, label: /bar is hovered or selected/i },
+    stackedBar: { measurements: /total height/i, observation: /one stacked bar/i, cluster: /segments stacked inside/i, label: /stacked segment is hovered or selected/i },
+    horizontalBar: { measurements: /length of each horizontal bar/i, observation: /one horizontal bar row/i, cluster: /coloured horizontal bar/i, label: /horizontal bar is hovered or selected/i },
+    horizontalStackedBar: { measurements: /total length/i, observation: /one horizontal stacked bar/i, cluster: /segments stacked along/i, label: /stacked segment is hovered or selected/i },
+    line: { measurements: /height of the line points/i, observation: /left-to-right position/i, cluster: /separate coloured line/i, label: /line point is hovered or selected/i },
+    area: { measurements: /height of the filled area/i, observation: /left-to-right position/i, cluster: /separate coloured filled area/i, label: /area point is hovered or selected/i },
+    mixed: { measurements: /height of its bars or line points/i, observation: /left-to-right position/i, cluster: /separate coloured bars or lines/i, label: /mark is hovered or selected/i },
+    pie: { category: /one labelled slice/i, value: /size of each pie slice/i },
+    donut: { category: /one labelled ring segment/i, value: /size of each ring segment/i },
+    kpi: { value: /main number on the card/i, target: /comparison target beside/i, entity: /separate card/i, label: /supporting text on the card/i, time: /which observation supplies/i },
+    gauge: { value: /needle or filled portion/i, target: /reference point on the gauge/i, entity: /separate gauge/i, label: /supporting text beside/i, time: /which observation supplies/i },
+    bullet: { actual: /filled performance bar/i, target: /target marker/i, entity: /separate bullet row/i, label: /text beside the bullet/i, time: /which observation supplies/i },
+    deltaCard: { measurement: /headline change is shown on the card/i, entity: /one card's change/i, time: /earlier and later values/i, target: /comparison goal/i },
+    deltaList: { measurement: /change is shown in each list row/i, entity: /one row in the list/i, time: /earlier and later values/i, target: /comparison goal/i },
+    scatter: { x: /left-to-right position/i, y: /up-and-down position/i, size: /size of each point/i, label: /point is hovered or selected/i, cluster: /coloured set of points/i },
+    bubble: { x: /left-to-right position/i, y: /up-and-down position/i, size: /area of each bubble/i, label: /bubble is hovered or selected/i, cluster: /coloured set of bubbles/i },
+    heatmap: { row: /horizontal row of cells/i, column: /vertical column of cells/i, value: /colour intensity of each cell/i, time: /which moment's cells/i },
+    readinessMatrix: { row: /horizontal row of matrix cells/i, column: /vertical column of matrix cells/i, value: /colour or state of each cell/i, time: /which moment's matrix/i },
+    timeline: { event: /label on an event bar/i, start: /left edge of each event bar/i, end: /right edge/i, lane: /separate horizontal lane/i, status: /colour or styling of each event/i },
+    swimlane: { event: /label on an event bar/i, start: /left edge of each event bar/i, end: /right edge/i, lane: /horizontal swimlane/i, status: /colour or styling of each event/i },
+    choroplethMap: { geography: /map area that is filled/i, value: /colour of each map area/i, time: /which moment's map areas/i },
+    chronoChoroplethMap: { geography: /map area that is filled/i, value: /colour of each map area/i, time: /which frame of the map/i },
+    mapScatter: { geography: /location of each point/i, value: /colour or size of each map point/i, time: /which moment's points/i },
+    table: { columns: /visible table column/i, time: /which records or time context/i },
+  };
+
+  for (const schema of Object.values(expectedVisualCopy)) {
+    assert.ok(schema, "Each expected chart type needs visual role coverage");
+  }
+  assert.deepEqual(
+    Object.keys(expectedVisualCopy).sort(),
+    listChartSchemas().filter(({ roles }) => roles.length > 0).map(({ typeId }) => typeId).sort(),
+  );
+
+  for (const [typeId, expectedRoles] of Object.entries(expectedVisualCopy)) {
+    const chart = createChartDraft(typeId, {
+      id: `${typeId}-visual-guidance`,
+      title: `${typeId} visual guidance`,
+      sourceId: "exercise-data",
+    });
+    const fields = allFields(buildEditorFormModel({ chart, profile: datasetProfile() }));
+    assert.deepEqual(
+      Object.keys(expectedRoles).sort(),
+      getChartSchema(typeId).roles.map(({ id }) => id).sort(),
+      `${typeId} needs guidance for each declared role`,
+    );
+    for (const [roleId, expected] of Object.entries(expectedRoles)) {
+      assert.match(fields.find(({ id }) => id === roleId)?.help ?? "", expected, `${typeId} ${roleId}`);
+    }
+  }
 });
 
 test("table row distribution is available in both quick and full appearance forms", () => {

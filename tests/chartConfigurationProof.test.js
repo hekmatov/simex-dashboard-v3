@@ -78,6 +78,38 @@ test("render proof is correlated to the current revision and non-empty output", 
   assert.match(empty.errors[0].message, /no renderer-ready output/i);
 });
 
+test("render proof retains the actionable preparation diagnostic that blocked a chart", () => {
+  const proof = requestRenderProof({
+    draftRevision: "draft-duplicates",
+    chart: {
+      id: "chart-stacked",
+      title: "Survey responses",
+      roles: {
+        observation: { field: "Question" },
+        cluster: { field: "Answer" },
+        measurements: [{ field: "Percentage" }],
+      },
+    },
+    preparedData: {
+      marks: [],
+      diagnostics: [{
+        severity: "warning",
+        code: "duplicate-observations",
+        message: "50 role-key collisions were found.",
+        duplicateGroupCount: 50,
+      }, {
+        severity: "error",
+        code: "duplicate-resolution-required",
+        message: "This chart needs one value per final chart mark.",
+      }],
+    },
+  });
+
+  assert.equal(proof.status, "invalid");
+  assert.equal(proof.errors[0].code, "duplicate-resolution-required");
+  assert.match(proof.errors[0].message, /50 plotted marks defined by Question, Answer, and Percentage/i);
+});
+
 test("render and placement proofs remain independent and must both be current", () => {
   const draft = {
     revision: "draft-7",

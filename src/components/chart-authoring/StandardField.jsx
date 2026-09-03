@@ -67,7 +67,7 @@ function StandardField({
       );
       break;
     case "duplicates":
-      control = /* @__PURE__ */ React.createElement("select", { ...shared, value: scalar(value ?? "first"), onChange: (event) => onChange(event.target.value) }, optionList([
+      control = /* @__PURE__ */ React.createElement("select", { ...shared, value: scalar(value ?? "error"), onChange: (event) => onChange(event.target.value) }, optionList([
         ["error", "Flag as an error"],
         ["first", "Use first observation"],
         ["last", "Use last observation"],

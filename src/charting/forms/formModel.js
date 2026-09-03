@@ -732,7 +732,7 @@ function transformationFields(schema, chart) {
       control: "grouping",
       path: ["transformations", "grouping"],
       value: chart.transformations?.grouping ?? null,
-      help: "Combines rows before rendering. Unlike Cluster, it does not create visual series; it changes which rows become one mark.",
+      help: "Combines rows before rendering one plotted result. It changes the data that makes one bar, point, cell, or other chart mark; it does not split marks into coloured groups.",
     },
     aggregate: {
       id: "aggregation",
@@ -766,23 +766,160 @@ function transformationFields(schema, chart) {
     .map((transform) => descriptors[transform]);
 }
 
+const VISUAL_ROLE_HELP = Object.freeze({
+  bar: {
+    measurements: "Choose the numbers that set the height of each bar.",
+    observation: "Choose the categories shown along the bottom of the chart; each category gets a bar position.",
+    cluster: "Choose categories that become a coloured bar beside the others for the same bottom-axis category. It separates bars; it does not combine source rows.",
+    label: "Choose text shown when a bar is hovered or selected. It does not change the bar height.",
+  },
+  groupedBar: {
+    measurements: "Choose the numbers that set the height of each bar.",
+    observation: "Choose the categories that form one group of bars along the bottom axis.",
+    cluster: "Choose categories that become the side-by-side bars within each group.",
+    label: "Choose text shown when a bar is hovered or selected. It does not change the bar height.",
+  },
+  stackedBar: {
+    measurements: "Choose the numbers that set the total height of each stacked bar.",
+    observation: "Choose the categories that get one stacked bar along the bottom axis.",
+    cluster: "Choose categories that become coloured segments stacked inside each bar. For example, with Question on the axis and Answer here, each question's bar is divided into answer segments.",
+    label: "Choose text shown when a stacked segment is hovered or selected. It does not create another segment.",
+  },
+  horizontalBar: {
+    measurements: "Choose the numbers that set the length of each horizontal bar.",
+    observation: "Choose the categories that get one horizontal bar row.",
+    cluster: "Choose categories that become a coloured horizontal bar for the same row category. It separates bars; it does not combine source rows.",
+    label: "Choose text shown when a horizontal bar is hovered or selected. It does not change the bar length.",
+  },
+  horizontalStackedBar: {
+    measurements: "Choose the numbers that set the total length of each horizontal stacked bar.",
+    observation: "Choose the categories that get one horizontal stacked bar row.",
+    cluster: "Choose categories that become coloured segments stacked along each horizontal bar.",
+    label: "Choose text shown when a stacked segment is hovered or selected. It does not create another segment.",
+  },
+  line: {
+    measurements: "Choose the numbers that set the height of the line points.",
+    observation: "Choose the category or time that sets each point's left-to-right position.",
+    cluster: "Choose categories that become a separate coloured line, so their paths can be compared.",
+    label: "Choose text shown when a line point is hovered or selected. It does not change the line's path.",
+  },
+  area: {
+    measurements: "Choose the numbers that set the height of the filled area.",
+    observation: "Choose the category or time that sets each point's left-to-right position.",
+    cluster: "Choose categories that become a separate coloured filled area, so their changes can be compared.",
+    label: "Choose text shown when an area point is hovered or selected. It does not change the filled area.",
+  },
+  mixed: {
+    measurements: "Choose the numbers that set the height of its bars or line points.",
+    observation: "Choose the category or time that sets each mark's left-to-right position.",
+    cluster: "Choose categories that become separate coloured bars or lines in the mixed chart.",
+    label: "Choose text shown when a mark is hovered or selected. It does not change the mark's value.",
+  },
+  pie: {
+    category: "Choose the categories that each become one labelled slice of the pie.",
+    value: "Choose the numbers that set the size of each pie slice.",
+  },
+  donut: {
+    category: "Choose the categories that each become one labelled ring segment.",
+    value: "Choose the numbers that set the size of each ring segment.",
+  },
+  kpi: {
+    value: "Choose the number displayed as the main number on the card.",
+    target: "Choose the comparison target beside the main number, when the card should show progress or a gap.",
+    entity: "Choose categories that create a separate card for each entity.",
+    label: "Choose supporting text on the card, such as a name or short description.",
+    time: "Choose which observation supplies the card's current value when the source has more than one time point.",
+  },
+  gauge: {
+    value: "Choose the number shown by the needle or filled portion of the gauge.",
+    target: "Choose the reference point on the gauge that the current value is compared against.",
+    entity: "Choose categories that create a separate gauge for each entity.",
+    label: "Choose supporting text beside the gauge, such as its name.",
+    time: "Choose which observation supplies the gauge's current value when the source has more than one time point.",
+  },
+  bullet: {
+    actual: "Choose the number that sets the filled performance bar.",
+    target: "Choose the number drawn as the target marker on the bullet chart.",
+    entity: "Choose categories that create a separate bullet row for each entity.",
+    label: "Choose text beside the bullet chart, such as a name or explanation.",
+    time: "Choose which observation supplies the bullet's current value when the source has more than one time point.",
+  },
+  deltaCard: {
+    measurement: "Choose the number whose headline change is shown on the card.",
+    entity: "Choose the entity whose one card's change is shown when there are several entities.",
+    time: "Choose the time column used to find the earlier and later values being compared.",
+    target: "Choose a comparison goal for the change, when one is available.",
+  },
+  deltaList: {
+    measurement: "Choose the number whose change is shown in each list row.",
+    entity: "Choose the categories that each become one row in the list.",
+    time: "Choose the time column used to find the earlier and later values being compared.",
+    target: "Choose a comparison goal for each row's change, when one is available.",
+  },
+  scatter: {
+    x: "Choose the number that sets each point's left-to-right position.",
+    y: "Choose the number that sets each point's up-and-down position.",
+    size: "Choose a number that sets the size of each point, when you want larger values to stand out.",
+    label: "Choose text shown when a point is hovered or selected.",
+    cluster: "Choose categories that become a coloured set of points, so groups are easy to compare.",
+  },
+  bubble: {
+    x: "Choose the number that sets each bubble's left-to-right position.",
+    y: "Choose the number that sets each bubble's up-and-down position.",
+    size: "Choose the number that sets the area of each bubble; larger values make larger bubbles.",
+    label: "Choose text shown when a bubble is hovered or selected.",
+    cluster: "Choose categories that become a coloured set of bubbles, so groups are easy to compare.",
+  },
+  heatmap: {
+    row: "Choose the categories that form each horizontal row of cells.",
+    column: "Choose the categories that form each vertical column of cells.",
+    value: "Choose the number that sets the colour intensity of each cell.",
+    time: "Choose which moment's cells to show when the source changes over time.",
+  },
+  readinessMatrix: {
+    row: "Choose the categories that form each horizontal row of matrix cells.",
+    column: "Choose the categories that form each vertical column of matrix cells.",
+    value: "Choose the value that sets the colour or state of each cell.",
+    time: "Choose which moment's matrix to show when readiness changes over time.",
+  },
+  timeline: {
+    event: "Choose the text displayed as the label on an event bar.",
+    start: "Choose the date or time that sets the left edge of each event bar.",
+    end: "Choose the date or time that sets the right edge of each event bar, so its duration is visible.",
+    lane: "Choose categories that place events on a separate horizontal lane.",
+    status: "Choose categories that set the colour or styling of each event.",
+  },
+  swimlane: {
+    event: "Choose the text displayed as the label on an event bar.",
+    start: "Choose the date or time that sets the left edge of each event bar.",
+    end: "Choose the date or time that sets the right edge of each event bar, so its duration is visible.",
+    lane: "Choose categories that place events in a horizontal swimlane.",
+    status: "Choose categories that set the colour or styling of each event.",
+  },
+  choroplethMap: {
+    geography: "Choose the geographic identifier that matches the map area that is filled.",
+    value: "Choose the number that sets the colour of each map area.",
+    time: "Choose which moment's map areas to show when the source changes over time.",
+  },
+  chronoChoroplethMap: {
+    geography: "Choose the geographic identifier that matches the map area that is filled.",
+    value: "Choose the number that sets the colour of each map area.",
+    time: "Choose the date or time that selects which frame of the map is shown.",
+  },
+  mapScatter: {
+    geography: "Choose the geographic identifier that sets the location of each point on the map.",
+    value: "Choose the number that sets the colour or size of each map point.",
+    time: "Choose which moment's points to show when the source changes over time.",
+  },
+  table: {
+    columns: "Choose the source fields that each become a visible table column.",
+    time: "Choose a date or time field used to select which records or time context the table shows.",
+  },
+});
+
 function roleHelp(schema, role) {
-  const axis = schema.dataFamily === "axis";
-  const messages = {
-    measurements: "Choose the numeric values plotted for each observation. Multiple measurements become separate series.",
-    observation: axis
-      ? "Choose the category or time used to position each value on the X-axis."
-      : "Choose the observation used to position each value.",
-    cluster: "Choose a category that creates separate visual series. It does not combine rows; use Grouping to combine rows before rendering.",
-    label: "Choose optional text shown with a mark or in its detail. It does not create a series or change the plotted value.",
-    category: "Choose the category that names each slice or composition part.",
-    value: "Choose the numeric value displayed or encoded by this chart.",
-    x: "Choose the numeric value that positions each point horizontally.",
-    y: "Choose the numeric value that positions each point vertically.",
-    size: "Choose the optional numeric value that controls bubble size.",
-    time: "Choose the date or time used to order, filter, or synchronize this chart.",
-  };
-  return messages[role.id] ?? `Choose the source column used as ${role.label.toLocaleLowerCase()}.`;
+  return VISUAL_ROLE_HELP[schema.typeId]?.[role.id]
+    ?? `Choose the source column used as ${role.label.toLocaleLowerCase()}.`;
 }
 
 function inferredInterpretationAlternatives(column, role) {
