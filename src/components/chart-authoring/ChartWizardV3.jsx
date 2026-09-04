@@ -290,11 +290,7 @@ export function chartEditDraftIdentity({ draft = null, chronoGroups = [] } = {})
 }
 
 export function chartDestinationForType(destination, typeId) {
-  if (typeId !== "gauge") return destination;
-  return {
-    ...(destination ?? {}),
-    footprint: { columns: 4, rows: 1 },
-  };
+  return destination;
 }
 
 export function createEditModePendingRuntime({
@@ -1627,7 +1623,7 @@ export default function ChartWizardV3({
                 { fallback: React.createElement("p", { role: "status" }, "Loading chart size options…") },
                 React.createElement(ChartFootprintPicker, {
                   value: destinationFootprint,
-                  disabled: disabled || submitting || wizard.draft?.typeId === "gauge",
+                  disabled: disabled || submitting,
                   onChange: (footprint) => updateDestination({ footprint }),
                 }),
               ),

@@ -3784,14 +3784,28 @@ test("full editor discard confirms only when the edit session is dirty", () => {
   assert.equal(discardConfirmationRequired({ editMode: false, editDirty: false }), true);
 });
 
-test("Gauge creation carries a full-row footprint into reviewed persistence", () => {
+test("Gauge creation preserves the selected footprint into reviewed persistence", () => {
   const destination = { pageId: "overview", sectionId: "status", footprint: { columns: 2, rows: 2 } };
-  assert.deepEqual(chartDestinationForType(destination, "gauge"), {
-    pageId: "overview",
-    sectionId: "status",
-    footprint: { columns: 4, rows: 1 },
-  });
+  assert.equal(chartDestinationForType(destination, "gauge"), destination);
   assert.equal(chartDestinationForType(destination, "kpi"), destination);
+});
+
+test("quick gauge editing leaves panel-size controls enabled", () => {
+  const chart = createChartDraft("gauge", {
+    id: "gauge-footprint",
+    title: "Capacity",
+    sourceId: "exercise-data",
+    roles: {
+      value: { field: "capacity" },
+      target: { field: "target" },
+    },
+    layout: { size: "compact", width: 1, height: 0.5 },
+  });
+  const session = createChartEditSession({ placementId: "placement-gauge", chart });
+  const tree = ChartQuickEditor({ session, onDraftChange() {} });
+  const footprint = findElement(tree, (element) => element.type === ChartFootprintPicker);
+
+  assert.equal(footprint.props.disabled, false);
 });
 
 test("editor state isolates mutation and same-authority rerenders preserve the draft", () => {

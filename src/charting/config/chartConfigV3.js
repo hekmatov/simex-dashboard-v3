@@ -847,9 +847,6 @@ export function normalizeChartInstance(chart) {
   if (seriesProperty.present) {
     normalized.presentation.series = normalizedSeries;
   }
-  if (normalized.typeId === "gauge") {
-    normalized.layout = { size: "wide", width: 4, height: 1 };
-  }
   return normalized;
 }
 
