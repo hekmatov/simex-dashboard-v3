@@ -524,6 +524,16 @@ function seriesAppearanceField(fieldId, series, referenceLine) {
       help: "Use the available row height and control the remaining gap with Bar separation.",
     };
   }
+  if (fieldId === "verticalCenter") {
+    return {
+      id: fieldId,
+      label: "Center vertically",
+      control: "toggle",
+      path: ["presentation", "series", fieldId],
+      value: series.verticalCenter === true,
+      help: "Center the pie or donut within the available chart height.",
+    };
+  }
   if (fieldId === "barWidth" && series.verticalFill === true) return null;
   const limits = SERIES_STYLE_LIMITS[fieldId];
   const value = fieldId === "barSeparation"
@@ -569,7 +579,7 @@ function labelsFields({ chart, schema }) {
     value: chart.presentation?.labels ?? {},
     controls,
     help: schema.dataFamily === "composition"
-      ? "Show or hide category names on slices; it does not change source values."
+      ? "Show or hide category names on slices, and optionally add either each value or percentage."
       : schema.dataFamily === "relationship"
         ? "Show or hide each point's Label role beside the point."
         : schema.dataFamily === "matrix"
@@ -580,7 +590,7 @@ function labelsFields({ chart, schema }) {
 
 function labelControls(schema) {
   if (schema.dataFamily === "axis") return ["visible", "position", "format"];
-  if (schema.dataFamily === "composition") return ["visible"];
+  if (schema.dataFamily === "composition") return ["visible", "valueMode", "valueFontSize", "labelFontSize"];
   if (schema.dataFamily === "relationship") return ["visible", "position"];
   if (schema.typeId === "heatmap") return ["visible"];
   return [];

@@ -4,6 +4,7 @@ export const SERIES_APPEARANCE_FIELD_IDS = Object.freeze([
   "barWidth",
   "barSeparation",
   "verticalFill",
+  "verticalCenter",
   "referenceLine",
 ]);
 
@@ -13,6 +14,7 @@ export const SERIES_STYLE_PROPERTIES = Object.freeze([
   "barWidth",
   "barSeparation",
   "verticalFill",
+  "verticalCenter",
 ]);
 
 export const SERIES_STYLE_LIMITS = Object.freeze({
@@ -28,6 +30,7 @@ const FIELD_BY_PROPERTY = Object.freeze({
   barWidth: "barWidth",
   barSeparation: "barSeparation",
   verticalFill: "verticalFill",
+  verticalCenter: "verticalCenter",
 });
 
 const APPEARANCE_BY_MARK = Object.freeze({
@@ -43,8 +46,8 @@ const APPEARANCE_BY_MARK = Object.freeze({
     "lineWidth",
     "barWidth",
   ]),
-  pie: Object.freeze(["seriesColors"]),
-  donut: Object.freeze(["seriesColors"]),
+  pie: Object.freeze(["seriesColors", "verticalCenter"]),
+  donut: Object.freeze(["seriesColors", "verticalCenter"]),
   point: Object.freeze(["seriesColors"]),
   bubble: Object.freeze(["seriesColors"]),
 });
@@ -149,6 +152,12 @@ export function normalizeSeriesStyle(series, appearance) {
       throw new Error("Chart presentation series verticalFill must be boolean.");
     }
     normalized.verticalFill = descriptors.verticalFill.value;
+  }
+  if (Object.hasOwn(descriptors, "verticalCenter")) {
+    if (typeof descriptors.verticalCenter.value !== "boolean") {
+      throw new Error("Chart presentation series verticalCenter must be boolean.");
+    }
+    normalized.verticalCenter = descriptors.verticalCenter.value;
   }
   return normalized;
 }

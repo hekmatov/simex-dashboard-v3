@@ -48,6 +48,18 @@ test("every adopted authored dirty key maps to one stable pending-work descripto
   assert.equal(ids.size, projectedKeys.length);
 });
 
+test("deferred dashboard configuration never masquerades as source content", () => {
+  const [pending] = selectBuildPendingWork({
+    authoredDirty: { configuration: true },
+    actions: actionHarness(),
+  });
+
+  assert.deepEqual(
+    { id: pending?.id, label: pending?.label, origin: pending?.origin },
+    { id: "configuration", label: "Configuration changes", origin: "dashboard-configuration" },
+  );
+});
+
 test("atomic Passport and dashboard metadata flags never publish Pending Work while adopted owners remain unchanged", () => {
   const owner = {
     draftId: "chart-edit:panel-a",

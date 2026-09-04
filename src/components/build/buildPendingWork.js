@@ -16,6 +16,7 @@ const DEFINITIONS = Object.freeze({
   chartWizard: Object.freeze({ id: "chart-wizard", kind: "chart", label: "New chart draft", origin: "chart-wizard", priority: 30 }),
   staticContent: Object.freeze({ id: "text-image", kind: "text-image", label: "Text/Image changes", origin: "text-image-editor", priority: 40 }),
   inlineRename: Object.freeze({ id: "inline-rename", kind: "rename", label: "Unfinished rename", origin: "dashboard-map", priority: 50 }),
+  configuration: Object.freeze({ id: "configuration", kind: "configuration", label: "Configuration changes", origin: "dashboard-configuration", priority: 55 }),
   pendingContent: Object.freeze({ id: "source-content", kind: "content", label: "Source content changes", origin: "source-content", priority: 60 }),
   chronoGroup: Object.freeze({ id: "chrono-group", kind: "chrono", label: "Chrono Studio changes", origin: "chrono-studio", priority: 70 }),
   scene: Object.freeze({ id: "scene", kind: "scene", label: "Scene Studio changes", origin: "scene-studio", priority: 80 }),

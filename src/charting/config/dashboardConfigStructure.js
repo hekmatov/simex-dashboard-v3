@@ -266,7 +266,7 @@ export function validateDashboardStructure(
         section.title,
         `Dashboard section "${sectionId}" title`,
       );
-      optionalText(
+      optionalString(
         section.description,
         `Dashboard section "${sectionId}" description`,
       );

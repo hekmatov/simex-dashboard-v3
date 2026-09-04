@@ -6,7 +6,10 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
     schema?.semantics?.mark,
   );
   const groups = groupMarks(prepared.marks);
-  const layout = compositionLayout(groups.length);
+  const layout = compositionLayout(
+    groups.length,
+    chart.presentation?.series?.verticalCenter === true,
+  );
   const colors = chart.presentation?.series?.colors;
   return {
     kind: "echarts",
@@ -24,27 +27,42 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
           ? [layout.innerRadius, layout.outerRadius]
           : ["0%", layout.outerRadius],
         avoidLabelOverlap: true,
-        label: {
-          show: chart.presentation?.labels?.visible !== false && marks.length <= 8,
-          formatter: "{b}",
-        },
+        label: compositionLabel(chart.presentation?.labels, marks.length),
         data: marks.map(({ category, value, share }) => ({ name: String(category), value, share })),
       })),
     },
   };
 }
 
-function compositionLayout(count) {
+function compositionLayout(count, verticallyCentered = false) {
   const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
   const rows = Math.max(1, Math.ceil(count / columns));
   const outer = count === 1 ? 58 : Math.max(12, Math.min(30, 36 / Math.max(columns, rows)));
   return {
     centers: Array.from({ length: count }, (_, index) => [
       `${((index % columns + 0.5) / columns) * 100}%`,
-      `${30 + ((Math.floor(index / columns) + 0.5) / rows) * 65}%`,
+      `${verticallyCentered
+        ? ((Math.floor(index / columns) + 0.5) / rows) * 100
+        : 30 + ((Math.floor(index / columns) + 0.5) / rows) * 65}%`,
     ]),
     innerRadius: `${Math.round(outer * 0.58)}%`,
     outerRadius: `${outer}%`,
+  };
+}
+
+function compositionLabel(labels = {}, markCount) {
+  const valueMode = labels?.valueMode;
+  const showValue = valueMode === "value" || valueMode === "percentage";
+  const rich = {};
+  if (Number.isInteger(labels?.labelFontSize)) rich.label = { fontSize: labels.labelFontSize };
+  if (showValue && Number.isInteger(labels?.valueFontSize)) rich.value = { fontSize: labels.valueFontSize };
+  const usesRichLabel = Object.keys(rich).length > 0;
+  return {
+    show: labels?.visible !== false && markCount <= 8,
+    formatter: showValue
+      ? `{label|{b}}\\n{value|${valueMode === "percentage" ? "{d}%" : "{c}"}}`
+      : usesRichLabel ? "{label|{b}}" : "{b}",
+    ...(usesRichLabel ? { rich } : {}),
   };
 }
 

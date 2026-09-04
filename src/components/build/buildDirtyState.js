@@ -5,6 +5,7 @@ export const AUTHORED_DIRTY_KEYS = Object.freeze([
   "chartWizard",
   "staticContent",
   "inlineRename",
+  "configuration",
   "pendingContent",
   "chronoGroup",
   "scene",

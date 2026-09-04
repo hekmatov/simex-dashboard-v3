@@ -350,7 +350,7 @@ function structuredControls(control, value, onChange, field = {}) {
       value: current.format ?? "",
       placeholder: "{value}",
       onChange: (event) => emit(["format"], event.target.value)
-    })) : null);
+    })) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null);
   }
   if (control === "axes") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(
@@ -537,6 +537,23 @@ function inlineToggle(label, checked, onChange) {
     onChange: (event) => onChange(event.target.checked)
   }), label);
 }
+function pieValueModeControls(value, emit, id) {
+  return React.createElement("fieldset", { className: "chart-authoring-inline-options" },
+    React.createElement("legend", null, "Slice readout"),
+    React.createElement("label", null, React.createElement("input", {
+      type: "radio",
+      name: `${id}-value-mode`,
+      checked: value.valueMode === "value",
+      onChange: () => emit(["valueMode"], "value"),
+    }), "Show value"),
+    React.createElement("label", null, React.createElement("input", {
+      type: "radio",
+      name: `${id}-value-mode`,
+      checked: value.valueMode === "percentage",
+      onChange: () => emit(["valueMode"], "percentage"),
+    }), "Show percentage"),
+  );
+}
 function updateStructuredFieldValue(control, current, path, value) {
   if (!STRUCTURED_CONTROLS.has(control)) {
     throw new Error(`Unsupported structured control "${control}".`);
@@ -563,7 +580,7 @@ function updateStructuredFieldValue(control, current, path, value) {
 function assertStructuredPath(control, path) {
   const [section, property] = path;
   const valid = {
-    labels: path.length === 1 && ["visible", "position", "format"].includes(section),
+    labels: path.length === 1 && ["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize"].includes(section),
     axes: path.length === 2 && ((["primary", "secondary"].includes(section) && AXIS_PROPERTIES.has(property)) || (section === "x" && X_AXIS_PROPERTIES.has(property))),
     targets: path.length === 1 && ["ranges", "direction", "readoutLabel", "showReadoutLabel", "unit"].includes(section),
     map: path.length === 1 && ["scale", "geoSource", "joinField"].includes(section),
@@ -575,6 +592,12 @@ function normalizeStructuredInput(control, path, value) {
   const property = path.at(-1);
   if (control === "labels" && property === "visible" || control === "axes" && property === "grid") {
     return value === true;
+  }
+  if (control === "labels" && ["valueFontSize", "labelFontSize"].includes(property)) {
+    return Number.isInteger(value) && value >= 8 && value <= 32 ? value : void 0;
+  }
+  if (control === "labels" && property === "valueMode") {
+    return ["value", "percentage"].includes(value) ? value : void 0;
   }
   if (control === "axes" && ["min", "max"].includes(property) && path[0] !== "x") {
     return Number.isFinite(value) ? value : void 0;
@@ -613,7 +636,10 @@ function sanitizeStructuredValue(control, value) {
     return compact({
       visible: typeof current.visible === "boolean" ? current.visible : void 0,
       position: nonemptyString(current.position),
-      format: nonemptyString(current.format)
+      format: nonemptyString(current.format),
+      valueMode: ["value", "percentage"].includes(current.valueMode) ? current.valueMode : void 0,
+      valueFontSize: Number.isInteger(current.valueFontSize) && current.valueFontSize >= 8 && current.valueFontSize <= 32 ? current.valueFontSize : void 0,
+      labelFontSize: Number.isInteger(current.labelFontSize) && current.labelFontSize >= 8 && current.labelFontSize <= 32 ? current.labelFontSize : void 0,
     });
   }
   if (control === "axes") {

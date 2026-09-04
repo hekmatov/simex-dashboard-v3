@@ -460,7 +460,7 @@ function validatePresentation(chart, schema, temporalRoles) {
     "Chart presentation",
   ).value;
   validateCollection(collection, schema);
-  validateLabels(descriptors.labels?.value);
+  validateLabels(descriptors.labels?.value, schema);
   validateAxes(descriptors.axes?.value, schema, temporalRoles);
   validateTargets(descriptors.targets?.value, schema);
   validateMap(descriptors.map?.value);
@@ -497,10 +497,19 @@ function validateTable(table, schema) {
   }
 }
 
-function validateLabels(labels) {
-  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format"]));
+function validateLabels(labels, schema) {
+  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize"]));
   if (labels?.visible !== undefined && typeof labels.visible !== "boolean") throw new Error("Chart presentation labels visible must be boolean.");
   for (const field of ["position", "format"]) if (labels?.[field] !== undefined && typeof labels[field] !== "string") throw new Error(`Chart presentation labels ${field} must be a string.`);
+  const composition = schema.dataFamily === "composition";
+  if (labels?.valueMode !== undefined && (!composition || !["value", "percentage"].includes(labels.valueMode))) {
+    throw new Error("Chart presentation labels valueMode must be value or percentage on composition charts.");
+  }
+  for (const field of ["valueFontSize", "labelFontSize"]) {
+    if (labels?.[field] !== undefined && (!composition || !Number.isInteger(labels[field]) || labels[field] < 8 || labels[field] > 32)) {
+      throw new Error(`Chart presentation labels ${field} must be an integer from 8 through 32 on composition charts.`);
+    }
+  }
 }
 
 function validateAxes(axes, schema, temporalRoles) {

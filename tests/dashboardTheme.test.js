@@ -100,13 +100,14 @@ test("dashboard configuration accepts only approved saved look values", async ()
   );
 });
 
-test("dashboard and page descriptions may be intentionally blank", async () => {
+test("dashboard, page, and section descriptions may be intentionally blank", async () => {
   const dashboard = JSON.parse(await readFile(
     new URL("../public/config/dashboard.json", import.meta.url),
     "utf8",
   ));
   dashboard.description = "";
   dashboard.pages[0].description = "";
+  dashboard.pages[0].sections[0].description = "";
 
   assert.doesNotThrow(() => validateDashboardStructure(dashboard));
 });

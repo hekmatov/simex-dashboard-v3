@@ -2101,6 +2101,46 @@ test("pie and donut produce actual ECharts pie series from canonical marks", () 
   assert.deepEqual(pie.option.series[0].data[0], { name: "Cases", value: 3, share: 0.75 });
 });
 
+test("pie labels can show either values or percentages with independently sized category text", () => {
+  const prepared = ready([
+    { category: "Cases", value: 3, share: 0.75, group: null, groupKey: "" },
+    { category: "Deaths", value: 1, share: 0.25, group: null, groupKey: "" },
+  ]);
+  const model = buildRenderModel({
+    chart: chart("pie", {
+      presentation: {
+        labels: {
+          visible: true,
+          valueMode: "percentage",
+          valueFontSize: 18,
+          labelFontSize: 12,
+        },
+      },
+    }),
+    prepared,
+  });
+
+  assert.equal(model.option.series[0].label.formatter, "{label|{b}}\\n{value|{d}%}");
+  assert.deepEqual(model.option.series[0].label.rich, {
+    label: { fontSize: 12 },
+    value: { fontSize: 18 },
+  });
+});
+
+test("pie can center vertically when requested", () => {
+  const prepared = ready([
+    { category: "Cases", value: 3, share: 0.75, group: null, groupKey: "" },
+  ]);
+  const model = buildRenderModel({
+    chart: chart("pie", {
+      presentation: { series: { verticalCenter: true } },
+    }),
+    prepared,
+  });
+
+  assert.deepEqual(model.option.series[0].center, ["50%", "50%"]);
+});
+
 test("grouped composition lays out non-overlapping pie series", () => {
   const model = buildRenderModel({
     chart: chart("pie"),
