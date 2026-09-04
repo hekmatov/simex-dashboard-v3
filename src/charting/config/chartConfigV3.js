@@ -462,7 +462,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   validateCollection(collection, schema);
   validateLabels(descriptors.labels?.value);
   validateAxes(descriptors.axes?.value, schema, temporalRoles);
-  validateTargets(descriptors.targets?.value);
+  validateTargets(descriptors.targets?.value, schema);
   validateMap(descriptors.map?.value);
   validateTimeline(descriptors.timeline?.value);
   validateTable(descriptors.table?.value, schema);
@@ -537,8 +537,8 @@ function validateAxes(axes, schema, temporalRoles) {
     const axis = axes?.[axisName];
     if (axis === undefined) continue;
     ensureObject(axis, `Chart presentation axes ${axisName}`);
-    checkKnownKeys(axis, new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency", ...VALUE_AXIS_TITLE_KEYS]), `chart presentation axes ${axisName}`);
-    for (const field of ["title", "name", "xTitle", "yTitle"]) if (axis[field] !== undefined && typeof axis[field] !== "string") throw new Error(`Chart presentation axes ${axisName} ${field} must be a string.`);
+    checkKnownKeys(axis, new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency", ...VALUE_AXIS_TITLE_KEYS]), `chart presentation axes ${axisName}`);
+    for (const field of ["title", "name", "unit", "xTitle", "yTitle"]) if (axis[field] !== undefined && typeof axis[field] !== "string") throw new Error(`Chart presentation axes ${axisName} ${field} must be a string.`);
     for (const field of ["min", "max"]) if (axis[field] !== undefined && !Number.isFinite(axis[field])) throw new Error(`Chart presentation axes ${axisName} ${field} must be finite.`);
     if (axis.grid !== undefined && typeof axis.grid !== "boolean") throw new Error(`Chart presentation axes ${axisName} grid must be boolean.`);
     if (axis.min !== undefined && axis.max !== undefined && axis.min > axis.max) throw new Error(`Chart presentation axes ${axisName} min cannot exceed max.`);
@@ -633,9 +633,16 @@ function validateTickFrequency(value, kind, label) {
   }
 }
 
-function validateTargets(targets) {
-  optionalObject(targets, "Chart presentation targets", new Set(["ranges", "direction"]));
+function validateTargets(targets, schema) {
+  optionalObject(targets, "Chart presentation targets", new Set(["ranges", "direction", "readoutLabel", "showReadoutLabel", "unit"]));
+  const hasGaugeReadoutSetting = ["readoutLabel", "showReadoutLabel", "unit"].some((key) => targets?.[key] !== undefined);
+  if (hasGaugeReadoutSetting && schema?.typeId !== "gauge") {
+    throw new Error("Gauge readout settings are only supported by Gauge charts.");
+  }
   if (targets?.direction !== undefined && !TARGET_DIRECTIONS.has(targets.direction)) throw new Error("Chart presentation targets direction must be increase-is-good, decrease-is-good, or neutral.");
+  if (targets?.readoutLabel !== undefined && typeof targets.readoutLabel !== "string") throw new Error("Chart presentation targets readoutLabel must be a string.");
+  if (targets?.showReadoutLabel !== undefined && typeof targets.showReadoutLabel !== "boolean") throw new Error("Chart presentation targets showReadoutLabel must be boolean.");
+  if (targets?.unit !== undefined && typeof targets.unit !== "string") throw new Error("Chart presentation targets unit must be a string.");
   if (targets?.ranges === undefined) return;
   if (!Array.isArray(targets.ranges)) throw new Error("Chart presentation targets ranges must be an array.");
   for (const range of targets.ranges) {
@@ -769,7 +776,11 @@ function validateLayout(chart) {
     chart.layout.height !== undefined
     && !(
       (Number.isInteger(chart.layout.height) && chart.layout.height > 0)
-      || [0.25, 0.5, 0.75, 1.25, 1.5, 1.75].includes(chart.layout.height)
+      || (
+        (chart.typeId === "freeText" || chart.typeId === "image")
+          ? [0.25, 0.5, 0.75, 1.25, 1.5, 1.75, 2.25, 2.5, 2.75, 3.25, 3.5, 3.75]
+          : [0.25, 0.5, 0.75, 1.25, 1.5, 1.75]
+      ).includes(chart.layout.height)
     )
   ) {
     throw new Error("Chart layout height must be a whole row or a supported quarter-row percentage.");
@@ -801,6 +812,16 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
     },
     presentation: {
       ...options.presentation,
+      ...(schema.typeId === "gauge"
+        ? {
+            targets: {
+              ranges: [50, 80, 100],
+              readoutLabel: "OF TARGET RANGE",
+              showReadoutLabel: true,
+              ...(options.presentation?.targets ?? {}),
+            },
+          }
+        : {}),
       title: { align: "left", ...(options.presentation?.title ?? {}) },
       collection: options.presentation?.collection ?? null,
     },
@@ -871,9 +892,6 @@ export function normalizeChartInstance(chart) {
   }
   if (seriesProperty.present) {
     normalized.presentation.series = normalizedSeries;
-  }
-  if (normalized.typeId === "gauge") {
-    normalized.layout = { size: "wide", width: 4, height: 1 };
   }
   return normalized;
 }

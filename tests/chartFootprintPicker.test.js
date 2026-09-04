@@ -48,6 +48,7 @@ test("the chart editor footprint picker combines percentage height input with a 
   assert.match(html, /aria-label="Chart size: 3 columns by 75% of a row"/);
   assert.match(html, /--footprint-preview-columns:3/);
   assert.match(html, /--footprint-preview-height:75%/);
+  assert.doesNotMatch(html, /400% of a row/);
   assert.doesNotMatch(html, /Half row/);
 });
 

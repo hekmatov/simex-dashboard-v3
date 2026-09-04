@@ -100,6 +100,17 @@ test("dashboard configuration accepts only approved saved look values", async ()
   );
 });
 
+test("dashboard and page descriptions may be intentionally blank", async () => {
+  const dashboard = JSON.parse(await readFile(
+    new URL("../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  dashboard.description = "";
+  dashboard.pages[0].description = "";
+
+  assert.doesNotThrow(() => validateDashboardStructure(dashboard));
+});
+
 test("theme resolver exposes the exact renamed style and 13-profile catalogue in both appearances", () => {
   assert.equal(typeof themeModule.resolveDashboardTheme, "function");
   if (typeof themeModule.resolveDashboardTheme !== "function") return;

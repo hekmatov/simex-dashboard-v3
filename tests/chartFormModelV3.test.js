@@ -117,7 +117,7 @@ test("every chart exposes only configuration controls its renderer honors", () =
     pie: { labels: ["visible"] },
     donut: { labels: ["visible"] },
     kpi: {},
-    gauge: { targets: ["ranges"] },
+    gauge: { targets: ["ranges", "readoutLabel", "showReadoutLabel", "unit"] },
     bullet: {},
     deltaCard: { targets: ["direction"] },
     deltaList: { targets: ["direction"] },

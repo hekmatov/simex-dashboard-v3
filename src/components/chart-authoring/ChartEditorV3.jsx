@@ -653,7 +653,7 @@ export default function ChartEditorV3({
             { className: "chart-editor-footprint-block" },
             React.createElement(ChartFootprintPicker, {
               value: resolveChartFootprint(state.draft.layout),
-              disabled: disabled || submitting || state.draft.typeId === "gauge",
+              disabled: disabled || submitting,
               showTextLabels: false,
               onChange: ({ columns, rows }) => updateChartPath(
                 ["layout"],

@@ -204,10 +204,10 @@ const backgroundSection = {
   label: "Appearance",
   fields: [{
     id: "background",
-    label: "Background",
+    label: "Background color",
     control: "color",
     path: ["presentation", "background", "color"],
-    value: "#FFFFFF",
+    value: "",
   }],
 };
 
@@ -603,15 +603,41 @@ test("chart type guidance appears once before profiling and selected source prof
   );
 });
 
-test("background uses the shared identified color field contract", () => {
+test("background color uses the shared identified color field contract", () => {
   const html = render(React.createElement(GeneratedFormSection, {
     section: backgroundSection,
     onChange() {},
   }));
 
   assert.match(html, /data-color-field="background"/);
-  assert.match(html, /aria-label="Background"/);
+  assert.match(html, /aria-label="Background color"/);
   assert.match(html, /id="chart-field-background"/);
+});
+
+test("chart background color starts empty and can be restored to the dashboard default", () => {
+  const calls = [];
+  const chart = validLineChart();
+  const field = backgroundSection.fields[0];
+  const element = SchemaField({
+    field,
+    value: "",
+    chart,
+    onChange(path, value) {
+      calls.push({ path, value });
+    },
+  });
+  const html = render(React.createElement(SchemaField, {
+    field,
+    value: "",
+    chart,
+    onChange() {},
+  }));
+
+  assert.match(html, /value=""/);
+  assert.match(html, />Default<\/button>/);
+  assert.doesNotMatch(html, /settings-color-contrast/);
+  element.props.onDefault();
+  assert.deepEqual(calls, [{ path: ["presentation", "background"], value: undefined }]);
 });
 
 test("Delta comparison conditionally renders fixed time, policy, and nearest tolerance", () => {
@@ -1017,6 +1043,15 @@ test("structured presentation controls emit only validator-approved nested contr
       direction: "neutral",
       ranges: [50, 80, 100],
     }],
+    ["targets", { ranges: [50, 80, 100] }, ["readoutLabel"], "of capacity", {
+      ranges: [50, 80, 100],
+      readoutLabel: "of capacity",
+    }],
+    ["targets", { readoutLabel: "of capacity" }, ["showReadoutLabel"], false, {
+      readoutLabel: "of capacity",
+      showReadoutLabel: false,
+    }],
+    ["targets", {}, ["unit"], "%", { unit: "%" }],
     ["map", {}, ["scale"], "continuous", { scale: "continuous" }],
     ["map", { scale: "continuous" }, ["geoSource"], "regions", {
       scale: "continuous",
@@ -1038,7 +1073,12 @@ test("structured presentation controls emit only validator-approved nested contr
   for (const [control, current, path, value, expected] of cases) {
     const next = updateStructuredFieldValue(control, current, path, value);
     assert.deepEqual(next, expected, `${control}.${path.join(".")}`);
-    presentation[control] = next;
+    if (!(
+      control === "targets"
+      && ["readoutLabel", "showReadoutLabel", "unit"].includes(path[0])
+    )) {
+      presentation[control] = next;
+    }
   }
   const chart = validLineChart({ presentation });
   assert.doesNotThrow(() => validateChartInstance(chart, {
@@ -3817,14 +3857,28 @@ test("full editor discard confirms only when the edit session is dirty", () => {
   assert.equal(discardConfirmationRequired({ editMode: false, editDirty: false }), true);
 });
 
-test("Gauge creation carries a full-row footprint into reviewed persistence", () => {
+test("Gauge creation preserves the selected footprint into reviewed persistence", () => {
   const destination = { pageId: "overview", sectionId: "status", footprint: { columns: 2, rows: 2 } };
-  assert.deepEqual(chartDestinationForType(destination, "gauge"), {
-    pageId: "overview",
-    sectionId: "status",
-    footprint: { columns: 4, rows: 1 },
-  });
+  assert.equal(chartDestinationForType(destination, "gauge"), destination);
   assert.equal(chartDestinationForType(destination, "kpi"), destination);
+});
+
+test("quick gauge editing leaves panel-size controls enabled", () => {
+  const chart = createChartDraft("gauge", {
+    id: "gauge-footprint",
+    title: "Capacity",
+    sourceId: "exercise-data",
+    roles: {
+      value: { field: "capacity" },
+      target: { field: "target" },
+    },
+    layout: { size: "compact", width: 1, height: 0.5 },
+  });
+  const session = createChartEditSession({ placementId: "placement-gauge", chart });
+  const tree = ChartQuickEditor({ session, onDraftChange() {} });
+  const footprint = findElement(tree, (element) => element.type === ChartFootprintPicker);
+
+  assert.equal(footprint.props.disabled, false);
 });
 
 test("editor state isolates mutation and same-authority rerenders preserve the draft", () => {

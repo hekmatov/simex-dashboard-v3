@@ -432,6 +432,10 @@
   grid-template-columns: var(--simex-control-utility) minmax(0, 1fr) auto;
 }
 
+.app-frame .chart-wizard .settings-color-row--with-default {
+  grid-template-columns: var(--simex-control-utility) minmax(0, 1fr) auto auto;
+}
+
 .app-frame .chart-wizard .settings-color-swatch {
   block-size: var(--simex-control-utility);
   border-radius: var(--simex-style-control-radius);

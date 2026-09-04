@@ -107,7 +107,10 @@ function singleTargetModel(chart, mark, activeTime, embedded = false) {
 }
 
 function gaugeModel(chart, mark, activeTime, embedded = false) {
-  const ranges = chart.presentation?.targets?.ranges ?? [];
+  const configuredRanges = chart.presentation?.targets?.ranges;
+  const ranges = Array.isArray(configuredRanges) && configuredRanges.length > 0
+    ? configuredRanges
+    : [50, 80, 100];
   const rangeMaximum = Math.max(0, ...ranges.map(rangeEnd).filter(Number.isFinite));
   const maximum = Math.max(
     100,
@@ -154,6 +157,17 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
     : null;
   return {
     kind: "echarts",
+    precisionGauge: mark
+      ? {
+          actual: Number.isFinite(mark.value) ? mark.value : null,
+          target: hasTarget ? target : null,
+          maximum,
+          segments: gaugeSegments(ranges, maximum),
+          readoutLabel: chart.presentation?.targets?.readoutLabel ?? "OF TARGET RANGE",
+          showReadoutLabel: chart.presentation?.targets?.showReadoutLabel !== false,
+          unit: chart.presentation?.targets?.unit ?? "",
+        }
+      : null,
     semanticSummary: targetSemanticSummary(chart, mark ? [mark] : [], activeTime, embedded),
     ...(embedded
       ? {}

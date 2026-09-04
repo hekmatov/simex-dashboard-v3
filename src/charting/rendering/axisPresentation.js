@@ -15,6 +15,9 @@ const AXIS_LINE_HEIGHT = 14;
 const AXIS_LABEL_MARGIN = 8;
 const AXIS_TICK_HALF_HEIGHT = 6;
 const AXIS_TITLE_CLEARANCE = 10;
+const VALUE_AXIS_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+});
 // Mirrors ZRender's renderer-independent fallback glyph metrics. The safety
 // factor also covers the small differences introduced by platform fonts when
 // ECharts measures the same 12px sans-serif text in a browser canvas.
@@ -74,6 +77,15 @@ export function valueAxisPresentation(settings) {
   const result = {};
   const interval = tickInterval(settings?.tickFrequency, "number");
   if (interval !== undefined) result.interval = interval;
+  const unit = typeof settings?.unit === "string" ? settings.unit : "";
+  if (unit) {
+    result.axisLabel = {
+      formatter: (value) => {
+        const numeric = Number(value);
+        return `${Number.isFinite(numeric) ? VALUE_AXIS_NUMBER_FORMATTER.format(numeric) : String(value ?? "")}${unit}`;
+      },
+    };
+  }
   return result;
 }
 

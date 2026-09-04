@@ -53,17 +53,56 @@ function lineChart(overrides = {}) {
   };
 }
 
-test("Gauge charts normalize to a full-width single-row footprint", () => {
+test("Gauge charts preserve their configured footprint", () => {
   const draft = createChartDraft("gauge", {
     layout: { size: "compact", width: 1, height: 2 },
   });
-  assert.deepEqual(draft.layout, { size: "wide", width: 4, height: 1 });
+  assert.deepEqual(draft.layout, { size: "compact", width: 1, height: 2 });
 
   const normalized = normalizeChartInstance({
     ...draft,
     layout: { size: "standard", width: 2, height: 2 },
   });
-  assert.deepEqual(normalized.layout, { size: "wide", width: 4, height: 1 });
+  assert.deepEqual(normalized.layout, { size: "standard", width: 2, height: 2 });
+});
+
+test("new gauge drafts expose the standard bands in their configuration", () => {
+  const draft = createChartDraft("gauge");
+
+  assert.deepEqual(draft.presentation.targets, {
+    ranges: [50, 80, 100],
+    readoutLabel: "OF TARGET RANGE",
+    showReadoutLabel: true,
+  });
+});
+
+test("gauge readout settings validate as part of a gauge chart", () => {
+  const gauge = createChartDraft("gauge", {
+    id: "configured-gauge",
+    title: "Configured gauge",
+    sourceId: "manual-status",
+    roles: { value: { field: "capacity" } },
+    presentation: {
+      targets: {
+        ranges: [50, 80, 100],
+        readoutLabel: "of capacity",
+        showReadoutLabel: false,
+        unit: "%",
+      },
+    },
+  });
+
+  assert.doesNotThrow(() => validateChartInstance(gauge));
+});
+
+test("gauge-only readout settings are rejected on other chart types", () => {
+  assert.throws(() => validateChartInstance(lineChart({
+    presentation: {
+      title: { align: "left" },
+      collection: null,
+      targets: { unit: "%" },
+    },
+  })), /only supported by Gauge charts/);
 });
 
 function version3Dashboard() {

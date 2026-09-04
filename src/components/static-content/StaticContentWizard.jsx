@@ -470,6 +470,7 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
         subject="Panel"
         idPrefix={`static-panel-${draft.draftIdentity?.panelId ?? "draft"}`}
         showTextLabels={false}
+        maxRows={4}
         value={resolveChartFootprint(draft.panel?.layout)}
         disabled={disabled}
         onChange={({ columns, rows }) => dispatch({

@@ -1107,6 +1107,10 @@ th {
   grid-template-columns: 36px minmax(0, 1fr) auto;
 }
 
+.settings-color-row--with-default {
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+}
+
 .settings-color-swatch {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--simex-text-strong) 22%, transparent);
@@ -2789,7 +2793,26 @@ button.danger {
 }
 
 .chart-target-collection {
+  display: flex;
+  flex: 1 1 0;
   margin-top: 8px;
+  min-block-size: 0;
+}
+
+.chart-target-collection > .collection-display,
+.chart-target-collection .collection-grid,
+.chart-target-collection .collection-item {
+  min-block-size: 0;
+}
+
+.chart-target-collection > .collection-display {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.chart-target-collection .collection-grid {
+  flex: 1 1 0;
 }
 
 .chart-target-collection-item {
@@ -2799,6 +2822,14 @@ button.danger {
   min-block-size: 0;
   overflow: hidden;
   padding: 8px;
+}
+
+.chart-target-collection-item--precision-gauge {
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  padding: 10px;
 }
 
 .chart-target-collection-label {
@@ -2813,6 +2844,116 @@ button.danger {
   block-size: 5.5rem;
   min-width: 0;
   width: 100%;
+}
+
+.precision-arc-gauge {
+  aspect-ratio: 500 / 260;
+  min-inline-size: 0;
+  width: 100%;
+}
+
+.chart-echarts-view--precision-gauge,
+.chart-target-collection-item--precision-gauge .precision-arc-gauge {
+  min-block-size: 0;
+}
+
+.chart-echarts-view--precision-gauge,
+.chart-target-collection-item--precision-gauge .precision-arc-gauge {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.chart-echarts-view--precision-gauge {
+  block-size: 100%;
+}
+
+.precision-arc-gauge-svg {
+  block-size: 100%;
+  display: block;
+  overflow: visible;
+  width: 100%;
+}
+
+.precision-arc-gauge-track,
+.precision-arc-gauge-range {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 16;
+}
+
+.precision-arc-gauge-track {
+  stroke: #e2e8f0;
+}
+
+.precision-arc-gauge-target {
+  fill: #fffdf8;
+  stroke: #334155;
+  stroke-width: 4;
+}
+
+.precision-arc-gauge-needle {
+  stroke: #334155;
+  stroke-linecap: round;
+  stroke-width: 6;
+}
+
+.precision-arc-gauge-needle-cap {
+  fill: #334155;
+}
+
+.precision-arc-gauge-tick {
+  stroke: #94a3b8;
+  stroke-width: 2;
+}
+
+.precision-arc-gauge-value,
+.precision-arc-gauge-unit,
+.precision-arc-gauge-status,
+.precision-arc-gauge-target-text,
+.precision-arc-gauge-bound {
+  fill: var(--simex-text-strong);
+  text-anchor: middle;
+}
+
+.precision-arc-gauge-value {
+  font-family: var(--simex-data-font, inherit);
+  font-size: var(--precision-arc-value-size, 44px);
+  font-weight: 700;
+  letter-spacing: -1.5px;
+}
+
+.precision-arc-gauge-value-unit {
+  font-size: 0.62em;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.precision-arc-gauge-unit {
+  fill: var(--simex-text-muted);
+  font-size: var(--precision-arc-text-size, 12px);
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+
+.precision-arc-gauge-status {
+  fill: #334155;
+  font-size: calc(var(--precision-arc-text-size, 12px) * 0.9);
+  font-weight: 700;
+  letter-spacing: 0.35px;
+}
+
+.precision-arc-gauge-target-text {
+  fill: #334155;
+  font-size: calc(var(--precision-arc-text-size, 12px) * 0.8);
+  font-weight: 750;
+  text-anchor: start;
+}
+
+.precision-arc-gauge-bound {
+  fill: var(--simex-text-muted);
+  font-size: calc(var(--precision-arc-text-size, 12px) * 2.083333);
+  text-anchor: middle;
 }
 
 .panel-actions {
@@ -2958,6 +3099,10 @@ button.danger {
   flex: 0 1 min(280px, 60%);
   min-width: 0;
   width: min(280px, 60%);
+}
+
+.collection-header-transport-host:empty {
+  display: none;
 }
 
 .collection-header-transport {

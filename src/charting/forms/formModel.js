@@ -411,7 +411,7 @@ function appearanceFields({ chart, schema }) {
     },
     {
       id: "background",
-      label: "Background",
+      label: "Background color",
       control: "color",
       path: ["presentation", "background", "color"],
       value: chart.presentation?.background?.color ?? "",
@@ -450,7 +450,7 @@ function appearanceFields({ chart, schema }) {
         series,
         chart.presentation?.referenceLine,
       )
-    )),
+    )).filter(Boolean),
   ];
 }
 
@@ -514,8 +514,21 @@ function seriesAppearanceField(fieldId, series, referenceLine) {
       max: SERIES_STYLE_LIMITS.colors.max,
     };
   }
+  if (fieldId === "verticalFill") {
+    return {
+      id: fieldId,
+      label: "Vertical fill",
+      control: "toggle",
+      path: ["presentation", "series", fieldId],
+      value: series.verticalFill === true,
+      help: "Use the available row height and control the remaining gap with Bar separation.",
+    };
+  }
+  if (fieldId === "barWidth" && series.verticalFill === true) return null;
   const limits = SERIES_STYLE_LIMITS[fieldId];
-  const value = series[fieldId];
+  const value = fieldId === "barSeparation"
+    ? series[fieldId] ?? 25
+    : series[fieldId];
   const invalid = value !== undefined && (
     !Number.isFinite(value)
     || value < limits.min
@@ -523,14 +536,20 @@ function seriesAppearanceField(fieldId, series, referenceLine) {
   );
   return {
     id: fieldId,
-    label: fieldId === "lineWidth" ? "Line width" : "Bar width",
+    label: fieldId === "lineWidth"
+      ? "Line width"
+      : fieldId === "barSeparation"
+        ? "Bar separation"
+        : "Bar width",
     control: "number",
     path: ["presentation", "series", fieldId],
     value,
     min: limits.min,
     max: limits.max,
     step: "any",
-    help: `Choose a width from ${limits.min} through ${limits.max}.`,
+    help: fieldId === "barSeparation"
+      ? "Percentage of each category band reserved between bars."
+      : `Choose a width from ${limits.min} through ${limits.max}.`,
     ...(invalid
       ? {
           error: `Enter a number from ${limits.min} through ${limits.max}.`,
@@ -590,7 +609,7 @@ function axesFields({ chart, schema, prepared }) {
 
 function targetsFields({ chart }) {
   const controls = chart.typeId === "gauge"
-    ? ["ranges"]
+    ? ["ranges", "readoutLabel", "showReadoutLabel", "unit"]
     : ["deltaCard", "deltaList"].includes(chart.typeId)
       ? ["direction"]
       : [];
@@ -600,12 +619,23 @@ function targetsFields({ chart }) {
     label: chart.typeId === "gauge" ? "Gauge status bands" : "Favorable change",
     control: "targets",
     path: ["presentation", "targets"],
-    value: chart.presentation?.targets ?? {},
+    value: chart.typeId === "gauge"
+      ? gaugeTargetSettings(chart.presentation?.targets)
+      : chart.presentation?.targets ?? {},
     controls,
     help: chart.typeId === "gauge"
       ? "Enter the upper end of each coloured status band in order. The gauge shows the current value and its optional target together."
       : "Choose whether an increase or decrease should be shown as favorable for this change chart.",
   }];
+}
+
+function gaugeTargetSettings(targets) {
+  return {
+    ranges: [50, 80, 100],
+    readoutLabel: "OF TARGET RANGE",
+    showReadoutLabel: true,
+    ...(targets ?? {}),
+  };
 }
 
 function mapFields() {

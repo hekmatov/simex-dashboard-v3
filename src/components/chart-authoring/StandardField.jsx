@@ -1,7 +1,7 @@
 import React from "react";
 import { IconControl } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
-const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
+const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
 const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]);
 const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
@@ -369,7 +369,11 @@ function structuredControls(control, value, onChange, field = {}) {
     }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is favorable"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is favorable"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))) : null, controls.has("ranges") ? /* @__PURE__ */ React.createElement(TargetRangesControl, {
       ranges: current.ranges,
       onChange: (nextRanges) => emit(["ranges"], nextRanges)
-    }) : null);
+    }) : null, controls.has("readoutLabel") ? textControl("Readout label", current.readoutLabel, (nextValue) => emit(["readoutLabel"], nextValue)) : null, controls.has("showReadoutLabel") ? inlineToggle(
+      "Show readout label",
+      current.showReadoutLabel !== false,
+      (checked) => emit(["showReadoutLabel"], checked)
+    ) : null, controls.has("unit") ? textControl("Unit", current.unit, (nextValue) => emit(["unit"], nextValue)) : null);
   }
   if (control === "map") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)));
@@ -386,6 +390,7 @@ function axisControls(label, axis, value, emit) {
     { className: "chart-authoring-axis-group dashboard-authoring-grid" },
     React.createElement("legend", null, label),
     textControl("Title", value.title, (nextValue) => emit([axis, "title"], nextValue)),
+    textControl("Unit", value.unit, (nextValue) => emit([axis, "unit"], nextValue)),
     selectControl("Title position", value.titlePosition ?? "center", ["top", "center", "bottom"], (nextValue) => emit([axis, "titlePosition"], nextValue)),
     selectControl("Title orientation", value.titleOrientation ?? "vertical", ["vertical", "horizontal"], (nextValue) => emit([axis, "titleOrientation"], nextValue)),
     fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit([axis, "titleFontSize"], nextValue)),
@@ -560,7 +565,7 @@ function assertStructuredPath(control, path) {
   const valid = {
     labels: path.length === 1 && ["visible", "position", "format"].includes(section),
     axes: path.length === 2 && ((["primary", "secondary"].includes(section) && AXIS_PROPERTIES.has(property)) || (section === "x" && X_AXIS_PROPERTIES.has(property))),
-    targets: path.length === 1 && ["ranges", "direction"].includes(section),
+    targets: path.length === 1 && ["ranges", "direction", "readoutLabel", "showReadoutLabel", "unit"].includes(section),
     map: path.length === 1 && ["scale", "geoSource", "joinField"].includes(section),
     timeline: path.length === 1 && ["lanes", "marker"].includes(section)
   }[control];
@@ -592,6 +597,9 @@ function normalizeStructuredInput(control, path, value) {
   if (control === "targets" && property === "ranges") {
     return sanitizeRanges(value);
   }
+  if (control === "targets" && property === "showReadoutLabel") {
+    return value === true;
+  }
   if (control === "timeline" && property === "lanes") {
     return sanitizeStringArray(value);
   }
@@ -620,7 +628,12 @@ function sanitizeStructuredValue(control, value) {
       ranges: sanitizeRanges(current.ranges),
       direction: ["increase-is-good", "decrease-is-good", "neutral"].includes(current.direction)
         ? current.direction
-        : void 0
+        : void 0,
+      readoutLabel: nonemptyString(current.readoutLabel),
+      showReadoutLabel: typeof current.showReadoutLabel === "boolean"
+        ? current.showReadoutLabel
+        : void 0,
+      unit: nonemptyString(current.unit),
     }, true);
   }
   if (control === "map") {

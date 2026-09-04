@@ -13,9 +13,11 @@ export default function ChartFootprintPicker({
   value,
   disabled = false,
   showTextLabels = true,
+  maxRows = 2,
   onChange,
 }) {
-  const current = normalizeFootprint(value);
+  const rowHeights = FOOTPRINT_ROW_HEIGHTS.filter((rows) => rows <= maxRows);
+  const current = normalizeFootprint(value, rowHeights);
   const subjectLabel = String(subject || "Chart");
   const titleId = `${idPrefix}-footprint-title`;
   const widthId = `${idPrefix}-footprint-width`;
@@ -64,7 +66,7 @@ export default function ChartFootprintPicker({
               disabled={disabled}
               onChange={(event) => update({ rows: Number(event.target.value) })}
             >
-              {FOOTPRINT_ROW_HEIGHTS.map((rows) => (
+              {rowHeights.map((rows) => (
                 <option key={rows} value={rows}>
                   {describeRowHeight(rows)}
                 </option>
@@ -100,9 +102,12 @@ export function describeRowHeight(rows) {
   return `${Math.round(rows * 100)}% of a row`;
 }
 
-function normalizeFootprint(value) {
-  return resolveChartFootprint({
+function normalizeFootprint(value, rowHeights) {
+  const footprint = resolveChartFootprint({
     width: value?.columns,
     height: value?.rows,
   });
+  return rowHeights.includes(footprint.rows)
+    ? footprint
+    : { ...footprint, rows: 1 };
 }

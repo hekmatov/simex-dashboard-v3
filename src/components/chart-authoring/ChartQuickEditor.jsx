@@ -119,7 +119,7 @@ export default function ChartQuickEditor({
           { className: "chart-editor-layout chart-quick-editor-layout" },
           React.createElement(ChartFootprintPicker, {
             value: resolveChartFootprint(chart.layout),
-            disabled: locked || chart.typeId === "gauge",
+            disabled: locked,
             onChange: ({ columns, rows }) => changeDraft(
               ["layout"],
               {

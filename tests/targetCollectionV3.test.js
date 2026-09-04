@@ -129,8 +129,9 @@ test("repeated gauges become stable detached one-mark collection models with ran
 
   for (const item of model.items) {
     assert.equal(item.model.kind, "echarts");
-    assert.equal(item.model.option.series.length, 1);
+    assert.equal(item.model.option.series.length, 2);
     assert.equal(item.model.option.series[0].data.length, 1);
+    assert.equal(item.model.option.series[1].data.length, 1);
     assert.deepEqual(item.model.option.series[0].center, ["50%", "58%"]);
     assert.equal(item.model.option.title, undefined);
     assert.deepEqual(item.model.semanticSummary.items, [{
@@ -473,7 +474,7 @@ test("the target collection view renders detached identity without injecting hid
     ]),
     renderContext: { accessibilityEnabled: true },
   });
-  const modelBefore = structuredClone(model);
+  const modelBefore = JSON.stringify(model);
   const html = renderToStaticMarkup(React.createElement(
     TargetCollectionChartView,
     {
@@ -495,13 +496,15 @@ test("the target collection view renders detached identity without injecting hid
   );
   assert.ok(model.items.every((item) => item.model.option.aria.enabled === false));
   assert.ok(model.items.every((item) => item.model.accessibility === undefined));
-  assert.doesNotMatch(html, /Clinic A: actual 72|Clinic B: actual 55/);
+  assert.match(html, /Clinic A: actual 72; target 80/);
+  assert.match(html, /Clinic B: actual 55; target 70/);
   assert.doesNotMatch(html, /aria-describedby=|role="group"/);
-  assert.equal((html.match(/class="chart-embedded-echarts-host" aria-hidden="true"/g) ?? []).length, 2);
-  assert.doesNotMatch(html, /role="img"/);
+  assert.equal((html.match(/<div class="precision-arc-gauge"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /chart-embedded-echarts-host/);
+  assert.equal((html.match(/role="img"/g) ?? []).length, 2);
   assert.equal((html.match(/class="chart-view-title"/g) ?? []).length, 1);
   assert.equal((html.match(/Source: Operations register/g) ?? []).length, 0);
-  assert.deepEqual(model, modelBefore);
+  assert.equal(JSON.stringify(model), modelBefore);
 });
 
 test("embedded target ECharts normalizes gauge and bullet text before every fake lifecycle update", () => {
