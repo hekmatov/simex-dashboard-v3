@@ -116,6 +116,26 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
     finite(mark?.target),
   );
   const name = mark?.entity ?? mark?.label ?? chart.title ?? "";
+  const target = Number(mark?.target);
+  const targetMarker = Number.isFinite(target)
+    ? {
+        value: target,
+        name: `Target ${formatTargetValue(target)}`,
+        detail: { show: false },
+        title: { show: false },
+        pointer: {
+          icon: "circle",
+          width: 12,
+          length: 12,
+          offsetCenter: [0, "-94%"],
+          itemStyle: {
+            color: "#fffdf8",
+            borderColor: "#2c383d",
+            borderWidth: 3,
+          },
+        },
+      }
+    : null;
   return {
     kind: "echarts",
     semanticSummary: targetSemanticSummary(chart, mark ? [mark] : [], activeTime, embedded),
@@ -135,13 +155,24 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
           type: "gauge",
           min: 0,
           max: maximum,
+          startAngle: 200,
+          endAngle: -20,
           center: ["50%", embedded ? "58%" : "54%"],
           radius: embedded ? "68%" : "52%",
-          axisLine: { lineStyle: { color: gaugeSegments(ranges, maximum) } },
+          axisLine: {
+            roundCap: true,
+            lineStyle: { width: 14, color: gaugeSegments(ranges, maximum) },
+          },
           axisLabel: { show: false },
           axisTick: { show: false },
-          splitLine: { distance: -9, length: 8 },
-          pointer: { length: "56%", width: 4 },
+          splitLine: { distance: -17, length: 6 },
+          pointer: {
+            length: "34%",
+            width: 4,
+            offsetCenter: [0, "-24%"],
+            itemStyle: { color: "#2c383d" },
+          },
+          anchor: { show: false },
           detail: {
             valueAnimation: false,
             fontSize: embedded ? 26 : 32,
@@ -162,7 +193,7 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
               time: mark.time,
             },
             activeTime,
-          )],
+          ), targetMarker].filter(Boolean),
         }]
         : [],
     },

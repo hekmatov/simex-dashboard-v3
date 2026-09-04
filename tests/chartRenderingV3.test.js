@@ -2171,6 +2171,45 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
   ]);
 });
 
+test("gauge uses a precision arc with a detached needle and target ring", () => {
+  const gauge = buildRenderModel({
+    chart: chart("gauge", {
+      presentation: { title: { align: "left" }, collection: null, targets: { ranges: [50, 80, 100] } },
+    }),
+    prepared: ready([{ value: 76, target: 72, time: "2027-05-02" }]),
+  });
+
+  const series = gauge.option.series[0];
+  assert.equal(series.startAngle, 200);
+  assert.equal(series.endAngle, -20);
+  assert.equal(series.axisLine.lineStyle.width, 14);
+  assert.equal(series.axisLine.roundCap, true);
+  assert.deepEqual(series.pointer, {
+    length: "34%",
+    width: 4,
+    offsetCenter: [0, "-24%"],
+    itemStyle: { color: "#2c383d" },
+  });
+  assert.equal(series.anchor.show, false);
+  assert.deepEqual(series.data[1], {
+    value: 72,
+    name: "Target 72",
+    detail: { show: false },
+    title: { show: false },
+    pointer: {
+      icon: "circle",
+      width: 12,
+      length: 12,
+      offsetCenter: [0, "-94%"],
+      itemStyle: {
+        color: "#fffdf8",
+        borderColor: "#2c383d",
+        borderWidth: 3,
+      },
+    },
+  });
+});
+
 test("multi-item gauges preserve every prepared mark as renderer-neutral collection items", () => {
   const collection = {
     layout: "fixed",
