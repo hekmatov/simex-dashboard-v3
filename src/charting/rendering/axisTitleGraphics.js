@@ -93,7 +93,7 @@ function resolveGraphic(projection, gridRect, textTheme, measureText) {
     type: "text",
     x: metrics.titleWidth / 2,
     y: metrics.titleHeight / 2,
-    rotation: projection.orientation === "vertical" ? -Math.PI / 2 : 0,
+    rotation: projection.orientation === "vertical" ? Math.PI / 2 : 0,
     style: {
       text: projection.title,
       fill: textTheme.textMuted ?? "#5A6066",

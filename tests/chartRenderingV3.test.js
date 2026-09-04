@@ -1557,6 +1557,7 @@ test("value-axis title graphics apply size, weight, offsets, clearance, and posi
   assert.equal(base[0].children[0].style.fontFamily, "Body Token Stack");
   assert.equal(base[0].children[0].style.fontSize, 24);
   assert.equal(base[0].children[0].style.fontWeight, 700);
+  assert.equal(base[0].children[0].rotation, Math.PI / 2);
   const renderedTitle = renderedTextBounds({ graphic: base });
   assert.equal(renderedTitle.length, 1);
   assert.equal(renderedTitle[0].text, "Cumulative cases");
