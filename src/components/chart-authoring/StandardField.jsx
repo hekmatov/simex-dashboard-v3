@@ -540,13 +540,13 @@ function inlineToggle(label, checked, onChange) {
 function pieValueModeControls(value, emit, id) {
   return React.createElement("fieldset", { className: "chart-authoring-inline-options" },
     React.createElement("legend", null, "Slice readout"),
-    React.createElement("label", null, React.createElement("input", {
+    React.createElement("label", { className: "dashboard-authoring-boolean-row" }, React.createElement("input", {
       type: "radio",
       name: `${id}-value-mode`,
       checked: value.valueMode === "value",
       onChange: () => emit(["valueMode"], "value"),
     }), "Show value"),
-    React.createElement("label", null, React.createElement("input", {
+    React.createElement("label", { className: "dashboard-authoring-boolean-row" }, React.createElement("input", {
       type: "radio",
       name: `${id}-value-mode`,
       checked: value.valueMode === "percentage",
