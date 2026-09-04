@@ -2191,9 +2191,20 @@ test("gauge uses a precision arc with a detached needle and target ring", () => 
     itemStyle: { color: "#2c383d" },
   });
   assert.equal(series.anchor.show, false);
-  assert.deepEqual(series.data[1], {
-    value: 72,
+  assert.deepEqual(gauge.option.series[1], {
     name: "Target 72",
+    type: "gauge",
+    min: 0,
+    max: 100,
+    startAngle: 200,
+    endAngle: -20,
+    center: ["50%", "54%"],
+    radius: "52%",
+    axisLine: { show: false },
+    axisLabel: { show: false },
+    axisTick: { show: false },
+    splitLine: { show: false },
+    anchor: { show: false },
     detail: { show: false },
     title: { show: false },
     pointer: {
@@ -2207,7 +2218,17 @@ test("gauge uses a precision arc with a detached needle and target ring", () => 
         borderWidth: 3,
       },
     },
+    data: [{ value: 72, name: "Target 72" }],
   });
+  const svg = renderSvg(gauge.option);
+  assert.match(svg, /fill="#fffdf8"/);
+  assert.match(svg, /stroke="#2c383d"/);
+
+  const gaugeWithoutTarget = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([{ value: 76, target: null, time: "2027-05-02" }]),
+  });
+  assert.equal(gaugeWithoutTarget.option.series.length, 1);
 });
 
 test("multi-item gauges preserve every prepared mark as renderer-neutral collection items", () => {
@@ -2244,7 +2265,8 @@ test("multi-item gauges preserve every prepared mark as renderer-neutral collect
     { value: 72, name: "Clinic A", target: 80, time: "2027-05-02" },
     { value: 55, name: "Clinic B", target: 70, time: "2027-05-03" },
   ]);
-  assert.equal(model.items.every(({ model: itemModel }) => itemModel.option.series.length === 1), true);
+  assert.equal(model.items.every(({ model: itemModel }) => itemModel.option.series.length === 2), true);
+  assert.deepEqual(model.items.map(({ model: itemModel }) => itemModel.option.series[1].data[0].value), [80, 70]);
   assert.equal(model.items.every(({ model: itemModel }) => (
     itemModel.option.series[0].center[1] === "58%"
   )), true);

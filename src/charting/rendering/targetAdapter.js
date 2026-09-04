@@ -117,10 +117,25 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
   );
   const name = mark?.entity ?? mark?.label ?? chart.title ?? "";
   const target = Number(mark?.target);
-  const targetMarker = Number.isFinite(target)
+  const hasTarget = mark?.target !== null
+    && mark?.target !== undefined
+    && mark.target !== ""
+    && Number.isFinite(target);
+  const targetMarkerSeries = hasTarget
     ? {
-        value: target,
         name: `Target ${formatTargetValue(target)}`,
+        type: "gauge",
+        min: 0,
+        max: maximum,
+        startAngle: 200,
+        endAngle: -20,
+        center: ["50%", embedded ? "58%" : "54%"],
+        radius: embedded ? "68%" : "52%",
+        axisLine: { show: false },
+        axisLabel: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        anchor: { show: false },
         detail: { show: false },
         title: { show: false },
         pointer: {
@@ -134,6 +149,7 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
             borderWidth: 3,
           },
         },
+        data: [{ value: target, name: `Target ${formatTargetValue(target)}` }],
       }
     : null;
   return {
@@ -193,8 +209,8 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
               time: mark.time,
             },
             activeTime,
-          ), targetMarker].filter(Boolean),
-        }]
+          )],
+        }, ...(targetMarkerSeries ? [targetMarkerSeries] : [])]
         : [],
     },
   };
