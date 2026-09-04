@@ -153,6 +153,14 @@ test("precision gauges shrink within shorter collection cards instead of keeping
   assert.doesNotMatch(gaugeRules, /clamp\(13rem/);
 });
 
+test("precision gauge endpoint labels scale with the gauge typography", async () => {
+  const styles = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  const boundRules = [...styles.matchAll(/\.precision-arc-gauge-bound\s*\{[^}]*\}/g)]
+    .map(([rule]) => rule);
+
+  assert.ok(boundRules.some((rule) => /font-size:\s*var\(--precision-arc-text-size,\s*12px\)/.test(rule)));
+});
+
 test("delta cards render the exact resolved comparison time rather than a raw-row guess", () => {
   const rows = [
     { at: "2027-05-03", value: 10 },
