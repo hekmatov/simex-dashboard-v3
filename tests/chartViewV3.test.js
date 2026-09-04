@@ -158,7 +158,7 @@ test("precision gauge endpoint labels scale with the gauge typography", async ()
   const boundRules = [...styles.matchAll(/\.precision-arc-gauge-bound\s*\{[^}]*\}/g)]
     .map(([rule]) => rule);
 
-  assert.ok(boundRules.some((rule) => /font-size:\s*calc\(var\(--precision-arc-text-size,\s*12px\)\s*\*\s*2\.8\)/.test(rule)));
+  assert.ok(boundRules.some((rule) => /font-size:\s*calc\(var\(--precision-arc-text-size,\s*12px\)\s*\*\s*2\.083333\)/.test(rule)));
 });
 
 test("collection chart titles use header space that has no transport controls", async () => {
