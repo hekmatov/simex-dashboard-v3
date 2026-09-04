@@ -2948,7 +2948,7 @@ button.danger {
 
 .precision-arc-gauge-bound {
   fill: var(--simex-text-muted);
-  font-size: var(--precision-arc-text-size, 12px);
+  font-size: calc(var(--precision-arc-text-size, 12px) * 1.4);
   text-anchor: middle;
 }
 
