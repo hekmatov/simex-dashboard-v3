@@ -43,6 +43,20 @@ test("schemas are grouped by their communication purpose", () => {
   );
 });
 
+test("each axis chart offers the measures-to-rows pivot and other chart families do not", () => {
+  const axisTypes = new Set([
+    "bar", "groupedBar", "stackedBar", "horizontalBar",
+    "horizontalStackedBar", "line", "area", "mixed",
+  ]);
+  for (const schema of listChartSchemas()) {
+    assert.equal(
+      schema.transforms.includes("pivot"),
+      axisTypes.has(schema.typeId),
+      schema.typeId,
+    );
+  }
+});
+
 test("invalid schemas fail before the application renders", () => {
   assert.throws(
     () => validateChartSchema({ version: 3, typeId: "broken", roles: [] }),

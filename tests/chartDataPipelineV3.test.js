@@ -34,6 +34,43 @@ function previousDeltaTransformations(overrides = {}) {
   };
 }
 
+test("pivoting selected measures creates comparison rows without changing the source rows", () => {
+  const rows = [
+    { "Income bracket": "Low income", "Population share": 35, "Income share": 9 },
+    { "Income bracket": "High income", "Population share": 6, "Income share": 30 },
+  ];
+  const result = prepareChartData({
+    chart: chart("horizontalStackedBar", {
+      measurements: [
+        { field: "Population share", label: "Share of population (%)" },
+        { field: "Income share", label: "Share of total income (%)" },
+      ],
+      observation: { field: "Income bracket" },
+    }, {
+      filters: [],
+      grouping: [],
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      pivot: { mode: "measuresToRows" },
+    }),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "ready");
+  assert.deepEqual(result.marks.map(({ x, cluster, value }) => ({ x, cluster, value })), [
+    { x: "Share of population (%)", cluster: "Low income", value: 35 },
+    { x: "Share of total income (%)", cluster: "Low income", value: 9 },
+    { x: "Share of population (%)", cluster: "High income", value: 6 },
+    { x: "Share of total income (%)", cluster: "High income", value: 30 },
+  ]);
+  assert.deepEqual(rows, [
+    { "Income bracket": "Low income", "Population share": 35, "Income share": 9 },
+    { "Income bracket": "High income", "Population share": 6, "Income share": 30 },
+  ]);
+});
+
 test("duplicate blockers explain the one-value-per-mark rule and resolution routes", () => {
   const rows = [{ category: "A", value: 2 }, { category: "A", value: 3 }];
   const result = prepareChartData({

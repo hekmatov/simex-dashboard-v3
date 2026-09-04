@@ -20,7 +20,7 @@ import {
 export const CHART_CONFIG_VERSION = 3;
 
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
-const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
+const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison", "pivot"]);
 const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
 const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "table", "image", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine", "card"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
@@ -40,6 +40,7 @@ const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neut
 const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
 const COMPARISON_MODES = new Set(CHART_COMPARISON_MODES);
 const COMPARISON_MATCHING_POLICIES = new Set(CHART_COMPARISON_MATCHING_POLICIES);
+const PIVOT_MODES = new Set(["measuresToRows"]);
 const INTERPOLATION_BINDING_ROLES = new Set(["measurements", "measurement", "value", "actual", "target"]);
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
@@ -245,6 +246,9 @@ function validateTransformations(chart, schema, columnTypes) {
   const aggregation = Object.hasOwn(chart.transformations, "aggregation")
     ? chart.transformations.aggregation
     : null;
+  const pivot = Object.hasOwn(chart.transformations, "pivot")
+    ? chart.transformations.pivot
+    : null;
   if (!Array.isArray(filters)) throw new Error("Chart transformations filters must be an array.");
   if (schema.authoringWorkflow === "static") {
     if (
@@ -254,6 +258,7 @@ function validateTransformations(chart, schema, columnTypes) {
       || duplicates !== null
       || missingValues !== "gap"
       || Object.hasOwn(chart.transformations, "comparison")
+      || pivot !== null
     ) {
       throw new Error(`Static content type "${schema.typeId}" cannot use chart data transformations.`);
     }
@@ -286,7 +291,27 @@ function validateTransformations(chart, schema, columnTypes) {
     throw new Error(`Duplicate strategy "${duplicates ?? "null"}" does not use aggregation "${aggregation}"; aggregation must be null.`);
   }
   if (!MISSING_VALUE_STRATEGIES.has(missingValues) || !schema.transforms.includes("missing")) throw new Error(`Unsupported missing-value handling "${missingValues}" for chart type "${schema.typeId}".`);
+  validatePivot(chart, schema, pivot);
   validateComparison(chart.transformations, schema);
+}
+
+function validatePivot(chart, schema, pivot) {
+  if (pivot === null || pivot === undefined) return;
+  if (!schema.transforms.includes("pivot")) {
+    throw new Error(`Chart type "${schema.typeId}" does not support pivot transformations.`);
+  }
+  const descriptors = strictRecordDescriptors(pivot, "Chart pivot");
+  checkKnownDescriptorKeys(descriptors, new Set(["mode"]), "chart pivot");
+  const mode = requiredDescriptorValue(descriptors, "mode", "Chart pivot");
+  requiredString(mode, "Chart pivot mode");
+  if (!PIVOT_MODES.has(mode)) throw new Error(`Unsupported chart pivot mode "${mode}".`);
+  const measurementRole = schema.roles.find(({ id }) => id === "measurements");
+  const measurements = measurementRole
+    ? bindingsFor(chart.roles?.measurements, measurementRole)
+    : [];
+  if (measurements.length < 2) {
+    throw new Error("Pivoting measures into rows requires at least two measurement fields.");
+  }
 }
 
 function validateComparison(transformations, schema) {

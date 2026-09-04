@@ -58,6 +58,51 @@ test("chart drafts preserve an optional false title visibility flag", () => {
   assert.equal(validateChartInstance(chart), chart);
 });
 
+test("measure-to-row pivots are valid only for axis charts with two measurements", () => {
+  const pivoted = createChartDraft("horizontalStackedBar", {
+    id: "income-distribution",
+    title: "Income distribution",
+    sourceId: "income",
+    roles: {
+      measurements: [
+        { field: "population share" },
+        { field: "income share" },
+      ],
+      observation: { field: "income bracket" },
+    },
+    transformations: { pivot: { mode: "measuresToRows" } },
+  });
+
+  assert.doesNotThrow(() => validateChartInstance(pivoted));
+
+  const oneMeasurement = createChartDraft("bar", {
+    id: "incomplete-pivot",
+    title: "Incomplete pivot",
+    sourceId: "income",
+    roles: {
+      measurements: [{ field: "population share" }],
+      observation: { field: "income bracket" },
+    },
+    transformations: { pivot: { mode: "measuresToRows" } },
+  });
+  assert.throws(
+    () => validateChartInstance(oneMeasurement),
+    /at least two measurement fields/i,
+  );
+
+  const unsupported = createChartDraft("gauge", {
+    id: "unsupported-pivot",
+    title: "Unsupported pivot",
+    sourceId: "income",
+    roles: { value: { field: "population share" } },
+    transformations: { pivot: { mode: "measuresToRows" } },
+  });
+  assert.throws(
+    () => validateChartInstance(unsupported),
+    /does not support pivot transformations/i,
+  );
+});
+
 test("category axes accept bounded label wrapping and font settings", () => {
   const chart = createChartDraft("bar", {
     id: "wrapped-category-axis",

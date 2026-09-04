@@ -17,7 +17,7 @@ export const CHART_COLUMN_TYPES = Object.freeze(["number", "text", "category", "
 export const CHART_SOURCE_KINDS = Object.freeze(["dataset", "inline", "staticText", "staticImage"]);
 export const CHART_AUTHORING_WORKFLOWS = Object.freeze(["chart", "static"]);
 export const CHART_SURFACES = Object.freeze(["build", "view", "fullscreen", "present", "audience"]);
-export const CHART_TRANSFORMS = Object.freeze(["filter", "group", "aggregate", "duplicates", "missing", "comparison"]);
+export const CHART_TRANSFORMS = Object.freeze(["filter", "group", "aggregate", "duplicates", "missing", "comparison", "pivot"]);
 export const CHART_COMPARISON_MODES = Object.freeze(["previousObservation", "fixedTime"]);
 export const CHART_COMPARISON_MATCHING_POLICIES = Object.freeze(["exact", "lastKnown", "nearest", "interpolate"]);
 export const CHART_FORM_SECTION_DEFINITIONS = Object.freeze([
@@ -95,7 +95,14 @@ export function getChartFormSectionDefinition(sectionId) {
 export function role(id, label, accepts, min, max = 1) { return { id, label, accepts, min, max }; }
 export function chartSchema(definition) {
   const groupable = !["target", "operational"].includes(definition.dataFamily);
-  const transforms = ["filter", ...(groupable ? ["group"] : []), "aggregate", "duplicates", "missing"];
+  const transforms = [
+    "filter",
+    ...(groupable ? ["group"] : []),
+    "aggregate",
+    "duplicates",
+    "missing",
+    ...(definition.dataFamily === "axis" ? ["pivot"] : []),
+  ];
   const authoringWorkflow = definition.authoringWorkflow ?? "chart";
   const capabilities = {
     sourceCsv: authoringWorkflow === "chart",

@@ -76,6 +76,7 @@ export function prepareChartData(input = {}) {
     ...transformed.diagnostics,
     ...bindingDiagnostics,
     ...validateGroupTransform(schema, transformed, input.datasetProfile),
+    ...validatePivotTransform(schema, chart, transformed),
     ...geographyBinding.diagnostics,
   ];
 
@@ -291,6 +292,26 @@ function validateGroupTransform(schema, transformed, datasetProfile) {
   return fields
     .filter((field) => !columns.has(field))
     .map((field) => error("group-field-missing", `Group field "${field}" is not in the dataset.`, { field }));
+}
+
+function validatePivotTransform(schema, chart, transformed) {
+  if (!transformed.config.pivot) return [];
+  if (!schema.transforms.includes("pivot")) {
+    return [error(
+      "pivot-transform-unsupported",
+      `${schema.label} cannot pivot selected measures into comparison rows.`,
+    )];
+  }
+  const measurements = Array.isArray(chart.roles?.measurements)
+    ? chart.roles.measurements
+    : chart.roles?.measurements ? [chart.roles.measurements] : [];
+  if (measurements.length < 2) {
+    return [error(
+      "pivot-measurements-required",
+      "Pivoting measures into rows requires at least two measurement fields.",
+    )];
+  }
+  return [];
 }
 
 function finalizePreparedResult(prepared, transformed, schema) {

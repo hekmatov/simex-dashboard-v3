@@ -772,6 +772,14 @@ function transformationFields(schema, chart) {
       help: "Choose whether missing measurements remain gaps, become zero, or are omitted.",
       options: selectOptions(["gap", "zero", "drop"]),
     },
+    pivot: {
+      id: "pivot",
+      label: "Pivot selected measures into comparison rows",
+      control: "pivot",
+      path: ["transformations", "pivot"],
+      value: chart.transformations?.pivot ?? null,
+      help: "Use the Observation field as the series or stack segment, and turn each selected Measurement into a chart row. Choose at least two measurements.",
+    },
   };
   return schema.transforms
     .filter((transform) => Object.hasOwn(descriptors, transform))

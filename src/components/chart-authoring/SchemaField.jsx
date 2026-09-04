@@ -117,6 +117,15 @@ function SchemaField({
       }
     );
   }
+  if (field.control === "pivot") {
+    return /* @__PURE__ */ React.createElement(StandardField, {
+      field: { ...decoratedField, control: "toggle" },
+      value: value?.mode === "measuresToRows",
+      onChange: (enabled) => emit(enabled ? { mode: "measuresToRows" } : null),
+      columns,
+      rows,
+    });
+  }
   return /* @__PURE__ */ React.createElement(StandardField, { ...shared, columns, rows });
 }
 function validField(field) {

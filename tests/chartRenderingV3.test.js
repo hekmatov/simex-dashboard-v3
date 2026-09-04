@@ -224,6 +224,35 @@ test("bar variants preserve canonical series, groups, stacking, and orientation"
   assert.equal(horizontalStacked.option.series[0].stack, "total");
 });
 
+test("pivoted measures render as comparison rows with one stack series per source category", () => {
+  const rows = [
+    { bracket: "Low income", population: 35, income: 9 },
+    { bracket: "High income", population: 6, income: 30 },
+  ];
+  const pivotedChart = chart("horizontalStackedBar", {
+    roles: {
+      measurements: [
+        { field: "population", label: "Population share" },
+        { field: "income", label: "Income share" },
+      ],
+      observation: { field: "bracket" },
+    },
+    transformations: { pivot: { mode: "measuresToRows" } },
+  });
+  const prepared = prepareChartData({
+    chart: pivotedChart,
+    rows,
+    datasetProfile: profileDataset(rows),
+  });
+  const model = buildRenderModel({ chart: pivotedChart, prepared });
+
+  assert.deepEqual(model.option.yAxis.data, ["Population share", "Income share"]);
+  assert.deepEqual(model.option.series.map(({ name, data, stack }) => ({ name, data, stack })), [
+    { name: "Low income", data: [35, 9], stack: "total" },
+    { name: "High income", data: [6, 30], stack: "total" },
+  ]);
+});
+
 test("line, area, and mixed options preserve axis types and primary or secondary axes", () => {
   const line = buildRenderModel({
     chart: chart("line", {

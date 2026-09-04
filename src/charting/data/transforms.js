@@ -21,6 +21,7 @@ const DEFAULTS = Object.freeze({
   missingStrategy: "gap",
   groupFields: [],
   comparison: null,
+  pivot: null,
 });
 
 export function applyTransforms(rows = [], transformations, datasetProfile, chart = null) {
@@ -314,7 +315,22 @@ function canonicalTransformConfig(transformations, diagnostics) {
     duplicateStrategy,
     missingStrategy,
     comparison: safeComparisonValue(source, diagnostics),
+    pivot: safePivotValue(source, diagnostics),
   };
+}
+
+function safePivotValue(source, diagnostics) {
+  if (!Object.hasOwn(source, "pivot")) return null;
+  const pivot = source.pivot;
+  if (pivot === null || pivot === undefined) return null;
+  if (!isRecord(pivot) || Object.keys(pivot).length !== 1 || pivot.mode !== "measuresToRows") {
+    diagnostics.push(error(
+      "invalid-transform-pivot",
+      'Pivot must be { mode: "measuresToRows" } or null.',
+    ));
+    return null;
+  }
+  return { mode: "measuresToRows" };
 }
 
 function safeComparisonValue(source, diagnostics) {

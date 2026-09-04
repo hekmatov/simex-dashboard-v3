@@ -2311,6 +2311,39 @@ test("data roles render measurements first and duplicate controls only for corre
   assert.match(withDuplicates, /Duplicate observations/);
 });
 
+test("axis chart data forms expose an opt-in measures-to-rows pivot control", () => {
+  const axisChart = createChartDraft("horizontalStackedBar", {
+    id: "pivot-form",
+    title: "Pivot form",
+    sourceId: "income",
+    roles: {
+      measurements: [{ field: "population" }, { field: "income" }],
+      observation: { field: "bracket" },
+    },
+  });
+  const pivotField = buildEditorFormModel({ chart: axisChart })
+    .sections.find(({ id }) => id === "data")
+    .fields.find(({ id }) => id === "pivot");
+
+  assert.equal(pivotField.control, "pivot");
+  assert.match(pivotField.help, /Observation field.*series or stack segment/i);
+  assert.match(
+    render(React.createElement(SchemaField, { field: pivotField, chart: axisChart })),
+    /type="checkbox"/,
+  );
+
+  const gauge = createChartDraft("gauge", {
+    id: "gauge-form",
+    title: "Gauge form",
+    sourceId: "income",
+    roles: { value: { field: "population" } },
+  });
+  const gaugeFields = buildEditorFormModel({ chart: gauge })
+    .sections.find(({ id }) => id === "data")
+    .fields;
+  assert.equal(gaugeFields.some(({ id }) => id === "pivot"), false);
+});
+
 test("duplicate resolution shows the chart's unresolved error state instead of an unapplied choice", () => {
   const html = render(React.createElement(StandardField, {
     field: {
