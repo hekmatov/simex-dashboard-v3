@@ -33,6 +33,10 @@ import {
   serializeDashboardBundle,
 } from "./charting/config/dashboardBundleV3.js";
 import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "./static-content/assets/browserAuthoredAssetRuntime.js";
+import {
+  analyzeBuildLayoutMove,
+  applyBuildLayoutMoveToDashboard,
+} from "./components/build/buildLayoutMove.js";
 import { buildPresentableItemIndex } from "./static-content/staticPanelCapabilities.js";
 import { commitDurableStaticPanelTransaction } from "./static-content/assets/durableStaticPanelCommit.js";
 import { reconcileAuthoredAssets } from "./static-content/assets/reconcileAuthoredAssets.js";
@@ -1229,9 +1233,19 @@ function AppContent() {
   async function saveChart(payload, { reportStatus = true } = {}) {
     requireChartAuthoringPayload(payload);
     const save = async () => {
-      const committed = await ensureDashboardCommitController().mutate((current) => (
-        integrateSavedChart(current, payload)
-      ));
+      const committed = await ensureDashboardCommitController().mutate((current) => {
+        const saved = integrateSavedChart(current, payload);
+        if (!payload?.placementMove) return saved;
+        const analysis = analyzeBuildLayoutMove(saved, payload.placementMove);
+        if (analysis.status === "invalid") throw new Error(analysis.error?.message ?? "The chart placement is no longer available.");
+        if (analysis.status === "noop") return saved;
+        if (analysis.requiresConfirmation && payload.placementMove.confirmed !== true) {
+          throw new Error("Moving this chart would change a partial scenario; confirm that move before saving.");
+        }
+        return applyBuildLayoutMoveToDashboard(saved, analysis, {
+          confirmed: payload.placementMove.confirmed === true,
+        });
+      });
       publishCommittedChartArtifact(payload?.runtimeArtifact);
       return committed;
     };

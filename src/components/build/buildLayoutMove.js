@@ -65,8 +65,7 @@ export function applyBuildLayoutMove(layoutDraft, analysis, { confirmed = false 
   if (layoutDraft.status === "saving") return layoutDraft;
   const currentAnalysis = analyzeBuildLayoutMove(layoutDraft.value, analysis.move);
   if (currentAnalysis.status !== "ready") return layoutDraft;
-  if (currentAnalysis.requiresConfirmation && confirmed !== true) return layoutDraft;
-  const value = applyAnalyzedMove(layoutDraft.value, currentAnalysis);
+  const value = applyBuildLayoutMoveToDashboard(layoutDraft.value, currentAnalysis, { confirmed });
   if (value === layoutDraft.value) return layoutDraft;
   return {
     ...layoutDraft,
@@ -77,6 +76,15 @@ export function applyBuildLayoutMove(layoutDraft, analysis, { confirmed = false 
     error: null,
     sceneConsequences: structuredClone(currentAnalysis.consequences),
   };
+}
+
+/** Apply a reviewed layout move directly to a persisted dashboard value. */
+export function applyBuildLayoutMoveToDashboard(dashboard, analysis, { confirmed = false } = {}) {
+  if (!dashboard || analysis?.status !== "ready") return dashboard;
+  const currentAnalysis = analyzeBuildLayoutMove(dashboard, analysis.move);
+  if (currentAnalysis.status !== "ready") return dashboard;
+  if (currentAnalysis.requiresConfirmation && confirmed !== true) return dashboard;
+  return applyAnalyzedMove(dashboard, currentAnalysis);
 }
 
 function locateSource(dashboard, move) {

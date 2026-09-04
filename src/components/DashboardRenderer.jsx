@@ -1636,13 +1636,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       : current);
   }
 
-  const changeFullChartDraft = React.useCallback(({ draft, chronoGroups }) => {
+  const changeFullChartDraft = React.useCallback(({ draft, chronoGroups, placementMove }) => {
     setChartEditSession((current) => current && current.status !== "saving"
       ? reduceChartEditSession(current, {
           type: "CHANGE",
           surface: "full",
           draft,
           chronoGroups,
+          placementMove,
         })
       : current);
   }, []);
@@ -1715,6 +1716,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               draft: fullValue.chart,
               ...(Object.hasOwn(fullValue, "chronoGroups")
                 ? { chronoGroups: fullValue.chronoGroups }
+                : {}),
+              ...(Object.hasOwn(fullValue, "placementMove")
+                ? { placementMove: fullValue.placementMove }
                 : {}),
             })
           : activeSession;
@@ -2997,10 +3001,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         }}
         onClose={() => {}}
         onSaveChanges={saveChartEditSession}
-        onMovePlacement={(source) => {
-          if (!source) return;
-          requestPanelMove(source, chartEditSession.draft?.title ?? source.placementId, null);
-        }}
         onDiscardChanges={discardChartEditOwner}
       />}
       {staticWizardTarget && <StaticContentWizard

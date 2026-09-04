@@ -26,6 +26,7 @@ export function createChartEditSession({
     savedChronoGroups,
     draft: structuredClone(savedChart),
     chronoGroups: structuredClone(savedChronoGroups),
+    placementMove: null,
     dirtyOrigins: { quick: false, full: false },
     activeSurface: surface,
     activity: "active",
@@ -81,6 +82,7 @@ export function reduceChartEditSession(state, action) {
         ...state,
         draft: structuredClone(state.savedChart),
         chronoGroups: structuredClone(state.savedChronoGroups),
+        placementMove: null,
         dirtyOrigins: { quick: false, full: false },
         suspended: false,
         pendingRuntimeArtifact: null,
@@ -106,8 +108,8 @@ export function reduceChartEditSession(state, action) {
 
 export function isChartEditSessionDirty(state) {
   assertSession(state);
-  return projectionKey(state.draft, state.chronoGroups)
-    !== projectionKey(state.savedChart, state.savedChronoGroups);
+  return projectionKey(state.draft, state.chronoGroups, state.placementMove)
+    !== projectionKey(state.savedChart, state.savedChronoGroups, null);
 }
 
 export function hasRetainableChartEditWork(state) {
@@ -254,6 +256,7 @@ export function prepareChartEditSessionSave(state, {
         state.savedChronoGroups,
         state.chronoGroups,
       ),
+      ...(state.placementMove ? { placementMove: structuredClone(state.placementMove) } : {}),
       ...(pendingRuntimeArtifact
         ? { runtimeArtifact: structuredClone(pendingRuntimeArtifact) }
         : {}),
@@ -306,6 +309,9 @@ export function materializeChartEditSessionSave(intent, currentChronoGroups) {
   }
   if (Object.hasOwn(intent, "runtimeArtifact")) {
     payload.runtimeArtifact = cloneRuntimeArtifact(intent.runtimeArtifact);
+  }
+  if (Object.hasOwn(intent, "placementMove")) {
+    payload.placementMove = structuredClone(intent.placementMove);
   }
   return payload;
 }
@@ -445,8 +451,8 @@ function changeSession(state, action) {
   if (surface !== state.activeSurface || (surface === "quick" && state.dirtyOrigins.full)) {
     return state;
   }
-  if (!Object.hasOwn(action, "draft") && !Object.hasOwn(action, "chronoGroups")) {
-    throw new Error("Chart edit changes require a draft or Chrono Groups value.");
+  if (!Object.hasOwn(action, "draft") && !Object.hasOwn(action, "chronoGroups") && !Object.hasOwn(action, "placementMove")) {
+    throw new Error("Chart edit changes require a draft, Chrono Groups, or placement value.");
   }
 
   const draft = Object.hasOwn(action, "draft")
@@ -455,16 +461,20 @@ function changeSession(state, action) {
   const chronoGroups = Object.hasOwn(action, "chronoGroups")
     ? cloneChronoGroups(action.chronoGroups)
     : structuredClone(state.chronoGroups);
-  if (projectionKey(draft, chronoGroups) === projectionKey(state.draft, state.chronoGroups)) {
+  const placementMove = Object.hasOwn(action, "placementMove")
+    ? (action.placementMove === null ? null : structuredClone(action.placementMove))
+    : structuredClone(state.placementMove);
+  if (projectionKey(draft, chronoGroups, placementMove) === projectionKey(state.draft, state.chronoGroups, state.placementMove)) {
     return state;
   }
 
-  const dirty = projectionKey(draft, chronoGroups)
-    !== projectionKey(state.savedChart, state.savedChronoGroups);
+  const dirty = projectionKey(draft, chronoGroups, placementMove)
+    !== projectionKey(state.savedChart, state.savedChronoGroups, null);
   return {
     ...state,
     draft,
     chronoGroups,
+    placementMove,
     dirtyOrigins: dirty
       ? { ...state.dirtyOrigins, [surface]: true }
       : { quick: false, full: false },
@@ -554,6 +564,7 @@ function acceptSave(state, action) {
     savedChronoGroups,
     draft: structuredClone(savedChart),
     chronoGroups: structuredClone(savedChronoGroups),
+    placementMove: null,
     dirtyOrigins: { quick: false, full: false },
     suspended: false,
     pendingRuntimeArtifact: null,
@@ -569,8 +580,8 @@ function preferredSurface(state) {
   return requiredSurface(state.restoration.surface ?? "quick");
 }
 
-function projectionKey(chart, chronoGroups) {
-  return stableSerialize({ chart, chronoGroups });
+function projectionKey(chart, chronoGroups, placementMove = null) {
+  return stableSerialize({ chart, chronoGroups, placementMove });
 }
 
 function deriveChronoGroupChanges(savedChronoGroups, chronoGroups) {

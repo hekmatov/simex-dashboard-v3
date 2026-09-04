@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   analyzeBuildLayoutMove,
   applyBuildLayoutMove,
+  applyBuildLayoutMoveToDashboard,
 } from "../src/components/build/buildLayoutMove.js";
 import {
   createBuildLayoutDraft,
@@ -86,6 +87,28 @@ test("same-container index reconciliation preserves placement identity and rejec
   assert.equal(invalid.status, "invalid");
   assert.equal(invalid.error.code, "MOVE_SOURCE_NOT_FOUND");
   assert.strictEqual(applyBuildLayoutMove(clean, invalid, {}), clean);
+});
+
+test("a reviewed move can be applied directly to a committed dashboard without a layout draft", () => {
+  const dashboard = fixture();
+  const before = structuredClone(dashboard);
+  const analysis = analyzeBuildLayoutMove(dashboard, {
+    kind: "panel",
+    source: { pageId: "page-a", sectionId: "section-a1", placementId: "placement-a" },
+    target: { pageId: "page-b", sectionId: "section-b1", index: 0 },
+  });
+
+  assert.equal(analysis.status, "ready");
+  const moved = applyBuildLayoutMoveToDashboard(dashboard, analysis, { confirmed: true });
+  assert.deepEqual(
+    moved.pages.find(({ id }) => id === "page-a").sections.find(({ id }) => id === "section-a1").panels.map(({ id }) => id),
+    ["placement-b", "placement-static"],
+  );
+  assert.deepEqual(
+    moved.pages.find(({ id }) => id === "page-b").sections.find(({ id }) => id === "section-b1").panels.map(({ id }) => id),
+    ["placement-a"],
+  );
+  assert.deepEqual(dashboard, before);
 });
 
 test("cross-container moves replace only source and destination paths", () => {

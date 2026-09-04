@@ -140,6 +140,7 @@ const chartWizardModule = await import(
 const {
   default: ChartWizardV3,
   applyWizardMembership,
+  buildChartEditPlacementMove,
   buildChartWizardEditCommitPayload,
   chartDestinationForType,
   chartEditDraftIdentity,
@@ -152,7 +153,6 @@ const {
   createWizardPreparation,
   isChartWizardStateDirty,
   parseUploadedCsvFile,
-  placementMoveSource,
   routeChartWizardCommit,
   submitWizardDraft,
 } = chartWizardModule;
@@ -1034,12 +1034,27 @@ test("categorical filters expose unique detected values in source order", () => 
   ), ["North", "South"]);
 });
 
-test("edit placement moves retain the canonical placement identity", () => {
-  assert.deepEqual(placementMoveSource({ placementId: "chart-a", destination: { pageId: "overview", sectionId: "summary" } }), {
+test("edit placement moves retain the canonical placement identity and target insertion", () => {
+  assert.deepEqual(buildChartEditPlacementMove({
+    dashboard: {
+      pages: [{
+        id: "overview",
+        sections: [{
+          id: "summary",
+          panels: [
+            { id: "placement-a", chart: { id: "chart-a" } },
+            { id: "placement-b", chart: { id: "chart-b" } },
+          ],
+        }],
+      }],
+    },
+    placementId: "placement-a",
+    source: { pageId: "overview", sectionId: "summary" },
+    destination: { pageId: "overview", sectionId: "summary", relation: "after", anchorId: "chart-b" },
+  }), {
     kind: "panel",
-    pageId: "overview",
-    sectionId: "summary",
-    placementId: "chart-a",
+    source: { pageId: "overview", sectionId: "summary", placementId: "placement-a" },
+    target: { pageId: "overview", sectionId: "summary", index: 2 },
   });
 });
 
@@ -3734,6 +3749,79 @@ test("Full wizard continues the shared Quick draft and exposes edit-only Save ch
   }));
   assert.match(sourceHtml, /Managed data source/);
   assert.doesNotMatch(sourceHtml, /Upload a new CSV|Enter data manually|Upload GeoJSON/);
+});
+
+test("full chart edit restores an uploaded CSV as the selected existing source", () => {
+  const chart = validLineChart({ sourceId: "uploaded-cases" });
+  const session = reduceChartEditSession(createChartEditSession({
+    placementId: "placement-line",
+    chart,
+    chronoGroups: [],
+    activeSurface: "full",
+  }), { type: "OPEN", surface: "full" });
+  const source = {
+    kind: "dataset",
+    type: "uploadedCsv",
+    fileName: "cases.csv",
+    csvText: "period,capacity\nMay,4\n",
+  };
+  const state = createChartWizardEditState({
+    session,
+    loadedData: { "uploaded-cases": [{ period: "May", capacity: 4 }] },
+    profiles: {},
+    chronoGroups: [],
+    existingCharts: [chart],
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    source,
+    stage: "data-source",
+  });
+
+  assert.equal(state.sourceSelection.kind, "existing");
+  assert.deepEqual(state.sourceSelection.source, source);
+});
+
+test("full chart edit enables destination choices without a separate move control", () => {
+  const chart = validLineChart();
+  const session = reduceChartEditSession(createChartEditSession({
+    placementId: "placement-line",
+    chart,
+    chronoGroups: [],
+    activeSurface: "full",
+  }), { type: "OPEN", surface: "full" });
+  const html = render(React.createElement(ChartWizardV3, {
+    mode: "edit",
+    open: true,
+    editSession: session,
+    initialDraftState: createChartWizardEditState({
+      session,
+      loadedData: { "exercise-data": [{ period: "May", capacity: 4 }] },
+      profiles: {},
+      chronoGroups: [],
+      existingCharts: [chart],
+      destination: { pageId: "page-a", sectionId: "section-a" },
+      source: { kind: "dataset", type: "uploadedCsv", fileName: "cases.csv", csvText: "period,capacity\nMay,4\n" },
+      stage: "destination",
+    }),
+    dashboard: {
+      pages: [
+        { id: "page-a", title: "Page A", sections: [{ id: "section-a", title: "Section A", panels: [{ id: "placement-line", chart }] }] },
+        { id: "page-b", title: "Page B", sections: [{ id: "section-b", title: "Section B", panels: [] }] },
+      ],
+    },
+    loadedData: { "exercise-data": [{ period: "May", capacity: 4 }] },
+    dataSources: { "exercise-data": { kind: "dataset", type: "uploadedCsv", fileName: "cases.csv", csvText: "period,capacity\nMay,4\n" } },
+    datasetProfiles: {},
+    chronoGroups: [],
+    existingCharts: [chart],
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    onClose() {},
+    onSaveChanges() {},
+  }));
+
+  assert.doesNotMatch(html, /Move placement/);
+  assert.match(html, /Destination page<select(?![^>]*disabled)/);
+  assert.match(html, /Destination section<select(?![^>]*disabled)/);
+  assert.match(html, /Insertion<select(?![^>]*disabled)/);
 });
 
 test("edit-mode wizard commit routes only to the placement Save authority", async () => {

@@ -315,6 +315,30 @@ test("Save uses a narrow intent and promotes only the persisted value to the bas
   assert.equal(chartEditSessionPendingSurface(saved), null);
 });
 
+test("a full edit placement move is dirty work and is retained in the Save payload", () => {
+  const opened = reduceChartEditSession(createSession(), {
+    type: "OPEN",
+    surface: "full",
+  });
+  const changed = reduceChartEditSession(opened, {
+    type: "CHANGE",
+    surface: "full",
+    placementMove: {
+      kind: "panel",
+      source: { pageId: "page-a", sectionId: "section-a", placementId: "placement-a" },
+      target: { pageId: "page-b", sectionId: "section-b", index: 0 },
+    },
+  });
+
+  assert.equal(isChartEditSessionDirty(changed), true);
+  const request = prepareChartEditSessionSave(changed);
+  assert.deepEqual(materializeChartEditSessionSave(request.intent, changed.chronoGroups).placementMove, {
+    kind: "panel",
+    source: { pageId: "page-a", sectionId: "section-a", placementId: "placement-a" },
+    target: { pageId: "page-b", sectionId: "section-b", index: 0 },
+  });
+});
+
 test("quick Save omits an unchanged Chrono baseline so persistence can rebase on current groups", () => {
   const changed = changeChart(createSession(), "quick", {
     title: "Saved without stale Chrono data",

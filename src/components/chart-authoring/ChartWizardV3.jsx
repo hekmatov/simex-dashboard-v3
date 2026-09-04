@@ -56,6 +56,7 @@ import { buildGeoJsonContentDraft } from "../../content-library/contentDraftTran
 import { validateGeoJson as validateManagedGeoJson } from "../../lib/geoJsonValidation.js";
 import { projectChartCreateOwner } from "../../charting/forms/chartDraftSession.js";
 import { scheduleAfterPaint } from "../../lib/scheduleAfterPaint.js";
+import { analyzeBuildLayoutMove } from "../build/buildLayoutMove.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
@@ -271,22 +272,46 @@ export function discardConfirmationRequired({ editMode = false, editDirty = fals
   return !editMode || editDirty;
 }
 
-export function placementMoveSource({ placementId, destination } = {}) {
+export function buildChartEditPlacementMove({ dashboard, placementId, source, destination } = {}) {
   if (
     typeof placementId !== "string" || placementId.trim() === ""
+    || typeof source?.pageId !== "string" || source.pageId.trim() === ""
+    || typeof source?.sectionId !== "string" || source.sectionId.trim() === ""
     || typeof destination?.pageId !== "string" || destination.pageId.trim() === ""
     || typeof destination?.sectionId !== "string" || destination.sectionId.trim() === ""
   ) return null;
+  const page = (dashboard?.pages ?? []).find(({ id }) => id === destination.pageId);
+  const section = (page?.sections ?? []).find(({ id }) => id === destination.sectionId);
+  if (!section) return null;
+  const relation = destination.relation ?? destination.position ?? "append";
+  const panels = section.panels ?? [];
+  let index = Number.isInteger(destination.targetIndex)
+    ? destination.targetIndex
+    : panels.length;
+  if (!Number.isInteger(destination.targetIndex) && relation !== "append") {
+    const anchorIndex = panels.findIndex((panel) => (
+      (panel.chart ?? panel).id === destination.anchorId
+    ));
+    if (anchorIndex < 0) return null;
+    index = relation === "before" ? anchorIndex : anchorIndex + 1;
+  }
   return {
     kind: "panel",
-    pageId: destination.pageId,
-    sectionId: destination.sectionId,
-    placementId,
+    source: {
+      pageId: source.pageId,
+      sectionId: source.sectionId,
+      placementId,
+    },
+    target: {
+      pageId: destination.pageId,
+      sectionId: destination.sectionId,
+      index,
+    },
   };
 }
 
-export function chartEditDraftIdentity({ draft = null, chronoGroups = [] } = {}) {
-  return stableIdentity({ draft, chronoGroups });
+export function chartEditDraftIdentity({ draft = null, chronoGroups = [], placementMove = null } = {}) {
+  return stableIdentity({ draft, chronoGroups, placementMove });
 }
 
 export function chartDestinationForType(destination, typeId) {
@@ -352,7 +377,6 @@ export default function ChartWizardV3({
   onRestorationChange = noop,
   onSuspendedChange = noop,
   onSaveChanges,
-  onMovePlacement = noop,
   onDiscardChanges = noop,
   onCommitSuccess = noop,
   onCreate,
@@ -563,19 +587,6 @@ export default function ChartWizardV3({
   React.useEffect(() => {
     onDraftStateChange(wizard);
   }, [onDraftStateChange, wizard]);
-  React.useEffect(() => {
-    if (!editMode || !wizard.draft) return;
-    const identity = chartEditDraftIdentity({
-      draft: wizard.draft,
-      chronoGroups: wizard.chronoGroups,
-    });
-    if (identity === emittedEditIdentityRef.current?.identity) return;
-    emittedEditIdentityRef.current.identity = identity;
-    onEditDraftChange({
-      draft: structuredClone(wizard.draft),
-      chronoGroups: structuredClone(wizard.chronoGroups),
-    });
-  }, [editMode, onEditDraftChange, wizard.draft, wizard.chronoGroups]);
   React.useEffect(() => (
     () => onDirtyChange(false)
   ), [onDirtyChange]);
@@ -681,6 +692,14 @@ export default function ChartWizardV3({
     }),
   }, [editMode, wizard.draft, rows, geoData, authorMetadata]);
   const [deferredPreparation, setDeferredPreparation] = React.useState(null);
+  const [placementEdited, setPlacementEdited] = React.useState(() => Boolean(editSession?.placementMove));
+  const [placementMoveConfirmation, setPlacementMoveConfirmation] = React.useState(null);
+  const placementOwnerRef = React.useRef(editSession?.placementId ?? null);
+  React.useEffect(() => {
+    if (placementOwnerRef.current === editSession?.placementId) return;
+    placementOwnerRef.current = editSession?.placementId ?? null;
+    setPlacementEdited(Boolean(editSession?.placementMove));
+  }, [editSession?.placementId, editSession?.placementMove]);
   React.useEffect(() => {
     if (!editMode) return undefined;
     const chart = wizard.draft;
@@ -773,6 +792,16 @@ export default function ChartWizardV3({
     preparedData: runtime.prepared,
   });
   const destinationChoices = editableDestinationChoices(dashboard, wizard.destination);
+  const editPlacementMove = React.useMemo(() => (
+    editMode && placementEdited
+      ? buildChartEditPlacementMove({
+          dashboard,
+          placementId: editSession?.placementId,
+          source: destination,
+          destination: wizard.destination,
+        })
+      : null
+  ), [dashboard, destination, editMode, editSession?.placementId, placementEdited, wizard.destination]);
   const reviewedDestination = chartDestinationForType(
     wizard.destination ?? destination,
     wizard.draft?.typeId,
@@ -811,6 +840,21 @@ export default function ChartWizardV3({
     && canCreate
     && placementProof.status === "valid"
     && renderProof.status === "valid";
+  React.useEffect(() => {
+    if (!editMode || !wizard.draft) return;
+    const identity = chartEditDraftIdentity({
+      draft: wizard.draft,
+      chronoGroups: wizard.chronoGroups,
+      placementMove: editPlacementMove,
+    });
+    if (identity === emittedEditIdentityRef.current?.identity) return;
+    emittedEditIdentityRef.current.identity = identity;
+    onEditDraftChange({
+      draft: structuredClone(wizard.draft),
+      chronoGroups: structuredClone(wizard.chronoGroups),
+      placementMove: structuredClone(editPlacementMove),
+    });
+  }, [editMode, editPlacementMove, onEditDraftChange, wizard.draft, wizard.chronoGroups]);
   React.useEffect(() => {
     if (editMode || !open) return;
     if (!retainableCreation) {
@@ -871,8 +915,10 @@ export default function ChartWizardV3({
     setSubmissionError("");
   };
   const updateDestination = (patch) => {
+    if (editMode) setPlacementEdited(true);
     setWizard((current) => {
       const nextDestination = { ...(current.destination ?? {}), ...patch };
+      if (Object.keys(patch).length > 0) delete nextDestination.targetIndex;
       let next = reduceWizardState(current, {
         type: "setDestination",
         destination: nextDestination,
@@ -1239,8 +1285,19 @@ export default function ChartWizardV3({
       setSubmissionError(safeMessage(error));
     }
   };
-  const finish = async () => {
+  const finish = async ({ confirmedPlacementMove = false } = {}) => {
     if (!canCreate || disabled || (editMode && !editDirty)) return;
+    const placementAnalysis = editMode && editPlacementMove
+      ? analyzeBuildLayoutMove(dashboard, editPlacementMove)
+      : null;
+    if (placementAnalysis?.status === "invalid") {
+      setSubmissionError(placementAnalysis.error?.message ?? "The chart placement is no longer available.");
+      return null;
+    }
+    if (placementAnalysis?.requiresConfirmation && !confirmedPlacementMove) {
+      setPlacementMoveConfirmation(placementAnalysis);
+      return null;
+    }
     return submissionGateRef.current.run(async () => {
       setSubmitting(true);
       try {
@@ -1266,6 +1323,9 @@ export default function ChartWizardV3({
               placementId: editSession?.placementId,
               finalized,
               runtimeArtifact,
+              placementMove: placementAnalysis?.requiresConfirmation
+                ? { ...editPlacementMove, confirmed: true }
+                : editPlacementMove,
             }),
             reviewedPlacement: reviewedDestination,
             onSaveChanges,
@@ -1535,12 +1595,6 @@ export default function ChartWizardV3({
               { className: "chart-wizard-step chart-wizard-destination", "aria-labelledby": "chart-destination-heading" },
               React.createElement("h3", { id: "chart-destination-heading" }, "Choose destination and placement"),
               React.createElement("p", null, "Destination stays attached to this chart draft even if you inspect another page."),
-              editMode ? React.createElement("button", {
-                type: "button",
-                className: "secondary",
-                disabled: disabled || submitting || !placementMoveSource({ placementId: editSession?.placementId, destination: wizard.destination ?? destination }),
-                onClick: () => onMovePlacement(placementMoveSource({ placementId: editSession?.placementId, destination: wizard.destination ?? destination })),
-              }, "Move placement…") : null,
               React.createElement(
                 "div",
                 { className: "chart-destination-controls" },
@@ -1552,7 +1606,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.pageId ?? "",
-                      disabled: disabled || submitting || editMode,
+                      disabled: disabled || submitting,
                       onChange: (event) => {
                         const page = destinationChoices.pages.find(({ id }) => id === event.target.value);
                         const section = page?.sections?.[0] ?? null;
@@ -1580,7 +1634,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.sectionId ?? "",
-                      disabled: disabled || submitting || editMode,
+                      disabled: disabled || submitting,
                       onChange: (event) => updateDestination({
                         sectionId: event.target.value,
                         relation: "append",
@@ -1603,7 +1657,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
-                      disabled: disabled || submitting || editMode,
+                      disabled: disabled || submitting,
                       onChange: (event) => updateDestination({
                         relation: event.target.value,
                         position: event.target.value,
@@ -1625,7 +1679,7 @@ export default function ChartWizardV3({
                     "select",
                     {
                       value: wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? "",
-                      disabled: disabled || submitting || editMode
+                      disabled: disabled || submitting
                         || (wizard.destination?.relation ?? wizard.destination?.position ?? "append") === "append",
                       onChange: (event) => updateDestination({ anchorId: event.target.value }),
                     },
@@ -1841,6 +1895,19 @@ export default function ChartWizardV3({
         ),
       ),
     ),
+    React.createElement(ConfirmDialog, {
+      open: placementMoveConfirmation !== null,
+      title: "Confirm chart move?",
+      message: "This move changes a scenario that contains other charts. Confirm to apply the chart edit and its placement together.",
+      confirmLabel: "Move and save",
+      cancelLabel: "Keep editing",
+      onConfirm: () => {
+        setPlacementMoveConfirmation(null);
+        void finish({ confirmedPlacementMove: true });
+      },
+      onCancel: () => setPlacementMoveConfirmation(null),
+      disabled: disabled || submitting,
+    }),
     React.createElement(ConfirmDialog, {
       open: wizard.confirmation === "discardChart",
       title: editMode ? "Discard changes?" : "Discard chart?",
@@ -2354,6 +2421,7 @@ export function buildChartWizardEditCommitPayload({
   placementId,
   finalized,
   runtimeArtifact,
+  placementMove = null,
 } = {}) {
   if (!isRecord(finalized?.chart)) {
     throw new TypeError("A finalized chart is required for chart edit Save.");
@@ -2364,6 +2432,7 @@ export function buildChartWizardEditCommitPayload({
     ...(Object.hasOwn(finalized, "chronoGroups")
       ? { chronoGroups: finalized.chronoGroups }
       : {}),
+    ...(placementMove ? { placementMove } : {}),
     ...(runtimeArtifact === undefined ? {} : { runtimeArtifact }),
   };
 }
@@ -2481,17 +2550,27 @@ export function createChartWizardEditState({
   const sourceId = session.draft.sourceId;
   const rows = readEntry(loadedData, sourceId) ?? [];
   const profile = readEntry(profiles, sourceId) ?? profileDataset(rows);
+  const resumedDestination = session.placementMove?.target
+    ? {
+        pageId: session.placementMove.target.pageId,
+        sectionId: session.placementMove.target.sectionId,
+        relation: "append",
+        position: "append",
+        anchorId: null,
+        targetIndex: session.placementMove.target.index,
+      }
+    : destination;
   return createChartWizardState({
     loadedData,
     profiles: sourceId ? { ...profiles, [sourceId]: profile } : profiles,
     chronoGroups: session.chronoGroups ?? chronoGroups,
     existingCharts,
-    destination,
+    destination: resumedDestination,
     dashboardRevision,
     draftId: `chart-edit:${session.placementId}`,
     draft: session.draft,
     source,
-    sourceSelection: sourceId ? { sourceId, source, rows, profile } : null,
+    sourceSelection: sourceId ? { sourceId, source, rows, profile, kind: "existing" } : null,
     stage,
   });
 }
