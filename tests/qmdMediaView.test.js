@@ -291,7 +291,7 @@ test("custom frame variables apply only to framed modes and Card remains visuall
   assert.notEqual(result[1].background, result[2].background);
 });
 
-test("wrap is capped, narrow collapse retains the token, and logical alignment follows RTL", async () => {
+test("wrap honors the configured width, narrow collapse retains the token, and logical alignment follows RTL", async () => {
   const result = await page.evaluate(async () => {
     await import("/src/styles/source-content.css");
     const { default: React } = await import("/node_modules/.vite/deps/react.js");
@@ -337,7 +337,7 @@ test("wrap is capped, narrow collapse retains the token, and logical alignment f
   });
 
   assert.deepEqual(result.wideRtl, {
-    token: "wrap-start", widthRatio: 0.5, startGap: 300, endGap: 0, float: "inline-start", caption: "Caption", frame: true,
+    token: "wrap-start", widthRatio: 0.75, startGap: 150, endGap: 0, float: "inline-start", caption: "Caption", frame: true,
   });
   assert.deepEqual(result.narrowRtl, {
     token: "wrap-start", widthRatio: 0.75, startGap: 0, endGap: 100, float: "none", caption: "Caption", frame: true,

@@ -60,8 +60,6 @@
 .qmd-media-view--align-start { margin-inline: 0 auto; }
 .qmd-media-view--align-center { margin-inline: auto; }
 .qmd-media-view--align-end { margin-inline: auto 0; }
-.qmd-media-view--flow-wrap-start,
-.qmd-media-view--flow-wrap-end { max-inline-size: 50%; }
 .qmd-media-view--flow-wrap-start { float: inline-start; margin-inline-end: 1rem; }
 .qmd-media-view--flow-wrap-end { float: inline-end; margin-inline-start: 1rem; }
 .qmd-media-view--frame-outline {
