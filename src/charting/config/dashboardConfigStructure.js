@@ -138,8 +138,8 @@ export function validateDashboardStructure(
   if (requireComplete || config.timezone !== undefined) {
     validateDashboardTimezone(config.timezone);
   }
+  optionalString(config.description, "Dashboard description");
   for (const [key, label] of [
-    ["description", "Dashboard description"],
     ["lastUpdated", "Dashboard lastUpdated"],
     ["layout", "Dashboard layout"],
     ["programLabel", "Dashboard programLabel"],
@@ -216,7 +216,7 @@ export function validateDashboardStructure(
     }
     optionalText(page.label, `Dashboard page "${pageId}" label`);
     optionalText(page.title, `Dashboard page "${pageId}" title`);
-    optionalText(page.description, `Dashboard page "${pageId}" description`);
+    optionalString(page.description, `Dashboard page "${pageId}" description`);
     if (
       page.pageType !== undefined
       && !PAGE_TYPES.includes(page.pageType)
@@ -660,6 +660,12 @@ function requiredText(value, description) {
 
 function optionalText(value, description) {
   if (value !== undefined) requiredText(value, description);
+}
+
+function optionalString(value, description) {
+  if (value !== undefined && typeof value !== "string") {
+    throw new TypeError(`${description} must be text.`);
+  }
 }
 
 function uniqueText(ids, value, description) {
