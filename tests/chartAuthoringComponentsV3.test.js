@@ -1017,6 +1017,15 @@ test("structured presentation controls emit only validator-approved nested contr
       direction: "neutral",
       ranges: [50, 80, 100],
     }],
+    ["targets", { ranges: [50, 80, 100] }, ["readoutLabel"], "of capacity", {
+      ranges: [50, 80, 100],
+      readoutLabel: "of capacity",
+    }],
+    ["targets", { readoutLabel: "of capacity" }, ["showReadoutLabel"], false, {
+      readoutLabel: "of capacity",
+      showReadoutLabel: false,
+    }],
+    ["targets", {}, ["unit"], "%", { unit: "%" }],
     ["map", {}, ["scale"], "continuous", { scale: "continuous" }],
     ["map", { scale: "continuous" }, ["geoSource"], "regions", {
       scale: "continuous",
@@ -1038,7 +1047,12 @@ test("structured presentation controls emit only validator-approved nested contr
   for (const [control, current, path, value, expected] of cases) {
     const next = updateStructuredFieldValue(control, current, path, value);
     assert.deepEqual(next, expected, `${control}.${path.join(".")}`);
-    presentation[control] = next;
+    if (!(
+      control === "targets"
+      && ["readoutLabel", "showReadoutLabel", "unit"].includes(path[0])
+    )) {
+      presentation[control] = next;
+    }
   }
   const chart = validLineChart({ presentation });
   assert.doesNotThrow(() => validateChartInstance(chart, {

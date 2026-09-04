@@ -437,7 +437,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   validateCollection(collection, schema);
   validateLabels(descriptors.labels?.value);
   validateAxes(descriptors.axes?.value, schema, temporalRoles);
-  validateTargets(descriptors.targets?.value);
+  validateTargets(descriptors.targets?.value, schema);
   validateMap(descriptors.map?.value);
   validateTimeline(descriptors.timeline?.value);
   validateTable(descriptors.table?.value, schema);
@@ -608,9 +608,16 @@ function validateTickFrequency(value, kind, label) {
   }
 }
 
-function validateTargets(targets) {
-  optionalObject(targets, "Chart presentation targets", new Set(["ranges", "direction"]));
+function validateTargets(targets, schema) {
+  optionalObject(targets, "Chart presentation targets", new Set(["ranges", "direction", "readoutLabel", "showReadoutLabel", "unit"]));
+  const hasGaugeReadoutSetting = ["readoutLabel", "showReadoutLabel", "unit"].some((key) => targets?.[key] !== undefined);
+  if (hasGaugeReadoutSetting && schema?.typeId !== "gauge") {
+    throw new Error("Gauge readout settings are only supported by Gauge charts.");
+  }
   if (targets?.direction !== undefined && !TARGET_DIRECTIONS.has(targets.direction)) throw new Error("Chart presentation targets direction must be increase-is-good, decrease-is-good, or neutral.");
+  if (targets?.readoutLabel !== undefined && typeof targets.readoutLabel !== "string") throw new Error("Chart presentation targets readoutLabel must be a string.");
+  if (targets?.showReadoutLabel !== undefined && typeof targets.showReadoutLabel !== "boolean") throw new Error("Chart presentation targets showReadoutLabel must be boolean.");
+  if (targets?.unit !== undefined && typeof targets.unit !== "string") throw new Error("Chart presentation targets unit must be a string.");
   if (targets?.ranges === undefined) return;
   if (!Array.isArray(targets.ranges)) throw new Error("Chart presentation targets ranges must be an array.");
   for (const range of targets.ranges) {
@@ -776,6 +783,16 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
     },
     presentation: {
       ...options.presentation,
+      ...(schema.typeId === "gauge"
+        ? {
+            targets: {
+              ranges: [50, 80, 100],
+              readoutLabel: "OF TARGET RANGE",
+              showReadoutLabel: true,
+              ...(options.presentation?.targets ?? {}),
+            },
+          }
+        : {}),
       title: { align: "left", ...(options.presentation?.title ?? {}) },
       collection: options.presentation?.collection ?? null,
     },

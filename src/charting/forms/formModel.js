@@ -590,7 +590,7 @@ function axesFields({ chart, schema, prepared }) {
 
 function targetsFields({ chart }) {
   const controls = chart.typeId === "gauge"
-    ? ["ranges"]
+    ? ["ranges", "readoutLabel", "showReadoutLabel", "unit"]
     : ["deltaCard", "deltaList"].includes(chart.typeId)
       ? ["direction"]
       : [];
@@ -600,12 +600,23 @@ function targetsFields({ chart }) {
     label: chart.typeId === "gauge" ? "Gauge status bands" : "Favorable change",
     control: "targets",
     path: ["presentation", "targets"],
-    value: chart.presentation?.targets ?? {},
+    value: chart.typeId === "gauge"
+      ? gaugeTargetSettings(chart.presentation?.targets)
+      : chart.presentation?.targets ?? {},
     controls,
     help: chart.typeId === "gauge"
       ? "Enter the upper end of each coloured status band in order. The gauge shows the current value and its optional target together."
       : "Choose whether an increase or decrease should be shown as favorable for this change chart.",
   }];
+}
+
+function gaugeTargetSettings(targets) {
+  return {
+    ranges: [50, 80, 100],
+    readoutLabel: "OF TARGET RANGE",
+    showReadoutLabel: true,
+    ...(targets ?? {}),
+  };
 }
 
 function mapFields() {

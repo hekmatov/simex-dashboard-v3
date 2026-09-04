@@ -2789,7 +2789,26 @@ button.danger {
 }
 
 .chart-target-collection {
+  display: flex;
+  flex: 1 1 0;
   margin-top: 8px;
+  min-block-size: 0;
+}
+
+.chart-target-collection > .collection-display,
+.chart-target-collection .collection-grid,
+.chart-target-collection .collection-item {
+  min-block-size: 0;
+}
+
+.chart-target-collection > .collection-display {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.chart-target-collection .collection-grid {
+  flex: 1 1 0;
 }
 
 .chart-target-collection-item {
@@ -2802,6 +2821,10 @@ button.danger {
 }
 
 .chart-target-collection-item--precision-gauge {
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
   padding: 10px;
 }
 
@@ -2820,9 +2843,25 @@ button.danger {
 }
 
 .precision-arc-gauge {
-  block-size: clamp(13rem, 22vw, 17rem);
+  aspect-ratio: 500 / 260;
   min-inline-size: 0;
   width: 100%;
+}
+
+.chart-echarts-view--precision-gauge,
+.chart-target-collection-item--precision-gauge .precision-arc-gauge {
+  min-block-size: 0;
+}
+
+.chart-echarts-view--precision-gauge,
+.chart-target-collection-item--precision-gauge .precision-arc-gauge {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.chart-echarts-view--precision-gauge {
+  block-size: 100%;
 }
 
 .precision-arc-gauge-svg {
@@ -2878,6 +2917,12 @@ button.danger {
   font-size: var(--precision-arc-value-size, 44px);
   font-weight: 700;
   letter-spacing: -1.5px;
+}
+
+.precision-arc-gauge-value-unit {
+  font-size: 0.62em;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 .precision-arc-gauge-unit {

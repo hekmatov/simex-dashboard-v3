@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import React from "react";
@@ -117,6 +118,39 @@ test("precision gauges keep target labels inside both ends of the dial", () => {
 
   assert.match(renderGauge(0), /data-precision-target-label-anchor="start"/);
   assert.match(renderGauge(100), /data-precision-target-label-anchor="end"/);
+});
+
+test("precision gauges honor their configured readout and centre a combined value and unit", () => {
+  const html = renderToStaticMarkup(React.createElement(EChartsChartView, {
+    chart: { title: "ICU occupancy" },
+    model: {
+      kind: "echarts",
+      precisionGauge: {
+        actual: 76,
+        target: null,
+        maximum: 100,
+        segments: [[0.5, "#d73027"], [0.8, "#fdae61"], [1, "#1a9850"]],
+        readoutLabel: "of capacity",
+        showReadoutLabel: false,
+        unit: "%",
+      },
+      option: { series: [] },
+    },
+  }));
+
+  assert.match(html, /class="precision-arc-gauge-value"[^>]*style="text-anchor:middle"/);
+  assert.match(html, /class="precision-arc-gauge-value-unit"[^>]*>\s*%<\/tspan>/);
+  assert.doesNotMatch(html, /OF TARGET RANGE|of capacity|CURRENT STATUS/);
+});
+
+test("precision gauges shrink within shorter collection cards instead of keeping a fixed dial height", async () => {
+  const styles = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  const gaugeRules = styles.match(/\.chart-target-collection-item--precision-gauge\s*\{[^}]*\}[\s\S]*?\.precision-arc-gauge\s*\{[^}]*\}/)?.[0] ?? "";
+
+  assert.match(gaugeRules, /display:\s*flex/);
+  assert.match(gaugeRules, /min-block-size:\s*0/);
+  assert.match(styles, /\.chart-target-collection-item--precision-gauge\s+\.precision-arc-gauge\s*\{[^}]*flex:\s*1\s+1\s+0/);
+  assert.doesNotMatch(gaugeRules, /clamp\(13rem/);
 });
 
 test("delta cards render the exact resolved comparison time rather than a raw-row guess", () => {

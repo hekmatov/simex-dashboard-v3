@@ -19,7 +19,10 @@ export default function PrecisionArcGauge({ gauge, label = "Gauge", audienceScal
   const targetPoint = targetRatio === null ? null : polarPoint(ARC_RADIUS, angleFor(targetRatio));
   const targetLabel = targetPoint === null ? null : targetLabelPosition(targetPoint);
   const status = gaugeStatus(actual, target);
-  const summary = `${label}: actual ${displayValue(actual)}${target === null ? "" : `; target ${displayValue(target)}`}${status ? `; ${status.toLowerCase()}` : ""}.`;
+  const unit = displayUnit(gauge?.unit);
+  const readoutLabel = displayReadoutLabel(gauge?.readoutLabel);
+  const showReadoutLabel = gauge?.showReadoutLabel !== false && Boolean(readoutLabel);
+  const summary = `${label}: actual ${displayValue(actual)}${unit ? ` ${unit}` : ""}${target === null ? "" : `; target ${displayValue(target)}`}${status ? `; ${status.toLowerCase()}` : ""}.`;
   const typography = typographyStyle(audienceScale);
 
   return React.createElement("div", {
@@ -87,17 +90,24 @@ export default function PrecisionArcGauge({ gauge, label = "Gauge", audienceScal
     className: "precision-arc-gauge-value",
     x: CENTER_X,
     y: 164,
-  }, displayValue(actual)),
-  React.createElement("text", {
-    className: "precision-arc-gauge-unit",
-    x: CENTER_X,
-    y: 185,
-  }, "OF TARGET RANGE"),
-  React.createElement("text", {
-    className: "precision-arc-gauge-status",
-    x: CENTER_X,
-    y: 237,
-  }, status),
+    style: { textAnchor: "middle" },
+  }, displayValue(actual), unit
+    ? React.createElement("tspan", { className: "precision-arc-gauge-value-unit" }, ` ${unit}`)
+    : null),
+  showReadoutLabel
+    ? React.createElement("text", {
+        className: "precision-arc-gauge-unit",
+        x: CENTER_X,
+        y: 185,
+      }, readoutLabel)
+    : null,
+  status
+    ? React.createElement("text", {
+        className: "precision-arc-gauge-status",
+        x: CENTER_X,
+        y: 237,
+      }, status)
+    : null,
   React.createElement("text", { className: "precision-arc-gauge-bound", x: 65, y: 229 }, "0"),
   React.createElement("text", { className: "precision-arc-gauge-bound", x: 435, y: 229 }, displayValue(maximum))));
 }
@@ -183,7 +193,7 @@ function displaySegmentColor(color, index) {
 }
 
 function gaugeStatus(actual, target) {
-  if (actual === null || target === null) return "CURRENT STATUS";
+  if (actual === null || target === null) return "";
   const difference = round(actual - target);
   if (difference === 0) return "ON TARGET";
   const points = displayValue(Math.abs(difference));
@@ -211,4 +221,12 @@ function round(value) {
 function displayValue(value) {
   if (value === null) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
+}
+
+function displayUnit(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function displayReadoutLabel(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : "OF TARGET RANGE";
 }
