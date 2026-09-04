@@ -114,8 +114,8 @@ test("every chart exposes only configuration controls its renderer honors", () =
     line: { labels: ["visible", "position", "format"] },
     area: { labels: ["visible", "position", "format"] },
     mixed: { labels: ["visible", "position", "format"] },
-    pie: { labels: ["visible", "valueMode", "valueFontSize", "labelFontSize"] },
-    donut: { labels: ["visible", "valueMode", "valueFontSize", "labelFontSize"] },
+    pie: { labels: ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"] },
+    donut: { labels: ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"] },
     kpi: {},
     gauge: { targets: ["ranges", "readoutLabel", "showReadoutLabel", "unit"] },
     bullet: {},
@@ -922,7 +922,7 @@ test("card charts expose their approved visual styles and only the applicable ca
   assert.equal(deltaAppearance.fields.some(({ id }) => id === "cardAccentColors"), false);
 });
 
-test("legend visibility is exposed only by renderers that consume it", () => {
+test("legend controls are exposed only by renderers that consume them", () => {
   const profile = datasetProfile();
   const supported = [
     { chart: lineChart(), value: true },
@@ -965,6 +965,19 @@ test("legend visibility is exposed only by renderers that consume it", () => {
       path: ["presentation", "legend", "visible"],
       value,
     }, chart.typeId);
+    assert.deepEqual(
+      model.sections
+        .find(({ id }) => id === "appearance")
+        .fields.find(({ id }) => id === "legendWrap"),
+      {
+        id: "legendWrap",
+        label: "Wrap long legend labels",
+        control: "toggle",
+        path: ["presentation", "legend", "wrap"],
+        value: false,
+      },
+      chart.typeId,
+    );
   }
 
   const unsupported = createChartDraft("kpi", {
@@ -982,7 +995,7 @@ test("legend visibility is exposed only by renderers that consume it", () => {
   assert.equal(
     unsupportedModel.sections
       .find(({ id }) => id === "appearance")
-      .fields.some(({ id }) => id === "legendVisible"),
+      .fields.some(({ id }) => id === "legendVisible" || id === "legendWrap"),
     false,
   );
 });

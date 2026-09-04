@@ -28,6 +28,8 @@ export default function DataSourceStep({
   onManualTableChange = noop,
   onGeoSourceChange = noop,
   onRequestClear = noop,
+  existingCharts = [],
+  onCopyChart = noop,
 } = {}) {
   const warnings = profileWarnings(profile);
   return React.createElement(
@@ -53,6 +55,15 @@ export default function DataSourceStep({
         onSelect: onSelectExisting,
         onUpload: onUploadCsv,
       }),
+      existingCharts.length > 0 ? React.createElement(
+        "section",
+        { className: "wizard-choice-card" },
+        React.createElement("h4", null, "Copy from another chart"),
+        React.createElement("label", null, "Chart to copy", React.createElement("select", {
+          defaultValue: "",
+          onChange: (event) => event.target.value && onCopyChart(event.target.value),
+        }, React.createElement("option", { value: "" }, "Choose a chart"), existingCharts.map((chart) => React.createElement("option", { key: chart.id, value: chart.id }, `${chart.title || chart.id} (${chart.typeId})`)))),
+      ) : null,
       allowSourceCreation && manualAllowed
         ? React.createElement(
             "section",

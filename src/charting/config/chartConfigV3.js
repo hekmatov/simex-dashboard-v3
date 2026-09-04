@@ -498,10 +498,11 @@ function validateTable(table, schema) {
 }
 
 function validateLabels(labels, schema) {
-  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize"]));
+  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"]));
   if (labels?.visible !== undefined && typeof labels.visible !== "boolean") throw new Error("Chart presentation labels visible must be boolean.");
   for (const field of ["position", "format"]) if (labels?.[field] !== undefined && typeof labels[field] !== "string") throw new Error(`Chart presentation labels ${field} must be a string.`);
   const composition = schema.dataFamily === "composition";
+  if (labels?.labelWrap !== undefined && (!composition || typeof labels.labelWrap !== "boolean")) throw new Error("Chart presentation labels labelWrap must be boolean on composition charts.");
   if (labels?.valueMode !== undefined && (!composition || !["value", "percentage"].includes(labels.valueMode))) {
     throw new Error("Chart presentation labels valueMode must be value or percentage on composition charts.");
   }
@@ -687,8 +688,9 @@ function validateBackground(background) {
 }
 
 function validateLegend(legend) {
-  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position"]));
+  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "wrap"]));
   if (legend?.visible !== undefined && typeof legend.visible !== "boolean") throw new Error("Chart presentation legend visible must be boolean.");
+  if (legend?.wrap !== undefined && typeof legend.wrap !== "boolean") throw new Error("Chart presentation legend wrap must be boolean.");
   if (legend?.position !== undefined && !LEGEND_POSITIONS.has(legend.position)) throw new Error("Chart presentation legend position must be top, bottom, left, or right.");
 }
 

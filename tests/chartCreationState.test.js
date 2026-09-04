@@ -10,6 +10,7 @@ import {
   reduceWizardState,
 } from "../src/charting/forms/wizardDraft.js";
 import { isMeaningfulChartDraft } from "../src/charting/forms/chartDraftSession.js";
+import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 
 test("chart creation exposes exactly six stable stages and labels with no proof stage", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
@@ -172,6 +173,43 @@ test("meaningful detection distinguishes pristine, meaningful, committed, and di
   };
   assert.equal(isMeaningfulChartDraft(committed), false);
   assert.equal(isMeaningfulChartDraft(reduceWizardState(meaningful, { type: "discard" })), false);
+});
+
+test("copying an existing chart keeps its draft identity and destination while replacing configuration and size", () => {
+  const template = createChartDraft("pie", {
+    id: "template-chart",
+    title: "Workforce distribution",
+    description: "Copied description",
+    sourceId: "workforce",
+    roles: { category: { field: "sector" }, value: { field: "count" } },
+    presentation: { labels: { labelWrap: true }, legend: { wrap: true } },
+    layout: { size: "wide", width: 4, height: 1.5 },
+  });
+  const state = createWizardState({
+    draftId: "new-chart",
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    charts: [template],
+    loadedData: { workforce: [{ sector: "Health", count: 4 }] },
+    profiles: { workforce: { columns: [{ name: "sector", type: "string" }, { name: "count", type: "number" }] } },
+  });
+  const copied = reduceWizardState(state, {
+    type: "copyExistingChart",
+    chartId: "template-chart",
+    source: null,
+    rows: [{ sector: "Health", count: 4 }],
+    profile: { columns: [{ name: "sector", type: "string" }, { name: "count", type: "number" }] },
+  });
+
+  assert.equal(copied.draft.id, "new-chart");
+  assert.equal(copied.draft.typeId, "pie");
+  assert.equal(copied.draft.title, "Workforce distribution");
+  assert.equal(copied.draft.presentation.labels.labelWrap, true);
+  assert.equal(copied.draft.presentation.legend.wrap, true);
+  assert.deepEqual(copied.destination, {
+    pageId: "page-a",
+    sectionId: "section-a",
+    footprint: { columns: 4, rows: 1.5 },
+  });
 });
 
 test("serialized committing state is non-cancellable and duplicate-input safe", () => {

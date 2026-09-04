@@ -82,7 +82,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -220,7 +221,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -1567,7 +1569,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -1839,7 +1842,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -1977,7 +1981,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -2348,7 +2353,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -2623,7 +2629,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -3125,7 +3132,8 @@
           "group",
           "aggregate",
           "duplicates",
-          "missing"
+          "missing",
+          "pivot"
         ],
         "manual_data": null
       },
@@ -4631,5 +4639,5 @@
     }
   ],
   "dashboard_semantic_digest": "89874f2207612c06d427156567077c04a2f205b7e017776f40ddbc68335f0e40",
-  "digest": "8248f9d9e5e38309c10710d031032516b9eeac512820e63c4823ed93f5a36db0"
+  "digest": "61e21dcf1658e0c652b0a15ab0aa04f284101fd0b393787866dd4553153b4f01"
 }

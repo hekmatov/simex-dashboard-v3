@@ -159,7 +159,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       title: titleOption(chart),
       aria: ariaOption(chart),
       tooltip: { trigger: "axis" },
-      legend: { show: chart.presentation?.legend?.visible !== false },
+      legend: legendOption(chart),
       ...(Array.isArray(seriesStyle?.colors)
         ? { color: [...seriesStyle.colors] }
         : {}),
@@ -187,6 +187,15 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       series,
       dataZoom: buildEChartsDataZoom(chart, horizontal ? "y" : "x"),
     },
+  };
+}
+
+function legendOption(chart) {
+  return {
+    show: chart.presentation?.legend?.visible !== false,
+    ...(chart.presentation?.legend?.wrap === true
+      ? { textStyle: { width: 120, overflow: "break" } }
+      : {}),
   };
 }
 

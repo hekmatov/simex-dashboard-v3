@@ -257,6 +257,8 @@ export function reduceWizardState(state, action) {
       return selectSource(state, action);
     case "requestSourceChange":
       return requestSourceChange(state, action);
+    case "copyExistingChart":
+      return copyExistingChart(state, action);
     case "confirmSourceChange":
       return confirmSourceChange(state);
     case "updateRole":
@@ -499,6 +501,46 @@ function selectSource(state, action) {
     throw new Error("A data source id is required.");
   }
   return applySourceChange(state, sourceChange(action), { clearMappings: false });
+}
+
+function copyExistingChart(state, action) {
+  requiredString(action.chartId, "Chart to copy");
+  const template = state.charts.find(({ id }) => id === action.chartId);
+  if (!template) throw new Error(`Chart "${action.chartId}" is unavailable for copying.`);
+  const identity = state.draft?.id ?? state.draftId ?? createChartDraft(template.typeId).id;
+  const draft = normalizeChartInstance({ ...structuredClone(template), id: identity });
+  const change = sourceChange({
+    sourceId: draft.sourceId,
+    kind: "existing",
+    source: action.source ?? null,
+    rows: action.rows,
+    profile: action.profile,
+  });
+  const sourceSelection = selectionFromChange(state, change);
+  return withStageStatuses({
+    ...state,
+    draft,
+    chartTypeId: draft.typeId,
+    destination: state.destination
+      ? {
+          ...state.destination,
+          footprint: {
+            columns: draft.layout.width,
+            rows: draft.layout.height,
+          },
+        }
+      : state.destination,
+    sourceSelection,
+    source: null,
+    loadedData: change.rows === undefined
+      ? state.loadedData
+      : collectionWithEntry(state.loadedData, draft.sourceId, change.rows),
+    profiles: change.profile === undefined
+      ? state.profiles
+      : collectionWithEntry(state.profiles, draft.sourceId, change.profile),
+    confirmation: null,
+    pendingSourceChange: null,
+  });
 }
 
 function requestSourceChange(state, action) {

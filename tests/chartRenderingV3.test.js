@@ -2115,17 +2115,23 @@ test("pie labels can show either values or percentages with independently sized 
           valueMode: "percentage",
           valueFontSize: 18,
           labelFontSize: 12,
+          labelWrap: true,
         },
+        legend: { wrap: true },
       },
     }),
     prepared,
   });
 
-  assert.equal(model.option.series[0].label.formatter, "{label|{b}}\\n{value|{d}%}");
-  assert.deepEqual(model.option.series[0].label.rich, {
-    label: { fontSize: 12 },
-    value: { fontSize: 18 },
+  assert.deepEqual(model.option.series[0].label, {
+    show: true,
+    formatter: "{label|{b}}\\n{value|{d}%}",
+    rich: {
+      label: { fontSize: 12, width: 120, overflow: "break" },
+      value: { fontSize: 18 },
+    },
   });
+  assert.deepEqual(model.option.legend.textStyle, { width: 120, overflow: "break" });
 });
 
 test("pie can center vertically when requested", () => {

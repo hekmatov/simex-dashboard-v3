@@ -17,7 +17,7 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
       tooltip: { trigger: "item" },
-      legend: { show: chart.presentation?.legend?.visible !== false },
+      legend: legendOption(chart),
       ...(Array.isArray(colors) ? { color: [...colors] } : {}),
       series: groups.map(({ name, marks }, index) => ({
         name,
@@ -54,7 +54,12 @@ function compositionLabel(labels = {}, markCount) {
   const valueMode = labels?.valueMode;
   const showValue = valueMode === "value" || valueMode === "percentage";
   const rich = {};
-  if (Number.isInteger(labels?.labelFontSize)) rich.label = { fontSize: labels.labelFontSize };
+  if (Number.isInteger(labels?.labelFontSize) || labels?.labelWrap === true) {
+    rich.label = {
+      ...(Number.isInteger(labels?.labelFontSize) ? { fontSize: labels.labelFontSize } : {}),
+      ...(labels?.labelWrap === true ? { width: 120, overflow: "break" } : {}),
+    };
+  }
   if (showValue && Number.isInteger(labels?.valueFontSize)) rich.value = { fontSize: labels.valueFontSize };
   const usesRichLabel = Object.keys(rich).length > 0;
   return {
@@ -63,6 +68,15 @@ function compositionLabel(labels = {}, markCount) {
       ? `{label|{b}}\\n{value|${valueMode === "percentage" ? "{d}%" : "{c}"}}`
       : usesRichLabel ? "{label|{b}}" : "{b}",
     ...(usesRichLabel ? { rich } : {}),
+  };
+}
+
+function legendOption(chart) {
+  return {
+    show: chart.presentation?.legend?.visible !== false,
+    ...(chart.presentation?.legend?.wrap === true
+      ? { textStyle: { width: 120, overflow: "break" } }
+      : {}),
   };
 }
 

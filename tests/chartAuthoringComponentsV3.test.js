@@ -1968,6 +1968,16 @@ test("data source controls stay enabled before chart capability is known", () =>
   assert.doesNotMatch(html, /Enter data manually/);
 });
 
+test("data source controls offer copying an existing chart into the draft", () => {
+  const html = render(React.createElement(DataSourceStep, {
+    existingCharts: [{ id: "cases-chart", title: "Confirmed cases", typeId: "line" }],
+    onCopyChart() {},
+  }));
+
+  assert.match(html, /Copy from another chart/);
+  assert.match(html, /Confirmed cases/);
+});
+
 test("edit-mode source selection keeps existing authorities and hides unsupported additions", () => {
   const html = render(React.createElement(DataSourceStep, {
     allowSourceCreation: false,

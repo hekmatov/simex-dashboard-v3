@@ -119,6 +119,28 @@ test("category axes accept bounded label wrapping and font settings", () => {
   assert.doesNotThrow(() => validateChartInstance(chart));
 });
 
+test("composition charts accept typed category-label and legend wrapping", () => {
+  const chart = createChartDraft("pie", {
+    id: "wrapped-composition",
+    title: "Wrapped composition",
+    sourceId: "workforce",
+    roles: { category: { field: "sector" }, value: { field: "count" } },
+    presentation: {
+      labels: { labelWrap: true },
+      legend: { wrap: true },
+    },
+  });
+
+  assert.doesNotThrow(() => validateChartInstance(chart));
+  assert.throws(
+    () => validateChartInstance({
+      ...chart,
+      presentation: { ...chart.presentation, legend: { wrap: "yes" } },
+    }),
+    /legend wrap must be boolean/i,
+  );
+});
+
 test("bar charts accept value-axis units, separation, and horizontal vertical fill", () => {
   const base = {
     title: "Income share",

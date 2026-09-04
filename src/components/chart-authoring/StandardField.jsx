@@ -350,7 +350,7 @@ function structuredControls(control, value, onChange, field = {}) {
       value: current.format ?? "",
       placeholder: "{value}",
       onChange: (event) => emit(["format"], event.target.value)
-    })) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null);
+    })) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null);
   }
   if (control === "axes") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(

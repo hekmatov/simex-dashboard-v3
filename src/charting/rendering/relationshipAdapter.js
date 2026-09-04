@@ -18,7 +18,7 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
       tooltip: { trigger: "item" },
-      legend: { show: chart.presentation?.legend?.visible !== false },
+      legend: legendOption(chart),
       ...(Array.isArray(colors) ? { color: [...colors] } : {}),
       grid: {
         containLabel: true,
@@ -44,6 +44,15 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
       })),
       dataZoom: buildEChartsDataZoom(chart),
     },
+  };
+}
+
+function legendOption(chart) {
+  return {
+    show: chart.presentation?.legend?.visible !== false,
+    ...(chart.presentation?.legend?.wrap === true
+      ? { textStyle: { width: 120, overflow: "break" } }
+      : {}),
   };
 }
 

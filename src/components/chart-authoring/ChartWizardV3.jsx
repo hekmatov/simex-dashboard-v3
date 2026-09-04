@@ -1026,6 +1026,27 @@ export default function ChartWizardV3({
       setSubmissionError(safeMessage(error));
     }
   };
+  const copyExistingChart = (chartId) => {
+    const template = wizard.charts.find(({ id }) => id === chartId);
+    if (!template) return;
+    const rows = readEntry(safeLoadedData, template.sourceId) ?? [];
+    const sourceMetadata = readEntry(safeDataSources, template.sourceId);
+    setWizard((current) => reduceWizardState({
+      ...current,
+      loadedData: runtimeLoadedData,
+      profiles,
+    }, {
+      type: "copyExistingChart",
+      chartId,
+      source: null,
+      rows,
+      profile: profileDataset(rows, sourceMetadata?.parsingMetadata ?? {}),
+    }));
+    setSourceKind("existing");
+    setManualTable(null);
+    setManualErrors([]);
+    setSubmissionError("");
+  };
   const uploadCsv = async (file) => {
     if (!file) return;
     try {
@@ -1684,6 +1705,8 @@ export default function ChartWizardV3({
               onManualTableChange: updateManual,
               onGeoSourceChange: (value) => void selectGeoSource(value),
               onRequestClear: () => dispatch({ type: "requestClearSource" }),
+              existingCharts: wizard.charts.filter(({ id }) => id !== wizard.draft?.id),
+              onCopyChart: copyExistingChart,
             })
           : null,
         wizard.stage === "map-and-prepare-data"

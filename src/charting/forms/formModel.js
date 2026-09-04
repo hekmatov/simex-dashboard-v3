@@ -428,6 +428,12 @@ function appearanceFields({ chart, schema }) {
           control: "toggle",
           path: ["presentation", "legend", "visible"],
           value: chart.presentation?.legend?.visible !== false,
+        }, {
+          id: "legendWrap",
+          label: "Wrap long legend labels",
+          control: "toggle",
+          path: ["presentation", "legend", "wrap"],
+          value: chart.presentation?.legend?.wrap === true,
         }]
       : []),
     ...(schema.typeId === "table"
@@ -590,7 +596,7 @@ function labelsFields({ chart, schema }) {
 
 function labelControls(schema) {
   if (schema.dataFamily === "axis") return ["visible", "position", "format"];
-  if (schema.dataFamily === "composition") return ["visible", "valueMode", "valueFontSize", "labelFontSize"];
+  if (schema.dataFamily === "composition") return ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"];
   if (schema.dataFamily === "relationship") return ["visible", "position"];
   if (schema.typeId === "heatmap") return ["visible"];
   return [];
