@@ -53,7 +53,7 @@ test("Restore online confirmation warns, offers download first, and explains the
   );
 });
 
-test("App prepares queued Build work and durably replaces before resetting live state", async () => {
+test("App discards queued local work before restoring without validating the current dashboard", async () => {
   const [app, renderer] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/DashboardRenderer.jsx", import.meta.url), "utf8"),
@@ -63,6 +63,9 @@ test("App prepares queued Build work and durably replaces before resetting live 
   )?.[1] ?? "";
   const replacementResetBody = renderer.match(
     /resetAfterDashboardReplacement\(replacementDashboard\) \{([\s\S]*?)\r?\n    \},\r?\n    requestCompareCharts/,
+  )?.[1] ?? "";
+  const onlineRestorePreparation = renderer.match(
+    /async prepareForOnlineDashboardRestore\(\) \{([\s\S]*?)\r?\n    \},\r?\n    resetAfterDashboardReplacement/,
   )?.[1] ?? "";
 
   assert.match(restoreBody, /prepareOnlineDashboardRestore/);
@@ -88,8 +91,12 @@ test("App prepares queued Build work and durably replaces before resetting live 
     /dashboardRef\.current\s*=|setDashboard\(|setOperationError\(/,
   );
   assert.match(
-    renderer,
-    /async prepareForOnlineDashboardRestore\(\)[\s\S]*?pendingEdits\.flush\(\)[\s\S]*?onCommitPendingConfiguration/,
+    onlineRestorePreparation,
+    /pendingEdits\.cancel\(\);/,
+  );
+  assert.doesNotMatch(
+    onlineRestorePreparation,
+    /pendingEdits\.flush\(\)|onCommitPendingConfiguration/,
   );
   assert.match(
     renderer,

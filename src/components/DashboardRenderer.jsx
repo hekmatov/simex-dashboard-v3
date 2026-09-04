@@ -577,8 +577,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await onCommitPendingConfiguration?.();
     },
     async prepareForOnlineDashboardRestore() {
-      await pendingEdits.flush();
-      await onCommitPendingConfiguration?.();
+      pendingEdits.cancel();
     },
     resetAfterDashboardReplacement(replacementDashboard) {
       const rebasedDrafts = createDashboardReplacementRendererState(
