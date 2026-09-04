@@ -2948,7 +2948,7 @@ button.danger {
 
 .precision-arc-gauge-bound {
   fill: var(--simex-text-muted);
-  font-size: calc(var(--precision-arc-text-size, 12px) * 1.4);
+  font-size: calc(var(--precision-arc-text-size, 12px) * 2.8);
   text-anchor: middle;
 }
 
@@ -3095,6 +3095,10 @@ button.danger {
   flex: 0 1 min(280px, 60%);
   min-width: 0;
   width: min(280px, 60%);
+}
+
+.collection-header-transport-host:empty {
+  display: none;
 }
 
 .collection-header-transport {
