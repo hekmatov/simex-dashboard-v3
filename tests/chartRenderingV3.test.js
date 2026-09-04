@@ -2180,6 +2180,12 @@ test("gauge uses a precision arc with a detached needle and target ring", () => 
   });
 
   const series = gauge.option.series[0];
+  assert.deepEqual(gauge.precisionGauge, {
+    actual: 76,
+    target: 72,
+    maximum: 100,
+    segments: [[0.5, "#d73027"], [0.8, "#fdae61"], [1, "#1a9850"]],
+  });
   assert.equal(series.startAngle, 200);
   assert.equal(series.endAngle, -20);
   assert.equal(series.axisLine.lineStyle.width, 14);

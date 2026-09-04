@@ -8,6 +8,7 @@ import {
 } from "../../charting/rendering/axisTitleGraphics.js";
 import { useDashboardChartTheme } from "../../theme/DashboardChartThemeContext.jsx";
 import ChartHeading from "./ChartHeading.jsx";
+import PrecisionArcGauge from "./PrecisionArcGauge.jsx";
 import { titleContainerProps } from "./chartViewPresentation.js";
 import { mapBudgetNotice, useBuildMapBudgetSlot } from "../build/BuildMapBudgetContext.jsx";
 
@@ -122,6 +123,19 @@ export default function EChartsChartView({
   }
 
   const budgetNotice = mapBudgetNotice(mapBudget.status);
+
+  if (model?.precisionGauge) {
+    return React.createElement("section", {
+      className: "chart-echarts-view chart-echarts-view--precision-gauge",
+      ...titleContainerProps(chart),
+    },
+    React.createElement(ChartHeading, { chart, titleId, descriptionId }),
+    React.createElement(PrecisionArcGauge, {
+      gauge: model.precisionGauge,
+      label: chart.title || "Gauge",
+      audienceScale,
+    }));
+  }
 
   return React.createElement("section", {
     className: "chart-echarts-view",

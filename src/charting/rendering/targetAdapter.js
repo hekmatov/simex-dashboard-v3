@@ -154,6 +154,14 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
     : null;
   return {
     kind: "echarts",
+    precisionGauge: mark
+      ? {
+          actual: Number.isFinite(mark.value) ? mark.value : null,
+          target: hasTarget ? target : null,
+          maximum,
+          segments: gaugeSegments(ranges, maximum),
+        }
+      : null,
     semanticSummary: targetSemanticSummary(chart, mark ? [mark] : [], activeTime, embedded),
     ...(embedded
       ? {}

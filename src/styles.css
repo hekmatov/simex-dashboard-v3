@@ -2801,6 +2801,10 @@ button.danger {
   padding: 8px;
 }
 
+.chart-target-collection-item--precision-gauge {
+  padding: 10px;
+}
+
 .chart-target-collection-label {
   color: var(--simex-text-strong);
   font-size: 0.82rem;
@@ -2813,6 +2817,94 @@ button.danger {
   block-size: 5.5rem;
   min-width: 0;
   width: 100%;
+}
+
+.precision-arc-gauge {
+  block-size: clamp(13rem, 22vw, 17rem);
+  min-inline-size: 0;
+  width: 100%;
+}
+
+.precision-arc-gauge-svg {
+  block-size: 100%;
+  display: block;
+  overflow: visible;
+  width: 100%;
+}
+
+.precision-arc-gauge-track,
+.precision-arc-gauge-range {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 16;
+}
+
+.precision-arc-gauge-track {
+  stroke: #e5e0d5;
+}
+
+.precision-arc-gauge-target {
+  fill: #fffdf8;
+  stroke: #2c383d;
+  stroke-width: 4;
+}
+
+.precision-arc-gauge-needle {
+  stroke: #2c383d;
+  stroke-linecap: round;
+  stroke-width: 6;
+}
+
+.precision-arc-gauge-needle-cap {
+  fill: #2c383d;
+}
+
+.precision-arc-gauge-tick {
+  stroke: #aaa69b;
+  stroke-width: 2;
+}
+
+.precision-arc-gauge-value,
+.precision-arc-gauge-unit,
+.precision-arc-gauge-status,
+.precision-arc-gauge-target-text,
+.precision-arc-gauge-bound {
+  fill: var(--simex-text-strong);
+  text-anchor: middle;
+}
+
+.precision-arc-gauge-value {
+  font-family: var(--simex-data-font, inherit);
+  font-size: var(--precision-arc-value-size, 44px);
+  font-weight: 700;
+  letter-spacing: -1.5px;
+}
+
+.precision-arc-gauge-unit {
+  fill: var(--simex-text-muted);
+  font-size: var(--precision-arc-text-size, 12px);
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+
+.precision-arc-gauge-status {
+  fill: #2c383d;
+  font-size: calc(var(--precision-arc-text-size, 12px) * 0.9);
+  font-weight: 700;
+  letter-spacing: 0.35px;
+}
+
+.precision-arc-gauge-target-text {
+  fill: #2c383d;
+  font-size: calc(var(--precision-arc-text-size, 12px) * 0.8);
+  font-weight: 750;
+  text-anchor: start;
+}
+
+.precision-arc-gauge-bound {
+  fill: var(--simex-text-muted);
+  font-size: 10px;
+  text-anchor: middle;
 }
 
 .panel-actions {

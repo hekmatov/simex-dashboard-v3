@@ -2,6 +2,7 @@ import React from "react";
 
 import CollectionDisplay from "../collection/CollectionDisplay.jsx";
 import EmbeddedEChartsItem from "./EmbeddedEChartsItem.jsx";
+import PrecisionArcGauge from "./PrecisionArcGauge.jsx";
 import {
   chartDescriptionVisible,
   chartTitleClassName,
@@ -74,7 +75,9 @@ function TargetCollectionItem({ item, accessibilityEnabled, audienceScale }) {
       )
     : null;
   return React.createElement("article", {
-    className: "chart-target-collection-item",
+    className: item.model?.precisionGauge
+      ? "chart-target-collection-item chart-target-collection-item--precision-gauge"
+      : "chart-target-collection-item",
     ...(accessibilityEnabled
       ? {
           role: "group",
@@ -96,7 +99,13 @@ function TargetCollectionItem({ item, accessibilityEnabled, audienceScale }) {
         className: "chart-view-title--visually-hidden",
       }, summary)
     : null,
-  React.createElement(EmbeddedEChartsItem, { model: item.model, audienceScale }));
+  item.model?.precisionGauge
+    ? React.createElement(PrecisionArcGauge, {
+        gauge: item.model.precisionGauge,
+        label,
+        audienceScale,
+      })
+    : React.createElement(EmbeddedEChartsItem, { model: item.model, audienceScale }));
 }
 
 

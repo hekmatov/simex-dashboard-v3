@@ -73,6 +73,49 @@ test("card render models expose labels, values, deltas, and provenance", () => {
   assert.match(html, /Observed 2027-05-01/);
 });
 
+test("precision gauges render the approved arc instead of an ECharts canvas", () => {
+  const html = renderToStaticMarkup(React.createElement(EChartsChartView, {
+    chart: { id: "occupancy", title: "ICU occupancy", description: "Current occupancy." },
+    model: {
+      kind: "echarts",
+      precisionGauge: {
+        actual: 76,
+        target: 72,
+        maximum: 100,
+        segments: [[0.5, "#d73027"], [0.8, "#fdae61"], [1, "#1a9850"]],
+      },
+      option: { series: [] },
+    },
+  }));
+
+  assert.match(html, /precision-arc-gauge/);
+  assert.match(html, /76/);
+  assert.match(html, /data-precision-target/);
+  assert.match(html, /precision-arc-gauge-tick/);
+  assert.match(html, /precision-arc-gauge-status/);
+  assert.match(html, /ON TRACK/);
+  assert.doesNotMatch(html, /chart-echarts-host/);
+});
+
+test("precision gauges keep target labels inside both ends of the dial", () => {
+  const renderGauge = (target) => renderToStaticMarkup(React.createElement(EChartsChartView, {
+    chart: { title: "ICU occupancy" },
+    model: {
+      kind: "echarts",
+      precisionGauge: {
+        actual: 76,
+        target,
+        maximum: 100,
+        segments: [[1, "#1a9850"]],
+      },
+      option: { series: [] },
+    },
+  }));
+
+  assert.match(renderGauge(0), /data-precision-target-label-anchor="start"/);
+  assert.match(renderGauge(100), /data-precision-target-label-anchor="end"/);
+});
+
 test("delta cards render the exact resolved comparison time rather than a raw-row guess", () => {
   const rows = [
     { at: "2027-05-03", value: 10 },
@@ -669,7 +712,7 @@ test("hostile DOM presentation values fall back to left alignment without invali
   assert.doesNotMatch(html, /javascript|background-color/);
 });
 
-test("gauge models retain exact values while rendered summaries stay suppressed", () => {
+test("gauge models retain exact values while the dashboard renders the precision arc", () => {
   const rows = [{ actual: 8, target: 10 }];
   const chart = {
     typeId: "gauge",
@@ -683,8 +726,9 @@ test("gauge models retain exact values while rendered summaries stay suppressed"
   assert.deepEqual(model.semanticSummary.items, [{ label: "Supply readiness", actual: 8, target: 10, time: null }]);
   assert.equal(model.option.aria.enabled, false);
   assert.match(html, /<h3[^>]*>Supply readiness<\/h3>/);
-  assert.match(html, /class="chart-echarts-host" aria-hidden="true"/);
-  assert.doesNotMatch(html, /Supply readiness: actual 8; target 10|role="img"/);
+  assert.match(html, /class="precision-arc-gauge/);
+  assert.match(html, /Supply readiness: actual 8; target 10/);
+  assert.doesNotMatch(html, /chart-echarts-host/);
 });
 
 test("bullet models retain exact values and time while rendered summaries stay suppressed", () => {
@@ -798,12 +842,18 @@ test("repeated Gauge and Bullet charts keep shared title visibility independent 
     assert.match(html, /data-collection-layout="fixed"/);
     assert.equal((html.match(new RegExp(`>${title}<`, "g")) ?? []).length, 1);
     assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 0);
-    assert.equal((html.match(/class="chart-target-collection-item"/g) ?? []).length, 2);
+    assert.equal((html.match(/class="chart-target-collection-item(?: |")/g) ?? []).length, 2);
     assert.equal((html.match(/class="chart-target-collection-label"/g) ?? []).length, 2);
     assert.match(html, />Clinic A<\/h4>/);
     assert.match(html, />Clinic B<\/h4>/);
-    assert.doesNotMatch(html, /role="group"|role="img"|aria-labelledby|aria-describedby/);
-    assert.doesNotMatch(html, /Clinic A: actual 8; target 10|Clinic B: actual 6; target 9/);
+    if (typeId === "gauge") {
+      assert.equal((html.match(/<div class="precision-arc-gauge"/g) ?? []).length, 2);
+      assert.doesNotMatch(html, /chart-embedded-echarts-host/);
+      assert.match(html, /Clinic A: actual 8; target 10/);
+    } else {
+      assert.doesNotMatch(html, /role="group"|role="img"|aria-labelledby|aria-describedby/);
+      assert.doesNotMatch(html, /Clinic A: actual 8; target 10|Clinic B: actual 6; target 9/);
+    }
     assert.doesNotMatch(html, /class="chart-echarts-view"/);
   }
 });
