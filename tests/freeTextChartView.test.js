@@ -1290,6 +1290,27 @@ test("ordinary tables wrap while code retains bounded internal overflow", async 
   });
 });
 
+test("a dashboard-sized text panel keeps the supplied narrative visible without scrolling", async () => {
+  const source = [
+    "The Hendra virus (HeV) is a zoonotic RNA virus belonging to the genus Henipavirus within the family Paramyxoviridae. The virus was first identified in 1994 during an outbreak among horses and two humans in Hendra, Queensland, Australia.",
+    "The natural hosts are bats of the genus Pteropus (flying foxes), which carry the virus without showing any clinical symptoms. Transmission to humans occurs exclusively via an equine intermediate host: direct contact with virus-containing bodily fluids from infected horses (saliva, urine, blood, nasal secretions). Human-to-human transmission had not been detected prior to the current outbreak.",
+    "Clinical features observed in previous HeV outbreaks include severe respiratory disease, encephalitis, and a high case fatality rate (CFR) of over 50% in humans. Diagnostic tests are conducted under Biosafety Level 4 (BSL-4) conditions due to the high-risk profile. To date, only a few dozen confirmed human infections have been documented worldwide. No specific treatment or vaccine is available for humans (equine vaccine is registered).",
+    "**It is 21 February 2027.** Over the past two months, a new Hendra virus variant, HeV A26, has spread from Continentia to 14 countries across 4 continents, with confirmed human to human transmission and a fatality rate of 4 to 6 percent. WHO declared a Public Health Emergency of International Concern on 10 February. Two days ago, Eldoria confirmed its first 2 cases, both linked to recent travel from Continentia. No local transmission has been confirmed yet. The Eldorian government has convened an international panel of biomedical and societal experts to advise on how the country should respond before the situation escalates further.",
+  ].join("\n\n");
+  await page.evaluate((qmd) => window.mountRoutedFreeText(qmd), source);
+  await page.locator(".free-text-chart-view__content").first().waitFor();
+  const geometry = await page.locator('[data-harness-mode="active"] .free-text-chart-view').evaluate((node) => {
+    node.style.height = "480px";
+    node.style.width = "1340px";
+    return { scrollHeight: node.scrollHeight, clientHeight: node.clientHeight };
+  });
+
+  assert.ok(
+    geometry.scrollHeight <= geometry.clientHeight,
+    `expected narrative to fit without scrolling: ${JSON.stringify(geometry)}`,
+  );
+});
+
 test("canonical renderer and editor reject one-token math expansion before mounting over-budget DOM", async () => {
   const source = `$${"\\frac{x}{x}".repeat(220)}$`;
   const pageErrors = [];

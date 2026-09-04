@@ -243,7 +243,7 @@ const PLACEMENT_PRESETS = Object.freeze({
     columns,
     default: columns === 2,
   }))),
-  heights: Object.freeze(FOOTPRINT_ROW_HEIGHTS.map((rows) => Object.freeze({
+  heights: Object.freeze(FOOTPRINT_ROW_HEIGHTS.filter((rows) => rows <= 2).map((rows) => Object.freeze({
     id: `height-${rows}`,
     label: `${Math.round(rows * 100)}% of a row`,
     rows,

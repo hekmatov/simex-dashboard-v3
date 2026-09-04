@@ -96,7 +96,7 @@ test("chart title visibility rejects non-boolean values", () => {
   );
 });
 
-test("chart layout supports quarter-row percentage heights and rejects unsupported fractions", () => {
+test("Text/Image layouts support quarter-row heights through 400% and reject unsupported fractions", () => {
   const chart = createChartDraft("image", {
     id: "three-quarter-image",
     title: "Three-quarter image",
@@ -106,7 +106,15 @@ test("chart layout supports quarter-row percentage heights and rejects unsupport
 
   assert.equal(validateChartInstance(chart), chart);
 
-  for (const height of [0.2, 0.6, 2.25]) {
+  const tallStaticPanel = createChartDraft("image", {
+    id: "tall-image",
+    title: "Tall image",
+    sourceId: "image-source",
+    layout: { size: "standard", width: 3, height: 2.25 },
+  });
+  assert.equal(validateChartInstance(tallStaticPanel), tallStaticPanel);
+
+  for (const height of [0.2, 0.6]) {
     const invalid = createChartDraft("image", {
       id: `invalid-height-${height}`,
       title: "Invalid percentage height",

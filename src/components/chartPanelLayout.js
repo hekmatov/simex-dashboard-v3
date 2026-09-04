@@ -21,6 +21,14 @@ export const FOOTPRINT_ROW_HEIGHTS = Object.freeze([
   1.5,
   1.75,
   2,
+  2.25,
+  2.5,
+  2.75,
+  3,
+  3.25,
+  3.5,
+  3.75,
+  4,
 ]);
 
 export function isSupportedFootprintRowHeight(rows) {

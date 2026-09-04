@@ -751,7 +751,11 @@ function validateLayout(chart) {
     chart.layout.height !== undefined
     && !(
       (Number.isInteger(chart.layout.height) && chart.layout.height > 0)
-      || [0.25, 0.5, 0.75, 1.25, 1.5, 1.75].includes(chart.layout.height)
+      || (
+        (chart.typeId === "freeText" || chart.typeId === "image")
+          ? [0.25, 0.5, 0.75, 1.25, 1.5, 1.75, 2.25, 2.5, 2.75, 3.25, 3.5, 3.75]
+          : [0.25, 0.5, 0.75, 1.25, 1.5, 1.75]
+      ).includes(chart.layout.height)
     )
   ) {
     throw new Error("Chart layout height must be a whole row or a supported quarter-row percentage.");

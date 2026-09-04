@@ -505,14 +505,15 @@
   overflow-x: hidden;
   overflow-y: auto;
   overflow-wrap: anywhere;
-  padding: clamp(12px, 2vw, 20px);
+  padding-block: clamp(12px, 1.2vw, 16px);
+  padding-inline: clamp(12px, 2vw, 20px);
   scroll-padding-block: 12px;
 }
 
 .free-text-chart-view__header {
   border-bottom: 1px solid var(--simex-border-subtle);
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.5rem;
 }
 
 .free-text-chart-view__header h2 {
@@ -539,7 +540,7 @@
 }
 
 .free-text-chart-view__content :is(p, ul, ol, blockquote) {
-  margin-block: 0.7em;
+  margin-block: 0.5em;
 }
 
 .free-text-chart-view__content blockquote {

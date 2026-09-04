@@ -416,6 +416,24 @@ test("Free-text authoring forwards the draft panel footprint to writer and previ
   assert.match(html, /data-authoring-footprint="preview"/);
 });
 
+test("Text/Image panel sizing offers and retains a 400% row height", () => {
+  const draft = createStaticContentDraft({
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    stage: "content",
+    panel: { id: "tall-text-panel", sourceId: "tall-text-source", layout: { width: 2, height: 4 } },
+    placement: { kind: "staticText", qmd: "Tall panel content" },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentFields, {
+    draft,
+    dashboard: { pages: [], assets: {}, contentLibrary: { mediaItems: {} } },
+    dispatch() {},
+  }));
+
+  assert.match(html, /<option value="4"[^>]*>400% of a row<\/option>/);
+  assert.equal((html.match(/--chart-footprint-row-span:16/g) ?? []).length, 2);
+});
+
 test("Text/Image stages and footer slots stay mounted from Destination", () => {
   const readyAtDestination = createStaticContentDraft({
     destination: { pageId: "overview", sectionId: "response" },
