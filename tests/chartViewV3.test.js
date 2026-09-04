@@ -94,6 +94,9 @@ test("precision gauges render the approved arc instead of an ECharts canvas", ()
   assert.match(html, /precision-arc-gauge-tick/);
   assert.match(html, /precision-arc-gauge-status/);
   assert.match(html, /ON TRACK/);
+  assert.match(html, /stroke="#dc2626"/);
+  assert.match(html, /stroke="#f59e0b"/);
+  assert.match(html, /stroke="#16a34a"/);
   assert.doesNotMatch(html, /chart-echarts-host/);
 });
 

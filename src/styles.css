@@ -2840,27 +2840,27 @@ button.danger {
 }
 
 .precision-arc-gauge-track {
-  stroke: #e5e0d5;
+  stroke: #e2e8f0;
 }
 
 .precision-arc-gauge-target {
   fill: #fffdf8;
-  stroke: #2c383d;
+  stroke: #334155;
   stroke-width: 4;
 }
 
 .precision-arc-gauge-needle {
-  stroke: #2c383d;
+  stroke: #334155;
   stroke-linecap: round;
   stroke-width: 6;
 }
 
 .precision-arc-gauge-needle-cap {
-  fill: #2c383d;
+  fill: #334155;
 }
 
 .precision-arc-gauge-tick {
-  stroke: #aaa69b;
+  stroke: #94a3b8;
   stroke-width: 2;
 }
 
@@ -2888,14 +2888,14 @@ button.danger {
 }
 
 .precision-arc-gauge-status {
-  fill: #2c383d;
+  fill: #334155;
   font-size: calc(var(--precision-arc-text-size, 12px) * 0.9);
   font-weight: 700;
   letter-spacing: 0.35px;
 }
 
 .precision-arc-gauge-target-text {
-  fill: #2c383d;
+  fill: #334155;
   font-size: calc(var(--precision-arc-text-size, 12px) * 0.8);
   font-weight: 750;
   text-anchor: start;

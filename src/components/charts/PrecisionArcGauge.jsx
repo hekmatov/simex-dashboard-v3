@@ -6,7 +6,7 @@ const CENTER_X = 250;
 const CENTER_Y = 202;
 const ARC_RADIUS = 178;
 const TAU = Math.PI * 2;
-const REFERENCE_COLORS = ["#9a665c", "#9a794c", "#667853"];
+const STANDARD_STATUS_COLORS = ["#dc2626", "#f59e0b", "#16a34a"];
 
 export default function PrecisionArcGauge({ gauge, label = "Gauge", audienceScale = null }) {
   const actual = finiteValue(gauge?.actual);
@@ -178,7 +178,7 @@ function typographyStyle(audienceScale) {
 function displaySegmentColor(color, index) {
   const defaultColors = ["#d73027", "#fdae61", "#1a9850", "#2c7bb6"];
   return defaultColors.includes(String(color).toLowerCase())
-    ? REFERENCE_COLORS[Math.min(index, REFERENCE_COLORS.length - 1)]
+    ? STANDARD_STATUS_COLORS[Math.min(index, STANDARD_STATUS_COLORS.length - 1)]
     : color;
 }
 
