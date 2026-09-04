@@ -26,6 +26,7 @@ import {
 } from "../../static-content/image/imageAssetValidation.js";
 import { buildStaticPanelContentDraftCandidate } from "../../content-library/contentDraftTransaction.js";
 import ChartFootprintPicker from "../chart-authoring/ChartFootprintPicker.jsx";
+import { STATIC_FOOTPRINT_ROW_HEIGHTS } from "../chartPanelLayout.js";
 import { legacySizeForFootprint, resolveChartFootprint } from "../chartPanelLayout.js";
 
 const STATIC_CONTENT_PENDING_REASON = "Text/Image authoring is unavailable while this draft action is pending.";
@@ -471,6 +472,7 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
         idPrefix={`static-panel-${draft.draftIdentity?.panelId ?? "draft"}`}
         showTextLabels={false}
         maxRows={4}
+        rowHeights={STATIC_FOOTPRINT_ROW_HEIGHTS}
         value={resolveChartFootprint(draft.panel?.layout)}
         disabled={disabled}
         onChange={({ columns, rows }) => dispatch({

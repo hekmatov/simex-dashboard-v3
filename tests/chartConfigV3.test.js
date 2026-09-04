@@ -171,12 +171,12 @@ test("chart title visibility rejects non-boolean values", () => {
   );
 });
 
-test("Text/Image layouts support quarter-row heights through 400% and reject unsupported fractions", () => {
+test("Text/Image layouts support eighth-row heights through 400% and reject unsupported fractions", () => {
   const chart = createChartDraft("image", {
-    id: "three-quarter-image",
-    title: "Three-quarter image",
+    id: "one-eighth-image",
+    title: "One-eighth image",
     sourceId: "image-source",
-    layout: { size: "standard", width: 3, height: 0.75 },
+    layout: { size: "standard", width: 3, height: 0.125 },
   });
 
   assert.equal(validateChartInstance(chart), chart);

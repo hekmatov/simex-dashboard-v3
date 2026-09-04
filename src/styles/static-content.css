@@ -56,7 +56,7 @@
   display: grid;
   gap: 16px;
   grid-auto-flow: dense;
-  grid-auto-rows: minmax(64px, auto);
+  grid-auto-rows: minmax(24px, auto);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-inline-size: 100%;
   min-inline-size: 0;

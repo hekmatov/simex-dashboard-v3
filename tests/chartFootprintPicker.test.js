@@ -28,7 +28,7 @@ test("the authoring footprint frame projects a selected panel width across the d
 
   assert.match(html, /class="authoring-footprint-grid"/);
   assert.match(html, /--chart-footprint-columns:3/);
-  assert.match(html, /--chart-footprint-row-span:4/);
+  assert.match(html, /--chart-footprint-row-span:8/);
   assert.match(html, /data-authoring-footprint="writer"/);
 });
 
@@ -56,6 +56,8 @@ test("the shared footprint picker can label Text/Image panel sizing without char
   const html = renderToStaticMarkup(React.createElement(pickerModule.default, {
     subject: "Panel",
     idPrefix: "static-panel",
+    rowHeights: [0.125, 0.25, 0.5, 1, 2, 3, 4],
+    maxRows: 4,
     value: { columns: 2, rows: 0.25 },
     onChange() {},
   }));
@@ -63,6 +65,7 @@ test("the shared footprint picker can label Text/Image panel sizing without char
   assert.match(html, /id="static-panel-footprint-title"/);
   assert.match(html, /id="static-panel-footprint-width"/);
   assert.match(html, /id="static-panel-footprint-row-height"/);
+  assert.match(html, /<option value="0.125"[^>]*>12.5% of a row<\/option>/);
   assert.match(html, /aria-label="Panel size: 2 columns by 25% of a row"/);
   assert.doesNotMatch(html, /Chart size/);
 });

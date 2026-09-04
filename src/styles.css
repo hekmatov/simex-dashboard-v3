@@ -272,7 +272,7 @@ body::before {
 }
 
 .app-shell[data-device-layout="tablet"] .layout-grid {
-  grid-auto-rows: calc((440px - 48px) / 4);
+  grid-auto-rows: calc((440px - 112px) / 8);
 }
 
 .app-shell[data-device-layout="phone"] {
@@ -649,7 +649,7 @@ h1 {
   display: grid;
   gap: 16px;
   grid-auto-flow: dense;
-  grid-auto-rows: calc((418px - 48px) / 4);
+  grid-auto-rows: calc((418px - 112px) / 8);
 }
 
 button,

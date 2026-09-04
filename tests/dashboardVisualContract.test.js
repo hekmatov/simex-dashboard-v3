@@ -252,7 +252,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.doesNotMatch(modes, /\.build-page-navigation\s*\{[^}]*flex-wrap:\s*wrap/s);
   assert.doesNotMatch(modes, /\.build-page-tab-scroller\s*\{[^}]*flex-basis:\s*100%/s);
   assert.match(modes, /\.build-section-actions\s*\{[^}]*align-items:\s*center[^}]*gap:\s*var\(--simex-gap-control-group\)/s);
-  assert.ok(styles.includes("grid-auto-rows: calc((418px - 48px) / 4);"));
+  assert.ok(styles.includes("grid-auto-rows: calc((418px - 112px) / 8);"));
   assert.ok(modes.includes("grid-row: span var(--chart-footprint-row-span);"));
   assert.ok(modes.includes("height: var(--footprint-preview-visual-height);"));
   assert.match(modes, /\.chart-panel-footprint\[data-footprint-short="true"\]\s*:is\(\.chart-view-frame,\s*\.chart-zoom-guard\)\s*\{[^}]*overflow:\s*auto/s);

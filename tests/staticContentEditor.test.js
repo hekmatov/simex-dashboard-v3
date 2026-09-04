@@ -411,12 +411,12 @@ test("Free-text authoring forwards the draft panel footprint to writer and previ
   }));
 
   assert.equal((html.match(/--chart-footprint-columns:3/g) ?? []).length, 2);
-  assert.equal((html.match(/--chart-footprint-row-span:3/g) ?? []).length, 2);
+  assert.equal((html.match(/--chart-footprint-row-span:6/g) ?? []).length, 2);
   assert.match(html, /data-authoring-footprint="writer"/);
   assert.match(html, /data-authoring-footprint="preview"/);
 });
 
-test("Text/Image panel sizing offers and retains a 400% row height", () => {
+test("Text/Image panel sizing offers eighth-row increments through a 400% row height", () => {
   const draft = createStaticContentDraft({
     destination: { pageId: "overview", sectionId: "response" },
     contentTypeId: "freeText",
@@ -430,8 +430,9 @@ test("Text/Image panel sizing offers and retains a 400% row height", () => {
     dispatch() {},
   }));
 
+  assert.match(html, /<option value="0.125"[^>]*>12.5% of a row<\/option>/);
   assert.match(html, /<option value="4"[^>]*>400% of a row<\/option>/);
-  assert.equal((html.match(/--chart-footprint-row-span:16/g) ?? []).length, 2);
+  assert.equal((html.match(/--chart-footprint-row-span:32/g) ?? []).length, 2);
 });
 
 test("Text/Image stages and footer slots stay mounted from Destination", () => {

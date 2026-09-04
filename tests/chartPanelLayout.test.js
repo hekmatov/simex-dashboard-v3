@@ -20,16 +20,17 @@ test("version-3 chart sizes map to their panel layout classes", () => {
   assert.equal(chartPanelLayoutClass("removed-v2-size"), "chart-panel-standard");
 });
 
-test("the universal four-by-two footprint preserves every quarter-row height", () => {
+test("the universal four-by-two footprint preserves eighth-row layout spans", () => {
   const heights = [
-    { rows: 0.25, rowSpan: 1 },
-    { rows: 0.5, rowSpan: 2 },
-    { rows: 0.75, rowSpan: 3 },
-    { rows: 1, rowSpan: 4 },
-    { rows: 1.25, rowSpan: 5 },
-    { rows: 1.5, rowSpan: 6 },
-    { rows: 1.75, rowSpan: 7 },
-    { rows: 2, rowSpan: 8 },
+    { rows: 0.125, rowSpan: 1 },
+    { rows: 0.25, rowSpan: 2 },
+    { rows: 0.5, rowSpan: 4 },
+    { rows: 0.75, rowSpan: 6 },
+    { rows: 1, rowSpan: 8 },
+    { rows: 1.25, rowSpan: 10 },
+    { rows: 1.5, rowSpan: 12 },
+    { rows: 1.75, rowSpan: 14 },
+    { rows: 2, rowSpan: 16 },
   ];
   for (const columns of [1, 2, 3, 4]) {
     for (const { rows, rowSpan } of heights) {

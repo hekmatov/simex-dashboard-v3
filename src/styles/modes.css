@@ -2228,7 +2228,7 @@
   display: grid;
   gap: 16px;
   grid-auto-flow: dense;
-  grid-auto-rows: calc((var(--scene-canonical-row-height, 418px) - 48px) / 4);
+  grid-auto-rows: calc((var(--scene-canonical-row-height, 418px) - 112px) / 8);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   min-width: 0;
 }
@@ -3970,7 +3970,7 @@
   outline-offset: 2px;
 }
 
-/* A 4 × 2 guide gives the familiar canvas shape while heights use quarter-row increments. */
+/* An 8 × 2 sub-row guide preserves the familiar canvas shape while static panels use eighth-row increments. */
 .chart-panel-footprint {
   grid-column: span var(--chart-footprint-columns);
   grid-row: span var(--chart-footprint-row-span);

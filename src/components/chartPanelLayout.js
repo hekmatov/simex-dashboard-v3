@@ -31,12 +31,47 @@ export const FOOTPRINT_ROW_HEIGHTS = Object.freeze([
   4,
 ]);
 
+export const STATIC_FOOTPRINT_ROW_HEIGHTS = Object.freeze([
+  0.125,
+  0.25,
+  0.375,
+  0.5,
+  0.625,
+  0.75,
+  0.875,
+  1,
+  1.125,
+  1.25,
+  1.375,
+  1.5,
+  1.625,
+  1.75,
+  1.875,
+  2,
+  2.125,
+  2.25,
+  2.375,
+  2.5,
+  2.625,
+  2.75,
+  2.875,
+  3,
+  3.125,
+  3.25,
+  3.375,
+  3.5,
+  3.625,
+  3.75,
+  3.875,
+  4,
+]);
+
 export function isSupportedFootprintRowHeight(rows) {
-  return FOOTPRINT_ROW_HEIGHTS.includes(rows);
+  return STATIC_FOOTPRINT_ROW_HEIGHTS.includes(rows);
 }
 
 export function chartFootprintRowSpan(rows) {
-  return isSupportedFootprintRowHeight(rows) ? Math.round(rows * 4) : 4;
+  return isSupportedFootprintRowHeight(rows) ? Math.round(rows * 8) : 8;
 }
 
 export function chartPanelLayoutClass(size = "standard") {
