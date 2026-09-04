@@ -74,6 +74,36 @@ test("category axes accept bounded label wrapping and font settings", () => {
   assert.doesNotThrow(() => validateChartInstance(chart));
 });
 
+test("bar charts accept value-axis units, separation, and horizontal vertical fill", () => {
+  const base = {
+    title: "Income share",
+    sourceId: "income",
+    roles: {
+      measurements: [{ field: "share", axis: "primary" }],
+      observation: { field: "incomeGroup" },
+    },
+  };
+
+  const vertical = createChartDraft("bar", {
+    ...base,
+    id: "income-share",
+    presentation: {
+      axes: { primary: { unit: "%" } },
+      series: { barSeparation: 25 },
+    },
+  });
+  const horizontal = createChartDraft("horizontalBar", {
+    ...base,
+    id: "income-share-horizontal",
+    presentation: {
+      series: { barSeparation: 25, verticalFill: true },
+    },
+  });
+
+  assert.doesNotThrow(() => validateChartInstance(vertical));
+  assert.doesNotThrow(() => validateChartInstance(horizontal));
+});
+
 test("chart title visibility rejects non-boolean values", () => {
   const chart = createChartDraft("line", {
     id: "invalid-title-visibility",

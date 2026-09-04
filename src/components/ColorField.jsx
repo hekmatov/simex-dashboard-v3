@@ -39,6 +39,9 @@ function ColorField({
   allowTransparency = false,
   transparent = false,
   onTransparencyChange,
+  allowDefault = false,
+  defaultActive = false,
+  onDefault,
   showContrast = false,
   pickerRevision
 }) {
@@ -111,7 +114,7 @@ function ColorField({
       "data-invalid": error || invalid ? "true" : void 0
     },
     /* @__PURE__ */ React.createElement("label", { htmlFor: controlId }, label),
-    /* @__PURE__ */ React.createElement("div", { className: "settings-color-row" }, /* @__PURE__ */ React.createElement("button", {
+    /* @__PURE__ */ React.createElement("div", { className: `settings-color-row${allowDefault ? " settings-color-row--with-default" : ""}` }, /* @__PURE__ */ React.createElement("button", {
       type: "button",
       className: "settings-color-swatch",
       style: { backgroundColor: normalizedValue },
@@ -143,7 +146,12 @@ function ColorField({
       "aria-label": `Pick ${String(label).toLowerCase()} from dashboard`,
       tooltip: "Pick color from screen",
       title: "Pick color from screen"
-    })),
+    }), allowDefault ? /* @__PURE__ */ React.createElement("button", {
+      type: "button",
+      className: "secondary settings-color-default-button",
+      disabled: defaultActive,
+      onClick: () => onDefault?.()
+    }, "Default") : null),
     paletteOpen ? /* @__PURE__ */ React.createElement(ColorPalettePanel, {
       id: paletteId,
       label,
@@ -157,7 +165,7 @@ function ColorField({
       checked: transparent === true,
       onChange: (event) => onTransparencyChange?.(event.target.checked)
     }), "Transparent background") : null,
-    showContrast || allowTransparency ? /* @__PURE__ */ React.createElement("small", { role: "status", "aria-live": "polite", className: `settings-color-contrast settings-color-contrast-${contrast.level}` }, contrast.message) : null,
+    showContrast ? /* @__PURE__ */ React.createElement("small", { role: "status", "aria-live": "polite", className: `settings-color-contrast settings-color-contrast-${contrast.level}` }, contrast.message) : null,
     message ? /* @__PURE__ */ React.createElement("small", null, message) : null,
     help ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-help` }, help) : null,
     error ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-error`, role: "alert" }, error) : null

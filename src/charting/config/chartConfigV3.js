@@ -512,8 +512,8 @@ function validateAxes(axes, schema, temporalRoles) {
     const axis = axes?.[axisName];
     if (axis === undefined) continue;
     ensureObject(axis, `Chart presentation axes ${axisName}`);
-    checkKnownKeys(axis, new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency", ...VALUE_AXIS_TITLE_KEYS]), `chart presentation axes ${axisName}`);
-    for (const field of ["title", "name", "xTitle", "yTitle"]) if (axis[field] !== undefined && typeof axis[field] !== "string") throw new Error(`Chart presentation axes ${axisName} ${field} must be a string.`);
+    checkKnownKeys(axis, new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "tickFrequency", ...VALUE_AXIS_TITLE_KEYS]), `chart presentation axes ${axisName}`);
+    for (const field of ["title", "name", "unit", "xTitle", "yTitle"]) if (axis[field] !== undefined && typeof axis[field] !== "string") throw new Error(`Chart presentation axes ${axisName} ${field} must be a string.`);
     for (const field of ["min", "max"]) if (axis[field] !== undefined && !Number.isFinite(axis[field])) throw new Error(`Chart presentation axes ${axisName} ${field} must be finite.`);
     if (axis.grid !== undefined && typeof axis.grid !== "boolean") throw new Error(`Chart presentation axes ${axisName} grid must be boolean.`);
     if (axis.min !== undefined && axis.max !== undefined && axis.min > axis.max) throw new Error(`Chart presentation axes ${axisName} min cannot exceed max.`);

@@ -63,13 +63,14 @@ function SchemaField({
       ? backgroundValue.color
       : validHex(value)
         ? value
-        : "#FFFFFF";
+        : "";
     return /* @__PURE__ */ React.createElement(
       ColorField,
       {
         id: fieldControlId(decoratedField),
         label: field.label,
         value,
+        fallback: background ? "" : undefined,
         onChange: emit,
         dataColorField: field.id,
         help: field.help,
@@ -78,11 +79,24 @@ function SchemaField({
         ariaDescribedBy: fieldDescribedBy(decoratedField),
         allowTransparency: background,
         transparent: background && backgroundValue?.transparent === true,
-        showContrast: background,
+        allowDefault: background,
+        defaultActive: background && !validHex(backgroundValue?.color) && backgroundValue?.transparent !== true,
+        onDefault: background
+          ? () => onChange(["presentation", "background"], undefined)
+          : undefined,
         onTransparencyChange: background
           ? (transparent) => onChange(
             ["presentation", "background"],
-            { color: backgroundColor.toUpperCase(), transparent }
+            transparent
+              ? {
+                  ...(validHex(backgroundColor)
+                    ? { color: backgroundColor.toUpperCase() }
+                    : {}),
+                  transparent: true,
+                }
+              : validHex(backgroundColor)
+                ? { color: backgroundColor.toUpperCase(), transparent: false }
+                : undefined
           )
           : void 0
       }

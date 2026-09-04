@@ -59,11 +59,11 @@ test("validation rejects unknown form sections", () => {
 
 test("schemas declare only the appearance fields their renderers can apply", () => {
   const expectedAppearance = new Map([
-    ["bar", ["seriesColors", "barWidth"]],
-    ["groupedBar", ["seriesColors", "barWidth"]],
-    ["stackedBar", ["seriesColors", "barWidth"]],
-    ["horizontalBar", ["seriesColors", "barWidth"]],
-    ["horizontalStackedBar", ["seriesColors", "barWidth"]],
+    ["bar", ["seriesColors", "barWidth", "barSeparation"]],
+    ["groupedBar", ["seriesColors", "barWidth", "barSeparation"]],
+    ["stackedBar", ["seriesColors", "barWidth", "barSeparation"]],
+    ["horizontalBar", ["seriesColors", "verticalFill", "barWidth", "barSeparation"]],
+    ["horizontalStackedBar", ["seriesColors", "verticalFill", "barWidth", "barSeparation"]],
     ["line", ["seriesColors", "lineWidth", "referenceLine"]],
     ["area", ["seriesColors", "lineWidth"]],
     ["mixed", ["seriesColors", "lineWidth", "barWidth"]],

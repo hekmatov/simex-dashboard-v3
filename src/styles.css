@@ -1107,6 +1107,10 @@ th {
   grid-template-columns: 36px minmax(0, 1fr) auto;
 }
 
+.settings-color-row--with-default {
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+}
+
 .settings-color-swatch {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--simex-text-strong) 22%, transparent);

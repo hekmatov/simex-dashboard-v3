@@ -2,6 +2,8 @@ export const SERIES_APPEARANCE_FIELD_IDS = Object.freeze([
   "seriesColors",
   "lineWidth",
   "barWidth",
+  "barSeparation",
+  "verticalFill",
   "referenceLine",
 ]);
 
@@ -9,26 +11,31 @@ export const SERIES_STYLE_PROPERTIES = Object.freeze([
   "colors",
   "lineWidth",
   "barWidth",
+  "barSeparation",
+  "verticalFill",
 ]);
 
 export const SERIES_STYLE_LIMITS = Object.freeze({
   colors: Object.freeze({ min: 1, max: 12 }),
   lineWidth: Object.freeze({ min: 1, max: 12 }),
   barWidth: Object.freeze({ min: 4, max: 120 }),
+  barSeparation: Object.freeze({ min: 0, max: 80 }),
 });
 
 const FIELD_BY_PROPERTY = Object.freeze({
   colors: "seriesColors",
   lineWidth: "lineWidth",
   barWidth: "barWidth",
+  barSeparation: "barSeparation",
+  verticalFill: "verticalFill",
 });
 
 const APPEARANCE_BY_MARK = Object.freeze({
-  bar: Object.freeze(["seriesColors", "barWidth"]),
-  "grouped-bar": Object.freeze(["seriesColors", "barWidth"]),
-  "stacked-bar": Object.freeze(["seriesColors", "barWidth"]),
-  "horizontal-bar": Object.freeze(["seriesColors", "barWidth"]),
-  "horizontal-stacked-bar": Object.freeze(["seriesColors", "barWidth"]),
+  bar: Object.freeze(["seriesColors", "barWidth", "barSeparation"]),
+  "grouped-bar": Object.freeze(["seriesColors", "barWidth", "barSeparation"]),
+  "stacked-bar": Object.freeze(["seriesColors", "barWidth", "barSeparation"]),
+  "horizontal-bar": Object.freeze(["seriesColors", "verticalFill", "barWidth", "barSeparation"]),
+  "horizontal-stacked-bar": Object.freeze(["seriesColors", "verticalFill", "barWidth", "barSeparation"]),
   line: Object.freeze(["seriesColors", "lineWidth", "referenceLine"]),
   area: Object.freeze(["seriesColors", "lineWidth"]),
   "mixed-axis": Object.freeze([
@@ -130,6 +137,18 @@ export function normalizeSeriesStyle(series, appearance) {
       descriptors.barWidth.value,
       "barWidth",
     );
+  }
+  if (Object.hasOwn(descriptors, "barSeparation")) {
+    normalized.barSeparation = boundedWidth(
+      descriptors.barSeparation.value,
+      "barSeparation",
+    );
+  }
+  if (Object.hasOwn(descriptors, "verticalFill")) {
+    if (typeof descriptors.verticalFill.value !== "boolean") {
+      throw new Error("Chart presentation series verticalFill must be boolean.");
+    }
+    normalized.verticalFill = descriptors.verticalFill.value;
   }
   return normalized;
 }

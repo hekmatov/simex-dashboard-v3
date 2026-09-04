@@ -143,9 +143,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       ...(type === "line" && Number.isFinite(seriesStyle?.lineWidth)
         ? { lineStyle: { width: seriesStyle.lineWidth } }
         : {}),
-      ...(type === "bar" && Number.isFinite(seriesStyle?.barWidth)
-        ? { barWidth: seriesStyle.barWidth }
-        : {}),
+      ...barSeriesPresentation(type, seriesStyle, horizontal),
       ...(marker ? { markPoint: marker } : {}),
       ...(index === 0 && type === "line" && referenceLine?.visible === true
         && Number.isFinite(referenceLine.value)
@@ -251,6 +249,18 @@ function valueAxis(settings = {}, secondary = false, values = []) {
     max: settings?.max,
     splitLine: { show: secondary ? false : settings?.grid !== false },
   };
+}
+
+function barSeriesPresentation(type, seriesStyle, horizontal) {
+  if (type !== "bar") return {};
+  const result = {};
+  if (Number.isFinite(seriesStyle?.barSeparation)) {
+    result.barCategoryGap = `${seriesStyle.barSeparation}%`;
+  }
+  if (Number.isFinite(seriesStyle?.barWidth) && !(horizontal && seriesStyle?.verticalFill === true)) {
+    result.barWidth = seriesStyle.barWidth;
+  }
+  return result;
 }
 
 function groupedValues(groups, axis) {

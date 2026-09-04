@@ -204,10 +204,10 @@ const backgroundSection = {
   label: "Appearance",
   fields: [{
     id: "background",
-    label: "Background",
+    label: "Background color",
     control: "color",
     path: ["presentation", "background", "color"],
-    value: "#FFFFFF",
+    value: "",
   }],
 };
 
@@ -603,15 +603,41 @@ test("chart type guidance appears once before profiling and selected source prof
   );
 });
 
-test("background uses the shared identified color field contract", () => {
+test("background color uses the shared identified color field contract", () => {
   const html = render(React.createElement(GeneratedFormSection, {
     section: backgroundSection,
     onChange() {},
   }));
 
   assert.match(html, /data-color-field="background"/);
-  assert.match(html, /aria-label="Background"/);
+  assert.match(html, /aria-label="Background color"/);
   assert.match(html, /id="chart-field-background"/);
+});
+
+test("chart background color starts empty and can be restored to the dashboard default", () => {
+  const calls = [];
+  const chart = validLineChart();
+  const field = backgroundSection.fields[0];
+  const element = SchemaField({
+    field,
+    value: "",
+    chart,
+    onChange(path, value) {
+      calls.push({ path, value });
+    },
+  });
+  const html = render(React.createElement(SchemaField, {
+    field,
+    value: "",
+    chart,
+    onChange() {},
+  }));
+
+  assert.match(html, /value=""/);
+  assert.match(html, />Default<\/button>/);
+  assert.doesNotMatch(html, /settings-color-contrast/);
+  element.props.onDefault();
+  assert.deepEqual(calls, [{ path: ["presentation", "background"], value: undefined }]);
 });
 
 test("Delta comparison conditionally renders fixed time, policy, and nearest tolerance", () => {
