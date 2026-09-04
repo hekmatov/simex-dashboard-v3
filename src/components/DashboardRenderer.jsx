@@ -3197,7 +3197,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                 ) : (
                   <h1>{activePage?.title ?? dashboard.title}</h1>
                 )}
-                <p className="subtitle">{activePage?.description ?? dashboard.description}</p>
+                {typeof (activePage?.description ?? dashboard.description) === "string"
+                  && (activePage?.description ?? dashboard.description).trim() !== ""
+                  && <p className="subtitle">{activePage?.description ?? dashboard.description}</p>}
               </>
             )}
           </div>

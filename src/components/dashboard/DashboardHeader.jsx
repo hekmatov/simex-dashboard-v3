@@ -6,6 +6,7 @@ export default function DashboardHeader({ activePage, dashboard }) {
   const landingActive = hasLandingPresentation(activePage);
   const title = activePage?.title ?? dashboard.title;
   const description = activePage?.description ?? dashboard.description;
+  const hasDescription = typeof description === "string" && description.trim() !== "";
 
   return (
     <header className="dashboard-header">
@@ -18,7 +19,7 @@ export default function DashboardHeader({ activePage, dashboard }) {
           ) : (
             <h1>{title}</h1>
           )}
-          <p className="subtitle">{description}</p>
+          {hasDescription && <p className="subtitle">{description}</p>}
         </div>
       </div>
       <div className="header-right-rail">

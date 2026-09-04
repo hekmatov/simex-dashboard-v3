@@ -51,7 +51,8 @@ export async function load(url, context, nextLoad) {
   if (url.endsWith(".jsx")) {
     const loaded = await nextLoad(url, { ...context, format: "module" });
     const { transformWithEsbuild } = await import(${JSON.stringify(viteModuleUrl)});
-    const transformed = await transformWithEsbuild(loaded.source.toString(), url, { loader: "jsx", format: "esm" });
+    const source = loaded.source.toString().replaceAll("import.meta.env.BASE_URL", JSON.stringify("/"));
+    const transformed = await transformWithEsbuild(source, url, { loader: "jsx", format: "esm" });
     return { format: "module", source: transformed.code, shortCircuit: true };
   }
   return nextLoad(url, context);
@@ -195,6 +196,9 @@ const { default: ChartFootprintPicker } = await import(
 const { default: ChartQuickEditor } = await import(
   "../src/components/chart-authoring/ChartQuickEditor.jsx"
 );
+const { default: DashboardHeader } = await import(
+  "../src/components/dashboard/DashboardHeader.jsx"
+);
 const { IconControl } = await import(
   "../src/components/common/SimExIcon.js"
 );
@@ -223,6 +227,17 @@ const deltaField = {
 function render(element) {
   return renderToStaticMarkup(element);
 }
+
+test("a blank page description renders no subtitle element or reserved gap", () => {
+  const markup = render(
+    React.createElement(DashboardHeader, {
+      activePage: { id: "status", title: "Status", description: "" },
+      dashboard: { title: "Dashboard", description: "Dashboard supporting text" },
+    }),
+  );
+
+  assert.doesNotMatch(markup, /class="subtitle"/);
+});
 
 test("post-paint chart preparation is deferred and cancellable", () => {
   assert.equal(typeof scheduleAfterPaint, "function");
