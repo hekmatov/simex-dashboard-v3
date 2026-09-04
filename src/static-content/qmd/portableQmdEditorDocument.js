@@ -13,6 +13,7 @@ const UNSUPPORTED_SOURCE = Object.freeze([
 const ALLOWED_BLOCK_TOKENS = new Set([
   "paragraph_open", "paragraph_close", "heading_open", "heading_close", "inline",
   "lead_open", "lead_close", "caption_open", "caption_close",
+  "text_align_open", "text_align_close",
   "bullet_list_open", "bullet_list_close", "ordered_list_open", "ordered_list_close",
   "list_item_open", "list_item_close", "table_open", "table_close", "thead_open", "thead_close",
   "tbody_open", "tbody_close", "tr_open", "tr_close", "th_open", "th_close", "td_open", "td_close",
@@ -34,7 +35,8 @@ export function parsePortableQmdEditorDocument(source) {
     return value.startsWith(":::")
       && value !== ":::"
       && value !== "::: {.simex-text-lead}"
-      && value !== "::: {.simex-text-caption}";
+      && value !== "::: {.simex-text-caption}"
+      && !/^:::\s+\{\.simex-text-align-(left|center|right|justify)\}$/.test(value);
   })) return advanced(source, "callouts or unsupported directives");
   if (!hasSupportedTableShape(source)) return advanced(source, "an unsupported table shape");
   const parsed = parsePortableQmdWithMedia(source);
@@ -104,7 +106,8 @@ export function identifyPortableQmdRewriteRisks(source, advancedReason = "") {
     return value.startsWith(":::")
       && value !== ":::"
       && value !== "::: {.simex-text-lead}"
-      && value !== "::: {.simex-text-caption}";
+      && value !== "::: {.simex-text-caption}"
+      && !/^:::\s+\{\.simex-text-align-(left|center|right|justify)\}$/.test(value);
   })) add("callouts or unsupported directives");
   if (!hasSupportedTableShape(source)) add("an unsupported table shape");
   add(constructFromAdvancedReason(advancedReason));
@@ -166,6 +169,19 @@ function parseBlocks(tokens, mediaNodes, start = 0, stopType = null) {
         type: token.type.startsWith("lead") ? "lead" : "caption",
         content: parseInline(inner[1].children ?? [], mediaNodes),
       });
+      index = closing + 1;
+      continue;
+    }
+    if (token.type === "text_align_open") {
+      const closing = findMatching(tokens, index, "text_align_open", "text_align_close");
+      const blocks = parseBlocks(tokens.slice(index + 1, closing), mediaNodes);
+      if (blocks.length !== 1 || !["paragraph", "heading", "lead", "caption"].includes(blocks[0]?.type)) {
+        throw new Error("Text alignment supports one paragraph, heading, lead, or caption at a time.");
+      }
+      const textAlign = token.meta?.textAlign;
+      if (!TEXT_ALIGNMENTS.has(textAlign)) throw new Error("Text alignment is invalid.");
+      blocks[0].attrs = { ...(blocks[0].attrs ?? {}), textAlign };
+      content.push(blocks[0]);
       index = closing + 1;
       continue;
     }
@@ -265,10 +281,12 @@ function parseInline(tokens, mediaNodes) {
 
 function serializeBlock(node, errors, depth) {
   if (!node || typeof node !== "object") { errors.push("Every visual document block must be an object."); return null; }
-  if (node.type === "paragraph") return serializeInline(node.content, errors);
+  const textAlign = normalizedTextAlign(node.attrs?.textAlign, errors);
+  let serialized;
+  if (node.type === "paragraph") serialized = serializeInline(node.content, errors);
   if (node.type === "lead" || node.type === "caption") {
     const style = node.type === "lead" ? "lead" : "caption";
-    return `::: {.simex-text-${style}}\n${serializeInline(node.content, errors)}\n:::`;
+    serialized = `::: {.simex-text-${style}}\n${serializeInline(node.content, errors)}\n:::`;
   }
   if (node.type === "heading") {
     const level = Number(node.attrs?.level);
@@ -276,21 +294,33 @@ function serializeBlock(node, errors, depth) {
       errors.push("Visual headings must use Heading (level 2) or Subheading (level 3).");
       return null;
     }
-    return `${"#".repeat(level)} ${serializeInline(node.content, errors)}`;
+    serialized = `${"#".repeat(level)} ${serializeInline(node.content, errors)}`;
   }
   if (node.type === "bulletList" || node.type === "orderedList") {
     const ordered = node.type === "orderedList";
     const start = ordered ? Math.max(1, Number(node.attrs?.start) || 1) : 1;
-    return (node.content ?? []).map((item, itemIndex) => {
+    serialized = (node.content ?? []).map((item, itemIndex) => {
       if (item?.type !== "listItem") { errors.push("Lists may contain only list items."); return ""; }
       const parts = (item.content ?? []).map((block) => serializeBlock(block, errors, depth + 1) ?? "");
       const prefix = ordered ? `${start + itemIndex}. ` : "- ";
       return `${prefix}${parts.join("\n").replace(/\n/g, "\n  ")}`;
     }).join("\n");
   }
-  if (node.type === "table") return serializeTable(node, errors);
-  errors.push(`Unsupported visual document node: ${String(node.type)}.`);
-  return null;
+  if (node.type === "table") serialized = serializeTable(node, errors);
+  if (serialized === undefined) {
+    errors.push(`Unsupported visual document node: ${String(node.type)}.`);
+    return null;
+  }
+  return textAlign === "left" ? serialized : `::: {.simex-text-align-${textAlign}}\n${serialized}\n:::`;
+}
+
+const TEXT_ALIGNMENTS = new Set(["left", "center", "right", "justify"]);
+
+function normalizedTextAlign(value, errors) {
+  if (value === undefined || value === null || value === "") return "left";
+  if (TEXT_ALIGNMENTS.has(value)) return value;
+  errors.push("Text alignment must be left, center, right, or justify.");
+  return "left";
 }
 
 function serializeTable(node, errors) {

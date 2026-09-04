@@ -1,5 +1,5 @@
 import React from "react";
-import { Node } from "@tiptap/core";
+import { Extension, Node } from "@tiptap/core";
 import { Fragment, Slice } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -18,6 +18,7 @@ import { sanitizePortableQmdHtmlPaste } from "../../static-content/qmd/portableQ
 
 const Lead = fixedSemanticParagraph("lead", "portable-qmd-lead");
 const Caption = fixedSemanticParagraph("caption", "portable-qmd-caption");
+const TEXT_ALIGNMENTS = Object.freeze(["left", "center", "right", "justify"]);
 const PENDING_REASON = "Text/Image authoring is unavailable while this draft action is pending.";
 const LOADING_REASON = "The Composer is still loading.";
 const PortableMedia = Node.create({
@@ -63,6 +64,7 @@ export function createPortableQmdEditorExtensions() {
     TableKit.configure({ table: { resizable: false, allowTableNodeSelection: true } }),
     Lead,
     Caption,
+    PortableTextAlignment,
     PortableMedia,
   ];
 }
@@ -169,6 +171,7 @@ export default function PortableQmdRichTextEditor({
       orderedList: current?.isActive("orderedList") ?? false,
       link: current?.isActive("link") ?? false,
       table: current?.isActive("table") ?? false,
+      textAlign: currentTextAlignment(current),
     }),
   });
 
@@ -239,6 +242,12 @@ export default function PortableQmdRichTextEditor({
           <ComposerButton label="Bullet list" pressed={toolbarState.bulletList} {...standardState} onClick={() => command((chain) => chain.toggleBulletList())} />
           <ComposerButton label="Numbered list" pressed={toolbarState.orderedList} {...standardState} onClick={() => command((chain) => chain.toggleOrderedList())} />
           <ComposerButton label="Table" pressed={toolbarState.table} {...standardState} onClick={() => command((chain) => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }))} />
+        </div>
+        <div className="portable-qmd-composer__toolbar-group" role="group" aria-label="Text alignment">
+          <ComposerButton label="Align left" pressed={toolbarState.textAlign === "left"} {...standardState} onClick={() => command((chain) => chain.setTextAlign("left"))} />
+          <ComposerButton label="Align center" pressed={toolbarState.textAlign === "center"} {...standardState} onClick={() => command((chain) => chain.setTextAlign("center"))} />
+          <ComposerButton label="Align right" pressed={toolbarState.textAlign === "right"} {...standardState} onClick={() => command((chain) => chain.setTextAlign("right"))} />
+          <ComposerButton label="Justify text" pressed={toolbarState.textAlign === "justify"} {...standardState} onClick={() => command((chain) => chain.setTextAlign("justify"))} />
         </div>
         <div className="portable-qmd-composer__toolbar-group" role="group" aria-label="Insert content">
           <ComposerButton label="Insert image" {...standardState} onClick={() => onMediaSelect?.()} />
@@ -316,6 +325,10 @@ function composerGlyph(label) {
     "Numbered list": "1≡",
     Table: "▦",
     "Insert image": "▧",
+    "Align left": "L",
+    "Align center": "C",
+    "Align right": "R",
+    "Justify text": "J",
     Undo: "↶",
     Redo: "↷",
     "Raw text": "Raw",
@@ -497,6 +510,51 @@ function fixedSemanticParagraph(name, className) {
     parseHTML() { return [{ tag: `p[data-simex-text-style=\"${name}\"]` }]; },
     renderHTML() { return ["p", { class: className, "data-simex-text-style": name }, 0]; },
   });
+}
+
+const PortableTextAlignment = Extension.create({
+  name: "portableTextAlignment",
+  addGlobalAttributes() {
+    return [{
+      types: ["paragraph", "heading", "lead", "caption"],
+      attributes: {
+        textAlign: {
+          default: "left",
+          parseHTML: (element) => textAlignmentValue(element.getAttribute("data-text-align") ?? element.style.textAlign),
+          renderHTML: (attributes) => attributes.textAlign === "left"
+            ? {}
+            : { "data-text-align": attributes.textAlign, style: `text-align: ${attributes.textAlign}` },
+        },
+      },
+    }];
+  },
+  addCommands() {
+    return {
+      setTextAlign: (textAlign) => ({ state, dispatch }) => {
+        if (!TEXT_ALIGNMENTS.includes(textAlign)) return false;
+        const { from, to } = state.selection;
+        let changed = false;
+        const transaction = state.tr;
+        state.doc.nodesBetween(from, to, (node, position) => {
+          if (!["paragraph", "heading", "lead", "caption"].includes(node.type.name)) return;
+          if (node.attrs.textAlign === textAlign) return;
+          transaction.setNodeMarkup(position, undefined, { ...node.attrs, textAlign });
+          changed = true;
+        });
+        if (changed && dispatch) dispatch(transaction);
+        return changed;
+      },
+    };
+  },
+});
+
+function currentTextAlignment(editor) {
+  const value = editor?.getAttributes?.(editor?.isActive("lead") ? "lead" : editor?.isActive("caption") ? "caption" : editor?.isActive("heading") ? "heading" : "paragraph")?.textAlign;
+  return TEXT_ALIGNMENTS.includes(value) ? value : "left";
+}
+
+function textAlignmentValue(value) {
+  return TEXT_ALIGNMENTS.includes(value) ? value : "left";
 }
 
 function currentSemanticStyle(editor) {

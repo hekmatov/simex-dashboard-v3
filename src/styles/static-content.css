@@ -413,6 +413,11 @@
   font-size: 0.875rem;
 }
 
+.portable-qmd-text-align--left { text-align: left; }
+.portable-qmd-text-align--center { text-align: center; }
+.portable-qmd-text-align--right { text-align: right; }
+.portable-qmd-text-align--justify { text-align: justify; }
+
 .free-text-source-editor__reference-cards {
   display: contents;
 }

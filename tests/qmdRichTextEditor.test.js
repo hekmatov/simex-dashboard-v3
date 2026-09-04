@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { Editor } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
+import { serializePortableQmdEditorDocument } from "../src/static-content/qmd/portableQmdEditorDocument.js";
 
 const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
 const module = await vite.ssrLoadModule("/src/components/static-content/PortableQmdRichTextEditor.jsx").catch(() => null);
@@ -26,6 +27,7 @@ test("the constrained Composer exposes every visible labelled authoring command"
     "Paragraph", "Lead", "Heading", "Subheading", "Caption",
     "Bold", "Italic", "Underline", "Bullet list", "Numbered list",
     "Link", "Table", "Insert image", "Clear formatting", "Undo", "Redo",
+    "Align left", "Align center", "Align right", "Justify text",
   ]) assert.match(html, new RegExp(`(?:aria-label=\\\"${label}\\\"|>${label}<)`), label);
   assert.match(html, /aria-live="polite"/);
 });
@@ -37,7 +39,7 @@ test("the Composer keeps its familiar format rail commands in accessible groups"
     onMediaSelect() {},
   }));
   assert.match(html, /data-qmd-format-rail="true"/);
-  for (const label of ["Text style", "Inline formatting", "Block formatting", "Insert content", "History", "Editing mode"]) {
+  for (const label of ["Text style", "Inline formatting", "Block formatting", "Text alignment", "Insert content", "History", "Editing mode"]) {
     assert.match(html, new RegExp(`role="group"[^>]*aria-label="${label}"`), label);
   }
   assert.match(html, /aria-label="Raw text"/);
@@ -124,6 +126,21 @@ test("the Tiptap extension set uses TableKit and the constrained semantic nodes"
   editor.destroy();
 });
 
+test("Composer alignment commands persist the selected block as Portable QMD", () => {
+  const editor = new Editor({
+    extensions: module.createPortableQmdEditorExtensions(),
+    content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Operational note" }] }] },
+  });
+
+  assert.equal(editor.commands.setTextAlign("right"), true);
+  const serialized = serializePortableQmdEditorDocument(editor.getJSON());
+  assert.deepEqual(serialized, {
+    ok: true,
+    source: "::: {.simex-text-align-right}\nOperational note\n:::",
+  });
+  editor.destroy();
+});
+
 test("Composer input rules and shortcuts cannot create unsupported schema", () => {
   const editor = new Editor({
     extensions: module.createPortableQmdEditorExtensions(),
@@ -153,7 +170,11 @@ test("a serialization failure restores the last persistable document and returns
   const accepted = { source: "Stable text", document: stableDocument };
   const result = module.reconcilePortableQmdEditorUpdate({ editor, accepted });
   assert.equal(result.ok, false);
-  assert.deepEqual(editor.getJSON(), stableDocument);
+  const restored = editor.getJSON();
+  assert.equal(restored.type, "doc");
+  assert.equal(restored.content[0].type, "paragraph");
+  assert.equal(restored.content[0].attrs.textAlign, "left");
+  assert.equal(restored.content[0].content[0].text, "Stable text");
   assert.equal(result.accepted, accepted);
   assert.match(result.announcement, /could not be saved/i);
   assert.match(result.announcement, /restored/i);

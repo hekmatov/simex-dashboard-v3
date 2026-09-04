@@ -120,6 +120,17 @@ function renderTokens(tokens, root, environment) {
       semanticParagraphDepth = Math.max(0, semanticParagraphDepth - 1);
       continue;
     }
+    if (token.type === "text_align_open") {
+      const textAlign = ["left", "center", "right", "justify"].includes(token.meta?.textAlign)
+        ? token.meta.textAlign
+        : "left";
+      open(createElement(environment.document, "div", `portable-qmd-text-align portable-qmd-text-align--${textAlign}`));
+      continue;
+    }
+    if (token.type === "text_align_close") {
+      close();
+      continue;
+    }
     if (token.type === "inline") {
       renderInlineTokens(token.children ?? [], current(), environment);
       continue;

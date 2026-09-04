@@ -277,6 +277,7 @@ test("horizontal bars retain configured category labels while value axes append 
   });
   assert.equal(model.option.xAxis[0].axisLabel.formatter(12.5), "12.5%");
   assert.ok(model.option.series.every(({ barCategoryGap }) => barCategoryGap === "25%"));
+  assert.ok(model.option.series.every(({ barGap }) => barGap === "25%"));
   assert.ok(model.option.series.every((series) => !Object.hasOwn(series, "barWidth")));
 });
 

@@ -29,6 +29,34 @@ after(async () => {
   await vite.close();
 });
 
+test("Portable QMD alignment renders as a safe block-level text style", async () => {
+  await page.goto(`${baseURL}/tests/fixtures/portable-qmd-browser.html`);
+  const result = await page.evaluate(async () => {
+    const { compilePortableQmd } = await import("/src/static-content/qmd/compilePortableQmd.js");
+    const compiled = compilePortableQmd([
+      "::: {.simex-text-align-right}",
+      "Right-aligned operational note.",
+      ":::",
+    ].join("\n"), { panelId: "aligned-note" });
+    const target = document.querySelector("#target");
+    target.replaceChildren(compiled.fragment);
+    const aligned = target.querySelector(".portable-qmd-text-align--right");
+    return {
+      ok: compiled.ok,
+      className: aligned?.className,
+      textAlign: aligned ? getComputedStyle(aligned).textAlign : "",
+      text: aligned?.textContent,
+      styleAttributes: target.querySelectorAll("[style]").length,
+    };
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.className, "portable-qmd-text-align portable-qmd-text-align--right");
+  assert.equal(result.textAlign, "right");
+  assert.equal(result.text, "Right-aligned operational note.");
+  assert.equal(result.styleAttributes, 0);
+});
+
 test("arbitrary authored markup compiles into inert visible DOM without active elements or resources", async () => {
   const remoteRequests = [];
   page.on("request", (request) => {

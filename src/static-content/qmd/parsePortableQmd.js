@@ -106,24 +106,41 @@ function portableSemanticTextBlockPlugin(md) {
       : opening === "::: {.simex-text-caption}"
         ? "caption"
         : null;
-    if (!style) return false;
+    const alignment = /^:::\s+\{\.simex-text-align-(left|center|right|justify)\}$/.exec(opening)?.[1] ?? null;
+    if (!style && !alignment) return false;
+    let nestedDirectives = 0;
     let closeLine = startLine + 1;
     for (; closeLine < endLine; closeLine += 1) {
       const lineStart = state.bMarks[closeLine] + state.tShift[closeLine];
-      if (state.src.slice(lineStart, state.eMarks[closeLine]).trim() === ":::") break;
+      const candidate = state.src.slice(lineStart, state.eMarks[closeLine]).trim();
+      if (isPortableSemanticTextOpening(candidate)) {
+        nestedDirectives += 1;
+        continue;
+      }
+      if (candidate === ":::") {
+        if (nestedDirectives === 0) break;
+        nestedDirectives -= 1;
+      }
     }
     if (closeLine >= endLine) return false;
     if (silent) return true;
-    const open = state.push(`${style}_open`, "p", 1);
+    const open = state.push(style ? `${style}_open` : "text_align_open", style ? "p" : "div", 1);
     open.block = true;
     open.map = [startLine, closeLine + 1];
+    if (alignment) open.meta = { textAlign: alignment };
     state.md.block.tokenize(state, startLine + 1, closeLine);
-    const close = state.push(`${style}_close`, "p", -1);
+    const close = state.push(style ? `${style}_close` : "text_align_close", style ? "p" : "div", -1);
     close.block = true;
     close.map = [closeLine, closeLine + 1];
     state.line = closeLine + 1;
     return true;
   });
+}
+
+function isPortableSemanticTextOpening(value) {
+  return value === "::: {.simex-text-lead}"
+    || value === "::: {.simex-text-caption}"
+    || /^:::\s+\{\.simex-text-align-(left|center|right|justify)\}$/.test(value);
 }
 
 function annotateInlineImageSourceOffsets(tokens, source, fixedSourceStart = null) {

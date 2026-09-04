@@ -256,6 +256,9 @@ function barSeriesPresentation(type, seriesStyle, horizontal) {
   const result = {};
   if (Number.isFinite(seriesStyle?.barSeparation)) {
     result.barCategoryGap = `${seriesStyle.barSeparation}%`;
+    if (horizontal && seriesStyle?.verticalFill === true) {
+      result.barGap = `${seriesStyle.barSeparation}%`;
+    }
   }
   if (Number.isFinite(seriesStyle?.barWidth) && !(horizontal && seriesStyle?.verticalFill === true)) {
     result.barWidth = seriesStyle.barWidth;

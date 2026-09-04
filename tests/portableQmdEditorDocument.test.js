@@ -60,6 +60,42 @@ test("representable Portable QMD round-trips through the visual document idempot
   assert.deepEqual(second, first);
 });
 
+test("text alignment round-trips through Portable QMD for every editor choice", () => {
+  const document = {
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "Left" }] },
+      { type: "paragraph", attrs: { textAlign: "center" }, content: [{ type: "text", text: "Centre" }] },
+      { type: "heading", attrs: { level: 2, textAlign: "right" }, content: [{ type: "text", text: "Right" }] },
+      { type: "caption", attrs: { textAlign: "justify" }, content: [{ type: "text", text: "Justified" }] },
+    ],
+  };
+
+  const serialized = serializePortableQmdEditorDocument(document);
+  assert.equal(serialized.ok, true, JSON.stringify(serialized.errors));
+  assert.equal(serialized.source, [
+    "Left",
+    "",
+    "::: {.simex-text-align-center}",
+    "Centre",
+    ":::",
+    "",
+    "::: {.simex-text-align-right}",
+    "## Right",
+    ":::",
+    "",
+    "::: {.simex-text-align-justify}",
+    "::: {.simex-text-caption}",
+    "Justified",
+    ":::",
+    ":::",
+  ].join("\n"));
+
+  const parsed = parsePortableQmdEditorDocument(serialized.source);
+  assert.equal(parsed.mode, "visual", parsed.reason);
+  assert.deepEqual(parsed.document, document);
+});
+
 test("unsupported valid QMD opens Advanced QMD without changing its exact source", () => {
   const cases = [
     "Inline math $x^2$ stays exact.",
