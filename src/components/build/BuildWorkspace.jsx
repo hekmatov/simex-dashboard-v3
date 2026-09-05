@@ -14,7 +14,7 @@ import {
   collectChartPlacements,
   compatibleUnitOrbitCapabilities,
 } from "./panelEditingModel.js";
-import UnitOrbit, { revealUnitOrbitAnchor } from "./UnitOrbit.jsx";
+import UnitOrbit from "./UnitOrbit.jsx";
 import SceneEditor from "../time/SceneEditor.jsx";
 import {
   buildTemporalChartVariables,
@@ -482,7 +482,6 @@ export default function BuildWorkspace({
   };
   const discardPendingLayout = () => {
     onDiscardLayout?.();
-    revealUnitOrbitAnchor(chartEditorPlacementId);
   };
   const exportResolutionController = {
     resolve(issueId) {
@@ -940,7 +939,6 @@ export default function BuildWorkspace({
               themeProjection={themeProjection}
               anchorPlacementId={chartEditorPlacementId}
               anchorSelector={mapChartAnchorSelector}
-              preferVertical={Boolean(mapChartAnchorSelector)}
               chartTitle={selectedChart?.title}
               capabilities={unitOrbitCapabilities}
               open={chartEditorOpen}

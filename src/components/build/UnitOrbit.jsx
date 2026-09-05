@@ -6,65 +6,12 @@ const DEFAULT_GAP = 12;
 const DEFAULT_MARGIN = 12;
 const DEFAULT_MIN_HEIGHT = 280;
 const DEFAULT_WIDTH = 420;
-const PROTECTED_SELECTORS = [
-  ".app-frame-bar",
-  ".dashboard-command-crown",
-  ".build-header",
-  ".build-page-tabs",
-  ".build-command-header",
-  ".build-canvas-toolbar",
-  ".scene-transaction-footer",
-];
 
 export function isUnitOrbitOutsidePointer(orbit, target) {
   if (!orbit || !target || orbit.contains(target)) return false;
   if (typeof target.closest === "function" && target.closest("[data-unit-orbit-preserve-open]")) {
     return false;
   }
-  return true;
-}
-
-export function revealUnitOrbitAnchor(
-  placementId,
-  {
-    documentRef = typeof document === "undefined" ? null : document,
-    schedule = typeof window === "undefined" ? null : window.requestAnimationFrame.bind(window),
-  } = {},
-) {
-  if (!placementId || !documentRef || !schedule) return false;
-  schedule(() => {
-    const anchor = [...documentRef.querySelectorAll("[data-build-placement-id]")]
-      .find((element) => element.dataset.buildPlacementId === placementId);
-    anchor?.scrollIntoView?.({ block: "center", inline: "nearest", behavior: "auto" });
-  });
-  return true;
-}
-
-export function captureUnitOrbitReturnState({
-  windowRef = typeof window === "undefined" ? null : window,
-} = {}) {
-  if (!windowRef) return null;
-  return {
-    scrollLeft: windowRef.scrollX,
-    scrollTop: windowRef.scrollY,
-  };
-}
-
-export function restoreUnitOrbitReturnState(
-  state,
-  {
-    windowRef = typeof window === "undefined" ? null : window,
-    schedule = windowRef?.requestAnimationFrame?.bind(windowRef),
-  } = {},
-) {
-  if (!state || !windowRef || !schedule) return false;
-  schedule(() => {
-    windowRef.scrollTo({
-      left: state.scrollLeft,
-      top: state.scrollTop,
-      behavior: "auto",
-    });
-  });
   return true;
 }
 
@@ -85,112 +32,30 @@ export function positionUnitOrbit({
   anchorRect,
   orbitSize,
   viewport,
-  protectedRects = [],
   gap = DEFAULT_GAP,
   margin = DEFAULT_MARGIN,
-  minHeight = DEFAULT_MIN_HEIGHT,
-  preferVertical = false,
 }) {
   if (!anchorRect || !orbitSize || !viewport) return { needsRecenter: true };
 
   const width = Math.min(orbitSize.width, Math.max(0, viewport.width - (margin * 2)));
-  const height = Math.min(orbitSize.height, Math.max(0, viewport.height - (margin * 2)));
-  const candidates = [];
-
-  const verticalTop = clamp(
-    anchorRect.top,
-    margin,
-    Math.max(margin, viewport.height - margin - height),
-  );
-  const horizontalHeight = Math.min(height, viewport.height - (margin * 2));
-
-  const horizontalLeft = clamp(
-    anchorRect.left,
-    margin,
-    Math.max(margin, viewport.width - margin - width),
-  );
-  const belowHeight = Math.min(height, viewport.height - margin - (anchorRect.bottom + gap));
-  const aboveHeight = Math.min(height, anchorRect.top - gap - margin);
-  const addHorizontalCandidates = () => {
-    if (viewport.width - margin - (anchorRect.right + gap) >= width) candidates.push(candidate("right", anchorRect.right + gap, verticalTop, width, horizontalHeight));
-    candidates.push(topRightOverlayCandidate({
-      anchorRect,
-      width,
-      height: horizontalHeight,
-      viewport,
-      protectedRects,
-      gap,
-      margin,
-    }));
-  };
-  const addVerticalCandidates = () => {
-    if (belowHeight >= minHeight) candidates.push(candidate("below", horizontalLeft, anchorRect.bottom + gap, width, belowHeight));
-    if (aboveHeight >= minHeight) candidates.push(candidate("above", horizontalLeft, anchorRect.top - gap - aboveHeight, width, aboveHeight));
-  };
-  if (preferVertical) {
-    addVerticalCandidates();
-    addHorizontalCandidates();
-  } else {
-    addHorizontalCandidates();
-    addVerticalCandidates();
+  const height = orbitSize.height;
+  const right = anchorRect.right + gap;
+  if (viewport.width - margin - right >= width) {
+    return placement("right", right, anchorRect.top, height);
   }
 
-  const selected = candidates
-    .map((entry) => clipCandidateBeforeProtectedRects(entry, protectedRects, gap))
-    .find((entry) => (
-      (entry.side === "top-right" || entry.maxHeight >= minHeight)
-      && (entry.side === "top-right" || !intersects(entry.rect, anchorRect))
-      && !protectedRects.some((protectedRect) => intersects(entry.rect, protectedRect))
-    ));
+  const left = anchorRect.left - gap - width;
+  if (left >= margin) {
+    return placement("left", left, anchorRect.top, height);
+  }
 
-  if (!selected) return { needsRecenter: true };
-  return {
-    side: selected.side,
-    left: selected.left,
-    top: selected.top,
-    maxHeight: selected.maxHeight,
-  };
-}
-
-function topRightOverlayCandidate({
-  anchorRect,
-  width,
-  height,
-  viewport,
-  protectedRects,
-  gap,
-  margin,
-}) {
-  const left = clamp(
-    anchorRect.right - width,
-    margin,
-    Math.max(margin, viewport.width - margin - width),
-  );
-  const protectedTop = protectedRects.reduce((top, protectedRect) => {
-    const overlapsHorizontally = left < protectedRect.right && left + width > protectedRect.left;
-    return overlapsHorizontally && protectedRect.top <= top
-      ? Math.max(top, protectedRect.bottom + gap)
-      : top;
-  }, margin);
-  const top = clamp(
-    anchorRect.top - height,
-    protectedTop,
-    Math.max(protectedTop, viewport.height - margin - height),
-  );
-  return candidate(
-    "top-right",
-    left,
-    top,
-    width,
-    Math.min(height, viewport.height - margin - top),
-  );
+  return constrainedUnitOrbitPlacement({ orbitSize: { width, height }, viewport, margin });
 }
 
 export default function UnitOrbit({
   themeProjection,
   anchorPlacementId,
   anchorSelector = "",
-  preferVertical = false,
   chartTitle = "Selected chart",
   capabilities = [],
   onRequestClose,
@@ -198,9 +63,9 @@ export default function UnitOrbit({
   children,
 }) {
   const orbitRef = React.useRef(null);
-  const returnStateRef = React.useRef(null);
-  const recenteredRef = React.useRef(false);
+  const revealedRef = React.useRef(false);
   const frameRef = React.useRef(0);
+  const revealFrameRef = React.useRef(0);
   const [placement, setPlacement] = React.useState(null);
 
   React.useLayoutEffect(() => {
@@ -209,10 +74,7 @@ export default function UnitOrbit({
     const anchor = findAnchor(anchorPlacementId, anchorSelector);
     if (!anchor) return undefined;
 
-    returnStateRef.current = captureUnitOrbitReturnState({
-      windowRef: window,
-    });
-    recenteredRef.current = false;
+    revealedRef.current = false;
 
     const update = () => {
       frameRef.current = 0;
@@ -224,32 +86,20 @@ export default function UnitOrbit({
         anchorRect: currentAnchor.getBoundingClientRect(),
         orbitSize,
         viewport: { width: window.innerWidth, height: window.innerHeight },
-        protectedRects: protectedElementRects(),
-        preferVertical,
       });
-
-      if (result.needsRecenter && !recenteredRef.current) {
-        recenteredRef.current = true;
-        setPlacement(constrainedUnitOrbitPlacement({
-          orbitSize,
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-          protectedRects: protectedElementRects(),
-        }));
-        currentAnchor.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-        frameRef.current = window.requestAnimationFrame(update);
-        return;
+      setPlacement(result);
+      if (!revealedRef.current) {
+        revealedRef.current = true;
+        revealFrameRef.current = window.requestAnimationFrame(() => {
+          revealFrameRef.current = 0;
+          const currentOrbit = orbitRef.current;
+          if (currentOrbit) revealUnitOrbit(currentAnchor, currentOrbit, { windowRef: window });
+        });
       }
-
-      setPlacement(result.needsRecenter
-        ? constrainedUnitOrbitPlacement({
-            orbitSize,
-            viewport: { width: window.innerWidth, height: window.innerHeight },
-            protectedRects: protectedElementRects(),
-          })
-        : result);
     };
     const schedule = () => {
       if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
+      if (revealFrameRef.current) window.cancelAnimationFrame(revealFrameRef.current);
       frameRef.current = window.requestAnimationFrame(update);
     };
 
@@ -274,10 +124,8 @@ export default function UnitOrbit({
       window.removeEventListener("resize", schedule);
       window.removeEventListener("scroll", schedule, true);
       observer?.disconnect();
-      restoreUnitOrbitReturnState(returnStateRef.current, { windowRef: window });
-      returnStateRef.current = null;
     };
-  }, [anchorPlacementId, anchorSelector, open, preferVertical]);
+  }, [anchorPlacementId, anchorSelector, open]);
 
   React.useEffect(() => {
     if (!open || typeof document === "undefined") return undefined;
@@ -314,83 +162,58 @@ export default function UnitOrbit({
   );
 }
 
-function candidate(side, left, top, width, maxHeight) {
+function placement(side, left, top, maxHeight) {
   return {
     side,
     left,
     top,
     maxHeight,
-    rect: {
-      left,
-      top,
-      right: left + width,
-      bottom: top + maxHeight,
-    },
   };
-}
-
-function clipCandidateBeforeProtectedRects(entry, protectedRects, gap) {
-  const width = entry.rect.right - entry.rect.left;
-  const maxHeight = protectedRects.reduce((availableHeight, protectedRect) => {
-    const horizontallyOverlaps = entry.left < protectedRect.right
-      && entry.left + width > protectedRect.left;
-    const startsBelowCandidate = protectedRect.top > entry.top;
-    if (!horizontallyOverlaps || !startsBelowCandidate) return availableHeight;
-    return Math.min(availableHeight, protectedRect.top - gap - entry.top);
-  }, entry.maxHeight);
-  return candidate(entry.side, entry.left, entry.top, width, maxHeight);
 }
 
 export function constrainedUnitOrbitPlacement({
   orbitSize,
   viewport,
-  protectedRects = [],
-  gap = DEFAULT_GAP,
   margin = DEFAULT_MARGIN,
 }) {
   const width = Math.min(orbitSize.width, viewport.width - (margin * 2));
-  const protectedBottom = protectedRects.reduce(
-    (bottom, rect) => (
-      rect.bottom > 0 && rect.top < viewport.height
-        ? Math.max(bottom, rect.bottom + gap)
-        : bottom
-    ),
-    margin,
-  );
-  const top = clamp(protectedBottom, margin, Math.max(margin, viewport.height - margin - 120));
   return {
-    side: "viewport",
+    side: "viewport-top-right",
     left: Math.max(margin, viewport.width - margin - width),
-    top,
-    maxHeight: Math.max(120, viewport.height - margin - top),
+    top: margin,
+    maxHeight: orbitSize.height,
   };
+}
+
+export function revealUnitOrbit(
+  anchor,
+  orbit,
+  {
+    windowRef = typeof window === "undefined" ? null : window,
+    margin = DEFAULT_MARGIN,
+  } = {},
+) {
+  if (!anchor || !orbit || !windowRef) return false;
+  const anchorRect = anchor.getBoundingClientRect();
+  const orbitRect = orbit.getBoundingClientRect();
+  const combined = {
+    top: Math.min(anchorRect.top, orbitRect.top),
+    bottom: Math.max(anchorRect.bottom, orbitRect.bottom),
+  };
+  const availableHeight = windowRef.innerHeight - (margin * 2);
+  const target = combined.bottom - combined.top <= availableHeight ? combined : orbitRect;
+  let delta = 0;
+  if (target.top < margin) delta = target.top - margin;
+  else if (target.bottom > windowRef.innerHeight - margin) {
+    delta = target.bottom - (windowRef.innerHeight - margin);
+  }
+  if (!delta) return false;
+  windowRef.scrollBy({ top: delta, left: 0, behavior: "auto" });
+  return true;
 }
 
 function findAnchor(placementId, anchorSelector = "") {
   if (anchorSelector) return document.querySelector(anchorSelector);
   return [...document.querySelectorAll("[data-build-placement-id]")]
     .find((element) => element.dataset.buildPlacementId === placementId) ?? null;
-}
-
-function protectedElementRects() {
-  return PROTECTED_SELECTORS.flatMap((selector) => (
-    [...document.querySelectorAll(selector)].flatMap((element) => {
-      const rect = element.getBoundingClientRect();
-      const style = window.getComputedStyle(element);
-      return style.display === "none" || style.visibility === "hidden" || rect.width === 0 || rect.height === 0
-        ? []
-        : [rect];
-    })
-  ));
-}
-
-function intersects(left, right) {
-  return left.left < right.right
-    && left.right > right.left
-    && left.top < right.bottom
-    && left.bottom > right.top;
-}
-
-function clamp(value, minimum, maximum) {
-  return Math.min(Math.max(value, minimum), maximum);
 }

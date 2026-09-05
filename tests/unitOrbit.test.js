@@ -41,7 +41,7 @@ test("Unit Orbit measures the editor's inner scroll content", () => {
   );
 });
 
-test("Unit Orbit opens to the right and otherwise stays attached to the panel's right edge", () => {
+test("Unit Orbit opens right, then left, then floats at the viewport's top-right without resizing", () => {
   assert.equal(
     typeof orbitModule?.positionUnitOrbit,
     "function",
@@ -56,56 +56,37 @@ test("Unit Orbit opens to the right and otherwise stays attached to the panel's 
   });
   assert.equal(right.side, "right");
   assert.equal(right.left, rightAnchor.right + 12);
+  assert.equal(right.top, rightAnchor.top);
+  assert.equal(right.maxHeight, orbitSize.height);
   assert.equal(intersects(rightRect(right, orbitSize.width), rightAnchor), false);
 
   const leftAnchor = rect(1010, 180, 1410, 500);
-  const overlay = orbitModule.positionUnitOrbit({
+  const left = orbitModule.positionUnitOrbit({
     anchorRect: leftAnchor,
     orbitSize,
     viewport,
   });
-  assert.deepEqual(overlay, {
-    side: "top-right",
-    left: 1010,
+  assert.deepEqual(left, {
+    side: "left",
+    left: 598,
+    top: 180,
+    maxHeight: 620,
+  });
+
+  const fallback = orbitModule.positionUnitOrbit({
+    anchorRect: rect(300, 180, 720, 500),
+    orbitSize,
+    viewport: { width: 1000, height: 900 },
+  });
+  assert.deepEqual(fallback, {
+    side: "viewport-top-right",
+    left: 588,
     top: 12,
     maxHeight: 620,
   });
 });
 
-test("Unit Orbit overlays above the panel when its right-hand space is unavailable", () => {
-  const anchor = rect(1010, 700, 1410, 850);
-  const result = orbitModule.positionUnitOrbit({
-    anchorRect: anchor,
-    orbitSize,
-    viewport,
-  });
-
-  assert.deepEqual(result, {
-    side: "top-right",
-    left: 1010,
-    top: 80,
-    maxHeight: 620,
-  });
-});
-
-test("Unit Orbit keeps the top-right overlay below protected chrome", () => {
-  const anchor = rect(80, 120, 920, 430);
-  const result = orbitModule.positionUnitOrbit({
-    anchorRect: anchor,
-    orbitSize: { width: 400, height: 500 },
-    viewport: { width: 1000, height: 1000 },
-    protectedRects: [rect(0, 0, 1000, 96)],
-  });
-
-  assert.deepEqual(result, {
-    side: "top-right",
-    left: 520,
-    top: 108,
-    maxHeight: 500,
-  });
-});
-
-test("Unit Orbit prefers an anchored vertical placement for the Dashboard Map", () => {
+test("Unit Orbit applies the same side-first positioning to the Dashboard Map", () => {
   const anchor = rect(120, 180, 360, 220);
   const result = orbitModule.positionUnitOrbit({
     anchorRect: anchor,
@@ -114,12 +95,12 @@ test("Unit Orbit prefers an anchored vertical placement for the Dashboard Map", 
     preferVertical: true,
   });
 
-  assert.equal(result.side, "below");
-  assert.equal(result.top, anchor.bottom + 12);
+  assert.equal(result.side, "right");
+  assert.equal(result.top, anchor.top);
   assert.equal(intersects(rightRect(result, 210), anchor), false);
 });
 
-test("Unit Orbit clips beside-chart placement above a protected transaction footer", () => {
+test("Unit Orbit keeps its natural height beside a chart even near protected chrome", () => {
   const footer = rect(0, 700, 1200, 900);
   const result = orbitModule.positionUnitOrbit({
     anchorRect: rect(100, 100, 500, 420),
@@ -130,27 +111,10 @@ test("Unit Orbit clips beside-chart placement above a protected transaction foot
 
   assert.equal(result.side, "right");
   assert.equal(result.top, 100);
-  assert.equal(result.maxHeight, 588);
-  assert.equal(intersects(rightRect(result, 400), footer), false);
+  assert.equal(result.maxHeight, 760);
 });
 
-test("Unit Orbit shortens an anchored overlay to remain inside the viewport", () => {
-  const result = orbitModule.positionUnitOrbit({
-    anchorRect: rect(0, 170, 768, 560),
-    orbitSize,
-    viewport: { width: 768, height: 700 },
-    protectedRects: [rect(0, 0, 768, 150)],
-  });
-
-  assert.deepEqual(result, {
-    side: "top-right",
-    left: 356,
-    top: 162,
-    maxHeight: 526,
-  });
-});
-
-test("Unit Orbit fallback docks below protected chrome and fills the viewport", () => {
+test("Unit Orbit fallback remains fixed-size at the viewport's top-right", () => {
   assert.equal(
     typeof orbitModule?.constrainedUnitOrbitPlacement,
     "function",
@@ -163,10 +127,10 @@ test("Unit Orbit fallback docks below protected chrome and fills the viewport", 
   });
 
   assert.deepEqual(result, {
-    side: "viewport",
+    side: "viewport-top-right",
     left: 1008,
-    top: 112,
-    maxHeight: 776,
+    top: 12,
+    maxHeight: 980,
   });
 });
 
@@ -200,60 +164,39 @@ test("Unit Orbit stays open for coordinated draft controls outside its surface",
   );
 });
 
-test("layout restoration reveals the attached chart without changing editor focus", () => {
-  assert.equal(typeof orbitModule?.revealUnitOrbitAnchor, "function");
+test("opening Orbit scrolls until both it and the chart are visible, prioritizing Orbit", () => {
+  assert.equal(typeof orbitModule?.revealUnitOrbit, "function");
   const calls = [];
-  const anchor = {
-    scrollIntoView(options) {
+  const windowRef = {
+    innerHeight: 900,
+    scrollBy(options) {
       calls.push(options);
     },
   };
-  const documentRef = {
-    querySelectorAll(selector) {
-      assert.equal(selector, "[data-build-placement-id]");
-      return [{ dataset: { buildPlacementId: "panel-a" } }, anchor];
-    },
-  };
-  anchor.dataset = { buildPlacementId: "panel-b" };
+  const anchor = { getBoundingClientRect: () => rect(80, 800, 480, 920) };
+  const orbit = { getBoundingClientRect: () => rect(492, 800, 892, 920) };
 
-  orbitModule.revealUnitOrbitAnchor("panel-b", {
-    documentRef,
-    schedule(callback) {
-      callback();
-    },
-  });
+  orbitModule.revealUnitOrbit(anchor, orbit, { windowRef });
+  assert.deepEqual(calls, [{ top: 32, left: 0, behavior: "auto" }]);
 
-  assert.deepEqual(calls, [{ block: "center", inline: "nearest", behavior: "auto" }]);
+  calls.length = 0;
+  const tallOrbit = { getBoundingClientRect: () => rect(492, 520, 892, 1140) };
+  orbitModule.revealUnitOrbit(anchor, tallOrbit, { windowRef });
+  assert.deepEqual(calls, [{ top: 252, left: 0, behavior: "auto" }]);
 });
 
-test("closing Unit Orbit restores the pre-editor viewport without changing DOM focus", () => {
-  assert.equal(typeof orbitModule?.captureUnitOrbitReturnState, "function");
-  assert.equal(typeof orbitModule?.restoreUnitOrbitReturnState, "function");
-  const calls = [];
-  const focusTarget = {
-    focus(options) {
-      calls.push(["focus", options]);
-    },
-  };
-  const windowRef = {
-    scrollX: 18,
-    scrollY: 684,
-    scrollTo(options) {
-      calls.push(["scroll", options]);
-    },
-  };
-  const state = orbitModule.captureUnitOrbitReturnState({ windowRef, focusTarget });
-  assert.deepEqual(state, { scrollLeft: 18, scrollTop: 684 });
+test("Unit Orbit does not scroll when it closes", () => {
+  const source = readFileSync(
+    new URL("../src/components/build/UnitOrbit.jsx", import.meta.url),
+    "utf8",
+  );
+  const workspaceSource = readFileSync(
+    new URL("../src/components/build/BuildWorkspace.jsx", import.meta.url),
+    "utf8",
+  );
 
-  orbitModule.restoreUnitOrbitReturnState(state, {
-    windowRef,
-    schedule(callback) {
-      callback();
-    },
-  });
-  assert.deepEqual(calls, [
-    ["scroll", { left: 18, top: 684, behavior: "auto" }],
-  ]);
+  assert.doesNotMatch(source, /restoreUnitOrbitReturnState|scrollIntoView/);
+  assert.doesNotMatch(workspaceSource, /revealUnitOrbitAnchor/);
 });
 
 test("Unit Orbit has no autofocus, focus restoration, or keyboard dismissal", () => {
