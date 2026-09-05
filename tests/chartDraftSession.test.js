@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createWizardState } from "../src/charting/forms/wizardDraft.js";
+import { createWizardState, reduceWizardState } from "../src/charting/forms/wizardDraft.js";
 import * as sessionModule from "../src/charting/forms/chartDraftSession.js";
 import {
   CHART_DRAFT_EXIT_WARNING,
@@ -129,6 +129,27 @@ test("store replacement and clearing are dashboard-scoped", () => {
   assert.equal(store.clear("dashboard-a"), true);
   assert.equal(store.get("dashboard-a"), null);
   assert.strictEqual(store.get("dashboard-b"), second);
+});
+
+test("a tracked creation draft exists only while it has net user input", () => {
+  const initial = createWizardState({
+    trackInputChanges: true,
+    destination: { pageId: "page-a", sectionId: "section-a" },
+  });
+  assert.equal(isMeaningfulChartDraft(initial), false);
+
+  const changed = reduceWizardState(initial, {
+    type: "setDestination",
+    destination: { pageId: "page-a", sectionId: "section-b" },
+  });
+  assert.equal(isMeaningfulChartDraft(changed), true);
+  assert.match(changed.draftId, /^chart-draft-/);
+
+  const reverted = reduceWizardState(changed, {
+    type: "setDestination",
+    destination: initial.destination,
+  });
+  assert.equal(isMeaningfulChartDraft(reverted), false);
 });
 
 test("unload guard warns only for a meaningful resumable draft on a supporting platform", () => {

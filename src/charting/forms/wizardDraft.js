@@ -101,8 +101,36 @@ export function createWizardState(options = {}) {
     confirmation: null,
     pendingSourceChange: null,
     closed: false,
+    inputBaseline: typeof options.inputBaseline === "string"
+      ? options.inputBaseline
+      : null,
   };
+  if (options.trackInputChanges === true && state.inputBaseline === null) {
+    state.inputBaseline = chartWizardInputSignature(state);
+  }
   return withStageStatuses(state);
+}
+
+export function hasNetChartWizardInput(state) {
+  if (!state || typeof state.inputBaseline !== "string") return null;
+  return chartWizardInputSignature(state) !== state.inputBaseline;
+}
+
+export function chartWizardInputSignature(state) {
+  return stableStringify({
+    destination: state?.destination ?? null,
+    chartTypeId: state?.chartTypeId ?? null,
+    sourceSelection: state?.sourceSelection ?? null,
+    source: state?.source ?? null,
+    mapping: state?.mapping ?? null,
+    preparation: state?.preparation ?? null,
+    configuration: state?.configuration ?? null,
+    companions: state?.companions ?? [],
+    draft: state?.draft ?? null,
+    chronoGroups: state?.chronoGroupsProvided === true
+      ? state.chronoGroups ?? []
+      : null,
+  });
 }
 
 export function reduceWizardState(state, action) {
@@ -1110,9 +1138,17 @@ function chartState(state, patch) {
 }
 
 function withStageStatuses(state) {
+  const needsDraftId = state.discarded !== true
+    && typeof state.inputBaseline === "string"
+    && hasNetChartWizardInput(state) === true
+    && !state.draftId
+    && !state.draft?.id;
+  const next = needsDraftId
+    ? { ...state, draftId: createWizardSessionDraftId() }
+    : state;
   return {
-    ...state,
-    stageStatuses: deriveChartCreationStageStatuses(state),
+    ...next,
+    stageStatuses: deriveChartCreationStageStatuses(next),
   };
 }
 
@@ -1266,6 +1302,22 @@ function meaningfulValue(value) {
 
 function cloneOptional(value) {
   return value === undefined || value === null ? null : structuredClone(value);
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort().map((key) => (
+      `${JSON.stringify(key)}:${stableStringify(value[key])}`
+    )).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function createWizardSessionDraftId() {
+  const token = globalThis.crypto?.randomUUID?.()
+    ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `chart-draft-${token}`;
 }
 
 function nonEmptyString(value) {

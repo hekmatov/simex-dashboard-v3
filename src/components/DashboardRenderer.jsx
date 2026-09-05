@@ -550,7 +550,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   const handleChartDraftStateChange = React.useCallback((state) => {
     if (chartWizardSessionEpoch !== chartWizardSessionEpochRef.current) return;
-    if (!state || state.discarded === true || state.status === "committed") {
+    if (!isMeaningfulChartDraft(state)) {
       chartDraftSessionStore.clear(chartDraftSessionKey);
     } else if (chartDraftSessionStore.get(chartDraftSessionKey)) {
       chartDraftSessionStore.replace(chartDraftSessionKey, state);

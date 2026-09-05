@@ -1,4 +1,4 @@
-import { reduceWizardState } from "./wizardDraft.js";
+import { hasNetChartWizardInput, reduceWizardState } from "./wizardDraft.js";
 
 export function createChartDraftSessionStore() {
   const drafts = new Map();
@@ -53,6 +53,8 @@ export function createChartDraftSessionStore() {
 export function isMeaningfulChartDraft(state) {
   if (!state || state.discarded === true || state.status === "committed") return false;
   if (state.status === "committing" || state.status === "ambiguous") return true;
+  const netInput = hasNetChartWizardInput(state);
+  if (netInput !== null) return netInput;
   return Boolean(
     meaningful(state.destination)
     || meaningful(state.chartTypeId)

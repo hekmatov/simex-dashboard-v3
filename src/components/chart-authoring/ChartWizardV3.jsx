@@ -54,7 +54,10 @@ import {
 import { buildCsvContentDraft } from "../../content-library/sourceEntrySchema.js";
 import { buildGeoJsonContentDraft } from "../../content-library/contentDraftTransaction.js";
 import { validateGeoJson as validateManagedGeoJson } from "../../lib/geoJsonValidation.js";
-import { projectChartCreateOwner } from "../../charting/forms/chartDraftSession.js";
+import {
+  isMeaningfulChartDraft,
+  projectChartCreateOwner,
+} from "../../charting/forms/chartDraftSession.js";
 import { scheduleAfterPaint } from "../../lib/scheduleAfterPaint.js";
 import { analyzeBuildLayoutMove } from "../build/buildLayoutMove.js";
 
@@ -836,10 +839,7 @@ export default function ChartWizardV3({
     renderProof,
     canCreate,
   });
-  const retainableCreation = !editMode
-    && canCreate
-    && placementProof.status === "valid"
-    && renderProof.status === "valid";
+  const retainableCreation = !editMode && isMeaningfulChartDraft(wizard);
   React.useEffect(() => {
     if (!editMode || !wizard.draft) return;
     const identity = chartEditDraftIdentity({
@@ -861,11 +861,7 @@ export default function ChartWizardV3({
       onOwnerChange(null);
       return;
     }
-    const draftId = wizard.draftId ?? wizard.draft?.id;
-    if (!draftId) {
-      onOwnerChange(null);
-      return;
-    }
+    const draftId = wizard.draftId ?? wizard.draft?.id ?? createChartDraftSessionId();
     if (!wizard.draftId) {
       setWizard((current) => reduceWizardState(current, {
         type: "start",
@@ -2257,13 +2253,26 @@ export function isChartWizardStateDirty({
 } = {}) {
   if (!open || wizard?.closed) return false;
   return Boolean(
-    wizard?.draft
-    || wizard?.sourceSelection
-    || wizard?.source
-    || sourceKind
-    || manualTable
+    isMeaningfulChartDraft(wizard)
+    || (sourceKind === "manual" && manualTableHasValues(manualTable))
     || Object.keys(localRows ?? {}).length > 0
   );
+}
+
+function manualTableHasValues(table) {
+  return Array.isArray(table?.rows) && table.rows.some((row) => (
+    Object.values(row ?? {}).some((value) => (
+      value !== null
+      && value !== undefined
+      && !(typeof value === "string" && value.trim() === "")
+    ))
+  ));
+}
+
+function createChartDraftSessionId() {
+  const token = globalThis.crypto?.randomUUID?.()
+    ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `chart-draft-${token}`;
 }
 
 export function createWizardPreparation({
@@ -2526,6 +2535,7 @@ export function createChartWizardState({
     source,
     sourceSelection,
     stage,
+    trackInputChanges: true,
   });
 }
 

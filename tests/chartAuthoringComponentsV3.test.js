@@ -4078,6 +4078,31 @@ test("chart wizard dirty projection ignores an untouched open wizard and clears 
   assert.equal(isChartWizardStateDirty({ open: false, wizard: changed }), false);
 });
 
+test("chart wizard draft eligibility tracks net input rather than its default destination", () => {
+  const initial = createChartWizardState({
+    loadedData: {},
+    profiles: {},
+    chronoGroups: [],
+    existingCharts: [],
+    destination: { pageId: "overview", sectionId: "summary" },
+  });
+  const changedDestination = { pageId: "overview", sectionId: "details" };
+
+  assert.equal(isChartWizardStateDirty({ open: true, wizard: initial }), false);
+
+  const changed = reduceWizardState(initial, {
+    type: "setDestination",
+    destination: changedDestination,
+  });
+  assert.equal(isChartWizardStateDirty({ open: true, wizard: changed }), true);
+
+  const reverted = reduceWizardState(changed, {
+    type: "setDestination",
+    destination: initial.destination,
+  });
+  assert.equal(isChartWizardStateDirty({ open: true, wizard: reverted }), false);
+});
+
 test("a new saved revision rebases and reset restores that most recent saved state", () => {
   const first = validLineChart({ title: "First saved title" });
   let state = createChartEditorState({
