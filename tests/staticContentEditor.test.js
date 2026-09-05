@@ -21,6 +21,44 @@ const freeTextEditorModule = await vite.ssrLoadModule("/src/components/static-co
 const wizardModule = await vite.ssrLoadModule("/src/components/static-content/StaticContentWizard.jsx");
 await vite.close();
 
+test("Text/Image quick editing offers panel size controls before the full editor", () => {
+  assert.equal(
+    typeof editorModule.StaticContentQuickEditor,
+    "function",
+    "Text/Image panels need a compact size editor instead of opening the full editor immediately",
+  );
+  const dashboard = makeDashboardV5();
+  const draft = createStaticContentDraft({
+    mode: "edit",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: dashboard.pages[0].sections[0].panels[0].chart,
+    placement: dashboard.dataSources["image-source"],
+    mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
+    assets: dashboard.assets,
+  });
+  const drafts = [];
+  let openedFullEditor = 0;
+  const tree = editorModule.StaticContentQuickEditor({
+    draft,
+    onDraftChange(nextDraft) { drafts.push(nextDraft); },
+    onOpenFullEditor() { openedFullEditor += 1; },
+  });
+  const footprint = findElement(tree, (element) => element.props?.idPrefix === "static-panel-image-panel-footprint");
+  const fullEditor = findElement(tree, (element) => (
+    element.props?.leadingAction?.interactionId === "shell.open-editable-tab"
+  ));
+
+  assert.ok(footprint, "the compact surface exposes the shared panel footprint control");
+  footprint.props.onChange({ columns: 3, rows: 1.5 });
+  assert.deepEqual(drafts.at(-1).panel.layout, {
+    size: "standard",
+    width: 3,
+    height: 1.5,
+  });
+  fullEditor.props.leadingAction.onClick();
+  assert.equal(openedFullEditor, 1);
+});
+
 test("StaticContentEditor mounts an existing V5 Image edit with media placement settings", () => {
   const dashboard = makeDashboardV5();
   const html = renderToStaticMarkup(React.createElement(editorModule.StaticContentEditor, {
@@ -439,7 +477,7 @@ test("Free-text authoring forwards the draft panel footprint to writer and previ
   assert.match(html, /data-authoring-footprint="preview"/);
 });
 
-test("Text/Image panel sizing offers eighth-row increments through a 400% row height", () => {
+test("Text/Image panel sizing offers numbered eighth-row steps through a 400% row height", () => {
   const draft = createStaticContentDraft({
     destination: { pageId: "overview", sectionId: "response" },
     contentTypeId: "freeText",
@@ -453,8 +491,8 @@ test("Text/Image panel sizing offers eighth-row increments through a 400% row he
     dispatch() {},
   }));
 
-  assert.match(html, /<option value="0.125"[^>]*>12.5% of a row<\/option>/);
-  assert.match(html, /<option value="4"[^>]*>400% of a row<\/option>/);
+  assert.match(html, /<option value="0.125"[^>]*>1<\/option>/);
+  assert.match(html, /<option value="4"[^>]*>32<\/option>/);
   assert.equal((html.match(/--chart-footprint-row-span:32/g) ?? []).length, 2);
 });
 

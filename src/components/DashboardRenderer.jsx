@@ -10,7 +10,7 @@ import {
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartQuickEditor from "./chart-authoring/ChartQuickEditor.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
-import StaticContentEditor from "./static-content/StaticContentEditor.jsx";
+import StaticContentEditor, { StaticContentQuickEditor } from "./static-content/StaticContentEditor.jsx";
 import StaticContentWizard, { cleanupImageDraftAssets } from "./static-content/StaticContentWizard.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
 import BuildMoveDialog from "./build/BuildMoveDialog.jsx";
@@ -114,7 +114,12 @@ import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnload
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
 import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
-import { projectStaticContentDraftOwner } from "../static-content/forms/staticContentDraft.js";
+import {
+  createStaticContentDraft,
+  isStaticContentDraftDirty,
+  projectStaticContentDraftOwner,
+  reduceStaticContentDraft,
+} from "../static-content/forms/staticContentDraft.js";
 import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
 import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
 import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
@@ -226,6 +231,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [staticContentDraft, setStaticContentDraft] = React.useState(null);
   const [staticContentDirty, setStaticContentDirty] = React.useState(false);
   const [staticContentRestoration, setStaticContentRestoration] = React.useState(null);
+  const [staticContentEditorSurface, setStaticContentEditorSurface] = React.useState("quick");
   const staticWizardInvokerRef = React.useRef(null);
   const quickChartRestorationFrameRef = React.useRef(0);
   const [localAuthoringDrafts, setLocalAuthoringDrafts] = React.useState({});
@@ -1636,6 +1642,67 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       : current);
   }
 
+  function changeStaticQuickDraft(draft) {
+    setStaticContentDraft(draft);
+    setStaticContentDirty(isStaticContentDraftDirty(draft));
+  }
+
+  function resetStaticQuickDraft() {
+    setStaticContentDraft((current) => {
+      if (!current) return current;
+      const reset = reduceStaticContentDraft(current, { type: "reset" });
+      setStaticContentDirty(false);
+      return reset;
+    });
+  }
+
+  function openFullStaticContentEditor() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    setStaticContentEditorSurface("full");
+    setChartEditorVisible(true);
+  }
+
+  async function saveStaticQuickDraft() {
+    if (
+      moderatorOperationGateRef.current.isActive()
+      || !staticContentDraft
+      || !selectedPlacement
+      || !isStaticContentDraftDirty(staticContentDraft)
+    ) return;
+    const activeDraft = staticContentDraft;
+    const subject = activeDraft.panel?.title?.trim() || selectedPlacement.panelId;
+    const status = beginContentOperation("static.saved", {
+      subject,
+      workingLabel: `Saving Dashboard Content “${subject}”`,
+      key: "static-content-save",
+    });
+    try {
+      await status.beforeWork();
+      await pendingEdits.flush();
+      const prepared = prepareStaticPanelTransaction({
+        dashboard: dashboardStateRef.current,
+        operation: "update",
+        panelId: selectedPlacement.panelId,
+        panel: activeDraft.panel,
+        placement: activeDraft.placement,
+        mediaItem: activeDraft.mediaItem,
+        assets: activeDraft.assets,
+        stagedAssetIds: [],
+      });
+      await onStaticPanelCommit(prepared, { reportStatus: false });
+      setChartEditorVisible(false);
+      setChartEditorPlacementId(null);
+      setStaticContentDraft(null);
+      setStaticContentDirty(false);
+      setStaticContentRestoration(null);
+      setStaticContentEditorSurface("quick");
+      status.succeed();
+    } catch (error) {
+      status.fail(error);
+      throw error;
+    }
+  }
+
   const changeFullChartDraft = React.useCallback(({ draft, chronoGroups, placementMove }) => {
     setChartEditSession((current) => current && current.status !== "saving"
       ? reduceChartEditSession(current, {
@@ -1891,6 +1958,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setStaticContentDraft(null);
     setStaticContentDirty(false);
     setStaticContentRestoration(null);
+    setStaticContentEditorSurface("quick");
   }
 
   function dismissSelectedPanel() {
@@ -2141,6 +2209,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartEditorPlacementId(selection.placementId);
     setChartEditorVisible(true);
     setChartEditorDirty(false);
+    setStaticContentEditorSurface("quick");
+    setStaticContentDraft(staticChart && chart ? createStaticContentDraft({
+      mode: "edit",
+      destination: staticDestinationForPlacement(currentDashboard, selection.placementId),
+      panel: chart,
+      placement: currentDashboard.dataSources?.[chart.sourceId],
+      mediaItem: currentDashboard.contentLibrary?.mediaItems?.[
+        currentDashboard.dataSources?.[chart.sourceId]?.mediaId
+      ],
+      assets: currentDashboard.assets ?? {},
+    }) : null);
+    setStaticContentDirty(false);
+    setStaticContentRestoration(null);
     setChartEditSession(chart && !staticChart
       ? createChartEditSession({
           placementId: selection.placementId,
@@ -2605,7 +2686,26 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   const buildControlsDisabled = moderatorMutationLocked || chartAuthoringActive;
-  const selectedChartEditor = editMode && selectedPanel ? (selectedPanelIsStatic ? (
+  const selectedChartEditor = editMode && selectedPanel ? (selectedPanelIsStatic && staticContentEditorSurface === "quick" ? (
+    <StaticContentQuickEditor
+      draft={staticContentDraft ?? createStaticContentDraft({
+        mode: "edit",
+        destination: staticDestinationForPlacement(workingDashboard, selectedPlacement.panelId),
+        panel: selectedPanel,
+        placement: workingDashboard.dataSources?.[selectedPanel.sourceId],
+        mediaItem: workingDashboard.contentLibrary?.mediaItems?.[
+          workingDashboard.dataSources?.[selectedPanel.sourceId]?.mediaId
+        ],
+        assets: workingDashboard.assets ?? {},
+      })}
+      disabled={moderatorMutationLocked}
+      onDraftChange={changeStaticQuickDraft}
+      onSave={saveStaticQuickDraft}
+      onReset={resetStaticQuickDraft}
+      onClose={dismissSelectedPanel}
+      onOpenFullEditor={openFullStaticContentEditor}
+    />
+  ) : selectedPanelIsStatic ? (
     <StaticContentEditor
       dashboard={workingDashboard}
       contentDraftCoordinator={contentDraftCoordinator}
@@ -2652,6 +2752,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setStaticContentDraft(null);
           setStaticContentDirty(false);
           setStaticContentRestoration(null);
+          setStaticContentEditorSurface("quick");
           status.succeed();
         } catch (error) {
           status.fail(error);
@@ -2695,10 +2796,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       dashboardDraft={dashboardDraft}
       pageDrafts={pageDrafts}
       sectionDrafts={sectionDrafts}
-      chartEditor={selectedChartEditor}
+      chartEditor={selectedPanelIsStatic && staticContentEditorSurface === "full"
+        ? null
+        : selectedChartEditor}
       chartEditorPlacementId={chartEditorPlacementId}
       chartEditorOpen={selectedPanelIsStatic
-        ? chartEditorVisible
+        ? staticContentEditorSurface === "quick" && chartEditorVisible
         : chartEditSession?.activeSurface === "quick"}
       onCloseChartEditor={dismissSelectedPanel}
       onResumeChartEditor={() => {
@@ -2818,7 +2921,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onContentDraftDiscard={onContentDraftDiscard}
         contentRenderContext={contentRenderContext}
         buildPanelOpen={buildPanelOpen}
-        buildStaticAuthoringOpen={Boolean(editMode && selectedPanelIsStatic && chartEditorVisible)}
+        buildStaticAuthoringOpen={false}
         buildState={editMode ? {
           selection: buildSelection,
            disabled: layoutMutationLocked || buildDraftLocked,
@@ -2844,6 +2947,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onOpenMultiFullscreen={openMultiFullscreen}
         onCancelMultiSelection={cancelMultiSelection}
       />
+      {editMode && selectedPanelIsStatic && staticContentEditorSurface === "full" && chartEditorVisible
+        ? selectedChartEditor
+        : null}
       <BuildMoveDialog
         open={Boolean(moveDialogRequest)}
         dashboard={workingDashboard}
