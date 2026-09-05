@@ -278,6 +278,38 @@ test("section headers adapt only to title and description content", async ({ pag
   expect(metrics.descriptionHeightDelta).toBeCloseTo(metrics.descriptionHeight + 4, 1);
 });
 
+test("dashboard title hierarchy keeps section headings above panel titles", async ({ page }) => {
+  await page.goto("/");
+
+  const metrics = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.innerHTML = `
+      <section class="dashboard-section">
+        <header class="section-header"><h2>Section title</h2></header>
+        <article class="chart-panel"><h3 class="chart-view-title">Chart title</h3></article>
+        <section class="free-text-chart-view">
+          <header class="free-text-chart-view__header"><h2>Text panel title</h2></header>
+        </section>
+      </section>
+    `;
+    document.body.append(probe);
+    const fontSize = (selector) => getComputedStyle(probe.querySelector(selector)).fontSize;
+    const result = {
+      section: fontSize(".section-header h2"),
+      chart: fontSize(".chart-view-title"),
+      textPanel: fontSize(".free-text-chart-view__header h2"),
+    };
+    probe.remove();
+    return result;
+  });
+
+  expect(metrics).toEqual({
+    section: "24px",
+    chart: "18px",
+    textPanel: "18px",
+  });
+});
+
 test("Humanist contours retain accepted translucency and steady shell elevation", async ({ page }) => {
   const humanistStyle = NATIVE_STYLES.find(({ id }) => id === "humanist-standard");
   await openBiomedicalLook(page);

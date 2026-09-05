@@ -612,7 +612,7 @@ h1 {
 }
 
 .section-header h2 {
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1.2;
   margin: 0;
 }
@@ -937,7 +937,7 @@ textarea {
 .table-panel-content h3,
 .delta-panel-content h3,
 .chart-panel h3 {
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.2;
   margin: 0;
   max-width: calc(100% - 72px);
@@ -2755,7 +2755,7 @@ button.danger {
 
 .chart-view-title {
   color: var(--simex-text-strong);
-  font-size: 1rem;
+  font-size: 18px;
 }
 
 .chart-view-title--visually-hidden,
