@@ -283,9 +283,11 @@ test("dashboard title hierarchy keeps section headings above panel titles", asyn
 
   const metrics = await page.evaluate(() => {
     const probe = document.createElement("div");
+    probe.className = "app-frame";
     probe.innerHTML = `
       <section class="dashboard-section">
-        <header class="section-header"><h2>Section title</h2></header>
+        <header class="section-header"><h2><button class="build-section-title-trigger">Section title</button></h2></header>
+        <input class="build-section-title-input" value="Section title" />
         <article class="chart-panel"><h3 class="chart-view-title">Chart title</h3></article>
         <section class="free-text-chart-view">
           <header class="free-text-chart-view__header"><h2>Text panel title</h2></header>
@@ -296,6 +298,8 @@ test("dashboard title hierarchy keeps section headings above panel titles", asyn
     const fontSize = (selector) => getComputedStyle(probe.querySelector(selector)).fontSize;
     const result = {
       section: fontSize(".section-header h2"),
+      buildSection: fontSize(".build-section-title-trigger"),
+      buildSectionInput: fontSize(".build-section-title-input"),
       chart: fontSize(".chart-view-title"),
       textPanel: fontSize(".free-text-chart-view__header h2"),
     };
@@ -305,6 +309,8 @@ test("dashboard title hierarchy keeps section headings above panel titles", asyn
 
   expect(metrics).toEqual({
     section: "24px",
+    buildSection: "24px",
+    buildSectionInput: "24px",
     chart: "18px",
     textPanel: "18px",
   });
