@@ -71,14 +71,14 @@ export default function UnitOrbit({
   React.useLayoutEffect(() => {
     if (!open) return undefined;
     if (typeof document === "undefined" || typeof window === "undefined") return undefined;
-    const anchor = findAnchor(anchorPlacementId, anchorSelector);
+    const anchor = findUnitOrbitAnchor(anchorPlacementId, anchorSelector);
     if (!anchor) return undefined;
 
     revealedRef.current = false;
 
     const update = () => {
       frameRef.current = 0;
-      const currentAnchor = findAnchor(anchorPlacementId, anchorSelector);
+      const currentAnchor = findUnitOrbitAnchor(anchorPlacementId, anchorSelector);
       const orbit = orbitRef.current;
       if (!currentAnchor || !orbit) return;
       const orbitSize = resolveUnitOrbitSize(orbit, window.innerWidth);
@@ -212,8 +212,18 @@ export function revealUnitOrbit(
   return true;
 }
 
-function findAnchor(placementId, anchorSelector = "") {
-  if (anchorSelector) return document.querySelector(anchorSelector);
-  return [...document.querySelectorAll("[data-build-placement-id]")]
-    .find((element) => element.dataset.buildPlacementId === placementId) ?? null;
+export function findUnitOrbitAnchor(
+  placementId,
+  anchorSelector = "",
+  { documentRef = typeof document === "undefined" ? null : document } = {},
+) {
+  if (!documentRef) return null;
+  const anchors = anchorSelector
+    ? [...documentRef.querySelectorAll(anchorSelector)]
+    : [...documentRef.querySelectorAll("[data-build-placement-id]")]
+      .filter((element) => element.dataset.buildPlacementId === placementId);
+  return anchors.find((element) => {
+    const rect = element.getBoundingClientRect?.();
+    return rect && rect.width > 0 && rect.height > 0;
+  }) ?? anchors[0] ?? null;
 }

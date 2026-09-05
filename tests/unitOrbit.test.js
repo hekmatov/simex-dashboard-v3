@@ -41,6 +41,29 @@ test("Unit Orbit measures the editor's inner scroll content", () => {
   );
 });
 
+test("Unit Orbit anchors itself to the visible chart when a placement is rendered twice", () => {
+  assert.equal(typeof orbitModule?.findUnitOrbitAnchor, "function");
+  const hiddenAnchor = {
+    dataset: { buildPlacementId: "confirmed-cases" },
+    getBoundingClientRect: () => rect(0, 0, 0, 0),
+  };
+  const visibleAnchor = {
+    dataset: { buildPlacementId: "confirmed-cases" },
+    getBoundingClientRect: () => rect(32, 180, 742, 598),
+  };
+  const documentRef = {
+    querySelectorAll(selector) {
+      assert.equal(selector, "[data-build-placement-id]");
+      return [hiddenAnchor, visibleAnchor];
+    },
+  };
+
+  assert.equal(
+    orbitModule.findUnitOrbitAnchor("confirmed-cases", "", { documentRef }),
+    visibleAnchor,
+  );
+});
+
 test("Unit Orbit opens right, then left, then floats at the viewport's top-right without resizing", () => {
   assert.equal(
     typeof orbitModule?.positionUnitOrbit,
