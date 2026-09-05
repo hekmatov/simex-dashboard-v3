@@ -45,10 +45,10 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
             silent: true,
             tooltip: { show: false },
             avoidLabelOverlap: true,
-            itemStyle: { color: "transparent", borderColor: "transparent", opacity: 0 },
+            itemStyle: { color: "transparent", borderColor: "transparent" },
             emphasis: { disabled: true },
             label: compositionCategoryLabel(labels, marks.length),
-            labelLine: { show: true },
+            labelLine: { show: true, lineStyle: { color: "#64748B" } },
             data,
           }] : []),
         ];

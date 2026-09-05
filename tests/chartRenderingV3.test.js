@@ -2260,7 +2260,7 @@ test("pie keeps category labels outside while rendering the selected slice reado
     silent: true,
     tooltip: { show: false },
     avoidLabelOverlap: true,
-    itemStyle: { color: "transparent", borderColor: "transparent", opacity: 0 },
+    itemStyle: { color: "transparent", borderColor: "transparent" },
     emphasis: { disabled: true },
     label: {
       show: true,
@@ -2268,7 +2268,7 @@ test("pie keeps category labels outside while rendering the selected slice reado
       formatter: "{label|{b}}",
       rich: { label: { fontSize: 12, width: 120, overflow: "break" } },
     },
-    labelLine: { show: true },
+    labelLine: { show: true, lineStyle: { color: "#64748B" } },
     data: [
       { name: "Cases", value: 3, share: 0.75 },
       { name: "Deaths", value: 1, share: 0.25 },
@@ -2277,8 +2277,10 @@ test("pie keeps category labels outside while rendering the selected slice reado
   const svg = renderSvg(model.option);
   assert.match(svg, />Cases</);
   assert.match(svg, />Deaths</);
+  assert.doesNotMatch(svg, /fill-opacity="0"[^>]*>Cases<\/text>/);
+  assert.doesNotMatch(svg, /fill-opacity="0"[^>]*>Deaths<\/text>/);
   assert.equal(svg.includes("\\\\n"), false);
-  assert.equal((svg.match(/<polyline/g) ?? []).length, 2);
+  assert.equal((svg.match(/<polyline[^>]*stroke="#64748B"/g) ?? []).length, 2);
   assert.deepEqual(model.option.legend.textStyle, { width: 120, overflow: "break" });
 });
 
