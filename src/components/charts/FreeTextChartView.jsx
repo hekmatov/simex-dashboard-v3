@@ -137,7 +137,7 @@ export function textPanelFitsWithoutScroll({
   contentBottom,
   panelTop,
   panelHeight,
-  clearance = 12,
+  clearance = 0,
 } = {}) {
   return [contentBottom, panelTop, panelHeight, clearance].every(Number.isFinite)
     && contentBottom - panelTop + clearance <= panelHeight;

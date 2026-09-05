@@ -1282,7 +1282,7 @@ test("ordinary tables wrap while code retains bounded internal overflow", async 
   });
   assert.deepEqual(overflow, {
     documentFits: true,
-    viewY: "auto",
+    viewY: "hidden",
     tableX: "auto",
     codeX: "auto",
     tableFits: true,

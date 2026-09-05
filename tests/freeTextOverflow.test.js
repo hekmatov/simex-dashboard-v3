@@ -13,15 +13,15 @@ const { textPanelFitsWithoutScroll } = await vite.ssrLoadModule(
 );
 await vite.close();
 
-test("text panels avoid a scrollbar only when visible text retains 12px of clearance", () => {
+test("text panels avoid a scrollbar when visible text exactly fits", () => {
   assert.equal(typeof textPanelFitsWithoutScroll, "function");
   assert.equal(textPanelFitsWithoutScroll({
-    contentBottom: 388,
+    contentBottom: 400,
     panelTop: 100,
     panelHeight: 300,
   }), true);
   assert.equal(textPanelFitsWithoutScroll({
-    contentBottom: 389,
+    contentBottom: 401,
     panelTop: 100,
     panelHeight: 300,
   }), false);
