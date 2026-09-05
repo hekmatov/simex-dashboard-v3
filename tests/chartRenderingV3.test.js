@@ -2222,7 +2222,7 @@ test("pie and donut produce actual ECharts pie series from canonical marks", () 
   assert.deepEqual(pie.option.series[0].data[0], { name: "Cases", value: 3, share: 0.75 });
 });
 
-test("pie slice labels render inside slices and can include a value or percentage", () => {
+test("pie keeps category labels outside while rendering the selected slice readout inside", () => {
   const prepared = ready([
     { category: "Cases", value: 3, share: 0.75, group: null, groupKey: "" },
     { category: "Deaths", value: 1, share: 0.25, group: null, groupKey: "" },
@@ -2246,13 +2246,39 @@ test("pie slice labels render inside slices and can include a value or percentag
   assert.deepEqual(model.option.series[0].label, {
     show: true,
     position: "inside",
-    formatter: "{label|{b}}\\n{value|{d}%}",
+    formatter: "{value|{d}%}",
     rich: {
-      label: { fontSize: 12, width: 120, overflow: "break", color: "#FFFFFF", textBorderColor: "rgba(0, 0, 0, 0.45)", textBorderWidth: 2 },
       value: { fontSize: 18, color: "#FFFFFF", textBorderColor: "rgba(0, 0, 0, 0.45)", textBorderWidth: 2 },
     },
-    labelLine: { show: false },
   });
+  assert.deepEqual(model.option.series[0].labelLine, { show: false });
+  assert.deepEqual(model.option.series[1], {
+    name: "Composition labels",
+    type: "pie",
+    center: ["50%", "62.5%"],
+    radius: ["0%", "58%"],
+    silent: true,
+    tooltip: { show: false },
+    avoidLabelOverlap: true,
+    itemStyle: { color: "transparent", borderColor: "transparent", opacity: 0 },
+    emphasis: { disabled: true },
+    label: {
+      show: true,
+      position: "outside",
+      formatter: "{label|{b}}",
+      rich: { label: { fontSize: 12, width: 120, overflow: "break" } },
+    },
+    labelLine: { show: true },
+    data: [
+      { name: "Cases", value: 3, share: 0.75 },
+      { name: "Deaths", value: 1, share: 0.25 },
+    ],
+  });
+  const svg = renderSvg(model.option);
+  assert.match(svg, />Cases</);
+  assert.match(svg, />Deaths</);
+  assert.equal(svg.includes("\\\\n"), false);
+  assert.equal((svg.match(/<polyline/g) ?? []).length, 2);
   assert.deepEqual(model.option.legend.textStyle, { width: 120, overflow: "break" });
 });
 
@@ -2281,10 +2307,13 @@ test("grouped composition lays out non-overlapping pie series", () => {
     ]),
   });
 
-  assert.deepEqual(model.option.series.map(({ center }) => center), [
+  const visiblePies = model.option.series.filter(({ silent }) => silent !== true);
+  const labelLayers = model.option.series.filter(({ silent }) => silent === true);
+  assert.deepEqual(visiblePies.map(({ center }) => center), [
     ["25%", "62.5%"],
     ["75%", "62.5%"],
   ]);
+  assert.deepEqual(labelLayers.map(({ center }) => center), visiblePies.map(({ center }) => center));
   const svg = renderSvg(model.option, 800, 400);
   assert.match(svg, /Alpha/);
   assert.match(svg, /Beta/);

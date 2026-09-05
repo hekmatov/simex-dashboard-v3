@@ -19,17 +19,40 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
       tooltip: { trigger: "item" },
       legend: legendOption(chart),
       ...(Array.isArray(colors) ? { color: [...colors] } : {}),
-      series: groups.map(({ name, marks }, index) => ({
-        name,
-        type: "pie",
-        center: layout.centers[index],
-        radius: mark === "donut"
+      series: groups.flatMap(({ name, marks }, index) => {
+        const radius = mark === "donut"
           ? [layout.innerRadius, layout.outerRadius]
-          : ["0%", layout.outerRadius],
-        avoidLabelOverlap: true,
-        label: compositionLabel(chart.presentation?.labels, marks.length),
-        data: marks.map(({ category, value, share }) => ({ name: String(category), value, share })),
-      })),
+          : ["0%", layout.outerRadius];
+        const labels = chart.presentation?.labels;
+        const data = marks.map(({ category, value, share }) => ({ name: String(category), value, share }));
+        const showCategoryLabels = labels?.visible !== false && marks.length <= 8;
+        return [
+          {
+            name,
+            type: "pie",
+            center: layout.centers[index],
+            radius,
+            avoidLabelOverlap: false,
+            label: compositionReadoutLabel(labels, marks.length),
+            labelLine: { show: false },
+            data,
+          },
+          ...(showCategoryLabels ? [{
+            name: `${name} labels`,
+            type: "pie",
+            center: layout.centers[index],
+            radius,
+            silent: true,
+            tooltip: { show: false },
+            avoidLabelOverlap: true,
+            itemStyle: { color: "transparent", borderColor: "transparent", opacity: 0 },
+            emphasis: { disabled: true },
+            label: compositionCategoryLabel(labels, marks.length),
+            labelLine: { show: true },
+            data,
+          }] : []),
+        ];
+      }),
     },
   };
 }
@@ -50,7 +73,7 @@ function compositionLayout(count, verticallyCentered = false) {
   };
 }
 
-function compositionLabel(labels = {}, markCount) {
+function compositionReadoutLabel(labels = {}, markCount) {
   const valueMode = labels?.valueMode;
   const showValue = valueMode === "value" || valueMode === "percentage";
   const contrastText = {
@@ -58,27 +81,33 @@ function compositionLabel(labels = {}, markCount) {
     textBorderColor: "rgba(0, 0, 0, 0.45)",
     textBorderWidth: 2,
   };
-  const rich = {
-    label: {
-      fontSize: labels?.labelFontSize ?? 12,
-      ...(labels?.labelWrap === true ? { width: 120, overflow: "break" } : {}),
-      ...contrastText,
-    },
-    ...(showValue ? {
+  return {
+    show: labels?.visible !== false && markCount <= 8 && showValue,
+    position: "inside",
+    formatter: `{value|${valueMode === "percentage" ? "{d}%" : "{c}"}}`,
+    rich: {
       value: {
         fontSize: labels?.valueFontSize ?? 14,
         ...contrastText,
       },
-    } : {}),
+    },
   };
+}
+
+function compositionCategoryLabel(labels = {}, markCount) {
+  const rich = {};
+  if (Number.isInteger(labels?.labelFontSize) || labels?.labelWrap === true) {
+    rich.label = {
+      ...(Number.isInteger(labels?.labelFontSize) ? { fontSize: labels.labelFontSize } : {}),
+      ...(labels?.labelWrap === true ? { width: 120, overflow: "break" } : {}),
+    };
+  }
+  const usesRichLabel = Object.keys(rich).length > 0;
   return {
     show: labels?.visible !== false && markCount <= 8,
-    position: "inside",
-    formatter: showValue
-      ? `{label|{b}}\\n{value|${valueMode === "percentage" ? "{d}%" : "{c}"}}`
-      : "{label|{b}}",
-    rich,
-    labelLine: { show: false },
+    position: "outside",
+    formatter: usesRichLabel ? "{label|{b}}" : "{b}",
+    ...(usesRichLabel ? { rich } : {}),
   };
 }
 
