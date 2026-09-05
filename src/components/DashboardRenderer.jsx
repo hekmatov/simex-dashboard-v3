@@ -151,6 +151,7 @@ export async function completeFinishBuildTransition({ requestMode, status }) {
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
   contentDraftCoordinator = null,
+  viewOnly = false,
   mode,
   activePageId,
   onActivePageChange,
@@ -2940,7 +2941,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onActivePageChange={editMode
           ? navigateBuildCanvasPage
           : navigateToPage}
-        onAddPanelToSection={recoverEmptySectionInBuild}
+        onAddPanelToSection={viewOnly ? undefined : recoverEmptySectionInBuild}
         onDisplayAction={onDisplayAction}
         onToggleMultiPanel={toggleMultiPanel}
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}

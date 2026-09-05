@@ -189,11 +189,14 @@ async function reconcileSavedAuthoredAssets(dashboard, activeRetainers = null) {
   }
 }
 
-function AppContent() {
+function AppContent({ releaseProfile = null }) {
   const { beginOperation } = useOperationStatusActions();
-  const [dashboardEntry] = React.useState(() => parseDashboardEntry(
-    typeof window === "undefined" ? "" : window.location.search,
-  ));
+  const [dashboardEntry] = React.useState(() => {
+    const entry = parseDashboardEntry(
+      typeof window === "undefined" ? "" : window.location.search,
+    );
+    return releaseProfile?.normalizeEntry?.(entry) ?? entry;
+  });
   const [dashboard, setDashboard] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [operationError, setOperationError] = React.useState("");
@@ -210,9 +213,11 @@ function AppContent() {
   const initialModeInputsRef = React.useRef(null);
   if (initialModeInputsRef.current === null) {
     initialModeInputsRef.current = {
-      storedMode: dashboardEntry.surface === "workspace"
-        ? readDashboardModePreference()
-        : null,
+      storedMode: releaseProfile?.viewOnly
+        ? null
+        : dashboardEntry.surface === "workspace"
+          ? readDashboardModePreference()
+          : null,
       requestedMode: dashboardEntry.requestedMode,
     };
   }
@@ -455,14 +460,16 @@ function AppContent() {
           datasetProfiles: trackedProfiles,
         };
         trackedDatasetProfilesRef.current = trackedProfiles;
-        const stored = await readDashboardStorageWithAssets(
-          browserStorage,
-          DASHBOARD_STORAGE_KEY,
-          {
-            profiles: trackedProfiles,
-            assets: dashboardAssetPersistence,
-          },
-        );
+        const stored = releaseProfile?.viewOnly
+          ? null
+          : await readDashboardStorageWithAssets(
+            browserStorage,
+            DASHBOARD_STORAGE_KEY,
+            {
+              profiles: trackedProfiles,
+              assets: dashboardAssetPersistence,
+            },
+          );
         const selected = stored ?? configurationForStorage(
           tracked,
           trackedProfiles,
@@ -471,11 +478,12 @@ function AppContent() {
         const portableSources = stored ? null : definition.portableSources;
         const publish = (loaded) => {
           if (disposed) return;
-          dashboardRef.current = loaded;
-          if (dashboardEntry.surface === "workspace") {
-            ensureDashboardCommitController(loaded);
+          const published = releaseProfile?.prepareDashboard?.(loaded) ?? loaded;
+          dashboardRef.current = published;
+          if (dashboardEntry.surface === "workspace" && !releaseProfile?.viewOnly) {
+            ensureDashboardCommitController(published);
           }
-          setDashboard(loaded);
+          setDashboard(published);
           setError(null);
         };
         if (dashboardEntry.surface === "audience") {
@@ -486,7 +494,9 @@ function AppContent() {
             { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
           );
           publish(loaded);
-          await reconcileSavedAuthoredAssets(loaded, contentDraftCoordinator.getActiveRetainers());
+          if (!releaseProfile?.viewOnly) {
+            await reconcileSavedAuthoredAssets(loaded, contentDraftCoordinator.getActiveRetainers());
+          }
           return;
         }
         const loaded = await loadDashboardConfigProgressively(
@@ -498,7 +508,9 @@ function AppContent() {
             readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId),
           },
         );
-        await reconcileSavedAuthoredAssets(loaded, contentDraftCoordinator.getActiveRetainers());
+        if (!releaseProfile?.viewOnly) {
+          await reconcileSavedAuthoredAssets(loaded, contentDraftCoordinator.getActiveRetainers());
+        }
       })
       .catch((loadError) => {
         if (!disposed) setError(loadError);
@@ -506,7 +518,7 @@ function AppContent() {
     return () => {
       disposed = true;
     };
-  }, [dashboardEntry.surface]);
+  }, [dashboardEntry.surface, releaseProfile]);
 
   React.useEffect(() => {
     if (
@@ -601,7 +613,7 @@ function AppContent() {
   }, []);
 
   React.useEffect(() => {
-    if (dashboardEntry.surface === "audience") return undefined;
+    if (dashboardEntry.surface === "audience" || releaseProfile?.disableCompanion) return undefined;
     if (!dashboard) return undefined;
     let disposed = false;
     let client = null;
@@ -641,11 +653,16 @@ function AppContent() {
       }
       client?.stop();
     };
-  }, [dashboard, dashboardEntry.surface, dispatchDisplayAction]);
+  }, [dashboard, dashboardEntry.surface, dispatchDisplayAction, releaseProfile]);
 
   React.useEffect(() => {
     if (!dashboard) return;
     setActivePageId((current) => reconcileActivePageId(dashboard.pages, current));
+    if (releaseProfile?.viewOnly) {
+      initialModeResolvedRef.current = true;
+      if (mode !== releaseProfile.initialMode) setMode(releaseProfile.initialMode);
+      return;
+    }
     if (!initialModeResolvedRef.current) {
       initialModeResolvedRef.current = true;
       setMode(resolveInitialDashboardMode({
@@ -657,7 +674,7 @@ function AppContent() {
     const nextMode = reconcileLoadedDashboardMode(mode, dashboard);
     if (nextMode === mode) return;
     setMode(nextMode);
-  }, [dashboard, mode]);
+  }, [dashboard, mode, releaseProfile]);
 
   function ensureDashboardCommitController(initialDashboard = dashboardRef.current) {
     if (dashboardCommitControllerRef.current === null) {
@@ -1119,6 +1136,8 @@ function AppContent() {
   }
 
   async function requestMode(nextMode) {
+    const releaseOutcome = releaseProfile?.requestMode?.(nextMode);
+    if (releaseOutcome) return releaseOutcome;
     if (nextMode === mode) return { ok: true, mode: nextMode };
     if (
       dashboardEntry.surface !== "workspace"
@@ -1675,10 +1694,22 @@ function AppContent() {
     );
   }
 
+  const ReleaseHeader = releaseProfile?.HeaderComponent ?? null;
+  const releaseHeader = ReleaseHeader ? (
+    <ReleaseHeader
+      profile={releaseProfile}
+      pages={commandCrownProjection.pages}
+      activePage={commandCrownProjection.activePage}
+      onPageRequest={requestPage}
+    />
+  ) : null;
   const appFrame = (
     <AppFrame
       mode={mode}
-      availableModes={availableDashboardModes(dashboard)}
+      releaseProfileId={releaseProfile?.id ?? null}
+      commandHeader={releaseHeader}
+      suppressCommandCrown={releaseProfile?.suppressCommandCrown === true}
+      availableModes={releaseProfile?.availableModes ?? availableDashboardModes(dashboard)}
       onModeRequest={requestMode}
       modeDisabled={modeDisabled || buildDraftLocked}
       modeDisabledReason={buildDraftLocked
@@ -1749,6 +1780,7 @@ function AppContent() {
       <DashboardRenderer
       ref={dashboardRendererRef}
       dashboard={dashboard}
+      viewOnly={releaseProfile?.viewOnly === true}
       contentDraftCoordinator={contentDraftCoordinator}
       mode={mode}
       activePageId={activePageId}
@@ -1951,8 +1983,8 @@ function AppContent() {
   );
 }
 
-export default function App() {
-  return <AppContent />;
+export default function App({ releaseProfile = null }) {
+  return <AppContent releaseProfile={releaseProfile} />;
 }
 
 export function saveScenarioPassportDurably({ controller, persist, value }) {

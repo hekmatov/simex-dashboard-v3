@@ -1,0 +1,176 @@
+:root {
+  --simex-release-navy: #08224a;
+  --simex-release-blue: #043bcb;
+  --simex-release-cyan: #36bdeb;
+  --simex-release-green: #2baa7b;
+  --simex-release-rose: #f1a1ad;
+  --simex-release-rose-soft: #fceef0;
+  --simex-view-only-disclaimer-height: 28px;
+  --simex-view-only-sticky-offset: var(--simex-view-only-disclaimer-height);
+}
+
+.pdpc-release-disclaimer {
+  align-items: center;
+  background: var(--simex-release-rose-soft);
+  border-bottom: 1px solid var(--simex-release-rose);
+  color: var(--simex-release-navy);
+  display: flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  justify-content: center;
+  line-height: 1.35;
+  min-height: var(--simex-view-only-disclaimer-height);
+  overflow: hidden;
+  padding: max(4px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 4px max(12px, env(safe-area-inset-left));
+  position: sticky;
+  text-align: center;
+  top: 0;
+  z-index: 42;
+}
+
+.pdpc-release-disclaimer__texture {
+  color: rgb(8 34 74 / 8%);
+  display: block;
+  font-size: 0.75rem;
+  inset: 0;
+  line-height: var(--simex-view-only-disclaimer-height);
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.pdpc-release-disclaimer__statement {
+  position: relative;
+  z-index: 1;
+}
+
+.pdpc-release-header {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid rgb(8 34 74 / 18%);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
+  position: sticky;
+  top: var(--simex-view-only-disclaimer-height);
+  z-index: 41;
+}
+
+.pdpc-release-logo {
+  height: auto;
+  justify-self: start;
+  max-width: 100%;
+  object-fit: contain;
+  width: clamp(200px, 18vw, 240px);
+}
+
+.pdpc-release-pages {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.pdpc-release-pages button {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: var(--simex-release-navy);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px 5px;
+  touch-action: manipulation;
+}
+
+.pdpc-release-pages button[aria-current="page"] {
+  border-bottom-color: var(--simex-release-cyan);
+  font-weight: 800;
+}
+
+.pdpc-release-pages button:focus-visible {
+  outline: 3px solid var(--simex-release-blue);
+  outline-offset: 2px;
+}
+
+.pdpc-release-tag {
+  background: #fff;
+  border: 1px solid var(--simex-release-navy);
+  border-radius: 999px;
+  color: var(--simex-release-navy);
+  font-size: 0.75rem;
+  font-weight: 700;
+  justify-self: end;
+  line-height: 1.35;
+  padding: 5px 9px;
+  text-align: center;
+}
+
+html:has(.app-frame[data-release-profile^="pdpc-"]) {
+  scroll-padding-top: var(--simex-view-only-sticky-offset);
+}
+
+.app-frame[data-release-profile^="pdpc-"] :is([data-canonical-page-id], .dashboard-section, [data-scroll-target]) {
+  scroll-margin-top: var(--simex-view-only-sticky-offset);
+}
+
+@media (max-width: 720px) {
+  .pdpc-release-disclaimer__texture { display: none; }
+
+  .pdpc-release-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+    position: relative;
+    top: auto;
+  }
+
+  .pdpc-release-logo {
+    grid-column: 1;
+    grid-row: 1;
+    width: clamp(136px, 40vw, 160px);
+  }
+
+  .pdpc-release-pages {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .pdpc-release-pages button {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .pdpc-release-tag {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 360px) {
+  .pdpc-release-header { grid-template-columns: minmax(0, 1fr); }
+  .pdpc-release-logo {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: center;
+    width: min(136px, 80vw);
+  }
+  .pdpc-release-tag {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: center;
+  }
+  .pdpc-release-pages { grid-row: 3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdpc-release-disclaimer,
+  .pdpc-release-header,
+  .pdpc-release-pages button { transition: none; }
+}
