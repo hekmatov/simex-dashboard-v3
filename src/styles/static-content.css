@@ -56,17 +56,38 @@
   display: grid;
   gap: 16px;
   grid-auto-flow: dense;
-  grid-auto-rows: minmax(24px, auto);
+  grid-auto-rows: calc((var(--scene-canonical-row-height, 418px) - 112px) / 8);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-inline-size: 100%;
   min-inline-size: 0;
 }
 
 .authoring-footprint-frame {
+  display: flex;
   grid-column: span var(--chart-footprint-columns);
   grid-row: span var(--chart-footprint-row-span);
   max-inline-size: 100%;
+  min-block-size: 0;
   min-inline-size: 0;
+}
+
+.authoring-footprint-frame > .static-content-dialog__preview {
+  align-self: stretch;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
+}
+
+.authoring-footprint-frame > .static-content-dialog__preview [data-static-preview-type] {
+  display: flex;
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+
+.authoring-footprint-frame > .static-content-dialog__preview [data-static-preview-type] > * {
+  flex: 1 1 auto;
+  min-block-size: 0;
 }
 
 .free-text-source-editor__writer-card,

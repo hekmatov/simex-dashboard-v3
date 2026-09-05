@@ -3,6 +3,7 @@ import React from "react";
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
 import ControlTooltip from "../common/ControlTooltip.jsx";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
+import AuthoringFootprintFrame from "../common/AuthoringFootprintFrame.jsx";
 import {
   STATIC_CONTENT_STAGES,
   STATIC_CONTENT_STAGE_LABELS,
@@ -592,29 +593,31 @@ export function StaticPreview({ draft, contentRenderContext = {} }) {
     assets: { ...(contentRenderContext.assets ?? {}), ...(draft.assets ?? {}) },
   };
   return (
-    <section className="static-content-dialog__preview" aria-label="Text/Image preview">
-      <StaticContentStateBoundary state={{ status: "ready" }} surface="build">
-        {draft.contentTypeId === "freeText" ? (
-          <div data-static-preview-type="freeText">
-            <ChartView
-              chart={draft.panel}
-              renderContext={renderContext}
-              interactionMode="active"
-            />
-          </div>
-        ) : (
-          <div data-static-preview-type="image">
-            <ChartView
-              chart={draft.panel}
-              renderContext={renderContext}
-              interactionMode="passive"
-              surface="build"
-            />
-          </div>
-        )}
-      </StaticContentStateBoundary>
-      <p>Text/Image panels have no CSV, Chrono Group, Scene, or time controls.</p>
-    </section>
+    <AuthoringFootprintFrame layout={draft.panel?.layout} kind="preview-and-add">
+      <section className="static-content-dialog__preview" aria-label="Text/Image preview">
+        <StaticContentStateBoundary state={{ status: "ready" }} surface="build">
+          {draft.contentTypeId === "freeText" ? (
+            <div data-static-preview-type="freeText">
+              <ChartView
+                chart={draft.panel}
+                renderContext={renderContext}
+                interactionMode="active"
+              />
+            </div>
+          ) : (
+            <div data-static-preview-type="image">
+              <ChartView
+                chart={draft.panel}
+                renderContext={renderContext}
+                interactionMode="passive"
+                surface="build"
+              />
+            </div>
+          )}
+        </StaticContentStateBoundary>
+        <p>Text/Image panels have no CSV, Chrono Group, Scene, or time controls.</p>
+      </section>
+    </AuthoringFootprintFrame>
   );
 }
 

@@ -252,6 +252,29 @@ test("Static preview leaves Free Text and Image title ownership to their rendere
   assert.doesNotMatch(imageHtml, /<figcaption/);
 });
 
+test("Preview & add renders text and image panels at their selected footprint", () => {
+  for (const contentTypeId of ["freeText", "image"]) {
+    const draft = createStaticContentDraft({
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId,
+      stage: "preview-and-add",
+      panel: {
+        id: `${contentTypeId}-preview-footprint`,
+        sourceId: `${contentTypeId}-preview-source`,
+        layout: { width: 3, height: 0.75 },
+      },
+    });
+    const preview = wizardModule.StaticPreview({ draft });
+    const frame = findElement(preview, (element) => (
+      element.type?.name === "AuthoringFootprintFrame"
+      && element.props?.kind === "preview-and-add"
+    ));
+
+    assert.ok(frame);
+    assert.deepEqual(frame.props.layout, draft.panel.layout);
+  }
+});
+
 test("an explicitly untitled Free-text draft prepares a create transaction without persisting wizard-only state", () => {
   const dashboard = makeDashboardV5();
   let draft = createStaticContentDraft({
