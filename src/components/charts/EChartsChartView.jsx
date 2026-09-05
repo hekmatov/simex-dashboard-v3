@@ -216,6 +216,7 @@ export function applyEChartsPresentation(
   const grid = verticallyBalancedGrid(
     normalizedGrid(option.grid, titleGutters),
     chart,
+    titleGutters,
   );
   const presentedOption = {
       ...optionWithoutBackground,
@@ -235,7 +236,14 @@ export function applyEChartsPresentation(
           }),
       ...(option.legend === undefined
         ? {}
-        : { legend: normalizedLegend(option.legend, textMuted, bodyFont) }),
+        : {
+            legend: normalizedLegend(
+              option.legend,
+              textMuted,
+              bodyFont,
+              horizontalBarsFillVertically(chart),
+            ),
+          }),
       ...(option.xAxis === undefined
         ? {}
         : { xAxis: normalizedAxis(option.xAxis, textMuted, borderSubtle, gridline, bodyFont, dataFont) }),
@@ -607,14 +615,14 @@ function normalizedTitle(value, align, textColor, headingFont) {
       };
 }
 
-function normalizedLegend(value, textColor, bodyFont) {
+function normalizedLegend(value, textColor, bodyFont, compactTop = false) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const fontSize = Number.isFinite(value.textStyle?.fontSize) ? value.textStyle.fontSize : 11;
   return {
     ...value,
     type: value.type ?? "scroll",
     left: value.left ?? "center",
-    top: value.top ?? 32,
+    top: value.top ?? (compactTop ? 12 : 32),
     width: value.width ?? "88%",
     itemWidth: value.itemWidth ?? Math.round((fontSize * 16) / 11),
     itemHeight: value.itemHeight ?? Math.round((fontSize * 10) / 11),
@@ -755,8 +763,18 @@ function normalizedGrid(value, titleGutters) {
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
 }
 
-function verticallyBalancedGrid(value, chart) {
-  if (horizontalBarsFillVertically(chart)) return value;
+function verticallyBalancedGrid(value, chart, titleGutters = {}) {
+  if (horizontalBarsFillVertically(chart)) {
+    const fill = (grid) => {
+      if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
+      return {
+        ...grid,
+        top: compactGridGutter(grid.top, titleGutters.top, 44),
+        bottom: compactGridGutter(grid.bottom, titleGutters.bottom, 32),
+      };
+    };
+    return Array.isArray(value) ? value.map(fill) : fill(value);
+  }
   if (chartDescriptionVisible(chart) && String(chart?.description ?? "").trim()) return value;
   const balance = (grid) => {
     if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
@@ -765,6 +783,11 @@ function verticallyBalancedGrid(value, chart) {
     return { ...grid, top: gutter, bottom: gutter };
   };
   return Array.isArray(value) ? value.map(balance) : balance(value);
+}
+
+function compactGridGutter(current, required, target) {
+  if (!Number.isFinite(current)) return current;
+  return Math.min(current, Math.max(Number.isFinite(required) ? required : 0, target));
 }
 
 function horizontalBarsFillVertically(chart) {
