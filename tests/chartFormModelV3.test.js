@@ -978,6 +978,22 @@ test("legend controls are exposed only by renderers that consume them", () => {
       },
       chart.typeId,
     );
+    assert.deepEqual(
+      model.sections
+        .find(({ id }) => id === "appearance")
+        .fields.find(({ id }) => id === "legendFontSize"),
+      {
+        id: "legendFontSize",
+        label: "Legend font size",
+        control: "number",
+        min: 8,
+        max: 20,
+        step: 1,
+        path: ["presentation", "legend", "fontSize"],
+        value: 11,
+      },
+      chart.typeId,
+    );
   }
 
   const unsupported = createChartDraft("kpi", {

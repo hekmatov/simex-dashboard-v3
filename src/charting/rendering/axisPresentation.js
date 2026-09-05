@@ -70,6 +70,12 @@ export function xAxisPresentation(settings, kind, physicalAxis = "x") {
       };
     }
   }
+  if (Number.isInteger(settings?.labelFontSize)) {
+    result.axisLabel = {
+      ...(result.axisLabel ?? {}),
+      fontSize: settings.labelFontSize,
+    };
+  }
   return result;
 }
 
@@ -78,12 +84,15 @@ export function valueAxisPresentation(settings) {
   const interval = tickInterval(settings?.tickFrequency, "number");
   if (interval !== undefined) result.interval = interval;
   const unit = typeof settings?.unit === "string" ? settings.unit : "";
-  if (unit) {
+  if (unit || Number.isInteger(settings?.labelFontSize)) {
     result.axisLabel = {
-      formatter: (value) => {
-        const numeric = Number(value);
-        return `${Number.isFinite(numeric) ? VALUE_AXIS_NUMBER_FORMATTER.format(numeric) : String(value ?? "")}${unit}`;
-      },
+      ...(Number.isInteger(settings?.labelFontSize) ? { fontSize: settings.labelFontSize } : {}),
+      ...(unit ? {
+        formatter: (value) => {
+          const numeric = Number(value);
+          return `${Number.isFinite(numeric) ? VALUE_AXIS_NUMBER_FORMATTER.format(numeric) : String(value ?? "")}${unit}`;
+        },
+      } : {}),
     };
   }
   return result;
@@ -145,6 +154,7 @@ function axisTitle(settings = {}, direction, { tickLabelWidth = 0 } = {}) {
           )
         : AXIS_TICK_HALF_HEIGHT + AXIS_TITLE_CLEARANCE
       : 36,
+    ...(Number.isInteger(settings.titleFontSize) ? { nameTextStyle: { fontSize: settings.titleFontSize } } : {}),
   };
 }
 

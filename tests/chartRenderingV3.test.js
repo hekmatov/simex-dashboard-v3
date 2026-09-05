@@ -305,6 +305,64 @@ test("horizontal bars retain configured category labels while value axes append 
   assert.ok(model.option.series.every((series) => !Object.hasOwn(series, "barWidth")));
 });
 
+test("axis and legend typography apply independently, with legend swatches scaling to legend text", () => {
+  const model = buildRenderModel({
+    chart: chart("bar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: { title: "District", titleFontSize: 20, labelFontSize: 16 },
+          primary: { title: "Cases", labelFontSize: 18 },
+        },
+        legend: { fontSize: 18 },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  const presented = applyEChartsPresentation(model, {});
+  const primaryAxis = Array.isArray(model.option.yAxis) ? model.option.yAxis[0] : model.option.yAxis;
+
+  assert.equal(model.option.xAxis.nameTextStyle.fontSize, 20);
+  assert.equal(model.option.xAxis.axisLabel.fontSize, 16);
+  assert.equal(primaryAxis.axisLabel.fontSize, 18);
+  assert.equal(model.option.legend.textStyle.fontSize, 18);
+  assert.equal(presented.option.legend.itemWidth, 26);
+  assert.equal(presented.option.legend.itemHeight, 16);
+});
+
+test("clearing the Income distribution primary title leaves a renderable chart and removes its title projection", () => {
+  const incomeChart = chart("horizontalStackedBar", {
+    roles: {
+      measurements: [
+        { field: "Share of population (%)", axis: "primary" },
+        { field: "Share of total income (%)", axis: "primary" },
+      ],
+      observation: { field: "Income bracket" },
+    },
+    transformations: { pivot: { mode: "measuresToRows" } },
+    presentation: {
+      title: { align: "left" },
+      collection: null,
+      axes: { primary: { unit: "%", titlePosition: "top" } },
+      series: { barWidth: 20, verticalFill: true },
+    },
+  });
+  const rows = [
+    ["Low income", 35, 9], ["Lower-middle income", 27, 18], ["Middle income", 20, 22],
+    ["Upper-middle income", 12, 21], ["High income", 6, 30],
+  ].map(([bracket, population, income]) => ({
+    "Income bracket": bracket,
+    "Share of population (%)": population,
+    "Share of total income (%)": income,
+  }));
+  const prepared = prepareChartData({ chart: incomeChart, rows, datasetProfile: profileDataset(rows) });
+  const model = buildRenderModel({ chart: incomeChart, prepared });
+
+  assert.deepEqual(model.valueAxisTitleProjection, []);
+  assert.doesNotThrow(() => renderSvg(model.option));
+});
+
 test("line, area, and mixed options preserve axis types and primary or secondary axes", () => {
   const line = buildRenderModel({
     chart: chart("line", {

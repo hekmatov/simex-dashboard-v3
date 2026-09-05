@@ -1193,7 +1193,7 @@ test("save normalization trims raw axis title editing values", () => {
   assert.equal(normalized.presentation.axes.secondary, undefined);
 });
 
-test("value-axis title controls expose size steps, bold, and signed offsets only for available axes", () => {
+test("axis controls expose independent title and tick-label typography for available axes", () => {
   const field = {
     id: "axes",
     label: "Axes",
@@ -1227,6 +1227,7 @@ test("value-axis title controls expose size steps, bold, and signed offsets only
     onChange() {},
   }));
   assert.equal((primaryOnly.match(/Title font size/g) ?? []).length, 1);
+  assert.equal((primaryOnly.match(/Tick label font size/g) ?? []).length, 2);
   assert.doesNotMatch(primaryOnly, /Secondary axis/);
 
   const changes = [];

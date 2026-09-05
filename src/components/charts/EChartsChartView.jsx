@@ -594,14 +594,15 @@ function normalizedTitle(value, align, textColor, headingFont) {
 
 function normalizedLegend(value, textColor, bodyFont) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const fontSize = Number.isFinite(value.textStyle?.fontSize) ? value.textStyle.fontSize : 11;
   return {
     ...value,
     type: value.type ?? "scroll",
     left: value.left ?? "center",
     top: value.top ?? 32,
     width: value.width ?? "88%",
-    itemWidth: value.itemWidth ?? 16,
-    itemHeight: value.itemHeight ?? 10,
+    itemWidth: value.itemWidth ?? Math.round((fontSize * 16) / 11),
+    itemHeight: value.itemHeight ?? Math.round((fontSize * 10) / 11),
     textStyle: {
       fontSize: 11,
       ...(value.textStyle ?? {}),

@@ -191,11 +191,16 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
 }
 
 function legendOption(chart) {
+  const fontSize = chart.presentation?.legend?.fontSize;
+  const textStyle = {
+    ...(chart.presentation?.legend?.wrap === true
+      ? { width: 120, overflow: "break" }
+      : {}),
+    ...(Number.isInteger(fontSize) ? { fontSize } : {}),
+  };
   return {
     show: chart.presentation?.legend?.visible !== false,
-    ...(chart.presentation?.legend?.wrap === true
-      ? { textStyle: { width: 120, overflow: "break" } }
-      : {}),
+    ...(Object.keys(textStyle).length > 0 ? { textStyle } : {}),
   };
 }
 

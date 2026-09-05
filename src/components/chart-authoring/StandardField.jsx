@@ -1,8 +1,8 @@
 import React from "react";
 import { IconControl, SimExIcon } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
-const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
-const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]);
+const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "labelFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
+const X_AXIS_PROPERTIES = new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]);
 const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
 function StandardField({
@@ -394,6 +394,7 @@ function axisControls(label, axis, value, emit) {
     selectControl("Title position", value.titlePosition ?? "center", ["top", "center", "bottom"], (nextValue) => emit([axis, "titlePosition"], nextValue)),
     selectControl("Title orientation", value.titleOrientation ?? "vertical", ["vertical", "horizontal"], (nextValue) => emit([axis, "titleOrientation"], nextValue)),
     fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit([axis, "titleFontSize"], nextValue)),
+    boundedNumericControl("Tick label font size", value.labelFontSize, 8, 20, (nextValue) => emit([axis, "labelFontSize"], nextValue)),
     inlineToggle("Bold", value.titleBold === true, (checked) => emit([axis, "titleBold"], checked)),
     numericPair("chart-authoring-axis-offsets", [
       boundedNumericControl("Horizontal offset", value.titleOffsetX, -96, 96, (nextValue) => emit([axis, "titleOffsetX"], nextValue)),
@@ -488,20 +489,20 @@ function boundedNumericControl(label, value, min, max, onChange) {
     onChange: (event) => onChange(optionalNumber(event.target.value)),
   }));
 }
-function fontSizeControl(value, onChange) {
+function fontSizeControl(value, onChange, label = "Title") {
   const size = Number.isInteger(value) ? Math.min(24, Math.max(10, value)) : 14;
   return React.createElement("div", { className: "chart-authoring-axis-title-size" },
-    React.createElement("span", null, "Title font size"),
+    React.createElement("span", null, `${label} font size`),
     React.createElement("button", {
       type: "button",
-      "aria-label": "Decrease title font size",
+      "aria-label": `Decrease ${label.toLowerCase()} font size`,
       disabled: size <= 10,
       onClick: () => onChange(size - 1),
     }, "−"),
     React.createElement("output", null, size),
     React.createElement("button", {
       type: "button",
-      "aria-label": "Increase title font size",
+      "aria-label": `Increase ${label.toLowerCase()} font size`,
       disabled: size >= 24,
       onClick: () => onChange(size + 1),
     }, "+"),
@@ -526,10 +527,11 @@ function xAxisControls(value, kind, emit) {
     { className: "chart-authoring-axis-group dashboard-authoring-grid" },
     React.createElement("legend", null, "X axis"),
     textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)),
+    fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit(["x", "titleFontSize"], nextValue), "X-axis title"),
+    boundedNumericControl("Tick label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)),
     kind === "category" ? React.createElement(
       React.Fragment,
       null,
-      boundedNumericControl("Label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)),
       inlineToggle("Wrap long labels", value.labelWrap === true, (checked) => emit(["x", "labelWrap"], checked)),
       value.labelWrap === true ? boundedNumericControl("Wrapped label width", value.labelMaxWidth ?? 96, 40, 240, (nextValue) => emit(["x", "labelMaxWidth"], nextValue)) : null,
     ) : null,
@@ -732,9 +734,10 @@ function sanitizeAxis(value) {
   for (const property of AXIS_PROPERTIES) {
     if (["grid", "titleBold"].includes(property) && typeof value[property] === "boolean") axis[property] = value[property];
     else if (["min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property) && Number.isFinite(value[property])) axis[property] = value[property];
+    else if (property === "labelFontSize" && Number.isInteger(value[property]) && value[property] >= 8 && value[property] <= 20) axis[property] = value[property];
     else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
     else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
-    else if (!["grid", "titleBold", "min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY", "title"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
+    else if (!["grid", "titleBold", "min", "max", "titleFontSize", "labelFontSize", "titleOffsetX", "titleOffsetY", "title"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
   }
   if (Number.isFinite(axis.min) && Number.isFinite(axis.max) && axis.min > axis.max) {
     delete axis.max;
@@ -751,7 +754,7 @@ function sanitizeXAxis(value) {
     else if (property === "labelPreset" && nonemptyString(value[property]) && value[property].trim() !== "adaptive") axis[property] = value[property].trim();
     else if (property === "hoverLabelPreset" && nonemptyString(value[property]) && value[property].trim() !== "auto") axis[property] = value[property].trim();
     else if (property === "labelWrap" && typeof value[property] === "boolean") axis[property] = value[property];
-    else if (property === "labelFontSize" && Number.isInteger(value[property]) && value[property] >= 8 && value[property] <= 20) axis[property] = value[property];
+    else if (["titleFontSize", "labelFontSize"].includes(property) && Number.isInteger(value[property]) && value[property] >= (property === "titleFontSize" ? 10 : 8) && value[property] <= (property === "titleFontSize" ? 24 : 20)) axis[property] = value[property];
     else if (property === "labelMaxWidth" && Number.isInteger(value[property]) && value[property] >= 40 && value[property] <= 240) axis[property] = value[property];
   }
   return Object.keys(axis).length > 0 ? axis : void 0;

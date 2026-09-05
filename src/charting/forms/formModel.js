@@ -34,6 +34,8 @@ const QUICK_PRESENTATION_FIELD_IDS = new Set([
   "titleVisible",
   "background",
   "legendVisible",
+  "legendFontSize",
+  "axes",
 ]);
 
 const INTERPRETATION_LABELS = Object.freeze({
@@ -421,6 +423,15 @@ function appearanceFields({ chart, schema }) {
           control: "toggle",
           path: ["presentation", "legend", "wrap"],
           value: chart.presentation?.legend?.wrap === true,
+        }, {
+          id: "legendFontSize",
+          label: "Legend font size",
+          control: "number",
+          min: 8,
+          max: 20,
+          step: 1,
+          path: ["presentation", "legend", "fontSize"],
+          value: chart.presentation?.legend?.fontSize ?? 11,
         }]
       : []),
     ...(schema.typeId === "table"

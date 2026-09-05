@@ -103,7 +103,7 @@ test("measure-to-row pivots are valid only for axis charts with two measurements
   );
 });
 
-test("category axes accept bounded label wrapping and font settings", () => {
+test("chart typography accepts bounded axis titles, tick labels, and legend text", () => {
   const chart = createChartDraft("bar", {
     id: "wrapped-category-axis",
     title: "Wrapped categories",
@@ -113,7 +113,11 @@ test("category axes accept bounded label wrapping and font settings", () => {
       observation: { field: "district" },
     },
     presentation: {
-      axes: { x: { labelFontSize: 11, labelWrap: true, labelMaxWidth: 96 } },
+      axes: {
+        x: { titleFontSize: 20, labelFontSize: 11, labelWrap: true, labelMaxWidth: 96 },
+        primary: { titleFontSize: 14, labelFontSize: 18 },
+      },
+      legend: { fontSize: 16 },
     },
   });
   assert.doesNotThrow(() => validateChartInstance(chart));
@@ -467,6 +471,7 @@ test("value-axis title typography and offsets accept only their bounded values",
         primary: {
           title: "Cases",
           titleFontSize: 10,
+          labelFontSize: 8,
           titleBold: true,
           titleOffsetX: -96,
           titleOffsetY: 96,
@@ -474,6 +479,7 @@ test("value-axis title typography and offsets accept only their bounded values",
         secondary: {
           title: "Rate",
           titleFontSize: 24,
+          labelFontSize: 20,
           titleBold: false,
           titleOffsetX: 96,
           titleOffsetY: -96,
@@ -487,6 +493,7 @@ test("value-axis title typography and offsets accept only their bounded values",
   const invalid = [
     ["titleFontSize", 9, /titleFontSize must be an integer from 10 through 24/],
     ["titleFontSize", 24.5, /titleFontSize must be an integer from 10 through 24/],
+    ["labelFontSize", 7, /labelFontSize must be an integer from 8 through 20/],
     ["titleBold", "true", /titleBold must be a boolean/],
     ["titleOffsetX", -97, /titleOffsetX must be from -96 through 96/],
     ["titleOffsetY", 97, /titleOffsetY must be from -96 through 96/],
