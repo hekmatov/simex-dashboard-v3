@@ -1813,12 +1813,70 @@
 
 .dashboard-map-panel {
   --right-side-drawer-header-display: grid;
-  --right-side-drawer-max-width: min(380px, 100%);
-  --right-side-drawer-width: min(380px, calc(100vw - 24px));
+  --right-side-drawer-max-width: min(300px, 100%);
+  --right-side-drawer-width: min(300px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  width: 300px;
 }
 
 .dashboard-map-content {
-  padding: 10px;
+  padding: 6px 8px;
+}
+
+.app-frame .dashboard-map-panel .build-structure-list,
+.app-frame .dashboard-map-panel .build-tree-group,
+.app-frame .dashboard-map-panel .build-tree-item-wrap {
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+}
+
+.app-frame .dashboard-map-panel .build-tree-root {
+  padding-inline-start: 0;
+}
+
+body .app-frame .dashboard-map-panel .build-tree-group {
+  margin-inline-start: 0;
+  padding-inline-start: 14px;
+}
+
+.app-frame .dashboard-map-panel .build-tree-row {
+  grid-template-columns: var(--simex-control-utility, 24px) minmax(0, 1fr);
+  min-block-size: 28px;
+  padding: 2px 4px;
+  width: 100%;
+}
+
+.app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded] > .build-tree-row {
+  grid-template-columns: var(--simex-control-utility, 24px) minmax(0, 1fr);
+}
+
+.app-frame .dashboard-map-panel .build-tree-caret {
+  grid-column: 1;
+}
+
+.app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded] > .build-tree-row .build-tree-label,
+.app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded] > .build-tree-row input {
+  grid-column: 2;
+}
+
+.dashboard-map-panel .build-tree-label {
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-map-inline-inspector {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding-inline-start: 12px;
+}
+
+.dashboard-map-inline-inspector .build-inspector {
+  gap: 6px;
+  padding: 8px;
 }
 
 .dashboard-map-panel .build-region-grid {
@@ -1829,6 +1887,7 @@
 .dashboard-map-panel .build-side-sheet {
   display: block;
   max-height: none;
+  padding: 0;
 }
 
 .dashboard-map-header {
@@ -1919,10 +1978,10 @@
 
 @media (max-width: 899px) {
   .right-side-drawer.dashboard-map-panel {
-    left: 12px;
-    right: 12px;
+    left: auto;
+    right: 0;
     top: min(var(--right-side-drawer-top), calc(100dvh - 220px));
-    width: auto;
+    width: min(300px, calc(100vw - 24px));
   }
 
   .dashboard-map-header {
@@ -1936,6 +1995,17 @@
 }
 
 @media (min-width: 900px) {
+  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"]:not([data-build-static-authoring-open="true"]) {
+    --simex-dashboard-map-reserved-width: min(300px, 24vw);
+    margin-left: max(24px, calc((100vw - var(--simex-dashboard-map-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
+    margin-right: auto;
+    min-width: 0;
+    width: min(
+      var(--simex-canonical-canvas-max-width),
+      calc(100% - var(--simex-dashboard-map-reserved-width) - 48px)
+    );
+  }
+
   .scenario-passport-popover {
     inset-inline-start: 0;
     max-height: calc(100vh - 170px);

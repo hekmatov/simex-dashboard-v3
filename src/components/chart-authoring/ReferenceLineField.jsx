@@ -26,8 +26,8 @@ export default function ReferenceLineField({
     {
       className: "chart-authoring-field chart-authoring-reference-line",
       "data-field-id": field?.id,
+      "aria-label": field?.label ?? "Reference line",
     },
-    React.createElement("legend", null, field?.label ?? "Reference line"),
     React.createElement(
       "label",
       { className: "chart-authoring-inline-toggle" },

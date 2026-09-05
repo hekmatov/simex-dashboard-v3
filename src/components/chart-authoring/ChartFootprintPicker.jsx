@@ -13,6 +13,8 @@ export default function ChartFootprintPicker({
   value,
   disabled = false,
   showTextLabels = true,
+  showPreview = true,
+  compact = false,
   maxRows = 2,
   rowHeights: availableRowHeights = FOOTPRINT_ROW_HEIGHTS,
   onChange,
@@ -29,8 +31,12 @@ export default function ChartFootprintPicker({
   const update = (updates) => onChange?.({ ...current, ...updates });
 
   return (
-    <section className="chart-footprint-control" aria-labelledby={titleId}>
-      <div className="chart-footprint-heading">
+    <section
+      className={`chart-footprint-control${compact ? " chart-footprint-control--compact" : ""}`}
+      aria-labelledby={compact ? undefined : titleId}
+      aria-label={compact ? `${subjectLabel} size` : undefined}
+    >
+      {!compact && <div className="chart-footprint-heading">
         <div>
           <span
             id={showTextLabels ? undefined : titleId}
@@ -41,7 +47,7 @@ export default function ChartFootprintPicker({
           {showTextLabels && <h3 id={titleId}>Footprint</h3>}
         </div>
         {showTextLabels && <span className="chart-footprint-limit">4 × 2 guide</span>}
-      </div>
+      </div>}
       <div className="chart-footprint-picker">
         <div className="chart-footprint-inputs">
           <label className="chart-footprint-input" htmlFor={widthId}>
@@ -60,7 +66,7 @@ export default function ChartFootprintPicker({
             </select>
           </label>
           <label className="chart-footprint-input" htmlFor={rowHeightId}>
-            <span>Height step (12.5% of a row)</span>
+            <span>{compact ? "Height" : "Height step (12.5% of a row)"}</span>
             <select
               id={rowHeightId}
               value={String(current.rows)}
@@ -75,7 +81,7 @@ export default function ChartFootprintPicker({
             </select>
           </label>
         </div>
-        <div
+        {showPreview && <div
           className="chart-footprint-preview"
           data-footprint-preview="true"
           role="img"
@@ -88,9 +94,9 @@ export default function ChartFootprintPicker({
           }}
         >
           <span className="chart-footprint-preview__selection" aria-hidden="true" />
-        </div>
+        </div>}
       </div>
-      {showTextLabels && (
+      {showTextLabels && !compact && (
         <p className="chart-footprint-status">
           Current footprint: {current.columns} columns × {rowHeightLabel}.
         </p>

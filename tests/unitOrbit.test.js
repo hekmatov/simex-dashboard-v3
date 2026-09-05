@@ -84,6 +84,20 @@ test("Unit Orbit uses below placement when horizontal candidates cannot fit", ()
   assert.equal(intersects(rightRect(result, 400), anchor), false);
 });
 
+test("Unit Orbit prefers an anchored vertical placement for the Dashboard Map", () => {
+  const anchor = rect(120, 180, 360, 220);
+  const result = orbitModule.positionUnitOrbit({
+    anchorRect: anchor,
+    orbitSize: { width: 210, height: 340 },
+    viewport: { width: 1000, height: 900 },
+    preferVertical: true,
+  });
+
+  assert.equal(result.side, "below");
+  assert.equal(result.top, anchor.bottom + 12);
+  assert.equal(intersects(rightRect(result, 210), anchor), false);
+});
+
 test("Unit Orbit clips beside-chart placement above a protected transaction footer", () => {
   const footer = rect(0, 700, 1200, 900);
   const result = orbitModule.positionUnitOrbit({

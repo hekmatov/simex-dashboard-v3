@@ -24,7 +24,7 @@ const [
 ]);
 await vite.close();
 
-test("Structure tree exposes the selected roving item without temporal library content", () => {
+test("Dashboard map tree exposes selected rows as compact direct drag targets", () => {
   const html = renderToStaticMarkup(React.createElement(BuildStructureRail, {
     dashboard: {
       pages: [{ id: "one", label: "One", sections: [{ id: "overview", title: "Overview", panels: [] }] }],
@@ -38,8 +38,10 @@ test("Structure tree exposes the selected roving item without temporal library c
   assert.match(html, /build-tree-group/);
   assert.doesNotMatch(html, />Chrono Groups</);
   assert.doesNotMatch(html, />Period</);
-  assert.match(html, /<button(?=[^>]*aria-label="Move page One")(?=[^>]*draggable="true")[^>]*>/);
-  assert.match(html, /<button(?=[^>]*aria-label="Move section Overview")(?=[^>]*draggable="true")[^>]*>/);
+  assert.match(html, /<li(?=[^>]*role="treeitem")(?=[^>]*data-build-node-kind="page")(?=[^>]*draggable="true")[^>]*>/);
+  assert.match(html, /<li(?=[^>]*role="treeitem")(?=[^>]*data-build-node-kind="section")(?=[^>]*draggable="true")[^>]*>/);
+  assert.equal((html.match(/class="build-tree-caret"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /build-tree-move-handle|build-tree-kind-icon/);
 });
 
 test("Scene consequence dialog names every affected Scene, chart, unresolved frame source, and Present fallback", () => {

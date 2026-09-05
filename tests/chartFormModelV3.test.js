@@ -168,7 +168,7 @@ test("every chart exposes only configuration controls its renderer honors", () =
   }
 });
 
-test("table row distribution is available in both quick and full appearance forms", () => {
+test("table row distribution is available in the full appearance form only", () => {
   const chart = createChartDraft("table", {
     id: "exercise-table",
     title: "Exercise table",
@@ -188,7 +188,7 @@ test("table row distribution is available in both quick and full appearance form
 
   assert.equal(fullField?.value, "fill");
   assert.deepEqual(fullField?.options.map(({ value }) => value), ["regular", "fill"]);
-  assert.equal(quickField?.value, "fill");
+  assert.equal(quickField, undefined);
 });
 
 function deltaChart() {
@@ -1019,17 +1019,12 @@ test("quick editor fields expose only supported quick presentation controls", ()
   const axisModel = buildQuickEditorFormModel({ chart: axis });
 
   assert.deepEqual(
-    axisModel.sections[0].fields.map(({ id, path }) => ({ id, path })),
+    axisModel.sections[0].fields.map(({ id, control, path }) => ({ id, control, path })),
     [
-      { id: "title", path: ["title"] },
-      { id: "titleVisible", path: ["presentation", "title", "visible"] },
-      { id: "background", path: ["presentation", "background", "color"] },
-      { id: "legendVisible", path: ["presentation", "legend", "visible"] },
-      { id: "seriesColors", path: ["presentation", "series", "colors"] },
-      {
-        id: "referenceLineColor",
-        path: ["presentation", "referenceLine", "color"],
-      },
+      { id: "title", control: "text", path: ["title"] },
+      { id: "titleVisible", control: "toggle", path: ["presentation", "title", "visible"] },
+      { id: "background", control: "quickBackground", path: ["presentation", "background", "color"] },
+      { id: "legendVisible", control: "toggle", path: ["presentation", "legend", "visible"] },
     ],
   );
   assert.equal(
@@ -1039,10 +1034,6 @@ test("quick editor fields expose only supported quick presentation controls", ()
   assert.equal(
     axisModel.sections[0].fields.find(({ id }) => id === "legendVisible").value,
     false,
-  );
-  assert.equal(
-    axisModel.sections[0].fields.find(({ id }) => id === "referenceLineColor").value,
-    "#E56B2F",
   );
 
   const unsupported = buildQuickEditorFormModel({ chart: kpiChart() });

@@ -4,10 +4,7 @@ import {
 } from "../../charting/presentation/seriesStyleContract.js";
 import ColorField from "../ColorField.jsx";
 import { IconControl } from "../common/SimExIcon.js";
-import {
-  GroupShell,
-  fieldControlId,
-} from "./StandardField.jsx";
+import { fieldControlId } from "./StandardField.jsx";
 
 const MAX_SERIES_COLORS = SERIES_STYLE_LIMITS.colors.max;
 const DEFAULT_SERIES_COLORS = Object.freeze([
@@ -43,15 +40,24 @@ function SeriesColorsField({
   };
 
   return React.createElement(
-    GroupShell,
-    { field, className: "chart-authoring-series-colors" },
-    colors.length === 0
-      ? React.createElement(
-          "small",
-          { className: "chart-authoring-empty" },
-          "The chart is using its default color sequence.",
-        )
-      : null,
+    "fieldset",
+    {
+      className: "chart-authoring-field chart-authoring-series-colors",
+      "data-field-id": field?.id,
+    },
+    React.createElement("legend", { className: "visually-hidden" }, field?.label ?? "Series colors"),
+    React.createElement(
+      "div",
+      { className: "chart-authoring-series-colors-heading" },
+      React.createElement("span", { className: "chart-authoring-field-label" }, field?.label ?? "Series colors"),
+      colors.length === 0
+        ? React.createElement(
+            "small",
+            { className: "chart-authoring-empty" },
+            "Using the default color sequence.",
+          )
+        : null,
+    ),
     React.createElement(
       "div",
       { className: "chart-authoring-series-color-list" },

@@ -128,7 +128,6 @@ export default function BuildWorkspace({
   selectionControllerRef,
   exportResolutionControllerRef,
 }) {
-  const [mapRegion, setMapRegion] = React.useState("structure");
   const [draftCoordinator, dispatchDraftCoordinator] = React.useReducer(
     reduceBuildDraftCoordinator,
     { layoutDraft, chartSlotDraft },
@@ -199,7 +198,10 @@ export default function BuildWorkspace({
     : null;
   const selectedChart = selectedChartItem?.chart ?? null;
   const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
-  const inspectorFocusKey = mapRegion === "inspector" ? focusLabelKey : 0;
+  const inspectorFocusKey = focusLabelKey;
+  const mapChartAnchorSelector = buildPanelOpen && chartEditorPlacementId
+    ? `#dashboard-map-panel [data-build-placement-id="${typeof CSS === "undefined" ? chartEditorPlacementId : CSS.escape(chartEditorPlacementId)}"]`
+    : "";
 
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
@@ -223,11 +225,6 @@ export default function BuildWorkspace({
       findings: temporalFindings,
     }));
   }, [dashboard.chronoGroups, dashboard.pages, dashboard.scenes, temporalFindings, temporalSurfaceActive]);
-
-  React.useEffect(() => {
-    if (focusLabelKey <= 0 || selection?.kind === "chart") return;
-    setMapRegion("inspector");
-  }, [focusLabelKey, selection?.kind]);
 
   const chooseSelection = (next, options) => {
     if (
@@ -779,18 +776,6 @@ export default function BuildWorkspace({
     },
   });
 
-  const structure = (
-    <BuildStructureRail
-      key={treeResetGeneration}
-      dashboard={dashboard}
-      selection={selection}
-      disabled={navigationLocked}
-      onActivate={chooseSelection}
-      onRename={onRename}
-      onRenameDirtyChange={onInlineRenameDirtyChange}
-      onMove={onLayoutMove}
-    />
-  );
   const inspector = (
     <BuildInspector
       dashboard={dashboard}
@@ -804,6 +789,19 @@ export default function BuildWorkspace({
       onPageChange={onPageChange}
       onPageRemove={onPageRemove}
       onSectionChange={onSectionChange}
+    />
+  );
+  const structure = (
+    <BuildStructureRail
+      key={treeResetGeneration}
+      dashboard={dashboard}
+      selection={selection}
+      disabled={navigationLocked}
+      onActivate={chooseSelection}
+      onRename={onRename}
+      onRenameDirtyChange={onInlineRenameDirtyChange}
+      onMove={onLayoutMove}
+      inspector={inspector}
     />
   );
 
@@ -840,7 +838,7 @@ export default function BuildWorkspace({
               role="complementary"
               aria-label="Source content authoring"
               hidden={activeAuxiliary !== "source-content"}
-              inert={activeAuxiliary !== "source-content" ? "" : undefined}
+                inert={activeAuxiliary !== "source-content" || undefined}
               onKeyDown={(event) => {
                 if (event.key !== "Escape" || sourceContentSaving) return;
                 event.preventDefault();
@@ -925,51 +923,24 @@ export default function BuildWorkspace({
             open={buildPanelOpen}
             onClose={onCloseDashboardMap}
             modality="complementary"
-            eyebrow="Build"
             className="dashboard-map-panel"
             headerClassName="dashboard-map-header"
             contentClassName="dashboard-map-content"
             panelProps={{ "aria-label": "Dashboard map" }}
-            headerActions={(
-              <div className="dashboard-map-region-switch" role="group" aria-label="Dashboard map regions">
-                <button
-                  type="button"
-                  className="secondary"
-                  data-dashboard-map-region-control="structure"
-                  aria-pressed={mapRegion === "structure"}
-                  disabled={locked}
-                  onClick={() => setMapRegion("structure")}
-                >
-                  Structure
-                </button>
-                <button
-                  type="button"
-                  className="secondary"
-                  aria-pressed={mapRegion === "inspector"}
-                  disabled={locked}
-                  onClick={() => setMapRegion("inspector")}
-                >
-                  Inspector
-                </button>
-              </div>
-            )}
+            closeIcon
           >
             <section className="build-region-grid">
-              {mapRegion === "structure" ? (
-                <section className="build-side-sheet build-structure-sheet" data-dashboard-map-region="structure">
-                  {structure}
-                </section>
-              ) : (
-                <section className="build-side-sheet build-inspector-sheet" data-dashboard-map-region="inspector" role="region" aria-label="Context inspector">
-                  {inspector}
-                </section>
-              )}
+              <section className="build-side-sheet build-structure-sheet" data-dashboard-map-region="structure">
+                {structure}
+              </section>
             </section>
           </RightSideDrawer>
           {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
               themeProjection={themeProjection}
               anchorPlacementId={chartEditorPlacementId}
+              anchorSelector={mapChartAnchorSelector}
+              preferVertical={Boolean(mapChartAnchorSelector)}
               chartTitle={selectedChart?.title}
               capabilities={unitOrbitCapabilities}
               open={chartEditorOpen}

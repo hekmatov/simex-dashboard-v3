@@ -6,6 +6,7 @@ import DeltaComparisonField from "./DeltaComparisonField.jsx";
 import RoleField from "./RoleField.jsx";
 import ReferenceLineField from "./ReferenceLineField.jsx";
 import SeriesColorsField from "./SeriesColorsField.jsx";
+import QuickBackgroundField from "./QuickBackgroundField.jsx";
 import StandardField, {
   fieldControlId,
   fieldDescribedBy
@@ -42,6 +43,13 @@ function SchemaField({
   }
   if (field.control === "palette") {
     return /* @__PURE__ */ React.createElement(SeriesColorsField, shared);
+  }
+  if (field.control === "quickBackground") {
+    return /* @__PURE__ */ React.createElement(QuickBackgroundField, {
+      field: decoratedField,
+      chart,
+      onChange,
+    });
   }
   if (field.control === "referenceLine") {
     return /* @__PURE__ */ React.createElement(ReferenceLineField, shared);

@@ -89,6 +89,7 @@ export function positionUnitOrbit({
   gap = DEFAULT_GAP,
   margin = DEFAULT_MARGIN,
   minHeight = DEFAULT_MIN_HEIGHT,
+  preferVertical = false,
 }) {
   if (!anchorRect || !orbitSize || !viewport) return { needsRecenter: true };
 
@@ -103,25 +104,27 @@ export function positionUnitOrbit({
   );
   const horizontalHeight = Math.min(height, viewport.height - (margin * 2));
 
-  if (viewport.width - margin - (anchorRect.right + gap) >= width) {
-    candidates.push(candidate("right", anchorRect.right + gap, verticalTop, width, horizontalHeight));
-  }
-  if (anchorRect.left - gap - margin >= width) {
-    candidates.push(candidate("left", anchorRect.left - gap - width, verticalTop, width, horizontalHeight));
-  }
-
   const horizontalLeft = clamp(
     anchorRect.left,
     margin,
     Math.max(margin, viewport.width - margin - width),
   );
   const belowHeight = Math.min(height, viewport.height - margin - (anchorRect.bottom + gap));
-  if (belowHeight >= minHeight) {
-    candidates.push(candidate("below", horizontalLeft, anchorRect.bottom + gap, width, belowHeight));
-  }
   const aboveHeight = Math.min(height, anchorRect.top - gap - margin);
-  if (aboveHeight >= minHeight) {
-    candidates.push(candidate("above", horizontalLeft, anchorRect.top - gap - aboveHeight, width, aboveHeight));
+  const addHorizontalCandidates = () => {
+    if (viewport.width - margin - (anchorRect.right + gap) >= width) candidates.push(candidate("right", anchorRect.right + gap, verticalTop, width, horizontalHeight));
+    if (anchorRect.left - gap - margin >= width) candidates.push(candidate("left", anchorRect.left - gap - width, verticalTop, width, horizontalHeight));
+  };
+  const addVerticalCandidates = () => {
+    if (belowHeight >= minHeight) candidates.push(candidate("below", horizontalLeft, anchorRect.bottom + gap, width, belowHeight));
+    if (aboveHeight >= minHeight) candidates.push(candidate("above", horizontalLeft, anchorRect.top - gap - aboveHeight, width, aboveHeight));
+  };
+  if (preferVertical) {
+    addVerticalCandidates();
+    addHorizontalCandidates();
+  } else {
+    addHorizontalCandidates();
+    addVerticalCandidates();
   }
 
   const selected = candidates
@@ -144,6 +147,8 @@ export function positionUnitOrbit({
 export default function UnitOrbit({
   themeProjection,
   anchorPlacementId,
+  anchorSelector = "",
+  preferVertical = false,
   chartTitle = "Selected chart",
   capabilities = [],
   onRequestClose,
@@ -159,7 +164,7 @@ export default function UnitOrbit({
   React.useLayoutEffect(() => {
     if (!open) return undefined;
     if (typeof document === "undefined" || typeof window === "undefined") return undefined;
-    const anchor = findAnchor(anchorPlacementId);
+    const anchor = findAnchor(anchorPlacementId, anchorSelector);
     if (!anchor) return undefined;
 
     returnStateRef.current = captureUnitOrbitReturnState({
@@ -169,7 +174,7 @@ export default function UnitOrbit({
 
     const update = () => {
       frameRef.current = 0;
-      const currentAnchor = findAnchor(anchorPlacementId);
+      const currentAnchor = findAnchor(anchorPlacementId, anchorSelector);
       const orbit = orbitRef.current;
       if (!currentAnchor || !orbit) return;
       const orbitSize = resolveUnitOrbitSize(orbit, window.innerWidth);
@@ -178,6 +183,7 @@ export default function UnitOrbit({
         orbitSize,
         viewport: { width: window.innerWidth, height: window.innerHeight },
         protectedRects: protectedElementRects(),
+        preferVertical,
       });
 
       if (result.needsRecenter && !recenteredRef.current) {
@@ -229,7 +235,7 @@ export default function UnitOrbit({
       restoreUnitOrbitReturnState(returnStateRef.current, { windowRef: window });
       returnStateRef.current = null;
     };
-  }, [anchorPlacementId, open]);
+  }, [anchorPlacementId, anchorSelector, open, preferVertical]);
 
   React.useEffect(() => {
     if (!open || typeof document === "undefined") return undefined;
@@ -250,7 +256,7 @@ export default function UnitOrbit({
       aria-label={`Chart settings for ${chartTitle}`}
       aria-hidden={open ? undefined : "true"}
       hidden={!open}
-      inert={!open ? "" : undefined}
+      inert={!open || undefined}
       data-unit-orbit-side={placement?.side}
       data-unit-orbit-capabilities={capabilities.map(({ id }) => id).join(" ")}
       {...dashboardThemeRootProps(themeProjection, {
@@ -318,7 +324,8 @@ export function constrainedUnitOrbitPlacement({
   };
 }
 
-function findAnchor(placementId) {
+function findAnchor(placementId, anchorSelector = "") {
+  if (anchorSelector) return document.querySelector(anchorSelector);
   return [...document.querySelectorAll("[data-build-placement-id]")]
     .find((element) => element.dataset.buildPlacementId === placementId) ?? null;
 }

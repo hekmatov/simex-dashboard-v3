@@ -1,6 +1,7 @@
 import React from "react";
 
 import ModalFocusScope from "./ModalFocusScope.jsx";
+import { SimExIcon } from "./SimExIcon.js";
 
 export const RIGHT_SIDE_DRAWER_CHANGE_EVENT = "simex:right-side-drawer-change";
 export const RIGHT_SIDE_DRAWER_SELECTOR = '[data-right-side-drawer][data-open="true"]';
@@ -23,6 +24,7 @@ export default function RightSideDrawer({
   headerClassName = "",
   contentClassName = "",
   closeClassName = "secondary",
+  closeIcon = false,
   headerActions = null,
   footer = null,
   panelProps = {},
@@ -98,7 +100,7 @@ export default function RightSideDrawer({
           aria-label={`Close ${title}`}
           onClick={() => requestRightSideDrawerClose(latestClose.current, "close-button")}
         >
-          Close
+          {closeIcon ? <SimExIcon iconId="close" size={18} /> : "Close"}
         </button>
       </header>
       <div className={contentClasses}>{children}</div>

@@ -1,5 +1,5 @@
 import React from "react";
-import { IconControl } from "../common/SimExIcon.js";
+import { IconControl, SimExIcon } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
 const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
 const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]);
@@ -106,7 +106,7 @@ function StandardField({
 function FieldShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
   const id = fieldControlId(field);
-  return /* @__PURE__ */ React.createElement("div", { className: `chart-authoring-field ${className}`.trim(), "data-field-id": field.id, "aria-invalid": fieldHasError(field) ? "true" : void 0 }, /* @__PURE__ */ React.createElement("label", { htmlFor: id }, React.createElement("span", { className: "chart-authoring-field-label" }, field.label, requiredMarker(field))), field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null, children, field.help ? /* @__PURE__ */ React.createElement("small", { id: `${id}-help` }, field.help) : null, field.error ? /* @__PURE__ */ React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null);
+  return /* @__PURE__ */ React.createElement("div", { className: `chart-authoring-field ${field.compactLabel ? "chart-authoring-field--label-hidden " : ""}${className}`.trim(), "data-field-id": field.id, "aria-invalid": fieldHasError(field) ? "true" : void 0 }, /* @__PURE__ */ React.createElement("label", { htmlFor: id }, React.createElement("span", { className: field.compactLabel ? "chart-authoring-field-label visually-hidden" : "chart-authoring-field-label" }, field.label, requiredMarker(field))), field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null, children, field.help ? /* @__PURE__ */ React.createElement("small", { id: `${id}-help` }, field.help) : null, field.error ? /* @__PURE__ */ React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null);
 }
 function GroupShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
@@ -395,10 +395,14 @@ function axisControls(label, axis, value, emit) {
     selectControl("Title orientation", value.titleOrientation ?? "vertical", ["vertical", "horizontal"], (nextValue) => emit([axis, "titleOrientation"], nextValue)),
     fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit([axis, "titleFontSize"], nextValue)),
     inlineToggle("Bold", value.titleBold === true, (checked) => emit([axis, "titleBold"], checked)),
-    boundedNumericControl("Horizontal offset", value.titleOffsetX, -96, 96, (nextValue) => emit([axis, "titleOffsetX"], nextValue)),
-    boundedNumericControl("Vertical offset", value.titleOffsetY, -96, 96, (nextValue) => emit([axis, "titleOffsetY"], nextValue)),
-    numericControl("Minimum", value.min, (nextValue) => emit([axis, "min"], nextValue)),
-    numericControl("Maximum", value.max, (nextValue) => emit([axis, "max"], nextValue)),
+    numericPair("chart-authoring-axis-offsets", [
+      boundedNumericControl("Horizontal offset", value.titleOffsetX, -96, 96, (nextValue) => emit([axis, "titleOffsetX"], nextValue)),
+      boundedNumericControl("Vertical offset", value.titleOffsetY, -96, 96, (nextValue) => emit([axis, "titleOffsetY"], nextValue)),
+    ]),
+    numericPair("chart-authoring-axis-bounds", [
+      numericControl("Minimum", value.min, (nextValue) => emit([axis, "min"], nextValue)),
+      numericControl("Maximum", value.max, (nextValue) => emit([axis, "max"], nextValue)),
+    ]),
     tickControls(axis, value.tickFrequency, "number", emit),
     inlineToggle("Show grid", value.grid !== false, (checked) => emit([axis, "grid"], checked)),
   );
@@ -416,8 +420,24 @@ function BooleanFieldShell({ field, control }) {
     React.createElement(
       "div",
       { className: "dashboard-authoring-boolean-copy" },
-      React.createElement("label", { htmlFor: id }, field.label),
-      field.help ? React.createElement("small", { id: `${id}-help` }, field.help) : null,
+      React.createElement(
+        "label",
+        { htmlFor: id },
+        field.label,
+        field.helpTooltip
+          ? React.createElement(
+              "span",
+              {
+                className: "chart-authoring-inline-help",
+                title: field.helpTooltip,
+                role: "img",
+                "aria-label": field.helpTooltip,
+              },
+              React.createElement(SimExIcon, { iconId: "eye", size: 14 }),
+            )
+          : null,
+      ),
+      field.help && !field.helpTooltip ? React.createElement("small", { id: `${id}-help` }, field.help) : null,
       field.error ? React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null,
     ),
   );
@@ -433,12 +453,30 @@ function selectControl(label, value, options, onChange) {
     onChange: (event) => onChange(event.target.value),
   }, options.map((option) => React.createElement("option", { key: option, value: option }, sentence(option)))));
 }
+function optionSelectControl(label, value, options, onChange) {
+  return React.createElement("label", null, label, React.createElement(
+    "select",
+    { value, onChange: (event) => onChange(event.target.value) },
+    options.map(([optionValue, optionLabel]) => React.createElement(
+      "option",
+      { key: optionValue, value: optionValue },
+      optionLabel,
+    )),
+  ));
+}
 function numericControl(label, value, onChange) {
   return React.createElement("label", null, label, React.createElement("input", {
     type: "number",
     value: numeric(value),
     onChange: (event) => onChange(optionalNumber(event.target.value)),
   }));
+}
+function numericPair(className, controls) {
+  return React.createElement(
+    "div",
+    { className: `chart-authoring-number-pair ${className}` },
+    ...controls,
+  );
 }
 function boundedNumericControl(label, value, min, max, onChange) {
   return React.createElement("label", null, label, React.createElement("input", {
@@ -471,21 +509,35 @@ function fontSizeControl(value, onChange) {
 }
 function xAxisControls(value, kind, emit) {
   const ranged = kind === "temporal" || kind === "number";
-  return /* @__PURE__ */ React.createElement("fieldset", { className: "chart-authoring-axis-group dashboard-authoring-grid" }, /* @__PURE__ */ React.createElement("legend", null, "X axis"), textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)), kind === "category" ? /* @__PURE__ */ React.createElement(React.Fragment, null, boundedNumericControl("Label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)), inlineToggle("Wrap long labels", value.labelWrap === true, (checked) => emit(["x", "labelWrap"], checked)), value.labelWrap === true ? boundedNumericControl("Wrapped label width", value.labelMaxWidth ?? 96, 40, 240, (nextValue) => emit(["x", "labelMaxWidth"], nextValue)) : null) : null, ranged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Minimum", /* @__PURE__ */ React.createElement("input", {
-    type: kind === "temporal" ? "datetime-local" : "number",
-    value: kind === "number" ? numeric(value.min) : text(value.min),
-    onChange: (event) => emit(["x", "min"], kind === "number" ? optionalNumber(event.target.value) : event.target.value)
-  })), /* @__PURE__ */ React.createElement("label", null, "Maximum", /* @__PURE__ */ React.createElement("input", {
-    type: kind === "temporal" ? "datetime-local" : "number",
-    value: kind === "number" ? numeric(value.max) : text(value.max),
-    onChange: (event) => emit(["x", "max"], kind === "number" ? optionalNumber(event.target.value) : event.target.value)
-  }))) : null, kind === "temporal" ? /* @__PURE__ */ React.createElement("label", null, "Label format", /* @__PURE__ */ React.createElement("select", {
-    value: value.labelPreset ?? "adaptive",
-    onChange: (event) => emit(["x", "labelPreset"], event.target.value)
-  }, [["adaptive", "Adaptive / current hierarchy"], ["ddMmmYearBoundary", "DD MMM (year boundary)"], ["ddMmYyyy", "DD-MM-YYYY"], ["ddMmYy", "DD-MM-YY"], ["hhMm", "HH:mm"], ["ddMmYyyyHhMm", "DD-MM-YYYY HH:mm"]].map(([preset, label]) => /* @__PURE__ */ React.createElement("option", { key: preset, value: preset }, label)))) : null, kind === "temporal" ? /* @__PURE__ */ React.createElement("label", null, "Hover date/time", /* @__PURE__ */ React.createElement("select", {
-    value: value.hoverLabelPreset ?? "auto",
-    onChange: (event) => emit(["x", "hoverLabelPreset"], event.target.value)
-  }, [["auto", "Auto (match source)"], ["year", "Year (YYYY)"], ["date", "Date (YYYY-MM-DD)"], ["dateTime", "Date and time (YYYY-MM-DD HH:mm)"]].map(([preset, label]) => /* @__PURE__ */ React.createElement("option", { key: preset, value: preset }, label)))) : null, tickControls("x", value.tickFrequency, kind, emit));
+  const bounds = ranged ? numericPair("chart-authoring-axis-bounds", [
+    React.createElement("label", { key: "min" }, "Minimum", React.createElement("input", {
+      type: kind === "temporal" ? "datetime-local" : "number",
+      value: kind === "number" ? numeric(value.min) : text(value.min),
+      onChange: (event) => emit(["x", "min"], kind === "number" ? optionalNumber(event.target.value) : event.target.value),
+    })),
+    React.createElement("label", { key: "max" }, "Maximum", React.createElement("input", {
+      type: kind === "temporal" ? "datetime-local" : "number",
+      value: kind === "number" ? numeric(value.max) : text(value.max),
+      onChange: (event) => emit(["x", "max"], kind === "number" ? optionalNumber(event.target.value) : event.target.value),
+    })),
+  ]) : null;
+  return React.createElement(
+    "fieldset",
+    { className: "chart-authoring-axis-group dashboard-authoring-grid" },
+    React.createElement("legend", null, "X axis"),
+    textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)),
+    kind === "category" ? React.createElement(
+      React.Fragment,
+      null,
+      boundedNumericControl("Label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)),
+      inlineToggle("Wrap long labels", value.labelWrap === true, (checked) => emit(["x", "labelWrap"], checked)),
+      value.labelWrap === true ? boundedNumericControl("Wrapped label width", value.labelMaxWidth ?? 96, 40, 240, (nextValue) => emit(["x", "labelMaxWidth"], nextValue)) : null,
+    ) : null,
+    bounds,
+    kind === "temporal" ? optionSelectControl("Label format", value.labelPreset ?? "adaptive", [["adaptive", "Adaptive / current hierarchy"], ["ddMmmYearBoundary", "DD MMM (year boundary)"], ["ddMmYyyy", "DD-MM-YYYY"], ["ddMmYy", "DD-MM-YY"], ["hhMm", "HH:mm"], ["ddMmYyyyHhMm", "DD-MM-YYYY HH:mm"]], (nextValue) => emit(["x", "labelPreset"], nextValue)) : null,
+    kind === "temporal" ? optionSelectControl("Hover date/time", value.hoverLabelPreset ?? "auto", [["auto", "Auto (match source)"], ["year", "Year (YYYY)"], ["date", "Date (YYYY-MM-DD)"], ["dateTime", "Date and time (YYYY-MM-DD HH:mm)"]], (nextValue) => emit(["x", "hoverLabelPreset"], nextValue)) : null,
+    tickControls("x", value.tickFrequency, kind, emit),
+  );
 }
 function tickControls(axis, value, kind, emit) {
   const monthCadence = kind === "temporal" && value?.unit === "month";

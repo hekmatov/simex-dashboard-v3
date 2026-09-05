@@ -95,9 +95,11 @@ test("Build main row has the exact compact command order and ownership", () => {
   );
   assert.doesNotMatch(html, /aria-label="Build commands"[^>]*inert/);
   assert.match(html, /<h2[^>]*>Dashboard map<\/h2>/);
-  assert.match(html, /aria-label="Dashboard map regions"[\s\S]*aria-pressed="true"[^>]*>Structure<[\s\S]*aria-pressed="false"[^>]*>Inspector</);
+  assert.match(html, /aria-label="Close Dashboard map"/);
+  assert.match(html, /data-icon-id="close"/);
   assert.match(html, /data-dashboard-map-region="structure"/);
-  assert.doesNotMatch(html, /data-dashboard-map-region="inspector"/);
+  assert.doesNotMatch(html, /Dashboard map regions|>Structure<|>Inspector</);
+  assert.match(html, /dashboard-map-inline-inspector[\s\S]*?Page title/);
 });
 
 test("More is a dialog drawer containing only Scene Studio in pointer-only mode", () => {

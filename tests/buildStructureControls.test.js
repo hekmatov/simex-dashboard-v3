@@ -35,7 +35,7 @@ test("closing Page actions clears the command, value, and acknowledgement state"
   });
 });
 
-test("Build Structure is a Page-first accessible tree with aligned type icons", () => {
+test("Dashboard map is a Page-first accessible tree with direct drag rows", () => {
   assert.equal(typeof structureRailModule?.default, "function");
   const html = renderToStaticMarkup(React.createElement(structureRailModule.default, {
     dashboard: { pages: [{ id: "biomedical", label: "Biomedical", sections: [{ id: "overview", title: "Overview", panels: [{ id: "confirmed_cases_panel", chart: { id: "confirmed_cases", title: "Confirmed cases" } }] }] }] },
@@ -50,7 +50,7 @@ test("Build Structure is a Page-first accessible tree with aligned type icons", 
   assert.match(html, /data-build-node-kind="section"/);
   assert.match(html, /data-build-node-kind="chart"/);
   assert.doesNotMatch(html, />Scenario<\/button>/);
-  assert.match(html, /data-build-node-kind="page"[\s\S]*build-tree-caret[\s\S]*data-build-tree-icon="page"/);
-  assert.match(html, /data-build-node-kind="section"[\s\S]*build-tree-caret[\s\S]*data-build-tree-icon="section"/);
-  assert.match(html, /data-build-node-kind="chart"[\s\S]*build-tree-caret-spacer[\s\S]*data-build-tree-icon="chart"/);
+  assert.equal((html.match(/draggable="true"/g) ?? []).length, 3);
+  assert.equal((html.match(/class="build-tree-caret"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /build-tree-kind-icon|data-build-tree-icon=|build-tree-move-handle/);
 });

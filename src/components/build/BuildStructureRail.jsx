@@ -1,6 +1,5 @@
 import React from "react";
 
-import BuildMoveDialog from "./BuildMoveDialog.jsx";
 import {
   BUILD_LAYOUT_MOVE_MIME,
   buildSiblingMove,
@@ -24,12 +23,11 @@ function allExpanded(dashboard) {
   ]));
 }
 
-export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
+export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove, inspector = null }) {
   const [expandedKeys, setExpandedKeys] = React.useState(() => allExpanded(dashboard));
   const [focusedKey, setFocusedKey] = React.useState(() => selectionKey(selection));
   const [renameKey, setRenameKey] = React.useState("");
   const [renameValue, setRenameValue] = React.useState("");
-  const [moveRequest, setMoveRequest] = React.useState(null);
   const [dropIndicator, setDropIndicator] = React.useState(null);
   const refs = React.useRef(new Map());
   const dragSessionRef = React.useRef(null);
@@ -120,7 +118,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       if (event.key === "F2") { event.preventDefault(); void beginRename(node); }
       if (event.key === "Escape" && isRenaming) { event.preventDefault(); cancelRename(node); }
     };
-    return <li
+    return <React.Fragment key={node.key}><li
       key={node.key}
       ref={(element) => {
         if (element) refs.current.set(node.key, element);
@@ -130,11 +128,14 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       className="build-tree-item-wrap"
       data-build-node-kind={node.kind}
       data-build-node-id={node.placementId ?? node.sectionId ?? node.pageId}
+      data-build-placement-id={node.kind === "chart" ? node.placementId : undefined}
+      data-dashboard-map-node-key={node.key}
       aria-label={label}
       aria-expanded={node.hasChildren ? expanded : undefined}
       aria-selected={selected}
       aria-disabled={disabled || undefined}
       tabIndex={isRenaming ? -1 : activeTab ? 0 : -1}
+      draggable={!disabled && !isRenaming}
       onFocus={(event) => {
         if (event.target === event.currentTarget) setFocusedKey(node.key);
       }}
@@ -143,6 +144,18 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
         if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
         if (disabled || isRenaming || event.defaultPrevented) return;
         controller.click(() => void activate(selectionFor(node)));
+      }}
+      onDragStart={(event) => {
+        if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
+        if (disabled || isRenaming) return;
+        dragSessionRef.current.start(moveSourceForNode(node));
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData(BUILD_LAYOUT_MOVE_MIME, encodeBuildMovePayload(moveSourceForNode(node)));
+      }}
+      onDragEnd={(event) => {
+        if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
+        dragSessionRef.current.clear();
+        setDropIndicator(null);
       }}
       onDoubleClick={(event) => {
         if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
@@ -182,7 +195,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       }}
     >
       <div className={`build-tree-row${selected ? " is-selected" : ""}${isRenaming ? " is-renaming" : ""}`}>
-        {node.hasChildren ? (
+        {node.hasChildren && (
           <button
             type="button"
             className="build-tree-caret"
@@ -196,8 +209,8 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
             }}
             onDoubleClick={(event) => event.stopPropagation()}
           ><span aria-hidden="true" /></button>
-        ) : <span className="build-tree-caret-spacer" aria-hidden="true" />}
-        <span className="build-tree-kind-icon" data-build-tree-icon={node.kind} aria-hidden="true" />
+        )}
+        {!node.hasChildren && <span className="build-tree-caret-spacer" aria-hidden="true" />}
         {isRenaming ? (
           <input
             autoFocus
@@ -220,48 +233,13 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
               else cancelRename(node);
             }}
           />
-        ) : <span className="build-tree-label">{label}</span>}
-        <button
-          type="button"
-          className="build-tree-move-handle"
-          aria-label={`Move ${node.kind === "chart" ? "panel" : node.kind} ${label}`}
-          draggable={!disabled}
-          disabled={disabled}
-          onClick={(event) => {
-            event.stopPropagation();
-            setMoveRequest({ source: moveSourceForNode(node), label, invoker: event.currentTarget });
-          }}
-          onDoubleClick={(event) => event.stopPropagation()}
-          onDragStart={(event) => {
-            event.stopPropagation();
-            dragSessionRef.current.start(moveSourceForNode(node));
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData(BUILD_LAYOUT_MOVE_MIME, encodeBuildMovePayload(moveSourceForNode(node)));
-          }}
-          onDragEnd={() => {
-            dragSessionRef.current.clear();
-            setDropIndicator(null);
-          }}
-        ><span aria-hidden="true">↕</span></button>
+        ) : <span className="build-tree-label" title={label}>{label}</span>}
       </div>
       {node.hasChildren && expanded && <ul role="group" className="build-tree-group">{nodes.filter((item) => item.parentKey === node.key).map(row)}</ul>}
-    </li>;
+    </li>{selected && node.kind !== "chart" && inspector ? <li className="dashboard-map-inline-inspector">{inspector}</li> : null}</React.Fragment>;
   };
   return <>
-    <nav className="build-structure-rail" aria-label="Dashboard structure"><div className="build-region-heading"><p className="eyebrow">Structure</p><h2>Dashboard</h2></div><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
-    <BuildMoveDialog
-      open={Boolean(moveRequest)}
-      dashboard={dashboard}
-      source={moveRequest?.source}
-      sourceLabel={moveRequest?.label}
-      invoker={moveRequest?.invoker}
-      onCancel={() => setMoveRequest(null)}
-      onMove={(move) => {
-        const invoker = moveRequest?.invoker ?? null;
-        setMoveRequest(null);
-        onMove?.(move, invoker);
-      }}
-    />
+    <nav className="build-structure-rail" aria-label="Dashboard structure"><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
   </>;
 }
 

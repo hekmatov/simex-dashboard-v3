@@ -929,7 +929,7 @@
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   bottom: 0;
   content: "";
-  left: calc(var(--simex-control-utility, 24px) / 2);
+  left: calc((var(--simex-control-utility, 24px) / 2) + 4px);
   pointer-events: none;
   position: absolute;
   top: calc(50% + 8px);
@@ -941,7 +941,7 @@
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   content: "";
   height: calc(100% + 6px);
-  left: calc((var(--simex-control-utility, 24px) / 2) - 24px);
+  left: calc((var(--simex-control-utility, 24px) / 2) - 10px);
   pointer-events: none;
   position: absolute;
   top: 0;
@@ -950,22 +950,26 @@
 }
 
 .app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap:last-child::after {
-  height: 22px;
+  height: 18px;
 }
 
 .app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap::before {
   border-bottom: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   border-radius: 0 0 0 var(--build-tree-elbow-radius, 0);
-  height: 22px;
-  left: calc((var(--simex-control-utility, 24px) / 2) - 24px);
+  height: 18px;
+  left: calc((var(--simex-control-utility, 24px) / 2) - 10px);
   pointer-events: none;
   top: 0;
-  width: 24px;
+  width: 14px;
   z-index: 0;
 }
 
 .app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap[aria-expanded]::before {
-  width: 16px;
+  width: 14px;
+}
+
+.app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap[data-build-node-kind="chart"]::before {
+  width: 22px;
 }
 
 .app-frame .dashboard-map-panel .build-tree-row {

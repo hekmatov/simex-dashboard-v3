@@ -34,8 +34,6 @@ const QUICK_PRESENTATION_FIELD_IDS = new Set([
   "titleVisible",
   "background",
   "legendVisible",
-  "seriesColors",
-  "tableRowDistribution",
 ]);
 
 const INTERPRETATION_LABELS = Object.freeze({
@@ -173,31 +171,20 @@ export function buildQuickEditorFormModel({ chart, profile } = {}) {
   if (schema.authoringWorkflow !== "chart") {
     throw new Error(`Chart type "${schema.typeId}" does not use chart quick editing.`);
   }
-  const fields = appearanceFields({ chart, schema }).flatMap((field) => {
-    if (QUICK_PRESENTATION_FIELD_IDS.has(field.id)) return [field];
-    if (field.id !== "referenceLine") return [];
-    const referenceLine = chart.presentation?.referenceLine;
-    if (
-      !referenceLine
-      || typeof referenceLine !== "object"
-      || Array.isArray(referenceLine)
-    ) {
-      return [];
-    }
-    return [{
-      id: "referenceLineColor",
-      label: "Reference line color",
-      control: "color",
-      path: ["presentation", "referenceLine", "color"],
-      value: referenceLine.color ?? "",
-    }];
-  });
+  const fields = appearanceFields({ chart, schema }).flatMap((field) => (
+    QUICK_PRESENTATION_FIELD_IDS.has(field.id)
+      ? [field.id === "background"
+        ? { ...field, control: "quickBackground" }
+        : field]
+      : []
+  ));
   return {
     sections: [{
       id: "quick-appearance",
       label: "Quick appearance",
       fields,
       advanced: false,
+      headingVisible: false,
     }],
     valid: chartIsValid(chart, profile),
   };
@@ -695,7 +682,7 @@ function interactionFields({
         control: "toggle",
         path: ["interaction", "zoom", "rangeSelector"],
         value: chart.interaction?.zoom?.rangeSelector === true,
-        help: "Show a draggable overview slider below the plot.",
+        helpTooltip: "Show a draggable overview slider below the plot.",
       });
     }
   }

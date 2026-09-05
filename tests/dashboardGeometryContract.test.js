@@ -103,10 +103,10 @@ test("Look, Map, More, and Audience share one measured crown-bottom drawer coord
     /prefers-reduced-motion:\s*reduce[\s\S]*?animation:\s*none\s*!important[\s\S]*?transition:\s*none\s*!important/,
   );
   assert.match(operationStatus, /RIGHT_SIDE_DRAWER_SELECTOR/);
-  assert.doesNotMatch(
+  assert.match(
     modes,
-    /\[data-dashboard-map-open="true"\][^{]*\{[^}]*\b(?:margin-left|width):/,
-    "Dashboard Map must overlay without compressing or repositioning the canvas",
+    /\.canonical-dashboard-frame\.build-workspace\[data-dashboard-map-open="true"\]:not\(\[data-build-static-authoring-open="true"\]\)\s*\{[\s\S]*?--simex-dashboard-map-reserved-width:\s*min\(300px,\s*24vw\);[\s\S]*?width:\s*min\(/,
+    "the compact Dashboard Map should reserve a small desktop canvas column for side-by-side authoring",
   );
   assert.doesNotMatch(
     modes,
@@ -122,11 +122,48 @@ test("Dashboard Map preserves its header and first tree row at narrow zoomed vie
   );
 
   assert.ok(narrowMapRule, "the narrow Dashboard Map must have a drawer-specific geometry rule");
-  assert.match(narrowMapRule.groups.rule, /left:\s*12px;/);
-  assert.match(narrowMapRule.groups.rule, /right:\s*12px;/);
-  assert.match(narrowMapRule.groups.rule, /width:\s*auto;/);
+  assert.match(narrowMapRule.groups.rule, /left:\s*auto;/);
+  assert.match(narrowMapRule.groups.rule, /right:\s*0;/);
+  assert.match(narrowMapRule.groups.rule, /width:\s*min\(300px,\s*calc\(100vw - 24px\)\);/);
   assert.match(
     narrowMapRule.groups.rule,
     /top:\s*min\(var\(--right-side-drawer-top\),\s*calc\(100dvh - 220px\)\);/,
+  );
+});
+
+test("Dashboard Map branch guides follow the compact tree indent", async () => {
+  const [grammar, modes] = await Promise.all([
+    source(sources.grammar),
+    source(sources.modes),
+  ]);
+
+  assert.match(modes, /padding-inline-start:\s*14px;/);
+  assert.match(
+    modes,
+    /\.dashboard-map-panel \.build-tree-label\s*\{[\s\S]*?overflow:\s*hidden;[\s\S]*?text-overflow:\s*ellipsis;[\s\S]*?white-space:\s*nowrap;/,
+  );
+  assert.match(
+    grammar,
+    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap::after\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) - 10px\);/,
+  );
+  assert.match(
+    grammar,
+    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap::before\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) - 10px\);[\s\S]*?width:\s*14px;/,
+  );
+  assert.match(
+    grammar,
+    /\.dashboard-map-panel \.build-tree-item-wrap\[aria-expanded="true"\] > \.build-tree-row::before\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) \+ 4px\);/,
+  );
+  assert.match(
+    grammar,
+    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap::before\s*\{[\s\S]*?height:\s*18px;/,
+  );
+  assert.match(
+    grammar,
+    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap:last-child::after\s*\{\s*height:\s*18px;/,
+  );
+  assert.match(
+    grammar,
+    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap\[data-build-node-kind="chart"\]::before\s*\{\s*width:\s*22px;/,
   );
 });

@@ -30,6 +30,7 @@ function ColorField({
   value,
   fallback = "#043BCB",
   onChange,
+  labelHidden = false,
   showPresets = true,
   dataColorField,
   help,
@@ -113,7 +114,7 @@ function ColorField({
       "data-color-field": dataColorField,
       "data-invalid": error || invalid ? "true" : void 0
     },
-    /* @__PURE__ */ React.createElement("label", { htmlFor: controlId }, label),
+    /* @__PURE__ */ React.createElement("label", { htmlFor: controlId, className: labelHidden ? "visually-hidden" : undefined }, label),
     /* @__PURE__ */ React.createElement("div", { className: `settings-color-row${allowDefault ? " settings-color-row--with-default" : ""}` }, /* @__PURE__ */ React.createElement("button", {
       type: "button",
       className: "settings-color-swatch",

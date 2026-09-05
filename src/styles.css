@@ -5749,6 +5749,13 @@ button.danger {
   margin-top: 10px;
 }
 
+.chart-authoring-series-colors-heading {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
 .chart-authoring-icon-choice .simex-icon-control,
 .panel-actions .simex-icon-control,
 .section-actions .simex-icon-control,
@@ -6113,6 +6120,180 @@ button.danger {
 
 .chart-editor-tab-panel .chart-authoring-section-fields {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chart-wizard-style-controls .chart-authoring-section-fields,
+.chart-editor-tab-panel .chart-authoring-section-fields {
+  gap: 10px 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+}
+
+.chart-wizard-style-controls .chart-authoring-section,
+.chart-editor-tab-panel .chart-authoring-section {
+  gap: 10px;
+}
+
+.chart-wizard-style-controls .chart-authoring-axis-group.dashboard-authoring-grid,
+.chart-editor-tab-panel .chart-authoring-axis-group.dashboard-authoring-grid {
+  gap: 9px 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.chart-wizard-style-controls .chart-authoring-number-pair,
+.chart-editor-tab-panel .chart-authoring-number-pair {
+  grid-column: span 2;
+}
+
+.chart-quick-editor .chart-editor-layout {
+  gap: 0;
+  overflow: visible;
+  padding: 10px 12px 0;
+}
+
+.unit-orbit:has(.chart-quick-editor) {
+  height: auto;
+  width: min(210px, calc(100vw - 24px));
+}
+
+.unit-orbit:has(.chart-quick-editor) .unit-orbit-scroll {
+  height: auto;
+}
+
+.unit-orbit .chart-quick-editor .chart-quick-editor-actions {
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.chart-quick-editor-settings {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chart-quick-editor-fields {
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.chart-quick-editor .chart-footprint-control--compact {
+  background: transparent;
+  border: 0;
+  gap: 0;
+  padding: 0;
+}
+
+.chart-quick-editor .chart-footprint-control--compact .chart-footprint-picker {
+  display: block;
+}
+
+.chart-quick-editor .chart-footprint-control--compact .chart-footprint-inputs {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chart-quick-editor .chart-footprint-control--compact .chart-footprint-input {
+  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.chart-quick-editor .chart-footprint-control--compact .chart-footprint-input > span {
+  white-space: nowrap;
+}
+
+.unit-orbit .chart-quick-editor .chart-quick-editor-fields,
+.unit-orbit .chart-quick-editor .chart-authoring-section {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.unit-orbit .chart-quick-editor .chart-authoring-section {
+  gap: 8px;
+  margin: 0;
+}
+
+.unit-orbit .chart-quick-editor .dashboard-authoring-field--compound {
+  align-items: center;
+  column-gap: 10px;
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
+.unit-orbit .chart-quick-editor .dashboard-authoring-field--compound > .chart-authoring-field {
+  min-inline-size: 0;
+}
+
+.unit-orbit .chart-quick-editor .dashboard-authoring-field--compound [data-field-id="title"] input {
+  min-inline-size: 0;
+  width: 100%;
+}
+
+.dashboard-map-panel {
+  --right-side-drawer-max-width: min(300px, 100%);
+  --right-side-drawer-width: min(300px, calc(100vw - 24px));
+}
+
+.dashboard-map-panel .right-side-drawer__header {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 8px 10px;
+}
+
+.dashboard-map-panel .right-side-drawer__header .simex-icon {
+  pointer-events: none;
+}
+
+.dashboard-map-panel .dashboard-map-content {
+  padding: 6px 8px;
+}
+
+.dashboard-map-panel .build-structure-list,
+.dashboard-map-panel .build-tree-group,
+.dashboard-map-panel .build-tree-item-wrap {
+  gap: 2px;
+}
+
+.dashboard-map-panel .build-tree-row {
+  min-block-size: 28px;
+  padding: 2px 4px;
+}
+
+.dashboard-map-panel .build-tree-label {
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
+}
+
+.dashboard-map-panel [data-build-node-kind="page"] > .build-tree-row { padding-inline-start: 4px; }
+.dashboard-map-panel [data-build-node-kind="section"] > .build-tree-row { padding-inline-start: 12px; }
+.dashboard-map-panel [data-build-node-kind="chart"] > .build-tree-row { padding-inline-start: 20px; }
+
+.dashboard-map-inline-inspector {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding-inline-start: 12px;
+}
+
+.dashboard-map-inline-inspector .build-inspector {
+  gap: 6px;
+  padding: 8px;
+}
+
+.unit-orbit .chart-quick-editor .chart-quick-background {
+  align-items: center;
+  column-gap: 10px;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
+.unit-orbit .chart-quick-editor .chart-quick-background > .settings-color-field {
+  grid-column: 1 / -1;
+}
+
+.chart-quick-editor .chart-authoring-section-fields {
+  gap: 8px 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
 }
 
 .chart-editor-actions {

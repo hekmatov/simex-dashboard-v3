@@ -241,6 +241,27 @@
   min-inline-size: 0;
 }
 
+.dashboard-authoring-field--compound {
+  display: grid;
+  gap: var(--simex-space-2);
+}
+
+.chart-authoring-inline-help {
+  align-items: center;
+  color: var(--simex-text-muted);
+  cursor: help;
+  display: inline-flex;
+  margin-inline-start: var(--simex-space-1);
+  vertical-align: text-bottom;
+}
+
+.chart-authoring-number-pair {
+  display: grid;
+  gap: var(--simex-space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-inline-size: 0;
+}
+
 .dashboard-authoring-boolean-row {
   align-items: center;
   display: grid;

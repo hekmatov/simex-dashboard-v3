@@ -16,7 +16,7 @@ const { default: BuildStructureRail } = await vite.ssrLoadModule(
 );
 await vite.close();
 
-test("treeitem wrappers own selection, expansion, roving focus, label, and child group", () => {
+test("treeitem wrappers own selection, expansion, roving focus, label, child group, and direct dragging", () => {
   const html = renderToStaticMarkup(React.createElement(BuildStructureRail, {
     dashboard: {
       pages: [{
@@ -33,10 +33,12 @@ test("treeitem wrappers own selection, expansion, roving focus, label, and child
   }));
 
   assert.match(html, /<li[^>]*role="treeitem"[^>]*aria-label="One"[^>]*aria-expanded="true"[^>]*aria-selected="true"[^>]*tabindex="0"[^>]*>/);
-  assert.match(html, /role="treeitem"[\s\S]*<span class="build-tree-label">One<\/span>[\s\S]*<ul role="group"/);
+  assert.match(html, /role="treeitem"[\s\S]*<span class="build-tree-label" title="One">One<\/span>[\s\S]*<ul role="group"/);
   assert.match(html, /<ul role="group"[^>]*>[\s\S]*role="treeitem"[\s\S]*<\/ul><\/li>/);
   assert.equal((html.match(/role="treeitem"/g) ?? []).length, 3);
   assert.equal((html.match(/tabindex="0"/g) ?? []).length, 1);
-  assert.match(html, /class="build-tree-caret"[^>]*tabindex="-1"/);
-  assert.doesNotMatch(html, /class="build-tree-caret"[^>]*aria-expanded=/);
+  assert.equal((html.match(/draggable="true"/g) ?? []).length, 3);
+  assert.equal((html.match(/class="build-tree-caret"/g) ?? []).length, 2);
+  assert.equal((html.match(/class="build-tree-caret-spacer"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /build-tree-kind-icon|build-tree-move-handle/);
 });

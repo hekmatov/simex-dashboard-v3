@@ -58,6 +58,7 @@ const glyphs = {
     layoutRight: `<rect x="3" y="3" width="6" height="8" rx="1.2"></rect><rect x="3" y="13" width="6" height="8" rx="1.2"></rect><rect class="accent-fill" x="11" y="3" width="10" height="18" rx="1.5"></rect>`,
     layoutGrid: `<rect x="3" y="3" width="8" height="8" rx="1.2"></rect><rect class="accent-fill" x="13" y="3" width="8" height="8" rx="1.2"></rect><rect x="3" y="13" width="8" height="8" rx="1.2"></rect><rect x="13" y="13" width="8" height="8" rx="1.2"></rect>`,
     info: `<circle cx="12" cy="12" r="8"></circle><path d="M12 11v5"></path><circle class="accent-fill" cx="12" cy="8" r="1.3"></circle>`,
+    eye: `<path d="M2.5 12s3.4-5.5 9.5-5.5S21.5 12 21.5 12s-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z"></path><circle class="accent-fill" cx="12" cy="12" r="2.4"></circle>`,
     table: `<rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="M3.5 10h17M9.5 5v14"></path><rect class="accent-fill" x="11" y="11.5" width="7.5" height="5.5" rx="1"></rect>`,
     description: `<rect x="4" y="5" width="16" height="14" rx="2"></rect><path class="accent-stroke" d="M7 9h10M7 15h9"></path><path d="M7 12h7"></path>`,
     chartType: `<rect x="3.5" y="4" width="17" height="16" rx="3"></rect><path d="M7 16v-5M11.5 16V7M16 16v-7"></path><path class="accent-stroke" d="M6 8h4"></path>`,

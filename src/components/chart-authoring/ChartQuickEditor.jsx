@@ -77,18 +77,9 @@ export default function ChartQuickEditor({
         "form",
         { onSubmit: submit },
         React.createElement(
-          "header",
-          { className: "chart-editor-header chart-quick-editor-header" },
-          React.createElement(
-            "div",
-            null,
-            React.createElement("p", { className: "eyebrow" }, "Quick edit"),
-            React.createElement(
-              "h2",
-              { id: "chart-quick-editor-title" },
-              chart.title?.trim() || "Untitled chart",
-            ),
-          ),
+          "h2",
+          { id: "chart-quick-editor-title", className: "visually-hidden" },
+          `Quick edit: ${chart.title?.trim() || "Untitled chart"}`,
         ),
         React.createElement(EditSessionActions, {
           className: "chart-quick-editor-actions",
@@ -117,35 +108,44 @@ export default function ChartQuickEditor({
         React.createElement(
           "div",
           { className: "chart-editor-layout chart-quick-editor-layout" },
-          React.createElement(ChartFootprintPicker, {
-            value: resolveChartFootprint(chart.layout),
-            disabled: locked,
-            onChange: ({ columns, rows }) => changeDraft(
-              ["layout"],
+          React.createElement(
+            "div",
+            { className: "chart-quick-editor-settings" },
+            React.createElement(
+              ChartFootprintPicker,
               {
-                ...(chart.layout ?? {}),
-                size: legacySizeForFootprint({ columns, rows }),
-                width: columns,
-                height: rows,
+                value: resolveChartFootprint(chart.layout),
+                disabled: locked,
+                compact: true,
+                showPreview: false,
+                onChange: ({ columns, rows }) => changeDraft(
+                  ["layout"],
+                  {
+                    ...(chart.layout ?? {}),
+                    size: legacySizeForFootprint({ columns, rows }),
+                    width: columns,
+                    height: rows,
+                  },
+                ),
               },
             ),
-          }),
-          React.createElement(
-            "fieldset",
-            {
-              className: "chart-quick-editor-fields",
-              disabled: locked,
-            },
             React.createElement(
-              "legend",
-              { className: "visually-hidden" },
-              "Quick chart settings",
+              "fieldset",
+              {
+                className: "chart-quick-editor-fields",
+                disabled: locked,
+              },
+              React.createElement(
+                "legend",
+                { className: "visually-hidden" },
+                "Quick chart settings",
+              ),
+              React.createElement(GeneratedFormSection, {
+                section: model.sections[0],
+                chart,
+                onChange: changeDraft,
+              }),
             ),
-            React.createElement(GeneratedFormSection, {
-              section: model.sections[0],
-              chart,
-              onChange: changeDraft,
-            }),
           ),
         ),
         session.error

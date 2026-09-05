@@ -15,17 +15,28 @@ function GeneratedFormSection({
   const previewDiagnostics = buildPreviewDiagnostics(diagnostics, {
     namespace: diagnosticNamespace
   });
-  const content = /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-section-fields dashboard-authoring-grid" }, fields.map((field) => {
-    const renderedField = duplicateStructuredTitle(section, field)
-      ? { ...field, suppressLegend: true }
-      : field;
+  const content = /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-section-fields dashboard-authoring-grid" }, compactFieldItems(fields).map(({ field, visibilityField }) => {
+    const renderedField = {
+      ...field,
+      ...(duplicateStructuredTitle(section, field) ? { suppressLegend: true } : {}),
+      ...(visibilityField ? { compactLabel: true } : {}),
+    };
     return /* @__PURE__ */ React.createElement(
       "div",
       {
         key: field.id,
-        className: `dashboard-authoring-field-slot${wideField(field) ? " dashboard-authoring-field--wide" : ""}`,
+        className: `dashboard-authoring-field-slot${wideField(field) || visibilityField ? " dashboard-authoring-field--wide" : ""}${visibilityField ? " dashboard-authoring-field--compound" : ""}`,
         "data-field-slot": field.id,
       },
+      visibilityField
+        ? React.createElement(SchemaField, {
+            field: visibilityField,
+            value: visibilityField.value,
+            onChange,
+            diagnostics: previewDiagnostics.filter((diagnostic) => diagnosticAppliesToField(diagnostic, visibilityField)),
+            ...context
+          })
+        : null,
       React.createElement(SchemaField, {
         field: renderedField,
         value: field.value,
@@ -44,7 +55,10 @@ function GeneratedFormSection({
       className: "chart-authoring-section",
       "aria-labelledby": `chart-form-section-${safeId(section.id)}`
     },
-    /* @__PURE__ */ React.createElement("h3", { id: `chart-form-section-${safeId(section.id)}` }, section.label),
+    /* @__PURE__ */ React.createElement("h3", {
+      id: `chart-form-section-${safeId(section.id)}`,
+      className: section.headingVisible === false ? "visually-hidden" : undefined,
+    }, section.label),
     content
   );
 }
@@ -52,13 +66,27 @@ function diagnosticAppliesToField(diagnostic, field) {
   if (diagnostic?.fieldId === field.id) return true;
   return Array.isArray(diagnostic?.path) && diagnostic.path.includes(field.id);
 }
+const VISIBILITY_PAIRS = new Map([
+  ["title", "titleVisible"],
+  ["description", "descriptionVisible"],
+]);
+function compactFieldItems(fields) {
+  const byId = new Map(fields.map((field) => [field.id, field]));
+  return fields.flatMap((field) => {
+    if (VISIBILITY_PAIRS.has(field.id)) {
+      return [{ field: { ...field, compactLabel: byId.has(VISIBILITY_PAIRS.get(field.id)) }, visibilityField: byId.get(VISIBILITY_PAIRS.get(field.id)) ?? null }];
+    }
+    if ([...VISIBILITY_PAIRS.values()].includes(field.id)) return [];
+    return [{ field, visibilityField: null }];
+  });
+}
 function validField(field) {
   return field !== null && typeof field === "object" && typeof field.id === "string" && field.id.trim() !== "" && typeof field.label === "string" && field.label.trim() !== "";
 }
 const WIDE_CONTROLS = new Set([
   "textarea", "filters", "labels", "axes", "targets", "map", "timeline",
   "role", "palette", "referenceLine", "citation", "collection", "timeSync",
-  "deltaComparison",
+  "deltaComparison", "quickBackground",
 ]);
 const DUPLICATE_SAFE_STRUCTURED_CONTROLS = new Set([
   "labels", "axes", "targets", "map", "timeline",
