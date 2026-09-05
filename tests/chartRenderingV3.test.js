@@ -39,6 +39,30 @@ const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
 
+test("description-free Cartesian charts balance their plot gutters vertically", () => {
+  const model = {
+    option: {
+      grid: { left: 48, right: 28, top: 76, bottom: 32 },
+      xAxis: { type: "category", data: ["A", "B"] },
+      yAxis: { type: "value" },
+      series: [{ type: "line", data: [1, 2] }],
+    },
+  };
+  const withDescription = applyEChartsPresentation(model, {
+    description: "A visible chart description",
+    presentation: { description: { visible: true }, title: { align: "left" } },
+  });
+  const withoutDescription = applyEChartsPresentation(model, {
+    description: "",
+    presentation: { description: { visible: false }, title: { align: "left" } },
+  });
+
+  assert.equal(withDescription.option.grid.top, 76);
+  assert.equal(withDescription.option.grid.bottom, 32);
+  assert.equal(withoutDescription.option.grid.top, 76);
+  assert.equal(withoutDescription.option.grid.bottom, 76);
+});
+
 function chart(typeId, overrides = {}) {
   return {
     id: `chart-${typeId}`,

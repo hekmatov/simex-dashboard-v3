@@ -1,6 +1,7 @@
 import React from "react";
 import * as echarts from "echarts";
 
+import { chartDescriptionVisible } from "../../charting/presentation/chartCitation.js";
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import {
   resolveValueAxisTitleGraphics,
@@ -212,7 +213,10 @@ export function applyEChartsPresentation(
     ...(audienceScale ? { tickFontSize: audienceScale.text } : {}),
   };
   const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
-  const grid = normalizedGrid(option.grid, titleGutters);
+  const grid = verticallyBalancedGrid(
+    normalizedGrid(option.grid, titleGutters),
+    chart,
+  );
   const presentedOption = {
       ...optionWithoutBackground,
       ...(grid === undefined ? {} : { grid }),
@@ -733,6 +737,17 @@ function normalizedGrid(value, titleGutters) {
     };
   };
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
+}
+
+function verticallyBalancedGrid(value, chart) {
+  if (chartDescriptionVisible(chart) && String(chart?.description ?? "").trim()) return value;
+  const balance = (grid) => {
+    if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
+    if (!Number.isFinite(grid.top) || !Number.isFinite(grid.bottom)) return grid;
+    const gutter = Math.max(grid.top, grid.bottom);
+    return { ...grid, top: gutter, bottom: gutter };
+  };
+  return Array.isArray(value) ? value.map(balance) : balance(value);
 }
 
 function maximumPixelGutter(current, required) {

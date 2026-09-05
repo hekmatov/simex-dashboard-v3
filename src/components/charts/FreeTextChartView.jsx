@@ -8,8 +8,10 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
   const panelId = normalizePanelId(chart?.id ?? model?.sourceId);
   const titleId = `${panelId}-title`;
   const title = getFreeTextChartTitle(chart?.title);
+  const panelRef = React.useRef(null);
   const contentRef = React.useRef(null);
   const [portalEntries, setPortalEntries] = React.useState([]);
+  const [avoidOverflow, setAvoidOverflow] = React.useState(false);
   const mediaItems = useShallowStableCollection(contentRenderContext.mediaItems);
   const prepared = React.useMemo(() => compilePortableQmd(model?.qmd ?? "", {
     panelId,
@@ -49,6 +51,27 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
     return () => sink.replaceChildren();
   }, [prepared]);
 
+  React.useLayoutEffect(() => {
+    const panel = panelRef.current;
+    const content = contentRef.current;
+    if (!panel || !content || typeof ResizeObserver === "undefined") return undefined;
+    const updateOverflow = () => {
+      const panelRect = panel.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const fits = textPanelFitsWithoutScroll({
+        contentBottom: contentRect.bottom,
+        panelTop: panelRect.top,
+        panelHeight: panel.clientHeight,
+      });
+      setAvoidOverflow((current) => current === fits ? current : fits);
+    };
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(panel);
+    observer.observe(content);
+    queueMicrotask(updateOverflow);
+    return () => observer.disconnect();
+  }, [prepared]);
+
   if (!prepared.ok) {
     return (
       <section className="static-content-state static-content-state--error" role="status" data-static-failure="invalid-free-text">
@@ -61,12 +84,14 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
   return <>
     <section
       className="free-text-chart-view"
+      ref={panelRef}
       {...(title
         ? { "aria-labelledby": titleId }
         : { "aria-label": getFreeTextChartAccessibleName(title) })}
       data-static-content-kind="freeText"
       data-static-source-id={model?.sourceId}
       data-static-source-revision={model?.revision}
+      data-text-fits-with-clearance={avoidOverflow ? "true" : undefined}
     >
       {(title || chart?.description) && <header className="free-text-chart-view__header">
         {title && <h2 id={titleId}>{title}</h2>}
@@ -106,6 +131,16 @@ export function getFreeTextChartTitle(value) {
 
 export function getFreeTextChartAccessibleName(title) {
   return title || "Free text content";
+}
+
+export function textPanelFitsWithoutScroll({
+  contentBottom,
+  panelTop,
+  panelHeight,
+  clearance = 12,
+} = {}) {
+  return [contentBottom, panelTop, panelHeight, clearance].every(Number.isFinite)
+    && contentBottom - panelTop + clearance <= panelHeight;
 }
 
 function formatFirstError(prepared) {
