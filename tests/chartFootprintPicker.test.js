@@ -32,7 +32,7 @@ test("the authoring footprint frame projects a selected panel width across the d
   assert.match(html, /data-authoring-footprint="writer"/);
 });
 
-test("the chart editor footprint picker combines percentage height input with a four-by-two preview", () => {
+test("the chart editor footprint picker presents 12.5-percent row increments as numbered steps", () => {
   assert.equal(typeof pickerModule?.default, "function");
   if (typeof pickerModule?.default !== "function") return;
   const html = renderToStaticMarkup(React.createElement(pickerModule.default, {
@@ -42,14 +42,17 @@ test("the chart editor footprint picker combines percentage height input with a 
 
   assert.match(html, /id="chart-footprint-width"/);
   assert.match(html, /id="chart-footprint-row-height"/);
-  assert.match(html, /25% of a row/);
-  assert.match(html, /200% of a row/);
+  assert.match(html, /<span>Height step \(12\.5% of a row\)<\/span>/);
+  assert.match(html, /<option value="0.125"[^>]*>1<\/option>/);
+  assert.match(html, /<option value="0.75"[^>]*>6<\/option>/);
+  assert.match(html, /<option value="1.875"[^>]*>15<\/option>/);
+  assert.match(html, /<option value="2"[^>]*>16<\/option>/);
   assert.match(html, /data-footprint-preview="true"/);
-  assert.match(html, /aria-label="Chart size: 3 columns by 75% of a row"/);
+  assert.match(html, /aria-label="Chart size: 3 columns by 6 steps"/);
   assert.match(html, /--footprint-preview-columns:3/);
   assert.match(html, /--footprint-preview-height:75%/);
-  assert.doesNotMatch(html, /400% of a row/);
-  assert.doesNotMatch(html, /Half row/);
+  assert.doesNotMatch(html, /75% of a row/);
+  assert.doesNotMatch(html, /25% of a row/);
 });
 
 test("the shared footprint picker can label Text/Image panel sizing without chart wording or id collisions", () => {
@@ -65,8 +68,10 @@ test("the shared footprint picker can label Text/Image panel sizing without char
   assert.match(html, /id="static-panel-footprint-title"/);
   assert.match(html, /id="static-panel-footprint-width"/);
   assert.match(html, /id="static-panel-footprint-row-height"/);
-  assert.match(html, /<option value="0.125"[^>]*>12.5% of a row<\/option>/);
-  assert.match(html, /aria-label="Panel size: 2 columns by 25% of a row"/);
+  assert.match(html, /<option value="0.125"[^>]*>1<\/option>/);
+  assert.match(html, /<option value="0.25"[^>]*>2<\/option>/);
+  assert.match(html, /<option value="4"[^>]*>32<\/option>/);
+  assert.match(html, /aria-label="Panel size: 2 columns by 2 steps"/);
   assert.doesNotMatch(html, /Chart size/);
 });
 
@@ -81,6 +86,6 @@ test("Text/Image sizing can keep the visual grid while omitting redundant footpr
 
   assert.match(html, /class="dashboard-dialog__eyebrow"[^>]*>Panel size<\/span>/);
   assert.match(html, /data-footprint-preview="true"/);
-  assert.match(html, /aria-label="Panel size: 2 columns by 150% of a row"/);
+  assert.match(html, /aria-label="Panel size: 2 columns by 12 steps"/);
   assert.doesNotMatch(html, />Footprint<|4-column grid|Current footprint:/);
 });

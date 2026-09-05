@@ -13,22 +13,22 @@ const PANEL_LAYOUT_CLASSES = Object.freeze({
 });
 
 export const FOOTPRINT_ROW_HEIGHTS = Object.freeze([
+  0.125,
   0.25,
+  0.375,
   0.5,
+  0.625,
   0.75,
+  0.875,
   1,
+  1.125,
   1.25,
+  1.375,
   1.5,
+  1.625,
   1.75,
+  1.875,
   2,
-  2.25,
-  2.5,
-  2.75,
-  3,
-  3.25,
-  3.5,
-  3.75,
-  4,
 ]);
 
 export const STATIC_FOOTPRINT_ROW_HEIGHTS = Object.freeze([

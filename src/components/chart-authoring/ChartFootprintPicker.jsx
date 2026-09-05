@@ -60,7 +60,7 @@ export default function ChartFootprintPicker({
             </select>
           </label>
           <label className="chart-footprint-input" htmlFor={rowHeightId}>
-            <span>Row height</span>
+            <span>Height step (12.5% of a row)</span>
             <select
               id={rowHeightId}
               value={String(current.rows)}
@@ -69,7 +69,7 @@ export default function ChartFootprintPicker({
             >
               {rowHeights.map((rows) => (
                 <option key={rows} value={rows}>
-                  {describeRowHeight(rows)}
+                  {rowHeightStep(rows)}
                 </option>
               ))}
             </select>
@@ -100,7 +100,11 @@ export default function ChartFootprintPicker({
 }
 
 export function describeRowHeight(rows) {
-  return `${rows * 100}% of a row`;
+  return `${rowHeightStep(rows)} steps`;
+}
+
+function rowHeightStep(rows) {
+  return Math.round(rows * 8);
 }
 
 function normalizeFootprint(value, rowHeights) {
