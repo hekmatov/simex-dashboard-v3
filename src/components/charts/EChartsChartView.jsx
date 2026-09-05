@@ -492,6 +492,19 @@ export function createEChartsLifecycle({
     valueAxisTitleGraphicIds = nextIds;
   }
 
+  function clearValueAxisTitleGraphics(nextProjection, nextInstance = instance) {
+    if (!nextInstance || valueAxisTitleGraphicIds.length === 0) return;
+    const nextIds = new Set((Array.isArray(nextProjection) ? nextProjection : [])
+      .filter((projection) => projection && typeof projection === "object")
+      .map(({ id }) => `simex-value-axis-title-${id === "secondary" ? "secondary" : "primary"}`));
+    const staleIds = valueAxisTitleGraphicIds.filter((id) => !nextIds.has(id));
+    if (staleIds.length === 0) return;
+    nextInstance.setOption({
+      graphic: staleIds.map((id) => ({ id, $action: "remove" })),
+    }, { lazyUpdate: false });
+    valueAxisTitleGraphicIds = valueAxisTitleGraphicIds.filter((id) => nextIds.has(id));
+  }
+
   function cleanup(nextInstance = instance) {
     observer?.disconnect?.();
     if (resizeListener) windowTarget?.removeEventListener?.("resize", resizeListener);
@@ -542,9 +555,11 @@ export function createEChartsLifecycle({
       if (!instance) return;
       try {
         registerMap(echartsApi, model?.mapRegistration);
-        valueAxisTitleProjection = Array.isArray(model?.valueAxisTitleProjection)
+        const nextValueAxisTitleProjection = Array.isArray(model?.valueAxisTitleProjection)
           ? model.valueAxisTitleProjection
           : [];
+        clearValueAxisTitleGraphics(nextValueAxisTitleProjection, instance);
+        valueAxisTitleProjection = nextValueAxisTitleProjection;
         valueAxisTitleTextTheme = model?.valueAxisTitleTextTheme ?? {};
         instance.setOption(model?.option ?? {}, {
           notMerge: true,

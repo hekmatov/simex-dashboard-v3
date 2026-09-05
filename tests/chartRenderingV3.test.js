@@ -1791,9 +1791,47 @@ test("ECharts lifecycle replaces stable value-axis graphics after updates and re
   assert.equal(options[2].graphic[0].left, firstLeft + 30);
 
   lifecycle.update({ option: { grid: {} }, valueAxisTitleProjection: [] });
-  assert.equal(options[4].graphic[0].id, "simex-value-axis-title-primary");
-  assert.equal(options[4].graphic[0].$action, "remove");
+  assert.equal(options.length, 5);
+  assert.equal(options[3].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[3].graphic[0].$action, "remove");
+  assert.deepEqual(options[4], { grid: {} });
   lifecycle.dispose();
+});
+
+test("ECharts lifecycle clears a value-axis title before replacing the option", () => {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width: 640, height: 400 });
+  const errors = [];
+  const lifecycle = createEChartsLifecycle({
+    echartsApi: {
+      getInstanceByDom() { return null; },
+      init() { return instance; },
+      registerMap() {},
+    },
+    windowTarget: null,
+    ResizeObserverCtor: null,
+    onError(error) { errors.push(error); },
+  });
+  const option = {
+    grid: { left: 80, right: 28, top: 40, bottom: 52 },
+    xAxis: { type: "category", data: ["Low income", "High income"] },
+    yAxis: { type: "value" },
+    series: [{ type: "bar", data: [35, 6] }],
+  };
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    settings: { title: "%", titlePosition: "top" },
+    tickValues: [0, 35],
+  });
+
+  try {
+    lifecycle.mount({});
+    lifecycle.update({ option, valueAxisTitleProjection: [projection] });
+    lifecycle.update({ option, valueAxisTitleProjection: [] });
+
+    assert.deepEqual(errors, []);
+  } finally {
+    lifecycle.dispose();
+  }
 });
 
 test("centered Y-axis titles keep clearance for fractional ticks at zero, unit, and extreme scales", () => {
