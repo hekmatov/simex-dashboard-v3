@@ -597,6 +597,12 @@ function pieValueModeControls(value, emit, id) {
     React.createElement("label", { className: "dashboard-authoring-boolean-row" }, React.createElement("input", {
       type: "radio",
       name: `${id}-value-mode`,
+      checked: value.valueMode === undefined,
+      onChange: () => emit(["valueMode"], undefined),
+    }), "No slice readout"),
+    React.createElement("label", { className: "dashboard-authoring-boolean-row" }, React.createElement("input", {
+      type: "radio",
+      name: `${id}-value-mode`,
       checked: value.valueMode === "value",
       onChange: () => emit(["valueMode"], "value"),
     }), "Show value"),
@@ -667,6 +673,9 @@ function normalizeStructuredInput(control, path, value) {
   }
   if (control === "axes" && property === "titleBold") {
     return value === true;
+  }
+  if (control === "axes" && property === "labelFontSize") {
+    return Number.isInteger(value) && value >= 8 && value <= 20 ? value : void 0;
   }
   if (control === "axes" && ["titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property)) {
     return Number.isFinite(value) ? value : void 0;

@@ -1984,7 +1984,15 @@ test("data source controls stay enabled before chart capability is known", () =>
   assert.doesNotMatch(html, /Enter data manually/);
 });
 
-test("pie slice-readout radio choices keep each control and label in one row", () => {
+test("axis tick font sizes persist and pie slice-readout choices include neither", () => {
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "labelFontSize"], 16),
+    { x: { labelFontSize: 16 } },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["primary", "labelFontSize"], 18),
+    { primary: { labelFontSize: 18 } },
+  );
   const html = render(React.createElement(StandardField, {
     field: {
       id: "labels",
@@ -1998,6 +2006,7 @@ test("pie slice-readout radio choices keep each control and label in one row", (
 
   assert.match(html, /class="dashboard-authoring-boolean-row"[^>]*><input[^>]*type="radio"[^>]*>Show value<\/label>/);
   assert.match(html, /class="dashboard-authoring-boolean-row"[^>]*><input[^>]*type="radio"[^>]*>Show percentage<\/label>/);
+  assert.match(html, /class="dashboard-authoring-boolean-row"[^>]*><input[^>]*type="radio"[^>]*>No slice readout<\/label>/);
 });
 
 test("data source controls offer copying an existing chart into the draft", () => {

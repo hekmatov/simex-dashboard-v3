@@ -53,21 +53,32 @@ function compositionLayout(count, verticallyCentered = false) {
 function compositionLabel(labels = {}, markCount) {
   const valueMode = labels?.valueMode;
   const showValue = valueMode === "value" || valueMode === "percentage";
-  const rich = {};
-  if (Number.isInteger(labels?.labelFontSize) || labels?.labelWrap === true) {
-    rich.label = {
-      ...(Number.isInteger(labels?.labelFontSize) ? { fontSize: labels.labelFontSize } : {}),
+  const contrastText = {
+    color: "#FFFFFF",
+    textBorderColor: "rgba(0, 0, 0, 0.45)",
+    textBorderWidth: 2,
+  };
+  const rich = {
+    label: {
+      fontSize: labels?.labelFontSize ?? 12,
       ...(labels?.labelWrap === true ? { width: 120, overflow: "break" } : {}),
-    };
-  }
-  if (showValue && Number.isInteger(labels?.valueFontSize)) rich.value = { fontSize: labels.valueFontSize };
-  const usesRichLabel = Object.keys(rich).length > 0;
+      ...contrastText,
+    },
+    ...(showValue ? {
+      value: {
+        fontSize: labels?.valueFontSize ?? 14,
+        ...contrastText,
+      },
+    } : {}),
+  };
   return {
     show: labels?.visible !== false && markCount <= 8,
+    position: "inside",
     formatter: showValue
       ? `{label|{b}}\\n{value|${valueMode === "percentage" ? "{d}%" : "{c}"}}`
-      : usesRichLabel ? "{label|{b}}" : "{b}",
-    ...(usesRichLabel ? { rich } : {}),
+      : "{label|{b}}",
+    rich,
+    labelLine: { show: false },
   };
 }
 

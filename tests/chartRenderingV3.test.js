@@ -2222,7 +2222,7 @@ test("pie and donut produce actual ECharts pie series from canonical marks", () 
   assert.deepEqual(pie.option.series[0].data[0], { name: "Cases", value: 3, share: 0.75 });
 });
 
-test("pie labels can show either values or percentages with independently sized category text", () => {
+test("pie slice labels render inside slices and can include a value or percentage", () => {
   const prepared = ready([
     { category: "Cases", value: 3, share: 0.75, group: null, groupKey: "" },
     { category: "Deaths", value: 1, share: 0.25, group: null, groupKey: "" },
@@ -2245,11 +2245,13 @@ test("pie labels can show either values or percentages with independently sized 
 
   assert.deepEqual(model.option.series[0].label, {
     show: true,
+    position: "inside",
     formatter: "{label|{b}}\\n{value|{d}%}",
     rich: {
-      label: { fontSize: 12, width: 120, overflow: "break" },
-      value: { fontSize: 18 },
+      label: { fontSize: 12, width: 120, overflow: "break", color: "#FFFFFF", textBorderColor: "rgba(0, 0, 0, 0.45)", textBorderWidth: 2 },
+      value: { fontSize: 18, color: "#FFFFFF", textBorderColor: "rgba(0, 0, 0, 0.45)", textBorderWidth: 2 },
     },
+    labelLine: { show: false },
   });
   assert.deepEqual(model.option.legend.textStyle, { width: 120, overflow: "break" });
 });
