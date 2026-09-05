@@ -573,7 +573,7 @@ export default function ChartWizardV3({
         : current;
       return resumed.destination || !destination
         ? resumed
-        : reduceWizardState(resumed, { type: "setDestination", destination });
+        : reduceWizardState(resumed, { type: "initializeDestination", destination });
     });
   }, [open, destination?.pageId, destination?.sectionId, editMode, editSession?.placementId]);
 

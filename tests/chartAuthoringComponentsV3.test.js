@@ -4084,13 +4084,19 @@ test("chart wizard draft eligibility tracks net input rather than its default de
     profiles: {},
     chronoGroups: [],
     existingCharts: [],
-    destination: { pageId: "overview", sectionId: "summary" },
   });
+  const initialDestination = { pageId: "overview", sectionId: "summary" };
   const changedDestination = { pageId: "overview", sectionId: "details" };
 
   assert.equal(isChartWizardStateDirty({ open: true, wizard: initial }), false);
 
-  const changed = reduceWizardState(initial, {
+  const initialized = reduceWizardState(initial, {
+    type: "initializeDestination",
+    destination: initialDestination,
+  });
+  assert.equal(isChartWizardStateDirty({ open: true, wizard: initialized }), false);
+
+  const changed = reduceWizardState(initialized, {
     type: "setDestination",
     destination: changedDestination,
   });
@@ -4098,7 +4104,7 @@ test("chart wizard draft eligibility tracks net input rather than its default de
 
   const reverted = reduceWizardState(changed, {
     type: "setDestination",
-    destination: initial.destination,
+    destination: initialDestination,
   });
   assert.equal(isChartWizardStateDirty({ open: true, wizard: reverted }), false);
 });

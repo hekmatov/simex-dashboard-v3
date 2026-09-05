@@ -182,6 +182,21 @@ export function reduceWizardState(state, action) {
         status: "editing",
         discarded: false,
       });
+    case "initializeDestination": {
+      const next = {
+        ...state,
+        destination: cloneOptional(action.destination),
+        status: "editing",
+        discarded: false,
+      };
+      return withStageStatuses({
+        ...next,
+        inputBaseline: typeof state.inputBaseline === "string"
+          && hasNetChartWizardInput(state) === false
+          ? chartWizardInputSignature(next)
+          : state.inputBaseline,
+      });
+    }
     case "setChartType":
       requiredString(action.chartTypeId, "Chart type id");
       return chartState(state, {
