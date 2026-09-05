@@ -113,7 +113,15 @@ export function positionUnitOrbit({
   const aboveHeight = Math.min(height, anchorRect.top - gap - margin);
   const addHorizontalCandidates = () => {
     if (viewport.width - margin - (anchorRect.right + gap) >= width) candidates.push(candidate("right", anchorRect.right + gap, verticalTop, width, horizontalHeight));
-    if (anchorRect.left - gap - margin >= width) candidates.push(candidate("left", anchorRect.left - gap - width, verticalTop, width, horizontalHeight));
+    candidates.push(topRightOverlayCandidate({
+      anchorRect,
+      width,
+      height: horizontalHeight,
+      viewport,
+      protectedRects,
+      gap,
+      margin,
+    }));
   };
   const addVerticalCandidates = () => {
     if (belowHeight >= minHeight) candidates.push(candidate("below", horizontalLeft, anchorRect.bottom + gap, width, belowHeight));
@@ -130,8 +138,8 @@ export function positionUnitOrbit({
   const selected = candidates
     .map((entry) => clipCandidateBeforeProtectedRects(entry, protectedRects, gap))
     .find((entry) => (
-      entry.maxHeight >= minHeight
-      && !intersects(entry.rect, anchorRect)
+      (entry.side === "top-right" || entry.maxHeight >= minHeight)
+      && (entry.side === "top-right" || !intersects(entry.rect, anchorRect))
       && !protectedRects.some((protectedRect) => intersects(entry.rect, protectedRect))
     ));
 
@@ -142,6 +150,40 @@ export function positionUnitOrbit({
     top: selected.top,
     maxHeight: selected.maxHeight,
   };
+}
+
+function topRightOverlayCandidate({
+  anchorRect,
+  width,
+  height,
+  viewport,
+  protectedRects,
+  gap,
+  margin,
+}) {
+  const left = clamp(
+    anchorRect.right - width,
+    margin,
+    Math.max(margin, viewport.width - margin - width),
+  );
+  const protectedTop = protectedRects.reduce((top, protectedRect) => {
+    const overlapsHorizontally = left < protectedRect.right && left + width > protectedRect.left;
+    return overlapsHorizontally && protectedRect.top <= top
+      ? Math.max(top, protectedRect.bottom + gap)
+      : top;
+  }, margin);
+  const top = clamp(
+    anchorRect.top - height,
+    protectedTop,
+    Math.max(protectedTop, viewport.height - margin - height),
+  );
+  return candidate(
+    "top-right",
+    left,
+    top,
+    width,
+    Math.min(height, viewport.height - margin - top),
+  );
 }
 
 export default function UnitOrbit({

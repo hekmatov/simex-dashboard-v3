@@ -983,8 +983,15 @@
   max-height: var(--unit-orbit-max-height);
   overflow: hidden;
   position: fixed;
+  transition: top 160ms ease-out;
   width: min(420px, calc(100vw - 24px));
   z-index: 1200;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit-orbit {
+    transition: none;
+  }
 }
 
 .unit-orbit-scroll {

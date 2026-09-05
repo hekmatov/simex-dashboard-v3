@@ -41,7 +41,7 @@ test("Unit Orbit measures the editor's inner scroll content", () => {
   );
 });
 
-test("Unit Orbit chooses right, then left, without intersecting the selected chart", () => {
+test("Unit Orbit opens to the right and otherwise stays attached to the panel's right edge", () => {
   assert.equal(
     typeof orbitModule?.positionUnitOrbit,
     "function",
@@ -59,17 +59,36 @@ test("Unit Orbit chooses right, then left, without intersecting the selected cha
   assert.equal(intersects(rightRect(right, orbitSize.width), rightAnchor), false);
 
   const leftAnchor = rect(1010, 180, 1410, 500);
-  const left = orbitModule.positionUnitOrbit({
+  const overlay = orbitModule.positionUnitOrbit({
     anchorRect: leftAnchor,
     orbitSize,
     viewport,
   });
-  assert.equal(left.side, "left");
-  assert.equal(left.left + orbitSize.width, leftAnchor.left - 12);
-  assert.equal(intersects(rightRect(left, orbitSize.width), leftAnchor), false);
+  assert.deepEqual(overlay, {
+    side: "top-right",
+    left: 1010,
+    top: 12,
+    maxHeight: 620,
+  });
 });
 
-test("Unit Orbit uses below placement when horizontal candidates cannot fit", () => {
+test("Unit Orbit overlays above the panel when its right-hand space is unavailable", () => {
+  const anchor = rect(1010, 700, 1410, 850);
+  const result = orbitModule.positionUnitOrbit({
+    anchorRect: anchor,
+    orbitSize,
+    viewport,
+  });
+
+  assert.deepEqual(result, {
+    side: "top-right",
+    left: 1010,
+    top: 80,
+    maxHeight: 620,
+  });
+});
+
+test("Unit Orbit keeps the top-right overlay below protected chrome", () => {
   const anchor = rect(80, 120, 920, 430);
   const result = orbitModule.positionUnitOrbit({
     anchorRect: anchor,
@@ -78,10 +97,12 @@ test("Unit Orbit uses below placement when horizontal candidates cannot fit", ()
     protectedRects: [rect(0, 0, 1000, 96)],
   });
 
-  assert.equal(result.side, "below");
-  assert.equal(result.top, anchor.bottom + 12);
-  assert.ok(result.maxHeight >= 280);
-  assert.equal(intersects(rightRect(result, 400), anchor), false);
+  assert.deepEqual(result, {
+    side: "top-right",
+    left: 520,
+    top: 108,
+    maxHeight: 500,
+  });
 });
 
 test("Unit Orbit prefers an anchored vertical placement for the Dashboard Map", () => {
@@ -113,7 +134,7 @@ test("Unit Orbit clips beside-chart placement above a protected transaction foot
   assert.equal(intersects(rightRect(result, 400), footer), false);
 });
 
-test("Unit Orbit requests one recenter when no nonintersecting candidate has usable height", () => {
+test("Unit Orbit shortens an anchored overlay to remain inside the viewport", () => {
   const result = orbitModule.positionUnitOrbit({
     anchorRect: rect(0, 170, 768, 560),
     orbitSize,
@@ -121,7 +142,12 @@ test("Unit Orbit requests one recenter when no nonintersecting candidate has usa
     protectedRects: [rect(0, 0, 768, 150)],
   });
 
-  assert.deepEqual(result, { needsRecenter: true });
+  assert.deepEqual(result, {
+    side: "top-right",
+    left: 356,
+    top: 162,
+    maxHeight: 526,
+  });
 });
 
 test("Unit Orbit fallback docks below protected chrome and fills the viewport", () => {
