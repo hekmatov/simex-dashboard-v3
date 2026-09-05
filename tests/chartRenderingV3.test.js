@@ -63,6 +63,31 @@ test("description-free Cartesian charts balance their plot gutters vertically", 
   assert.equal(withoutDescription.option.grid.bottom, 76);
 });
 
+test("vertical fill gives horizontal bar variants the reclaimed lower plot height", () => {
+  const model = {
+    option: {
+      grid: { left: 48, right: 28, top: 76, bottom: 32 },
+      xAxis: { type: "value" },
+      yAxis: { type: "category", data: ["A", "B", "C"] },
+      series: [{ type: "bar", data: [1, 2, 3] }],
+    },
+  };
+
+  for (const typeId of ["horizontalBar", "horizontalStackedBar"]) {
+    const presented = applyEChartsPresentation(model, {
+      typeId,
+      description: "",
+      presentation: {
+        description: { visible: false },
+        series: { verticalFill: true },
+        title: { align: "left" },
+      },
+    });
+
+    assert.deepEqual(presented.option.grid, { left: 48, right: 28, top: 76, bottom: 32 });
+  }
+});
+
 function chart(typeId, overrides = {}) {
   return {
     id: `chart-${typeId}`,

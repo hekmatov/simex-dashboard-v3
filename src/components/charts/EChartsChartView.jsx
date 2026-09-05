@@ -756,6 +756,7 @@ function normalizedGrid(value, titleGutters) {
 }
 
 function verticallyBalancedGrid(value, chart) {
+  if (horizontalBarsFillVertically(chart)) return value;
   if (chartDescriptionVisible(chart) && String(chart?.description ?? "").trim()) return value;
   const balance = (grid) => {
     if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
@@ -764,6 +765,11 @@ function verticallyBalancedGrid(value, chart) {
     return { ...grid, top: gutter, bottom: gutter };
   };
   return Array.isArray(value) ? value.map(balance) : balance(value);
+}
+
+function horizontalBarsFillVertically(chart) {
+  return chart?.presentation?.series?.verticalFill === true
+    && ["horizontalBar", "horizontalStackedBar"].includes(chart?.typeId);
 }
 
 function maximumPixelGutter(current, required) {
