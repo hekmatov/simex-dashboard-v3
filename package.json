@@ -12,6 +12,7 @@
     "test:e2e:dev": "playwright test --max-failures=1",
     "audit:ui:density": "playwright test tests/e2e/dashboard-density-audit.spec.js --project=chromium --output=test-results/playwright-density",
     "test:e2e:package": "playwright test --config=playwright.static.config.js --grep \"production View launches from the built static output\"",
+    "test:e2e:pdpc": "playwright test --config=playwright.pdpc.config.js",
     "build:biomedical-derivatives": "node scripts/build-biomedical-derivatives.mjs",
     "check:biomedical-derivatives": "node scripts/build-biomedical-derivatives.mjs --check",
     "icons:build": "node scripts/build-icon-reference.mjs",
