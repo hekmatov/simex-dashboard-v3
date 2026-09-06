@@ -2968,7 +2968,7 @@ button.danger {
 }
 
 .precision-arc-gauge-value {
-  font-family: var(--simex-data-font, inherit);
+  font-family: var(--simex-style-data-font, inherit);
   font-size: var(--precision-arc-value-size, 44px);
   font-weight: 700;
   letter-spacing: -1.5px;

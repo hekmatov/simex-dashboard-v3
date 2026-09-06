@@ -3453,7 +3453,7 @@ test("pending chart persistence disables and guards removal", () => {
   assert.equal(removals, 0);
 });
 
-test("quick editor renders the complete controlled surface without full-editor ownership", () => {
+test("quick editor renders the compact controlled surface without full-editor ownership", () => {
   const chart = validLineChart({
     presentation: {
       background: { color: "#FFFFFF", transparent: false },
@@ -3490,8 +3490,8 @@ test("quick editor renders the complete controlled surface without full-editor o
   assert.match(html, /Show title/);
   assert.match(html, /Background/);
   assert.match(html, /Show legend/);
-  assert.match(html, /Series colors/);
-  assert.match(html, /Reference line color/);
+  assert.doesNotMatch(html, /Series colors/);
+  assert.doesNotMatch(html, /Reference line color/);
   assert.match(html, /Chart size/);
   assert.match(html, /data-icon-control="shell.open-editable-tab"/);
   assert.doesNotMatch(html, /chart-quick-editor-open-full/);

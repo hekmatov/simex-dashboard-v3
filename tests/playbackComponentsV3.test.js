@@ -1846,7 +1846,10 @@ test("timeline and swimlane playback models identify only active events without 
       renderContext: { accessibilityEnabled: true },
     });
     assert.deepEqual(
-      resolution.model.option.series[0].data.filter(({ active }) => active).map(({ event }) => event),
+      resolution.model.option.series
+        .flatMap(({ data }) => data)
+        .filter(({ active }) => active)
+        .map(({ event }) => event),
       ["Activate"],
     );
     assert.equal(resolution.model.option.aria.enabled, false);
