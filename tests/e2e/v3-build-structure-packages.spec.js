@@ -672,7 +672,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   await review.getByRole("button", { name: "Load package", exact: true }).click();
 
   await expect(review).toHaveCount(0);
-  await expect(tree.getByRole("textbox")).toHaveCount(0);
+  await expect(tree.locator('input[aria-label^="Rename "]')).toHaveCount(0);
   await expect(tree.getByRole("treeitem", {
     name: "Imported Same-ID Page",
     exact: true,
