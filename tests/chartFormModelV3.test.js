@@ -1046,6 +1046,7 @@ test("quick editor fields expose only supported quick presentation controls", ()
       { id: "titleFontSize", control: "number", path: ["presentation", "title", "fontSize"] },
       { id: "background", control: "quickBackground", path: ["presentation", "background", "color"] },
       { id: "legendVisible", control: "toggle", path: ["presentation", "legend", "visible"] },
+      { id: "legendOrientation", control: "select", path: ["presentation", "legend", "orientation"] },
       { id: "legendFontSize", control: "number", path: ["presentation", "legend", "fontSize"] },
     ],
   );

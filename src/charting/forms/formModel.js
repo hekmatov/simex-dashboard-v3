@@ -35,6 +35,7 @@ const QUICK_PRESENTATION_FIELD_IDS = new Set([
   "titleFontSize",
   "background",
   "legendVisible",
+  "legendOrientation",
   "legendFontSize",
   "axes",
 ]);
@@ -428,6 +429,13 @@ function appearanceFields({ chart, schema }) {
           control: "toggle",
           path: ["presentation", "legend", "visible"],
           value: chart.presentation?.legend?.visible !== false,
+        }, {
+          id: "legendOrientation",
+          label: "Legend arrangement",
+          control: "select",
+          path: ["presentation", "legend", "orientation"],
+          value: chart.presentation?.legend?.orientation ?? "horizontal",
+          options: selectOptions(["horizontal", "vertical"]),
         }, {
           id: "legendWrap",
           label: "Wrap long legend labels",

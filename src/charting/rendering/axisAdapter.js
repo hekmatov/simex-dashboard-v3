@@ -200,6 +200,7 @@ function legendOption(chart) {
   };
   return {
     show: chart.presentation?.legend?.visible !== false,
+    orient: chart.presentation?.legend?.orientation ?? "horizontal",
     ...(Object.keys(textStyle).length > 0 ? { textStyle } : {}),
   };
 }

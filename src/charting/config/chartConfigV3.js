@@ -704,7 +704,8 @@ function validateBackground(background) {
 }
 
 function validateLegend(legend) {
-  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "wrap", "fontSize"]));
+  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "orientation", "wrap", "fontSize"]));
+  if (legend?.orientation !== undefined && !["horizontal", "vertical"].includes(legend.orientation)) throw new Error("Chart presentation legend orientation must be horizontal or vertical.");
   if (legend?.visible !== undefined && typeof legend.visible !== "boolean") throw new Error("Chart presentation legend visible must be boolean.");
   if (legend?.wrap !== undefined && typeof legend.wrap !== "boolean") throw new Error("Chart presentation legend wrap must be boolean.");
   if (legend?.position !== undefined && !LEGEND_POSITIONS.has(legend.position)) throw new Error("Chart presentation legend position must be top, bottom, left, or right.");

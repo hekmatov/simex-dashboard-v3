@@ -76,6 +76,9 @@ export function xAxisPresentation(settings, kind, physicalAxis = "x") {
       fontSize: settings.labelFontSize,
     };
   }
+  if (physicalAxis === "x" && (kind === "category" || kind === "temporal")) {
+    result.axisLabel = { ...result.axisLabel, showMaxLabel: true };
+  }
   return result;
 }
 

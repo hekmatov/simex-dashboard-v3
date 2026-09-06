@@ -1,5 +1,6 @@
 import React from "react";
 import * as echarts from "echarts";
+import { fitLegendToViewport, fitRenderedLegend } from "../../charting/rendering/legendLayout.js";
 
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import {
@@ -274,6 +275,7 @@ export function applyEChartsPresentation(
     };
   return {
     ...model,
+    legendLayout: legend ? { minimumGridTop: Math.max(PLOT_TOP_PADDING, titleGutters.top) } : null,
     valueAxisTitleProjection,
     valueAxisTitleTextTheme,
     option: normalizeChartFontTokens(
@@ -524,6 +526,15 @@ export function createEChartsLifecycle({
   let valueAxisTitleProjection = [];
   let valueAxisTitleTextTheme = {};
   let valueAxisTitleGraphicIds = [];
+  let legendLayout = null;
+  let sourceOption = null;
+
+  function updateLegendLayout(nextInstance = instance) {
+    if (!legendLayout || !sourceOption) return;
+    const option = fitLegendToViewport(sourceOption, nextInstance.getWidth?.(), nextInstance.getHeight?.());
+    if (option !== sourceOption) nextInstance.setOption({ legend: option.legend }, { lazyUpdate: false });
+    fitRenderedLegend(nextInstance, option, legendLayout);
+  }
 
   function replaceValueAxisTitleGraphics(nextInstance = instance) {
     if (!nextInstance || (valueAxisTitleProjection.length === 0 && valueAxisTitleGraphicIds.length === 0)) return;
@@ -574,6 +585,8 @@ export function createEChartsLifecycle({
     valueAxisTitleProjection = [];
     valueAxisTitleTextTheme = {};
     valueAxisTitleGraphicIds = [];
+    legendLayout = null;
+    sourceOption = null;
   }
 
   function fail(error, nextInstance = instance) {
@@ -591,6 +604,7 @@ export function createEChartsLifecycle({
         resizeListener = () => {
           try {
             nextInstance?.resize();
+            updateLegendLayout(nextInstance);
             replaceValueAxisTitleGraphics(nextInstance);
           } catch (error) {
             fail(error, nextInstance);
@@ -616,11 +630,15 @@ export function createEChartsLifecycle({
         clearValueAxisTitleGraphics(nextValueAxisTitleProjection, instance);
         valueAxisTitleProjection = nextValueAxisTitleProjection;
         valueAxisTitleTextTheme = model?.valueAxisTitleTextTheme ?? {};
-        instance.setOption(model?.option ?? {}, {
+        legendLayout = model?.legendLayout ?? null;
+        sourceOption = model?.option ?? {};
+        const viewportOption = fitLegendToViewport(sourceOption, instance.getWidth?.(), instance.getHeight?.());
+        instance.setOption(viewportOption, {
           notMerge: true,
           replaceMerge: model?.replaceMerge,
           lazyUpdate: false,
         });
+        fitRenderedLegend(instance, viewportOption, legendLayout);
         replaceValueAxisTitleGraphics(instance);
       } catch (error) {
         fail(error);
