@@ -2247,7 +2247,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       && intent === "activate";
     if (selectedEditorDirty && !reactivatingCurrentChart && selectedPanelIsStatic && !discardStaticDraft) {
       setPendingStaticBuildSelection({ selection: nextSelection, intent });
-      setChartEditorVisible(false);
       return Promise.resolve(false);
     }
     if (quickChartEditDirty && !reactivatingCurrentChart) {
