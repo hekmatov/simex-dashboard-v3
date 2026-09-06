@@ -4,22 +4,36 @@ All proposed Eldoria figures below and in the accompanying CSV are **fictional e
 
 ## Replacement graph
 
-Use `eldoria-misinformation-2021-2026-fictional.csv`. It has six annual observations ending in 2026, before the scenario's February 2027 briefing. All percentages use adults in Eldoria as the fictional denominator; values are percentage points on a 0–100 scale, so `41` means 41%, not 0.41%.
+Use `eldoria-misinformation-2021-2027-fictional.csv`. It has seven annual reference points, including the scenario's February 2027 briefing. The 2027 point represents the situation at that briefing, not a completed full-year average. All percentages use adults in Eldoria as the fictional denominator; values are percentages on a 0–100 scale, so `41` means 41%, not 0.41%.
 
 - Title: **Reported exposure to mis- and disinformation in Eldoria**.
-- X: `Year`, ordered 2021–2026.
+- X: `Year`, ordered 2021–2027. Label the final point **2027 briefing** if supported.
 - Y: `Reported regular exposure to mis- and disinformation (%)`.
 - Axis title: **Adults (%)**; use a 0–100 range to keep the rise proportionate. Use straight segments with point markers, no smoothing or second Y axis.
-- Main series rises from 29% to 41%, a 12 percentage-point increase over five intervals.
-- The concern column is an optional second line, rising from 37% to 48%. Use a dashed line and a clear legend if included. It measures concern, not exposure or belief.
-- Caption: **Illustrative exercise data, 2021–2026. Regular exposure means adults reporting that they encounter suspected mis- or disinformation at least weekly.**
+- Main series rises unevenly from 29% in 2021 to 41% in 2026, then reaches 52% at the 2027 briefing. Highlight the final **+11 percentage points**; the total rise since 2021 is 23 points.
+- The concern column is an optional second line, rising from 37% to 48% by 2026 and 58% at the 2027 briefing. Use a dashed line and a clear legend if included. It measures concern, not exposure or belief.
+- Caption: **Fictional exercise data, 2021–2027; 2027 reflects the February briefing. Regular exposure means adults reporting that they encounter suspected mis- or disinformation at least weekly.**
 - Use the PDPC profile colours and inherited typography. This is an exposure indicator, not a count of false posts or proof that people believe them. Do not split misinformation and disinformation into two measured series: these references do not establish a way to identify intent.
 
 The existing image sits inside the Misinformation text box under Socio-Economic Information → Social challanges. Replace that media placement in your working scenario with a native line-chart panel beside the text, or an exported graph if you need to keep it inside the text box. A native chart keeps its labels responsive to the style tokens. No replacement has been applied to main or to the supplied package.
 
+### Values and rationale
+
+| Year | Regular exposure | Concern |
+| --- | ---: | ---: |
+| 2021 | 29% | 37% |
+| 2022 | 33% | 40% |
+| 2023 | 31% | 39% |
+| 2024 | 36% | 44% |
+| 2025 | 37% | 46% |
+| 2026 | 41% | 48% |
+| 2027 briefing | 52% | 58% |
+
+The earlier exposure values retain the original 2021 and 2026 endpoints, with a modest 2023 dip and slower growth in 2025. Annual changes before 2027 range from −2 to +5 percentage points; the final +11-point increase is distinctly larger. Concern broadly follows exposure but has different annual changes, so it is not a fixed-offset copy. Whole percentages avoid spurious precision. These fluctuations and the 2027 jump are authored scenario assumptions, not evidence of specific events or statistical uncertainty.
+
 ## Suggested section copy
 
-> Reported exposure to mis- and disinformation has increased gradually in Eldoria. In the exercise baseline, 41% of adults report encountering suspected false or misleading information at least weekly in 2026, compared with 29% in 2021. Concern about online mis- and disinformation has also risen, reaching 48%. These indicators describe the wider information environment; they do not imply that the material is believed or that current outbreak-related misinformation is widespread.
+> Reported exposure to mis- and disinformation has risen unevenly in Eldoria, with a marked increase at the 2027 briefing. In the fictional exercise figures, 52% of adults report encountering suspected false or misleading information at least weekly, up from 41% in 2026 and 29% in 2021. Concern about online mis- and disinformation reaches 58%, compared with 48% in 2026. These indicators describe the wider information environment; they do not imply that the material is believed or that current outbreak-related misinformation is widespread.
 >
 > Eldoria has three major national news outlets, and about 70% of adults are active on social media. As an additional exercise assumption, 7% rely exclusively on social media for news, while only 12% of adults say they trust news encountered there. This creates a communication challenge: use of a channel does not necessarily mean confidence in it. The state broadcaster remains the most trusted source overall, but its lower standing among adults under 35 makes it important to repeat clear, attributable updates through channels younger audiences already use.
 
