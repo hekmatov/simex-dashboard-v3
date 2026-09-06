@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enterBuildMode, openDashboardMap, openSourceContent } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { chartAuthoringWorkflow, openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
@@ -194,7 +195,7 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await intake.getByRole("button", { name: "Cancel", exact: true }).click();
   await closeManager(page);
 
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  await openDashboardMap(page);
   let flow = await openChartAuthoring(page);
   let wizard = flow.wizard;
   await flow.goToDestination();
@@ -365,12 +366,11 @@ async function openBiomedicalBuild(page, viewport) {
   await page.setViewportSize(viewport);
   if (page.url() === "about:blank") await page.goto("http://127.0.0.1:4175/");
   await openDashboardPage(page, "biomedical");
-  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await enterBuildMode(page);
 }
 
 async function openDataSourceManager(page) {
-  await page.getByRole("button", { name: "Source content", exact: true }).click();
-  const manager = page.locator(".source-content-workspace");
+  const manager = await openSourceContent(page);
   await expect(manager).toBeVisible();
   await manager.getByRole("tab", { name: "Data sources", exact: true }).click();
   return manager;

@@ -1,4 +1,5 @@
 import { openChartAuthoring } from "./chart-authoring-workflow.js";
+import { enterBuildMode, openDashboardMap, openSourceContent } from "./buildWorkflow.js";
 import { openDashboardPage } from "./landingWorkflow.js";
 import { dashboardJourneyGroupingRoleFor } from "../../../src/theme/dashboardSurfaceRoles.js";
 
@@ -853,16 +854,13 @@ async function setupViewChrono(context) {
 
 async function setupBuild(context) {
   const page = await openBiomedical(context);
-  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.locator("[data-canonical-mode='build']").waitFor();
+  await enterBuildMode(page);
   return { page };
 }
 
 async function setupDashboardMap(context) {
   const { page } = await setupBuild(context);
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.waitFor();
+  const map = await openDashboardMap(page);
   await map.getByRole("navigation", { name: "Dashboard structure" }).waitFor();
   return { page };
 }
@@ -930,8 +928,7 @@ async function setupScenarioPassport(context) {
 
 async function setupSourceContent(context) {
   const { page } = await setupBuild(context);
-  await page.getByRole("button", { name: "Source content", exact: true }).click();
-  await page.getByRole("complementary", { name: "Source content authoring" }).waitFor();
+  await openSourceContent(page);
   return { page };
 }
 
@@ -1140,25 +1137,25 @@ async function setupStaticImageEditor(context) {
   return { page };
 }
 
-async function openDashboardMap(context) {
+async function openBuildMapForCreate(context) {
   const { page } = await setupBuild(context);
   const addPage = page.getByRole("button", { name: "Add page", exact: true });
   if (!await addPage.isVisible()) {
-    await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+    await openDashboardMap(page);
   }
   await addPage.waitFor();
   return page;
 }
 
 async function setupCreatePageDialog(context) {
-  const page = await openDashboardMap(context);
+  const page = await openBuildMapForCreate(context);
   await page.getByRole("button", { name: "Add page", exact: true }).click();
   await page.getByRole("dialog", { name: "Create Page" }).waitFor();
   return { page };
 }
 
 async function setupCreateSectionDialog(context) {
-  const page = await openDashboardMap(context);
+  const page = await openBuildMapForCreate(context);
   await page.getByRole("button", { name: "Add section", exact: true }).click();
   await page.getByRole("dialog", { name: "Create Section" }).waitFor();
   return { page };
@@ -1241,8 +1238,7 @@ async function setupSourceContentActionDialog(context) {
   }, "simex-dashboard-config-v3-three-mode-v1");
   await page.reload();
   ({ page } = await setupBuild({ ...context, page }));
-  await page.getByRole("button", { name: "Source content", exact: true }).click();
-  const manager = page.getByRole("complementary", { name: "Source content authoring" });
+  const manager = await openSourceContent(page);
   await manager.getByRole("tab", { name: "Media" }).click();
   await manager.getByLabel("Filter by usage").selectOption("unused");
   await manager.getByLabel("Search media").fill("Density audit unused media");
