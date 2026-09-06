@@ -2961,7 +2961,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboard={workingDashboard}
         source={moveDialogRequest?.source}
         sourceLabel={moveDialogRequest?.label}
-        destinationPageId={moveDialogRequest?.source?.pageId}
         invoker={moveDialogRequest?.invoker}
         onCancel={() => setMoveDialogRequest(null)}
         onMove={(move) => {

@@ -266,13 +266,13 @@ test("Text/Image Composer, sanitized notice, rendered preview, raw source, and P
   await expect(wizard.locator(".portable-qmd-composer__announcement"))
     .toContainText(/unsupported paste formatting was removed/i);
   const width = wizard.getByRole("combobox", { name: "Width", exact: true });
-  const rowHeight = wizard.getByRole("combobox", { name: "Row height", exact: true });
+  const rowHeight = wizard.getByRole("combobox", { name: "Height step (12.5% of a row)", exact: true });
   await expect(width).toHaveValue("2");
   await expect(rowHeight).toHaveValue("1");
-  await expect(wizard.getByRole("img", { name: "Panel size: 2 columns by 100% of a row" })).toBeVisible();
+  await expect(wizard.getByRole("img", { name: "Panel size: 2 columns by 8 steps" })).toBeVisible();
   await width.selectOption("4");
-  await rowHeight.selectOption("2");
-  await expect(wizard.getByRole("img", { name: "Panel size: 4 columns by 200% of a row" })).toBeVisible();
+  await rowHeight.selectOption({ value: "2" });
+  await expect(wizard.getByRole("img", { name: "Panel size: 4 columns by 16 steps" })).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
 
   const boldControl = wizard.getByRole("button", { name: "Bold", exact: true });

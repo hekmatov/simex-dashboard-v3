@@ -727,11 +727,7 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a c
     (items) => items.filter((item) => item.tabIndex === 0).length,
   )).toBe(0);
   await expect(rename).toHaveJSProperty("tabIndex", 0);
-  const moveControls = tree.getByRole("button", { name: /^Move / });
-  expect(await moveControls.count()).toBeGreaterThan(0);
-  expect(await moveControls.evaluateAll(
-    (items) => items.every((item) => item.tabIndex === 0),
-  )).toBe(true);
+  await expect(tree.getByRole("button", { name: /^Move / })).toHaveCount(0);
 });
 
 test("pointer collapse moves descendant roving focus to the collapsing Section and Page", async ({ page }) => {

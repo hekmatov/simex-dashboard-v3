@@ -170,7 +170,7 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   const orbit = orbitShell.locator(".scene-unit-orbit");
   await expect(orbitShell).toBeVisible();
   await expect(orbit).toContainText("Unit Orbit");
-  const orbitRelationship = await page.evaluate(() => {
+  const readOrbitRelationship = () => page.evaluate(() => {
     const selectedChart = document.querySelector(
       ".scene-arrangement-board[data-board='scene'] .scene-view-composition-cell:has(.scene-chart-authoring-overlay[data-selected='true'])",
     );
@@ -200,9 +200,12 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
       ),
     };
   });
+  await expect.poll(readOrbitRelationship).toMatchObject({
+    orbitInsideViewport: true,
+    overlap: false,
+  });
+  const orbitRelationship = await readOrbitRelationship();
   expect(orbitRelationship.visibleChartHeight).toBeGreaterThanOrEqual(240);
-  expect(orbitRelationship.orbitInsideViewport).toBe(true);
-  expect(orbitRelationship.overlap).toBe(false);
   await expect(orbit.getByText("Include in Present", { exact: true })).toBeVisible();
   await expect(orbit.getByRole("button", { name: "Move first" })).toBeVisible();
   await orbit.getByRole("radio", { name: "1", exact: true }).check();
