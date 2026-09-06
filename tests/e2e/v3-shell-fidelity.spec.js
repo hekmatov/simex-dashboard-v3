@@ -100,7 +100,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
   ))).toBe(savedLayout);
 
   const clearance = await page.evaluate(() => {
-    const chart = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
+    const chart = document.querySelector('article[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
     const panel = document.querySelector("#dashboard-map-panel").getBoundingClientRect();
     return {
       chartWidth: chart.width,
@@ -122,7 +122,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
     localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
   ))).toBe(savedLayout);
 
-  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   const full = await openFullChartEditor(page, target);
   await expect(target).toHaveClass(/selected/);
   await expect(full.getByRole("navigation", { name: "Chart editing steps" })).toBeVisible();
@@ -156,7 +156,7 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
     .click();
 
   const frame = page.locator(".canonical-dashboard-frame");
-  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
   const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
   await editChart.click();
@@ -497,8 +497,9 @@ test("desktop width recommendation leaves Build and Present visible and usable",
 
   const appFrame = page.locator(".app-frame");
   const workspace = page.locator(".build-mode-shell");
-  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
+  await target.hover();
   const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
   await editChart.click();
 
@@ -512,7 +513,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await expect(discardChanges).toBeEnabled();
 
   const before = await page.evaluate(() => {
-    const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
+    const targetElement = document.querySelector('article[data-build-placement-id="bio_confirmed_cases"]');
     return {
       scrollY: window.scrollY,
       targetId: targetElement?.getAttribute("data-build-placement-id"),
@@ -543,7 +544,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");
   await expect(target).toHaveClass(/\bselected\b/);
   const after = await page.evaluate(() => {
-    const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
+    const targetElement = document.querySelector('article[data-build-placement-id="bio_confirmed_cases"]');
     return {
       scrollY: window.scrollY,
       targetId: targetElement?.getAttribute("data-build-placement-id"),

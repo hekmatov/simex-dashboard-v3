@@ -24,7 +24,7 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
   await toggle.click();
   await expect(map).toBeHidden();
 
-  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   await expect(target).toHaveClass(/selected/);
@@ -62,7 +62,7 @@ test("layout and selected-chart drafts stay independent through layout discard",
     exact: true,
   }).click();
   await mapToggle.click();
-  const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
+  const target = page.locator('article[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   const editor = page.getByRole("complementary", {
     name: "Chart settings for Trust in institutions over time",
@@ -82,13 +82,14 @@ test("layout and selected-chart drafts stay independent through layout discard",
   await expect(chartOwner).toHaveAttribute("data-pending-work-activity", "active");
   await expect(editor.locator(".chart-footprint-control").getByLabel("Width"))
     .toHaveValue("3");
-  await expect(editor.locator(".chart-footprint-control").getByLabel("Row height"))
+  await expect(editor.getByRole("region", { name: "Chart size", exact: true })
+    .getByRole("combobox", { name: "Height", exact: true }))
     .toHaveValue("1");
 });
 
 test("native drag and Move panel controls use the handle while the canvas article stays fixed", async ({ page }) => {
   await openBiomedicalBuild(page);
-  const panels = page.locator('[data-build-placement-id]');
+  const panels = page.locator('article[data-build-placement-id]');
   expect(await panels.count()).toBeGreaterThan(1);
   const source = panels.nth(0);
   const target = panels.nth(1);
@@ -105,14 +106,14 @@ test("native drag and Move panel controls use the handle while the canvas articl
       y: targetBox.height * 0.75,
     },
   });
-  const reordered = await page.locator('[data-build-placement-id]').evaluateAll((items) => items.map((item) => item.dataset.buildPlacementId));
+  const reordered = await page.locator('article[data-build-placement-id]').evaluateAll((items) => items.map((item) => item.dataset.buildPlacementId));
   expect(reordered.indexOf(sourceId)).toBeGreaterThan(0);
   const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   await mapToggle.click();
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
   await mapToggle.click();
 
-  const movedHandle = page.locator(`[data-build-placement-id="${sourceId}"]`).getByRole("button", { name: /^Move panel / });
+  const movedHandle = page.locator(`article[data-build-placement-id="${sourceId}"]`).getByRole("button", { name: /^Move panel / });
   await movedHandle.click();
   const dialog = page.getByRole("dialog", { name: /^Move / });
   await expect(dialog.getByLabel("Destination")).toBeVisible();
@@ -139,7 +140,7 @@ test("More opens Scene Studio without losing dirty pending work", async ({ page 
   }).click();
   await mapToggle.click();
 
-  const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
+  const target = page.locator('article[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   const editor = page.getByRole("complementary", {
     name: "Chart settings for Trust in institutions over time",

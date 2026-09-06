@@ -277,7 +277,7 @@ test("disabled Finish Build exposes its blocking reason on pointer hover", async
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
   await target.hover();
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
