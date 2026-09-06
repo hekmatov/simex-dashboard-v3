@@ -761,7 +761,7 @@ function normalizedGrid(value, titleGutters) {
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
 }
 
-const HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING = 5;
+const HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING = 10;
 
 function verticallyBalancedGrid(value, chart, titleGutters = {}, legend) {
   if (horizontalBarsFillVertically(chart)) {
