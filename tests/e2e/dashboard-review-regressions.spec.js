@@ -45,7 +45,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
 
   await page.getByRole("button", { name: "Build" }).click();
   const panel = page.locator(
-    '[data-build-placement-id="current-cases-placement"]',
+    'article[data-build-placement-id="current-cases-placement"]',
   );
   await expect(panel).toHaveAttribute("data-panel-id", "bio_current_cases_kpi");
   await panel.scrollIntoViewIfNeeded();

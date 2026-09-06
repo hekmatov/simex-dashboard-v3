@@ -166,7 +166,7 @@ test("chart Save commits its working toast before dashboard busy state", async (
 
 test("failed operation feedback stays visually above an overlapping Quick Edit surface", async ({ page }) => {
   await enterBiomedicalBuild(page);
-  await page.setViewportSize({ width: 790, height: 864 });
+  await page.setViewportSize({ width: 790, height: 600 });
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.hover();
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
