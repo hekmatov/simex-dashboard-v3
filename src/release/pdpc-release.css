@@ -1,4 +1,5 @@
 :root {
+  --pdpc-dashboard-header-font-size: clamp(1.15rem, 1.8vw, 1.55rem);
   --simex-view-only-disclaimer-height: 28px;
   --simex-view-only-sticky-offset: var(--simex-view-only-disclaimer-height);
 }
@@ -9,7 +10,7 @@
   border-bottom: 1px solid var(--simex-border-subtle);
   color: var(--simex-text-strong);
   display: flex;
-  font-size: 0.75rem;
+  font-size: calc(var(--pdpc-dashboard-header-font-size) - 3px);
   font-weight: 700;
   justify-content: center;
   line-height: 1.35;
@@ -20,18 +21,6 @@
   text-align: center;
   top: 0;
   z-index: 42;
-}
-
-.pdpc-release-disclaimer__texture {
-  color: var(--simex-text-muted);
-  display: block;
-  font-size: 0.75rem;
-  inset: 0;
-  line-height: var(--simex-view-only-disclaimer-height);
-  overflow: hidden;
-  position: absolute;
-  opacity: 0.12;
-  white-space: nowrap;
 }
 
 .pdpc-release-disclaimer__statement {
@@ -67,7 +56,7 @@
 
 .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity p,
 .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity h1 {
-  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+  font-size: var(--pdpc-dashboard-header-font-size);
   line-height: 1.15;
   margin: 0;
 }
@@ -98,7 +87,7 @@
   color: var(--simex-text-strong);
   cursor: pointer;
   font-family: inherit;
-  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+  font-size: var(--pdpc-dashboard-header-font-size);
   font-weight: 750;
   line-height: 1.15;
   min-height: 56px;
@@ -190,6 +179,10 @@ html:has(.app-frame[data-release-profile^="pdpc-"]) {
 }
 
 @media (max-width: 520px) {
+  :root {
+    --pdpc-dashboard-header-font-size: clamp(0.86rem, 4vw, 1rem);
+  }
+
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-header {
     gap: 6px 8px;
     min-height: 208px;
@@ -198,7 +191,7 @@ html:has(.app-frame[data-release-profile^="pdpc-"]) {
 
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity p,
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity h1 {
-    font-size: clamp(0.86rem, 4vw, 1rem);
+    font-size: var(--pdpc-dashboard-header-font-size);
   }
 
   .pdpc-dashboard-identity p {
@@ -211,7 +204,7 @@ html:has(.app-frame[data-release-profile^="pdpc-"]) {
   }
 
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-pages button {
-    font-size: clamp(0.86rem, 4vw, 1rem);
+    font-size: var(--pdpc-dashboard-header-font-size);
     overflow-wrap: anywhere;
     padding-inline: 8px;
   }

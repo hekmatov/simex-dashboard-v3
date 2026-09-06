@@ -33,9 +33,6 @@ export default function PdpcReleaseDisclaimer() {
       className="pdpc-release-disclaimer"
       aria-label="Exercise disclaimer"
     >
-      <span className="pdpc-release-disclaimer__texture" aria-hidden="true">
-        Fictional     Fictional     Fictional     Fictional     Fictional     Fictional
-      </span>
       <span className="pdpc-release-disclaimer__statement">
         Fictional scenario · Exercise use only
       </span>

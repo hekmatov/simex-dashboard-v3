@@ -39,8 +39,9 @@ test("the release keeps only the exercise disclaimer above the dashboard", () =>
   }));
 
   assert.equal((html.match(/Fictional scenario · Exercise use only/g) ?? []).length, 1);
+  assert.equal((html.match(/Fictional/g) ?? []).length, 1);
   assert.match(html, /<aside[^>]*aria-label="Exercise disclaimer"/);
-  assert.match(html, /class="pdpc-release-disclaimer__texture"[^>]*aria-hidden="true"/);
+  assert.doesNotMatch(html, /pdpc-release-disclaimer__texture/);
   assert.doesNotMatch(html, /pdpc-release-header|Dashboard pages|Simulation exercise/);
 });
 

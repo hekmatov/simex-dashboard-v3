@@ -24,7 +24,7 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${release.baseUrl}/?mode=build`, { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByLabel("Exercise disclaimer")).toContainText(
+    await expect(page.getByLabel("Exercise disclaimer")).toHaveText(
       "Fictional scenario · Exercise use only",
     );
     await expect(page.locator(".pdpc-release-header")).toHaveCount(0);
@@ -124,6 +124,7 @@ test("the integrated PDPC dashboard header uses theme tokens and reflows without
       disclaimerColorToken: disclaimerStyles.getPropertyValue("--simex-text-strong").trim(),
       disclaimerBorder: disclaimerStyles.borderBottomColor,
       disclaimerBorderToken: disclaimerStyles.getPropertyValue("--simex-border-subtle").trim(),
+      disclaimerFontSize: disclaimerStyles.fontSize,
       headerHeight: headerBox.height,
       identityLabelSize: getComputedStyle(identityLabel).fontSize,
       identityTitleSize: getComputedStyle(identityTitle).fontSize,
@@ -151,6 +152,9 @@ test("the integrated PDPC dashboard header uses theme tokens and reflows without
   expect(desktop.disclaimerBackground).toBe(cssColor(desktop.disclaimerBackgroundToken));
   expect(desktop.disclaimerColor).toBe(cssColor(desktop.disclaimerColorToken));
   expect(desktop.disclaimerBorder).toBe(cssColor(desktop.disclaimerBorderToken));
+  expect(
+    parseFloat(desktop.identityTitleSize) - parseFloat(desktop.disclaimerFontSize),
+  ).toBeCloseTo(3, 1);
   expect(Math.abs(desktop.offset - desktop.measured)).toBeLessThanOrEqual(1);
   expect(desktop.headerHeight).toBeCloseTo(185, 0);
   expect(desktop.identityLabelSize).toBe(desktop.identityTitleSize);
