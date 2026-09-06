@@ -145,12 +145,12 @@ test("Dashboard Map branch guides stay centered on the dense utility caret", () 
   assert.equal(group?.get("padding-left"), "24px");
   assert.equal(
     parentGuide?.get("left"),
-    "calc((var(--simex-control-utility, 24px) / 2) + 4px)",
+    "calc(var(--simex-control-utility, 24px) / 2)",
   );
   for (const guide of [childStem, childElbow]) {
     assert.equal(
       guide?.get("left"),
-      "calc((var(--simex-control-utility, 24px) / 2) - 10px)",
+      "calc((var(--simex-control-utility, 24px) / 2) - 14px)",
     );
   }
   assert.equal(childElbow?.get("width"), "14px");
