@@ -65,10 +65,8 @@ test("Build commands stay available while Dashboard map controls only structure 
   await expect(map).toBeVisible();
   await expect(commands).toBeVisible();
   await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toBeVisible();
-
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
-  await expect(map.getByRole("region", { name: "Context inspector" })).toBeVisible();
-  await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toHaveCount(0);
+  await expect(map.locator(".dashboard-map-inline-inspector .build-inspector")).toBeVisible();
+  await expect(map.getByLabel("Page title", { exact: true })).toBeVisible();
 
   await mapToggle.click();
   await expect(map).toBeHidden();
@@ -185,7 +183,6 @@ test("create page and inline rename acquire only the dashboard layout draft", as
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
   await expect(page.locator('[data-pending-work-kind="inlineRename"]')).toHaveCount(0);
 
-  await map.getByRole("button", { name: "Structure", exact: true }).click();
   const operationsNode = map.getByRole("tree").locator('[data-build-node-kind="page"][aria-label="Operations"]');
   await expect(operationsNode).toBeVisible();
   await operationsNode.getByRole("button", { name: "Expand Operations", exact: true }).click();
@@ -205,12 +202,11 @@ test("native drag, keyboard move and Move panel dialog share the layout owner an
   await tree.getByRole("button", { name: "Collapse Biomedical", exact: true }).click();
   await tree.getByRole("button", { name: "Collapse Socio-economic", exact: true }).click();
   const biomedical = tree.locator('[data-build-node-kind="page"][aria-label="Biomedical"]');
-  const mapDragHandle = tree.getByRole("button", { name: "Move page Biomedical", exact: true });
   const socioEconomic = tree.locator('[data-build-node-kind="page"][aria-label="Socio-economic"]');
   const before = await tree.locator('[data-build-node-kind="page"]').evaluateAll((items) => items.map((item) => item.getAttribute("aria-label")));
   const targetBox = await socioEconomic.boundingBox();
   expect(targetBox).toBeTruthy();
-  await mapDragHandle.dragTo(socioEconomic, { targetPosition: { x: 40, y: targetBox.height - 2 } });
+  await biomedical.dragTo(socioEconomic, { targetPosition: { x: 40, y: targetBox.height - 2 } });
   const afterDrag = await tree.locator('[data-build-node-kind="page"]').evaluateAll((items) => items.map((item) => item.getAttribute("aria-label")));
   expect(afterDrag).not.toEqual(before);
   await biomedical.focus();
@@ -220,8 +216,9 @@ test("native drag, keyboard move and Move panel dialog share the layout owner an
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
 
   await tree.getByRole("button", { name: "Expand Biomedical", exact: true }).click();
-  const moveHandle = tree.getByRole("button", { name: /^Move panel / }).first();
-  await moveHandle.click();
+  const moveHandle = page.getByRole("button", { name: /^Move panel / }).first();
+  await moveHandle.focus();
+  await moveHandle.press("Enter");
   const dialog = page.getByRole("dialog", { name: /^Move / });
   await expect(dialog.getByLabel("Destination")).toBeFocused();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -240,10 +237,11 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
 
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   const tree = map.getByRole("tree");
-  const moveConfirmedCases = tree.getByRole("button", { name: "Move panel Confirmed cases", exact: true });
+  const moveConfirmedCases = page.getByRole("button", { name: "Move panel Confirmed cases", exact: true });
   const before = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
 
-  await moveConfirmedCases.click();
+  await moveConfirmedCases.focus();
+  await moveConfirmedCases.press("Enter");
   await selectSocioDestination(page);
   let consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
   await expect(consequences).toContainText("Stage 12 whole Scene");
@@ -256,7 +254,8 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(before);
 
-  await moveConfirmedCases.click();
+  await moveConfirmedCases.focus();
+  await moveConfirmedCases.press("Enter");
   await selectSocioDestination(page);
   consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
   await consequences.getByRole("button", { name: "Confirm move", exact: true }).click();

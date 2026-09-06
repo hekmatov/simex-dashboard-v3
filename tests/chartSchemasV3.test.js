@@ -81,8 +81,8 @@ test("schemas declare only the appearance fields their renderers can apply", () 
     ["line", ["seriesColors", "lineWidth", "referenceLine"]],
     ["area", ["seriesColors", "lineWidth"]],
     ["mixed", ["seriesColors", "lineWidth", "barWidth"]],
-    ["pie", ["seriesColors"]],
-    ["donut", ["seriesColors"]],
+    ["pie", ["seriesColors", "verticalCenter"]],
+    ["donut", ["seriesColors", "verticalCenter"]],
     ["scatter", ["seriesColors"]],
     ["bubble", ["seriesColors"]],
   ]);

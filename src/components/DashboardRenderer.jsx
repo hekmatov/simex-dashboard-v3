@@ -151,6 +151,10 @@ export async function completeFinishBuildTransition({ requestMode, status }) {
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
   contentDraftCoordinator = null,
+  viewOnly = false,
+  dashboardHeaderNode = null,
+  dashboardFooterNode = null,
+  showChartFullscreen = true,
   mode,
   activePageId,
   onActivePageChange,
@@ -2243,7 +2247,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       && intent === "activate";
     if (selectedEditorDirty && !reactivatingCurrentChart && selectedPanelIsStatic && !discardStaticDraft) {
       setPendingStaticBuildSelection({ selection: nextSelection, intent });
-      setChartEditorVisible(false);
       return Promise.resolve(false);
     }
     if (quickChartEditDirty && !reactivatingCurrentChart) {
@@ -2915,6 +2918,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         activePage={renderingActivePage}
         pageType={landingActive ? "landing" : "analytical"}
         dashboard={renderingDashboard}
+        dashboardHeader={dashboardHeaderNode}
+        dashboardFooter={dashboardFooterNode}
+        showChartFullscreen={showChartFullscreen}
         contentDraftCoordinator={contentDraftCoordinator}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}
@@ -2940,7 +2946,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onActivePageChange={editMode
           ? navigateBuildCanvasPage
           : navigateToPage}
-        onAddPanelToSection={recoverEmptySectionInBuild}
+        onAddPanelToSection={viewOnly ? undefined : recoverEmptySectionInBuild}
         onDisplayAction={onDisplayAction}
         onToggleMultiPanel={toggleMultiPanel}
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}
@@ -2955,7 +2961,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboard={workingDashboard}
         source={moveDialogRequest?.source}
         sourceLabel={moveDialogRequest?.label}
-        destinationPageId={moveDialogRequest?.source?.pageId}
         invoker={moveDialogRequest?.invoker}
         onCancel={() => setMoveDialogRequest(null)}
         onMove={(move) => {
@@ -3271,7 +3276,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       data-page-type={landingActive ? "landing" : "analytical"}
       style={iconLanguageStyles}
     >
-      <header className="dashboard-header">
+      {dashboardHeaderNode ?? <header className="dashboard-header">
         <div className="dashboard-brand-block">
           <img className="pdpc-header-mark" src={`${import.meta.env.BASE_URL}assets/pdpc-logo.png`} alt="" />
           <div>
@@ -3381,7 +3386,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
             )}
           </div>
         </div>
-      </header>
+      </header>}
       {moderatorOperation.errorKind === "save-session" && moderatorOperation.error && (
         <p role="alert" className="edit-operation-error">{moderatorOperation.error}</p>
       )}

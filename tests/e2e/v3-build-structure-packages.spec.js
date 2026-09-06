@@ -672,7 +672,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   await review.getByRole("button", { name: "Load package", exact: true }).click();
 
   await expect(review).toHaveCount(0);
-  await expect(tree.getByRole("textbox")).toHaveCount(0);
+  await expect(tree.locator('input[aria-label^="Rename "]')).toHaveCount(0);
   await expect(tree.getByRole("treeitem", {
     name: "Imported Same-ID Page",
     exact: true,
@@ -727,11 +727,7 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a c
     (items) => items.filter((item) => item.tabIndex === 0).length,
   )).toBe(0);
   await expect(rename).toHaveJSProperty("tabIndex", 0);
-  const moveControls = tree.getByRole("button", { name: /^Move / });
-  expect(await moveControls.count()).toBeGreaterThan(0);
-  expect(await moveControls.evaluateAll(
-    (items) => items.every((item) => item.tabIndex === 0),
-  )).toBe(true);
+  await expect(tree.getByRole("button", { name: /^Move / })).toHaveCount(0);
 });
 
 test("pointer collapse moves descendant roving focus to the collapsing Section and Page", async ({ page }) => {

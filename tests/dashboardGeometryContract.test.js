@@ -144,15 +144,15 @@ test("Dashboard Map branch guides follow the compact tree indent", async () => {
   );
   assert.match(
     grammar,
-    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap::after\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) - 10px\);/,
+    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap::after\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) - 14px\);/,
   );
   assert.match(
     grammar,
-    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap::before\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) - 10px\);[\s\S]*?width:\s*14px;/,
+    /\.dashboard-map-panel \.build-tree-group > \.build-tree-item-wrap::before\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) - 14px\);[\s\S]*?width:\s*14px;/,
   );
   assert.match(
     grammar,
-    /\.dashboard-map-panel \.build-tree-item-wrap\[aria-expanded="true"\] > \.build-tree-row::before\s*\{[\s\S]*?left:\s*calc\(\(var\(--simex-control-utility, 24px\) \/ 2\) \+ 4px\);/,
+    /\.dashboard-map-panel \.build-tree-item-wrap\[aria-expanded="true"\] > \.build-tree-row::before\s*\{[\s\S]*?left:\s*calc\(var\(--simex-control-utility, 24px\) \/ 2\);/,
   );
   assert.match(
     grammar,

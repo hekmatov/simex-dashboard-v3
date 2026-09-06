@@ -36,11 +36,9 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
 
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
   await expect(map.getByLabel("Page title")).toHaveCSS("min-height", "32px");
   await expect(map.getByLabel("Page title")).toHaveCSS("color", await semanticColor(page, "--simex-text-strong"));
 
-  await map.getByRole("button", { name: "Structure", exact: true }).click();
   const structure = map.getByRole("navigation", { name: "Dashboard structure" });
   const contrast = await structure.getByRole("treeitem", { name: "Biomedical", exact: true }).evaluate((item) => {
     const surface = item.closest(".build-side-sheet");
@@ -279,13 +277,13 @@ test("disabled Finish Build exposes its blocking reason on pointer hover", async
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
   await target.hover();
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
-  await quick.getByLabel("Chart title").fill("Pending quick title");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Pending quick title");
   await expect(quick).toHaveAttribute("data-chart-edit-dirty", "true");
 
   const finish = page.getByRole("button", { name: "Finish Build", exact: true });

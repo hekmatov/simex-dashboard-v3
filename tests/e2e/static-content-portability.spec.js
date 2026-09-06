@@ -273,7 +273,11 @@ test("Image replacement and panel removal retain reusable durable media bytes", 
   await firstPanel.hover();
   await firstPanel.getByLabel(`${firstTitle} actions`)
     .getByRole("button", { name: "Edit chart" }).click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  await expect(editor).toBeVisible();
   await editor.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
     name: "replacement.png",
     mimeType: "image/png",

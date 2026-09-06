@@ -71,7 +71,7 @@ export function chartAuthoringWorkflow(wizard) {
         .selectOption(column);
     },
     async createChart(title) {
-      await wizard.getByLabel("Chart title").fill(title);
+      await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill(title);
       await goToStage("review");
       const create = wizard.getByRole("button", { name: "Create chart" });
       await expect(create).toBeEnabled();

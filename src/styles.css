@@ -2968,7 +2968,7 @@ button.danger {
 }
 
 .precision-arc-gauge-value {
-  font-family: var(--simex-data-font, inherit);
+  font-family: var(--simex-style-data-font, inherit);
   font-size: var(--precision-arc-value-size, 44px);
   font-weight: 700;
   letter-spacing: -1.5px;
@@ -3937,8 +3937,9 @@ button.danger {
 
 .view-shell .showcase-actions button:focus-visible,
 .view-shell .showcase-secondary-action:focus-visible {
-  outline: var(--simex-component-focus-width) solid var(--simex-on-accent);
+  outline: var(--simex-component-focus-width) solid var(--simex-surface-panel);
   outline-offset: 3px;
+  transition-property: background-color, border-color, box-shadow, color, opacity, transform;
 }
 
 .showcase-route button:focus-visible {

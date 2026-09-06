@@ -59,7 +59,10 @@ test("Scene View composition renders actual chart roots in authored order and wi
   assert.match(html, /data-scene-footprint-mode="live"/);
   assert.match(html, /data-scene-chart-id="chart-b"[^>]*data-scene-short="true"/);
   assert.doesNotMatch(html, /data-scene-chart-id="chart-a"[^>]*data-scene-short="true"/);
-  assert.match(html, /--scene-chart-row-span:3/);
+  assert.deepEqual(
+    [...html.matchAll(/--scene-chart-row-span:([^;\"]+)/g)].map((match) => Number(match[1])),
+    [8, 8, 6],
+  );
   assert.equal((html.match(/class="chart-view-frame"/g) ?? []).length, 3);
   assert.doesNotMatch(html, /Chart loads when it enters the viewport/);
 });

@@ -26,18 +26,21 @@ test("Composer keyboard formatting, semantic styles, footprint, and always-visib
 
   const panelSize = wizard.getByRole("region", { name: "Panel size" });
   const width = panelSize.getByLabel("Width");
-  const rowHeight = panelSize.getByLabel("Row height");
+  const rowHeight = panelSize.getByRole("combobox", {
+    name: "Height step (12.5% of a row)",
+    exact: true,
+  });
   await expect(width).toHaveValue("2");
   await expect(rowHeight).toHaveValue("1");
   await expect(panelSize.getByRole("img", {
-    name: "Panel size: 2 columns by 100% of a row",
+    name: "Panel size: 2 columns by 8 steps",
   })).toBeVisible();
   await width.selectOption("4");
-  await rowHeight.selectOption("2");
+  await rowHeight.selectOption({ value: "2" });
   await expect(width).toHaveValue("4");
   await expect(rowHeight).toHaveValue("2");
   await expect(panelSize.getByRole("img", {
-    name: "Panel size: 4 columns by 200% of a row",
+    name: "Panel size: 4 columns by 16 steps",
   })).toBeVisible();
 
   const preview = wizard.getByRole("region", { name: "Rendered preview" });

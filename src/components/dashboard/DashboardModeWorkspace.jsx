@@ -15,6 +15,9 @@ export default function DashboardModeWorkspace({
   activePage,
   pageType,
   dashboard,
+  dashboardHeader = null,
+  dashboardFooter = null,
+  showChartFullscreen = true,
   contentDraftCoordinator = null,
   onContentDraftStage,
   onContentDraftCommit,
@@ -116,7 +119,9 @@ export default function DashboardModeWorkspace({
         buildPanelOpen={buildPanelOpen}
         buildStaticAuthoringOpen={buildStaticAuthoringOpen}
         pageId={activePage?.id}
-        dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
+        dashboardHeader={dashboardHeader ?? (
+          <DashboardHeader activePage={activePage} dashboard={dashboard} />
+        )}
         workspaceControls={buildMode ? buildWorkspace : null}
         pageContent={(
           <div className={buildMode ? "canonical-build-content" : "canonical-view-content"}>
@@ -133,6 +138,7 @@ export default function DashboardModeWorkspace({
                 surface={buildMode ? "build" : "view"}
                 buildState={buildMode ? buildState : null}
                 displayState={displayState}
+                showFullscreen={showChartFullscreen}
                 multiSelectMode={!buildMode && multiSelectMode}
                 multiPanelIds={buildMode ? [] : multiPanelIds}
                 excludedChartIds={chronoProjection?.hiddenChartIds}
@@ -147,7 +153,7 @@ export default function DashboardModeWorkspace({
             </PlaybackSurface>
           </div>
         )}
-        footer={<CanonicalDashboardFooter dashboard={dashboard} />}
+        footer={dashboardFooter ?? <CanonicalDashboardFooter dashboard={dashboard} />}
         overlayLayer={buildMode ? null : viewOverlay}
       />
     </div>

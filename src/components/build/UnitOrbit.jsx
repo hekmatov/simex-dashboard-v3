@@ -41,12 +41,12 @@ export function positionUnitOrbit({
   const height = orbitSize.height;
   const right = anchorRect.right + gap;
   if (viewport.width - margin - right >= width) {
-    return placement("right", right, anchorRect.top, height);
+    return sidePlacement("right", right, anchorRect.top, height, viewport, margin);
   }
 
   const left = anchorRect.left - gap - width;
   if (left >= margin) {
-    return placement("left", left, anchorRect.top, height);
+    return sidePlacement("left", left, anchorRect.top, height, viewport, margin);
   }
 
   return constrainedUnitOrbitPlacement({ orbitSize: { width, height }, viewport, margin });
@@ -181,8 +181,21 @@ export function constrainedUnitOrbitPlacement({
     side: "viewport-top-right",
     left: Math.max(margin, viewport.width - margin - width),
     top: margin,
-    maxHeight: orbitSize.height,
+    maxHeight: Math.min(orbitSize.height, Math.max(0, viewport.height - (margin * 2))),
   };
+}
+
+function sidePlacement(side, left, anchorTop, height, viewport, margin) {
+  const availableHeight = Math.max(0, viewport.height - (margin * 2));
+  const minimumHeight = Math.min(DEFAULT_MIN_HEIGHT, availableHeight);
+  const maximumTop = Math.max(margin, viewport.height - margin - minimumHeight);
+  const top = Math.min(Math.max(anchorTop, margin), maximumTop);
+  return placement(
+    side,
+    left,
+    top,
+    Math.min(height, Math.max(0, viewport.height - margin - top)),
+  );
 }
 
 export function revealUnitOrbit(

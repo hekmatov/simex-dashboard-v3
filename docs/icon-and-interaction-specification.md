@@ -40,7 +40,7 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 
 | Measure | Count |
 | --- | ---: |
-| Approved glyphs | 115 |
+| Approved glyphs | 116 |
 | Unique interaction records | 130 |
 | Surface interaction references | 141 |
 | Surfaces | 14 |

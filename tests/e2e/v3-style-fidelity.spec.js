@@ -474,16 +474,16 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
   const buildPaint = await page.evaluate(() => ({
     headerEyebrow: getComputedStyle(document.querySelector(".canonical-dashboard-frame .dashboard-header .eyebrow")).color,
     primaryCommand: getComputedStyle(document.querySelector('[data-build-command-action="add-chart"]')).backgroundColor,
-    structureEyebrow: getComputedStyle(document.querySelector(".dashboard-map-panel .build-region-heading .eyebrow")).color,
-    structureButton: getComputedStyle(document.querySelector('.dashboard-map-region-switch button[aria-pressed="true"]')).backgroundColor,
+    mapHeading: getComputedStyle(document.querySelector(".dashboard-map-panel h2")).color,
+    inspectorControl: getComputedStyle(document.querySelector(".dashboard-map-inline-inspector .build-inspector input")).backgroundColor,
     railButton: getComputedStyle(document.querySelector(".build-structure-list .build-tree-caret")).backgroundColor,
     panelToggle: getComputedStyle(document.querySelector(".dashboard-map-toggle")).backgroundColor,
   }));
   expect(buildPaint).toEqual({
     headerEyebrow: "rgb(85, 90, 85)",
     primaryCommand: "rgb(250, 246, 236)",
-    structureEyebrow: "rgb(85, 90, 85)",
-    structureButton: "rgb(44, 56, 61)",
+    mapHeading: "rgb(29, 37, 41)",
+    inspectorControl: "rgb(255, 253, 248)",
     railButton: "rgba(0, 0, 0, 0)",
     panelToggle: "rgb(240, 226, 220)",
   });
@@ -605,14 +605,13 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
-    await dashboardMap.getByRole("button", { name: "Inspector", exact: true }).click();
     const inspectorChrome = await readChrome(page, {
-      inspector: ".dashboard-map-panel .build-inspector-sheet",
+      inspectorInput: ".dashboard-map-panel .dashboard-map-inline-inspector .build-inspector input",
     });
-    expect(inspectorChrome.inspector).toMatchObject({
-      backgroundColor: style.panelAltPaint,
-      borderRadius: style.panelRadius,
-      borderTopColor: roleDividerPaint,
+    expect(inspectorChrome.inspectorInput).toMatchObject({
+      backgroundColor: style.panelPaint,
+      borderRadius: style.controlRadius,
+      borderTopColor: style.borderPaint,
       color: style.textPaint,
     });
     for (const control of [buildChrome.look, buildChrome.chronoGroups]) {

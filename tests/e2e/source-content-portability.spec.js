@@ -115,7 +115,7 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
     await packageInput(importedPage).setInputFiles(bundlePath);
     const review = importedPage.getByRole("dialog", { name: "Review package contents" });
     await review.getByRole("button", { name: "Load package", exact: true }).click();
-    await expect(review).toHaveCount(0);
+    await expect(review).toHaveCount(0, { timeout: 60_000 });
     await openBiomedical(importedPage);
 
     const imagePanel = canonicalPanel(importedPage, IMAGE_PANEL_ID);

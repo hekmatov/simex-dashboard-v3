@@ -1,4 +1,5 @@
 import { openChartAuthoring } from "./chart-authoring-workflow.js";
+import { enterBuildMode, openDashboardMap, openSourceContent } from "./buildWorkflow.js";
 import { openDashboardPage } from "./landingWorkflow.js";
 import { dashboardJourneyGroupingRoleFor } from "../../../src/theme/dashboardSurfaceRoles.js";
 
@@ -143,7 +144,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     mode: "build",
     state: "context-inspector",
     viewport: DESKTOP_STANDARD,
-    root: "[role='region'][aria-label='Context inspector']",
+    root: "[role='complementary'][aria-label='Dashboard map'] .build-inspector",
     setup: setupDashboardMapInspector,
   }),
   executable({
@@ -640,7 +641,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     id: "source-viewer-standard",
     family: "source-viewer",
     owner: "source-viewer",
-    mode: "view",
+    mode: "build",
     state: "biomedical-csv",
     viewport: DESKTOP_STANDARD,
     root: ".source-viewer-theme-root",
@@ -853,16 +854,13 @@ async function setupViewChrono(context) {
 
 async function setupBuild(context) {
   const page = await openBiomedical(context);
-  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.locator("[data-canonical-mode='build']").waitFor();
+  await enterBuildMode(page);
   return { page };
 }
 
 async function setupDashboardMap(context) {
   const { page } = await setupBuild(context);
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.waitFor();
+  const map = await openDashboardMap(page);
   await map.getByRole("navigation", { name: "Dashboard structure" }).waitFor();
   return { page };
 }
@@ -870,8 +868,7 @@ async function setupDashboardMap(context) {
 async function setupDashboardMapInspector(context) {
   const { page } = await setupDashboardMap(context);
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
-  await map.getByRole("region", { name: "Context inspector" }).waitFor();
+  await map.locator(".build-inspector").waitFor();
   return { page };
 }
 
@@ -931,8 +928,7 @@ async function setupScenarioPassport(context) {
 
 async function setupSourceContent(context) {
   const { page } = await setupBuild(context);
-  await page.getByRole("button", { name: "Source content", exact: true }).click();
-  await page.getByRole("complementary", { name: "Source content authoring" }).waitFor();
+  await openSourceContent(page);
   return { page };
 }
 
@@ -1141,25 +1137,25 @@ async function setupStaticImageEditor(context) {
   return { page };
 }
 
-async function openDashboardMap(context) {
+async function openBuildMapForCreate(context) {
   const { page } = await setupBuild(context);
   const addPage = page.getByRole("button", { name: "Add page", exact: true });
   if (!await addPage.isVisible()) {
-    await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+    await openDashboardMap(page);
   }
   await addPage.waitFor();
   return page;
 }
 
 async function setupCreatePageDialog(context) {
-  const page = await openDashboardMap(context);
+  const page = await openBuildMapForCreate(context);
   await page.getByRole("button", { name: "Add page", exact: true }).click();
   await page.getByRole("dialog", { name: "Create Page" }).waitFor();
   return { page };
 }
 
 async function setupCreateSectionDialog(context) {
-  const page = await openDashboardMap(context);
+  const page = await openBuildMapForCreate(context);
   await page.getByRole("button", { name: "Add section", exact: true }).click();
   await page.getByRole("dialog", { name: "Create Section" }).waitFor();
   return { page };
@@ -1242,8 +1238,7 @@ async function setupSourceContentActionDialog(context) {
   }, "simex-dashboard-config-v3-three-mode-v1");
   await page.reload();
   ({ page } = await setupBuild({ ...context, page }));
-  await page.getByRole("button", { name: "Source content", exact: true }).click();
-  const manager = page.getByRole("complementary", { name: "Source content authoring" });
+  const manager = await openSourceContent(page);
   await manager.getByRole("tab", { name: "Media" }).click();
   await manager.getByLabel("Filter by usage").selectOption("unused");
   await manager.getByLabel("Search media").fill("Density audit unused media");
@@ -1258,7 +1253,9 @@ async function setupPendingOperation(context) {
   const { page } = await setupBuild(context);
   const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
-  await page.locator(".chart-quick-editor").getByLabel("Chart title").fill("Density audit pending edit");
+  await page.locator(".chart-quick-editor")
+    .getByRole("textbox", { name: "Chart title", exact: true })
+    .fill("Density audit pending edit");
   await page.locator("[data-pending-work-id='chart-edit:bio_confirmed_cases']").waitFor();
   return { page };
 }
@@ -1266,7 +1263,7 @@ async function setupPendingOperation(context) {
 async function setupOperationStatusNotice(context) {
   const { page } = await setupChartQuickEditor(context);
   const quick = page.locator(".chart-quick-editor");
-  const title = quick.getByLabel("Chart title");
+  const title = quick.getByRole("textbox", { name: "Chart title", exact: true });
   await title.fill(`${await title.inputValue()} audit`);
   await Promise.all([
     page.locator(".operation-status-notice").first().waitFor(),
@@ -1374,12 +1371,13 @@ async function setupAudience(context) {
 }
 
 async function setupSourceViewer(context) {
-  const { page } = await setupView(context);
+  const { page } = await setupBuild(context);
   const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
   await panel.scrollIntoViewIfNeeded();
-  const popupPromise = context.browserContext.waitForEvent("page");
-  await panel.getByRole("button", { name: "View source CSV", exact: true }).click();
-  const popup = await popupPromise;
+  const [popup] = await Promise.all([
+    page.waitForEvent("popup"),
+    panel.getByRole("button", { name: "View source CSV", exact: true }).click(),
+  ]);
   await popup.setViewportSize(context.entry.viewport);
   await popup.waitForLoadState("domcontentloaded");
   await popup.locator(".source-viewer-theme-root").waitFor();

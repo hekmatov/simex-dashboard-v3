@@ -12,7 +12,8 @@ test.beforeEach(async ({ page, request }) => {
   await openDashboardPage(page, "biomedical");
 });
 
-test("ordinary chart evidence action opens the dedicated viewer and returns to its invoker", async ({ page }) => {
+test("Build chart evidence action opens the dedicated viewer and returns to its invoker", async ({ page }) => {
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.scrollIntoViewIfNeeded();
   const sourceAction = panel.getByRole("button", { name: "View source CSV", exact: true });

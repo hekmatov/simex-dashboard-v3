@@ -301,19 +301,21 @@ for (const viewport of VIEWPORTS) {
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     }));
-    expect(overflow.overflowY).toBe("auto");
+    expect(overflow.overflowY).toBe(viewport.width > 860 ? "auto" : "hidden");
     if (viewport.width > 860) expect(overflow.internal).toBe(true);
     expect(overflow.documentWidth).toBeLessThanOrEqual(overflow.viewportWidth);
 
-    await panel.locator(".free-text-chart-view").evaluate((node) => {
-      node.scrollTop = Math.min(120, node.scrollHeight - node.clientHeight);
-    });
+    if (viewport.width > 860) {
+      await panel.locator(".free-text-chart-view").evaluate((node) => {
+        node.scrollTop = Math.min(120, node.scrollHeight - node.clientHeight);
+      });
+    }
     const discardTrigger = await prepareFreeTextEditorTrigger(panel, title);
     const beforeDiscard = await inspectBuildStaticState(page, panel);
 
     await openFreeTextEditor(panel, page, title, discardTrigger);
     let editor = page.getByRole("dialog", { name: "Text/Image editor" });
-    await expectStaticEditorCompression(page, viewport, beforeDiscard);
+    await expectStaticEditorOverlay(page, beforeDiscard);
     const editorSource = await rawQmdSource(editor);
     await editorSource.fill(INERT_QMD);
     await expect(editor.getByRole("button", { name: "Continue" })).toBeEnabled();
@@ -335,7 +337,9 @@ for (const viewport of VIEWPORTS) {
     await confirmation.getByRole("button", { name: "Discard" }).click();
     await expect(editor).toHaveCount(0);
     expect((await readSavedFreeText(page, title)).source.qmd).toBe(INITIAL_QMD);
-    await expectBuildStaticRestored(page, saved.panel.id, beforeDiscard);
+    await expectBuildStaticRestored(page, saved.panel.id, beforeDiscard, {
+      preserveContentScroll: viewport.width > 860,
+    });
 
     panel = canonicalPanel(page, saved.panel.id);
     await panel.scrollIntoViewIfNeeded();
@@ -343,7 +347,7 @@ for (const viewport of VIEWPORTS) {
     const beforeSave = await inspectBuildStaticState(page, panel);
     await openFreeTextEditor(panel, page, title, saveTrigger);
     editor = page.getByRole("dialog", { name: "Text/Image editor" });
-    await expectStaticEditorCompression(page, viewport, beforeSave);
+    await expectStaticEditorOverlay(page, beforeSave);
     await (await rawQmdSource(editor)).fill(SAVED_QMD);
     await expect(editor.getByRole("region", { name: "Rendered preview" }))
       .toContainText("Updated priorities");
@@ -847,6 +851,9 @@ async function openFreeTextEditor(panel, page, title, preparedTrigger = null) {
   const trigger = preparedTrigger ?? panel.getByLabel(`${title} actions`)
     .getByRole("button", { name: "Edit chart" });
   await trigger.click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Text/Image editor" })).toBeVisible();
 }
 
@@ -877,9 +884,9 @@ async function inspectBuildStaticState(page, panel) {
   });
 }
 
-async function expectStaticEditorCompression(page, viewport, before) {
+async function expectStaticEditorOverlay(page, before) {
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
-  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "true");
+  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "false");
   const openState = await page.evaluate(() => {
     const frameNode = document.querySelector(".canonical-dashboard-frame.build-workspace");
     return {
@@ -888,8 +895,7 @@ async function expectStaticEditorCompression(page, viewport, before) {
       viewportWidth: window.innerWidth,
     };
   });
-  if (viewport.width >= 900) expect(openState.frameWidth).toBeLessThan(before.frameWidth - 80);
-  else expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
+  expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
   expect(openState.documentWidth).toBeLessThanOrEqual(openState.viewportWidth);
 }
 

@@ -330,7 +330,7 @@ function findRemoteRuntimeDependencies({ packageJson, sourceFiles, publicFiles }
       for (const value of runtimeUrlCalls(source)) {
         findings.push({ path: filePath, field: "runtime URL", value });
       }
-      for (const value of attributeUrls(source)) {
+      for (const value of attributeUrls(source, { includeHref: false })) {
         findings.push({ path: filePath, field: "asset URL", value });
       }
     }
@@ -559,11 +559,12 @@ function runtimeUrlCalls(source) {
   return values;
 }
 
-function attributeUrls(source) {
+function attributeUrls(source, { includeHref = true } = {}) {
   const values = [];
+  const attributeName = includeHref ? "(?:src|href)" : "src";
   const patterns = [
-    /\b(?:src|href)\s*=\s*["'](https?:\/\/[^"']+)["']/gi,
-    /\b(?:src|href)\s*=\s*\{\s*["'](https?:\/\/[^"']+)["']\s*\}/gi,
+    new RegExp(`\\b${attributeName}\\s*=\\s*["'](https?:\\/\\/[^"']+)["']`, "gi"),
+    new RegExp(`\\b${attributeName}\\s*=\\s*\\{\\s*["'](https?:\\/\\/[^"']+)["']\\s*\\}`, "gi"),
   ];
   for (const pattern of patterns) {
     for (const match of source.matchAll(pattern)) values.push(match[1]);

@@ -160,7 +160,7 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
   let quick = page.locator(".chart-quick-editor");
-  await quick.getByLabel("Chart title").fill("Durable quick save");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Durable quick save");
   const owner = page.locator(`[data-pending-work-id="${ownerId}"]`);
   await expect(owner).toHaveCount(1);
 
@@ -196,7 +196,7 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   const full = page.getByRole("dialog", { name: "Edit chart" });
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  await expect(full.getByLabel("Chart title")).toHaveValue("Durable quick save");
+  await expect(full.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Durable quick save");
   await expect(owner).toHaveAttribute("data-pending-work-origin", "full");
   await expectNoRetiredDashboardStyle(page);
 
@@ -266,13 +266,13 @@ test("Text/Image Composer, sanitized notice, rendered preview, raw source, and P
   await expect(wizard.locator(".portable-qmd-composer__announcement"))
     .toContainText(/unsupported paste formatting was removed/i);
   const width = wizard.getByRole("combobox", { name: "Width", exact: true });
-  const rowHeight = wizard.getByRole("combobox", { name: "Row height", exact: true });
+  const rowHeight = wizard.getByRole("combobox", { name: "Height step (12.5% of a row)", exact: true });
   await expect(width).toHaveValue("2");
   await expect(rowHeight).toHaveValue("1");
-  await expect(wizard.getByRole("img", { name: "Panel size: 2 columns by 100% of a row" })).toBeVisible();
+  await expect(wizard.getByRole("img", { name: "Panel size: 2 columns by 8 steps" })).toBeVisible();
   await width.selectOption("4");
-  await rowHeight.selectOption("2");
-  await expect(wizard.getByRole("img", { name: "Panel size: 4 columns by 200% of a row" })).toBeVisible();
+  await rowHeight.selectOption({ value: "2" });
+  await expect(wizard.getByRole("img", { name: "Panel size: 4 columns by 16 steps" })).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
 
   const boldControl = wizard.getByRole("button", { name: "Bold", exact: true });
@@ -317,6 +317,7 @@ test("standalone source viewer and application recovery retain dashboard style",
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.scrollIntoViewIfNeeded();
 

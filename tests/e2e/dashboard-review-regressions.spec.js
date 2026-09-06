@@ -45,7 +45,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
 
   await page.getByRole("button", { name: "Build" }).click();
   const panel = page.locator(
-    '[data-build-placement-id="current-cases-placement"]',
+    'article[data-build-placement-id="current-cases-placement"]',
   );
   await expect(panel).toHaveAttribute("data-panel-id", "bio_current_cases_kpi");
   await panel.scrollIntoViewIfNeeded();
@@ -53,7 +53,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   await panel.getByRole("button", { name: "Edit chart" }).click();
   const quickEditor = page.locator(".chart-quick-editor");
   await expect(quickEditor).toBeVisible();
-  await quickEditor.getByLabel("Chart title").fill("Updated wrapped KPI");
+  await quickEditor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Updated wrapped KPI");
   await quickEditor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(quickEditor).toHaveCount(0);
 
@@ -330,6 +330,6 @@ async function openDashboard(page) {
 async function openSelectedPageInspector(page) {
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  await expect(map.getByLabel("Page title", { exact: true })).toBeVisible();
   return map;
 }

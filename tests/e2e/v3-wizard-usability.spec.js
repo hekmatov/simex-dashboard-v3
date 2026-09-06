@@ -104,11 +104,11 @@ test("New Chart keeps stable geometry and exposes editable destination placement
   const footprint = wizard.getByRole("region", { name: "Footprint" });
   await expect(footprint).toBeVisible();
   await footprint.getByLabel("Width").selectOption("3");
-  await footprint.getByLabel("Row height").selectOption("2");
+  await footprint.getByLabel("Height step (12.5% of a row)").selectOption({ value: "2" });
   await expect(footprint.getByLabel("Width")).toHaveValue("3");
-  await expect(footprint.getByLabel("Row height")).toHaveValue("2");
+  await expect(footprint.getByLabel("Height step (12.5% of a row)")).toHaveValue("2");
   await expect(footprint.getByRole("img", {
-    name: "Chart size: 3 columns by 200% of a row",
+    name: "Chart size: 3 columns by 16 steps",
   })).toBeVisible();
   await wizard.getByLabel("Insertion").selectOption("before");
   await expect(wizard.getByLabel("Placement anchor")).toBeEnabled();

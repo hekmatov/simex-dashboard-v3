@@ -224,7 +224,12 @@ test("hero action focus remains visible against the default hero surface", async
   expect(await action.evaluate((button) => button.matches(":focus-visible"))).toBe(true);
   const focus = await action.evaluate((button) => {
     const hero = button.closest(".showcase-hero");
-    const toRgb = (value) => value.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number);
+    const toRgb = (value) => {
+      const channels = value.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number);
+      return value.startsWith("color(srgb")
+        ? channels.map((channel) => channel * 255)
+        : channels;
+    };
     const luminance = (color) => {
       const channels = toRgb(color).map((channel) => {
         const normalized = channel / 255;
@@ -248,7 +253,7 @@ test("hero action focus remains visible against the default hero surface", async
 
   expect(focus.outlineStyle).toBe("solid");
   expect(focus.focusPaint).not.toBe(focus.heroSurface);
-  expect(focus.contrastRatio).toBeGreaterThanOrEqual(3);
+  expect(focus.contrastRatio, JSON.stringify(focus)).toBeGreaterThanOrEqual(3);
 });
 
 test("Home inherits Theme semantic tokens and exposes repository Issues feedback", async ({ page }) => {
@@ -261,6 +266,12 @@ test("Home inherits Theme semantic tokens and exposes repository Issues feedback
   await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
   await look.getByLabel("Dark", { exact: true }).check();
   await page.keyboard.press("Escape");
+  await expect.poll(async () => {
+    const settled = await readLandingTheme(page);
+    return settled.root.background === settled.tokens.canvas
+      && settled.root.color === settled.tokens.textStrong
+      && settled.root.borderColor === settled.tokens.border;
+  }).toBe(true);
 
   const after = await readLandingTheme(page);
   expect(after.metadata).toEqual({

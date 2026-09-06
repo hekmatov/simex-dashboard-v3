@@ -93,7 +93,7 @@ test("chart Save commits its working toast before dashboard busy state", async (
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
-  await quick.getByLabel("Chart title").fill("Toast precedes chart save work");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Toast precedes chart save work");
   const save = quick.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeEnabled();
 
@@ -166,7 +166,7 @@ test("chart Save commits its working toast before dashboard busy state", async (
 
 test("failed operation feedback stays visually above an overlapping Quick Edit surface", async ({ page }) => {
   await enterBiomedicalBuild(page);
-  await page.setViewportSize({ width: 790, height: 864 });
+  await page.setViewportSize({ width: 790, height: 600 });
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.hover();
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
@@ -190,7 +190,7 @@ test("failed operation feedback stays visually above an overlapping Quick Edit s
     };
     globalThis.__SIMEX_FAIL_TOAST_PROBE_ONCE__ = true;
   });
-  await quick.getByLabel("Chart title").fill("Toast stacking probe");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Toast stacking probe");
   await quick.getByRole("button", { name: "Save", exact: true }).click();
 
   const notice = page.locator(".operation-status-notice")

@@ -34,7 +34,7 @@ test("a pending header edit and immediate chart save commit in order", async ({
   await page.getByRole("button", { name: "Edit chart" }).first().click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
-  await quick.getByLabel("Chart title").fill("Race-safe chart title");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Race-safe chart title");
   await quick.getByRole("button", { name: "Save", exact: true }).click();
   await expect(quick).toHaveCount(0);
 
@@ -81,17 +81,8 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
 async function openBiomedicalPageInspector(page) {
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  const inspector = map.getByRole("button", { name: "Inspector", exact: true });
-  await expect.poll(() => inspector.evaluate((element) => {
-    const bounds = element.getBoundingClientRect();
-    return {
-      bottom: bounds.bottom <= window.innerHeight,
-      left: bounds.left >= 0,
-      right: bounds.right <= window.innerWidth,
-      top: bounds.top >= 0,
-    };
-  })).toEqual({ bottom: true, left: true, right: true, top: true });
-  await inspector.click();
+  const pageTitle = map.getByLabel("Page title", { exact: true });
+  await expect(pageTitle).toBeVisible();
   return map;
 }
 

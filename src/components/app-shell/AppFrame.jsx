@@ -11,6 +11,9 @@ const useBrowserLayoutEffect = typeof window === "undefined"
 
 export default function AppFrame({
   mode,
+  releaseProfileId = null,
+  commandHeader = null,
+  suppressCommandCrown = false,
   availableModes,
   showPageNavigation = true,
   onModeRequest,
@@ -80,6 +83,7 @@ export default function AppFrame({
       ref={frameRef}
       className="app-frame"
       data-dashboard-mode={mode}
+      data-release-profile={releaseProfileId ?? undefined}
       data-dashboard-density={density}
       data-dashboard-style={theme?.dashboardStyle}
       data-dashboard-color-profile={theme?.dashboardColorProfile}
@@ -94,27 +98,30 @@ export default function AppFrame({
       }}
     >
       {showsDesktopWidthNotice && <DesktopWidthNotice mode={mode} />}
-      <DashboardCommandCrown
-        mode={mode}
-        availableModes={availableModes}
-        showPageNavigation={showPageNavigation}
-        dashboardIdentity={dashboardIdentity}
-        activePage={activePage}
-        pages={pages}
-        contextNode={contextNode}
-        statusNode={statusNode}
-        pageActions={pageActions}
-        pageNavigationNode={pageNavigationNode}
-        onModeRequest={onModeRequest}
-        onPageRequest={onPageRequest}
-        onScenarioRequest={onScenarioRequest}
-        scenarioExpanded={scenarioExpanded}
-        scenarioDirty={scenarioDirty}
-        scenarioNode={scenarioNode}
-        disabled={modeDisabled}
-        disabledReason={modeDisabledReason || blockedReason}
-        contextDisabledReason={blockedReason}
-      />
+      {commandHeader}
+      {!suppressCommandCrown && (
+        <DashboardCommandCrown
+          mode={mode}
+          availableModes={availableModes}
+          showPageNavigation={showPageNavigation}
+          dashboardIdentity={dashboardIdentity}
+          activePage={activePage}
+          pages={pages}
+          contextNode={contextNode}
+          statusNode={statusNode}
+          pageActions={pageActions}
+          pageNavigationNode={pageNavigationNode}
+          onModeRequest={onModeRequest}
+          onPageRequest={onPageRequest}
+          onScenarioRequest={onScenarioRequest}
+          scenarioExpanded={scenarioExpanded}
+          scenarioDirty={scenarioDirty}
+          scenarioNode={scenarioNode}
+          disabled={modeDisabled}
+          disabledReason={modeDisabledReason || blockedReason}
+          contextDisabledReason={blockedReason}
+        />
+      )}
       {blockedReason && <p className="mode-switch-error" role="alert">{blockedReason}</p>}
       {persistenceNotice && (
         <p className="app-persistence-notice" role="status">{persistenceNotice}</p>

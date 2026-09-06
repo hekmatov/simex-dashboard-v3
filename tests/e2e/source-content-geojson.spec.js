@@ -98,7 +98,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await wizard.locator('[data-field-id="time"] select').selectOption("date");
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
-  await wizard.getByLabel("Chart title").fill("Journey I staged map draft");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Journey I staged map draft");
   await flow.goToReview();
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
   await flow.goToDataSource();
@@ -126,7 +126,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await wizard.locator('[data-field-id="time"] select').selectOption("date");
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
-  await wizard.getByLabel("Chart title").fill("Journey I managed map");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Journey I managed map");
   await flow.goToReview();
   await wizard.getByRole("button", { name: "Create chart", exact: true }).click();
   await expect(wizard).toHaveCount(0);

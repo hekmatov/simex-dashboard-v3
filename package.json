@@ -6,12 +6,13 @@
   "scripts": {
     "test": "node --test --test-concurrency=1",
     "test:unit": "node --test",
-    "test:e2e": "pnpm test:e2e:source && pnpm test:e2e:static",
+    "test:e2e": "pnpm test:e2e:source && pnpm test:e2e:static && pnpm test:e2e:pdpc",
     "test:e2e:source": "playwright test",
     "test:e2e:static": "playwright test --config=playwright.static.config.js",
     "test:e2e:dev": "playwright test --max-failures=1",
     "audit:ui:density": "playwright test tests/e2e/dashboard-density-audit.spec.js --project=chromium --output=test-results/playwright-density",
     "test:e2e:package": "playwright test --config=playwright.static.config.js --grep \"production View launches from the built static output\"",
+    "test:e2e:pdpc": "playwright test --config=playwright.pdpc.config.js",
     "build:biomedical-derivatives": "node scripts/build-biomedical-derivatives.mjs",
     "check:biomedical-derivatives": "node scripts/build-biomedical-derivatives.mjs --check",
     "icons:build": "node scripts/build-icon-reference.mjs",
@@ -28,6 +29,7 @@
     "build:cloudflare:linux": "node scripts/build-biomedical-derivatives.mjs && node scripts/build-dataset-profiles.mjs && SIMEX_EMBED_PORTABLE_DATA=0 node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs && VITE_SHOW_COMPATIBILITY_REPORTS=false vite build && node scripts/verify-v3-static-build.mjs --finalize",
     "build:flashdrive": "pnpm.cmd build",
     "package:flashdrive": "pnpm build && pnpm verify:v3-static && node scripts/package-flashdrive.mjs",
+    "release:pdpc": "node scripts/build-pdpc-release.mjs",
     "promote:bundle": "node scripts/promote-dashboard-bundle.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },

@@ -64,7 +64,7 @@ test("Unit Orbit anchors itself to the visible chart when a placement is rendere
   );
 });
 
-test("Unit Orbit opens right, then left, then floats at the viewport's top-right without resizing", () => {
+test("Unit Orbit opens right, then left, then floats within the viewport", () => {
   assert.equal(
     typeof orbitModule?.positionUnitOrbit,
     "function",
@@ -137,7 +137,7 @@ test("Unit Orbit keeps its natural height beside a chart even near protected chr
   assert.equal(result.maxHeight, 760);
 });
 
-test("Unit Orbit fallback remains fixed-size at the viewport's top-right", () => {
+test("Unit Orbit fallback caps its height at the viewport's top-right", () => {
   assert.equal(
     typeof orbitModule?.constrainedUnitOrbitPlacement,
     "function",
@@ -153,7 +153,22 @@ test("Unit Orbit fallback remains fixed-size at the viewport's top-right", () =>
     side: "viewport-top-right",
     left: 1008,
     top: 12,
-    maxHeight: 980,
+    maxHeight: 876,
+  });
+});
+
+test("Unit Orbit keeps a side placement anchored while capping it above the viewport edge", () => {
+  const result = orbitModule.positionUnitOrbit({
+    anchorRect: rect(100, 250, 500, 570),
+    orbitSize: { width: 400, height: 760 },
+    viewport: { width: 1200, height: 900 },
+  });
+
+  assert.deepEqual(result, {
+    side: "right",
+    left: 512,
+    top: 250,
+    maxHeight: 638,
   });
 });
 
