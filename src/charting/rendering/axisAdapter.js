@@ -247,9 +247,9 @@ function axisLabelOption(chart, horizontal, seriesType, totalMarkCount) {
 function labelFormatter(labels) {
   const unit = typeof labels.unit === "string" ? labels.unit.trim() : "";
   const format = typeof labels.format === "string" ? labels.format.trim() : "";
-  if (format) return unit ? `${format} ${unit}` : format;
+  if (format) return unit ? `${format}${unit}` : format;
   if (!unit) return formatSeriesLabel;
-  return (params) => `${formatSeriesLabel(params)} ${unit}`;
+  return (params) => `${formatSeriesLabel(params)}${unit}`;
 }
 
 function formatSeriesLabel(params) {

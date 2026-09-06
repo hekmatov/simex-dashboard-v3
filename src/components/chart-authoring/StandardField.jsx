@@ -601,7 +601,7 @@ function LabelFormatHelp() {
       "aria-label": "About label format",
       "aria-describedby": id,
     }, React.createElement(SimExIcon, { iconId: "info", size: 14 })),
-    React.createElement("span", { id, role: "tooltip" }, "Use {c} for the value, {b} for the category, and {a} for the series. Example: {b}: {c}. The label unit is added after the formatted value."),
+    React.createElement("span", { id, role: "tooltip" }, "Use {c} for the value, {b} for the category, and {a} for the series. Example: {b}: {c}. The label unit is added directly after the formatted value; add a leading space to the Unit field if you want one."),
   );
 }
 function textControl(label, value, onChange) {

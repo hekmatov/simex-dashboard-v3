@@ -1349,7 +1349,7 @@ test("axis series append a label unit and apply the configured label font size",
   assert.deepEqual(model.option.series[0].label, {
     show: true,
     position: "top",
-    formatter: "{b}: {c} %",
+    formatter: "{b}: {c}%",
     fontSize: 18,
   });
 });
