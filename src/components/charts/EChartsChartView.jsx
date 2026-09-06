@@ -769,7 +769,7 @@ function verticallyBalancedGrid(value, chart, titleGutters = {}) {
       if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
       return {
         ...grid,
-        top: compactGridGutter(grid.top, titleGutters.top, 26),
+        top: compactGridGutter(grid.top, titleGutters.top, 34),
         bottom: compactGridGutter(grid.bottom, titleGutters.bottom, 32),
       };
     };

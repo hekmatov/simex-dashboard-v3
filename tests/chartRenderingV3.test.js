@@ -85,7 +85,7 @@ test("vertical fill expands horizontal bar plots into the available panel height
       },
     });
 
-    assert.deepEqual(presented.option.grid, { left: 48, right: 28, top: 26, bottom: 32 });
+    assert.deepEqual(presented.option.grid, { left: 48, right: 28, top: 34, bottom: 32 });
     assert.equal(presented.option.legend.top, 12);
   }
 });
