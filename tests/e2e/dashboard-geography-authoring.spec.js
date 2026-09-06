@@ -48,9 +48,9 @@ test("a fresh chronological choropleth reaches preview through the early GeoJSON
     wizard.locator(".chart-authoring-preview-ready"),
   ).toBeVisible();
   await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Fresh municipal map");
-  await expect(
-    wizard.getByRole("region", { name: "Map", exact: true }),
-  ).toBeVisible();
+  const preview = wizard.getByRole("region", { name: "Chart preview", exact: true });
+  await expect(preview).toBeVisible();
+  await expect(preview.getByRole("heading", { name: "Fresh municipal map", exact: true })).toBeVisible();
   await expect(
     wizard.locator('[data-field-id="geoSource"]'),
   ).toHaveCount(0);
