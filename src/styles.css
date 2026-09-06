@@ -339,15 +339,16 @@ body::before {
 .pdpc-header-mark {
   background: rgb(255 255 255 / 92%);
   border: 1px solid rgb(255 255 255 / 42%);
+  box-sizing: border-box;
   border-radius: 18px;
   box-shadow: 0 10px 24px color-mix(in srgb, var(--simex-text-strong) 20%, transparent);
   filter: none;
   height: 92px;
-  object-fit: cover;
-  object-position: 64% 58%;
+  object-fit: contain;
+  object-position: center;
   opacity: 1;
-  padding: 4px;
-  width: 92px;
+  padding: 3px;
+  width: 158px;
 }
 
 .eyebrow {
@@ -1574,7 +1575,7 @@ th {
 
   .pdpc-header-mark {
     height: 54px;
-    width: 54px;
+    width: 93px;
   }
 
   .dashboard-meta {
@@ -4217,7 +4218,7 @@ button.danger {
 .app-shell[data-page-type="landing"] .pdpc-header-mark {
   border-radius: 12px;
   height: 56px;
-  width: 56px;
+  width: 96px;
 }
 
 .app-shell[data-page-type="landing"] .dashboard-page-title {

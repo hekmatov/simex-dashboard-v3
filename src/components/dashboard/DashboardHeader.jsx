@@ -11,7 +11,7 @@ export default function DashboardHeader({ activePage, dashboard }) {
   return (
     <header className="dashboard-header">
       <div className="dashboard-brand-block">
-        <img className="pdpc-header-mark" src={`${import.meta.env.BASE_URL}assets/pdpc-mark.png`} alt="" />
+        <img className="pdpc-header-mark" src={`${import.meta.env.BASE_URL}assets/pdpc-logo.png`} alt="" />
         <div>
           <p className="eyebrow">{dashboard.programLabel}</p>
           {landingActive ? (
