@@ -143,7 +143,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     mode: "build",
     state: "context-inspector",
     viewport: DESKTOP_STANDARD,
-    root: "[role='region'][aria-label='Context inspector']",
+    root: "[role='complementary'][aria-label='Dashboard map'] .build-inspector",
     setup: setupDashboardMapInspector,
   }),
   executable({
@@ -640,7 +640,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     id: "source-viewer-standard",
     family: "source-viewer",
     owner: "source-viewer",
-    mode: "view",
+    mode: "build",
     state: "biomedical-csv",
     viewport: DESKTOP_STANDARD,
     root: ".source-viewer-theme-root",
@@ -870,8 +870,7 @@ async function setupDashboardMap(context) {
 async function setupDashboardMapInspector(context) {
   const { page } = await setupDashboardMap(context);
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
-  await map.getByRole("region", { name: "Context inspector" }).waitFor();
+  await map.locator(".build-inspector").waitFor();
   return { page };
 }
 
@@ -1376,12 +1375,13 @@ async function setupAudience(context) {
 }
 
 async function setupSourceViewer(context) {
-  const { page } = await setupView(context);
+  const { page } = await setupBuild(context);
   const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
   await panel.scrollIntoViewIfNeeded();
-  const popupPromise = context.browserContext.waitForEvent("page");
-  await panel.getByRole("button", { name: "View source CSV", exact: true }).click();
-  const popup = await popupPromise;
+  const [popup] = await Promise.all([
+    page.waitForEvent("popup"),
+    panel.getByRole("button", { name: "View source CSV", exact: true }).click(),
+  ]);
   await popup.setViewportSize(context.entry.viewport);
   await popup.waitForLoadState("domcontentloaded");
   await popup.locator(".source-viewer-theme-root").waitFor();

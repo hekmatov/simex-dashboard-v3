@@ -317,6 +317,7 @@ test("standalone source viewer and application recovery retain dashboard style",
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.scrollIntoViewIfNeeded();
 
