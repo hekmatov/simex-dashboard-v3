@@ -36,6 +36,21 @@ test("ordinary chart rail exposes the dedicated CSV viewer directly beside Detai
   assert.doesNotMatch(html, />View source</);
 });
 
+test("View mode chart rail omits source CSV and source information actions", () => {
+  const html = renderToStaticMarkup(React.createElement(actionsModule.default, {
+    chartId: context.chartId,
+    chartTitle: context.chartTitle,
+    variableId: context.variableId,
+    sourceId: "bio_cases",
+    source,
+    citation: "Simulation exercise biomedical dataset",
+    showSourceActions: false,
+  }));
+  assert.doesNotMatch(html, /aria-label="View source CSV"/);
+  assert.doesNotMatch(html, /aria-label="Show chart details"/);
+  assert.match(html, /aria-label="Focus chart"/);
+});
+
 test("viewer descriptor distinguishes chart, variable, dataset, and CSV path", () => {
   const descriptor = protocol.buildSourceViewerDescriptor("bio_cases", source, context);
   assert.deepEqual(descriptor.invocation, {

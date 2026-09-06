@@ -237,6 +237,7 @@ function ChartPanel({
         source: dataSources?.[chart.sourceId],
         citation,
         staticContent: getChartSchema(chart.typeId).authoringWorkflow === "static",
+        showSourceActions: editMode,
         selectionMode: multiSelectMode,
         fullscreenSelected: isMultiSelected,
         fullscreenSelectionIndex: multiSelectionIndex,
