@@ -213,10 +213,15 @@ export function applyEChartsPresentation(
     ...(audienceScale ? { tickFontSize: audienceScale.text } : {}),
   };
   const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
+  const verticalFill = horizontalBarsFillVertically(chart);
+  const legend = option.legend === undefined
+    ? undefined
+    : normalizedLegend(option.legend, textMuted, bodyFont, verticalFill);
   const grid = verticallyBalancedGrid(
     normalizedGrid(option.grid, titleGutters),
     chart,
     titleGutters,
+    legend,
   );
   const presentedOption = {
       ...optionWithoutBackground,
@@ -234,16 +239,9 @@ export function applyEChartsPresentation(
               ? option.title.map((title) => normalizedTitle(title, align, textStrong, headingFont))
               : normalizedTitle(option.title, align, textStrong, headingFont),
           }),
-      ...(option.legend === undefined
+      ...(legend === undefined
         ? {}
-        : {
-            legend: normalizedLegend(
-              option.legend,
-              textMuted,
-              bodyFont,
-              horizontalBarsFillVertically(chart),
-            ),
-          }),
+        : { legend }),
       ...(option.xAxis === undefined
         ? {}
         : { xAxis: normalizedAxis(option.xAxis, textMuted, borderSubtle, gridline, bodyFont, dataFont) }),
@@ -763,13 +761,13 @@ function normalizedGrid(value, titleGutters) {
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
 }
 
-function verticallyBalancedGrid(value, chart, titleGutters = {}) {
+function verticallyBalancedGrid(value, chart, titleGutters = {}, legend) {
   if (horizontalBarsFillVertically(chart)) {
     const fill = (grid) => {
       if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
       return {
         ...grid,
-        top: compactGridGutter(grid.top, titleGutters.top, 34),
+        top: compactGridGutter(grid.top, titleGutters.top, legendVerticalGutter(legend)),
         bottom: compactGridGutter(grid.bottom, titleGutters.bottom, 32),
       };
     };
@@ -783,6 +781,16 @@ function verticallyBalancedGrid(value, chart, titleGutters = {}) {
     return { ...grid, top: gutter, bottom: gutter };
   };
   return Array.isArray(value) ? value.map(balance) : balance(value);
+}
+
+function legendVerticalGutter(legend) {
+  if (!legend || typeof legend !== "object" || Array.isArray(legend) || legend.show === false) return 0;
+  const fontSize = Number.isFinite(legend.textStyle?.fontSize) ? legend.textStyle.fontSize : 11;
+  const itemHeight = Number.isFinite(legend.itemHeight)
+    ? legend.itemHeight
+    : Math.round((fontSize * 10) / 11);
+  const top = Number.isFinite(legend.top) ? legend.top : 12;
+  return Math.round(top + Math.max(fontSize, itemHeight) + 11);
 }
 
 function compactGridGutter(current, required, target) {

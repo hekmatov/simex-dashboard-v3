@@ -90,6 +90,40 @@ test("vertical fill expands horizontal bar plots into the available panel height
   }
 });
 
+test("vertical fill removes the legend gutter when the legend is hidden", () => {
+  const presented = applyEChartsPresentation({
+    option: {
+      grid: { left: 48, right: 28, top: 76, bottom: 32 },
+      legend: { show: false },
+      xAxis: { type: "value" },
+      yAxis: { type: "category", data: ["A", "B", "C"] },
+      series: [{ type: "bar", data: [1, 2, 3] }],
+    },
+  }, {
+    typeId: "horizontalBar",
+    presentation: { series: { verticalFill: true }, title: { align: "left" } },
+  });
+
+  assert.equal(presented.option.grid.top, 0);
+});
+
+test("vertical fill increases the legend gutter with the legend font size", () => {
+  const presented = applyEChartsPresentation({
+    option: {
+      grid: { left: 48, right: 28, top: 76, bottom: 32 },
+      legend: { show: true, textStyle: { fontSize: 18 } },
+      xAxis: { type: "value" },
+      yAxis: { type: "category", data: ["A", "B", "C"] },
+      series: [{ type: "bar", data: [1, 2, 3] }],
+    },
+  }, {
+    typeId: "horizontalBar",
+    presentation: { series: { verticalFill: true }, title: { align: "left" } },
+  });
+
+  assert.equal(presented.option.grid.top, 41);
+});
+
 function chart(typeId, overrides = {}) {
   return {
     id: `chart-${typeId}`,
