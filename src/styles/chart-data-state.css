@@ -83,7 +83,7 @@
   align-items: center;
   border: 2px solid currentColor;
   display: inline-flex;
-  font-family: var(--simex-style-data-font, ui-monospace, monospace);
+  font-family: var(--simex-style-heading-font);
   font-weight: 800;
   justify-content: center;
   min-height: 32px;
@@ -177,7 +177,7 @@
   align-items: center;
   border: 2px solid currentColor;
   display: inline-flex;
-  font-family: var(--simex-style-data-font, ui-monospace, monospace);
+  font-family: var(--simex-style-heading-font);
   font-weight: 800;
   justify-content: center;
   min-height: 32px;

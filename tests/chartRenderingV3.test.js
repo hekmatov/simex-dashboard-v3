@@ -11,6 +11,7 @@ import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js"
 import { buildCompositionRenderModel } from "../src/charting/rendering/compositionAdapter.js";
 import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistry.js";
 import { buildRelationshipRenderModel } from "../src/charting/rendering/relationshipAdapter.js";
+import { resolveDashboardStyleGrammar } from "../src/theme/dashboardStyleGrammar.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -38,6 +39,38 @@ const {
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
+
+test("PDPC chart labels, rich text, tooltips and custom graphics use the two style tokens", () => {
+  const tokens = resolveDashboardStyleGrammar("pdpc");
+  const theme = readChartTextTheme({ getPropertyValue: key => tokens[key] ?? "" });
+  const font = tokens["--simex-style-body-font"];
+  assert.equal(theme.bodyFont, font);
+  assert.equal(theme.headingFont, font);
+  assert.equal(theme.dataFont, font);
+  const original = {
+    option: {
+      legend: { pageTextStyle: { fontFamily: "Arial" } },
+      visualMap: { textStyle: { fontFamily: "Arial" } },
+      xAxis: { axisLabel: { rich: { label: { fontFamily: "Arial", fontSize: 13 } } } },
+      tooltip: { textStyle: { fontFamily: "Arial" } },
+      graphic: { type: "text", style: { text: "Annotation", font: "italic 14px Arial" } },
+      series: [{ type: "custom", renderItem: () => ({
+        type: "text", style: { text: "Custom", fontFamily: "Arial", fontSize: 15 },
+      }) }, { type: "line", markLine: { label: { fontFamily: "Arial" } },
+        emphasis: { label: { fontFamily: "Arial" } } }],
+    },
+  };
+  const { option } = applyEChartsPresentation(original, {}, false, theme);
+  for (const style of [option.legend.pageTextStyle, option.visualMap.textStyle,
+    option.xAxis.axisLabel.rich.label, option.tooltip.textStyle, option.graphic.style,
+    option.series[0].renderItem().style, option.series[1].markLine.label, option.series[1].emphasis.label]) {
+    assert.equal(style.fontFamily, font);
+  }
+  assert.equal(option.graphic.style.font, `italic 14px ${font}`);
+  assert.equal(option.xAxis.axisLabel.rich.label.fontSize, 13);
+  assert.equal(original.option.graphic.style.font, "italic 14px Arial");
+  assert.equal(original.option.series[0].renderItem().style.fontFamily, "Arial");
+});
 
 test("description-free Cartesian charts balance their plot gutters vertically", () => {
   const model = {
@@ -785,7 +818,7 @@ test("ECharts title and legend defaults consume projected profile text colors", 
   assert.equal(presented.option.legend.textStyle.color, "#C1CFD4");
 });
 
-test("ECharts projects dashboard heading, body, and data fonts", () => {
+test("ECharts projects dashboard heading and body font tokens", () => {
   const presented = applyEChartsPresentation({
     kind: "echarts",
     option: {
@@ -798,7 +831,7 @@ test("ECharts projects dashboard heading, body, and data fonts", () => {
   }, { presentation: { title: { align: "left" } } }, false, {
     bodyFont: "Body Token Stack",
     headingFont: "Heading Token Stack",
-    dataFont: "Data Token Stack",
+    dataFont: "Heading Token Stack",
     typographyKey: "fonts-v1",
   });
 
@@ -806,13 +839,13 @@ test("ECharts projects dashboard heading, body, and data fonts", () => {
   assert.equal(presented.option.legend.textStyle.fontFamily, "Body Token Stack");
   assert.equal(presented.option.tooltip.textStyle.fontFamily, "Body Token Stack");
   assert.equal(presented.option.yAxis.nameTextStyle.fontFamily, "Body Token Stack");
-  assert.equal(presented.option.yAxis.axisLabel.fontFamily, "Data Token Stack");
-  assert.equal(presented.option.series[0].label.fontFamily, "Data Token Stack");
+  assert.equal(presented.option.yAxis.axisLabel.fontFamily, "Heading Token Stack");
+  assert.equal(presented.option.series[0].label.fontFamily, "Heading Token Stack");
   assert.equal(presented.valueAxisTitleTextTheme.bodyFont, "Body Token Stack");
-  assert.equal(presented.valueAxisTitleTextTheme.dataFont, "Data Token Stack");
+  assert.equal(presented.valueAxisTitleTextTheme.dataFont, "Heading Token Stack");
 });
 
-test("ECharts projects gauge titles and numeric labels into body and data fonts", () => {
+test("ECharts projects gauge titles and numeric labels into body and heading font tokens", () => {
   const presented = applyEChartsPresentation({
     kind: "echarts",
     option: {
@@ -825,12 +858,13 @@ test("ECharts projects gauge titles and numeric labels into body and data fonts"
     },
   }, { presentation: { title: { align: "left" } } }, false, {
     bodyFont: "Body Token Stack",
-    dataFont: "Data Token Stack",
+    headingFont: "Heading Token Stack",
+    dataFont: "Heading Token Stack",
   });
 
   assert.equal(presented.option.series[0].title.fontFamily, "Body Token Stack");
-  assert.equal(presented.option.series[0].detail.fontFamily, "Data Token Stack");
-  assert.equal(presented.option.series[0].axisLabel.fontFamily, "Data Token Stack");
+  assert.equal(presented.option.series[0].detail.fontFamily, "Heading Token Stack");
+  assert.equal(presented.option.series[0].axisLabel.fontFamily, "Heading Token Stack");
 });
 
 test("bullet and pie charts inherit the active dashboard data palette unless authored", () => {
@@ -1043,7 +1077,8 @@ test("Audience ECharts normalization overrides every visible text role without m
   assert.equal(ordinary.option.legend.textStyle.fontSize, 6);
   assert.equal(ordinary.option.series[0].detail.fontSize, 4);
   assert.equal(ordinary.option.visualMap.textStyle.fontSize, 5);
-  assert.equal(ordinary.option.series[1].renderItem, renderItem);
+  assert.equal(ordinary.option.series[1].renderItem().children[0].style.fontSize, 5);
+  assert.equal(model.option.series[1].renderItem, renderItem);
   assert.equal(ordinary.valueAxisTitleProjection, model.valueAxisTitleProjection);
 });
 
@@ -1086,11 +1121,11 @@ test("Audience materializes alternate-axis text tiers when authored style object
     radiusAxis: 12,
   });
   for (const key of axisKeys) {
-    assert.deepEqual(large.option[key].axisLabel, { fontSize: 18, margin: 10 });
-    assert.deepEqual(large.option[key].nameTextStyle, { fontSize: 18 });
+    assert.deepEqual(large.option[key].axisLabel, { fontSize: 18, margin: 10, fontFamily: "inherit" });
+    assert.deepEqual(large.option[key].nameTextStyle, { fontSize: 18, fontFamily: "inherit" });
     assert.equal(large.option[key].nameGap, 31);
-    assert.deepEqual(grid.option[key].axisLabel, { fontSize: 16, margin: 9 });
-    assert.deepEqual(grid.option[key].nameTextStyle, { fontSize: 16 });
+    assert.deepEqual(grid.option[key].axisLabel, { fontSize: 16, margin: 9, fontFamily: "inherit" });
+    assert.deepEqual(grid.option[key].nameTextStyle, { fontSize: 16, fontFamily: "inherit" });
     assert.equal(grid.option[key].nameGap, 27);
     assert.equal(ordinary.option[key].axisLabel, undefined);
     assert.equal(ordinary.option[key].nameTextStyle, undefined);

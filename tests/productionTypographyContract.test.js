@@ -9,7 +9,7 @@ const PROJECT_ROOT = new URL("../", import.meta.url);
 const AUTHORABLE_EXTENSIONS = new Set([".css", ".js", ".jsx", ".svg"]);
 const STYLE_GRAMMAR_EXCEPTION = Object.freeze({
   path: "src/theme/dashboardStyleGrammar.js",
-  properties: Object.freeze(["bodyFont", "headingFont", "dataFont"]),
+  properties: Object.freeze(["bodyFont", "headingFont"]),
   reason: "dashboard typography role definitions",
 });
 const BUNDLED_FONT_FACE_EXCEPTION = Object.freeze({
@@ -23,12 +23,12 @@ const KATEX_EXCEPTION = Object.freeze({
   reason: "dependency-owned mathematical glyph CSS",
 });
 
-test("dashboard style grammars project the shared mono font token", () => {
-  for (const style of ["evidence-ledger", "humanist-standard", "signal-instrument"]) {
-    assert.equal(
-      resolveDashboardStyleGrammar(style)["--simex-style-mono-font"],
-      "ui-monospace, SFMono-Regular, Consolas, monospace",
-    );
+test("dashboard styles expose only body and heading font tokens", () => {
+  for (const style of ["evidence-ledger", "humanist-standard", "signal-instrument", "pdpc"]) {
+    const grammar = resolveDashboardStyleGrammar(style);
+    assert.deepEqual(Object.keys(grammar).filter(key => key.endsWith("-font")).sort(), [
+      "--simex-style-body-font", "--simex-style-heading-font",
+    ]);
   }
 });
 

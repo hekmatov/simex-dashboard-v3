@@ -274,9 +274,11 @@ export function applyEChartsPresentation(
     ...model,
     valueAxisTitleProjection,
     valueAxisTitleTextTheme,
-    option: audienceScale
-      ? normalizeAudienceOption(presentedOption, audienceScale)
-      : presentedOption,
+    option: normalizeChartFontTokens(
+      audienceScale ? normalizeAudienceOption(presentedOption, audienceScale) : presentedOption,
+      bodyFont,
+      headingFont,
+    ),
   };
 }
 
@@ -294,7 +296,7 @@ export function readChartTextTheme(computedStyle, typographyKey = "", audienceTi
     surfacePanelAlt: token("--simex-surface-panel-alt", DEFAULT_CHART_TEXT_THEME.surfacePanelAlt),
     bodyFont: token("--simex-style-body-font", DEFAULT_CHART_TEXT_THEME.bodyFont),
     headingFont: token("--simex-style-heading-font", DEFAULT_CHART_TEXT_THEME.headingFont),
-    dataFont: token("--simex-style-data-font", DEFAULT_CHART_TEXT_THEME.dataFont),
+    dataFont: token("--simex-style-heading-font", DEFAULT_CHART_TEXT_THEME.dataFont),
     typographyKey,
     audienceTier,
     dataColors: [1, 2, 3, 4, 5, 6].map((index) => (
@@ -334,6 +336,42 @@ const AUDIENCE_TEXT_ROLE_KEYS = new Set([
   "upperLabel",
   "yearLabel",
 ]);
+
+// ECharts resolves CSS variables before drawing. Every rendered text style,
+// including rich spans and custom graphics, must retain that token projection.
+function normalizeChartFontTokens(value, bodyFont, headingFont, path = [], inheritedFont = null) {
+  if (Array.isArray(value)) {
+    return value.map((child, index) => normalizeChartFontTokens(child, bodyFont, headingFont, [...path, index], inheritedFont));
+  }
+  if (!isPlainObject(value)) return value;
+  const normalized = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "renderItem" && value.type === "custom" && typeof child === "function") {
+      normalized[key] = function themedRenderItem(...args) {
+        return normalizeChartFontTokens(child.apply(this, args), bodyFont, headingFont);
+      };
+      continue;
+    }
+    const isText = AUDIENCE_TEXT_ROLE_KEYS.has(key) || key === "pageTextStyle"
+      || (key === "style" && visibleGraphicText(value))
+      || (["detail", "title"].includes(key) && path.includes("series"));
+    const richFont = key === "rich" || path.at(-1) === "rich" ? inheritedFont : null;
+    let roleFont = richFont;
+    if (!roleFont && isText) {
+      roleFont = bodyFont;
+      if (["axisLabel", "label", "endLabel", "detail"].includes(key)
+        || (key === "textStyle" && path[0] === "title")) roleFont = headingFont;
+    }
+    normalized[key] = normalizeChartFontTokens(child, bodyFont, headingFont, [...path, key], roleFont);
+  }
+  if (inheritedFont && path.at(-1) !== "rich") {
+    normalized.fontFamily = inheritedFont;
+    if (typeof normalized.font === "string") {
+      normalized.font = normalized.font.replace(/(\d+(?:\.\d+)?(?:px|pt|em|rem)(?:\/[^\s]+)?)\s+.+$/, `$1 ${inheritedFont}`);
+    }
+  }
+  return normalized;
+}
 
 function normalizeAudienceOption(option, scale) {
   const normalized = normalizeAudienceTextTree(option, scale);

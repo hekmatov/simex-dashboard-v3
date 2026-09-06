@@ -1,6 +1,6 @@
 :root {
   color: #17191b;
-  font-family: var(--simex-style-body-font, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--simex-style-body-font);
 }
 
 * {
@@ -20,7 +20,7 @@ input {
 .source-viewer-theme-root {
   background: var(--simex-surface-outer, #e8e9ea);
   color: var(--simex-text-strong, #17191b);
-  font-family: var(--simex-style-body-font, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--simex-style-body-font);
   min-height: 100vh;
 }
 
@@ -44,7 +44,7 @@ input {
 }
 
 .source-viewer-header h1 {
-  font-family: var(--simex-style-heading-font, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--simex-style-heading-font);
   font-weight: var(--simex-style-heading-weight, 700);
   letter-spacing: var(--simex-style-heading-tracking, normal);
 }

@@ -13,6 +13,7 @@ try {
 }
 
 const APPROVED_PROFILE_IDS = [
+  "pdpc/brand",
   "evidence-ledger/brighter-vellum",
   "evidence-ledger/ash-register",
   "evidence-ledger/cool-archive",
@@ -30,11 +31,13 @@ const APPROVED_PROFILE_IDS = [
 
 const APPROVED_STYLE_CATALOGUE = [
   ["evidence-ledger", "Ledger"],
+  ["pdpc", "PDPC"],
   ["humanist-standard", "Humanist"],
   ["signal-instrument", "Instrument"],
 ];
 
 const APPROVED_PROFILE_CATALOGUE = [
+  ["pdpc/brand", "PDPC"],
   ["evidence-ledger/brighter-vellum", "Vellum"],
   ["evidence-ledger/ash-register", "Register"],
   ["evidence-ledger/cool-archive", "Archive"],
@@ -112,7 +115,7 @@ test("dashboard, page, and section descriptions may be intentionally blank", asy
   assert.doesNotThrow(() => validateDashboardStructure(dashboard));
 });
 
-test("theme resolver exposes the exact renamed style and 13-profile catalogue in both appearances", () => {
+test("theme resolver exposes the exact renamed style and 14-profile catalogue in both appearances", () => {
   assert.equal(typeof themeModule.resolveDashboardTheme, "function");
   if (typeof themeModule.resolveDashboardTheme !== "function") return;
 

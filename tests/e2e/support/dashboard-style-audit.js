@@ -135,7 +135,6 @@ export async function expectNoRetiredDashboardStyle(page) {
     const approvedFonts = new Set([
       "--simex-style-body-font",
       "--simex-style-heading-font",
-      "--simex-style-data-font",
     ].map((variable) => {
       const probe = document.createElement("span");
       probe.style.fontFamily = `var(${variable})`;

@@ -1,7 +1,7 @@
 :root {
   color: var(--simex-text-strong);
   background: var(--simex-surface-canvas);
-  font-family: var(--simex-style-body-font, Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--simex-style-body-font);
 }
 
 /* Step 7 chart creation: six stable stages with independent proof ledgers. */
@@ -1132,7 +1132,7 @@ th {
 }
 
 .settings-color-row input {
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
   min-width: 0;
   text-transform: uppercase;
 }
@@ -2968,7 +2968,7 @@ button.danger {
 }
 
 .precision-arc-gauge-value {
-  font-family: var(--simex-style-data-font, inherit);
+  font-family: var(--simex-style-heading-font);
   font-size: var(--precision-arc-value-size, 44px);
   font-weight: 700;
   letter-spacing: -1.5px;
@@ -4005,7 +4005,7 @@ button.danger {
 
 .showcase-eyebrow {
   color: var(--simex-accent);
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
   font-size: 11px;
   font-weight: 900;
   letter-spacing: .12em;

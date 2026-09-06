@@ -114,6 +114,10 @@ const CSS_VARIABLES = Object.freeze([
 ]);
 
 const RAW_PROFILES = Object.freeze([
+  // Brand hex values from the 2023 PDPC guide; dark values are readable tints.
+  ["pdpc/brand", "PDPC", "pdpc",
+    "#e9ecf3 #f5f6fa #ffffff #eef1f7 #253162 #4f5873 #626b80 #b2b9cb #626e8e #253162 #e4e8f3 #ffffff #253162 #258161 #e2f0e9 #756c9a #eeebf5 #0878a9 #e0f2fa #258161 #e2f0e9 #806018 #f6edd7 #d72628 #fbe5e5 #d9dded #253162 #253162 #258161 #139cd8 #d72628 #8d88ad #806018",
+    "#111627 #192139 #222c47 #1d263e #f1f3fa #c5cce0 #a4aec8 #526080 #96a5ca #b5c4f1 #303e63 #111627 #83cdef #86cfb0 #203e37 #c4bce0 #3b3453 #83cdef #203f51 #86cfb0 #203e37 #e5c57c #463c25 #f39297 #4b2935 #3c4968 #f1f3fa #b5c4f1 #86cfb0 #63c5ec #f39297 #c4bce0 #e5c57c"],
   ["evidence-ledger/brighter-vellum", "Vellum", "evidence-ledger",
     "#eee9de #f7f2e8 #fffdf8 #faf6ec #1d2529 #555a55 #6d7069 #b7b0a2 #50595d #2c383d #e8e4da #fffdf8 #2c383d #744740 #f0e2dc #62596b #e8e2e9 #58666b #e2e7e7 #4e6655 #e1e8e1 #7a6342 #eee7d8 #81514b #eee0dc #ddd7cb #2c383d #667853 #8f704a #61746f #8b584e #77657e #7d7457",
     "#181713 #211f1a #2b2922 #25231d #f5efe4 #c9c1b3 #aaa394 #746f64 #c2baab #f0e9dc #3b3831 #1d2428 #f5efe4 #d0a096 #493531 #c3b4ca #3f3944 #aab9bd #343e40 #a8bda9 #314035 #d1b482 #493d2c #d8a299 #4a3431 #4e4a40 #eee7da #a8b794 #c4aa82 #a2b2ad #c49a90 #b6a7bd #b9b08e"],
@@ -157,6 +161,7 @@ const RAW_PROFILES = Object.freeze([
 
 export const DASHBOARD_STYLES = Object.freeze([
   Object.freeze({ id: "evidence-ledger", name: "Ledger" }),
+  Object.freeze({ id: "pdpc", name: "PDPC" }),
   Object.freeze({ id: "humanist-standard", name: "Humanist" }),
   Object.freeze({ id: "signal-instrument", name: "Instrument" }),
 ]);

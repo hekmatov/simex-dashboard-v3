@@ -126,7 +126,7 @@ test("three Home styles expose materially distinct computed signatures without p
   expect(parseFloat(signatures["humanist-standard"].sectionRadius)).toBeGreaterThanOrEqual(14);
   expect(signatures["humanist-standard"].sectionShadow).not.toBe("none");
   expect(signatures["humanist-standard"].cardShadow).not.toBe("none");
-  expect(signatures["signal-instrument"].microcopyFont).toContain("Cascadia Mono");
+  expect(signatures["signal-instrument"].microcopyFont).toContain("Bahnschrift");
   expect(signatures["signal-instrument"]).toMatchObject({
     sectionBorderLeft: "0px",
     faqBorderLeft: "0px",

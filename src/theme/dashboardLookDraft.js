@@ -1,4 +1,5 @@
 const SIGNATURE_PROFILE_BY_STYLE = Object.freeze({
+  "pdpc": "pdpc/brand",
   "evidence-ledger": "evidence-ledger/brighter-vellum",
   "humanist-standard": "humanist-standard/common-ground",
   "signal-instrument": "signal-instrument/calibrated-steel",

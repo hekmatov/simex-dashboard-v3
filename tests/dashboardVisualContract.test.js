@@ -289,7 +289,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(sourceViewer, /:root\s*\{[^}]*font-family:\s*var\(--simex-style-body-font(?:,|\))/s);
   assert.match(sourceViewer, /source-viewer-theme-root :is\(button, input\)[^{]*\{[^}]*min-block-size:\s*var\(--simex-control-standard/s);
   assert.match(sourceViewer, /source-viewer-return\s*\{[^}]*background:\s*var\(--simex-surface-panel-alt[^}]*border[^}]*var\(--simex-border-strong[^}]*color:\s*var\(--simex-text-strong/s);
-  assert.match(iconGlyphs, /font-family:var\(--simex-style-data-font\)/);
+  assert.match(iconGlyphs, /font-family:var\(--simex-style-heading-font\)/);
   assert.match(buildWorkspace, /dashboardThemeRootProps\(\s*themeProjection,\s*activeAuxiliary !== "source-content"\s*\?\s*\{ display: "none" \}\s*:\s*\{\},?\s*\)/s);
   assert.doesNotMatch(buildWorkspace, /dashboardThemeRootProps\(themeProjection\)\}[\s\S]{0,500}style=\{activeAuxiliary !== "source-content"/);
   assert.doesNotMatch(`${styles}\n${modes}`, /--simex-shadow-(?:elevated|raised)/);

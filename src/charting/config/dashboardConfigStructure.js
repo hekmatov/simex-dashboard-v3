@@ -523,12 +523,13 @@ function validateGlobalStyles(value) {
   }
   allowedValue(
     styles.dashboardStyle,
-    ["evidence-ledger", "humanist-standard", "signal-instrument"],
+    ["evidence-ledger", "pdpc", "humanist-standard", "signal-instrument"],
     "Dashboard style",
   );
   allowedValue(
     styles.dashboardColorProfile,
     [
+      "pdpc/brand",
       "evidence-ledger/brighter-vellum",
       "evidence-ledger/ash-register",
       "evidence-ledger/cool-archive",

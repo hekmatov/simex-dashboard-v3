@@ -67,7 +67,7 @@ function signatureTuple(html, roleVariable) {
     inlineVariable(html, "--simex-style-role-divider"),
     inlineVariable(html, "--simex-style-role-rail"),
     inlineVariable(html, "--simex-style-panel-shadow"),
-    inlineVariable(html, "--simex-style-data-font"),
+    inlineVariable(html, "--simex-style-heading-font"),
   ].join(" | ");
 }
 
@@ -84,7 +84,7 @@ test("approved dashboard styles expose distinct paint grammar without changing p
   assert.match(humanist, /--simex-style-panel-radius:14px/);
   assert.match(humanist, /--simex-style-panel-shadow:0 8px 20px/);
 
-  assert.match(signal, /--simex-style-data-font:Cascadia Mono/);
+  assert.match(signal, /--simex-style-heading-font:Bahnschrift/);
   assert.match(signal, /--simex-style-panel-radius:4px/);
   assert.match(signal, /--simex-style-transition-duration:95ms/);
 

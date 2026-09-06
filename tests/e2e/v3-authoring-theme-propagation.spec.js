@@ -12,8 +12,10 @@ test("catalogue exposes the exact renamed styles and profiles without retired ch
   await page.goto("/");
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Theme" });
-  await expect(look.locator('input[name="dashboard-style"]')).toHaveCount(3);
-  await expect(look.locator('input[name="dashboard-profile"]')).toHaveCount(13);
+  await expect(look.locator('input[name="dashboard-style"]')).toHaveCount(4);
+  await expect(look.locator('input[name="dashboard-profile"]')).toHaveCount(14);
+  await expect(look.getByRole("group", { name: "Visual style", exact: true }).getByLabel("PDPC", { exact: true })).toHaveCount(1);
+  await expect(look.getByRole("group", { name: "Colour profile", exact: true }).getByLabel("PDPC", { exact: true })).toHaveCount(1);
   for (const label of [
     "Ledger", "Humanist", "Instrument",
     "Vellum", "Register", "Archive", "Common Ground", "Forum", "Steel",

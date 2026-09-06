@@ -1,4 +1,6 @@
-const MONO_FONT_STACK = "ui-monospace, SFMono-Regular, Consolas, monospace";
+// One family across PDPC View, including tables and authored code. Calibri is
+// the guide fallback when the host does not provide licensed Avenir fonts.
+const PDPC_FONT_STACK = 'Avenir, "Avenir Next", Calibri, "SimEx Inter", sans-serif';
 const SURFACE_ROLES = Object.freeze([
   "shell", "command-bar", "panel", "editor", "dialog", "drawer", "menu", "status", "table", "chart-cell",
 ]);
@@ -7,7 +9,6 @@ const STYLE_GRAMMARS = Object.freeze({
   "evidence-ledger": Object.freeze({
     bodyFont: '"SimEx Inter", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     headingFont: 'Georgia, "Times New Roman", serif',
-    dataFont: 'Georgia, "Times New Roman", serif',
     headingWeight: "500",
     headingTracking: "-0.015em",
     panelRadius: "2px",
@@ -29,7 +30,6 @@ const STYLE_GRAMMARS = Object.freeze({
   "humanist-standard": Object.freeze({
     bodyFont: 'Segoe UI Variable Text, "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
     headingFont: 'Segoe UI Variable Display, "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
-    dataFont: 'Segoe UI Variable Display, "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
     headingWeight: "650",
     headingTracking: "-0.012em",
     panelRadius: "14px",
@@ -57,7 +57,6 @@ const STYLE_GRAMMARS = Object.freeze({
   "signal-instrument": Object.freeze({
     bodyFont: 'Segoe UI Variable Text, "Segoe UI", ui-sans-serif, system-ui, sans-serif',
     headingFont: 'Bahnschrift, "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
-    dataFont: 'Cascadia Mono, "Segoe UI Mono", Consolas, ui-monospace, monospace',
     headingWeight: "650",
     headingTracking: "0.012em",
     panelRadius: "4px",
@@ -88,13 +87,19 @@ export function resolveDashboardStyleGrammar(
   dashboardStyle = "evidence-ledger",
   resolvedAppearance = "light",
 ) {
-  const grammar = STYLE_GRAMMARS[dashboardStyle] ?? STYLE_GRAMMARS["evidence-ledger"];
+  const grammar = dashboardStyle === "pdpc"
+    ? {
+        ...STYLE_GRAMMARS["evidence-ledger"],
+        bodyFont: PDPC_FONT_STACK,
+        headingFont: PDPC_FONT_STACK,
+        headingWeight: "900",
+        headingTracking: "normal",
+      }
+    : STYLE_GRAMMARS[dashboardStyle] ?? STYLE_GRAMMARS["evidence-ledger"];
   const appearance = resolvedAppearance === "dark" ? "dark" : "light";
   return Object.freeze({
     "--simex-style-body-font": grammar.bodyFont,
     "--simex-style-heading-font": grammar.headingFont,
-    "--simex-style-data-font": grammar.dataFont,
-    "--simex-style-mono-font": MONO_FONT_STACK,
     "--simex-style-heading-weight": grammar.headingWeight,
     "--simex-style-heading-tracking": grammar.headingTracking,
     "--simex-style-panel-radius": grammar.panelRadius,

@@ -30,7 +30,7 @@
   .chart-panel table td,
   .present-status-strip strong
 ) {
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
   font-variant-numeric: tabular-nums lining-nums;
 }
 
@@ -100,11 +100,11 @@
   border-color: var(--simex-border-subtle);
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] .section-header {
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .section-header {
   background: var(--simex-surface-canvas);
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] :is(
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) :is(
   .chart-panel,
   .dashboard-location-row,
   .build-header,
@@ -117,7 +117,7 @@
   box-shadow: none;
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] :is(
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) :is(
   .mode-switcher button[aria-pressed="true"],
   .page-tabs button[aria-current="page"]
 ) {
@@ -171,7 +171,7 @@
   .present-chart-limit-status,
   .dashboard-meta dt
 ) {
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
   letter-spacing: 0.075em;
 }
 
@@ -308,7 +308,7 @@
   }
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] .canonical-dashboard-frame .section-header {
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .canonical-dashboard-frame .section-header {
   background: var(--simex-surface-canvas);
 }
 
@@ -316,8 +316,8 @@
   background: color-mix(in srgb, var(--simex-surface-canvas) 88%, var(--simex-surface-panel));
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] .canonical-dashboard-frame,
-.app-frame[data-dashboard-style="evidence-ledger"] .canonical-dashboard-frame :is(
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .canonical-dashboard-frame,
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .canonical-dashboard-frame :is(
   .dashboard-header,
   .dashboard-footer
 ) {
@@ -571,7 +571,7 @@
 
 /* Present keeps one dense geometry while each approved style supplies a
    deliberate surface grammar through the shared semantic palette. */
-.app-frame[data-dashboard-style="evidence-ledger"] .present-workspace :is(
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .present-workspace :is(
   .present-status-strip,
   .present-context-panel,
   .present-scene-panel,
@@ -585,7 +585,7 @@
   box-shadow: none;
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] .present-selected-chart {
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .present-selected-chart {
   background-image: linear-gradient(
     var(--simex-border-strong),
     var(--simex-border-strong)
@@ -633,10 +633,10 @@
   .present-chart-limit-status,
   .presentation-controller
 ) {
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
   font-variant-numeric: tabular-nums lining-nums;
 }
-.app-frame[data-dashboard-style="evidence-ledger"] .build-tree-group{--build-tree-line:var(--simex-border-strong);--build-tree-line-width:1px;--build-tree-elbow-radius:0}.app-frame[data-dashboard-style="humanist-standard"] .build-tree-group{--build-tree-line:color-mix(in srgb,var(--simex-border-subtle) 72%,transparent);--build-tree-line-width:1px;--build-tree-elbow-radius:6px}.app-frame[data-dashboard-style="signal-instrument"] .build-tree-group{--build-tree-line:var(--simex-accent);--build-tree-line-width:2px;--build-tree-elbow-radius:0}
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .build-tree-group{--build-tree-line:var(--simex-border-strong);--build-tree-line-width:1px;--build-tree-elbow-radius:0}.app-frame[data-dashboard-style="humanist-standard"] .build-tree-group{--build-tree-line:color-mix(in srgb,var(--simex-border-subtle) 72%,transparent);--build-tree-line-width:1px;--build-tree-elbow-radius:6px}.app-frame[data-dashboard-style="signal-instrument"] .build-tree-group{--build-tree-line:var(--simex-accent);--build-tree-line-width:2px;--build-tree-elbow-radius:0}
 
 .look-drawer-layer {
   color: var(--simex-text-strong);
@@ -805,7 +805,7 @@
   box-shadow: inset 3px 0 0 var(--simex-selected);
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] .build-structure-rail {
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .build-structure-rail {
   --build-tree-line: var(--simex-border-strong);
   --build-tree-line-width: 1px;
   --build-tree-icon: var(--simex-text-strong);
@@ -1805,7 +1805,7 @@
 
 .app-frame .chart-creation-proof .chart-proof-eyebrow {
   color: var(--simex-text-muted);
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -2106,12 +2106,12 @@
 
 /* Home keeps one semantic structure while each approved style establishes a
    materially different editorial rhythm through typography and geometry. */
-.app-frame[data-dashboard-style="evidence-ledger"] .showcase-landing {
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) .showcase-landing {
   border-radius: 0;
   box-shadow: none;
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] :is(
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) :is(
   .showcase-section,
   .showcase-faq,
   .showcase-resources
@@ -2120,7 +2120,7 @@
   box-shadow: inset 0 1px 0 var(--simex-border-strong);
 }
 
-.app-frame[data-dashboard-style="evidence-ledger"] :is(
+.app-frame:is([data-dashboard-style="evidence-ledger"], [data-dashboard-style="pdpc"]) :is(
   .showcase-capability-grid article,
   .showcase-route,
   .showcase-tour,
@@ -2192,7 +2192,7 @@
   .showcase-route span,
   .showcase-faq summary
 ) {
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
 }
 
 /* Choice controls share the dense desktop 16px glyph and 28px row rhythm. */
@@ -2522,7 +2522,7 @@
   border-block-start-color: var(--simex-style-role-divider);
   border-radius: var(--simex-style-panel-radius);
   box-shadow: var(--simex-style-panel-shadow);
-  font-family: var(--simex-style-data-font);
+  font-family: var(--simex-style-heading-font);
 }
 
 :is(
