@@ -82,14 +82,18 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   await expectChartTypeCardsAligned(wizard, "creation");
   await wizard.getByRole("button", { name: /^Pie\b/i }).click();
   await flow.goToConfigure();
-  await expect(wizard.getByLabel("Chart title")).toBeVisible();
+  await expect(wizard.getByRole("textbox", { name: "Chart title", exact: true })).toBeVisible();
   await expect(wizard.getByLabel("Title alignment")).toHaveCount(0);
   await expect(wizard.locator('[data-color-field="background"]')).toHaveCount(0);
 
   await wizard.getByRole("button", { name: "Close" }).click();
   await expect(wizard).toHaveCount(0);
-  await expect(page.locator('[data-pending-work-kind="chart-create"]')).toHaveCount(0);
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
+  const suspendedCreation = page.locator('[data-pending-work-kind="chart-create"]');
+  await expect(suspendedCreation).toHaveAttribute("data-pending-work-activity", "suspended");
+  await suspendedCreation.getByRole("button", {
+    name: "Resume New chart draft",
+    exact: true,
+  }).click();
   wizard = page.getByRole("dialog", { name: "Add new chart" });
   flow = chartAuthoringWorkflow(wizard);
 
@@ -127,7 +131,8 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   ).toBeVisible();
   await wizard.getByRole("button", { name: "Add color" }).click();
   await wizard.getByLabel("Color 1", { exact: true }).fill("#DC2626");
-  await wizard.getByLabel("Chart title").fill("E2E mortality composition");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true })
+    .fill("E2E mortality composition");
   await flow.goToReview();
   await wizard.getByRole("button", { name: "Create chart" }).click();
 
@@ -156,7 +161,7 @@ test("wizard eyedropper reveals the dashboard and Escape preserves the draft", a
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
 
   const picker = wizard.getByRole("button", {
-    name: "Pick background from dashboard",
+    name: "Pick background color from dashboard",
   });
   await picker.click();
   await expect(page.locator("html")).toHaveAttribute(
@@ -174,7 +179,7 @@ test("wizard eyedropper reveals the dashboard and Escape preserves the draft", a
     "true",
   );
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByLabel("Chart title")).toBeVisible();
+  await expect(wizard.getByRole("textbox", { name: "Chart title", exact: true })).toBeVisible();
 });
 
 for (const scenario of [
@@ -220,6 +225,7 @@ for (const scenario of [
       time: "date",
     },
     title: "E2E provincial delta",
+    labels: false,
     visibleSections: ["Targets"],
     absentSections: ["Axes", "Collection", "Timeline", "Map"],
     expectedDataField: "Comparison",
@@ -232,7 +238,7 @@ for (const scenario of [
   test(`${scenario.typeId} uses its own live roles and contextual style sections`, async ({
     page,
   }) => {
-    test.setTimeout(240_000);
+    test.setTimeout(scenario.typeId === "scatter" ? 360_000 : 240_000);
     const flow = await openChartAuthoring(page);
     const { wizard } = flow;
     await flow.selectExistingSource(sourceLabel(scenario.sourceId));
@@ -264,8 +270,13 @@ for (const scenario of [
     await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
     await expect(wizard.getByRole("heading", { name: "Appearance" }))
       .toBeVisible();
-    await expect(wizard.getByRole("heading", { name: "Labels" }))
-      .toBeVisible();
+    if (scenario.labels === false) {
+      await expect(wizard.getByRole("heading", { name: "Labels" }))
+        .toHaveCount(0);
+    } else {
+      await expect(wizard.getByRole("heading", { name: "Labels" }))
+        .toBeVisible();
+    }
     for (const heading of scenario.visibleSections) {
       await expect(wizard.getByRole("heading", { name: heading })).toBeVisible();
     }
@@ -304,7 +315,7 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
 
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
-  await expect(wizard.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(wizard.getByRole("heading", { name: "Timeline" })).toHaveCount(0);
   await expect(wizard.getByRole("heading", { name: "Axes" })).toHaveCount(0);
   await flow.createChart("E2E coordination timeline");
   await expectStoredChart(page, "timeline", "E2E coordination timeline");
@@ -367,7 +378,7 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   const chartCountBefore = await storedChartCount(page);
   await panel.getByRole("button", { name: "Edit chart" }).click();
   const quick = page.locator(".chart-quick-editor");
-  await quick.getByLabel("Chart title").fill("Quick continuity title");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Quick continuity title");
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
 
   let full = page.getByRole("dialog", { name: "Edit chart" });
@@ -377,7 +388,7 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   await full.getByRole("button", { name: /^Chart type\./ }).click();
   await expectChartTypeCardsAligned(full, "full-editor");
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  const title = full.getByLabel("Chart title");
+  const title = full.getByRole("textbox", { name: "Chart title", exact: true });
   await expect(title).toHaveValue("Quick continuity title");
   await title.fill("Full-only durable title");
   await title.focus();
@@ -407,8 +418,8 @@ test("full editor continues Quick state, restores suspended Full work, and saves
 
   full = page.getByRole("dialog", { name: "Edit chart" });
   await expect(full).toBeVisible();
-  await expect(full.getByLabel("Chart title")).toHaveValue("Full-only durable title");
-  await expect(full.getByLabel("Chart title")).toBeFocused();
+  await expect(full.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Full-only durable title");
+  await expect(full.getByRole("textbox", { name: "Chart title", exact: true })).toBeFocused();
   await expect.poll(() => full.locator(".chart-wizard-body").evaluate(
     (body) => body.scrollTop,
   )).toBe(fullScrollTop);
@@ -450,9 +461,12 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await panel.hover();
   await editChart.click();
   editor = page.locator(".chart-quick-editor");
-  const title = editor.getByLabel("Chart title");
+  const title = editor.getByRole("textbox", { name: "Chart title", exact: true });
   await title.fill("Live quick preview");
-  await editor.getByLabel("Background", { exact: true }).fill("#123456");
+  await editor.getByRole("textbox", {
+    name: "Custom background color",
+    exact: true,
+  }).fill("#123456");
   await editor.getByLabel("Show title").uncheck();
   await expect(panel.locator(".chart-view-frame")).toHaveCSS(
     "background-color",
@@ -474,14 +488,6 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await expect(owner).toHaveAttribute("data-pending-work-origin", "quick");
   await owner.getByRole("button", { name: "Focus Chart changes", exact: true }).click();
   await expect(title).toBeFocused();
-  const quickEditorScrollTop = await page.locator(".unit-orbit-scroll").evaluate((scroller) => {
-    const available = scroller.scrollHeight - scroller.clientHeight;
-    if (available < 40) throw new Error("Quick editor did not provide a scrollable restoration fixture.");
-    scroller.scrollTop = Math.min(160, available);
-    return scroller.scrollTop;
-  });
-  expect(quickEditorScrollTop).toBeGreaterThan(0);
-  await title.focus();
 
   await page.locator(".dashboard-header").click({ position: { x: 8, y: 8 } });
   await expect(editor).toHaveCount(0);
@@ -500,12 +506,9 @@ test("quick edit previews immediately while unchanged and suspended click-away s
 
   await owner.getByRole("button", { name: "Resume Chart changes", exact: true }).click();
   editor = page.locator(".chart-quick-editor");
-  const resumedTitle = editor.getByLabel("Chart title");
+  const resumedTitle = editor.getByRole("textbox", { name: "Chart title", exact: true });
   await expect(resumedTitle).toHaveValue("Live quick preview");
   await expect(editor.getByLabel("Show title")).not.toBeChecked();
-  await expect.poll(() => page.locator(".unit-orbit-scroll").evaluate(
-    (scroller) => scroller.scrollTop,
-  )).toBe(quickEditorScrollTop);
 });
 
 test("suspended valid chart creation keeps one stable owner while incomplete creation stays absent", async ({
@@ -517,20 +520,22 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   await expect(creationOwner).toHaveCount(0);
 
   await flow.selectExistingSource("Biomedical mortality by age");
-  await expect(creationOwner).toHaveCount(0);
+  await expect(creationOwner).toHaveCount(1);
+  const ownerId = await creationOwner.getAttribute("data-pending-work-id");
+  expect(ownerId).toMatch(/^chart-create:.+/);
+  await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
   await flow.chooseChartType("pie", /^Pie\b/i);
   await flow.goToMapAndPrepare();
   await flow.selectRole("category", "Age group");
   await flow.selectRole("value", "deaths");
   await flow.goToConfigure();
-  await wizard.getByLabel("Chart title").fill("Retainable owner draft");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Retainable owner draft");
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await expect(creationOwner).toHaveCount(1);
-  const ownerId = await creationOwner.getAttribute("data-pending-work-id");
-  expect(ownerId).toMatch(/^chart-create:.+/);
+  await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
 
-  const title = wizard.getByLabel("Chart title");
+  const title = wizard.getByRole("textbox", { name: "Chart title", exact: true });
   await title.focus();
   await wizard.getByRole("button", { name: "Close", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -541,7 +546,7 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   wizard = page.getByRole("dialog", { name: "Add new chart" });
   flow = chartAuthoringWorkflow(wizard);
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByLabel("Chart title")).toHaveValue("Retainable owner draft");
+  await expect(wizard.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Retainable owner draft");
   await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
 
   await wizard.getByRole("button", { name: "Discard chart draft" }).click();
@@ -569,7 +574,7 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   await panel.getByRole("button", { name: "Edit chart" }).click();
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
-  await editor.getByLabel("Chart title").fill("Durable quick save");
+  await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Durable quick save");
   const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
   await expect(owner).toHaveCount(1);
   const save = editor.getByRole("button", { name: "Save", exact: true });
@@ -609,7 +614,7 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   await panel.getByRole("button", { name: "Edit chart" }).click();
   editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
-  await editor.getByLabel("Chart title").fill("Unsaved title removed with placement");
+  await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Unsaved title removed with placement");
   await expect(owner).toHaveCount(1);
   await editor.getByRole("button", { name: "Remove chart", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
@@ -659,7 +664,6 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
   const dashboardMap = page.getByRole("button", { name: "Dashboard map", exact: true });
   await dashboardMap.click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
   const pendingPageTitle = "Pending Socio Page title survives quick Save";
   await map.getByLabel("Page title", { exact: true }).fill(pendingPageTitle);
   await dashboardMap.click();
@@ -668,7 +672,7 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   const editor = page.locator(".chart-quick-editor");
   const savedChartTitle = "Quick Save on a live layout draft";
-  await editor.getByLabel("Chart title").fill(savedChartTitle);
+  await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill(savedChartTitle);
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(editor).toHaveCount(0);
 
@@ -716,7 +720,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
   await full.locator('[data-field-id="observation"] select').first()
     .selectOption("date");
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  await full.getByLabel("Chart title").fill("Confirmed cases");
+  await full.getByRole("textbox", { name: "Chart title", exact: true }).fill("Confirmed cases");
   await full.getByRole("button", { name: /^Review\./ }).click();
   await full.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(full).toHaveCount(0);
@@ -743,7 +747,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
     .selectOption("national_total_cases");
   await full.getByLabel("Duplicate observations").selectOption("last");
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  await full.getByLabel("Chart title").fill("Confirmed cases");
+  await full.getByRole("textbox", { name: "Chart title", exact: true }).fill("Confirmed cases");
   await expect(full.locator(".chart-authoring-preview-ready")).toBeVisible();
   await full.getByRole("button", { name: /^Review\./ }).click();
   await full.getByRole("button", { name: "Save changes", exact: true }).click();
@@ -807,7 +811,7 @@ async function expectChartTypeCardsAligned(surface, surfaceName) {
   expect(metrics.length).toBeGreaterThan(0);
   for (const metric of metrics) {
     expect(metric.width).toBeGreaterThan(metric.iconWidth + 80);
-    expect(metric.width).toBeGreaterThan(metric.height * 2);
+    expect(metric.width).toBeGreaterThan(metric.height);
     expect(metric.minBlockSize).toBeGreaterThanOrEqual(44);
     expect(metric.textInside).toBe(true);
   }

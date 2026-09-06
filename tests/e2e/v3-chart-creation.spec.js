@@ -31,7 +31,7 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   await flow.selectRole("measurements", "national_total_cases");
   await flow.selectRole("observation", "date");
   await flow.goToConfigure();
-  await wizard.getByLabel("Chart title").fill("E2E atomic Step 7 chart");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("E2E atomic Step 7 chart");
   await flow.goToReview();
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
   await flow.goToMapAndPrepare();
@@ -52,7 +52,7 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   await flow.selectRole("measurements", "national_total_cases");
   await flow.selectRole("observation", "date");
   await flow.goToConfigure();
-  await wizard.getByLabel("Chart title").fill("E2E atomic Step 7 chart");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("E2E atomic Step 7 chart");
   await flow.goToReview();
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
   await wizard.getByRole("button", { name: "Create chart" }).click();

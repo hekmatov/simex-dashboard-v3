@@ -1258,7 +1258,9 @@ async function setupPendingOperation(context) {
   const { page } = await setupBuild(context);
   const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
-  await page.locator(".chart-quick-editor").getByLabel("Chart title").fill("Density audit pending edit");
+  await page.locator(".chart-quick-editor")
+    .getByRole("textbox", { name: "Chart title", exact: true })
+    .fill("Density audit pending edit");
   await page.locator("[data-pending-work-id='chart-edit:bio_confirmed_cases']").waitFor();
   return { page };
 }
@@ -1266,7 +1268,7 @@ async function setupPendingOperation(context) {
 async function setupOperationStatusNotice(context) {
   const { page } = await setupChartQuickEditor(context);
   const quick = page.locator(".chart-quick-editor");
-  const title = quick.getByLabel("Chart title");
+  const title = quick.getByRole("textbox", { name: "Chart title", exact: true });
   await title.fill(`${await title.inputValue()} audit`);
   await Promise.all([
     page.locator(".operation-status-notice").first().waitFor(),

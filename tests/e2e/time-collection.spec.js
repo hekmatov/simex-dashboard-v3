@@ -29,7 +29,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   let editor = page.getByRole("dialog", { name: "Edit chart" });
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  let editorTitle = editor.getByLabel("Chart title");
+  let editorTitle = editor.getByRole("textbox", { name: "Chart title", exact: true });
   await editorTitle.fill("Playback-safe unsaved editor title");
 
   await expect(viewMode).toBeDisabled();
@@ -55,7 +55,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   editor = page.getByRole("dialog", { name: "Edit chart" });
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  editorTitle = editor.getByLabel("Chart title");
+  editorTitle = editor.getByRole("textbox", { name: "Chart title", exact: true });
   await expect(editorTitle).toHaveValue("Confirmed cases");
   await editorTitle.fill("Playback-safe saved editor title");
   await editor.getByRole("button", { name: /^Review\./ }).click();
@@ -71,7 +71,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await flow.selectRole("category", "Age group");
   await flow.selectRole("value", "deaths");
   await flow.goToConfigure();
-  const wizardTitle = wizard.getByLabel("Chart title");
+  const wizardTitle = wizard.getByRole("textbox", { name: "Chart title", exact: true });
   await wizardTitle.fill("Playback-safe unsaved wizard title");
 
   await expect(viewMode).toBeEnabled();

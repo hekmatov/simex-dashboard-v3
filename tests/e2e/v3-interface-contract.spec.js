@@ -285,7 +285,7 @@ test("disabled Finish Build exposes its blocking reason on pointer hover", async
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
-  await quick.getByLabel("Chart title").fill("Pending quick title");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Pending quick title");
   await expect(quick).toHaveAttribute("data-chart-edit-dirty", "true");
 
   const finish = page.getByRole("button", { name: "Finish Build", exact: true });

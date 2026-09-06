@@ -53,7 +53,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   await panel.getByRole("button", { name: "Edit chart" }).click();
   const quickEditor = page.locator(".chart-quick-editor");
   await expect(quickEditor).toBeVisible();
-  await quickEditor.getByLabel("Chart title").fill("Updated wrapped KPI");
+  await quickEditor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Updated wrapped KPI");
   await quickEditor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(quickEditor).toHaveCount(0);
 

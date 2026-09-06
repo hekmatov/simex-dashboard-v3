@@ -215,7 +215,7 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await flow.selectRole("measurements", "cases");
   await wizard.getByLabel("Observation / X-axis").selectOption("date");
   await flow.goToConfigure();
-  await wizard.getByLabel("Chart title").fill("Journey D CSV chart");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Journey D CSV chart");
   await flow.goToReview();
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
   await flow.goToDataSource();
@@ -241,7 +241,7 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await flow.selectRole("measurements", "cases");
   await wizard.getByLabel("Observation / X-axis").selectOption("date");
   await flow.goToConfigure();
-  await wizard.getByLabel("Chart title").fill("Journey D CSV chart");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Journey D CSV chart");
   await flow.goToReview();
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();
   await wizard.getByRole("button", { name: "Create chart" }).click();

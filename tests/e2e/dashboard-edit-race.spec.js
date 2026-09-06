@@ -34,7 +34,7 @@ test("a pending header edit and immediate chart save commit in order", async ({
   await page.getByRole("button", { name: "Edit chart" }).first().click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
-  await quick.getByLabel("Chart title").fill("Race-safe chart title");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Race-safe chart title");
   await quick.getByRole("button", { name: "Save", exact: true }).click();
   await expect(quick).toHaveCount(0);
 

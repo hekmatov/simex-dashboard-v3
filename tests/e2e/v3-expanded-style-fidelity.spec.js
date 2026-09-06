@@ -160,7 +160,7 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
   let quick = page.locator(".chart-quick-editor");
-  await quick.getByLabel("Chart title").fill("Durable quick save");
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Durable quick save");
   const owner = page.locator(`[data-pending-work-id="${ownerId}"]`);
   await expect(owner).toHaveCount(1);
 
@@ -196,7 +196,7 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   const full = page.getByRole("dialog", { name: "Edit chart" });
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  await expect(full.getByLabel("Chart title")).toHaveValue("Durable quick save");
+  await expect(full.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Durable quick save");
   await expect(owner).toHaveAttribute("data-pending-work-origin", "full");
   await expectNoRetiredDashboardStyle(page);
 

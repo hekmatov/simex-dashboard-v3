@@ -165,7 +165,7 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit chart" });
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  const title = editor.getByLabel("Chart title");
+  const title = editor.getByRole("textbox", { name: "Chart title", exact: true });
   await title.fill("Draft survives crown navigation");
 
   const blockedPage = crownPages.getByRole("button", { name: "Socio-economic", exact: true });
@@ -506,7 +506,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit chart" });
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  const chartDraft = editor.getByLabel("Chart title");
+  const chartDraft = editor.getByRole("textbox", { name: "Chart title", exact: true });
   const discardChanges = editor.getByRole("button", { name: "Discard changes", exact: true });
   await chartDraft.fill("Width-preserved confirmed cases");
   await expect(discardChanges).toBeEnabled();

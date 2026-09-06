@@ -843,7 +843,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
   const full = page.getByRole("dialog", { name: "Edit chart" });
   await expect(full).toBeVisible();
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  await full.getByLabel("Chart title").fill(`${title} updated`);
+  await full.getByRole("textbox", { name: "Chart title", exact: true }).fill(`${title} updated`);
   await full.getByRole("button", { name: /^Review\./ }).click();
   await full.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(full).toHaveCount(0);

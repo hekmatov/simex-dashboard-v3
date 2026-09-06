@@ -47,7 +47,7 @@ test("a fresh chronological choropleth reaches preview through the early GeoJSON
   await expect(
     wizard.locator(".chart-authoring-preview-ready"),
   ).toBeVisible();
-  await wizard.getByLabel("Chart title").fill("Fresh municipal map");
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Fresh municipal map");
   await expect(
     wizard.getByRole("region", { name: "Map", exact: true }),
   ).toBeVisible();

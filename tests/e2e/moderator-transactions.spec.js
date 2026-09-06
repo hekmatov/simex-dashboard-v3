@@ -258,7 +258,7 @@ async function preparePieWizard(page, title) {
   await flow.selectRole("value", "deaths");
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
-  await wizard.getByLabel("Chart title").fill(title);
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill(title);
   await flow.goToReview();
   await expect(wizard.getByRole("button", { name: "Create chart" })).toBeEnabled();
   return wizard;
@@ -306,7 +306,7 @@ test("chart save preserves session work when browser storage is full", async ({ 
   const editor = await openFirstFullChartEditor(page);
   const title = "Session fallback chart title";
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  await editor.getByLabel("Chart title").fill(title);
+  await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill(title);
   await editor.getByRole("button", { name: /^Review\./ }).click();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
   await editor.getByRole("button", { name: "Save changes", exact: true }).click();
@@ -327,7 +327,7 @@ for (const dismissal of ["Escape", "backdrop"]) {
     test.setTimeout(90_000);
     const editor = await openFirstFullChartEditor(page);
     await editor.getByRole("button", { name: /^Configure\./ }).click();
-    await editor.getByLabel("Chart title").fill(`Pending ${dismissal} save`);
+    await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill(`Pending ${dismissal} save`);
     await editor.getByRole("button", { name: /^Review\./ }).click();
     await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
     await armPendingChartDismissal(page, dismissal);
@@ -524,7 +524,7 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
     .toBeVisible();
   let editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  const chartTitle = editor.getByLabel("Chart title");
+  const chartTitle = editor.getByRole("textbox", { name: "Chart title", exact: true });
   const baselineChartTitle = await chartTitle.inputValue();
   await discardFullChartEditor(page, editor);
   await expect(page.getByRole("navigation", { name: "Pending Build work" })
@@ -546,7 +546,7 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
   ));
   editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  await expect(editor.getByLabel("Chart title")).toHaveValue(baselineChartTitle);
+  await expect(editor.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue(baselineChartTitle);
   await discardFullChartEditor(page, editor);
   expect(await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
@@ -564,7 +564,7 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
     .toBeVisible();
   editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  await expect(editor.getByLabel("Chart title")).toHaveValue(baselineChartTitle);
+  await expect(editor.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue(baselineChartTitle);
   await discardFullChartEditor(page, editor);
 });
 
@@ -648,7 +648,7 @@ test("edit-session save and reset use session fallback when storage is full", as
 test("final Build remains locked until dirty chart edit context resolves", async ({ page }) => {
   const editor = await openFirstFullChartEditor(page);
   await editor.getByRole("button", { name: /^Configure\./ }).click();
-  await editor.getByLabel("Chart title").fill("Finish-locked chart draft");
+  await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Finish-locked chart draft");
   const finishBuild = page.getByRole("button", { name: "Finish Build", exact: true });
   await expect(finishBuild).toBeDisabled();
   await expect(editor).toBeVisible();
