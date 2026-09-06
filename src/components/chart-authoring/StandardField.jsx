@@ -346,11 +346,7 @@ function structuredControls(control, value, onChange, field = {}) {
     ) : null, controls.has("position") ? /* @__PURE__ */ React.createElement("label", null, "Label position", /* @__PURE__ */ React.createElement("select", {
       value: current.position ?? "",
       onChange: (event) => emit(["position"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? /* @__PURE__ */ React.createElement("label", null, "Label format", /* @__PURE__ */ React.createElement("input", {
-      value: current.format ?? "",
-      placeholder: "{value}",
-      onChange: (event) => emit(["format"], event.target.value)
-    })) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null);
+    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? labelFormatControl(current.format, (nextValue) => emit(["format"], nextValue)) : null, controls.has("unit") ? textControl("Label unit", current.unit, (nextValue) => emit(["unit"], nextValue)) : null, controls.has("fontSize") ? boundedNumericControl("Label font size", current.fontSize ?? 12, 8, 32, (nextValue) => emit(["fontSize"], nextValue)) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null);
   }
   if (control === "axes") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(
@@ -585,6 +581,29 @@ function tickControls(axis, value, kind, emit) {
     },
   }, ["minute", "hour", "day", "week", "month", "year"].map((unit) => React.createElement("option", { key: unit, value: unit }, sentence(unit))))));
 }
+function labelFormatControl(value, onChange) {
+  return React.createElement("div", { className: "chart-authoring-label-format" },
+    React.createElement("span", { className: "chart-authoring-label-format__heading" }, "Label format", React.createElement(LabelFormatHelp)),
+    React.createElement("input", {
+      "aria-label": "Label format",
+      value: value ?? "",
+      placeholder: "{c}",
+      onChange: (event) => onChange(event.target.value),
+    }),
+  );
+}
+function LabelFormatHelp() {
+  const id = `label-format-help-${React.useId().replaceAll(":", "")}`;
+  return React.createElement("span", { className: "chart-authoring-label-format-help" },
+    React.createElement("button", {
+      type: "button",
+      className: "simex-icon-control",
+      "aria-label": "About label format",
+      "aria-describedby": id,
+    }, React.createElement(SimExIcon, { iconId: "info", size: 14 })),
+    React.createElement("span", { id, role: "tooltip" }, "Use {c} for the value, {b} for the category, and {a} for the series. Example: {b}: {c}. The label unit is added after the formatted value."),
+  );
+}
 function textControl(label, value, onChange) {
   return /* @__PURE__ */ React.createElement("label", null, label, /* @__PURE__ */ React.createElement("input", {
     value: typeof value === "string" ? value : "",
@@ -647,7 +666,7 @@ function updateStructuredFieldValue(control, current, path, value) {
 function assertStructuredPath(control, path) {
   const [section, property] = path;
   const valid = {
-    labels: path.length === 1 && ["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize"].includes(section),
+    labels: path.length === 1 && ["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize"].includes(section),
     axes: path.length === 2 && ((["primary", "secondary"].includes(section) && AXIS_PROPERTIES.has(property)) || (section === "x" && X_AXIS_PROPERTIES.has(property))),
     targets: path.length === 1 && ["ranges", "direction", "readoutLabel", "showReadoutLabel", "unit"].includes(section),
     map: path.length === 1 && ["scale", "geoSource", "joinField"].includes(section),
@@ -663,7 +682,7 @@ function normalizeStructuredInput(control, path, value) {
   ) {
     return value === true;
   }
-  if (control === "labels" && ["valueFontSize", "labelFontSize"].includes(property)) {
+  if (control === "labels" && ["fontSize", "valueFontSize", "labelFontSize"].includes(property)) {
     return Number.isInteger(value) && value >= 8 && value <= 32 ? value : void 0;
   }
   if (control === "labels" && property === "valueMode") {
@@ -713,6 +732,8 @@ function sanitizeStructuredValue(control, value) {
       visible: typeof current.visible === "boolean" ? current.visible : void 0,
       position: nonemptyString(current.position),
       format: nonemptyString(current.format),
+      unit: nonemptyString(current.unit),
+      fontSize: Number.isInteger(current.fontSize) && current.fontSize >= 8 && current.fontSize <= 32 ? current.fontSize : void 0,
       valueMode: ["value", "percentage"].includes(current.valueMode) ? current.valueMode : void 0,
       valueFontSize: Number.isInteger(current.valueFontSize) && current.valueFontSize >= 8 && current.valueFontSize <= 32 ? current.valueFontSize : void 0,
       labelFontSize: Number.isInteger(current.labelFontSize) && current.labelFontSize >= 8 && current.labelFontSize <= 32 ? current.labelFontSize : void 0,

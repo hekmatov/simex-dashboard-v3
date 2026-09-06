@@ -588,12 +588,12 @@ function labelsFields({ chart, schema }) {
         ? "Show or hide each point's Label role beside the point."
         : schema.dataFamily === "matrix"
           ? "Show or hide the value inside each cell when the grid has at most 30 cells."
-          : "Control text shown with chart marks; it does not create a new series or change source values.",
+        : undefined,
   }];
 }
 
 function labelControls(schema) {
-  if (schema.dataFamily === "axis") return ["visible", "position", "format"];
+  if (schema.dataFamily === "axis") return ["visible", "position", "format", "unit", "fontSize"];
   if (schema.dataFamily === "composition") return ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"];
   if (schema.dataFamily === "relationship") return ["visible", "position"];
   if (schema.typeId === "heatmap") return ["visible"];

@@ -498,9 +498,14 @@ function validateTable(table, schema) {
 }
 
 function validateLabels(labels, schema) {
-  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"]));
+  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"]));
   if (labels?.visible !== undefined && typeof labels.visible !== "boolean") throw new Error("Chart presentation labels visible must be boolean.");
   for (const field of ["position", "format"]) if (labels?.[field] !== undefined && typeof labels[field] !== "string") throw new Error(`Chart presentation labels ${field} must be a string.`);
+  const axis = schema.dataFamily === "axis";
+  if (labels?.unit !== undefined && (!axis || typeof labels.unit !== "string")) throw new Error("Chart presentation labels unit must be a string on axis charts.");
+  if (labels?.fontSize !== undefined && (!axis || !Number.isInteger(labels.fontSize) || labels.fontSize < 8 || labels.fontSize > 32)) {
+    throw new Error("Chart presentation labels fontSize must be an integer from 8 through 32 on axis charts.");
+  }
   const composition = schema.dataFamily === "composition";
   if (labels?.labelWrap !== undefined && (!composition || typeof labels.labelWrap !== "boolean")) throw new Error("Chart presentation labels labelWrap must be boolean on composition charts.");
   if (labels?.valueMode !== undefined && (!composition || !["value", "percentage"].includes(labels.valueMode))) {

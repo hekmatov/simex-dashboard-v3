@@ -1929,6 +1929,56 @@ th {
   position: relative;
 }
 
+.chart-authoring-label-format {
+  display: grid;
+  gap: 4px;
+}
+
+.chart-authoring-label-format__heading {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+}
+
+.chart-authoring-label-format-help {
+  display: inline-flex;
+  position: relative;
+}
+
+.chart-authoring-label-format-help > .simex-icon-control {
+  height: 18px;
+  min-height: 18px;
+  min-width: 18px;
+  padding: 2px;
+  width: 18px;
+}
+
+.chart-authoring-label-format-help [role="tooltip"] {
+  background: var(--simex-text-strong);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: 8px;
+  bottom: calc(100% + 6px);
+  color: var(--simex-surface-panel);
+  font-size: 12px;
+  left: 50%;
+  line-height: 1.35;
+  max-width: 260px;
+  opacity: 0;
+  padding: 8px 10px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, -4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+  width: max-content;
+  z-index: 12;
+}
+
+.chart-authoring-label-format-help:focus-within [role="tooltip"],
+.chart-authoring-label-format-help:hover [role="tooltip"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .chart-export-control {
   display: inline-flex;
   position: relative;

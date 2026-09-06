@@ -235,11 +235,21 @@ function axisLabelOption(chart, horizontal, seriesType, totalMarkCount) {
       ? 24
       : 18;
   const show = labels.visible === true && totalMarkCount <= densityLimit;
+  const format = labelFormatter(labels);
   return {
     show,
     position: labels.position ?? (horizontal ? "right" : "top"),
-    ...(show ? { formatter: labels.format ?? formatSeriesLabel } : {}),
+    ...(show ? { formatter: format } : {}),
+    ...(Number.isInteger(labels.fontSize) ? { fontSize: labels.fontSize } : {}),
   };
+}
+
+function labelFormatter(labels) {
+  const unit = typeof labels.unit === "string" ? labels.unit.trim() : "";
+  const format = typeof labels.format === "string" ? labels.format.trim() : "";
+  if (format) return unit ? `${format} ${unit}` : format;
+  if (!unit) return formatSeriesLabel;
+  return (params) => `${formatSeriesLabel(params)} ${unit}`;
 }
 
 function formatSeriesLabel(params) {

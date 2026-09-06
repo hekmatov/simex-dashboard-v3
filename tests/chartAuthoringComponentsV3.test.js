@@ -1163,6 +1163,35 @@ test("axis presentation controls expose temporal X controls and only render a se
   );
 });
 
+test("axis label controls expose unit, font size, and format-template help", () => {
+  const field = {
+    id: "labels",
+    label: "Labels",
+    control: "labels",
+    controls: ["visible", "position", "format", "unit", "fontSize"],
+  };
+  const html = render(React.createElement(StandardField, {
+    field,
+    value: { visible: true, format: "{b}: {c}", unit: "%", fontSize: 18 },
+    onChange() {},
+  }));
+
+  assert.match(html, /Label unit/);
+  assert.match(html, /Label font size/);
+  assert.match(html, /placeholder="\{c\}"/);
+  assert.match(html, /About label format/);
+  assert.match(html, /role="tooltip"/);
+  assert.doesNotMatch(html, /Control text shown with chart marks/);
+  assert.deepEqual(
+    updateStructuredFieldValue("labels", {}, ["unit"], "%"),
+    { unit: "%" },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("labels", {}, ["fontSize"], 18),
+    { fontSize: 18 },
+  );
+});
+
 test("X, primary, and secondary axis titles retain an internal typing space", () => {
   for (const path of [["x", "title"], ["primary", "title"], ["secondary", "title"]]) {
     const next = updateStructuredFieldValue("axes", {}, path, "Cumulative ");

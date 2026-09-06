@@ -1334,6 +1334,26 @@ test("axis series honor validated label visibility, position, and formatting", (
   });
 });
 
+test("axis series append a label unit and apply the configured label font size", () => {
+  const model = buildRenderModel({
+    chart: chart("bar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        labels: { visible: true, format: "{b}: {c}", unit: "%", fontSize: 18 },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.deepEqual(model.option.series[0].label, {
+    show: true,
+    position: "top",
+    formatter: "{b}: {c} %",
+    fontSize: 18,
+  });
+});
+
 test("forced category dates never become an ECharts time axis", () => {
   const model = buildRenderModel({
     chart: chart("line", {
