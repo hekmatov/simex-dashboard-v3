@@ -55,9 +55,9 @@ test("approved look drawer exposes all values with immediate persistence and no 
   assert.match(html, /aria-modal="true"/);
   assert.match(html, /class="[^"]*\blook-drawer-click-catcher\b[^"]*"/);
   assert.doesNotMatch(html, /scrim|backdrop-filter|opacity:/i);
-  assert.equal((html.match(/data-profile-option=/g) ?? []).length, 13);
+  assert.equal((html.match(/data-profile-option=/g) ?? []).length, 14);
   for (const label of [
-    "Ledger", "Humanist", "Instrument",
+    "Ledger", "PDPC", "Humanist", "Instrument",
     "Vellum", "Register", "Archive", "Common Ground", "Forum", "Steel",
     "Telemetry", "Amber", "Prismatic", "Ladder", "Sunrise", "Lakeside", "Monochrome",
   ]) {
@@ -293,5 +293,5 @@ test("colour-profile swatch projections are reused while appearance is unchanged
 
   assert.strictEqual(second, first);
   assert.notStrictEqual(dark, first);
-  assert.equal(first.length, 13);
+  assert.equal(first.length, 14);
 });
