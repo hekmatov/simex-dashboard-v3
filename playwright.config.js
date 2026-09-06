@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  testIgnore: ["pdpc-release-output.spec.js"],
   grepInvert: /@production-static/,
   fullyParallel: false,
   workers: 1,

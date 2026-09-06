@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test --test-concurrency=1",
     "test:unit": "node --test",
-    "test:e2e": "pnpm test:e2e:source && pnpm test:e2e:static",
+    "test:e2e": "pnpm test:e2e:source && pnpm test:e2e:static && pnpm test:e2e:pdpc",
     "test:e2e:source": "playwright test",
     "test:e2e:static": "playwright test --config=playwright.static.config.js",
     "test:e2e:dev": "playwright test --max-failures=1",

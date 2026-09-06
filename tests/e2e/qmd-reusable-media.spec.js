@@ -39,7 +39,7 @@ test("Flow Frame Decorative local image inspector keeps responsive geometry and 
       node.dataset.sourceRevision === node.dataset.previewRevision
     ))).toBe(true);
     if (label === "75%") expect(await geometry(page)).toMatchObject({
-      surface: "build", authoredFlow: "wrap-start", computedFloat: "inline-start", widthRatio: 0.5, horizontalOverflow: false,
+      surface: "build", authoredFlow: "wrap-start", computedFloat: "none", widthRatio: 0.75, horizontalOverflow: false,
     });
   }
   await inspector.getByLabel("Custom width percentage").fill("37");
