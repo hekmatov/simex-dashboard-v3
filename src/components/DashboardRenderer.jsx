@@ -152,6 +152,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
   contentDraftCoordinator = null,
   viewOnly = false,
+  dashboardHeaderNode = null,
   mode,
   activePageId,
   onActivePageChange,
@@ -3272,7 +3273,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       data-page-type={landingActive ? "landing" : "analytical"}
       style={iconLanguageStyles}
     >
-      <header className="dashboard-header">
+      {dashboardHeaderNode ?? <header className="dashboard-header">
         <div className="dashboard-brand-block">
           <img className="pdpc-header-mark" src={`${import.meta.env.BASE_URL}assets/pdpc-logo.png`} alt="" />
           <div>
@@ -3382,7 +3383,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
             )}
           </div>
         </div>
-      </header>
+      </header>}
       {moderatorOperation.errorKind === "save-session" && moderatorOperation.error && (
         <p role="alert" className="edit-operation-error">{moderatorOperation.error}</p>
       )}

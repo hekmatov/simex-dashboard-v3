@@ -9,7 +9,6 @@ import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles.css";
 import "../styles/modes.css";
-import "./pdpc-release.css";
 import "../styles/presentation.css";
 import "../styles/dashboard-style-grammar.css";
 import "../styles/dashboard-dialogs.css";
@@ -21,6 +20,7 @@ import "../styles/immersive-display.css";
 import "../styles/operation-status.css";
 import "../styles/right-side-drawer.css";
 import "../styles/desktop-mode-gate.css";
+import "./pdpc-release.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {

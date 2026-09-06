@@ -1703,6 +1703,15 @@ function AppContent({ releaseProfile = null }) {
       onPageRequest={requestPage}
     />
   ) : null;
+  const ReleaseDashboardHeader = releaseProfile?.DashboardHeaderComponent ?? null;
+  const releaseDashboardHeader = ReleaseDashboardHeader ? (
+    <ReleaseDashboardHeader
+      profile={releaseProfile}
+      pages={commandCrownProjection.pages}
+      activePage={commandCrownProjection.activePage}
+      onPageRequest={requestPage}
+    />
+  ) : null;
   const appFrame = (
     <AppFrame
       mode={mode}
@@ -1781,6 +1790,7 @@ function AppContent({ releaseProfile = null }) {
       ref={dashboardRendererRef}
       dashboard={dashboard}
       viewOnly={releaseProfile?.viewOnly === true}
+      dashboardHeaderNode={releaseDashboardHeader}
       contentDraftCoordinator={contentDraftCoordinator}
       mode={mode}
       activePageId={activePageId}

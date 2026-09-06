@@ -25,12 +25,23 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await expect(page.getByLabel("Exercise disclaimer")).toContainText(
       "Fictional scenario · Exercise use only",
     );
+    await expect(page.locator(".pdpc-release-header")).toHaveCount(0);
+    const dashboardHeader = page.locator(".pdpc-dashboard-header");
+    await expect(dashboardHeader).toBeVisible();
+    await expect(dashboardHeader.getByText(
+      "Pandemic & Disaster Preparedness Center",
+      { exact: true },
+    )).toBeVisible();
+    await expect(dashboardHeader.getByRole("heading", {
+      name: "WCPH HeV-A26 Simulation",
+      exact: true,
+    })).toBeVisible();
     await expect(page.getByRole("img", {
       name: "Pandemic and Disaster Preparedness Center (PDPC)",
     })).toBeVisible();
-    await expect(page.getByText("Simulation exercise", { exact: true })).toBeVisible();
+    await expect(dashboardHeader.locator(".pdpc-header-mark, .dashboard-meta")).toHaveCount(0);
 
-    const pageNavigation = page.getByRole("navigation", { name: "Dashboard pages" });
+    const pageNavigation = dashboardHeader.getByRole("navigation", { name: "Dashboard pages" });
     await expect(pageNavigation.locator("button")).toHaveCount(2);
     await expect(pageNavigation.locator("button").nth(0)).toHaveText("Scenario");
     await expect(pageNavigation.locator("button").nth(1)).toHaveText(release.disciplineLabel);
@@ -55,7 +66,7 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await expect(page.locator(`[data-canonical-page-id="${release.disciplineId}"]`)).toBeVisible();
 
     await page.goto(`${release.baseUrl}/?surface=audience&channel=abcdefghijklmnop`);
-    await expect(page.locator(`[data-pdpc-release-header="${release.variant}"]`)).toBeVisible();
+    await expect(page.locator(`[data-pdpc-dashboard-header="${release.variant}"]`)).toBeVisible();
     await expect(page.locator(".audience-display, .dashboard-command-crown")).toHaveCount(0);
     await expect(page.locator('[data-canonical-page-id="scenario"]')).toBeVisible();
     expect(issues).toEqual([]);
@@ -64,40 +75,63 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
   expect(scenarioSnapshots[0]).toBe(scenarioSnapshots[1]);
 });
 
-test("the generated PDPC shell keeps its approved sticky and narrow reflow behavior", async ({ page }) => {
+test("the integrated PDPC dashboard header uses theme tokens and reflows without overflow", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(RELEASES[0].baseUrl);
   const disclaimer = page.getByLabel("Exercise disclaimer");
-  const header = page.locator(".pdpc-release-header");
+  const header = page.locator(".pdpc-dashboard-header");
   await expect(header).toBeVisible();
 
   const desktop = await page.evaluate(() => {
     const disclaimerNode = document.querySelector(".pdpc-release-disclaimer");
-    const headerNode = document.querySelector(".pdpc-release-header");
+    const headerNode = document.querySelector(".pdpc-dashboard-header");
+    const logoNode = headerNode.querySelector(".pdpc-dashboard-logo");
+    const activeButton = headerNode.querySelector('[aria-current="page"]');
+    const inactiveButton = headerNode.querySelector('button:not([aria-current="page"])');
+    const rootStyles = getComputedStyle(document.documentElement);
+    const headerBox = headerNode.getBoundingClientRect();
+    const logoBox = logoNode.getBoundingClientRect();
     return {
       disclaimerPosition: getComputedStyle(disclaimerNode).position,
-      headerPosition: getComputedStyle(headerNode).position,
+      activeBackground: getComputedStyle(activeButton).backgroundColor,
+      activeToken: rootStyles.getPropertyValue("--simex-accent").trim(),
+      activeColor: getComputedStyle(activeButton).color,
+      activeColorToken: rootStyles.getPropertyValue("--simex-on-accent").trim(),
+      inactiveBackground: getComputedStyle(inactiveButton).backgroundColor,
+      inactiveToken: rootStyles.getPropertyValue("--simex-surface-panel-alt").trim(),
+      logoBackground: getComputedStyle(logoNode).backgroundColor,
+      logoBorder: getComputedStyle(logoNode).borderTopWidth,
+      logoShadow: getComputedStyle(logoNode).boxShadow,
+      logoTopGap: logoBox.top - headerBox.top,
+      logoBottomGap: headerBox.bottom - logoBox.bottom,
       offset: parseFloat(getComputedStyle(document.documentElement)
         .getPropertyValue("--simex-view-only-sticky-offset")),
-      measured: disclaimerNode.getBoundingClientRect().height + headerNode.getBoundingClientRect().height,
+      measured: disclaimerNode.getBoundingClientRect().height,
     };
   });
   expect(desktop.disclaimerPosition).toBe("sticky");
-  expect(desktop.headerPosition).toBe("sticky");
   expect(Math.abs(desktop.offset - desktop.measured)).toBeLessThanOrEqual(1);
+  expect(desktop.activeBackground).toBe(cssColor(desktop.activeToken));
+  expect(desktop.activeColor).toBe(cssColor(desktop.activeColorToken));
+  expect(desktop.inactiveBackground).toBe(cssColor(desktop.inactiveToken));
+  expect(desktop.logoBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(desktop.logoBorder).toBe("0px");
+  expect(desktop.logoShadow).toBe("none");
+  expect(desktop.logoTopGap).toBeGreaterThanOrEqual(2);
+  expect(desktop.logoTopGap).toBeLessThanOrEqual(4);
+  expect(desktop.logoBottomGap).toBeGreaterThanOrEqual(2);
+  expect(desktop.logoBottomGap).toBeLessThanOrEqual(4);
 
   await page.setViewportSize({ width: 720, height: 900 });
   await expect(disclaimer).toBeVisible();
   const tablet = await page.evaluate(() => ({
-    headerPosition: getComputedStyle(document.querySelector(".pdpc-release-header")).position,
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   }));
-  expect(tablet.headerPosition).toBe("relative");
   expect(tablet.overflow).toBeLessThanOrEqual(0);
 
   await page.setViewportSize({ width: 320, height: 900 });
   await expect(page.getByRole("navigation", { name: "Dashboard pages" }).locator("button")).toHaveCount(2);
-  await expect(page.getByText("Simulation exercise", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "WCPH HeV-A26 Simulation" })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
 
   await page.setViewportSize({ width: 640, height: 900 });
@@ -133,4 +167,14 @@ async function horizontalOverflow(page) {
   return page.evaluate(() => (
     document.documentElement.scrollWidth - document.documentElement.clientWidth
   ));
+}
+
+function cssColor(value) {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized.startsWith("#")) return normalized;
+  const hexadecimal = normalized.slice(1);
+  const channels = hexadecimal.length === 3
+    ? [...hexadecimal].map((channel) => Number.parseInt(channel + channel, 16))
+    : [0, 2, 4].map((offset) => Number.parseInt(hexadecimal.slice(offset, offset + 2), 16));
+  return `rgb(${channels.join(", ")})`;
 }

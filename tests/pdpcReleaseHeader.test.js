@@ -15,11 +15,13 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 const [
-  { default: PdpcReleaseHeader },
+  { default: PdpcReleaseDisclaimer, PdpcDashboardHeader },
+  { createPdpcReleaseProfile },
   { default: AppFrame },
   { default: OperationStatusProvider },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/release/PdpcReleaseHeader.jsx"),
+  vite.ssrLoadModule("/src/release/pdpcReleaseProfile.js"),
   vite.ssrLoadModule("/src/components/app-shell/AppFrame.jsx"),
   vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
 ]);
@@ -31,30 +33,47 @@ const pages = [
   { id: "biomedical", title: "Biomedical" },
 ];
 
-test("the PDPC header exposes one disclaimer and ordered accessible navigation", () => {
-  const html = renderToStaticMarkup(React.createElement(PdpcReleaseHeader, {
+test("the release keeps only the exercise disclaimer above the dashboard", () => {
+  const html = renderToStaticMarkup(React.createElement(PdpcReleaseDisclaimer, {
+    profile,
+  }));
+
+  assert.equal((html.match(/Fictional scenario · Exercise use only/g) ?? []).length, 1);
+  assert.match(html, /<aside[^>]*aria-label="Exercise disclaimer"/);
+  assert.match(html, /class="pdpc-release-disclaimer__texture"[^>]*aria-hidden="true"/);
+  assert.doesNotMatch(html, /pdpc-release-header|Dashboard pages|Simulation exercise/);
+});
+
+test("the PDPC dashboard header owns identity, navigation, and the official logo", () => {
+  assert.equal(typeof PdpcDashboardHeader, "function");
+  if (typeof PdpcDashboardHeader !== "function") return;
+
+  const html = renderToStaticMarkup(React.createElement(PdpcDashboardHeader, {
     profile,
     pages,
     activePage: pages[0],
     onPageRequest() {},
   }));
 
-  assert.equal((html.match(/Fictional scenario · Exercise use only/g) ?? []).length, 1);
-  assert.match(html, /<aside[^>]*aria-label="Exercise disclaimer"/);
-  assert.match(html, /class="pdpc-release-disclaimer__texture"[^>]*aria-hidden="true"/);
+  assert.match(html, /class="dashboard-header pdpc-dashboard-header"/);
+  assert.match(html, /Pandemic &amp; Disaster Preparedness Center/);
+  assert.match(html, /WCPH HeV-A26 Simulation/);
   assert.match(html, /alt="Pandemic and Disaster Preparedness Center \(PDPC\)"/);
   assert.match(html, /<nav[^>]*aria-label="Dashboard pages"/);
   assert.match(html, /data-dashboard-page-id="scenario"[^>]*aria-current="page"/);
-  assert.match(html, /Scenario[\s\S]*Biomedical[\s\S]*Simulation exercise/);
-  assert.doesNotMatch(html, />Home<|>View<|>Build<|>Present<|>Audience</);
+  assert.match(html, /Scenario[\s\S]*Biomedical/);
+  assert.doesNotMatch(html, />Home<|>View<|>Build<|>Present<|>Audience|>Updated</);
+});
+
+test("the release profile installs the integrated dashboard header", () => {
+  const releaseProfile = createPdpcReleaseProfile("biomedical");
+  assert.equal(typeof releaseProfile.HeaderComponent, "function");
+  assert.equal(typeof releaseProfile.DashboardHeaderComponent, "function");
 });
 
 test("AppFrame accepts release-owned chrome while retaining its ordinary crown default", () => {
-  const customHeader = React.createElement(PdpcReleaseHeader, {
+  const customHeader = React.createElement(PdpcReleaseDisclaimer, {
     profile,
-    pages,
-    activePage: pages[0],
-    onPageRequest() {},
   });
   const release = renderAppFrame({
     mode: "view",
@@ -64,7 +83,7 @@ test("AppFrame accepts release-owned chrome while retaining its ordinary crown d
     children: React.createElement("main", null, "Dashboard"),
   });
   assert.match(release, /data-release-profile="pdpc-biomedical"/);
-  assert.match(release, /data-pdpc-release-header="biomedical"/);
+  assert.match(release, /aria-label="Exercise disclaimer"/);
   assert.doesNotMatch(release, /data-command-crown-layer=/);
 
   const ordinary = renderAppFrame({
