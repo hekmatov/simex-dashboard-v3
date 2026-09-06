@@ -13,7 +13,6 @@ export default function BuildCommandHeader({
   auxiliaryLocked = false,
   auxiliaryDisabledReason = disabledReason,
   accessibilityEnabled = false,
-  operationError = "",
   onFinish,
   onReset,
   onAddChart,
@@ -112,7 +111,6 @@ export default function BuildCommandHeader({
         </ControlTooltip>
       </div>
 
-      {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
       {pendingWork.length > 0 && <BuildPendingWorkRail pendingWork={pendingWork} />}
 
       <BuildMoreDrawer

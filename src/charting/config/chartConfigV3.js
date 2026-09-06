@@ -801,16 +801,9 @@ function validateLayout(chart) {
   }
   if (
     chart.layout.height !== undefined
-    && !(
-      (Number.isInteger(chart.layout.height) && chart.layout.height > 0)
-      || (
-        (chart.typeId === "freeText" || chart.typeId === "image")
-          ? [0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.125, 1.25, 1.375, 1.5, 1.625, 1.75, 1.875, 2.125, 2.25, 2.375, 2.5, 2.625, 2.75, 2.875, 3.125, 3.25, 3.375, 3.5, 3.625, 3.75, 3.875]
-          : [0.25, 0.5, 0.75, 1.25, 1.5, 1.75]
-      ).includes(chart.layout.height)
-    )
+    && (!Number.isFinite(chart.layout.height) || chart.layout.height <= 0 || !Number.isInteger(chart.layout.height * 8))
   ) {
-    throw new Error("Chart layout height must be a whole row or a supported quarter-row percentage.");
+    throw new Error("Chart layout height must be a positive multiple of 12.5% of a row.");
   }
 }
 

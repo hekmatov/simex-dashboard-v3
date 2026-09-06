@@ -36,7 +36,7 @@ test("the chart editor footprint picker presents 12.5-percent row increments as 
   assert.equal(typeof pickerModule?.default, "function");
   if (typeof pickerModule?.default !== "function") return;
   const html = renderToStaticMarkup(React.createElement(pickerModule.default, {
-    value: { columns: 3, rows: 0.75 },
+    value: { columns: 3, rows: 0.125 },
     onChange() {},
   }));
 
@@ -48,9 +48,9 @@ test("the chart editor footprint picker presents 12.5-percent row increments as 
   assert.match(html, /<option value="1.875"[^>]*>15<\/option>/);
   assert.match(html, /<option value="2"[^>]*>16<\/option>/);
   assert.match(html, /data-footprint-preview="true"/);
-  assert.match(html, /aria-label="Chart size: 3 columns by 6 steps"/);
+  assert.match(html, /aria-label="Chart size: 3 columns by 1 step"/);
   assert.match(html, /--footprint-preview-columns:3/);
-  assert.match(html, /--footprint-preview-height:75%/);
+  assert.match(html, /--footprint-preview-height:12\.5%/);
   assert.doesNotMatch(html, /75% of a row/);
   assert.doesNotMatch(html, /25% of a row/);
 });

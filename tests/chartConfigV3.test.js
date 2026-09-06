@@ -223,7 +223,24 @@ test("Text/Image layouts support eighth-row heights through 400% and reject unsu
       sourceId: "image-source",
       layout: { size: "standard", width: 3, height },
     });
-    assert.throws(() => validateChartInstance(invalid), /Chart layout height/);
+    assert.throws(() => validateChartInstance(invalid), /positive multiple of 12\.5%/);
+  }
+});
+
+test("Chart layouts support 12.5% row-height increments", () => {
+  for (const height of [0.125, 0.875, 1.125, 1.875]) {
+    const chart = createChartDraft("line", {
+      id: `eighth-row-chart-${height}`,
+      title: "Eighth-row chart",
+      sourceId: "cases",
+      roles: {
+        measurements: [{ field: "cases", axis: "primary" }],
+        observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+      layout: { size: "standard", width: 3, height },
+    });
+
+    assert.equal(validateChartInstance(chart), chart);
   }
 });
 

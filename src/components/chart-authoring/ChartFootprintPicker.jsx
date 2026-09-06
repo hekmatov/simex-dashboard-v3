@@ -26,7 +26,7 @@ export default function ChartFootprintPicker({
   const widthId = `${idPrefix}-footprint-width`;
   const rowHeightId = `${idPrefix}-footprint-row-height`;
   const rowHeightLabel = describeRowHeight(current.rows);
-  const previewHeight = `${Math.round(current.rows * 100)}%`;
+  const previewHeight = `${current.rows * 100}%`;
 
   const update = (updates) => onChange?.({ ...current, ...updates });
 
@@ -106,7 +106,8 @@ export default function ChartFootprintPicker({
 }
 
 export function describeRowHeight(rows) {
-  return `${rowHeightStep(rows)} steps`;
+  const steps = rowHeightStep(rows);
+  return `${steps} ${steps === 1 ? "step" : "steps"}`;
 }
 
 function rowHeightStep(rows) {
