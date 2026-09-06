@@ -166,7 +166,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       grid: {
         containLabel: true,
         left: horizontal
-          ? 48
+          ? 24
           : 48,
         right: horizontal
           ? hasSecondary ? 56 : 28

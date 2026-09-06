@@ -1993,6 +1993,21 @@ test("axis tick font sizes persist and pie slice-readout choices include neither
     updateStructuredFieldValue("axes", {}, ["primary", "labelFontSize"], 18),
     { primary: { labelFontSize: 18 } },
   );
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "labelWrap"], true),
+    { x: { labelWrap: true } },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "labelMaxWidthEm"], 10),
+    { x: { labelMaxWidthEm: 10 } },
+  );
+  const axesHtml = render(React.createElement(StandardField, {
+    field: { id: "axes", label: "Axes", control: "axes", xKind: "category" },
+    value: { x: { labelFontSize: 15, labelWrap: true } },
+    onChange() {},
+  }));
+  assert.match(axesHtml, /Wrapped label width \(× tick-label font size\)/);
+  assert.match(axesHtml, /value="8"/);
   const html = render(React.createElement(StandardField, {
     field: {
       id: "labels",

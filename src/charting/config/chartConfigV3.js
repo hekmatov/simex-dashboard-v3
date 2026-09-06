@@ -519,7 +519,7 @@ function validateAxes(axes, schema, temporalRoles) {
   const x = axes?.x;
   if (x !== undefined) {
     ensureObject(x, "Chart presentation axes x");
-    checkKnownKeys(x, new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]), "chart presentation axes x");
+    checkKnownKeys(x, new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth", "labelMaxWidthEm"]), "chart presentation axes x");
     if (x.title !== undefined && typeof x.title !== "string") throw new Error("Chart presentation axes x title must be a string.");
     if (x.titleFontSize !== undefined && (!Number.isInteger(x.titleFontSize) || x.titleFontSize < 10 || x.titleFontSize > 24)) {
       throw new Error("Chart presentation axes x titleFontSize must be an integer from 10 through 24.");
@@ -544,6 +544,9 @@ function validateAxes(axes, schema, temporalRoles) {
     }
     if (x.labelMaxWidth !== undefined && (xKind !== "category" || !Number.isInteger(x.labelMaxWidth) || x.labelMaxWidth < 40 || x.labelMaxWidth > 240)) {
       throw new Error("Chart presentation axes x labelMaxWidth must be an integer from 40 through 240 on category axes.");
+    }
+    if (x.labelMaxWidthEm !== undefined && (xKind !== "category" || !Number.isInteger(x.labelMaxWidthEm) || x.labelMaxWidthEm < 4 || x.labelMaxWidthEm > 20)) {
+      throw new Error("Chart presentation axes x labelMaxWidthEm must be an integer from 4 through 20 on category axes.");
     }
   }
   for (const axisName of ["primary", "secondary"]) {

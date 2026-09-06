@@ -63,7 +63,7 @@ export function xAxisPresentation(settings, kind, physicalAxis = "x") {
         ...(result.axisLabel ?? {}),
         ...(Number.isInteger(fontSize) ? { fontSize } : {}),
         ...(wrapping ? {
-          width: settings?.labelMaxWidth ?? 96,
+          width: wrappedCategoryLabelWidth(settings, fontSize),
           overflow: "break",
           lineHeight: Math.ceil((fontSize ?? AXIS_FONT_SIZE) * 1.25),
         } : {}),
@@ -77,6 +77,14 @@ export function xAxisPresentation(settings, kind, physicalAxis = "x") {
     };
   }
   return result;
+}
+
+function wrappedCategoryLabelWidth(settings, fontSize) {
+  if (Number.isInteger(settings?.labelMaxWidthEm)) {
+    return settings.labelMaxWidthEm * (fontSize ?? AXIS_FONT_SIZE);
+  }
+  if (Number.isInteger(settings?.labelMaxWidth)) return settings.labelMaxWidth;
+  return 8 * (fontSize ?? AXIS_FONT_SIZE);
 }
 
 export function valueAxisPresentation(settings) {

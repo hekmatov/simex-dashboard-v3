@@ -330,6 +330,33 @@ test("horizontal bars retain configured category labels while value axes append 
   assert.ok(model.option.series.every(({ barCategoryGap }) => barCategoryGap === "25%"));
   assert.ok(model.option.series.every(({ barGap }) => barGap === "25%"));
   assert.ok(model.option.series.every((series) => !Object.hasOwn(series, "barWidth")));
+  assert.equal(model.option.grid.left, 24);
+});
+
+test("wrapped horizontal category labels scale their width with the tick font and allow an em override", () => {
+  const automatic = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { labelFontSize: 15, labelWrap: true } },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  const overridden = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { labelFontSize: 15, labelWrap: true, labelMaxWidthEm: 10 } },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.equal(automatic.option.yAxis.axisLabel.width, 120);
+  assert.equal(overridden.option.yAxis.axisLabel.width, 150);
 });
 
 test("axis and legend typography apply independently, with legend swatches scaling to legend text", () => {

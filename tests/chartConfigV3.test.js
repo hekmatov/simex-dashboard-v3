@@ -114,7 +114,7 @@ test("chart typography accepts bounded axis titles, tick labels, and legend text
     },
     presentation: {
       axes: {
-        x: { titleFontSize: 20, labelFontSize: 11, labelWrap: true, labelMaxWidth: 96 },
+        x: { titleFontSize: 20, labelFontSize: 11, labelWrap: true, labelMaxWidth: 96, labelMaxWidthEm: 8 },
         primary: { titleFontSize: 14, labelFontSize: 18 },
       },
       legend: { fontSize: 16 },
