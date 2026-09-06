@@ -398,7 +398,6 @@ test("timer-owned pending edit uses the bounded session fallback", async ({ page
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_LONG__ = true; });
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
   await map.getByLabel("Page title", { exact: true }).fill("Timer-owned failed edit");
 
   const status = page.getByRole("status").filter({
@@ -477,7 +476,6 @@ test("reset completes with session fallback when browser storage is full", async
   const editedLabel = "Draft retained after reset failure";
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
   const pageTitleInput = map.getByLabel("Page title", { exact: true });
   await pageTitleInput.fill(editedLabel);
   await page.locator(".build-command-header")
@@ -504,7 +502,6 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
   await openDashboardEditMode(page);
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
   const pageTitleInput = map.getByLabel("Page title", { exact: true });
   const pageTitle = await pageTitleInput.inputValue();
   await pageTitleInput.fill("Reset-only page draft");
@@ -618,7 +615,6 @@ test("edit-session save and reset use session fallback when storage is full", as
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
   await map.getByLabel("Page title", { exact: true }).fill(sessionTitle);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();

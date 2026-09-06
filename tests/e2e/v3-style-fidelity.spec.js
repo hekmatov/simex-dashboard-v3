@@ -605,14 +605,13 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
-    await dashboardMap.getByRole("button", { name: "Inspector", exact: true }).click();
     const inspectorChrome = await readChrome(page, {
-      inspector: ".dashboard-map-panel .build-inspector-sheet",
+      inspectorInput: ".dashboard-map-panel .dashboard-map-inline-inspector .build-inspector input",
     });
-    expect(inspectorChrome.inspector).toMatchObject({
-      backgroundColor: style.panelAltPaint,
-      borderRadius: style.panelRadius,
-      borderTopColor: roleDividerPaint,
+    expect(inspectorChrome.inspectorInput).toMatchObject({
+      backgroundColor: style.panelPaint,
+      borderRadius: style.controlRadius,
+      borderTopColor: style.borderPaint,
       color: style.textPaint,
     });
     for (const control of [buildChrome.look, buildChrome.chronoGroups]) {

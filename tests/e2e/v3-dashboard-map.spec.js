@@ -65,10 +65,8 @@ test("Build commands stay available while Dashboard map controls only structure 
   await expect(map).toBeVisible();
   await expect(commands).toBeVisible();
   await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toBeVisible();
-
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
-  await expect(map.getByRole("region", { name: "Context inspector" })).toBeVisible();
-  await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toHaveCount(0);
+  await expect(map.locator(".dashboard-map-inline-inspector .build-inspector")).toBeVisible();
+  await expect(map.getByLabel("Page title", { exact: true })).toBeVisible();
 
   await mapToggle.click();
   await expect(map).toBeHidden();
@@ -185,7 +183,6 @@ test("create page and inline rename acquire only the dashboard layout draft", as
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
   await expect(page.locator('[data-pending-work-kind="inlineRename"]')).toHaveCount(0);
 
-  await map.getByRole("button", { name: "Structure", exact: true }).click();
   const operationsNode = map.getByRole("tree").locator('[data-build-node-kind="page"][aria-label="Operations"]');
   await expect(operationsNode).toBeVisible();
   await operationsNode.getByRole("button", { name: "Expand Operations", exact: true }).click();

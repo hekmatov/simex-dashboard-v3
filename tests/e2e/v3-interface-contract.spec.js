@@ -36,11 +36,9 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
 
   const map = page.getByRole("complementary", { name: "Dashboard map" });
   await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
   await expect(map.getByLabel("Page title")).toHaveCSS("min-height", "32px");
   await expect(map.getByLabel("Page title")).toHaveCSS("color", await semanticColor(page, "--simex-text-strong"));
 
-  await map.getByRole("button", { name: "Structure", exact: true }).click();
   const structure = map.getByRole("navigation", { name: "Dashboard structure" });
   const contrast = await structure.getByRole("treeitem", { name: "Biomedical", exact: true }).evaluate((item) => {
     const surface = item.closest(".build-side-sheet");

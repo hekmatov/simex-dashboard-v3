@@ -330,6 +330,6 @@ async function openDashboard(page) {
 async function openSelectedPageInspector(page) {
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  await expect(map.getByLabel("Page title", { exact: true })).toBeVisible();
   return map;
 }
