@@ -2917,6 +2917,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         activePage={renderingActivePage}
         pageType={landingActive ? "landing" : "analytical"}
         dashboard={renderingDashboard}
+        dashboardHeader={dashboardHeaderNode}
         contentDraftCoordinator={contentDraftCoordinator}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}

@@ -15,6 +15,7 @@ export default function DashboardModeWorkspace({
   activePage,
   pageType,
   dashboard,
+  dashboardHeader = null,
   contentDraftCoordinator = null,
   onContentDraftStage,
   onContentDraftCommit,
@@ -116,7 +117,9 @@ export default function DashboardModeWorkspace({
         buildPanelOpen={buildPanelOpen}
         buildStaticAuthoringOpen={buildStaticAuthoringOpen}
         pageId={activePage?.id}
-        dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
+        dashboardHeader={dashboardHeader ?? (
+          <DashboardHeader activePage={activePage} dashboard={dashboard} />
+        )}
         workspaceControls={buildMode ? buildWorkspace : null}
         pageContent={(
           <div className={buildMode ? "canonical-build-content" : "canonical-view-content"}>
