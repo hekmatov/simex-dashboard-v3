@@ -85,7 +85,7 @@ test("vertical fill expands horizontal bar plots into the available panel height
       },
     });
 
-    assert.deepEqual(presented.option.grid, { left: 48, right: 28, top: 34, bottom: 32 });
+    assert.deepEqual(presented.option.grid, { left: 48, right: 28, top: 39, bottom: 32 });
     assert.equal(presented.option.legend.top, 12);
   }
 });
@@ -104,7 +104,7 @@ test("vertical fill removes the legend gutter when the legend is hidden", () => 
     presentation: { series: { verticalFill: true }, title: { align: "left" } },
   });
 
-  assert.equal(presented.option.grid.top, 0);
+  assert.equal(presented.option.grid.top, 5);
 });
 
 test("vertical fill increases the legend gutter with the legend font size", () => {
@@ -121,7 +121,7 @@ test("vertical fill increases the legend gutter with the legend font size", () =
     presentation: { series: { verticalFill: true }, title: { align: "left" } },
   });
 
-  assert.equal(presented.option.grid.top, 41);
+  assert.equal(presented.option.grid.top, 46);
 });
 
 function chart(typeId, overrides = {}) {

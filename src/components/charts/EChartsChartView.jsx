@@ -761,13 +761,19 @@ function normalizedGrid(value, titleGutters) {
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
 }
 
+const HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING = 5;
+
 function verticallyBalancedGrid(value, chart, titleGutters = {}, legend) {
   if (horizontalBarsFillVertically(chart)) {
     const fill = (grid) => {
       if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
       return {
         ...grid,
-        top: compactGridGutter(grid.top, titleGutters.top, legendVerticalGutter(legend)),
+        top: compactGridGutter(
+          grid.top,
+          titleGutters.top,
+          legendVerticalGutter(legend) + HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING,
+        ),
         bottom: compactGridGutter(grid.bottom, titleGutters.bottom, 32),
       };
     };
