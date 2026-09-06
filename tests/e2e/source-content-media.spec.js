@@ -262,8 +262,7 @@ test("Journey A — media create reuse default external import restore dependenc
 
   const imagePanel = page.locator(`[data-panel-id="${externalPanelId}"]`);
   await imagePanel.scrollIntoViewIfNeeded();
-  await imagePanel.getByLabel("Journey A external image actions").getByRole("button", { name: "Edit chart" }).click();
-  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  const editor = await openTextImageEditor(page, imagePanel, "Journey A external image");
   await editor.getByRole("radio", { name: /Journey A separate item/ }).click();
   await expect(editor.getByText("Replacement selected. Save, discard, or restore the previous image.")).toBeVisible();
   const restore = editor.getByRole("button", { name: "Restore previous image" });
@@ -278,7 +277,7 @@ test("Journey A — media create reuse default external import restore dependenc
   const savedReplacementMediaId = await persistedStaticMediaId(page, externalPanelId);
   expect(savedReplacementMediaId).not.toBe(EXTERNAL_ID);
 
-  await imagePanel.getByLabel("Journey A external image actions").getByRole("button", { name: "Edit chart" }).click();
+  await openTextImageEditor(page, imagePanel, "Journey A external image");
   await expect(editor.getByRole("button", { name: "Restore previous image" })).toHaveCount(0);
   await editor.getByRole("radio", { name: /Journey A external map/ }).click();
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -287,7 +286,7 @@ test("Journey A — media create reuse default external import restore dependenc
   await expect(editor).toHaveCount(0);
   expect(await persistedStaticMediaId(page, externalPanelId)).toBe(savedReplacementMediaId);
 
-  await imagePanel.getByLabel("Journey A external image actions").getByRole("button", { name: "Edit chart" }).click();
+  await openTextImageEditor(page, imagePanel, "Journey A external image");
   await editor.getByRole("radio", { name: /Journey A external map/ }).click();
   await editor.getByRole("button", { name: "Continue" }).click();
   await editor.getByRole("button", { name: "Save", exact: true }).click();
@@ -587,6 +586,19 @@ async function createImageFromPicker(page, { title, mediaName, expectedAlt }) {
   expect(panelId).not.toBeNull();
   await expect(page.getByLabel(`${title} actions`)).toBeVisible();
   return panelId;
+}
+
+async function openTextImageEditor(page, panel, title) {
+  await panel.hover();
+  await panel.getByLabel(`${title} actions`)
+    .getByRole("button", { name: "Edit chart", exact: true })
+    .click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  await expect(editor).toBeVisible();
+  return editor;
 }
 
 async function openFreeTextContentStage(page, title) {
