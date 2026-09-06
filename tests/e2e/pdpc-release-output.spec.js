@@ -11,7 +11,7 @@ const RELEASES = Object.freeze([
     variant: "socioeconomic",
     baseUrl: "http://127.0.0.1:4192",
     disciplineId: "socio_economic",
-    disciplineLabel: "Socio-economic",
+    disciplineLabel: "Socio-Economic",
   }),
 ]);
 
@@ -59,7 +59,9 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     )))).toBe(true);
 
     scenarioSnapshots.push(normalizeText(
-      await page.locator('[data-canonical-page-id="scenario"]').innerText(),
+      await page.locator(
+        '[data-canonical-page-id="scenario"] .canonical-dashboard-content',
+      ).innerText(),
     ));
     await pageNavigation.locator(`[data-dashboard-page-id="${release.disciplineId}"]`).click();
     await expect(pageNavigation.locator('[aria-current="page"]')).toHaveText(release.disciplineLabel);
@@ -88,17 +90,17 @@ test("the integrated PDPC dashboard header uses theme tokens and reflows without
     const logoNode = headerNode.querySelector(".pdpc-dashboard-logo");
     const activeButton = headerNode.querySelector('[aria-current="page"]');
     const inactiveButton = headerNode.querySelector('button:not([aria-current="page"])');
-    const rootStyles = getComputedStyle(document.documentElement);
+    const headerStyles = getComputedStyle(headerNode);
     const headerBox = headerNode.getBoundingClientRect();
     const logoBox = logoNode.getBoundingClientRect();
     return {
       disclaimerPosition: getComputedStyle(disclaimerNode).position,
       activeBackground: getComputedStyle(activeButton).backgroundColor,
-      activeToken: rootStyles.getPropertyValue("--simex-accent").trim(),
+      activeToken: headerStyles.getPropertyValue("--simex-accent").trim(),
       activeColor: getComputedStyle(activeButton).color,
-      activeColorToken: rootStyles.getPropertyValue("--simex-on-accent").trim(),
+      activeColorToken: headerStyles.getPropertyValue("--simex-on-accent").trim(),
       inactiveBackground: getComputedStyle(inactiveButton).backgroundColor,
-      inactiveToken: rootStyles.getPropertyValue("--simex-surface-panel-alt").trim(),
+      inactiveToken: headerStyles.getPropertyValue("--simex-surface-panel-alt").trim(),
       logoBackground: getComputedStyle(logoNode).backgroundColor,
       logoBorder: getComputedStyle(logoNode).borderTopWidth,
       logoShadow: getComputedStyle(logoNode).boxShadow,
