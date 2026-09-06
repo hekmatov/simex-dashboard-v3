@@ -5,7 +5,10 @@ import path from "node:path";
 import test from "node:test";
 
 import { buildPdpcReleaseSet } from "../scripts/build-pdpc-release.mjs";
-import { verifyPdpcStaticBuild } from "../scripts/verify-pdpc-static-build.mjs";
+import {
+  finalizePdpcRuntimeManifest,
+  verifyPdpcStaticBuild,
+} from "../scripts/verify-pdpc-static-build.mjs";
 import { createPdpcReleaseMetadata } from "../scripts/lib/pdpc-release.mjs";
 
 const SOURCE_COMMIT = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -156,6 +159,40 @@ test("an unowned output is rejected before the build boundary", async (t) => {
   );
   assert.equal(buildCalls, 0);
   assert.equal(await readFile(path.join(fixture.outDir, "unrelated.txt"), "utf8"), "keep\n");
+});
+
+test("the static verifier accepts the fingerprinted official PDPC logo", async (t) => {
+  const outputDir = await mkdtemp(path.join(os.tmpdir(), "simex-pdpc-verify-logo-"));
+  t.after(() => rm(outputDir, { recursive: true, force: true }));
+  await mkdir(path.join(outputDir, "assets"), { recursive: true });
+  await mkdir(path.join(outputDir, "config"), { recursive: true });
+  await mkdir(path.join(outputDir, "vendor"), { recursive: true });
+
+  await Promise.all([
+    writeFile(path.join(outputDir, "index.html"), '<script type="module" src="./assets/release-fixture.js"></script>\n'),
+    writeFile(path.join(outputDir, "release-manifest.json"), stableJson({
+      ...metadata().variantManifests.biomedical,
+    })),
+    writeFile(path.join(outputDir, "service-worker.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "portable-dashboard-data.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "config", "dashboard.json"), stableJson({
+      ...envelope().config,
+      pages: envelope().config.pages.slice(0, 2),
+    })),
+    writeFile(path.join(outputDir, "config", "dataset-profiles.json"), "{}\n"),
+    writeFile(path.join(outputDir, "vendor", "three.min.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "vendor", "vanta.net.min.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "assets", "pdpc-logo-fixture.png"), "official-logo-bytes"),
+    writeFile(
+      path.join(outputDir, "assets", "release-fixture.js"),
+      'console.log("Fictional scenario · Exercise use only");\n',
+    ),
+  ]);
+  await finalizePdpcRuntimeManifest({ outputDir, variant: "biomedical" });
+
+  const result = await verifyPdpcStaticBuild({ outputDir, variant: "biomedical" });
+  assert.equal(result.variant, "biomedical");
+  assert.deepEqual(result.includedPageIds, ["scenario", "biomedical"]);
 });
 
 test("the static verifier rejects a config whose pages diverge from its manifest", async (t) => {

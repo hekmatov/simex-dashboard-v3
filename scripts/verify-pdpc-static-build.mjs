@@ -65,8 +65,8 @@ export async function verifyPdpcStaticBuild({ outputDir, variant, manifest = nul
   if (files.has("release.html") || files.has("source-viewer.html")) {
     throw new Error("PDPC static output contains a non-release entrypoint.");
   }
-  if (![...files].some((file) => /^assets\/pdpc-lockup-[A-Za-z0-9_-]+\.png$/i.test(file))) {
-    throw new Error("PDPC static output is missing its fingerprinted lockup.");
+  if (![...files].some((file) => /^assets\/pdpc-logo-[A-Za-z0-9_-]+\.png$/i.test(file))) {
+    throw new Error("PDPC static output is missing its fingerprinted official logo.");
   }
 
   const runtimeAssets = new Set();
