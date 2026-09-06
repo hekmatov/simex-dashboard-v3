@@ -95,7 +95,7 @@ for (const viewport of VIEWPORTS) {
     const beforeDiscard = await inspectBuildImageState(page, panel);
     await openImageEditor(panel, page, title, discardTrigger);
   let editor = page.getByRole("dialog", { name: "Text/Image editor" });
-    await expectStaticEditorCompression(page, viewport, beforeDiscard);
+    await expectStaticEditorOverlay(page, beforeDiscard);
     await editor.getByLabel("Alternative text").fill("Unsaved alternative text");
     await editor.getByLabel("Crop width").fill("700");
     await editor.getByRole("button", { name: "Reset image" }).click();
@@ -120,7 +120,7 @@ for (const viewport of VIEWPORTS) {
     const beforeSave = await inspectBuildImageState(page, panel);
     await openImageEditor(panel, page, title, saveTrigger);
   editor = page.getByRole("dialog", { name: "Text/Image editor" });
-    await expectStaticEditorCompression(page, viewport, beforeSave);
+    await expectStaticEditorOverlay(page, beforeSave);
     await expect(editor.getByLabel("Crop x")).toHaveValue("200");
     await editor.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
       name: "replacement.png",
@@ -370,8 +370,7 @@ for (const viewport of VIEWPORTS) {
     await panel.getByRole("button", { name: "Retry" }).click();
     await expect(panel.locator('[data-static-failure="image-load-failed"]')).toBeVisible();
     await panel.getByRole("button", { name: "Replace" }).click();
-  editor = page.getByRole("dialog", { name: "Text/Image editor" });
-    await expect(editor).toBeVisible();
+  editor = await openFullTextImageEditor(page);
     await expect(editor.getByLabel("HTTPS image URL")).toHaveValue("https://example.test/unavailable.png");
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(editor).toHaveCount(0);
@@ -974,7 +973,16 @@ async function openImageEditor(panel, page, title, preparedTrigger = null) {
   const trigger = preparedTrigger
     ?? panel.getByLabel(`${title} actions`).getByRole("button", { name: "Edit chart" });
   await trigger.click();
-  await expect(page.getByRole("dialog", { name: "Text/Image editor" })).toBeVisible();
+  await openFullTextImageEditor(page);
+}
+
+async function openFullTextImageEditor(page) {
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  await expect(editor).toBeVisible();
+  return editor;
 }
 
 async function prepareImageEditorTrigger(panel, title) {
@@ -1006,9 +1014,9 @@ async function inspectBuildImageState(page, panel) {
   });
 }
 
-async function expectStaticEditorCompression(page, viewport, before) {
+async function expectStaticEditorOverlay(page, before) {
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
-  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "true");
+  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "false");
   const openState = await page.evaluate(() => {
     const frameNode = document.querySelector(".canonical-dashboard-frame.build-workspace");
     return {
@@ -1017,8 +1025,7 @@ async function expectStaticEditorCompression(page, viewport, before) {
       viewportWidth: window.innerWidth,
     };
   });
-  if (viewport.width >= 900) expect(openState.frameWidth).toBeLessThan(before.frameWidth - 80);
-  else expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
+  expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
   expect(openState.documentWidth).toBeLessThanOrEqual(openState.viewportWidth);
 }
 

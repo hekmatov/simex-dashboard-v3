@@ -313,7 +313,7 @@ for (const viewport of VIEWPORTS) {
 
     await openFreeTextEditor(panel, page, title, discardTrigger);
     let editor = page.getByRole("dialog", { name: "Text/Image editor" });
-    await expectStaticEditorCompression(page, viewport, beforeDiscard);
+    await expectStaticEditorOverlay(page, beforeDiscard);
     const editorSource = await rawQmdSource(editor);
     await editorSource.fill(INERT_QMD);
     await expect(editor.getByRole("button", { name: "Continue" })).toBeEnabled();
@@ -343,7 +343,7 @@ for (const viewport of VIEWPORTS) {
     const beforeSave = await inspectBuildStaticState(page, panel);
     await openFreeTextEditor(panel, page, title, saveTrigger);
     editor = page.getByRole("dialog", { name: "Text/Image editor" });
-    await expectStaticEditorCompression(page, viewport, beforeSave);
+    await expectStaticEditorOverlay(page, beforeSave);
     await (await rawQmdSource(editor)).fill(SAVED_QMD);
     await expect(editor.getByRole("region", { name: "Rendered preview" }))
       .toContainText("Updated priorities");
@@ -880,9 +880,9 @@ async function inspectBuildStaticState(page, panel) {
   });
 }
 
-async function expectStaticEditorCompression(page, viewport, before) {
+async function expectStaticEditorOverlay(page, before) {
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
-  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "true");
+  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "false");
   const openState = await page.evaluate(() => {
     const frameNode = document.querySelector(".canonical-dashboard-frame.build-workspace");
     return {
@@ -891,8 +891,7 @@ async function expectStaticEditorCompression(page, viewport, before) {
       viewportWidth: window.innerWidth,
     };
   });
-  if (viewport.width >= 900) expect(openState.frameWidth).toBeLessThan(before.frameWidth - 80);
-  else expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
+  expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
   expect(openState.documentWidth).toBeLessThanOrEqual(openState.viewportWidth);
 }
 
