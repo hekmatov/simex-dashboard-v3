@@ -1712,6 +1712,10 @@ function AppContent({ releaseProfile = null }) {
       onPageRequest={requestPage}
     />
   ) : null;
+  const ReleaseDashboardFooter = releaseProfile?.DashboardFooterComponent ?? null;
+  const releaseDashboardFooter = ReleaseDashboardFooter ? (
+    <ReleaseDashboardFooter profile={releaseProfile} />
+  ) : null;
   const appFrame = (
     <AppFrame
       mode={mode}
@@ -1791,6 +1795,7 @@ function AppContent({ releaseProfile = null }) {
       dashboard={dashboard}
       viewOnly={releaseProfile?.viewOnly === true}
       dashboardHeaderNode={releaseDashboardHeader}
+      dashboardFooterNode={releaseDashboardFooter}
       contentDraftCoordinator={contentDraftCoordinator}
       mode={mode}
       activePageId={activePageId}

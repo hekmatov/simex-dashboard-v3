@@ -1,4 +1,7 @@
-import PdpcReleaseDisclaimer, { PdpcDashboardHeader } from "./PdpcReleaseHeader.jsx";
+import PdpcReleaseDisclaimer, {
+  PdpcDashboardFooter,
+  PdpcDashboardHeader,
+} from "./PdpcReleaseHeader.jsx";
 
 const VARIANTS = Object.freeze({
   biomedical: Object.freeze(["scenario", "biomedical"]),
@@ -21,6 +24,7 @@ export function createPdpcReleaseProfile(variant) {
     suppressCommandCrown: true,
     HeaderComponent: PdpcReleaseDisclaimer,
     DashboardHeaderComponent: PdpcDashboardHeader,
+    DashboardFooterComponent: PdpcDashboardFooter,
     normalizeEntry,
     prepareDashboard(dashboard) {
       const pageIds = Array.isArray(dashboard?.pages)

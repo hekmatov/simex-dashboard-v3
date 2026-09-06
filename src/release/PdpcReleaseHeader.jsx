@@ -86,6 +86,30 @@ export function PdpcDashboardHeader({
   );
 }
 
+export function PdpcDashboardFooter() {
+  return (
+    <footer
+      className="dashboard-footer pdpc-dashboard-footer"
+      aria-label="Dashboard information and feedback"
+    >
+      <div>
+        <strong>SimEx Dashboard V3</strong>
+        <a
+          className="pdpc-dashboard-footer__builder-link"
+          href="https://simex-dashboard-v3.pages.dev/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Build your own dashboard
+        </a>
+      </div>
+      <nav aria-label="Project links">
+        <span>Developed by Hekmat Alrouh</span>
+      </nav>
+    </footer>
+  );
+}
+
 function pageLabel(page) {
   if (page.id === "socio_economic") return "Socio-Economic Information";
   return page.label ?? page.title ?? page.id;

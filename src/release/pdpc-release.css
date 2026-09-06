@@ -132,6 +132,12 @@
   width: auto;
 }
 
+.app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-footer__builder-link {
+  text-decoration: underline;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.16em;
+}
+
 html:has(.app-frame[data-release-profile^="pdpc-"]) {
   scroll-padding-top: var(--simex-view-only-sticky-offset);
 }

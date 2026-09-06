@@ -15,7 +15,7 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 const [
-  { default: PdpcReleaseDisclaimer, PdpcDashboardHeader },
+  { default: PdpcReleaseDisclaimer, PdpcDashboardHeader, PdpcDashboardFooter },
   { createPdpcReleaseProfile },
   { default: AppFrame },
   { default: OperationStatusProvider },
@@ -88,6 +88,22 @@ test("the release profile installs the integrated dashboard header", () => {
   const releaseProfile = createPdpcReleaseProfile("biomedical");
   assert.equal(typeof releaseProfile.HeaderComponent, "function");
   assert.equal(typeof releaseProfile.DashboardHeaderComponent, "function");
+  assert.equal(typeof releaseProfile.DashboardFooterComponent, "function");
+});
+
+test("the PDPC footer promotes the dashboard builder and moves the plain credit right", () => {
+  assert.equal(typeof PdpcDashboardFooter, "function");
+  if (typeof PdpcDashboardFooter !== "function") return;
+
+  const html = renderToStaticMarkup(React.createElement(PdpcDashboardFooter));
+
+  assert.match(
+    html,
+    /<strong>SimEx Dashboard V3<\/strong><a[^>]*href="https:\/\/simex-dashboard-v3\.pages\.dev\/"[^>]*>Build your own dashboard<\/a>/,
+  );
+  assert.match(html, /<nav[^>]*aria-label="Project links"><span>Developed by Hekmat Alrouh<\/span><\/nav>/);
+  assert.doesNotMatch(html, /Report a bug \/ request a feature/);
+  assert.doesNotMatch(html, /<a[^>]*>Developed by Hekmat Alrouh<\/a>/);
 });
 
 test("AppFrame accepts release-owned chrome while retaining its ordinary crown default", () => {

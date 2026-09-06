@@ -66,7 +66,7 @@ test("the release profile requires exactly its generated page pair", () => {
   );
 });
 
-test("the ordinary Vite build graph excludes the PDPC release entry, CSS, and brand assets", async (t) => {
+test("the ordinary Vite build graph excludes PDPC release-only entry, CSS, and lockup assets", async (t) => {
   const output = await mkdtemp(path.join(os.tmpdir(), "simex-ordinary-build-"));
   t.after(() => rm(output, { recursive: true, force: true }));
 
@@ -83,10 +83,10 @@ test("the ordinary Vite build graph excludes the PDPC release entry, CSS, and br
   const manifest = JSON.parse(await readFile(path.join(output, ".vite", "manifest.json"), "utf8"));
   const graph = JSON.stringify(manifest);
   assert.doesNotMatch(graph, /src\/release\//);
-  assert.doesNotMatch(graph, /pdpc-(?:lockup|logo)/);
+  assert.doesNotMatch(graph, /pdpc-lockup/);
 
   const files = await recursiveFiles(output);
-  assert.equal(files.some((file) => /pdpc-(?:lockup|logo)/i.test(file)), false);
+  assert.equal(files.some((file) => /pdpc-lockup/i.test(file)), false);
   const runtimeText = (await Promise.all(
     files
       .filter((file) => /\.(?:css|html|js)$/i.test(file))

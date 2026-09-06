@@ -6,12 +6,14 @@ const RELEASES = Object.freeze([
     baseUrl: "http://127.0.0.1:4191",
     disciplineId: "biomedical",
     disciplineLabel: "Biomedical",
+    expectedPanelTitle: "International Confirmed cases (cumulative)",
   }),
   Object.freeze({
     variant: "socioeconomic",
     baseUrl: "http://127.0.0.1:4192",
     disciplineId: "socio_economic",
     disciplineLabel: "Socio-Economic Information",
+    expectedPanelTitle: "Loneliness",
   }),
 ]);
 
@@ -66,6 +68,18 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await pageNavigation.locator(`[data-dashboard-page-id="${release.disciplineId}"]`).click();
     await expect(pageNavigation.locator('[aria-current="page"]')).toHaveText(release.disciplineLabel);
     await expect(page.locator(`[data-canonical-page-id="${release.disciplineId}"]`)).toBeVisible();
+    await expect(page.getByText(release.expectedPanelTitle, { exact: true })).toBeVisible();
+    await expect(page.locator(".application-recovery")).toHaveCount(0);
+
+    const footer = page.locator("footer.pdpc-dashboard-footer");
+    await expect(footer).toHaveAttribute("aria-label", "Dashboard information and feedback");
+    await expect(footer.getByText("SimEx Dashboard V3", { exact: true })).toBeVisible();
+    const builderLink = footer.getByRole("link", { name: "Build your own dashboard", exact: true });
+    await expect(builderLink).toHaveAttribute("href", "https://simex-dashboard-v3.pages.dev/");
+    await expect(builderLink).toHaveCSS("text-decoration-line", "underline");
+    await expect(footer.getByText("Developed by Hekmat Alrouh", { exact: true })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "Report a bug / request a feature" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "Developed by Hekmat Alrouh" })).toHaveCount(0);
 
     await page.goto(`${release.baseUrl}/?surface=audience&channel=abcdefghijklmnop`);
     await expect(page.locator(`[data-pdpc-dashboard-header="${release.variant}"]`)).toBeVisible();

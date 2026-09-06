@@ -16,6 +16,7 @@ export default function DashboardModeWorkspace({
   pageType,
   dashboard,
   dashboardHeader = null,
+  dashboardFooter = null,
   contentDraftCoordinator = null,
   onContentDraftStage,
   onContentDraftCommit,
@@ -150,7 +151,7 @@ export default function DashboardModeWorkspace({
             </PlaybackSurface>
           </div>
         )}
-        footer={<CanonicalDashboardFooter dashboard={dashboard} />}
+        footer={dashboardFooter ?? <CanonicalDashboardFooter dashboard={dashboard} />}
         overlayLayer={buildMode ? null : viewOverlay}
       />
     </div>
