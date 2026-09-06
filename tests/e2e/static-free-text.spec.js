@@ -847,6 +847,9 @@ async function openFreeTextEditor(panel, page, title, preparedTrigger = null) {
   const trigger = preparedTrigger ?? panel.getByLabel(`${title} actions`)
     .getByRole("button", { name: "Edit chart" });
   await trigger.click();
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Text/Image editor" })).toBeVisible();
 }
 
