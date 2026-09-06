@@ -387,13 +387,14 @@ test("collection carousels remain independent while Chrono plays", async ({
   const independentPanel = page.locator('[data-panel-id="e2e_carousel_independent"]');
   const pauses = pausesPanel.getByRole("region", { name: "Collection carousel" });
   const independent = independentPanel.getByRole("region", { name: "Collection carousel" });
+  const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
   await pausesPanel.scrollIntoViewIfNeeded();
+  await chronoButton.hover();
 
   expect(await pauses.getAttribute("data-collection-pause-on-playback")).toBeNull();
   await expect(pauses).toHaveAttribute("data-collection-rotation-paused", "false");
   await independentPanel.scrollIntoViewIfNeeded();
   expect(await independent.getAttribute("data-collection-pause-on-playback")).toBeNull();
-  const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
   await chronoButton.hover();
   await expect(independent).toHaveAttribute("data-collection-rotation-paused", "false");
 
@@ -404,12 +405,14 @@ test("collection carousels remain independent while Chrono plays", async ({
     .fill(String(Date.parse("2027-02-20T00:00:00.000Z")));
   await controls.getByRole("button", { name: "Play Chrono" }).click();
   await pausesPanel.scrollIntoViewIfNeeded();
+  await chronoButton.hover();
   await expect(pauses).toHaveAttribute(
     "data-collection-rotation-paused",
     "false",
     { timeout: 500 },
   );
   await independentPanel.scrollIntoViewIfNeeded();
+  await chronoButton.hover();
   await expect(independent).toHaveAttribute(
     "data-collection-rotation-paused",
     "false",
