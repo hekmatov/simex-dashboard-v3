@@ -154,6 +154,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   viewOnly = false,
   dashboardHeaderNode = null,
   dashboardFooterNode = null,
+  showChartFullscreen = true,
   mode,
   activePageId,
   onActivePageChange,
@@ -2920,6 +2921,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboard={renderingDashboard}
         dashboardHeader={dashboardHeaderNode}
         dashboardFooter={dashboardFooterNode}
+        showChartFullscreen={showChartFullscreen}
         contentDraftCoordinator={contentDraftCoordinator}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}

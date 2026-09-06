@@ -17,6 +17,7 @@ export default function DashboardModeWorkspace({
   dashboard,
   dashboardHeader = null,
   dashboardFooter = null,
+  showChartFullscreen = true,
   contentDraftCoordinator = null,
   onContentDraftStage,
   onContentDraftCommit,
@@ -137,6 +138,7 @@ export default function DashboardModeWorkspace({
                 surface={buildMode ? "build" : "view"}
                 buildState={buildMode ? buildState : null}
                 displayState={displayState}
+                showFullscreen={showChartFullscreen}
                 multiSelectMode={!buildMode && multiSelectMode}
                 multiPanelIds={buildMode ? [] : multiPanelIds}
                 excludedChartIds={chronoProjection?.hiddenChartIds}

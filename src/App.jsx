@@ -1796,6 +1796,7 @@ function AppContent({ releaseProfile = null }) {
       viewOnly={releaseProfile?.viewOnly === true}
       dashboardHeaderNode={releaseDashboardHeader}
       dashboardFooterNode={releaseDashboardFooter}
+      showChartFullscreen={releaseProfile?.disableChartFullscreen !== true}
       contentDraftCoordinator={contentDraftCoordinator}
       mode={mode}
       activePageId={activePageId}

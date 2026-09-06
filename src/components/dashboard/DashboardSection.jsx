@@ -24,6 +24,7 @@ function DashboardSection({
   assets,
   contentRenderContext,
   accessibilityEnabled,
+  showFullscreen,
   actions,
   disabled,
   selectedPlacementId,
@@ -92,6 +93,7 @@ function DashboardSection({
                 assets={assets}
                 contentRenderContext={contentRenderContext}
                 accessibilityEnabled={accessibilityEnabled}
+                showFullscreen={showFullscreen}
                 actions={actions}
                 editDisabled={disabled}
                 editControlDisabled={disabled && !selected}

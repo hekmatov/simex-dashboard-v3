@@ -30,7 +30,7 @@ await vite.close();
 const profile = { id: "pdpc-biomedical", variant: "biomedical" };
 const pages = [
   { id: "scenario", title: "Scenario" },
-  { id: "biomedical", title: "Biomedical" },
+  { id: "biomedical", title: "Biomedical Information", label: "Biomedical" },
 ];
 
 test("the release keeps only the exercise disclaimer above the dashboard", () => {
@@ -56,12 +56,18 @@ test("the PDPC dashboard header owns identity, navigation, and the official logo
   }));
 
   assert.match(html, /class="dashboard-header pdpc-dashboard-header"/);
-  assert.match(html, /Pandemic &amp; Disaster Preparedness Center/);
+  assert.match(
+    html,
+    /<span class="pdpc-dashboard-identity-line">Pandemic and Disaster<\/span><span class="pdpc-dashboard-identity-line">Preparedness Center<\/span>/,
+  );
   assert.match(html, /WCPH HeV-A26 Simulation/);
   assert.match(html, /alt="Pandemic and Disaster Preparedness Center \(PDPC\)"/);
   assert.match(html, /<nav[^>]*aria-label="Dashboard pages"/);
   assert.match(html, /data-dashboard-page-id="scenario"[^>]*aria-current="page"/);
-  assert.match(html, /Scenario[\s\S]*Biomedical/);
+  assert.match(
+    html,
+    /data-dashboard-page-id="biomedical"[^>]*aria-label="Biomedical Information"[^>]*>Biomedical Information</,
+  );
   assert.doesNotMatch(html, />Home<|>View<|>Build<|>Present<|>Audience|>Updated</);
 });
 
@@ -89,6 +95,7 @@ test("the release profile installs the integrated dashboard header", () => {
   assert.equal(typeof releaseProfile.HeaderComponent, "function");
   assert.equal(typeof releaseProfile.DashboardHeaderComponent, "function");
   assert.equal(typeof releaseProfile.DashboardFooterComponent, "function");
+  assert.equal(releaseProfile.disableChartFullscreen, true);
 });
 
 test("the PDPC footer promotes the dashboard builder and moves the plain credit right", () => {

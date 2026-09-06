@@ -19,6 +19,7 @@ export default function DashboardCanvas({
   surface,
   buildState,
   displayState,
+  showFullscreen = true,
   multiSelectMode = false,
   multiPanelIds = [],
   excludedChartIds = [],
@@ -168,6 +169,7 @@ export default function DashboardCanvas({
                           assets={dashboard.assets ?? {}}
                           contentRenderContext={contentRenderContext}
                           accessibilityEnabled={accessibilityEnabled}
+                          showFullscreen={showFullscreen}
                           onDisplayAction={onDisplayAction}
                           multiSelectMode={multiSelectMode}
                           isMultiSelected={multiPanelIds.includes(chart.id)}
@@ -207,6 +209,7 @@ export default function DashboardCanvas({
                   assets={dashboard.assets ?? EMPTY_OBJECT}
                   contentRenderContext={contentRenderContext}
                   accessibilityEnabled={accessibilityEnabled}
+                  showFullscreen={showFullscreen}
                   actions={buildActions}
                   disabled={Boolean(buildState?.disabled)}
                   selectedPlacementId={selectedPlacementId}

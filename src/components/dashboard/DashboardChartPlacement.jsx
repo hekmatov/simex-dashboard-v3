@@ -14,6 +14,7 @@ function DashboardChartPlacement({
   assets,
   contentRenderContext,
   accessibilityEnabled,
+  showFullscreen = true,
   actions = null,
   editDisabled = false,
   editControlDisabled = false,
@@ -73,6 +74,7 @@ function DashboardChartPlacement({
       assets={assets}
       contentRenderContext={contentRenderContext}
       accessibilityEnabled={accessibilityEnabled}
+      showFullscreen={showFullscreen}
       editMode={Boolean(actions)}
       placementId={placementId}
       editDisabled={editDisabled}

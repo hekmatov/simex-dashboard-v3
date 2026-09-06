@@ -55,7 +55,10 @@ export function PdpcDashboardHeader({
       data-pdpc-dashboard-header={profile.variant}
     >
       <div className="pdpc-dashboard-identity">
-        <p>Pandemic &amp; Disaster Preparedness Center</p>
+        <p>
+          <span className="pdpc-dashboard-identity-line">Pandemic and Disaster</span>
+          <span className="pdpc-dashboard-identity-line">Preparedness Center</span>
+        </p>
         <h1>WCPH HeV-A26 Simulation</h1>
       </div>
       <nav className="pdpc-dashboard-pages" aria-label="Dashboard pages">
@@ -111,11 +114,14 @@ export function PdpcDashboardFooter() {
 }
 
 function pageLabel(page) {
+  if (page.id === "biomedical") return "Biomedical Information";
   if (page.id === "socio_economic") return "Socio-Economic Information";
   return page.label ?? page.title ?? page.id;
 }
 
 function pageAccessibleLabel(page) {
   const label = pageLabel(page);
-  return page.id === "socio_economic" ? label : `${label} information`;
+  return ["biomedical", "socio_economic"].includes(page.id)
+    ? label
+    : `${label} information`;
 }

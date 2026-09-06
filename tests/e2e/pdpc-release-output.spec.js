@@ -5,7 +5,7 @@ const RELEASES = Object.freeze([
     variant: "biomedical",
     baseUrl: "http://127.0.0.1:4191",
     disciplineId: "biomedical",
-    disciplineLabel: "Biomedical",
+    disciplineLabel: "Biomedical Information",
     expectedPanelTitle: "International Confirmed cases (cumulative)",
   }),
   Object.freeze({
@@ -30,10 +30,10 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await expect(page.locator(".pdpc-release-header")).toHaveCount(0);
     const dashboardHeader = page.locator(".pdpc-dashboard-header");
     await expect(dashboardHeader).toBeVisible();
-    await expect(dashboardHeader.getByText(
-      "Pandemic & Disaster Preparedness Center",
-      { exact: true },
-    )).toBeVisible();
+    const identityLines = dashboardHeader.locator(".pdpc-dashboard-identity-line");
+    await expect(identityLines).toHaveCount(2);
+    await expect(identityLines.nth(0)).toHaveText("Pandemic and Disaster");
+    await expect(identityLines.nth(1)).toHaveText("Preparedness Center");
     await expect(dashboardHeader.getByRole("heading", {
       name: "WCPH HeV-A26 Simulation",
       exact: true,
@@ -53,6 +53,12 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await expect(page.locator(".dashboard-command-crown")).toHaveCount(0);
     await expect(page.locator("button[data-dashboard-mode]")).toHaveCount(0);
     await expect(page.locator(".build-workspace, .present-workspace, .audience-display")).toHaveCount(0);
+    await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", "evidence-ledger");
+    await expect(page.locator(".app-frame")).toHaveAttribute(
+      "data-dashboard-color-profile",
+      "signal-instrument/calibrated-steel",
+    );
+    await expect(page.getByRole("button", { name: "Focus chart" })).toHaveCount(0);
 
     const packageImages = page.locator('img[src*="assets/package/"]');
     await expect(packageImages.first()).toBeVisible();
@@ -121,6 +127,10 @@ test("the integrated PDPC dashboard header uses theme tokens and reflows without
       headerHeight: headerBox.height,
       identityLabelSize: getComputedStyle(identityLabel).fontSize,
       identityTitleSize: getComputedStyle(identityTitle).fontSize,
+      activeButtonHeight: activeButton.getBoundingClientRect().height,
+      inactiveButtonHeight: inactiveButton.getBoundingClientRect().height,
+      activeButtonFontSize: getComputedStyle(activeButton).fontSize,
+      inactiveButtonFontSize: getComputedStyle(inactiveButton).fontSize,
       activeBackground: getComputedStyle(activeButton).backgroundColor,
       activeToken: headerStyles.getPropertyValue("--simex-accent").trim(),
       activeColor: getComputedStyle(activeButton).color,
@@ -144,6 +154,10 @@ test("the integrated PDPC dashboard header uses theme tokens and reflows without
   expect(Math.abs(desktop.offset - desktop.measured)).toBeLessThanOrEqual(1);
   expect(desktop.headerHeight).toBeCloseTo(185, 0);
   expect(desktop.identityLabelSize).toBe(desktop.identityTitleSize);
+  expect(desktop.activeButtonHeight).toBeGreaterThanOrEqual(56);
+  expect(desktop.inactiveButtonHeight).toBeGreaterThanOrEqual(56);
+  expect(desktop.activeButtonFontSize).toBe(desktop.identityTitleSize);
+  expect(desktop.inactiveButtonFontSize).toBe(desktop.identityTitleSize);
   expect(desktop.activeBackground).toBe(cssColor(desktop.activeToken));
   expect(desktop.activeColor).toBe(cssColor(desktop.activeColorToken));
   expect(desktop.inactiveBackground).toBe(cssColor(desktop.inactiveToken));

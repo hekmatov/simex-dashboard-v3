@@ -20,6 +20,7 @@ export function createPdpcReleaseProfile(variant) {
     availableModes: Object.freeze(["view"]),
     initialMode: "view",
     viewOnly: true,
+    disableChartFullscreen: true,
     disableCompanion: true,
     suppressCommandCrown: true,
     HeaderComponent: PdpcReleaseDisclaimer,
