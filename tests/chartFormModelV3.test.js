@@ -106,14 +106,14 @@ test("every chart type explains every data role in the visual language of that c
 
 test("every chart exposes only configuration controls its renderer honors", () => {
   const expectedControls = {
-    bar: { labels: ["visible", "position", "format"] },
-    groupedBar: { labels: ["visible", "position", "format"] },
-    stackedBar: { labels: ["visible", "position", "format"] },
-    horizontalBar: { labels: ["visible", "position", "format"] },
-    horizontalStackedBar: { labels: ["visible", "position", "format"] },
-    line: { labels: ["visible", "position", "format"] },
-    area: { labels: ["visible", "position", "format"] },
-    mixed: { labels: ["visible", "position", "format"] },
+    bar: { labels: ["visible", "position", "format", "unit", "fontSize"] },
+    groupedBar: { labels: ["visible", "position", "format", "unit", "fontSize"] },
+    stackedBar: { labels: ["visible", "position", "format", "unit", "fontSize"] },
+    horizontalBar: { labels: ["visible", "position", "format", "unit", "fontSize"] },
+    horizontalStackedBar: { labels: ["visible", "position", "format", "unit", "fontSize"] },
+    line: { labels: ["visible", "position", "format", "unit", "fontSize"] },
+    area: { labels: ["visible", "position", "format", "unit", "fontSize"] },
+    mixed: { labels: ["visible", "position", "format", "unit", "fontSize"] },
     pie: { labels: ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"] },
     donut: { labels: ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"] },
     kpi: {},
@@ -804,7 +804,7 @@ test("appearance begins with the required title and its visibility control", () 
   const appearance = model.sections.find(({ id }) => id === "appearance");
 
   assert.deepEqual(
-    appearance.fields.slice(0, 6).map(({ id, label, path, value }) => ({
+    appearance.fields.slice(0, 7).map(({ id, label, path, value }) => ({
       id,
       path,
       ...(id === "titleVisible" ? { label, value } : {}),
@@ -816,6 +816,10 @@ test("appearance begins with the required title and its visibility control", () 
         path: ["presentation", "title", "visible"],
         label: "Show title",
         value: true,
+      },
+      {
+        id: "titleFontSize",
+        path: ["presentation", "title", "fontSize"],
       },
       { id: "description", path: ["description"] },
       {
@@ -1039,8 +1043,10 @@ test("quick editor fields expose only supported quick presentation controls", ()
     [
       { id: "title", control: "text", path: ["title"] },
       { id: "titleVisible", control: "toggle", path: ["presentation", "title", "visible"] },
+      { id: "titleFontSize", control: "number", path: ["presentation", "title", "fontSize"] },
       { id: "background", control: "quickBackground", path: ["presentation", "background", "color"] },
       { id: "legendVisible", control: "toggle", path: ["presentation", "legend", "visible"] },
+      { id: "legendFontSize", control: "number", path: ["presentation", "legend", "fontSize"] },
     ],
   );
   assert.equal(
@@ -1055,7 +1061,7 @@ test("quick editor fields expose only supported quick presentation controls", ()
   const unsupported = buildQuickEditorFormModel({ chart: kpiChart() });
   assert.deepEqual(
     unsupported.sections[0].fields.map(({ id }) => id),
-    ["title", "titleVisible", "background"],
+    ["title", "titleVisible", "titleFontSize", "background"],
   );
 });
 

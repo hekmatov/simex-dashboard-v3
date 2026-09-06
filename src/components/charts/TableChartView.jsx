@@ -2,6 +2,7 @@ import React from "react";
 import {
   chartDescriptionVisible,
   chartTitleClassName,
+  chartTitleStyle,
   chartTitleVisible,
   titleContainerProps,
 } from "./chartViewPresentation.js";
@@ -32,7 +33,7 @@ export default function TableChartView({ model, chart = {}, provenance }) {
     ...dashboardOwnedRegionProps("chart-table-register"),
     ...titleContainerProps(chart),
   },
-    React.createElement("h3", { className: chartTitleClassName(chart) }, title),
+    React.createElement("h3", { className: chartTitleClassName(chart), style: chartTitleStyle(chart) }, title),
     chartDescriptionVisible(chart) && chart.description
       ? React.createElement("p", { className: "chart-view-description" }, chart.description)
       : null,

@@ -428,7 +428,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   checkKnownDescriptorKeys(descriptors, PRESENTATION_KEYS, "chart presentation");
   const title = requiredDescriptorValue(descriptors, "title", "Chart presentation");
   ensureObject(title, "Chart presentation title");
-  const imageTitleKeys = new Set(["fontSize", "bold", "italic", "underline"]);
+  const imageTitleKeys = new Set(["bold", "italic", "underline"]);
   if (schema.typeId !== "image" && Object.keys(title).some((key) => imageTitleKeys.has(key))) {
     throw new Error("Image title appearance properties are only supported by Image charts.");
   }
@@ -437,6 +437,7 @@ function validatePresentation(chart, schema, temporalRoles) {
     new Set([
       "align",
       "visible",
+      "fontSize",
       ...(schema.typeId === "image" ? imageTitleKeys : []),
     ]),
     "chart presentation title",
@@ -447,7 +448,7 @@ function validatePresentation(chart, schema, temporalRoles) {
     title.fontSize !== undefined
     && (!Number.isInteger(title.fontSize) || title.fontSize < 12 || title.fontSize > 32)
   ) {
-    throw new Error("Image title font size must be an integer from 12 through 32.");
+    throw new Error("Chart title font size must be an integer from 12 through 32.");
   }
   for (const key of ["bold", "italic", "underline"]) {
     if (title[key] !== undefined && typeof title[key] !== "boolean") {

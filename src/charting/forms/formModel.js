@@ -32,6 +32,7 @@ const LEGEND_PRESENTATION_RENDERERS = new Set([
 const QUICK_PRESENTATION_FIELD_IDS = new Set([
   "title",
   "titleVisible",
+  "titleFontSize",
   "background",
   "legendVisible",
   "legendFontSize",
@@ -375,6 +376,16 @@ function appearanceFields({ chart, schema }) {
       control: "toggle",
       path: ["presentation", "title", "visible"],
       value: chart.presentation?.title?.visible !== false,
+    },
+    {
+      id: "titleFontSize",
+      label: "Chart title font size",
+      control: "number",
+      min: 12,
+      max: 32,
+      step: 1,
+      path: ["presentation", "title", "fontSize"],
+      value: chart.presentation?.title?.fontSize ?? 18,
     },
     {
       id: "description",

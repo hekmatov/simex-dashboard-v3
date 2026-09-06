@@ -3,6 +3,7 @@ import React from "react";
 import {
   chartDescriptionVisible,
   chartTitleClassName,
+  chartTitleStyle,
   titleContainerProps,
 } from "./chartViewPresentation.js";
 
@@ -10,6 +11,10 @@ export default function ChartHeading({ chart, titleId, descriptionId, level = 3,
   const Heading = `h${level}`;
   const title = String(chart?.title || "Chart");
   const description = String(chart?.description || "");
+  const resolvedTitleStyle = {
+    ...chartTitleStyle(chart),
+    ...titleStyle,
+  };
 
   return React.createElement(
     "header",
@@ -17,10 +22,10 @@ export default function ChartHeading({ chart, titleId, descriptionId, level = 3,
     React.createElement(Heading, {
       id: titleId,
       className: chartTitleClassName(chart),
-      ...(titleStyle ? {
+      ...(Object.keys(resolvedTitleStyle).length > 0 ? {
         style: {
           fontFamily: "var(--simex-style-heading-font)",
-          ...titleStyle,
+          ...resolvedTitleStyle,
         },
       } : {}),
     }, title),

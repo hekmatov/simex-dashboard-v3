@@ -286,7 +286,19 @@ test("Image title appearance is image-only, bounded, and typed", () => {
     assert.throws(() => validateChartInstance(chart), new RegExp(`${key}.*boolean`, "i"));
   }
 
-  for (const key of ["fontSize", "bold", "italic", "underline"]) {
+  const nonImageTitle = createChartDraft("line", {
+    id: "line-title-size",
+    title: "Trend",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: { title: { fontSize: 20 } },
+  });
+  assert.equal(validateChartInstance(nonImageTitle), nonImageTitle);
+
+  for (const key of ["bold", "italic", "underline"]) {
     const chart = createChartDraft("line", {
       id: `non-image-${key}`,
       title: "Trend",

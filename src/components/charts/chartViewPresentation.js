@@ -38,6 +38,13 @@ export function chartTitleClassName(chart) {
     : "chart-view-title chart-view-title--visually-hidden";
 }
 
+export function chartTitleStyle(chart) {
+  const fontSize = chart?.presentation?.title?.fontSize;
+  return Number.isInteger(fontSize) && fontSize >= 12 && fontSize <= 32
+    ? { fontSize: `${fontSize}px` }
+    : undefined;
+}
+
 export function titleContainerProps(chart) {
   const align = titleAlignment(chart);
   return {
