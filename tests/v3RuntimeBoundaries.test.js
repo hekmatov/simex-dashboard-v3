@@ -295,6 +295,14 @@ test("source CSS and JSX remote assets report exact paths and fields", async () 
   }
 });
 
+test("external JSX navigation links are not runtime asset dependencies", async () => {
+  const inputs = await repositoryInputs();
+  inputs.sourceFiles["src/runtime-boundary-navigation-fixture.jsx"] =
+    'export default <a href="https://example.invalid/guide">Guide</a>;';
+
+  assert.doesNotThrow(() => boundaryModule.inspectRuntimeBoundaries(inputs));
+});
+
 test("source import and runtime URL variants report exact paths and fields", async () => {
   const inputs = await repositoryInputs();
   const filePath = "src/runtime-boundary-fixture.js";
