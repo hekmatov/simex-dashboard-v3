@@ -15,7 +15,7 @@ const STYLE_GRAMMAR_EXCEPTION = Object.freeze({
 const BUNDLED_FONT_FACE_EXCEPTION = Object.freeze({
   path: "src/styles/fonts.css",
   properties: Object.freeze(["font-family"]),
-  value: '"SimEx Inter"',
+  values: Object.freeze(['"SimEx Inter"', '"PDPC Avenir"']),
   reason: "repository-owned font-face family declaration",
 });
 const KATEX_EXCEPTION = Object.freeze({
@@ -244,7 +244,7 @@ function isAllowedRawBoundary(relativePath, declaration) {
     && STYLE_GRAMMAR_EXCEPTION.properties.includes(declaration.property);
   const isBundledFontFace = relativePath === BUNDLED_FONT_FACE_EXCEPTION.path
     && BUNDLED_FONT_FACE_EXCEPTION.properties.includes(declaration.property)
-    && declaration.value === BUNDLED_FONT_FACE_EXCEPTION.value;
+    && BUNDLED_FONT_FACE_EXCEPTION.values.includes(declaration.value);
   return isStyleGrammarRole || isBundledFontFace;
 }
 

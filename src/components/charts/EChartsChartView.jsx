@@ -79,7 +79,11 @@ export default function EChartsChartView({
       typographyKey,
       audienceTier,
     );
-    setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
+    let cancelled = false;
+    void waitForChartFonts(typeof document === "undefined" ? null : document.fonts, next).then(() => {
+      if (!cancelled) setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
+    });
+    return () => { cancelled = true; };
   }, [audienceTier, typographyKey]);
 
   React.useEffect(() => {
@@ -280,6 +284,15 @@ export function applyEChartsPresentation(
       headingFont,
     ),
   };
+}
+
+export async function waitForChartFonts(fontSet, textTheme) {
+  if (typeof fontSet?.load !== "function") return;
+  const faces = [[400, textTheme.bodyFont], [700, textTheme.headingFont]]
+    .filter(([, family]) => family && family !== "inherit");
+  // Load before the canvas engine caches glyph measurements. Missing assets
+  // still permit the token-defined fallback family to render.
+  await Promise.allSettled(faces.map(async ([weight, family]) => fontSet.load(`${weight} 14px ${family}`)));
 }
 
 export function readChartTextTheme(computedStyle, typographyKey = "", audienceTier = "") {

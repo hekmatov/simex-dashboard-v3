@@ -1,6 +1,5 @@
-// One family across PDPC View, including tables and authored code. Calibri is
-// the guide fallback when the host does not provide licensed Avenir fonts.
-const PDPC_FONT_STACK = 'Avenir, "Avenir Next", Calibri, "SimEx Inter", sans-serif';
+// Both roles use the supplied Avenir Book asset, registered in fonts.css.
+const PDPC_FONT_STACK = '"PDPC Avenir", "SimEx Inter", sans-serif';
 const SURFACE_ROLES = Object.freeze([
   "shell", "command-bar", "panel", "editor", "dialog", "drawer", "menu", "status", "table", "chart-cell",
 ]);
@@ -92,7 +91,7 @@ export function resolveDashboardStyleGrammar(
         ...STYLE_GRAMMARS["evidence-ledger"],
         bodyFont: PDPC_FONT_STACK,
         headingFont: PDPC_FONT_STACK,
-        headingWeight: "900",
+        headingWeight: "700",
         headingTracking: "normal",
       }
     : STYLE_GRAMMARS[dashboardStyle] ?? STYLE_GRAMMARS["evidence-ledger"];

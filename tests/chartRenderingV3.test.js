@@ -28,6 +28,7 @@ const {
   createEChartsLifecycle,
   readChartTextTheme,
   sameChartTextTheme,
+  waitForChartFonts,
 } = await import("../src/components/charts/EChartsChartView.jsx");
 
 const {
@@ -39,6 +40,22 @@ const {
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
+
+test("chart font readiness waits for body and heading faces before canvas measurement", async () => {
+  const calls = [];
+  const pending = [];
+  const fontSet = { load: spec => { calls.push(spec); return new Promise(resolve => pending.push(resolve)); } };
+  let complete = false;
+  const result = waitForChartFonts(fontSet, {bodyFont:'"PDPC Avenir"',headingFont:'"PDPC Avenir"'}).then(() => {complete=true;});
+  await Promise.resolve();
+  assert.equal(complete, false);
+  assert.deepEqual(calls, ['400 14px "PDPC Avenir"', '700 14px "PDPC Avenir"']);
+  pending.forEach(resolve => resolve([]));
+  await result;
+  assert.equal(complete, true);
+  await waitForChartFonts(null, {});
+  await waitForChartFonts({load: () => Promise.reject(new Error('Unavailable'))}, {bodyFont:'"Missing"',headingFont:'"Missing"'});
+});
 
 test("PDPC chart labels, rich text, tooltips and custom graphics use the two style tokens", () => {
   const tokens = resolveDashboardStyleGrammar("pdpc");

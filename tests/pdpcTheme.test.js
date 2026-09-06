@@ -15,7 +15,7 @@ test("PDPC preserves Ledger geometry and uses one family for every typography ro
     assert.equal(pdpc.dashboardStyle, "pdpc");
     const fonts = ["body", "heading"].map(role => pdpc.styleVariables[`--simex-style-${role}-font`]);
     assert.equal(new Set(fonts).size, 1);
-    assert.match(fonts[0], /Avenir.*Calibri/);
+    assert.match(fonts[0], /^"PDPC Avenir",/);
     for (const [key, value] of Object.entries(ledger.styleVariables)) {
       if (!key.endsWith("-font") && !key.endsWith("-weight") && !key.endsWith("-tracking")) {
         assert.equal(pdpc.styleVariables[key], value, key);
@@ -39,6 +39,16 @@ test("PDPC palette and appearance survive dashboard and presentation boundaries"
     assert.deepEqual(restored.styleVariables, theme.styleVariables);
   }
   const { cssVariables } = resolveDashboardTheme({ globalStyles, appearancePreference: "light" });
-  assert.equal(cssVariables["--simex-accent"], "#253162");
-  assert.deepEqual([1, 2, 3, 4, 5].map(i => cssVariables[`--simex-data-${i}`]), ["#253162", "#258161", "#139cd8", "#d72628", "#8d88ad"]);
+  assert.equal(cssVariables["--simex-accent"], "#258161");
+  assert.equal(cssVariables["--simex-selected"], "#253162");
+  assert.equal(cssVariables["--simex-chrono"], "#087cab");
+  assert.deepEqual([1, 2, 3].map(i => cssVariables[`--simex-data-${i}`]), ["#258161", "#139cd8", "#253162"]);
+});
+
+test("PDPC uses a bundled Avenir Book font file", async () => {
+  const css = await readFile(new URL("../src/styles/fonts.css", import.meta.url), "utf8");
+  assert.match(css, /font-family: "PDPC Avenir"/);
+  assert.match(css, /AvenirBook\.otf/);
+  const font = await readFile(new URL("../src/assets/fonts/AvenirBook.otf", import.meta.url));
+  assert.equal(font.subarray(0, 4).toString("ascii"), "OTTO");
 });

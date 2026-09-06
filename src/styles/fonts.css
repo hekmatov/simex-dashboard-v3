@@ -5,3 +5,11 @@
   font-style: normal;
   font-weight: 100 900;
 }
+
+@font-face {
+  font-family: "PDPC Avenir";
+  src: url("../assets/fonts/AvenirBook.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
