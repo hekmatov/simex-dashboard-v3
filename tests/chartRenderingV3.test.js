@@ -89,7 +89,7 @@ test("PDPC chart labels, rich text, tooltips and custom graphics use the two sty
   assert.equal(original.option.series[0].renderItem().style.fontFamily, "Arial");
 });
 
-test("description-free Cartesian charts balance their plot gutters vertically", () => {
+test("Cartesian plot gutters do not reserve hidden canvas headings or mirror top space below labels", () => {
   const model = {
     option: {
       grid: { left: 48, right: 28, top: 76, bottom: 32 },
@@ -107,10 +107,42 @@ test("description-free Cartesian charts balance their plot gutters vertically", 
     presentation: { description: { visible: false }, title: { align: "left" } },
   });
 
-  assert.equal(withDescription.option.grid.top, 76);
+  assert.equal(withDescription.option.grid.top, 10);
   assert.equal(withDescription.option.grid.bottom, 32);
-  assert.equal(withoutDescription.option.grid.top, 76);
-  assert.equal(withoutDescription.option.grid.bottom, 76);
+  assert.equal(withoutDescription.option.grid.top, 10);
+  assert.equal(withoutDescription.option.grid.bottom, 32);
+});
+
+test("Cartesian gutters retain visible legends, axis titles and range controls independently", () => {
+  const model = {
+    option: {
+      grid: { containLabel: true, left: 48, right: 28, top: 76, bottom: 52 },
+      legend: { show: true },
+      xAxis: { type: "category", data: ["A", "B"] },
+      yAxis: { type: "value" },
+      series: [{ name: "Trust", type: "bar", data: [41, 52] }],
+      dataZoom: [{ type: "slider" }],
+    },
+  };
+  const visible = applyEChartsPresentation(model, { typeId: "groupedBar" });
+  assert.equal(visible.option.grid.top, 44);
+  assert.equal(visible.option.legend.top, 12);
+  assert.equal(visible.option.grid.bottom, 52);
+  assert.equal(visible.option.grid.containLabel, true);
+  for (const legend of [{ show: false }, { show: true, data: [] }]) {
+    const hidden = applyEChartsPresentation({ ...model, option: { ...model.option, legend } }, {});
+    assert.equal(hidden.option.grid.top, 10);
+    assert.equal(hidden.option.grid.bottom, 52);
+  }
+  const projection = createValueAxisTitleProjection({
+    horizontal: true,
+    secondary: true,
+    settings: { title: "Visible title", titleFontSize: 48 },
+  });
+  const titled = applyEChartsPresentation({ ...model, valueAxisTitleProjection: [projection] }, {});
+  const required = valueAxisTitleGutters([projection], titled.valueAxisTitleTextTheme);
+  assert.ok(titled.option.grid.top >= required.top);
+  assert.equal(titled.option.grid.bottom, 52);
 });
 
 test("vertical fill expands horizontal bar plots into the available panel height", () => {

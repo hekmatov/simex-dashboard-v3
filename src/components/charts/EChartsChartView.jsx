@@ -1,7 +1,6 @@
 import React from "react";
 import * as echarts from "echarts";
 
-import { chartDescriptionVisible } from "../../charting/presentation/chartCitation.js";
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import {
   resolveValueAxisTitleGraphics,
@@ -217,13 +216,12 @@ export function applyEChartsPresentation(
     ...(audienceScale ? { tickFontSize: audienceScale.text } : {}),
   };
   const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
-  const verticalFill = horizontalBarsFillVertically(chart);
+  const compactLegend = option.grid !== undefined || horizontalBarsFillVertically(chart);
   const legend = option.legend === undefined
     ? undefined
-    : normalizedLegend(option.legend, textMuted, bodyFont, verticalFill);
-  const grid = verticallyBalancedGrid(
+    : normalizedLegend(option.legend, textMuted, bodyFont, compactLegend);
+  const grid = contentAwareGrid(
     normalizedGrid(option.grid, titleGutters),
-    chart,
     titleGutters,
     legend,
   );
@@ -812,47 +810,33 @@ function normalizedGrid(value, titleGutters) {
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
 }
 
-const HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING = 10;
+const PLOT_TOP_PADDING = 10;
 
-function verticallyBalancedGrid(value, chart, titleGutters = {}, legend) {
-  if (horizontalBarsFillVertically(chart)) {
-    const fill = (grid) => {
-      if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
-      return {
-        ...grid,
-        top: compactGridGutter(
-          grid.top,
-          titleGutters.top,
-          legendVerticalGutter(legend) + HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING,
-        ),
-        bottom: compactGridGutter(grid.bottom, titleGutters.bottom, 32),
-      };
-    };
-    return Array.isArray(value) ? value.map(fill) : fill(value);
-  }
-  if (chartDescriptionVisible(chart) && String(chart?.description ?? "").trim()) return value;
-  const balance = (grid) => {
+function contentAwareGrid(value, titleGutters = {}, legend) {
+  const fit = (grid) => {
     if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
-    if (!Number.isFinite(grid.top) || !Number.isFinite(grid.bottom)) return grid;
-    const gutter = Math.max(grid.top, grid.bottom);
-    return { ...grid, top: gutter, bottom: gutter };
+    // Chart headings/descriptions live outside the canvas. Only visible canvas
+    // content needs a top gutter; it must never create an equal bottom gutter.
+    // Keep the adapter's bottom clearance for labels, sliders and visual maps.
+    return {
+      ...grid,
+      top: Number.isFinite(grid.top)
+        ? Math.max(titleGutters.top ?? 0, legendVerticalGutter(legend) + PLOT_TOP_PADDING)
+        : grid.top,
+    };
   };
-  return Array.isArray(value) ? value.map(balance) : balance(value);
+  return Array.isArray(value) ? value.map(fit) : fit(value);
 }
 
 function legendVerticalGutter(legend) {
   if (!legend || typeof legend !== "object" || Array.isArray(legend) || legend.show === false) return 0;
+  if (Array.isArray(legend.data) && legend.data.length === 0) return 0;
   const fontSize = Number.isFinite(legend.textStyle?.fontSize) ? legend.textStyle.fontSize : 11;
   const itemHeight = Number.isFinite(legend.itemHeight)
     ? legend.itemHeight
     : Math.round((fontSize * 10) / 11);
   const top = Number.isFinite(legend.top) ? legend.top : 12;
   return Math.round(top + Math.max(fontSize, itemHeight) + 11);
-}
-
-function compactGridGutter(current, required, target) {
-  if (!Number.isFinite(current)) return current;
-  return Math.min(current, Math.max(Number.isFinite(required) ? required : 0, target));
 }
 
 function horizontalBarsFillVertically(chart) {
