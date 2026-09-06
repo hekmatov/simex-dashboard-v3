@@ -67,7 +67,7 @@ export function PdpcDashboardHeader({
               type="button"
               data-dashboard-page-id={page.id}
               aria-current={active ? "page" : undefined}
-              aria-label={`${pageLabel(page)} information`}
+              aria-label={pageAccessibleLabel(page)}
               onClick={() => onPageRequest?.(page.id)}
             >
               {pageLabel(page)}
@@ -87,6 +87,11 @@ export function PdpcDashboardHeader({
 }
 
 function pageLabel(page) {
-  if (page.id === "socio_economic") return "Socio-Economic";
+  if (page.id === "socio_economic") return "Socio-Economic Information";
   return page.label ?? page.title ?? page.id;
+}
+
+function pageAccessibleLabel(page) {
+  const label = pageLabel(page);
+  return page.id === "socio_economic" ? label : `${label} information`;
 }

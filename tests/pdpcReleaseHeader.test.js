@@ -65,6 +65,25 @@ test("the PDPC dashboard header owns identity, navigation, and the official logo
   assert.doesNotMatch(html, />Home<|>View<|>Build<|>Present<|>Audience|>Updated</);
 });
 
+test("the socio-economic navigation names its information destination once", () => {
+  const socioeconomicPages = [
+    pages[0],
+    { id: "socio_economic", title: "Socio-economic" },
+  ];
+  const html = renderToStaticMarkup(React.createElement(PdpcDashboardHeader, {
+    profile: { id: "pdpc-socioeconomic", variant: "socioeconomic" },
+    pages: socioeconomicPages,
+    activePage: socioeconomicPages[1],
+    onPageRequest() {},
+  }));
+
+  assert.match(
+    html,
+    /data-dashboard-page-id="socio_economic"[^>]*aria-label="Socio-Economic Information"[^>]*>Socio-Economic Information</,
+  );
+  assert.doesNotMatch(html, /Information information/);
+});
+
 test("the release profile installs the integrated dashboard header", () => {
   const releaseProfile = createPdpcReleaseProfile("biomedical");
   assert.equal(typeof releaseProfile.HeaderComponent, "function");

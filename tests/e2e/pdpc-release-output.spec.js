@@ -11,7 +11,7 @@ const RELEASES = Object.freeze([
     variant: "socioeconomic",
     baseUrl: "http://127.0.0.1:4192",
     disciplineId: "socio_economic",
-    disciplineLabel: "Socio-Economic",
+    disciplineLabel: "Socio-Economic Information",
   }),
 ]);
 
@@ -88,13 +88,25 @@ test("the integrated PDPC dashboard header uses theme tokens and reflows without
     const disclaimerNode = document.querySelector(".pdpc-release-disclaimer");
     const headerNode = document.querySelector(".pdpc-dashboard-header");
     const logoNode = headerNode.querySelector(".pdpc-dashboard-logo");
+    const identityLabel = headerNode.querySelector(".pdpc-dashboard-identity p");
+    const identityTitle = headerNode.querySelector(".pdpc-dashboard-identity h1");
     const activeButton = headerNode.querySelector('[aria-current="page"]');
     const inactiveButton = headerNode.querySelector('button:not([aria-current="page"])');
+    const disclaimerStyles = getComputedStyle(disclaimerNode);
     const headerStyles = getComputedStyle(headerNode);
     const headerBox = headerNode.getBoundingClientRect();
     const logoBox = logoNode.getBoundingClientRect();
     return {
-      disclaimerPosition: getComputedStyle(disclaimerNode).position,
+      disclaimerPosition: disclaimerStyles.position,
+      disclaimerBackground: disclaimerStyles.backgroundColor,
+      disclaimerBackgroundToken: disclaimerStyles.getPropertyValue("--simex-surface-panel-alt").trim(),
+      disclaimerColor: disclaimerStyles.color,
+      disclaimerColorToken: disclaimerStyles.getPropertyValue("--simex-text-strong").trim(),
+      disclaimerBorder: disclaimerStyles.borderBottomColor,
+      disclaimerBorderToken: disclaimerStyles.getPropertyValue("--simex-border-subtle").trim(),
+      headerHeight: headerBox.height,
+      identityLabelSize: getComputedStyle(identityLabel).fontSize,
+      identityTitleSize: getComputedStyle(identityTitle).fontSize,
       activeBackground: getComputedStyle(activeButton).backgroundColor,
       activeToken: headerStyles.getPropertyValue("--simex-accent").trim(),
       activeColor: getComputedStyle(activeButton).color,
@@ -112,17 +124,22 @@ test("the integrated PDPC dashboard header uses theme tokens and reflows without
     };
   });
   expect(desktop.disclaimerPosition).toBe("sticky");
+  expect(desktop.disclaimerBackground).toBe(cssColor(desktop.disclaimerBackgroundToken));
+  expect(desktop.disclaimerColor).toBe(cssColor(desktop.disclaimerColorToken));
+  expect(desktop.disclaimerBorder).toBe(cssColor(desktop.disclaimerBorderToken));
   expect(Math.abs(desktop.offset - desktop.measured)).toBeLessThanOrEqual(1);
+  expect(desktop.headerHeight).toBeCloseTo(185, 0);
+  expect(desktop.identityLabelSize).toBe(desktop.identityTitleSize);
   expect(desktop.activeBackground).toBe(cssColor(desktop.activeToken));
   expect(desktop.activeColor).toBe(cssColor(desktop.activeColorToken));
   expect(desktop.inactiveBackground).toBe(cssColor(desktop.inactiveToken));
   expect(desktop.logoBackground).toBe("rgba(0, 0, 0, 0)");
   expect(desktop.logoBorder).toBe("0px");
   expect(desktop.logoShadow).toBe("none");
-  expect(desktop.logoTopGap).toBeGreaterThanOrEqual(2);
-  expect(desktop.logoTopGap).toBeLessThanOrEqual(4);
-  expect(desktop.logoBottomGap).toBeGreaterThanOrEqual(2);
-  expect(desktop.logoBottomGap).toBeLessThanOrEqual(4);
+  expect(desktop.logoTopGap).toBeGreaterThanOrEqual(4.5);
+  expect(desktop.logoTopGap).toBeLessThanOrEqual(5.5);
+  expect(desktop.logoBottomGap).toBeGreaterThanOrEqual(4.5);
+  expect(desktop.logoBottomGap).toBeLessThanOrEqual(5.5);
 
   await page.setViewportSize({ width: 720, height: 900 });
   await expect(disclaimer).toBeVisible();

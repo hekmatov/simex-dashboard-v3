@@ -1,16 +1,13 @@
 :root {
-  --simex-release-navy: #08224a;
-  --simex-release-rose: #f1a1ad;
-  --simex-release-rose-soft: #fceef0;
   --simex-view-only-disclaimer-height: 28px;
   --simex-view-only-sticky-offset: var(--simex-view-only-disclaimer-height);
 }
 
 .pdpc-release-disclaimer {
   align-items: center;
-  background: var(--simex-release-rose-soft);
-  border-bottom: 1px solid var(--simex-release-rose);
-  color: var(--simex-release-navy);
+  background: var(--simex-surface-panel-alt);
+  border-bottom: 1px solid var(--simex-border-subtle);
+  color: var(--simex-text-strong);
   display: flex;
   font-size: 0.75rem;
   font-weight: 700;
@@ -26,13 +23,14 @@
 }
 
 .pdpc-release-disclaimer__texture {
-  color: rgb(8 34 74 / 8%);
+  color: var(--simex-text-muted);
   display: block;
   font-size: 0.75rem;
   inset: 0;
   line-height: var(--simex-view-only-disclaimer-height);
   overflow: hidden;
   position: absolute;
+  opacity: 0.12;
   white-space: nowrap;
 }
 
@@ -50,37 +48,35 @@
   color: var(--simex-text-strong);
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(250px, 1fr) auto minmax(220px, 1fr);
-  height: 112px;
+  grid-template-columns: minmax(300px, 1fr) auto minmax(300px, 1fr);
+  height: 185px;
   margin: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 2px 3px 2px 18px;
+  padding: 4px 5px 4px 18px;
 }
 
 .pdpc-dashboard-identity {
   min-width: 0;
 }
 
-.pdpc-dashboard-identity p,
-.pdpc-dashboard-identity h1 {
+.app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity p,
+.app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity h1 {
+  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+  line-height: 1.15;
   margin: 0;
 }
 
 .pdpc-dashboard-identity p {
   color: var(--simex-text-muted);
-  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.035em;
-  line-height: 1.3;
   text-transform: uppercase;
 }
 
 .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity h1 {
   color: var(--simex-text-strong);
   font-family: var(--simex-style-heading-font);
-  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
-  line-height: 1.15;
   margin-top: 5px;
 }
 
@@ -127,9 +123,9 @@
   border-radius: 0;
   box-shadow: none;
   display: block;
-  height: 106px;
+  height: 175px;
   justify-self: end;
-  max-width: min(29vw, 300px);
+  max-width: min(34vw, 320px);
   object-fit: contain;
   object-position: right center;
   padding: 0;
@@ -149,8 +145,8 @@ html:has(.app-frame[data-release-profile^="pdpc-"]) {
     gap: 6px 12px;
     grid-template-columns: minmax(0, 1fr) auto;
     height: auto;
-    min-height: 132px;
-    padding: 2px 3px 8px 12px;
+    min-height: 218px;
+    padding: 4px 5px 8px 12px;
   }
 
   .pdpc-dashboard-identity {
@@ -174,30 +170,30 @@ html:has(.app-frame[data-release-profile^="pdpc-"]) {
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-logo {
     grid-column: 2;
     grid-row: 1;
-    height: 74px;
-    max-width: min(34vw, 164px);
+    height: 122px;
+    max-width: min(38vw, 210px);
   }
 }
 
 @media (max-width: 520px) {
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-header {
     gap: 6px 8px;
-    min-height: 126px;
+    min-height: 208px;
     padding-left: 9px;
   }
 
-  .pdpc-dashboard-identity p {
-    font-size: 0.65rem;
-    letter-spacing: 0;
-  }
-
+  .pdpc-dashboard-identity p,
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-identity h1 {
     font-size: 1rem;
   }
 
+  .pdpc-dashboard-identity p {
+    letter-spacing: 0;
+  }
+
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-logo {
-    height: 58px;
-    max-width: min(32vw, 110px);
+    height: 96px;
+    max-width: min(36vw, 165px);
   }
 
   .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-pages button {
