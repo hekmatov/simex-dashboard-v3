@@ -94,7 +94,6 @@ export default function BuildWorkspace({
   accessibilityEnabled = false,
   deviceLayout,
   focusLabelKey,
-  operationError = "",
   geoDataSources,
   onActivePageChange,
   onActivate,
@@ -818,7 +817,6 @@ export default function BuildWorkspace({
             auxiliaryLocked={auxiliaryLocked}
             auxiliaryDisabledReason={auxiliaryDisabledReason}
             accessibilityEnabled={accessibilityEnabled}
-            operationError={operationError}
             onFinish={onFinish}
             onReset={onReset}
             onAddChart={() => onAddChart?.()}

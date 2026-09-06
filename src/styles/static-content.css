@@ -547,7 +547,8 @@
 }
 
 .free-text-chart-view__header h2 {
-  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  font-size: 18px;
+  line-height: 1.2;
   margin: 0;
 }
 

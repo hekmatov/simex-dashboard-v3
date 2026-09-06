@@ -32,8 +32,11 @@ const LEGEND_PRESENTATION_RENDERERS = new Set([
 const QUICK_PRESENTATION_FIELD_IDS = new Set([
   "title",
   "titleVisible",
+  "titleFontSize",
   "background",
   "legendVisible",
+  "legendFontSize",
+  "axes",
 ]);
 
 const INTERPRETATION_LABELS = Object.freeze({
@@ -375,6 +378,16 @@ function appearanceFields({ chart, schema }) {
       value: chart.presentation?.title?.visible !== false,
     },
     {
+      id: "titleFontSize",
+      label: "Chart title font size",
+      control: "number",
+      min: 12,
+      max: 32,
+      step: 1,
+      path: ["presentation", "title", "fontSize"],
+      value: chart.presentation?.title?.fontSize ?? 18,
+    },
+    {
       id: "description",
       label: "Description",
       control: "textarea",
@@ -421,6 +434,15 @@ function appearanceFields({ chart, schema }) {
           control: "toggle",
           path: ["presentation", "legend", "wrap"],
           value: chart.presentation?.legend?.wrap === true,
+        }, {
+          id: "legendFontSize",
+          label: "Legend font size",
+          control: "number",
+          min: 8,
+          max: 20,
+          step: 1,
+          path: ["presentation", "legend", "fontSize"],
+          value: chart.presentation?.legend?.fontSize ?? 11,
         }]
       : []),
     ...(schema.typeId === "table"
@@ -577,12 +599,12 @@ function labelsFields({ chart, schema }) {
         ? "Show or hide each point's Label role beside the point."
         : schema.dataFamily === "matrix"
           ? "Show or hide the value inside each cell when the grid has at most 30 cells."
-          : "Control text shown with chart marks; it does not create a new series or change source values.",
+        : undefined,
   }];
 }
 
 function labelControls(schema) {
-  if (schema.dataFamily === "axis") return ["visible", "position", "format"];
+  if (schema.dataFamily === "axis") return ["visible", "position", "format", "unit", "fontSize"];
   if (schema.dataFamily === "composition") return ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"];
   if (schema.dataFamily === "relationship") return ["visible", "position"];
   if (schema.typeId === "heatmap") return ["visible"];

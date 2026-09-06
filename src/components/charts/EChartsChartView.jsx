@@ -213,9 +213,15 @@ export function applyEChartsPresentation(
     ...(audienceScale ? { tickFontSize: audienceScale.text } : {}),
   };
   const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
+  const verticalFill = horizontalBarsFillVertically(chart);
+  const legend = option.legend === undefined
+    ? undefined
+    : normalizedLegend(option.legend, textMuted, bodyFont, verticalFill);
   const grid = verticallyBalancedGrid(
     normalizedGrid(option.grid, titleGutters),
     chart,
+    titleGutters,
+    legend,
   );
   const presentedOption = {
       ...optionWithoutBackground,
@@ -233,9 +239,9 @@ export function applyEChartsPresentation(
               ? option.title.map((title) => normalizedTitle(title, align, textStrong, headingFont))
               : normalizedTitle(option.title, align, textStrong, headingFont),
           }),
-      ...(option.legend === undefined
+      ...(legend === undefined
         ? {}
-        : { legend: normalizedLegend(option.legend, textMuted, bodyFont) }),
+        : { legend }),
       ...(option.xAxis === undefined
         ? {}
         : { xAxis: normalizedAxis(option.xAxis, textMuted, borderSubtle, gridline, bodyFont, dataFont) }),
@@ -492,6 +498,19 @@ export function createEChartsLifecycle({
     valueAxisTitleGraphicIds = nextIds;
   }
 
+  function clearValueAxisTitleGraphics(nextProjection, nextInstance = instance) {
+    if (!nextInstance || valueAxisTitleGraphicIds.length === 0) return;
+    const nextIds = new Set((Array.isArray(nextProjection) ? nextProjection : [])
+      .filter((projection) => projection && typeof projection === "object")
+      .map(({ id }) => `simex-value-axis-title-${id === "secondary" ? "secondary" : "primary"}`));
+    const staleIds = valueAxisTitleGraphicIds.filter((id) => !nextIds.has(id));
+    if (staleIds.length === 0) return;
+    nextInstance.setOption({
+      graphic: staleIds.map((id) => ({ id, $action: "remove" })),
+    }, { lazyUpdate: false });
+    valueAxisTitleGraphicIds = valueAxisTitleGraphicIds.filter((id) => nextIds.has(id));
+  }
+
   function cleanup(nextInstance = instance) {
     observer?.disconnect?.();
     if (resizeListener) windowTarget?.removeEventListener?.("resize", resizeListener);
@@ -542,9 +561,11 @@ export function createEChartsLifecycle({
       if (!instance) return;
       try {
         registerMap(echartsApi, model?.mapRegistration);
-        valueAxisTitleProjection = Array.isArray(model?.valueAxisTitleProjection)
+        const nextValueAxisTitleProjection = Array.isArray(model?.valueAxisTitleProjection)
           ? model.valueAxisTitleProjection
           : [];
+        clearValueAxisTitleGraphics(nextValueAxisTitleProjection, instance);
+        valueAxisTitleProjection = nextValueAxisTitleProjection;
         valueAxisTitleTextTheme = model?.valueAxisTitleTextTheme ?? {};
         instance.setOption(model?.option ?? {}, {
           notMerge: true,
@@ -592,16 +613,17 @@ function normalizedTitle(value, align, textColor, headingFont) {
       };
 }
 
-function normalizedLegend(value, textColor, bodyFont) {
+function normalizedLegend(value, textColor, bodyFont, compactTop = false) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const fontSize = Number.isFinite(value.textStyle?.fontSize) ? value.textStyle.fontSize : 11;
   return {
     ...value,
     type: value.type ?? "scroll",
     left: value.left ?? "center",
-    top: value.top ?? 32,
+    top: value.top ?? (compactTop ? 12 : 32),
     width: value.width ?? "88%",
-    itemWidth: value.itemWidth ?? 16,
-    itemHeight: value.itemHeight ?? 10,
+    itemWidth: value.itemWidth ?? Math.round((fontSize * 16) / 11),
+    itemHeight: value.itemHeight ?? Math.round((fontSize * 10) / 11),
     textStyle: {
       fontSize: 11,
       ...(value.textStyle ?? {}),
@@ -739,7 +761,24 @@ function normalizedGrid(value, titleGutters) {
   return Array.isArray(value) ? value.map(normalize) : normalize(value);
 }
 
-function verticallyBalancedGrid(value, chart) {
+const HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING = 10;
+
+function verticallyBalancedGrid(value, chart, titleGutters = {}, legend) {
+  if (horizontalBarsFillVertically(chart)) {
+    const fill = (grid) => {
+      if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
+      return {
+        ...grid,
+        top: compactGridGutter(
+          grid.top,
+          titleGutters.top,
+          legendVerticalGutter(legend) + HORIZONTAL_BAR_VERTICAL_FILL_TOP_PADDING,
+        ),
+        bottom: compactGridGutter(grid.bottom, titleGutters.bottom, 32),
+      };
+    };
+    return Array.isArray(value) ? value.map(fill) : fill(value);
+  }
   if (chartDescriptionVisible(chart) && String(chart?.description ?? "").trim()) return value;
   const balance = (grid) => {
     if (!grid || typeof grid !== "object" || Array.isArray(grid)) return grid;
@@ -748,6 +787,26 @@ function verticallyBalancedGrid(value, chart) {
     return { ...grid, top: gutter, bottom: gutter };
   };
   return Array.isArray(value) ? value.map(balance) : balance(value);
+}
+
+function legendVerticalGutter(legend) {
+  if (!legend || typeof legend !== "object" || Array.isArray(legend) || legend.show === false) return 0;
+  const fontSize = Number.isFinite(legend.textStyle?.fontSize) ? legend.textStyle.fontSize : 11;
+  const itemHeight = Number.isFinite(legend.itemHeight)
+    ? legend.itemHeight
+    : Math.round((fontSize * 10) / 11);
+  const top = Number.isFinite(legend.top) ? legend.top : 12;
+  return Math.round(top + Math.max(fontSize, itemHeight) + 11);
+}
+
+function compactGridGutter(current, required, target) {
+  if (!Number.isFinite(current)) return current;
+  return Math.min(current, Math.max(Number.isFinite(required) ? required : 0, target));
+}
+
+function horizontalBarsFillVertically(chart) {
+  return chart?.presentation?.series?.verticalFill === true
+    && ["horizontalBar", "horizontalStackedBar"].includes(chart?.typeId);
 }
 
 function maximumPixelGutter(current, required) {

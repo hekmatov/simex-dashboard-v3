@@ -1,8 +1,8 @@
 import React from "react";
 import { IconControl, SimExIcon } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
-const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
-const X_AXIS_PROPERTIES = new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]);
+const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "labelFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
+const X_AXIS_PROPERTIES = new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth", "labelMaxWidthEm"]);
 const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
 function StandardField({
@@ -346,11 +346,7 @@ function structuredControls(control, value, onChange, field = {}) {
     ) : null, controls.has("position") ? /* @__PURE__ */ React.createElement("label", null, "Label position", /* @__PURE__ */ React.createElement("select", {
       value: current.position ?? "",
       onChange: (event) => emit(["position"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? /* @__PURE__ */ React.createElement("label", null, "Label format", /* @__PURE__ */ React.createElement("input", {
-      value: current.format ?? "",
-      placeholder: "{value}",
-      onChange: (event) => emit(["format"], event.target.value)
-    })) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null);
+    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? labelFormatControl(current.format, (nextValue) => emit(["format"], nextValue)) : null, controls.has("unit") ? textControl("Label unit", current.unit, (nextValue) => emit(["unit"], nextValue)) : null, controls.has("fontSize") ? boundedNumericControl("Label font size", current.fontSize ?? 12, 8, 32, (nextValue) => emit(["fontSize"], nextValue)) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null);
   }
   if (control === "axes") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(
@@ -394,6 +390,7 @@ function axisControls(label, axis, value, emit) {
     selectControl("Title position", value.titlePosition ?? "center", ["top", "center", "bottom"], (nextValue) => emit([axis, "titlePosition"], nextValue)),
     selectControl("Title orientation", value.titleOrientation ?? "vertical", ["vertical", "horizontal"], (nextValue) => emit([axis, "titleOrientation"], nextValue)),
     fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit([axis, "titleFontSize"], nextValue)),
+    boundedNumericControl("Tick label font size", value.labelFontSize, 8, 20, (nextValue) => emit([axis, "labelFontSize"], nextValue)),
     inlineToggle("Bold", value.titleBold === true, (checked) => emit([axis, "titleBold"], checked)),
     numericPair("chart-authoring-axis-offsets", [
       boundedNumericControl("Horizontal offset", value.titleOffsetX, -96, 96, (nextValue) => emit([axis, "titleOffsetX"], nextValue)),
@@ -488,20 +485,20 @@ function boundedNumericControl(label, value, min, max, onChange) {
     onChange: (event) => onChange(optionalNumber(event.target.value)),
   }));
 }
-function fontSizeControl(value, onChange) {
+function fontSizeControl(value, onChange, label = "Title") {
   const size = Number.isInteger(value) ? Math.min(24, Math.max(10, value)) : 14;
   return React.createElement("div", { className: "chart-authoring-axis-title-size" },
-    React.createElement("span", null, "Title font size"),
+    React.createElement("span", null, `${label} font size`),
     React.createElement("button", {
       type: "button",
-      "aria-label": "Decrease title font size",
+      "aria-label": `Decrease ${label.toLowerCase()} font size`,
       disabled: size <= 10,
       onClick: () => onChange(size - 1),
     }, "−"),
     React.createElement("output", null, size),
     React.createElement("button", {
       type: "button",
-      "aria-label": "Increase title font size",
+      "aria-label": `Increase ${label.toLowerCase()} font size`,
       disabled: size >= 24,
       onClick: () => onChange(size + 1),
     }, "+"),
@@ -526,18 +523,26 @@ function xAxisControls(value, kind, emit) {
     { className: "chart-authoring-axis-group dashboard-authoring-grid" },
     React.createElement("legend", null, "X axis"),
     textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)),
+    fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit(["x", "titleFontSize"], nextValue), "X-axis title"),
+    boundedNumericControl("Tick label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)),
     kind === "category" ? React.createElement(
       React.Fragment,
       null,
-      boundedNumericControl("Label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)),
       inlineToggle("Wrap long labels", value.labelWrap === true, (checked) => emit(["x", "labelWrap"], checked)),
-      value.labelWrap === true ? boundedNumericControl("Wrapped label width", value.labelMaxWidth ?? 96, 40, 240, (nextValue) => emit(["x", "labelMaxWidth"], nextValue)) : null,
+      value.labelWrap === true ? boundedNumericControl("Wrapped label width (× tick-label font size)", wrapWidthEm(value), 4, 20, (nextValue) => emit(["x", "labelMaxWidthEm"], nextValue)) : null,
     ) : null,
     bounds,
     kind === "temporal" ? optionSelectControl("Label format", value.labelPreset ?? "adaptive", [["adaptive", "Adaptive / current hierarchy"], ["ddMmmYearBoundary", "DD MMM (year boundary)"], ["ddMmYyyy", "DD-MM-YYYY"], ["ddMmYy", "DD-MM-YY"], ["hhMm", "HH:mm"], ["ddMmYyyyHhMm", "DD-MM-YYYY HH:mm"]], (nextValue) => emit(["x", "labelPreset"], nextValue)) : null,
     kind === "temporal" ? optionSelectControl("Hover date/time", value.hoverLabelPreset ?? "auto", [["auto", "Auto (match source)"], ["year", "Year (YYYY)"], ["date", "Date (YYYY-MM-DD)"], ["dateTime", "Date and time (YYYY-MM-DD HH:mm)"]], (nextValue) => emit(["x", "hoverLabelPreset"], nextValue)) : null,
     tickControls("x", value.tickFrequency, kind, emit),
   );
+}
+function wrapWidthEm(value) {
+  if (Number.isInteger(value.labelMaxWidthEm)) return value.labelMaxWidthEm;
+  if (Number.isInteger(value.labelMaxWidth) && Number.isInteger(value.labelFontSize)) {
+    return Math.max(4, Math.min(20, Math.round(value.labelMaxWidth / value.labelFontSize)));
+  }
+  return 8;
 }
 function tickControls(axis, value, kind, emit) {
   const monthCadence = kind === "temporal" && value?.unit === "month";
@@ -576,6 +581,29 @@ function tickControls(axis, value, kind, emit) {
     },
   }, ["minute", "hour", "day", "week", "month", "year"].map((unit) => React.createElement("option", { key: unit, value: unit }, sentence(unit))))));
 }
+function labelFormatControl(value, onChange) {
+  return React.createElement("div", { className: "chart-authoring-label-format" },
+    React.createElement("span", { className: "chart-authoring-label-format__heading" }, "Label format", React.createElement(LabelFormatHelp)),
+    React.createElement("input", {
+      "aria-label": "Label format",
+      value: value ?? "",
+      placeholder: "{c}",
+      onChange: (event) => onChange(event.target.value),
+    }),
+  );
+}
+function LabelFormatHelp() {
+  const id = `label-format-help-${React.useId().replaceAll(":", "")}`;
+  return React.createElement("span", { className: "chart-authoring-label-format-help" },
+    React.createElement("button", {
+      type: "button",
+      className: "simex-icon-control",
+      "aria-label": "About label format",
+      "aria-describedby": id,
+    }, React.createElement(SimExIcon, { iconId: "info", size: 14 })),
+    React.createElement("span", { id, role: "tooltip" }, "Use {c} for the value, {b} for the category, and {a} for the series. Example: {b}: {c}. The label unit is added directly after the formatted value; add a leading space to the Unit field if you want one."),
+  );
+}
 function textControl(label, value, onChange) {
   return /* @__PURE__ */ React.createElement("label", null, label, /* @__PURE__ */ React.createElement("input", {
     value: typeof value === "string" ? value : "",
@@ -592,6 +620,12 @@ function inlineToggle(label, checked, onChange) {
 function pieValueModeControls(value, emit, id) {
   return React.createElement("fieldset", { className: "chart-authoring-inline-options" },
     React.createElement("legend", null, "Slice readout"),
+    React.createElement("label", { className: "dashboard-authoring-boolean-row" }, React.createElement("input", {
+      type: "radio",
+      name: `${id}-value-mode`,
+      checked: value.valueMode === undefined,
+      onChange: () => emit(["valueMode"], undefined),
+    }), "No slice readout"),
     React.createElement("label", { className: "dashboard-authoring-boolean-row" }, React.createElement("input", {
       type: "radio",
       name: `${id}-value-mode`,
@@ -632,7 +666,7 @@ function updateStructuredFieldValue(control, current, path, value) {
 function assertStructuredPath(control, path) {
   const [section, property] = path;
   const valid = {
-    labels: path.length === 1 && ["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize"].includes(section),
+    labels: path.length === 1 && ["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize"].includes(section),
     axes: path.length === 2 && ((["primary", "secondary"].includes(section) && AXIS_PROPERTIES.has(property)) || (section === "x" && X_AXIS_PROPERTIES.has(property))),
     targets: path.length === 1 && ["ranges", "direction", "readoutLabel", "showReadoutLabel", "unit"].includes(section),
     map: path.length === 1 && ["scale", "geoSource", "joinField"].includes(section),
@@ -642,10 +676,13 @@ function assertStructuredPath(control, path) {
 }
 function normalizeStructuredInput(control, path, value) {
   const property = path.at(-1);
-  if (control === "labels" && property === "visible" || control === "axes" && property === "grid") {
+  if (
+    (control === "labels" && property === "visible")
+    || (control === "axes" && ["grid", "labelWrap"].includes(property))
+  ) {
     return value === true;
   }
-  if (control === "labels" && ["valueFontSize", "labelFontSize"].includes(property)) {
+  if (control === "labels" && ["fontSize", "valueFontSize", "labelFontSize"].includes(property)) {
     return Number.isInteger(value) && value >= 8 && value <= 32 ? value : void 0;
   }
   if (control === "labels" && property === "valueMode") {
@@ -665,6 +702,12 @@ function normalizeStructuredInput(control, path, value) {
   }
   if (control === "axes" && property === "titleBold") {
     return value === true;
+  }
+  if (control === "axes" && property === "labelFontSize") {
+    return Number.isInteger(value) && value >= 8 && value <= 20 ? value : void 0;
+  }
+  if (control === "axes" && property === "labelMaxWidthEm") {
+    return Number.isInteger(value) && value >= 4 && value <= 20 ? value : void 0;
   }
   if (control === "axes" && ["titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property)) {
     return Number.isFinite(value) ? value : void 0;
@@ -689,6 +732,8 @@ function sanitizeStructuredValue(control, value) {
       visible: typeof current.visible === "boolean" ? current.visible : void 0,
       position: nonemptyString(current.position),
       format: nonemptyString(current.format),
+      unit: nonemptyString(current.unit),
+      fontSize: Number.isInteger(current.fontSize) && current.fontSize >= 8 && current.fontSize <= 32 ? current.fontSize : void 0,
       valueMode: ["value", "percentage"].includes(current.valueMode) ? current.valueMode : void 0,
       valueFontSize: Number.isInteger(current.valueFontSize) && current.valueFontSize >= 8 && current.valueFontSize <= 32 ? current.valueFontSize : void 0,
       labelFontSize: Number.isInteger(current.labelFontSize) && current.labelFontSize >= 8 && current.labelFontSize <= 32 ? current.labelFontSize : void 0,
@@ -732,9 +777,10 @@ function sanitizeAxis(value) {
   for (const property of AXIS_PROPERTIES) {
     if (["grid", "titleBold"].includes(property) && typeof value[property] === "boolean") axis[property] = value[property];
     else if (["min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY"].includes(property) && Number.isFinite(value[property])) axis[property] = value[property];
+    else if (property === "labelFontSize" && Number.isInteger(value[property]) && value[property] >= 8 && value[property] <= 20) axis[property] = value[property];
     else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
     else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];
-    else if (!["grid", "titleBold", "min", "max", "titleFontSize", "titleOffsetX", "titleOffsetY", "title"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
+    else if (!["grid", "titleBold", "min", "max", "titleFontSize", "labelFontSize", "titleOffsetX", "titleOffsetY", "title"].includes(property) && nonemptyString(value[property])) axis[property] = value[property].trim();
   }
   if (Number.isFinite(axis.min) && Number.isFinite(axis.max) && axis.min > axis.max) {
     delete axis.max;
@@ -751,8 +797,9 @@ function sanitizeXAxis(value) {
     else if (property === "labelPreset" && nonemptyString(value[property]) && value[property].trim() !== "adaptive") axis[property] = value[property].trim();
     else if (property === "hoverLabelPreset" && nonemptyString(value[property]) && value[property].trim() !== "auto") axis[property] = value[property].trim();
     else if (property === "labelWrap" && typeof value[property] === "boolean") axis[property] = value[property];
-    else if (property === "labelFontSize" && Number.isInteger(value[property]) && value[property] >= 8 && value[property] <= 20) axis[property] = value[property];
+    else if (["titleFontSize", "labelFontSize"].includes(property) && Number.isInteger(value[property]) && value[property] >= (property === "titleFontSize" ? 10 : 8) && value[property] <= (property === "titleFontSize" ? 24 : 20)) axis[property] = value[property];
     else if (property === "labelMaxWidth" && Number.isInteger(value[property]) && value[property] >= 40 && value[property] <= 240) axis[property] = value[property];
+    else if (property === "labelMaxWidthEm" && Number.isInteger(value[property]) && value[property] >= 4 && value[property] <= 20) axis[property] = value[property];
   }
   return Object.keys(axis).length > 0 ? axis : void 0;
 }

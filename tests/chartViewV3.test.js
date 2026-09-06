@@ -24,12 +24,24 @@ const { default: CardChartView } = await vite.ssrLoadModule("/src/components/cha
 const { default: EChartsChartView, createEChartsLifecycle } = await vite.ssrLoadModule("/src/components/charts/EChartsChartView.jsx");
 const { default: ImageChartView } = await vite.ssrLoadModule("/src/components/charts/ImageChartView.jsx");
 const { default: TableChartView } = await vite.ssrLoadModule("/src/components/charts/TableChartView.jsx");
+const { default: ChartHeading } = await vite.ssrLoadModule("/src/components/charts/ChartHeading.jsx");
 await vite.close();
 
 const deltaRows = [
   { capacity: 8, observed: "2027-05-01" },
   { capacity: 10, observed: "2027-05-02" },
 ];
+
+test("an authored chart title font size styles non-image chart headings", () => {
+  const html = renderToStaticMarkup(React.createElement(ChartHeading, {
+    chart: {
+      title: "Hospital demand",
+      presentation: { title: { fontSize: 22 } },
+    },
+  }));
+
+  assert.match(html, /font-size:22px/);
+});
 
 const deltaCard = {
   id: "capacity-change",

@@ -63,6 +63,67 @@ test("description-free Cartesian charts balance their plot gutters vertically", 
   assert.equal(withoutDescription.option.grid.bottom, 76);
 });
 
+test("vertical fill expands horizontal bar plots into the available panel height", () => {
+  const model = {
+    option: {
+      grid: { left: 48, right: 28, top: 76, bottom: 32 },
+      legend: { show: true },
+      xAxis: { type: "value" },
+      yAxis: { type: "category", data: ["A", "B", "C"] },
+      series: [{ type: "bar", data: [1, 2, 3] }],
+    },
+  };
+
+  for (const typeId of ["horizontalBar", "horizontalStackedBar"]) {
+    const presented = applyEChartsPresentation(model, {
+      typeId,
+      description: "",
+      presentation: {
+        description: { visible: false },
+        series: { verticalFill: true },
+        title: { align: "left" },
+      },
+    });
+
+    assert.deepEqual(presented.option.grid, { left: 48, right: 28, top: 44, bottom: 32 });
+    assert.equal(presented.option.legend.top, 12);
+  }
+});
+
+test("vertical fill removes the legend gutter when the legend is hidden", () => {
+  const presented = applyEChartsPresentation({
+    option: {
+      grid: { left: 48, right: 28, top: 76, bottom: 32 },
+      legend: { show: false },
+      xAxis: { type: "value" },
+      yAxis: { type: "category", data: ["A", "B", "C"] },
+      series: [{ type: "bar", data: [1, 2, 3] }],
+    },
+  }, {
+    typeId: "horizontalBar",
+    presentation: { series: { verticalFill: true }, title: { align: "left" } },
+  });
+
+  assert.equal(presented.option.grid.top, 10);
+});
+
+test("vertical fill increases the legend gutter with the legend font size", () => {
+  const presented = applyEChartsPresentation({
+    option: {
+      grid: { left: 48, right: 28, top: 76, bottom: 32 },
+      legend: { show: true, textStyle: { fontSize: 18 } },
+      xAxis: { type: "value" },
+      yAxis: { type: "category", data: ["A", "B", "C"] },
+      series: [{ type: "bar", data: [1, 2, 3] }],
+    },
+  }, {
+    typeId: "horizontalBar",
+    presentation: { series: { verticalFill: true }, title: { align: "left" } },
+  });
+
+  assert.equal(presented.option.grid.top, 51);
+});
+
 function chart(typeId, overrides = {}) {
   return {
     id: `chart-${typeId}`,
@@ -303,6 +364,91 @@ test("horizontal bars retain configured category labels while value axes append 
   assert.ok(model.option.series.every(({ barCategoryGap }) => barCategoryGap === "25%"));
   assert.ok(model.option.series.every(({ barGap }) => barGap === "25%"));
   assert.ok(model.option.series.every((series) => !Object.hasOwn(series, "barWidth")));
+  assert.equal(model.option.grid.left, 24);
+});
+
+test("wrapped horizontal category labels scale their width with the tick font and allow an em override", () => {
+  const automatic = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { labelFontSize: 15, labelWrap: true } },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  const overridden = buildRenderModel({
+    chart: chart("horizontalBar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: { x: { labelFontSize: 15, labelWrap: true, labelMaxWidthEm: 10 } },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.equal(automatic.option.yAxis.axisLabel.width, 120);
+  assert.equal(overridden.option.yAxis.axisLabel.width, 150);
+});
+
+test("axis and legend typography apply independently, with legend swatches scaling to legend text", () => {
+  const model = buildRenderModel({
+    chart: chart("bar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        axes: {
+          x: { title: "District", titleFontSize: 20, labelFontSize: 16 },
+          primary: { title: "Cases", labelFontSize: 18 },
+        },
+        legend: { fontSize: 18 },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  const presented = applyEChartsPresentation(model, {});
+  const primaryAxis = Array.isArray(model.option.yAxis) ? model.option.yAxis[0] : model.option.yAxis;
+
+  assert.equal(model.option.xAxis.nameTextStyle.fontSize, 20);
+  assert.equal(model.option.xAxis.axisLabel.fontSize, 16);
+  assert.equal(primaryAxis.axisLabel.fontSize, 18);
+  assert.equal(model.option.legend.textStyle.fontSize, 18);
+  assert.equal(presented.option.legend.itemWidth, 26);
+  assert.equal(presented.option.legend.itemHeight, 16);
+});
+
+test("clearing the Income distribution primary title leaves a renderable chart and removes its title projection", () => {
+  const incomeChart = chart("horizontalStackedBar", {
+    roles: {
+      measurements: [
+        { field: "Share of population (%)", axis: "primary" },
+        { field: "Share of total income (%)", axis: "primary" },
+      ],
+      observation: { field: "Income bracket" },
+    },
+    transformations: { pivot: { mode: "measuresToRows" } },
+    presentation: {
+      title: { align: "left" },
+      collection: null,
+      axes: { primary: { unit: "%", titlePosition: "top" } },
+      series: { barWidth: 20, verticalFill: true },
+    },
+  });
+  const rows = [
+    ["Low income", 35, 9], ["Lower-middle income", 27, 18], ["Middle income", 20, 22],
+    ["Upper-middle income", 12, 21], ["High income", 6, 30],
+  ].map(([bracket, population, income]) => ({
+    "Income bracket": bracket,
+    "Share of population (%)": population,
+    "Share of total income (%)": income,
+  }));
+  const prepared = prepareChartData({ chart: incomeChart, rows, datasetProfile: profileDataset(rows) });
+  const model = buildRenderModel({ chart: incomeChart, prepared });
+
+  assert.deepEqual(model.valueAxisTitleProjection, []);
+  assert.doesNotThrow(() => renderSvg(model.option));
 });
 
 test("line, area, and mixed options preserve axis types and primary or secondary axes", () => {
@@ -1188,6 +1334,26 @@ test("axis series honor validated label visibility, position, and formatting", (
   });
 });
 
+test("axis series append a label unit and apply the configured label font size", () => {
+  const model = buildRenderModel({
+    chart: chart("bar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        labels: { visible: true, format: "{b}: {c}", unit: "%", fontSize: 18 },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.deepEqual(model.option.series[0].label, {
+    show: true,
+    position: "top",
+    formatter: "{b}: {c}%",
+    fontSize: 18,
+  });
+});
+
 test("forced category dates never become an ECharts time axis", () => {
   const model = buildRenderModel({
     chart: chart("line", {
@@ -1733,9 +1899,47 @@ test("ECharts lifecycle replaces stable value-axis graphics after updates and re
   assert.equal(options[2].graphic[0].left, firstLeft + 30);
 
   lifecycle.update({ option: { grid: {} }, valueAxisTitleProjection: [] });
-  assert.equal(options[4].graphic[0].id, "simex-value-axis-title-primary");
-  assert.equal(options[4].graphic[0].$action, "remove");
+  assert.equal(options.length, 5);
+  assert.equal(options[3].graphic[0].id, "simex-value-axis-title-primary");
+  assert.equal(options[3].graphic[0].$action, "remove");
+  assert.deepEqual(options[4], { grid: {} });
   lifecycle.dispose();
+});
+
+test("ECharts lifecycle clears a value-axis title before replacing the option", () => {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width: 640, height: 400 });
+  const errors = [];
+  const lifecycle = createEChartsLifecycle({
+    echartsApi: {
+      getInstanceByDom() { return null; },
+      init() { return instance; },
+      registerMap() {},
+    },
+    windowTarget: null,
+    ResizeObserverCtor: null,
+    onError(error) { errors.push(error); },
+  });
+  const option = {
+    grid: { left: 80, right: 28, top: 40, bottom: 52 },
+    xAxis: { type: "category", data: ["Low income", "High income"] },
+    yAxis: { type: "value" },
+    series: [{ type: "bar", data: [35, 6] }],
+  };
+  const projection = createValueAxisTitleProjection({
+    id: "primary",
+    settings: { title: "%", titlePosition: "top" },
+    tickValues: [0, 35],
+  });
+
+  try {
+    lifecycle.mount({});
+    lifecycle.update({ option, valueAxisTitleProjection: [projection] });
+    lifecycle.update({ option, valueAxisTitleProjection: [] });
+
+    assert.deepEqual(errors, []);
+  } finally {
+    lifecycle.dispose();
+  }
 });
 
 test("centered Y-axis titles keep clearance for fractional ticks at zero, unit, and extreme scales", () => {
@@ -2126,7 +2330,7 @@ test("pie and donut produce actual ECharts pie series from canonical marks", () 
   assert.deepEqual(pie.option.series[0].data[0], { name: "Cases", value: 3, share: 0.75 });
 });
 
-test("pie labels can show either values or percentages with independently sized category text", () => {
+test("pie keeps category labels outside while rendering the selected slice readout inside", () => {
   const prepared = ready([
     { category: "Cases", value: 3, share: 0.75, group: null, groupKey: "" },
     { category: "Deaths", value: 1, share: 0.25, group: null, groupKey: "" },
@@ -2149,12 +2353,42 @@ test("pie labels can show either values or percentages with independently sized 
 
   assert.deepEqual(model.option.series[0].label, {
     show: true,
-    formatter: "{label|{b}}\\n{value|{d}%}",
+    position: "inside",
+    formatter: "{value|{d}%}",
     rich: {
-      label: { fontSize: 12, width: 120, overflow: "break" },
-      value: { fontSize: 18 },
+      value: { fontSize: 18, color: "#FFFFFF", textBorderColor: "rgba(0, 0, 0, 0.45)", textBorderWidth: 2 },
     },
   });
+  assert.deepEqual(model.option.series[0].labelLine, { show: false });
+  assert.deepEqual(model.option.series[1], {
+    name: "Composition labels",
+    type: "pie",
+    center: ["50%", "62.5%"],
+    radius: ["0%", "58%"],
+    silent: true,
+    tooltip: { show: false },
+    avoidLabelOverlap: true,
+    itemStyle: { color: "transparent", borderColor: "transparent" },
+    emphasis: { disabled: true },
+    label: {
+      show: true,
+      position: "outside",
+      formatter: "{label|{b}}",
+      rich: { label: { fontSize: 12, width: 120, overflow: "break" } },
+    },
+    labelLine: { show: true, lineStyle: { color: "#64748B" } },
+    data: [
+      { name: "Cases", value: 3, share: 0.75 },
+      { name: "Deaths", value: 1, share: 0.25 },
+    ],
+  });
+  const svg = renderSvg(model.option);
+  assert.match(svg, />Cases</);
+  assert.match(svg, />Deaths</);
+  assert.doesNotMatch(svg, /fill-opacity="0"[^>]*>Cases<\/text>/);
+  assert.doesNotMatch(svg, /fill-opacity="0"[^>]*>Deaths<\/text>/);
+  assert.equal(svg.includes("\\\\n"), false);
+  assert.equal((svg.match(/<polyline[^>]*stroke="#64748B"/g) ?? []).length, 2);
   assert.deepEqual(model.option.legend.textStyle, { width: 120, overflow: "break" });
 });
 
@@ -2183,10 +2417,13 @@ test("grouped composition lays out non-overlapping pie series", () => {
     ]),
   });
 
-  assert.deepEqual(model.option.series.map(({ center }) => center), [
+  const visiblePies = model.option.series.filter(({ silent }) => silent !== true);
+  const labelLayers = model.option.series.filter(({ silent }) => silent === true);
+  assert.deepEqual(visiblePies.map(({ center }) => center), [
     ["25%", "62.5%"],
     ["75%", "62.5%"],
   ]);
+  assert.deepEqual(labelLayers.map(({ center }) => center), visiblePies.map(({ center }) => center));
   const svg = renderSvg(model.option, 800, 400);
   assert.match(svg, /Alpha/);
   assert.match(svg, /Beta/);

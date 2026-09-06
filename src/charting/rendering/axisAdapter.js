@@ -166,7 +166,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       grid: {
         containLabel: true,
         left: horizontal
-          ? 48
+          ? 24
           : 48,
         right: horizontal
           ? hasSecondary ? 56 : 28
@@ -191,11 +191,16 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
 }
 
 function legendOption(chart) {
+  const fontSize = chart.presentation?.legend?.fontSize;
+  const textStyle = {
+    ...(chart.presentation?.legend?.wrap === true
+      ? { width: 120, overflow: "break" }
+      : {}),
+    ...(Number.isInteger(fontSize) ? { fontSize } : {}),
+  };
   return {
     show: chart.presentation?.legend?.visible !== false,
-    ...(chart.presentation?.legend?.wrap === true
-      ? { textStyle: { width: 120, overflow: "break" } }
-      : {}),
+    ...(Object.keys(textStyle).length > 0 ? { textStyle } : {}),
   };
 }
 
@@ -230,11 +235,21 @@ function axisLabelOption(chart, horizontal, seriesType, totalMarkCount) {
       ? 24
       : 18;
   const show = labels.visible === true && totalMarkCount <= densityLimit;
+  const format = labelFormatter(labels);
   return {
     show,
     position: labels.position ?? (horizontal ? "right" : "top"),
-    ...(show ? { formatter: labels.format ?? formatSeriesLabel } : {}),
+    ...(show ? { formatter: format } : {}),
+    ...(Number.isInteger(labels.fontSize) ? { fontSize: labels.fontSize } : {}),
   };
+}
+
+function labelFormatter(labels) {
+  const unit = typeof labels.unit === "string" ? labels.unit.trim() : "";
+  const format = typeof labels.format === "string" ? labels.format.trim() : "";
+  if (format) return unit ? `${format}${unit}` : format;
+  if (!unit) return formatSeriesLabel;
+  return (params) => `${formatSeriesLabel(params)}${unit}`;
 }
 
 function formatSeriesLabel(params) {

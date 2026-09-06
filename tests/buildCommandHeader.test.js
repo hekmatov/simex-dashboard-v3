@@ -102,6 +102,15 @@ test("Build main row has the exact compact command order and ownership", () => {
   assert.match(html, /dashboard-map-inline-inspector[\s\S]*?Page title/);
 });
 
+test("Build controls do not duplicate toast-reported operation errors", () => {
+  const html = renderWorkspace({
+    operationError: "Chart layout height must be a whole row or a supported quarter-row percentage.",
+  });
+
+  assert.doesNotMatch(html, /Chart layout height must be a whole row or a supported quarter-row percentage\./);
+  assert.doesNotMatch(html, /build-operation-error/);
+});
+
 test("More is a dialog drawer containing only Scene Studio in pointer-only mode", () => {
   const html = renderToStaticMarkup(React.createElement(BuildMoreDrawer, {
     open: true,

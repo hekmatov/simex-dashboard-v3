@@ -34,7 +34,7 @@ const MISSING_VALUE_STRATEGIES = new Set(["gap", "zero", "drop"]);
 const COLUMN_TYPES = new Set(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
 const TITLE_ALIGNMENTS = new Set(["left", "center", "right"]);
 const VALUE_AXIS_TITLE_KEYS = new Set([
-  "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY",
+  "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "labelFontSize",
 ]);
 const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neutral"]);
 const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
@@ -428,7 +428,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   checkKnownDescriptorKeys(descriptors, PRESENTATION_KEYS, "chart presentation");
   const title = requiredDescriptorValue(descriptors, "title", "Chart presentation");
   ensureObject(title, "Chart presentation title");
-  const imageTitleKeys = new Set(["fontSize", "bold", "italic", "underline"]);
+  const imageTitleKeys = new Set(["bold", "italic", "underline"]);
   if (schema.typeId !== "image" && Object.keys(title).some((key) => imageTitleKeys.has(key))) {
     throw new Error("Image title appearance properties are only supported by Image charts.");
   }
@@ -437,6 +437,7 @@ function validatePresentation(chart, schema, temporalRoles) {
     new Set([
       "align",
       "visible",
+      "fontSize",
       ...(schema.typeId === "image" ? imageTitleKeys : []),
     ]),
     "chart presentation title",
@@ -447,7 +448,7 @@ function validatePresentation(chart, schema, temporalRoles) {
     title.fontSize !== undefined
     && (!Number.isInteger(title.fontSize) || title.fontSize < 12 || title.fontSize > 32)
   ) {
-    throw new Error("Image title font size must be an integer from 12 through 32.");
+    throw new Error("Chart title font size must be an integer from 12 through 32.");
   }
   for (const key of ["bold", "italic", "underline"]) {
     if (title[key] !== undefined && typeof title[key] !== "boolean") {
@@ -498,9 +499,14 @@ function validateTable(table, schema) {
 }
 
 function validateLabels(labels, schema) {
-  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"]));
+  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"]));
   if (labels?.visible !== undefined && typeof labels.visible !== "boolean") throw new Error("Chart presentation labels visible must be boolean.");
   for (const field of ["position", "format"]) if (labels?.[field] !== undefined && typeof labels[field] !== "string") throw new Error(`Chart presentation labels ${field} must be a string.`);
+  const axis = schema.dataFamily === "axis";
+  if (labels?.unit !== undefined && (!axis || typeof labels.unit !== "string")) throw new Error("Chart presentation labels unit must be a string on axis charts.");
+  if (labels?.fontSize !== undefined && (!axis || !Number.isInteger(labels.fontSize) || labels.fontSize < 8 || labels.fontSize > 32)) {
+    throw new Error("Chart presentation labels fontSize must be an integer from 8 through 32 on axis charts.");
+  }
   const composition = schema.dataFamily === "composition";
   if (labels?.labelWrap !== undefined && (!composition || typeof labels.labelWrap !== "boolean")) throw new Error("Chart presentation labels labelWrap must be boolean on composition charts.");
   if (labels?.valueMode !== undefined && (!composition || !["value", "percentage"].includes(labels.valueMode))) {
@@ -519,8 +525,11 @@ function validateAxes(axes, schema, temporalRoles) {
   const x = axes?.x;
   if (x !== undefined) {
     ensureObject(x, "Chart presentation axes x");
-    checkKnownKeys(x, new Set(["title", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth"]), "chart presentation axes x");
+    checkKnownKeys(x, new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth", "labelMaxWidthEm"]), "chart presentation axes x");
     if (x.title !== undefined && typeof x.title !== "string") throw new Error("Chart presentation axes x title must be a string.");
+    if (x.titleFontSize !== undefined && (!Number.isInteger(x.titleFontSize) || x.titleFontSize < 10 || x.titleFontSize > 24)) {
+      throw new Error("Chart presentation axes x titleFontSize must be an integer from 10 through 24.");
+    }
     validateAxisRange(x, xKind, "X");
     validateTickFrequency(x.tickFrequency, xKind, "X");
     if (x.labelPreset !== undefined) {
@@ -533,14 +542,17 @@ function validateAxes(axes, schema, temporalRoles) {
         throw new Error("Chart presentation axes x hoverLabelPreset is unsupported.");
       }
     }
-    if (x.labelFontSize !== undefined && (xKind !== "category" || !Number.isInteger(x.labelFontSize) || x.labelFontSize < 8 || x.labelFontSize > 20)) {
-      throw new Error("Chart presentation axes x labelFontSize must be an integer from 8 through 20 on category axes.");
+    if (x.labelFontSize !== undefined && (!Number.isInteger(x.labelFontSize) || x.labelFontSize < 8 || x.labelFontSize > 20)) {
+      throw new Error("Chart presentation axes x labelFontSize must be an integer from 8 through 20.");
     }
     if (x.labelWrap !== undefined && (xKind !== "category" || typeof x.labelWrap !== "boolean")) {
       throw new Error("Chart presentation axes x labelWrap must be boolean on category axes.");
     }
     if (x.labelMaxWidth !== undefined && (xKind !== "category" || !Number.isInteger(x.labelMaxWidth) || x.labelMaxWidth < 40 || x.labelMaxWidth > 240)) {
       throw new Error("Chart presentation axes x labelMaxWidth must be an integer from 40 through 240 on category axes.");
+    }
+    if (x.labelMaxWidthEm !== undefined && (xKind !== "category" || !Number.isInteger(x.labelMaxWidthEm) || x.labelMaxWidthEm < 4 || x.labelMaxWidthEm > 20)) {
+      throw new Error("Chart presentation axes x labelMaxWidthEm must be an integer from 4 through 20 on category axes.");
     }
   }
   for (const axisName of ["primary", "secondary"]) {
@@ -557,6 +569,10 @@ function validateAxes(axes, schema, temporalRoles) {
     if (axis.titleFontSize !== undefined
       && (!Number.isInteger(axis.titleFontSize) || axis.titleFontSize < 10 || axis.titleFontSize > 24)) {
       throw new Error(`Chart presentation axes ${axisName} titleFontSize must be an integer from 10 through 24.`);
+    }
+    if (axis.labelFontSize !== undefined
+      && (!Number.isInteger(axis.labelFontSize) || axis.labelFontSize < 8 || axis.labelFontSize > 20)) {
+      throw new Error(`Chart presentation axes ${axisName} labelFontSize must be an integer from 8 through 20.`);
     }
     if (axis.titleBold !== undefined && typeof axis.titleBold !== "boolean") {
       throw new Error(`Chart presentation axes ${axisName} titleBold must be a boolean.`);
@@ -688,10 +704,11 @@ function validateBackground(background) {
 }
 
 function validateLegend(legend) {
-  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "wrap"]));
+  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "wrap", "fontSize"]));
   if (legend?.visible !== undefined && typeof legend.visible !== "boolean") throw new Error("Chart presentation legend visible must be boolean.");
   if (legend?.wrap !== undefined && typeof legend.wrap !== "boolean") throw new Error("Chart presentation legend wrap must be boolean.");
   if (legend?.position !== undefined && !LEGEND_POSITIONS.has(legend.position)) throw new Error("Chart presentation legend position must be top, bottom, left, or right.");
+  if (legend?.fontSize !== undefined && (!Number.isInteger(legend.fontSize) || legend.fontSize < 8 || legend.fontSize > 20)) throw new Error("Chart presentation legend fontSize must be an integer from 8 through 20.");
 }
 
 function validateAccessibility(accessibility) {
@@ -785,16 +802,9 @@ function validateLayout(chart) {
   }
   if (
     chart.layout.height !== undefined
-    && !(
-      (Number.isInteger(chart.layout.height) && chart.layout.height > 0)
-      || (
-        (chart.typeId === "freeText" || chart.typeId === "image")
-          ? [0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.125, 1.25, 1.375, 1.5, 1.625, 1.75, 1.875, 2.125, 2.25, 2.375, 2.5, 2.625, 2.75, 2.875, 3.125, 3.25, 3.375, 3.5, 3.625, 3.75, 3.875]
-          : [0.25, 0.5, 0.75, 1.25, 1.5, 1.75]
-      ).includes(chart.layout.height)
-    )
+    && (!Number.isFinite(chart.layout.height) || chart.layout.height <= 0 || !Number.isInteger(chart.layout.height * 8))
   ) {
-    throw new Error("Chart layout height must be a whole row or a supported quarter-row percentage.");
+    throw new Error("Chart layout height must be a positive multiple of 12.5% of a row.");
   }
 }
 

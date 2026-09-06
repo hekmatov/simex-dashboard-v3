@@ -63,14 +63,28 @@ export function xAxisPresentation(settings, kind, physicalAxis = "x") {
         ...(result.axisLabel ?? {}),
         ...(Number.isInteger(fontSize) ? { fontSize } : {}),
         ...(wrapping ? {
-          width: settings?.labelMaxWidth ?? 96,
+          width: wrappedCategoryLabelWidth(settings, fontSize),
           overflow: "break",
           lineHeight: Math.ceil((fontSize ?? AXIS_FONT_SIZE) * 1.25),
         } : {}),
       };
     }
   }
+  if (Number.isInteger(settings?.labelFontSize)) {
+    result.axisLabel = {
+      ...(result.axisLabel ?? {}),
+      fontSize: settings.labelFontSize,
+    };
+  }
   return result;
+}
+
+function wrappedCategoryLabelWidth(settings, fontSize) {
+  if (Number.isInteger(settings?.labelMaxWidthEm)) {
+    return settings.labelMaxWidthEm * (fontSize ?? AXIS_FONT_SIZE);
+  }
+  if (Number.isInteger(settings?.labelMaxWidth)) return settings.labelMaxWidth;
+  return 8 * (fontSize ?? AXIS_FONT_SIZE);
 }
 
 export function valueAxisPresentation(settings) {
@@ -78,12 +92,15 @@ export function valueAxisPresentation(settings) {
   const interval = tickInterval(settings?.tickFrequency, "number");
   if (interval !== undefined) result.interval = interval;
   const unit = typeof settings?.unit === "string" ? settings.unit : "";
-  if (unit) {
+  if (unit || Number.isInteger(settings?.labelFontSize)) {
     result.axisLabel = {
-      formatter: (value) => {
-        const numeric = Number(value);
-        return `${Number.isFinite(numeric) ? VALUE_AXIS_NUMBER_FORMATTER.format(numeric) : String(value ?? "")}${unit}`;
-      },
+      ...(Number.isInteger(settings?.labelFontSize) ? { fontSize: settings.labelFontSize } : {}),
+      ...(unit ? {
+        formatter: (value) => {
+          const numeric = Number(value);
+          return `${Number.isFinite(numeric) ? VALUE_AXIS_NUMBER_FORMATTER.format(numeric) : String(value ?? "")}${unit}`;
+        },
+      } : {}),
     };
   }
   return result;
@@ -145,6 +162,7 @@ function axisTitle(settings = {}, direction, { tickLabelWidth = 0 } = {}) {
           )
         : AXIS_TICK_HALF_HEIGHT + AXIS_TITLE_CLEARANCE
       : 36,
+    ...(Number.isInteger(settings.titleFontSize) ? { nameTextStyle: { fontSize: settings.titleFontSize } } : {}),
   };
 }
 

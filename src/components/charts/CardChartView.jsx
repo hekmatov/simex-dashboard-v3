@@ -3,6 +3,7 @@ import CollectionDisplay from "../collection/CollectionDisplay.jsx";
 import {
   chartDescriptionVisible,
   chartTitleClassName,
+  chartTitleStyle,
   titleContainerProps,
 } from "./chartViewPresentation.js";
 import { cardPresentationForChart } from "../../charting/presentation/cardPresentationContract.js";
@@ -34,7 +35,7 @@ export default function CardChartView({
     ...titleContainerProps(chart),
   },
     React.createElement("header", { className: "collection-display-header" },
-      React.createElement("h3", { className: chartTitleClassName(chart) }, title),
+      React.createElement("h3", { className: chartTitleClassName(chart), style: chartTitleStyle(chart) }, title),
       React.createElement("div", { id: controlsPortalId, className: "collection-header-transport-host" })),
     chartDescriptionVisible(chart)
       ? React.createElement("p", { className: "chart-view-description" }, description)

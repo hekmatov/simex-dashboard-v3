@@ -6,6 +6,7 @@ import PrecisionArcGauge from "./PrecisionArcGauge.jsx";
 import {
   chartDescriptionVisible,
   chartTitleClassName,
+  chartTitleStyle,
   titleContainerProps,
 } from "./chartViewPresentation.js";
 
@@ -36,7 +37,7 @@ export default function TargetCollectionChartView({
     ...titleContainerProps(chart),
   },
   React.createElement("header", { className: "collection-display-header" },
-    React.createElement("h3", { id: titleId, className: chartTitleClassName(chart) }, title),
+    React.createElement("h3", { id: titleId, className: chartTitleClassName(chart), style: chartTitleStyle(chart) }, title),
     React.createElement("div", { id: controlsPortalId, className: "collection-header-transport-host" })),
   chartDescriptionVisible(chart)
     ? React.createElement("p", {

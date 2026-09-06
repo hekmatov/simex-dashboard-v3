@@ -103,7 +103,7 @@ test("measure-to-row pivots are valid only for axis charts with two measurements
   );
 });
 
-test("category axes accept bounded label wrapping and font settings", () => {
+test("chart typography accepts bounded axis titles, tick labels, and legend text", () => {
   const chart = createChartDraft("bar", {
     id: "wrapped-category-axis",
     title: "Wrapped categories",
@@ -113,7 +113,12 @@ test("category axes accept bounded label wrapping and font settings", () => {
       observation: { field: "district" },
     },
     presentation: {
-      axes: { x: { labelFontSize: 11, labelWrap: true, labelMaxWidth: 96 } },
+      axes: {
+        x: { titleFontSize: 20, labelFontSize: 11, labelWrap: true, labelMaxWidth: 96, labelMaxWidthEm: 8 },
+        primary: { titleFontSize: 14, labelFontSize: 18 },
+      },
+      labels: { unit: "%", fontSize: 18 },
+      legend: { fontSize: 16 },
     },
   });
   assert.doesNotThrow(() => validateChartInstance(chart));
@@ -218,7 +223,24 @@ test("Text/Image layouts support eighth-row heights through 400% and reject unsu
       sourceId: "image-source",
       layout: { size: "standard", width: 3, height },
     });
-    assert.throws(() => validateChartInstance(invalid), /Chart layout height/);
+    assert.throws(() => validateChartInstance(invalid), /positive multiple of 12\.5%/);
+  }
+});
+
+test("Chart layouts support 12.5% row-height increments", () => {
+  for (const height of [0.125, 0.875, 1.125, 1.875]) {
+    const chart = createChartDraft("line", {
+      id: `eighth-row-chart-${height}`,
+      title: "Eighth-row chart",
+      sourceId: "cases",
+      roles: {
+        measurements: [{ field: "cases", axis: "primary" }],
+        observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+      layout: { size: "standard", width: 3, height },
+    });
+
+    assert.equal(validateChartInstance(chart), chart);
   }
 });
 
@@ -264,7 +286,19 @@ test("Image title appearance is image-only, bounded, and typed", () => {
     assert.throws(() => validateChartInstance(chart), new RegExp(`${key}.*boolean`, "i"));
   }
 
-  for (const key of ["fontSize", "bold", "italic", "underline"]) {
+  const nonImageTitle = createChartDraft("line", {
+    id: "line-title-size",
+    title: "Trend",
+    sourceId: "cases",
+    roles: {
+      measurements: [{ field: "cases" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: { title: { fontSize: 20 } },
+  });
+  assert.equal(validateChartInstance(nonImageTitle), nonImageTitle);
+
+  for (const key of ["bold", "italic", "underline"]) {
     const chart = createChartDraft("line", {
       id: `non-image-${key}`,
       title: "Trend",
@@ -467,6 +501,7 @@ test("value-axis title typography and offsets accept only their bounded values",
         primary: {
           title: "Cases",
           titleFontSize: 10,
+          labelFontSize: 8,
           titleBold: true,
           titleOffsetX: -96,
           titleOffsetY: 96,
@@ -474,6 +509,7 @@ test("value-axis title typography and offsets accept only their bounded values",
         secondary: {
           title: "Rate",
           titleFontSize: 24,
+          labelFontSize: 20,
           titleBold: false,
           titleOffsetX: 96,
           titleOffsetY: -96,
@@ -487,6 +523,7 @@ test("value-axis title typography and offsets accept only their bounded values",
   const invalid = [
     ["titleFontSize", 9, /titleFontSize must be an integer from 10 through 24/],
     ["titleFontSize", 24.5, /titleFontSize must be an integer from 10 through 24/],
+    ["labelFontSize", 7, /labelFontSize must be an integer from 8 through 20/],
     ["titleBold", "true", /titleBold must be a boolean/],
     ["titleOffsetX", -97, /titleOffsetX must be from -96 through 96/],
     ["titleOffsetY", 97, /titleOffsetY must be from -96 through 96/],

@@ -12,7 +12,7 @@ const FALLBACK_CORE_ASSETS = [
   "./manifest.webmanifest",
   "./service-worker.js",
   "./portable-dashboard-data.js",
-  "./assets/pdpc-mark.png",
+  "./assets/pdpc-logo.png",
   "./assets/pwa-icon.svg",
   "./config/dashboard.json",
   "./config/dataset-profiles.json",

@@ -1163,6 +1163,35 @@ test("axis presentation controls expose temporal X controls and only render a se
   );
 });
 
+test("axis label controls expose unit, font size, and format-template help", () => {
+  const field = {
+    id: "labels",
+    label: "Labels",
+    control: "labels",
+    controls: ["visible", "position", "format", "unit", "fontSize"],
+  };
+  const html = render(React.createElement(StandardField, {
+    field,
+    value: { visible: true, format: "{b}: {c}", unit: "%", fontSize: 18 },
+    onChange() {},
+  }));
+
+  assert.match(html, /Label unit/);
+  assert.match(html, /Label font size/);
+  assert.match(html, /placeholder="\{c\}"/);
+  assert.match(html, /About label format/);
+  assert.match(html, /role="tooltip"/);
+  assert.doesNotMatch(html, /Control text shown with chart marks/);
+  assert.deepEqual(
+    updateStructuredFieldValue("labels", {}, ["unit"], "%"),
+    { unit: "%" },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("labels", {}, ["fontSize"], 18),
+    { fontSize: 18 },
+  );
+});
+
 test("X, primary, and secondary axis titles retain an internal typing space", () => {
   for (const path of [["x", "title"], ["primary", "title"], ["secondary", "title"]]) {
     const next = updateStructuredFieldValue("axes", {}, path, "Cumulative ");
@@ -1193,7 +1222,7 @@ test("save normalization trims raw axis title editing values", () => {
   assert.equal(normalized.presentation.axes.secondary, undefined);
 });
 
-test("value-axis title controls expose size steps, bold, and signed offsets only for available axes", () => {
+test("axis controls expose independent title and tick-label typography for available axes", () => {
   const field = {
     id: "axes",
     label: "Axes",
@@ -1227,6 +1256,7 @@ test("value-axis title controls expose size steps, bold, and signed offsets only
     onChange() {},
   }));
   assert.equal((primaryOnly.match(/Title font size/g) ?? []).length, 1);
+  assert.equal((primaryOnly.match(/Tick label font size/g) ?? []).length, 2);
   assert.doesNotMatch(primaryOnly, /Secondary axis/);
 
   const changes = [];
@@ -1983,7 +2013,30 @@ test("data source controls stay enabled before chart capability is known", () =>
   assert.doesNotMatch(html, /Enter data manually/);
 });
 
-test("pie slice-readout radio choices keep each control and label in one row", () => {
+test("axis tick font sizes persist and pie slice-readout choices include neither", () => {
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "labelFontSize"], 16),
+    { x: { labelFontSize: 16 } },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["primary", "labelFontSize"], 18),
+    { primary: { labelFontSize: 18 } },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "labelWrap"], true),
+    { x: { labelWrap: true } },
+  );
+  assert.deepEqual(
+    updateStructuredFieldValue("axes", {}, ["x", "labelMaxWidthEm"], 10),
+    { x: { labelMaxWidthEm: 10 } },
+  );
+  const axesHtml = render(React.createElement(StandardField, {
+    field: { id: "axes", label: "Axes", control: "axes", xKind: "category" },
+    value: { x: { labelFontSize: 15, labelWrap: true } },
+    onChange() {},
+  }));
+  assert.match(axesHtml, /Wrapped label width \(× tick-label font size\)/);
+  assert.match(axesHtml, /value="8"/);
   const html = render(React.createElement(StandardField, {
     field: {
       id: "labels",
@@ -1997,6 +2050,7 @@ test("pie slice-readout radio choices keep each control and label in one row", (
 
   assert.match(html, /class="dashboard-authoring-boolean-row"[^>]*><input[^>]*type="radio"[^>]*>Show value<\/label>/);
   assert.match(html, /class="dashboard-authoring-boolean-row"[^>]*><input[^>]*type="radio"[^>]*>Show percentage<\/label>/);
+  assert.match(html, /class="dashboard-authoring-boolean-row"[^>]*><input[^>]*type="radio"[^>]*>No slice readout<\/label>/);
 });
 
 test("data source controls offer copying an existing chart into the draft", () => {

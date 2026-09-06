@@ -12,7 +12,7 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const DEFAULT_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..");
 const ENTRYPOINTS = Object.freeze(["index.html", "source-viewer.html"]);
 const REQUIRED_PACKAGE_ASSETS = Object.freeze([
-  "assets/pdpc-mark.png",
+  "assets/pdpc-logo.png",
   "assets/pwa-icon.svg",
   "manifest.webmanifest",
   "service-worker.js",
