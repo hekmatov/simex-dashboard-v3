@@ -301,13 +301,15 @@ for (const viewport of VIEWPORTS) {
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     }));
-    expect(overflow.overflowY).toBe("auto");
+    expect(overflow.overflowY).toBe(viewport.width > 860 ? "auto" : "hidden");
     if (viewport.width > 860) expect(overflow.internal).toBe(true);
     expect(overflow.documentWidth).toBeLessThanOrEqual(overflow.viewportWidth);
 
-    await panel.locator(".free-text-chart-view").evaluate((node) => {
-      node.scrollTop = Math.min(120, node.scrollHeight - node.clientHeight);
-    });
+    if (viewport.width > 860) {
+      await panel.locator(".free-text-chart-view").evaluate((node) => {
+        node.scrollTop = Math.min(120, node.scrollHeight - node.clientHeight);
+      });
+    }
     const discardTrigger = await prepareFreeTextEditorTrigger(panel, title);
     const beforeDiscard = await inspectBuildStaticState(page, panel);
 
@@ -335,7 +337,9 @@ for (const viewport of VIEWPORTS) {
     await confirmation.getByRole("button", { name: "Discard" }).click();
     await expect(editor).toHaveCount(0);
     expect((await readSavedFreeText(page, title)).source.qmd).toBe(INITIAL_QMD);
-    await expectBuildStaticRestored(page, saved.panel.id, beforeDiscard);
+    await expectBuildStaticRestored(page, saved.panel.id, beforeDiscard, {
+      preserveContentScroll: viewport.width > 860,
+    });
 
     panel = canonicalPanel(page, saved.panel.id);
     await panel.scrollIntoViewIfNeeded();
