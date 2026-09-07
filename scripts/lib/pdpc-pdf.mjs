@@ -92,7 +92,7 @@ export async function buildPdpcPdf({ releaseDir, outputFile, variant }) {
       displayHeaderFooter: true,
       headerTemplate: "<span></span>",
       footerTemplate: PDF_FOOTER_TEMPLATE,
-      scale: 0.64,
+      scale: 0.62,
     });
     const output = await stat(resolvedOutput);
     return Object.freeze({
