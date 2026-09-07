@@ -18,9 +18,23 @@ test("PDF preparation captures both release sections while removing navigation c
           <button data-dashboard-page-id="scenario">Scenario</button>
           <button data-dashboard-page-id="biomedical">Biomedical Information</button>
         </nav></header>
-        <main data-canonical-page-id="scenario"><h1>Scenario content</h1><canvas width="20" height="20"></canvas></main>
+        <main data-canonical-page-id="scenario">
+          <h1>Scenario content</h1><canvas width="20" height="20"></canvas>
+          <div style="height: 1800px"></div>
+          <div class="chart-deferred-placeholder">Chart loads when it enters the viewport</div>
+        </main>
       </div>
       <script>
+        addEventListener('scroll', () => {
+          const placeholder = document.querySelector('.chart-deferred-placeholder');
+          if (placeholder && scrollY > 500) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 20;
+            canvas.height = 20;
+            canvas.getContext('2d').fillRect(0, 0, 10, 10);
+            placeholder.replaceWith(canvas);
+          }
+        });
         document.querySelector('[data-dashboard-page-id="biomedical"]').addEventListener('click', () => {
           const main = document.querySelector('main');
           main.dataset.canonicalPageId = 'biomedical';
@@ -39,7 +53,8 @@ test("PDF preparation captures both release sections while removing navigation c
       ["scenario", "biomedical"],
     );
     assert.equal(await page.locator(".pdpc-dashboard-pages").count(), 0);
-    assert.equal(await page.locator(".pdpc-pdf-chart").count(), 2);
+    assert.equal(await page.locator(".chart-deferred-placeholder").count(), 0);
+    assert.equal(await page.locator(".pdpc-pdf-chart").count(), 4);
     assert.match(await page.locator(".pdpc-pdf-chart").first().getAttribute("src"), /^data:image\/png;base64,/);
   } finally {
     await browser.close();

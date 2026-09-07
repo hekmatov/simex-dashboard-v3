@@ -95,6 +95,7 @@ export async function preparePdpcPdfDocument({ page, variant }) {
       state: "visible",
       timeout: 60_000,
     });
+    await activateDeferredCharts(page);
     await waitForRenderableAssets(page);
     snapshots.push(await page.evaluate(() => {
       const source = document.querySelector(".app-frame");
@@ -136,6 +137,26 @@ export async function preparePdpcPdfDocument({ page, variant }) {
   }, { html: snapshots, styles: PDF_STYLES });
   await waitForRenderableAssets(page);
   return Object.freeze({ pageIds: [...pageIds], sectionCount: snapshots.length });
+}
+
+async function activateDeferredCharts(page) {
+  await page.evaluate(async () => {
+    const settle = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const step = Math.max(400, Math.floor(window.innerHeight * 0.7));
+    const bottom = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    for (let position = 0; position < bottom; position += step) {
+      window.scrollTo(0, position);
+      await settle();
+    }
+    window.scrollTo(0, bottom);
+    await settle();
+  });
+  await page.waitForFunction(
+    () => document.querySelectorAll(".chart-deferred-placeholder").length === 0,
+    null,
+    { timeout: 60_000 },
+  );
+  await page.evaluate(() => window.scrollTo(0, 0));
 }
 
 async function waitForRenderableAssets(page) {
