@@ -1,3 +1,5 @@
 # Generated dashboard contracts are byte-validated and shared across repositories.
 public/config/*.json text eol=lf
 public/integration/*.json text eol=lf
+# Keep exported CSV row separators consistent for automatic newline detection.
+exports/eldoria/*.csv text eol=lf
