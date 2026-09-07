@@ -85,7 +85,7 @@ test("PDF preparation captures both release sections while removing navigation c
       await page.locator(".section-header").evaluateAll((nodes) => (
         nodes.map((node) => getComputedStyle(node).breakAfter)
       )),
-      ["avoid", "avoid"],
+      ["auto", "avoid"],
     );
     assert.deepEqual(
       await page.locator(".dashboard-section").evaluateAll((nodes) => (

@@ -25,9 +25,9 @@ body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !
 .pdpc-pdf-section .page-stack,
 .pdpc-pdf-section .dashboard-section { display: block !important; }
 .pdpc-pdf-section .dashboard-section + .dashboard-section { margin-top: 18px; }
-.pdpc-pdf-section .section-header {
+.pdpc-pdf-section .section-header { margin-bottom: 12px; }
+.pdpc-pdf-section[data-pdf-section-index="1"] .section-header {
   break-after: avoid;
-  margin-bottom: 12px;
   page-break-after: avoid;
 }
 .pdpc-pdf-section[data-pdf-section-index="1"] .chart-panel {
@@ -92,7 +92,7 @@ export async function buildPdpcPdf({ releaseDir, outputFile, variant }) {
       displayHeaderFooter: true,
       headerTemplate: "<span></span>",
       footerTemplate: PDF_FOOTER_TEMPLATE,
-      scale: 0.62,
+      scale: 0.6,
     });
     const output = await stat(resolvedOutput);
     return Object.freeze({
