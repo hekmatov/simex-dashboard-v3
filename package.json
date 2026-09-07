@@ -30,6 +30,7 @@
     "build:flashdrive": "pnpm.cmd build",
     "package:flashdrive": "pnpm build && pnpm verify:v3-static && node scripts/package-flashdrive.mjs",
     "release:pdpc": "node scripts/build-pdpc-release.mjs",
+    "release:pdpc:deliverables": "node scripts/build-pdpc-deliverables.mjs",
     "promote:bundle": "node scripts/promote-dashboard-bundle.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
