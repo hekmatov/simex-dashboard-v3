@@ -5,7 +5,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { runPdpcReleaseCommand } from "./build-pdpc-release.mjs";
 import { parsePdpcReleaseArgs } from "./lib/pdpc-release.mjs";
-import { buildPdpcPdf } from "./lib/pdpc-pdf.mjs";
 import { buildPdpcSingleFile } from "./lib/pdpc-single-file.mjs";
 import { createZipFromDirectory } from "./lib/zip-directory.mjs";
 import { verifyPdpcStaticBuild } from "./verify-pdpc-static-build.mjs";
@@ -96,12 +95,10 @@ export async function buildPdpcVariantArtifacts({
   variant,
   verifyVariant = verifyPdpcStaticBuild,
   buildSingleFile = buildPdpcSingleFile,
-  buildPdf = buildPdpcPdf,
   createZip = createZipFromDirectory,
 }) {
   const releaseDir = path.join(cloudflareDir, variant.id);
   const offlineFile = path.join(staging, "Offline", `PDPC-${variant.label}-Offline.html`);
-  const pdfFile = path.join(staging, "PDF", `PDPC-${variant.label}.pdf`);
   const zipFile = path.join(staging, `PDPC-${variant.label}-Cloudflare.zip`);
   const staticResult = await verifyVariant({ outputDir: releaseDir, variant: variant.id });
   const offlineResult = await buildSingleFile({
@@ -109,17 +106,11 @@ export async function buildPdpcVariantArtifacts({
     outputFile: offlineFile,
     variant: variant.id,
   });
-  const pdfResult = await buildPdf({
-    releaseDir,
-    outputFile: pdfFile,
-    variant: variant.id,
-  });
   const zipResult = await createZip({ sourceDir: releaseDir, outputFile: zipFile });
   return Object.freeze({
     deliverables: Object.freeze([
       await fileRecord(staging, zipFile, "cloudflare-zip", variant.id),
       await fileRecord(staging, offlineFile, "offline-single-html", variant.id),
-      await fileRecord(staging, pdfFile, "pdf", variant.id),
     ]),
     validation: Object.freeze({
       variant: variant.id,
@@ -130,8 +121,6 @@ export async function buildPdpcVariantArtifacts({
       zipEntries: zipResult.entries.length,
       offlineBytes: offlineResult.bytes,
       embeddedPackageAssets: offlineResult.embeddedPackageAssets,
-      pdfBytes: pdfResult.bytes,
-      pdfSections: pdfResult.sectionCount,
     }),
   });
 }
@@ -197,10 +186,6 @@ Copy either file from \`Offline/\` to a flash drive and double-click it:
 - \`PDPC-Socioeconomic-Offline.html\`
 
 Each is a self-contained, script-free-launch HTML file. It needs no command prompt, local server, installation, or internet connection, and works across Windows, macOS, and Linux in a current browser.
-
-## PDF
-
-The \`PDF/\` directory contains \`PDPC-Biomedical.pdf\` and \`PDPC-Socioeconomic.pdf\`. Each PDF includes Scenario first and its specialist section second, with the interactive dashboard navigation omitted.
 
 ## Integrity
 
