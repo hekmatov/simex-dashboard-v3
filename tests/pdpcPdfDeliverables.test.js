@@ -14,15 +14,20 @@ test("PDF preparation captures both release sections while removing navigation c
     await page.setContent(`
       <div class="app-frame" data-appearance-preference="light">
         <aside aria-label="Exercise disclaimer">Fictional scenario · Exercise use only</aside>
+        <div class="app-shell" style="min-height: 100vh">Printable application shell</div>
+        <div class="page-stack" style="display: grid">Printable page stack</div>
+        <section class="dashboard-section" style="display: grid">Printable dashboard section</section>
         <header><nav class="pdpc-dashboard-pages" aria-label="Dashboard pages">
           <button data-dashboard-page-id="scenario">Scenario</button>
           <button data-dashboard-page-id="biomedical">Biomedical Information</button>
         </nav></header>
         <main data-canonical-page-id="scenario">
-          <h1>Scenario content</h1><canvas width="20" height="20"></canvas>
+          <div class="section-header"><h1>Scenario content</h1></div><canvas width="20" height="20"></canvas>
+          <section class="layout-grid"><article class="chart-panel">Printable chart card</article></section>
           <div style="height: 1800px"></div>
           <div class="chart-deferred-placeholder">Chart loads when it enters the viewport</div>
         </main>
+        <footer class="pdpc-dashboard-footer">Dashboard footer</footer>
       </div>
       <script>
         addEventListener('scroll', () => {
@@ -53,9 +58,47 @@ test("PDF preparation captures both release sections while removing navigation c
       ["scenario", "biomedical"],
     );
     assert.equal(await page.locator(".pdpc-dashboard-pages").count(), 0);
+    assert.deepEqual(
+      await page.locator(".app-shell").evaluateAll((nodes) => (
+        nodes.map((node) => getComputedStyle(node).minHeight)
+      )),
+      ["0px", "0px"],
+    );
     assert.equal(await page.locator(".chart-deferred-placeholder").count(), 0);
     assert.equal(await page.locator(".pdpc-pdf-chart").count(), 4);
+    assert.deepEqual(
+      await page.locator(".pdpc-dashboard-footer").evaluateAll((nodes) => (
+        nodes.map((node) => getComputedStyle(node).display)
+      )),
+      ["none", "none"],
+    );
     assert.match(await page.locator(".pdpc-pdf-chart").first().getAttribute("src"), /^data:image\/png;base64,/);
+    await page.setViewportSize({ width: 1000, height: 900 });
+    assert.equal(await page.evaluate(() => document.body.getBoundingClientRect().width), 1440);
+    assert.deepEqual(
+      await page.locator(".layout-grid, .chart-panel").evaluateAll((nodes) => (
+        nodes.map((node) => getComputedStyle(node).breakInside)
+      )),
+      ["auto", "auto", "auto", "avoid"],
+    );
+    assert.deepEqual(
+      await page.locator(".section-header").evaluateAll((nodes) => (
+        nodes.map((node) => getComputedStyle(node).breakAfter)
+      )),
+      ["avoid", "avoid"],
+    );
+    assert.deepEqual(
+      await page.locator(".dashboard-section").evaluateAll((nodes) => (
+        nodes.map((node) => getComputedStyle(node).display)
+      )),
+      ["block", "block"],
+    );
+    assert.deepEqual(
+      await page.locator(".page-stack").evaluateAll((nodes) => (
+        nodes.map((node) => getComputedStyle(node).display)
+      )),
+      ["block", "block"],
+    );
   } finally {
     await browser.close();
   }

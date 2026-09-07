@@ -11,20 +11,41 @@ const VARIANT_PAGE_IDS = Object.freeze({
 });
 
 const PDF_STYLES = `
-@page { size: A4 landscape; margin: 8mm; }
-html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+@page { size: A4 landscape; margin: 8mm 8mm 13mm; }
+html { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+body { background: #fff !important; margin: 0 !important; padding: 0 !important; width: 1440px !important; }
 body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 #vanta-background { display: none !important; }
 .pdpc-pdf-section { break-after: page; page-break-after: always; }
 .pdpc-pdf-section:last-child { break-after: auto; page-break-after: auto; }
 .pdpc-pdf-section > .app-frame { min-height: 0 !important; }
+.pdpc-pdf-section .app-shell { min-height: 0 !important; }
 .pdpc-pdf-section .pdpc-dashboard-pages { display: none !important; }
+.pdpc-pdf-section .pdpc-dashboard-footer { display: none !important; }
+.pdpc-pdf-section .page-stack,
+.pdpc-pdf-section .dashboard-section { display: block !important; }
+.pdpc-pdf-section .dashboard-section + .dashboard-section { margin-top: 18px; }
+.pdpc-pdf-section .section-header {
+  break-after: avoid;
+  margin-bottom: 12px;
+  page-break-after: avoid;
+}
+.pdpc-pdf-section[data-pdf-section-index="1"] .chart-panel {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
 .pdpc-pdf-section .pdpc-dashboard-header {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
 }
 .pdpc-pdf-section .pdpc-dashboard-logo { grid-column: 2 !important; }
 .pdpc-pdf-chart { display: block; height: auto; max-width: 100%; }
 `;
+
+const PDF_FOOTER_TEMPLATE = `
+<div style="box-sizing:border-box;color:#263a43;display:flex;font-family:Arial,sans-serif;font-size:7px;justify-content:space-between;padding:0 8mm;width:100%;">
+  <span><strong>SimEx Dashboard V3</strong>&nbsp;&nbsp;<a href="https://simex-dashboard-v3.pages.dev/" style="color:#263a43;text-decoration:underline;">Build your own dashboard</a></span>
+  <span>Developed by Hekmat Alrouh</span>
+</div>`;
 
 export async function buildPdpcPdf({ releaseDir, outputFile, variant }) {
   const pageIds = pageIdsForVariant(variant);
@@ -68,6 +89,10 @@ export async function buildPdpcPdf({ releaseDir, outputFile, variant }) {
       landscape: true,
       printBackground: true,
       preferCSSPageSize: true,
+      displayHeaderFooter: true,
+      headerTemplate: "<span></span>",
+      footerTemplate: PDF_FOOTER_TEMPLATE,
+      scale: 0.64,
     });
     const output = await stat(resolvedOutput);
     return Object.freeze({
