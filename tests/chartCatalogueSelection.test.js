@@ -14,6 +14,7 @@ import {
   resolveSourceEntryLabels,
 } from "../src/content-library/sourceEntrySchema.js";
 import { validateDatasetProfiles } from "../src/lib/loadDashboard.js";
+import { buildChartCatalogue } from "../src/lib/quorumCatalogue.js";
 
 function registryWith(...typeIds) {
   return createChartSchemaRegistry(typeIds.map((typeId) => (
@@ -197,4 +198,30 @@ test("shipped biomedical source names are specific and runtime-compatible with d
     dashboard.dataSources,
     datasetProfiles,
   ));
+});
+
+test("catalogue accepts a promoted dashboard with embedded dataset profiles", () => {
+  const dashboard = JSON.parse(readFileSync(
+    new URL("../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  const aliases = {};
+  const visit = (value) => {
+    if (!value || typeof value !== "object") return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (value.id && value.typeId) {
+      aliases[value.id] = {
+        aliases: [value.id],
+        keywords: [value.typeId],
+      };
+    }
+    Object.values(value).forEach(visit);
+  };
+  visit(dashboard);
+  dashboard.datasetProfiles = {};
+
+  assert.doesNotThrow(() => buildChartCatalogue(dashboard, aliases));
 });

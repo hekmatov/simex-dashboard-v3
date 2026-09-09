@@ -316,7 +316,7 @@ function buildDashboardContext(dashboard) {
   const v4 = input.configVersion === 3 ? migrateDashboardV3ToV4(input) : input;
   const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
   const root = migrateDashboardV5ToV6(v5);
-  const structure = validateDashboardStructure(root);
+  const structure = validateDashboardStructure(root, { allowRuntimeState: true });
   if (root.configVersion !== DASHBOARD_CONFIG_STRUCTURE.version) {
     throw new Error(`dashboard configuration version ${DASHBOARD_CONFIG_STRUCTURE.version} is required`);
   }
