@@ -1,7 +1,10 @@
 import React from "react";
 import { createPortal } from "react-dom";
 
-import { projectPresentationState } from "../../lib/audienceProjection.js";
+import {
+  projectPresentationState,
+  sanitizeAudienceSnapshotCloneColors,
+} from "../../lib/audienceProjection.js";
 import AudienceDisplay from "./AudienceDisplay.jsx";
 
 const CAPTURE_SETTLE_MS = 200;
@@ -93,6 +96,7 @@ export default function AudienceSnapshotMonitor({
           backgroundColor: latestRef.current.themeProjection.cssVariables["--simex-surface-canvas"] ?? "#f4f5f5",
           height: 720,
           logging: false,
+          onclone: sanitizeAudienceSnapshotCloneColors,
           scale: 0.75,
           useCORS: true,
           width: 1280,
@@ -103,7 +107,8 @@ export default function AudienceSnapshotMonitor({
           setImageUrl(canvas.toDataURL("image/jpeg", 0.86));
           setCaptureUnavailable(false);
         }
-      } catch {
+      } catch (error) {
+        console.error("Audience monitor capture failed.", error);
         if (!cancelled && !imageUrlRef.current) setCaptureUnavailable(true);
       } finally {
         if (!cancelled) {

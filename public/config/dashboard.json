@@ -9,8 +9,8 @@
   "lastUpdated": "2026-09-07",
   "layout": "two-column",
   "globalStyles": {
-    "dashboardStyle": "pdpc",
-    "dashboardColorProfile": "signal-instrument/calibrated-steel",
+    "dashboardStyle": "humanist-standard",
+    "dashboardColorProfile": "pdpc/brand",
     "chartColorMode": "standard",
     "accessibility": {
       "enabled": false
@@ -40454,7 +40454,7 @@
     }
   ],
   "home": {
-    "enabled": false
+    "enabled": true
   },
   "contentLibrary": {
     "mediaItems": {

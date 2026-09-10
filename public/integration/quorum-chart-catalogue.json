@@ -1,7 +1,7 @@
 {
   "contract_version": "2",
   "catalogue_id": "simex-dashboard",
-  "catalogue_revision": "2026-07-27",
+  "catalogue_revision": "2026-09-07",
   "chart_schema_version": 3,
   "chart_types": [
     {
@@ -3587,165 +3587,162 @@
   ],
   "charts": [
     {
-      "chart_id": "bio_admissions",
-      "type_id": "groupedBar",
-      "title": "New ICU and hospital admissions",
-      "description": "Daily new ICU and clinic admissions.",
-      "page_id": "biomedical",
-      "section_id": "health_system",
+      "chart_id": "chart-bar-44cbf87a-e849-4c92-a797-ebf26c444ed7",
+      "type_id": "horizontalStackedBar",
+      "title": "Income Distribution",
+      "description": "Income distribution per income group",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512398466",
       "aliases": [
-        "new icu and hospital admissions"
+        "household income"
       ],
       "keywords": [
-        "admissions",
-        "bio",
-        "groupedBar"
+        "economy",
+        "income",
+        "socio-economic",
+        "stacked bar"
       ],
       "role_ids": [
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "national_outbreak",
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen",
-        "playback"
-      ]
-    },
-    {
-      "chart_id": "bio_case_deltas",
-      "type_id": "deltaList",
-      "title": "Change in cases by province",
-      "description": "Latest cumulative provincial cases compared with each province's preceding observation.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "change in cases by province"
-      ],
-      "keywords": [
-        "bio",
-        "case",
-        "deltaList",
-        "deltas"
-      ],
-      "role_ids": [
-        "entity",
-        "measurement",
-        "time"
-      ],
       "chrono_group_id": null,
-      "collection_capability": true,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
       ]
     },
     {
-      "chart_id": "bio_confirmed_cases",
-      "type_id": "line",
-      "title": "Confirmed cases",
-      "description": "Cumulative confirmed HeV-A26 cases over time.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
+      "chart_id": "chart-groupedBar-eafbfdd0-e768-4303-8df1-6de4f5515d73",
+      "type_id": "groupedBar",
+      "title": "Public Trust in Institutions",
+      "description": "Public Trust in Institutions",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512378053",
       "aliases": [
-        "confirmed cases"
+        "institutional trust"
       ],
       "keywords": [
-        "bio",
-        "cases",
-        "confirmed",
+        "grouped bar",
+        "institutions",
+        "socio-economic",
+        "trust"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad",
+      "type_id": "horizontalBar",
+      "title": "Loneliness",
+      "description": "People reporting frequent loneliness stratified per age group",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section",
+      "aliases": [
+        "loneliness levels"
+      ],
+      "keywords": [
+        "horizontal bar",
+        "loneliness",
+        "social",
+        "socio-economic"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-horizontalBar-mthbdhxi",
+      "type_id": "horizontalBar",
+      "title": "Public Support for Potential Measures",
+      "description": "Measures that could be taken to prevent spread of HeV-A26",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512378053",
+      "aliases": [
+        "support for measures"
+      ],
+      "keywords": [
+        "horizontal bar",
+        "measures",
+        "public support",
+        "socio-economic"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-line-a01a017d-96f1-440b-b24a-bcf2e30da1cc",
+      "type_id": "line",
+      "title": "Exposure and Concerns about Mis- and Disinformation in Eldoria",
+      "description": "Exposure and Concerns about Mis- and Disinformation in Eldoria",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788715418554",
+      "aliases": [
+        "misinformation exposure"
+      ],
+      "keywords": [
+        "concerns",
+        "disinformation",
+        "exposure",
+        "line",
+        "misinformation"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-line-mtgytrwj",
+      "type_id": "line",
+      "title": "International Confirmed Cases (Cumulative)",
+      "description": "International Confirmed Cases (Cumulative)",
+      "page_id": "biomedical",
+      "section_id": "biomedical_section",
+      "aliases": [
+        "international cases"
+      ],
+      "keywords": [
+        "biomedical",
+        "confirmed cases",
+        "cumulative",
+        "international",
         "line"
       ],
       "role_ids": [
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "national_outbreak",
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen",
-        "playback"
-      ]
-    },
-    {
-      "chart_id": "bio_current_cases_kpi",
-      "type_id": "kpi",
-      "title": "Current confirmed cases",
-      "description": "Autonomous collection of national cumulative confirmed-case observations.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "current confirmed cases"
-      ],
-      "keywords": [
-        "bio",
-        "cases",
-        "current",
-        "kpi"
-      ],
-      "role_ids": [
-        "label",
-        "time",
-        "value"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "bio_daily_cases_bar",
-      "type_id": "bar",
-      "title": "Daily confirmed cases",
-      "description": "Daily national new confirmed cases for discrete day-by-day comparison.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "daily confirmed cases"
-      ],
-      "keywords": [
-        "bar",
-        "bio",
-        "cases",
-        "daily"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": "national_outbreak",
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen",
-        "playback"
-      ]
-    },
-    {
-      "chart_id": "bio_delayed_healthcare",
-      "type_id": "groupedBar",
-      "title": "Delayed-care activity",
-      "description": "Treatment activity by month and specialty during the exercise year.",
-      "page_id": "biomedical",
-      "section_id": "health_system",
-      "aliases": [
-        "delayed-care activity"
-      ],
-      "keywords": [
-        "bio",
-        "delayed",
-        "groupedBar",
-        "healthcare"
-      ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -3754,49 +3751,21 @@
       ]
     },
     {
-      "chart_id": "bio_hospital_capacity_bullet",
-      "type_id": "bullet",
-      "title": "Hospital occupancy against capacity",
-      "description": "Autonomous collection of hospital occupancy and capacity observations.",
-      "page_id": "biomedical",
-      "section_id": "health_system",
-      "aliases": [
-        "hospital occupancy against capacity"
-      ],
-      "keywords": [
-        "bio",
-        "bullet",
-        "capacity",
-        "hospital"
-      ],
-      "role_ids": [
-        "actual",
-        "label",
-        "target",
-        "time"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "bio_hospital_occupancy",
+      "chart_id": "chart-line-mtgz6v76",
       "type_id": "line",
-      "title": "Hospital occupancy",
-      "description": "HeV-A26 and other hospital occupancy alongside capacity.",
+      "title": "National Confirmed Cases (cumulative)",
+      "description": "National confirmed cases in Eldoria",
       "page_id": "biomedical",
-      "section_id": "health_system",
+      "section_id": "biomedical_section_1788164839437",
       "aliases": [
-        "hospital occupancy"
+        "national cases"
       ],
       "keywords": [
-        "bio",
-        "hospital",
-        "line",
-        "occupancy"
+        "biomedical",
+        "confirmed cases",
+        "cumulative",
+        "eldoria",
+        "line"
       ],
       "role_ids": [
         "measurements",
@@ -3810,76 +3779,21 @@
       ]
     },
     {
-      "chart_id": "bio_icu_capacity_bullet",
-      "type_id": "bullet",
-      "title": "ICU occupancy against capacity",
-      "description": "Autonomous collection of ICU occupancy and capacity observations.",
-      "page_id": "biomedical",
-      "section_id": "health_system",
-      "aliases": [
-        "icu occupancy against capacity"
-      ],
-      "keywords": [
-        "bio",
-        "bullet",
-        "capacity",
-        "icu"
-      ],
-      "role_ids": [
-        "actual",
-        "label",
-        "target",
-        "time"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "bio_icu_occupancy",
-      "type_id": "line",
-      "title": "ICU occupancy",
-      "description": "HeV-A26 and other ICU occupancy alongside capacity.",
-      "page_id": "biomedical",
-      "section_id": "health_system",
-      "aliases": [
-        "icu occupancy"
-      ],
-      "keywords": [
-        "bio",
-        "icu",
-        "line",
-        "occupancy"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "bio_mortality_age",
+      "chart_id": "chart-pie-e58760c5-7b89-440d-bf42-f8115642210b",
       "type_id": "pie",
-      "title": "Mortality by age group",
-      "description": "Share of reported deaths across age groups at the mortality snapshot.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
+      "title": "Workforce Disitribution",
+      "description": "Workforce Disitribution",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512398466",
       "aliases": [
-        "mortality by age group"
+        "workforce distribution"
       ],
       "keywords": [
-        "age",
-        "bio",
-        "mortality",
-        "pie"
+        "economy",
+        "employment",
+        "pie",
+        "socio-economic",
+        "workforce"
       ],
       "role_ids": [
         "category",
@@ -3893,142 +3807,22 @@
       ]
     },
     {
-      "chart_id": "bio_municipality_aggregate",
-      "type_id": "line",
-      "title": "Aggregate municipal infections",
-      "description": "Sum of cumulative infections represented by the harmonized municipality series.",
+      "chart_id": "static-1df51cee-adea-4d7b-982f-5a50a6ba73d1",
+      "type_id": "freeText",
+      "title": "Clinical Characteristics",
+      "description": "Clinical Characteristics",
       "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
+      "section_id": "biomedical_section",
       "aliases": [
-        "aggregate municipal infections"
+        "clinical profile"
       ],
       "keywords": [
-        "aggregate",
-        "bio",
-        "line",
-        "municipality"
+        "biomedical",
+        "clinical",
+        "international",
+        "text"
       ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": "municipal_outbreak",
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen",
-        "playback"
-      ]
-    },
-    {
-      "chart_id": "bio_municipality_choropleth_animation",
-      "type_id": "chronoChoroplethMap",
-      "title": "Municipal infection rate over time",
-      "description": "Cumulative infections per 10,000 residents on harmonized 2021 municipality boundaries.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "municipal infection rate over time"
-      ],
-      "keywords": [
-        "animation",
-        "bio",
-        "choropleth",
-        "chronoChoroplethMap",
-        "municipality"
-      ],
-      "role_ids": [
-        "geography",
-        "time",
-        "value"
-      ],
-      "chrono_group_id": "municipal_outbreak",
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen",
-        "playback"
-      ]
-    },
-    {
-      "chart_id": "bio_new_cases_deaths",
-      "type_id": "mixed",
-      "title": "Daily cases and deaths",
-      "description": "Daily new cases and deaths on separate axes.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "daily cases and deaths"
-      ],
-      "keywords": [
-        "bio",
-        "cases",
-        "deaths",
-        "mixed",
-        "new"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": "national_outbreak",
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen",
-        "playback"
-      ]
-    },
-    {
-      "chart_id": "bio_occupancy_collection",
-      "type_id": "gauge",
-      "title": "Current occupancy pressure",
-      "description": "Current ICU and hospital occupancy percentages as a shared gauge collection.",
-      "page_id": "biomedical",
-      "section_id": "health_system",
-      "aliases": [
-        "current occupancy pressure"
-      ],
-      "keywords": [
-        "bio",
-        "collection",
-        "gauge",
-        "occupancy"
-      ],
-      "role_ids": [
-        "entity",
-        "value"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "bio_population_infection_bubble",
-      "type_id": "bubble",
-      "title": "Population and municipal infection burden",
-      "description": "Municipal population, infection rate, and cumulative infections at the latest harmonized observation.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "population and municipal infection burden"
-      ],
-      "keywords": [
-        "bio",
-        "bubble",
-        "infection",
-        "population"
-      ],
-      "role_ids": [
-        "cluster",
-        "label",
-        "size",
-        "x",
-        "y"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4037,52 +3831,22 @@
       ]
     },
     {
-      "chart_id": "bio_r_values",
-      "type_id": "line",
-      "title": "Reproduction value",
-      "description": "Estimated reproduction value through the exercise period.",
+      "chart_id": "static-998c93eb-c7d1-422b-8062-e9f2122b2399",
+      "type_id": "freeText",
+      "title": "Epidemiological Characteristics",
+      "description": "Epidemiological Characteristics",
       "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
+      "section_id": "biomedical_section",
       "aliases": [
-        "reproduction value"
+        "epidemiological profile"
       ],
       "keywords": [
-        "bio",
-        "line",
-        "values"
+        "biomedical",
+        "epidemiology",
+        "international",
+        "text"
       ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": "national_outbreak",
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen",
-        "playback"
-      ]
-    },
-    {
-      "chart_id": "bio_region_comparison",
-      "type_id": "horizontalBar",
-      "title": "Cases by province",
-      "description": "Latest cumulative infections compared across provinces.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "cases by province"
-      ],
-      "keywords": [
-        "bio",
-        "comparison",
-        "horizontalBar",
-        "region"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4091,25 +3855,21 @@
       ]
     },
     {
-      "chart_id": "bio_testing_overlay",
-      "type_id": "mixed",
-      "title": "Testing and positivity",
-      "description": "Tests per day and test positivity rate on separate axes.",
-      "page_id": "biomedical",
-      "section_id": "health_system",
+      "chart_id": "static-a98417d0-1c09-4abf-b9b4-462dd591ef30",
+      "type_id": "freeText",
+      "title": "Background",
+      "description": "Background",
+      "page_id": "scenario",
+      "section_id": "scenario_section_1788163593858",
       "aliases": [
-        "testing and positivity"
+        "scenario background"
       ],
       "keywords": [
-        "bio",
-        "mixed",
-        "overlay",
-        "testing"
+        "background",
+        "scenario",
+        "text"
       ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4118,24 +3878,22 @@
       ]
     },
     {
-      "chart_id": "bio_vaccination_current",
-      "type_id": "table",
-      "title": "Current vaccination status",
-      "description": "Current first- and second-dose percentages and operational status by group.",
+      "chart_id": "static-be2ad3bd-ca18-44bf-9e6a-46f81ed9a98d",
+      "type_id": "freeText",
+      "title": "Current Characteristics",
+      "description": "Current Characteristics",
       "page_id": "biomedical",
-      "section_id": "vaccination",
+      "section_id": "biomedical_section_1788164839437",
       "aliases": [
-        "current vaccination status"
+        "national characteristics"
       ],
       "keywords": [
-        "bio",
+        "biomedical",
         "current",
-        "table",
-        "vaccination"
+        "eldoria",
+        "text"
       ],
-      "role_ids": [
-        "columns"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4144,26 +3902,22 @@
       ]
     },
     {
-      "chart_id": "bio_vaccination_rate",
-      "type_id": "line",
-      "title": "Vaccination rate over time",
-      "description": "Vaccination rate over time for each operational population group.",
+      "chart_id": "static-c1a6ffb8-0c32-4ad2-bb54-16973ec3b2db",
+      "type_id": "freeText",
+      "title": "Treatment",
+      "description": "Treatment",
       "page_id": "biomedical",
-      "section_id": "vaccination",
+      "section_id": "biomedical_section",
       "aliases": [
-        "vaccination rate over time"
+        "treatment information"
       ],
       "keywords": [
-        "bio",
-        "line",
-        "rate",
-        "vaccination"
+        "biomedical",
+        "international",
+        "text",
+        "treatment"
       ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4172,26 +3926,21 @@
       ]
     },
     {
-      "chart_id": "bio_wastewater_map",
-      "type_id": "mapScatter",
-      "title": "Current wastewater signal",
-      "description": "Latest virus-particle concentration by province.",
-      "page_id": "biomedical",
-      "section_id": "environmental_surveillance",
+      "chart_id": "static-cc1d15c3-dba6-4196-8293-7004cb03fffd",
+      "type_id": "image",
+      "title": "Text/Image panel",
+      "description": "Text/Image panel",
+      "page_id": "scenario",
+      "section_id": "scenario_section_1788163593858",
       "aliases": [
-        "current wastewater signal"
+        "scenario timeline"
       ],
       "keywords": [
-        "bio",
-        "map",
-        "mapScatter",
-        "wastewater"
+        "image",
+        "scenario",
+        "timeline"
       ],
-      "role_ids": [
-        "geography",
-        "time",
-        "value"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4200,25 +3949,21 @@
       ]
     },
     {
-      "chart_id": "bio_wastewater_province",
-      "type_id": "horizontalBar",
-      "title": "Wastewater signal by province",
-      "description": "Latest virus-particle concentration compared across provinces.",
-      "page_id": "biomedical",
-      "section_id": "environmental_surveillance",
+      "chart_id": "static-d2adf346-9ba9-4230-8ae0-2fa8161ddc1d",
+      "type_id": "freeText",
+      "title": "Eldoria",
+      "description": "Eldoria",
+      "page_id": "scenario",
+      "section_id": "scenario_section_1788177898051",
       "aliases": [
-        "wastewater signal by province"
+        "country profile"
       ],
       "keywords": [
-        "bio",
-        "horizontalBar",
-        "province",
-        "wastewater"
+        "eldoria",
+        "scenario",
+        "text"
       ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4227,25 +3972,22 @@
       ]
     },
     {
-      "chart_id": "socio_adherence",
-      "type_id": "stackedBar",
-      "title": "Adherence to public-health measures",
-      "description": "Latest response composition for each adherence measure.",
+      "chart_id": "static-de5891b4-3c59-4108-aa60-0caccfafc835",
+      "type_id": "freeText",
+      "title": "Mental Health Trends",
+      "description": "Mental Health Trends",
       "page_id": "socio_economic",
-      "section_id": "public_response",
+      "section_id": "socio_economic_section",
       "aliases": [
-        "adherence to public-health measures"
+        "mental health"
       ],
       "keywords": [
-        "adherence",
-        "socio",
-        "stackedBar"
+        "mental health",
+        "socio-economic",
+        "text",
+        "trends"
       ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
@@ -4254,390 +3996,30 @@
       ]
     },
     {
-      "chart_id": "socio_business_closures",
-      "type_id": "groupedBar",
-      "title": "Business closures by sector",
-      "description": "Closure rate by sector and reporting year.",
+      "chart_id": "static-e0ee5e1e-d221-42bd-8e5a-0616d95e6b09",
+      "type_id": "freeText",
+      "title": "Text/Image panel",
+      "description": "Text/Image panel",
       "page_id": "socio_economic",
-      "section_id": "economy_staffing",
+      "section_id": "socio_economic_section_1788715418554",
       "aliases": [
-        "business closures by sector"
+        "misinformation context"
       ],
       "keywords": [
-        "business",
-        "closures",
-        "groupedBar",
-        "socio"
+        "disinformation",
+        "misinformation",
+        "socio-economic",
+        "text"
       ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
+      "role_ids": [],
       "chrono_group_id": null,
       "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_education_absenteeism",
-      "type_id": "line",
-      "title": "School absenteeism",
-      "description": "Monthly absenteeism percentage across the education system.",
-      "page_id": "socio_economic",
-      "section_id": "economy_staffing",
-      "aliases": [
-        "school absenteeism"
-      ],
-      "keywords": [
-        "absenteeism",
-        "education",
-        "line",
-        "socio"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_healthcare_absenteeism",
-      "type_id": "line",
-      "title": "Healthcare staff absenteeism",
-      "description": "Monthly absenteeism percentage among healthcare staff.",
-      "page_id": "socio_economic",
-      "section_id": "economy_staffing",
-      "aliases": [
-        "healthcare staff absenteeism"
-      ],
-      "keywords": [
-        "absenteeism",
-        "healthcare",
-        "line",
-        "socio"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_lifestyle",
-      "type_id": "stackedBar",
-      "title": "Current lifestyle changes",
-      "description": "Latest response composition for tracked lifestyle behaviours.",
-      "page_id": "socio_economic",
-      "section_id": "trust_wellbeing",
-      "aliases": [
-        "current lifestyle changes"
-      ],
-      "keywords": [
-        "lifestyle",
-        "socio",
-        "stackedBar"
-      ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_loneliness",
-      "type_id": "line",
-      "title": "Loneliness by age group",
-      "description": "Reported loneliness through successive survey waves by age group.",
-      "page_id": "socio_economic",
-      "section_id": "trust_wellbeing",
-      "aliases": [
-        "loneliness by age group"
-      ],
-      "keywords": [
-        "line",
-        "loneliness",
-        "socio"
-      ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_mental_wellbeing",
-      "type_id": "stackedBar",
-      "title": "Current anxiety profile",
-      "description": "Latest anxiety response composition by age group.",
-      "page_id": "socio_economic",
-      "section_id": "trust_wellbeing",
-      "aliases": [
-        "current anxiety profile"
-      ],
-      "keywords": [
-        "mental",
-        "socio",
-        "stackedBar",
-        "wellbeing"
-      ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_resilience",
-      "type_id": "stackedBar",
-      "title": "Current resilience profile",
-      "description": "Latest response composition for tracked resilience statements.",
-      "page_id": "socio_economic",
-      "section_id": "trust_wellbeing",
-      "aliases": [
-        "current resilience profile"
-      ],
-      "keywords": [
-        "resilience",
-        "socio",
-        "stackedBar"
-      ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_risk_deltas",
-      "type_id": "deltaList",
-      "title": "Change in risk perception",
-      "description": "Agreement with each risk statement compared with its preceding survey wave.",
-      "page_id": "socio_economic",
-      "section_id": "public_response",
-      "aliases": [
-        "change in risk perception"
-      ],
-      "keywords": [
-        "deltaList",
-        "deltas",
-        "risk",
-        "socio"
-      ],
-      "role_ids": [
-        "entity",
-        "measurement",
-        "time"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_risk_perception",
-      "type_id": "heatmap",
-      "title": "Risk perception over time",
-      "description": "Strong agreement with risk statements across survey waves.",
-      "page_id": "socio_economic",
-      "section_id": "public_response",
-      "aliases": [
-        "risk perception over time"
-      ],
-      "keywords": [
-        "heatmap",
-        "perception",
-        "risk",
-        "socio"
-      ],
-      "role_ids": [
-        "column",
-        "row",
-        "time",
-        "value"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_trust_meter",
-      "type_id": "gauge",
-      "title": "Current trust by institution",
-      "description": "Latest trust score for each tracked institution.",
-      "page_id": "socio_economic",
-      "section_id": "trust_wellbeing",
-      "aliases": [
-        "current trust by institution"
-      ],
-      "keywords": [
-        "gauge",
-        "meter",
-        "socio",
-        "trust"
-      ],
-      "role_ids": [
-        "entity",
-        "time",
-        "value"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_trust_trend",
-      "type_id": "line",
-      "title": "Trust in institutions over time",
-      "description": "Public trust trend for each tracked institution.",
-      "page_id": "socio_economic",
-      "section_id": "trust_wellbeing",
-      "aliases": [
-        "trust in institutions over time"
-      ],
-      "keywords": [
-        "line",
-        "socio",
-        "trend",
-        "trust"
-      ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_unemployment",
-      "type_id": "line",
-      "title": "Unemployment rate",
-      "description": "Monthly unemployment rate over the exercise horizon.",
-      "page_id": "socio_economic",
-      "section_id": "economy_staffing",
-      "aliases": [
-        "unemployment rate"
-      ],
-      "keywords": [
-        "line",
-        "socio",
-        "unemployment"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_values",
-      "type_id": "horizontalBar",
-      "title": "Citizen priorities",
-      "description": "Latest importance assigned to public-policy considerations.",
-      "page_id": "socio_economic",
-      "section_id": "public_response",
-      "aliases": [
-        "citizen priorities"
-      ],
-      "keywords": [
-        "horizontalBar",
-        "socio",
-        "values"
-      ],
-      "role_ids": [
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "socio_values_deltas",
-      "type_id": "deltaList",
-      "title": "Change in citizen priorities",
-      "description": "Importance of each policy consideration compared with its preceding survey wave.",
-      "page_id": "socio_economic",
-      "section_id": "public_response",
-      "aliases": [
-        "change in citizen priorities"
-      ],
-      "keywords": [
-        "deltaList",
-        "deltas",
-        "socio",
-        "values"
-      ],
-      "role_ids": [
-        "entity",
-        "measurement",
-        "time"
-      ],
-      "chrono_group_id": null,
-      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
       ]
     }
   ],
-  "dashboard_semantic_digest": "89874f2207612c06d427156567077c04a2f205b7e017776f40ddbc68335f0e40",
-  "digest": "61e21dcf1658e0c652b0a15ab0aa04f284101fd0b393787866dd4553153b4f01"
+  "dashboard_semantic_digest": "bacaf2cb79d7efe772221a15635879bb576652a3b9fe073112d7688da165486d",
+  "digest": "579f8c5e3883753af79eb19f67b5e222181a104d8443a4618dcc2ec87f2ffa90"
 }

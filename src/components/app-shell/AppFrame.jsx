@@ -38,6 +38,7 @@ export default function AppFrame({
   theme,
   lookDrawerOpen = false,
   rightDrawer = null,
+  noticeNode = null,
 }) {
   const showsDesktopWidthNotice = mode === "build" || mode === "present";
   const frameRef = React.useRef(null);
@@ -122,6 +123,7 @@ export default function AppFrame({
           contextDisabledReason={blockedReason}
         />
       )}
+      {noticeNode}
       {blockedReason && <p className="mode-switch-error" role="alert">{blockedReason}</p>}
       {persistenceNotice && (
         <p className="app-persistence-notice" role="status">{persistenceNotice}</p>

@@ -9,6 +9,12 @@ const UNACCEPTED_REASON = Object.freeze({
   message: "Audience projection requires a validated V3 state or ended message.",
 });
 
+const SRGB_COMPONENT = String.raw`[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?`;
+const CSS_SRGB_COLOR = new RegExp(
+  String.raw`color\(\s*srgb\s+(${SRGB_COMPONENT})\s+(${SRGB_COMPONENT})\s+(${SRGB_COMPONENT})(?:\s*\/\s*(${SRGB_COMPONENT}))?\s*\)`,
+  "gi",
+);
+
 export function projectAudienceSnapshot(message, lastValid = null) {
   const retained = clone(lastValid);
   if (message?.accepted === false) {
@@ -62,6 +68,31 @@ export function projectPresentationState(state) {
   });
 }
 
+export function sanitizeAudienceSnapshotCloneColors(
+  clonedDocument,
+  _clonedReferenceElement,
+  readComputedStyle,
+) {
+  const source = clonedDocument?.querySelector?.(".audience-snapshot-source");
+  if (!source) return 0;
+  const styleReader = readComputedStyle
+    ?? clonedDocument.defaultView?.getComputedStyle?.bind(clonedDocument.defaultView);
+  if (typeof styleReader !== "function") return 0;
+
+  let normalizedPropertyCount = 0;
+  for (const element of [source, ...source.querySelectorAll("*")]) {
+    const computedStyle = styleReader(element);
+    for (const property of computedStyle) {
+      const currentValue = computedStyle.getPropertyValue(property);
+      const compatibleValue = normalizeCssSrgbColors(currentValue);
+      if (compatibleValue === currentValue) continue;
+      element.style.setProperty(property, compatibleValue);
+      normalizedPropertyCount += 1;
+    }
+  }
+  return normalizedPropertyCount;
+}
+
 function isAcceptedEnvelope(message) {
   return message?.protocol_version === 3
     && typeof message.session_id === "string"
@@ -86,4 +117,21 @@ function deepFreeze(value) {
 
 function clone(value) {
   return value == null ? value : structuredClone(value);
+}
+
+function normalizeCssSrgbColors(value) {
+  return value.replace(CSS_SRGB_COLOR, (_match, red, green, blue, alpha = "1") => (
+    `rgba(${toByte(red)}, ${toByte(green)}, ${toByte(blue)}, ${toUnitInterval(alpha)})`
+  ));
+}
+
+function toByte(value) {
+  return Math.round(toUnitInterval(value) * 255);
+}
+
+function toUnitInterval(value) {
+  const numeric = value.endsWith("%")
+    ? Number.parseFloat(value) / 100
+    : Number.parseFloat(value);
+  return Math.min(1, Math.max(0, numeric));
 }

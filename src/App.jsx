@@ -9,6 +9,7 @@ import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import ExerciseDisclaimer from "./components/app-shell/ExerciseDisclaimer.jsx";
 import { useOperationStatusActions } from "./components/app-shell/OperationStatusProvider.jsx";
 import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
@@ -1782,6 +1783,7 @@ function AppContent({ releaseProfile = null }) {
       theme={dashboardTheme}
       lookDrawerOpen={lookDrawerOpen}
       rightDrawer={lookDrawerOpen ? "look" : buildPanelOpen ? "map" : null}
+      noticeNode={!releaseProfile && mode !== "home" ? <ExerciseDisclaimer /> : null}
     >
     {mode === "home" ? (
       <CanonicalHomeWorkspace

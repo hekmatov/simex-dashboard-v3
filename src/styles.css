@@ -6654,3 +6654,22 @@ html[data-simex-eyedropper-active="true"] body * {
     transition: none;
   }
 }
+/* Persistent exercise context for ordinary View, Build, and Present surfaces. */
+.exercise-disclaimer {
+  align-items: center;
+  background: var(--simex-surface-panel-alt);
+  border-bottom: 1px solid var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+  display: flex;
+  font-size: 0.95rem;
+  font-weight: 700;
+  justify-content: center;
+  line-height: 1.35;
+  min-height: 28px;
+  overflow: hidden;
+  padding: max(4px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 4px max(12px, env(safe-area-inset-left));
+  position: sticky;
+  text-align: center;
+  top: 0;
+  z-index: 42;
+}

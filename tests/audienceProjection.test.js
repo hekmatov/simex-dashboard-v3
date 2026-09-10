@@ -1,10 +1,41 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
+import * as audienceProjection from "../src/lib/audienceProjection.js";
+
+const {
   projectAudienceSnapshot,
   projectPresentationState,
-} from "../src/lib/audienceProjection.js";
+} = audienceProjection;
+
+test("normalizes CSS Color 4 values before html2canvas parses an audience snapshot", () => {
+  const sanitizeClone = audienceProjection.sanitizeAudienceSnapshotCloneColors;
+  assert.equal(typeof sanitizeClone, "function");
+
+  const child = fakeElement({
+    color: "color(srgb 0.2 0.4 0.6)",
+    "background-color": "rgb(1, 2, 3)",
+  });
+  const root = fakeElement({
+    "background-image": "linear-gradient(color(srgb 0.1 0.2 0.3 / 0.28), color(srgb 0.1 0.2 0.3 / 0.28))",
+    "border-top-color": "color(srgb 0.3 0.4 0.5 / 0.64)",
+    "box-shadow": "color(srgb 0.05 0.1 0.15 / 0.48) 0px 16px 38px 0px",
+  }, [child]);
+  const clonedDocument = {
+    querySelector: (selector) => selector === ".audience-snapshot-source" ? root : null,
+  };
+
+  sanitizeClone(clonedDocument, root, fakeComputedStyle);
+
+  assert.deepEqual(root.style.values, {
+    "background-image": "linear-gradient(rgba(26, 51, 77, 0.28), rgba(26, 51, 77, 0.28))",
+    "border-top-color": "rgba(77, 102, 128, 0.64)",
+    "box-shadow": "rgba(13, 26, 38, 0.48) 0px 16px 38px 0px",
+  });
+  assert.deepEqual(child.style.values, {
+    color: "rgba(51, 102, 153, 1)",
+  });
+});
 
 test("projects local presenter state through the same immutable Audience mapping", () => {
   const state = presentationState({ traceMode: "full", frameIndex: 1 });
@@ -191,6 +222,33 @@ function presentationState({
         scene_name: true,
         scene_date: true,
       },
+    },
+  };
+}
+
+function fakeElement(computedValues, children = []) {
+  return {
+    computedValues,
+    style: {
+      values: {},
+      setProperty(name, value) {
+        this.values[name] = value;
+      },
+    },
+    querySelectorAll() {
+      return children;
+    },
+  };
+}
+
+function fakeComputedStyle(element) {
+  const names = Object.keys(element.computedValues);
+  return {
+    *[Symbol.iterator]() {
+      yield* names;
+    },
+    getPropertyValue(name) {
+      return element.computedValues[name];
     },
   };
 }

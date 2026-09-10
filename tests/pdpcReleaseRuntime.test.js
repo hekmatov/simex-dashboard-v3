@@ -66,7 +66,7 @@ test("the release profile requires exactly its generated page pair", () => {
   );
 });
 
-test("the ordinary Vite build graph excludes PDPC release-only entry, CSS, and lockup assets", async (t) => {
+test("the ordinary Vite build excludes PDPC release assets while retaining the shared exercise disclaimer", async (t) => {
   const output = await mkdtemp(path.join(os.tmpdir(), "simex-ordinary-build-"));
   t.after(() => rm(output, { recursive: true, force: true }));
 
@@ -92,7 +92,7 @@ test("the ordinary Vite build graph excludes PDPC release-only entry, CSS, and l
       .filter((file) => /\.(?:css|html|js)$/i.test(file))
       .map((file) => readFile(path.join(output, file), "utf8")),
   )).join("\n");
-  assert.doesNotMatch(runtimeText, /Fictional scenario · Exercise use only/);
+  assert.match(runtimeText, /Fictional scenario · Exercise use only/);
 });
 
 async function recursiveFiles(root) {
