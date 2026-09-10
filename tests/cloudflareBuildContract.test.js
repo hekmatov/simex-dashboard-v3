@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
@@ -16,4 +17,8 @@ test("HTML and service worker headers force revalidation while hashed assets rem
   for (const path of ["/service-worker.js", "/index.html", "/"]) {
     assert.match(headers, new RegExp(`${path.replace(/[/.]/g, "\\$&")}\\r?\\n  Cache-Control: no-cache, no-store, must-revalidate`));
   }
+});
+
+test("Cloudflare deployment does not include the retired Basic Auth Pages Function", () => {
+  assert.equal(existsSync(new URL("../functions/_middleware.js", import.meta.url)), false);
 });
