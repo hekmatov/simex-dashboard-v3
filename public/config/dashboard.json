@@ -9,7 +9,7 @@
   "lastUpdated": "2026-09-07",
   "layout": "two-column",
   "globalStyles": {
-    "dashboardStyle": "humanist-standard",
+    "dashboardStyle": "pdpc",
     "dashboardColorProfile": "pdpc/brand",
     "chartColorMode": "standard",
     "accessibility": {

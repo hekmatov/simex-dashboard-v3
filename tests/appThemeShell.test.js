@@ -12,7 +12,7 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 const [
-  { default: AppFrame },
+  { commandBoundaryElement, default: AppFrame },
   { resolveDashboardTheme },
   {
     createOperationStatusProviderQueueOwner,
@@ -121,6 +121,21 @@ test("operation status reserves the measured tablet drawer but not a full-screen
     viewportWidth: 390,
     drawerRect: { left: 0, right: 390 },
   }), 0);
+});
+
+test("right-side drawers anchor below the sticky exercise disclaimer", () => {
+  const crown = { id: "crown" };
+  const disclaimer = { id: "disclaimer" };
+  const exerciseFrame = {
+    querySelector: (selector) => selector === ".exercise-disclaimer" ? disclaimer : crown,
+  };
+  const homeFrame = {
+    querySelector: (selector) => selector === ".dashboard-command-crown" ? crown : null,
+  };
+
+  assert.equal(commandBoundaryElement(exerciseFrame), disclaimer);
+  assert.equal(commandBoundaryElement(homeFrame), crown);
+  assert.equal(commandBoundaryElement(null), null);
 });
 
 test("operation status provider cleanup disposes only its internally owned queue", () => {

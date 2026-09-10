@@ -46,6 +46,33 @@ test("the command crown orders mode, dashboard/Page, and one equal-sized mode co
   assert.match(html, /data-mode-context-size="shared"/);
 });
 
+test("exercise context keeps only the location row and disclaimer in the sticky stack", async () => {
+  const html = renderToStaticMarkup(React.createElement(DashboardCommandCrown, {
+    mode: "present",
+    dashboardIdentity: Object.freeze({ title: "Exercise dashboard" }),
+    activePage: Object.freeze({ id: "biomedical", label: "Biomedical" }),
+    pages: Object.freeze([Object.freeze({ id: "biomedical", label: "Biomedical" })]),
+    contextNode: React.createElement("span", null, "Present context"),
+    noticeNode: React.createElement("aside", { className: "exercise-disclaimer" }, "Exercise use only"),
+    onModeRequest: () => {},
+    onPageRequest: () => {},
+    onScenarioRequest: () => {},
+  }));
+  const [modesCss, appCss] = await Promise.all([
+    readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(html, /data-sticky-location="true"/);
+  assert.match(
+    html,
+    /data-command-crown-layer="location"[\s\S]*exercise-disclaimer[\s\S]*data-command-crown-layer="context"/,
+  );
+  assert.match(modesCss, /data-sticky-location="true"[^}]*display:\s*contents/);
+  assert.match(modesCss, /data-sticky-location="true"[^}]*\.dashboard-identity-row\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;/);
+  assert.match(appCss, /\.exercise-disclaimer\s*\{[^}]*position:\s*sticky;[^}]*top:\s*var\(--simex-command-crown-row\);/);
+});
+
 test("an empty mode context is omitted until a real projection needs it", async () => {
   const props = {
     dashboardIdentity: Object.freeze({ title: "Biomedical situational awareness" }),

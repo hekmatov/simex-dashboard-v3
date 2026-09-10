@@ -21,6 +21,7 @@ export default function DashboardCommandCrown({
   scenarioExpanded,
   scenarioDirty,
   scenarioNode,
+  noticeNode,
   disabled = false,
   disabledReason = "",
   contextDisabledReason = disabledReason,
@@ -28,6 +29,7 @@ export default function DashboardCommandCrown({
   return (
     <div
       className="dashboard-command-crown"
+      data-sticky-location={noticeNode ? "true" : undefined}
       style={{ "--dashboard-mode-context-block-size": "var(--simex-command-crown-row)" }}
     >
       <header className="command-crown-mode-row" data-command-crown-layer="mode">
@@ -53,6 +55,7 @@ export default function DashboardCommandCrown({
         pageActions={pageActions}
         pageNavigationNode={pageNavigationNode}
       />
+      {noticeNode}
       <ModeContextStrip
         mode={mode}
         contextNode={contextNode}

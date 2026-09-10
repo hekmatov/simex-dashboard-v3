@@ -9,6 +9,12 @@ const useBrowserLayoutEffect = typeof window === "undefined"
   ? React.useEffect
   : React.useLayoutEffect;
 
+export function commandBoundaryElement(frame) {
+  return frame?.querySelector(".exercise-disclaimer")
+    ?? frame?.querySelector(".dashboard-command-crown")
+    ?? null;
+}
+
 export default function AppFrame({
   mode,
   releaseProfileId = null,
@@ -49,8 +55,7 @@ export default function AppFrame({
     let frame = 0;
     const update = () => {
       frame = 0;
-      const crownBottom = frameRef.current
-        ?.querySelector(".dashboard-command-crown")
+      const crownBottom = commandBoundaryElement(frameRef.current)
         ?.getBoundingClientRect().bottom;
       const viewportTop = window.visualViewport?.offsetTop ?? 0;
       const next = rightSideDrawerTopFromCrown({ crownBottom, viewportTop });
@@ -59,11 +64,11 @@ export default function AppFrame({
     const schedule = () => {
       if (!frame) frame = window.requestAnimationFrame(update);
     };
-    const crown = frameRef.current?.querySelector(".dashboard-command-crown");
-    const observer = typeof ResizeObserver === "function" && crown
+    const commandBoundary = commandBoundaryElement(frameRef.current);
+    const observer = typeof ResizeObserver === "function" && commandBoundary
       ? new ResizeObserver(schedule)
       : null;
-    observer?.observe(crown);
+    observer?.observe(commandBoundary);
     update();
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
@@ -118,12 +123,12 @@ export default function AppFrame({
           scenarioExpanded={scenarioExpanded}
           scenarioDirty={scenarioDirty}
           scenarioNode={scenarioNode}
+          noticeNode={noticeNode}
           disabled={modeDisabled}
           disabledReason={modeDisabledReason || blockedReason}
           contextDisabledReason={blockedReason}
         />
       )}
-      {noticeNode}
       {blockedReason && <p className="mode-switch-error" role="alert">{blockedReason}</p>}
       {persistenceNotice && (
         <p className="app-persistence-notice" role="status">{persistenceNotice}</p>

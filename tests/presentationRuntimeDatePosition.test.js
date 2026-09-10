@@ -14,6 +14,16 @@ const runtimeModule = await vite
   .catch(() => null);
 await vite.close();
 
+test("Audience display information starts entirely hidden", () => {
+  assert.deepEqual(runtimeModule?.DEFAULT_AUDIENCE_FACTS, {
+    dashboard_name: false,
+    page: false,
+    parent_chrono_group: false,
+    scene_name: false,
+    scene_date: false,
+  });
+});
+
 test("Audience movement auto-saves saved Scenes but leaves raw Chrono Groups session-only", async () => {
   assert.equal(
     typeof runtimeModule?.persistAudienceDatePositionForSource,

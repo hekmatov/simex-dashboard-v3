@@ -1394,6 +1394,16 @@
   padding: 0 var(--simex-padding-dialog);
 }
 
+.dashboard-command-crown[data-sticky-location="true"] {
+  display: contents;
+}
+
+.dashboard-command-crown[data-sticky-location="true"] .dashboard-identity-row {
+  position: sticky;
+  top: 0;
+  z-index: 43;
+}
+
 .dashboard-identity-summary {
   align-items: center;
   display: flex;

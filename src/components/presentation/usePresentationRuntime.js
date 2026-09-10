@@ -11,7 +11,11 @@ import { openAudienceWindow, requestAudienceWindowClose } from "../../lib/presen
 import { executePresentationEndEffects } from "./PresentationController.jsx";
 
 export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
-  dashboard_name: true, page: false, parent_chrono_group: true, scene_name: true, scene_date: true,
+  dashboard_name: false,
+  page: false,
+  parent_chrono_group: false,
+  scene_name: false,
+  scene_date: false,
 });
 const AUDIENCE_FACT_KEYS = new Set(Object.keys(DEFAULT_AUDIENCE_FACTS));
 
