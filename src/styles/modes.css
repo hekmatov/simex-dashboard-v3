@@ -4319,3 +4319,34 @@ body .app-frame .dashboard-map-panel .build-tree-group {
   min-width: var(--simex-control-utility);
   padding: 0;
 }
+
+/* Lane A: Build command groups (Insert, Libraries, Session). */
+.build-command-main-row {
+  column-gap: var(--simex-space-5);
+  row-gap: var(--simex-space-3);
+}
+
+.build-command-group {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: var(--simex-gap-control-group);
+  width: auto;
+}
+
+.build-command-group-label {
+  color: var(--simex-text-muted);
+  font-size: 12px;
+  line-height: var(--simex-control-line-height);
+  margin-inline-end: var(--simex-space-1);
+}
+
+.build-command-group[data-build-command-group="session"] {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 1023px) {
+  .build-command-group[data-build-command-group="session"] {
+    margin-inline-start: 0;
+  }
+}

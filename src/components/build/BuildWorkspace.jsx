@@ -816,12 +816,10 @@ export default function BuildWorkspace({
             disabledReason={mutationDisabledReason}
             auxiliaryLocked={auxiliaryLocked}
             auxiliaryDisabledReason={auxiliaryDisabledReason}
-            accessibilityEnabled={accessibilityEnabled}
             onFinish={onFinish}
             onReset={onReset}
             onAddChart={() => onAddChart?.()}
             onAddStaticContent={() => onAddStaticContent?.()}
-            onAccessibilityChange={onAccessibilityChange}
             onOpenAuxiliary={openAuxiliary}
           />
           {(activeAuxiliary === "source-content" || sourceContentOwners.length > 0) && typeof document !== "undefined" && createPortal((

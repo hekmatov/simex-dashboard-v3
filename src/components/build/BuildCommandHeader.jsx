@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 
 import { dashboardOwnedRegionProps } from "../../theme/dashboardRegionRegistry.js";
 import ControlTooltip from "../common/ControlTooltip.jsx";
-import BuildMoreDrawer from "./BuildMoreDrawer.jsx";
 
 const DISCARD_BUILD_CHANGES_DESCRIPTION = "Restores the dashboard to the baseline captured when you entered Build. It does not contact the deployed online dashboard.";
 
@@ -12,15 +11,33 @@ export default function BuildCommandHeader({
   disabledReason = "",
   auxiliaryLocked = false,
   auxiliaryDisabledReason = disabledReason,
-  accessibilityEnabled = false,
   onFinish,
   onReset,
   onAddChart,
   onAddStaticContent,
-  onAccessibilityChange,
   onOpenAuxiliary,
 }) {
-  const [moreOpen, setMoreOpen] = useState(false);
+  const command = (id, label, { primary = false, disabled, reason, explain = false, ...rest } = {}) => (
+    <ControlTooltip disabled={disabled} explain={explain} reason={reason}>
+      <button
+        type="button"
+        className={primary ? undefined : "secondary"}
+        data-build-command-action={id}
+        disabled={disabled}
+        {...rest}
+      >
+        {label}
+      </button>
+    </ControlTooltip>
+  );
+  const library = (id, label, entry) => command(id, label, {
+    id: `${id}-command`,
+    disabled: auxiliaryLocked,
+    reason: auxiliaryDisabledReason,
+    "data-context-shelf-entry": entry,
+    "data-unit-orbit-preserve-open": true,
+    onClick: () => onOpenAuxiliary?.(entry),
+  });
 
   return (
     <section
@@ -29,101 +46,30 @@ export default function BuildCommandHeader({
       {...dashboardOwnedRegionProps("build-command-header")}
     >
       <div className="build-command-main-row" role="toolbar" aria-label="Primary Build commands">
-        <ControlTooltip disabled={locked} reason={disabledReason}>
-          <button type="button" className="secondary" data-build-command-action="add-chart" disabled={locked} onClick={onAddChart}>
-            Add chart
-          </button>
-        </ControlTooltip>
-        <ControlTooltip disabled={locked} reason={disabledReason}>
-          <button
-            id="add-static-content-command"
-            type="button"
-            className="secondary"
-            data-build-command-action="add-text-image"
-            disabled={locked}
-            onClick={onAddStaticContent}
-          >
-            Add Text/Image
-          </button>
-        </ControlTooltip>
-        <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
-          <button
-            id="source-content-command"
-            type="button"
-            className="secondary"
-            data-build-command-action="source-content"
-            data-context-shelf-entry="source-content"
-            data-unit-orbit-preserve-open
-            disabled={auxiliaryLocked}
-            onClick={() => onOpenAuxiliary?.("source-content")}
-          >
-            Source content
-          </button>
-        </ControlTooltip>
-        <ControlTooltip disabled={auxiliaryLocked} reason={auxiliaryDisabledReason}>
-          <button
-            id="chrono-studio-command"
-            type="button"
-            className="secondary"
-            data-build-command-action="chrono-studio"
-            data-context-shelf-entry="chrono-group"
-            data-unit-orbit-preserve-open
-            disabled={auxiliaryLocked}
-            onClick={() => onOpenAuxiliary?.("chrono-group")}
-          >
-            Chrono Studio
-          </button>
-        </ControlTooltip>
-        <ControlTooltip
-          disabled={locked}
-          explain={!locked}
-          reason={locked ? disabledReason : DISCARD_BUILD_CHANGES_DESCRIPTION}
-        >
-          <button
-            type="button"
-            className="secondary"
-            data-build-command-action="discard-build-changes"
-            disabled={locked}
-            onClick={onReset}
-          >
-            Discard Build changes
-          </button>
-        </ControlTooltip>
-        <ControlTooltip disabled={locked} reason={disabledReason}>
-          <button type="button" data-build-command-action="finish-build" disabled={locked} onClick={onFinish}>
-            Finish Build
-          </button>
-        </ControlTooltip>
-        <ControlTooltip disabled={auxiliaryLocked && locked} reason={auxiliaryDisabledReason || disabledReason}>
-          <button
-            type="button"
-            className="secondary"
-            data-build-command-action="more"
-            data-unit-orbit-preserve-open
-            aria-controls="build-more-drawer"
-            aria-expanded={moreOpen}
-            aria-haspopup="dialog"
-            disabled={auxiliaryLocked && locked}
-            onClick={() => setMoreOpen(true)}
-          >
-            More
-          </button>
-        </ControlTooltip>
+        <div className="build-command-group" role="group" aria-label="Insert" data-build-command-group="insert">
+          <span className="build-command-group-label" aria-hidden="true">Insert</span>
+          {command("add-chart", "Add chart", { disabled: locked, reason: disabledReason, onClick: onAddChart })}
+          {command("add-text-image", "Add Text/Image", { id: "add-static-content-command", disabled: locked, reason: disabledReason, onClick: onAddStaticContent })}
+        </div>
+        <div className="build-command-group" role="group" aria-label="Libraries" data-build-command-group="libraries">
+          <span className="build-command-group-label" aria-hidden="true">Libraries</span>
+          {library("source-content", "Source content", "source-content")}
+          {library("chrono-studio", "Chrono Studio", "chrono-group")}
+          {library("scene-studio", "Scene Studio", "scene")}
+        </div>
+        <div className="build-command-group" role="group" aria-label="Session" data-build-command-group="session">
+          <span className="build-command-group-label" aria-hidden="true">Session</span>
+          {command("discard-build-changes", "Discard Build changes", {
+            disabled: locked,
+            explain: !locked,
+            reason: locked ? disabledReason : DISCARD_BUILD_CHANGES_DESCRIPTION,
+            onClick: onReset,
+          })}
+          {command("finish-build", "Finish Build", { primary: true, disabled: locked, reason: disabledReason, onClick: onFinish })}
+        </div>
       </div>
 
       {pendingWork.length > 0 && <BuildPendingWorkRail pendingWork={pendingWork} />}
-
-      <BuildMoreDrawer
-        open={moreOpen}
-        onClose={() => setMoreOpen(false)}
-        sceneDisabled={auxiliaryLocked}
-        sceneDisabledReason={auxiliaryDisabledReason}
-        accessibilityDisabled={locked}
-        accessibilityDisabledReason={disabledReason}
-        onOpenSceneStudio={() => onOpenAuxiliary?.("scene")}
-        accessibilityEnabled={accessibilityEnabled}
-        onAccessibilityChange={onAccessibilityChange}
-      />
     </section>
   );
 }

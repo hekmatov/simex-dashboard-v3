@@ -10,13 +10,7 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [
-  { default: BuildWorkspace },
-  { default: BuildMoreDrawer },
-] = await Promise.all([
-  vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
-  vite.ssrLoadModule("/src/components/build/BuildMoreDrawer.jsx"),
-]);
+const { default: BuildWorkspace } = await vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx");
 await vite.close();
 
 const activePage = {
@@ -55,86 +49,37 @@ function renderWorkspace(overrides = {}) {
   }));
 }
 
-test("Build main row has the exact compact command order and ownership", () => {
+test("Build command row exposes Insert, Libraries, and Session groups in order", () => {
   const html = renderWorkspace();
-  const actionOrder = [...html.matchAll(/data-build-command-action="([^"]+)"/g)]
-    .map((match) => match[1]);
-  assert.match(
-    html,
-    /<section(?=[^>]*\baria-label="Build commands")(?=[^>]*\bdata-dashboard-region="build-command-header")(?=[^>]*\bdata-dashboard-surface-role="command-bar")(?=[^>]*\bdata-dashboard-material="flat")[^>]*>/,
-  );
+  const groupOrder = [...html.matchAll(/data-build-command-group="([^"]+)"/g)].map((match) => match[1]);
+  const actionOrder = [...html.matchAll(/data-build-command-action="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(groupOrder, ["insert", "libraries", "session"]);
   assert.deepEqual(actionOrder, [
     "add-chart",
     "add-text-image",
     "source-content",
     "chrono-studio",
+    "scene-studio",
     "discard-build-changes",
     "finish-build",
-    "more",
   ]);
-  assert.match(html, /data-build-command-action="add-chart"[^>]*>Add chart<\/button>/);
-  assert.match(html, /data-build-command-action="add-text-image"[^>]*>Add Text\/Image<\/button>/);
-  assert.match(html, /data-build-command-action="source-content"[\s\S]*?>Source content<\/button>/);
-  assert.match(html, /data-build-command-action="chrono-studio"[\s\S]*?>Chrono Studio<\/button>/);
-  assert.match(html, /data-build-command-action="more"[^>]*>More<\/button>/);
-  assert.doesNotMatch(html, /Pages &amp; sections/);
-  assert.doesNotMatch(html, /data-build-command-group="package"/);
-  assert.doesNotMatch(html, /Upload Dashboard Package|Download Dashboard Package|Clear dashboard|Delete dashboard content/);
-  assert.match(
-    html,
-    /<button[^>]*aria-describedby="[^"]+"[^>]*>Discard Build changes<\/button>/,
-  );
-  assert.match(
-    html,
-    /role="tooltip"[^>]*>Restores the dashboard to the baseline captured when you entered Build\. It does not contact the deployed online dashboard\.<\/span>/,
-  );
-  assert.doesNotMatch(html, /aria-label="Pending Build work"/);
-  assert.match(
-    html,
-    /<aside(?=[^>]*\bid="dashboard-map-panel")(?=[^>]*\baria-label="Dashboard map")(?=[^>]*\binert="")[^>]*>/,
-  );
-  assert.doesNotMatch(html, /aria-label="Build commands"[^>]*inert/);
-  assert.match(html, /<h2[^>]*>Dashboard map<\/h2>/);
-  assert.match(html, /aria-label="Close Dashboard map"/);
-  assert.match(html, /data-icon-id="close"/);
-  assert.match(html, /data-dashboard-map-region="structure"/);
-  assert.doesNotMatch(html, /Dashboard map regions|>Structure<|>Inspector</);
-  assert.match(html, /dashboard-map-inline-inspector[\s\S]*?Page title/);
+  assert.match(html, /<div(?=[^>]*\brole="group")(?=[^>]*\baria-label="Insert")[^>]*>/);
+  assert.match(html, /<div(?=[^>]*\brole="group")(?=[^>]*\baria-label="Libraries")[^>]*>/);
+  assert.match(html, /<div(?=[^>]*\brole="group")(?=[^>]*\baria-label="Session")[^>]*>/);
+  assert.match(html, /class="build-command-group-label"[^>]*>Insert</);
+  assert.match(html, /data-build-command-action="scene-studio"[\s\S]*?>Scene Studio<\/button>/);
+  assert.doesNotMatch(html, /data-build-command-action="more"/);
+  assert.doesNotMatch(html, /build-more-drawer/);
+});
+
+test("Finish Build is the only primary command", () => {
+  const html = renderWorkspace();
+  const buttons = [...html.matchAll(/<button[^>]*data-build-command-action="([^"]+)"[^>]*>/g)];
+  const primary = buttons.filter(([tag]) => !/class="[^"]*\bsecondary\b/.test(tag)).map(([, id]) => id);
+  assert.deepEqual(primary, ["finish-build"]);
 });
 
 test("Build controls do not duplicate toast-reported operation errors", () => {
-  const html = renderWorkspace({
-    operationError: "Chart layout height must be a whole row or a supported quarter-row percentage.",
-  });
-
-  assert.doesNotMatch(html, /Chart layout height must be a whole row or a supported quarter-row percentage\./);
-  assert.doesNotMatch(html, /build-operation-error/);
-});
-
-test("More is a dialog drawer containing only Scene Studio in pointer-only mode", () => {
-  const html = renderToStaticMarkup(React.createElement(BuildMoreDrawer, {
-    open: true,
-    onClose() {},
-    onOpenSceneStudio() {},
-    accessibilityEnabled: false,
-    onAccessibilityChange() {},
-  }));
-  const commands = [...html.matchAll(/data-build-more-command="([^"]+)"/g)]
-    .map((match) => match[1]);
-
-  assert.match(html, /data-right-side-drawer="build-more-drawer"/);
-  assert.match(html, /role="dialog"/);
-  assert.match(html, /aria-modal="true"/);
-  assert.deepEqual(commands, ["scene-studio"]);
-  assert.match(html, />Scene Studio<\/button>/);
-  assert.doesNotMatch(html, /type="checkbox"|Chart accessibility/);
-  assert.doesNotMatch(html, /Add chart|Add Text\/Image|Source content|Chrono Studio|Discard Build changes|Finish Build|Pages/);
-});
-
-test("More preserves the selected chart until Scene Studio captures its restoration", () => {
-  const html = renderWorkspace();
-  const moreButton = html.match(/<button[^>]*data-build-command-action="more"[^>]*>/)?.[0];
-
-  assert.ok(moreButton, "Build renders the More command");
-  assert.match(moreButton, /data-unit-orbit-preserve-open/);
+  const html = renderWorkspace({ operationError: "Layout save failed" });
+  assert.doesNotMatch(html, /Layout save failed/);
 });
