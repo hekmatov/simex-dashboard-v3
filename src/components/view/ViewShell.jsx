@@ -62,7 +62,7 @@ export default function ViewShell({
       mode="view"
       pageType={pageType}
       pageId={activePage?.id}
-      dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
+      dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} mode="view" />}
       pageContent={(
         <div className="canonical-view-content" style={iconLanguageStyles}>
           <PlaybackSurface

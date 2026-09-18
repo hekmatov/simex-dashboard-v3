@@ -114,3 +114,45 @@ test("an empty mode context is omitted until a real projection needs it", async 
   assert.match(pageButtonRule, /min-height:\s*var\(--simex-control-standard\);/);
   assert.match(pageButtonRule, /min-width:\s*var\(--simex-control-standard\);/);
 });
+
+test("the compact crown collapses to one row with a page disclosure at phone width", async () => {
+  const html = renderCrownWithMatchMedia(true, {
+    mode: "view",
+    dashboardIdentity: { title: "Biomedical situational awareness", scenarioLabel: "HeV-A26 Day 2", lastUpdated: "2026-07-27" },
+    activePage: { id: "biomedical", label: "Biomedical" },
+    pages: [{ id: "biomedical", label: "Biomedical" }, { id: "operations", label: "Operations" }],
+    pageActions: React.createElement("button", { type: "button" }, "Compare charts"),
+    onModeRequest() {}, onPageRequest() {}, onScenarioRequest() {},
+  });
+  assert.match(html, /data-crown-compact="true"/);
+  assert.equal((html.match(/data-command-crown-layer="location"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-command-crown-layer="mode"/);
+  assert.match(html, /<button(?=[^>]*aria-expanded="false")(?=[^>]*aria-controls="crown-disclosure")[^>]*>Biomedical<\/button>/);
+  assert.doesNotMatch(html, /id="crown-disclosure"/);
+});
+
+test("the compact crown never applies outside View", async () => {
+  const html = renderCrownWithMatchMedia(true, {
+    mode: "build",
+    dashboardIdentity: { title: "Dashboard" },
+    activePage: { id: "a", label: "A" },
+    pages: [{ id: "a", label: "A" }],
+    onModeRequest() {}, onPageRequest() {}, onScenarioRequest() {},
+  });
+  assert.doesNotMatch(html, /data-crown-compact/);
+  assert.equal((html.match(/data-command-crown-layer=/g) ?? []).length, 2);
+});
+
+function renderCrownWithMatchMedia(matches, props) {
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { matchMedia: () => ({ matches, addEventListener() {}, removeEventListener() {} }) },
+  });
+  try {
+    return renderToStaticMarkup(React.createElement(DashboardCommandCrown, props));
+  } finally {
+    if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+    else delete globalThis.window;
+  }
+}

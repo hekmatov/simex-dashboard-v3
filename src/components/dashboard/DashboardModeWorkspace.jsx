@@ -120,7 +120,7 @@ export default function DashboardModeWorkspace({
         buildStaticAuthoringOpen={buildStaticAuthoringOpen}
         pageId={activePage?.id}
         dashboardHeader={dashboardHeader ?? (
-          <DashboardHeader activePage={activePage} dashboard={dashboard} />
+          <DashboardHeader activePage={activePage} dashboard={dashboard} mode={mode} />
         )}
         workspaceControls={buildMode ? buildWorkspace : null}
         pageContent={(
