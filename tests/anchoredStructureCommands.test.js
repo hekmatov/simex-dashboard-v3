@@ -35,11 +35,9 @@ test("real Section headers own inline rename and the complete command set", () =
     buildState: { sectionDrafts: {}, onStructureCommand() {} },
   }));
   assert.match(html, /Edit Section title: Hospital pressure/);
-  assert.match(html, /Move Hospital pressure earlier/);
-  assert.match(html, /Move Hospital pressure later/);
-  assert.match(html, /Move Hospital pressure to Page/);
-  assert.match(html, /Merge Hospital pressure/);
-  assert.match(html, /Remove Hospital pressure/);
+  assert.match(html, /<button(?=[^>]*aria-haspopup="menu")(?=[^>]*aria-label="Section actions for Hospital pressure")(?=[^>]*data-section-menu="pressure")[^>]*>/);
+  assert.doesNotMatch(html, /Move Hospital pressure earlier/);
+  assert.doesNotMatch(html, />Move to Page</);
   assert.doesNotMatch(html, />Rename Section</);
 });
 

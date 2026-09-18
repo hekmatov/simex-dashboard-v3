@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { choosePanelAction } from "./support/buildWorkflow.js";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 import {
@@ -327,7 +328,7 @@ test("full editor keeps every tab's controls and render panels aligned", async (
   await page.setViewportSize({ width: 1645, height: 1214 });
   await openBiomedicalPage(page);
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   await page.locator(".chart-quick-editor")
     .getByRole("button", { name: "Open full editor", exact: true })
     .click();
@@ -376,7 +377,7 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   await openBiomedicalPage(page);
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   const chartCountBefore = await storedChartCount(page);
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Quick continuity title");
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -441,14 +442,14 @@ test("quick edit previews immediately while unchanged and suspended click-away s
 }) => {
   await openBiomedicalPage(page);
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
-  const editChart = panel.getByRole("button", { name: "Edit chart" });
+  const placementId = await panel.getAttribute("data-build-placement-id");
   const storedDashboardBeforeEdit = await page.evaluate(
     (key) => localStorage.getItem(key),
     STORAGE_KEY,
   );
 
   await panel.hover();
-  await editChart.click();
+  await choosePanelAction(page, placementId, "edit");
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
   const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
@@ -459,7 +460,7 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await expect(page.getByRole("button", { name: "View", exact: true })).toBeEnabled();
 
   await panel.hover();
-  await editChart.click();
+  await choosePanelAction(page, placementId, "edit");
   editor = page.locator(".chart-quick-editor");
   const title = editor.getByRole("textbox", { name: "Chart title", exact: true });
   await title.fill("Live quick preview");
@@ -498,7 +499,9 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await expect(
     panel.locator(".chart-echarts-view .chart-view-title--visually-hidden"),
   ).toHaveText("Live quick preview");
-  await expect(editChart).toBeEnabled();
+  await panel.locator("[data-panel-menu]").click();
+  await expect(page.locator(`[data-build-edit-for="${placementId}"]`)).toBeEnabled();
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Add chart", exact: true })).toBeDisabled();
   await expect(owner).toHaveCount(1);
   await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
@@ -571,7 +574,7 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
     ].join("-");
   });
 
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
   await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Durable quick save");
@@ -611,7 +614,7 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   expect(afterSave.unrelatedChart).toEqual(before.unrelatedChart);
   expect(afterSave.chronoGroups).toEqual(before.chronoGroups);
 
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
   await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Unsaved title removed with placement");
@@ -669,7 +672,7 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
   await dashboardMap.click();
 
   const target = page.locator('[data-panel-id="socio_trust_trend"]');
-  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await choosePanelAction(page, await target.getAttribute("data-build-placement-id"), "edit");
   const editor = page.locator(".chart-quick-editor");
   const savedChartTitle = "Quick Save on a live layout draft";
   await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill(savedChartTitle);
@@ -756,7 +759,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
 });
 
 async function openFullChartEditor(page, panel) {
-  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();

@@ -41,8 +41,8 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 | Measure | Count |
 | --- | ---: |
 | Approved glyphs | 116 |
-| Unique interaction records | 130 |
-| Surface interaction references | 141 |
+| Unique interaction records | 131 |
+| Surface interaction references | 142 |
 | Surfaces | 14 |
 | Chart pictograms | 27 |
 | Visual states | 7 |
@@ -216,7 +216,7 @@ Surface ID: `layouts` · 8 references
 
 ## Chart panels
 
-Surface ID: `panels` · 7 references
+Surface ID: `panels` · 8 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -227,6 +227,7 @@ Surface ID: `panels` · 7 references
 | panel.edit-chart | edit | Edit chart | Edit chart | icon | standard | live | none | — |
 | chart.remove | trash | Remove chart | Remove chart | icon | danger | live | required | Destructive chart action; confirmation required |
 | panel.hold-ctrl-while-scrolling-to-zoom | — | Hold Ctrl while scrolling | Hold Ctrl while scrolling | text | standard | reference | none | Inconspicuous top-left hint |
+| panel.actions | moveFourWay | Panel actions | Panel actions. Drag to move. | icon | standard | live | none | Single menu trigger that doubles as the drag handle |
 
 ## Chart wizard
 

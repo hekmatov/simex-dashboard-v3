@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { choosePanelAction } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
@@ -43,8 +44,8 @@ async function openDashboardEditMode(page) {
 
 async function openFirstQuickChartEditor(page) {
   await openDashboardEditMode(page);
-  await page.locator(".chart-panel").first()
-    .getByRole("button", { name: "Edit chart" }).click();
+  const panel = page.locator(".chart-panel").first();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   return quick;
@@ -52,7 +53,7 @@ async function openFirstQuickChartEditor(page) {
 
 async function openFullChartEditorForPanel(page, panel) {
   await panel.hover();
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();

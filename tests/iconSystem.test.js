@@ -60,7 +60,7 @@ test("the icon catalogue resolves every approved interaction and surface referen
         + (surface.chartTypeIds?.length ?? 0),
       0,
     ),
-    168,
+    169,
   );
   for (const duplicateId of [
     "shell.open-editable-tab.1",
@@ -290,6 +290,7 @@ test("approved compact dashboard actions are live icon-only interactions", () =>
     "shell.start-section",
     "image.zoom-reset",
     "panel.edit-chart",
+    "panel.actions",
     "panel.view-source-csv",
     "wizard.close-wizard",
     "wizard.create-chart",

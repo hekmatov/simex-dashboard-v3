@@ -42,3 +42,27 @@ export async function openSourceContent(page) {
   await workspace.waitFor({ state: "visible" });
   return workspace;
 }
+
+export function sectionMenu(page, sectionId) {
+  return page.locator(`[data-section-menu="${sectionId}"]`);
+}
+
+export function panelMenu(page, placementId) {
+  return page.locator(`[data-panel-menu="${placementId}"]`);
+}
+
+export async function chooseSectionAction(page, sectionId, itemId) {
+  const trigger = sectionMenu(page, sectionId);
+  await trigger.click();
+  const menu = page.locator(`#section-menu-${sectionId}[role="menu"]`);
+  await menu.waitFor({ state: "visible" });
+  await menu.locator(`[data-action-menu-item="${itemId}"]`).click();
+}
+
+export async function choosePanelAction(page, placementId, itemId) {
+  const trigger = panelMenu(page, placementId);
+  await trigger.click();
+  const menu = page.locator(`#panel-menu-${placementId}[role="menu"]`);
+  await menu.waitFor({ state: "visible" });
+  await menu.locator(`[data-action-menu-item="${itemId}"]`).click();
+}
