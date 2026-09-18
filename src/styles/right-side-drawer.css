@@ -41,7 +41,7 @@
   max-block-size: none;
 }
 
-.right-side-drawer:is(.build-more-drawer, .audience-display-options-drawer) {
+.right-side-drawer.audience-display-options-drawer {
   block-size: auto;
   bottom: auto;
   max-block-size: calc(100dvh - var(--right-side-drawer-top) - 8px);

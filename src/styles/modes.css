@@ -428,21 +428,11 @@
   color: var(--simex-text-muted);
 }
 
-.build-pending-work__actions,
-.build-more-command-list {
+.build-pending-work__actions {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.build-more-command-list {
-  align-items: stretch;
-  flex-direction: column;
-}
-
-.build-more-command-list > .control-tooltip > :is(button, label) {
-  width: 100%;
 }
 
 @keyframes build-pending-work-enter {

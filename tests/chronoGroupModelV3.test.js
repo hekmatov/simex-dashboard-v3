@@ -698,6 +698,7 @@ test("the initial playback state is immutable and matches the v3 contract", () =
     reducedMotion: false,
     playbackView: false,
     playbackViewOwners: [],
+    sourcePreference: "auto",
   });
   assert.equal(Object.isFrozen(initialPlaybackState), true);
 });
@@ -755,6 +756,7 @@ test("changing groups resets the index and pauses playback", () => {
       activeIndex: 0,
       frameIndex: 0,
       playing: false,
+      sourcePreference: "auto",
     },
   );
   assert.deepEqual(
@@ -769,6 +771,7 @@ test("changing groups resets the index and pauses playback", () => {
       activeIndex: 0,
       frameIndex: 0,
       playing: false,
+      sourcePreference: "page",
     },
   );
 });
