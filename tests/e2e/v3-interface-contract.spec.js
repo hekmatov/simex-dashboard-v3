@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { choosePanelAction, chooseSectionAction } from "./support/buildWorkflow.js";
 
 import { chartAuthoringWorkflow } from "./support/chart-authoring-workflow.js";
 
@@ -137,11 +138,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   await mapToggle.click();
   const mapDrawer = page.locator("#dashboard-map-panel");
-  const moveSection = page.getByRole("button", {
-    name: "Move Outbreak dynamics later",
-    exact: true,
-  });
-  await moveSection.click();
+  await chooseSectionAction(page, "outbreak_dynamics", "move-later");
   const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
   await expect(layoutOwner).toHaveAttribute("data-pending-work-state", "dirty");
   await expect(failedRestoreNotice).toBeVisible();
@@ -234,7 +231,7 @@ test("same-page section reorder paints status first and preserves the React-owne
     record();
   });
 
-  await page.getByRole("button", { name: "Move Outbreak dynamics later", exact: true }).click();
+  await chooseSectionAction(page, "outbreak_dynamics", "move-later");
   await expect.poll(() => page.locator("[data-canonical-section-id]").evaluateAll(
     (nodes) => nodes.map((node) => node.getAttribute("data-canonical-section-id")).slice(0, 2),
   )).toEqual(["health_system", "outbreak_dynamics"]);
@@ -280,7 +277,7 @@ test("disabled Finish Build exposes its blocking reason on pointer hover", async
   const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
   await target.hover();
-  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await choosePanelAction(page, await target.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Pending quick title");

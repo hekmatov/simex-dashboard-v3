@@ -1,5 +1,5 @@
 import { openChartAuthoring } from "./chart-authoring-workflow.js";
-import { enterBuildMode, openDashboardMap, openSourceContent } from "./buildWorkflow.js";
+import { choosePanelAction, chooseSectionAction, enterBuildMode, openDashboardMap, openSourceContent, panelMenu, sectionMenu } from "./buildWorkflow.js";
 import { openDashboardPage } from "./landingWorkflow.js";
 import { dashboardJourneyGroupingRoleFor } from "../../../src/theme/dashboardSurfaceRoles.js";
 
@@ -188,14 +188,24 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     setup: setupSectionCommandDialog,
   }),
   executable({
-    id: "build-more-menu",
+    id: "build-section-menu",
     family: "build",
-    owner: "build-command-crown",
+    owner: "build-workspace",
     mode: "build",
-    state: "more-commands",
-    viewport: DESKTOP_PRESSURE,
-    root: "[role='dialog']",
-    setup: setupBuildMore,
+    state: "section-menu-open",
+    viewport: DESKTOP_STANDARD,
+    root: '[id^="section-menu-"][role="menu"]',
+    setup: setupBuildSectionMenu,
+  }),
+  executable({
+    id: "build-panel-menu",
+    family: "build",
+    owner: "build-workspace",
+    mode: "build",
+    state: "panel-menu-open",
+    viewport: DESKTOP_STANDARD,
+    root: '[id^="panel-menu-"][role="menu"]',
+    setup: setupBuildPanelMenu,
   }),
   executable({
     id: "dashboard-look-standard",
@@ -890,6 +900,25 @@ async function setupBuildPageActions(context) {
   return { page };
 }
 
+async function setupBuildSectionMenu(context) {
+  const { page } = await setupBuild(context);
+  const section = page.locator("[data-canonical-section-id]").first();
+  const sectionId = await section.getAttribute("data-canonical-section-id");
+  await sectionMenu(page, sectionId).click();
+  await page.locator(`[id="section-menu-${sectionId}"][role="menu"]`).waitFor();
+  return { page };
+}
+
+async function setupBuildPanelMenu(context) {
+  const { page } = await setupBuild(context);
+  const panel = page.locator("article[data-build-placement-id]").first();
+  const placementId = await panel.getAttribute("data-build-placement-id");
+  await panel.hover();
+  await panelMenu(page, placementId).click();
+  await page.locator(`[id="panel-menu-${placementId}"][role="menu"]`).waitFor();
+  return { page };
+}
+
 async function setupBuildPageCommandForm(context) {
   const { page } = await setupBuildPageActions(context);
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
@@ -900,15 +929,8 @@ async function setupBuildPageCommandForm(context) {
 
 async function setupSectionCommandDialog(context) {
   const { page } = await setupBuild(context);
-  await page.getByRole("button", { name: "Move Outbreak dynamics to Page" }).click();
+  await chooseSectionAction(page, "outbreak_dynamics", "move-page");
   await page.getByRole("dialog", { name: "move Outbreak dynamics" }).waitFor();
-  return { page };
-}
-
-async function setupBuildMore(context) {
-  const { page } = await setupBuild(context);
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("dialog", { name: "More Build commands" }).waitFor();
   return { page };
 }
 
@@ -961,9 +983,8 @@ async function setupChronoGroupEditor(context) {
 }
 
 async function setupSceneStudio(context) {
-  const { page } = await setupBuildMore(context);
-  await page.getByRole("dialog", { name: "More Build commands" })
-    .getByRole("button", { name: "Scene Studio", exact: true }).click();
+  const { page } = await setupBuild(context);
+  await page.locator('[data-build-command-action="scene-studio"]').click();
   const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await studio.waitFor();
   await studio.getByRole("button", { name: "Create Scene", exact: true }).click();
@@ -1066,7 +1087,7 @@ async function setupChartWizardReviewIssues(context) {
 async function setupFullChartEditor(context) {
   const { page } = await setupBuild(context);
   const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
-  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await quick.waitFor();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -1079,7 +1100,7 @@ async function setupFullChartEditor(context) {
 async function setupChartQuickEditor(context) {
   const { page } = await setupBuild(context);
   const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
-  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   await page.locator(".chart-quick-editor").waitFor();
   return { page };
 }
@@ -1252,7 +1273,7 @@ async function setupSourceContentActionDialog(context) {
 async function setupPendingOperation(context) {
   const { page } = await setupBuild(context);
   const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
-  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   await page.locator(".chart-quick-editor")
     .getByRole("textbox", { name: "Chart title", exact: true })
     .fill("Density audit pending edit");

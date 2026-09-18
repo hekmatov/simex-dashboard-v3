@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { choosePanelAction } from "./support/buildWorkflow.js";
 
 import {
   enterAuthoredDashboard,
@@ -50,7 +51,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   await expect(panel).toHaveAttribute("data-panel-id", "bio_current_cases_kpi");
   await panel.scrollIntoViewIfNeeded();
   await panel.hover();
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quickEditor = page.locator(".chart-quick-editor");
   await expect(quickEditor).toBeVisible();
   await quickEditor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Updated wrapped KPI");
@@ -76,7 +77,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
 
   await panel.scrollIntoViewIfNeeded();
   await panel.hover();
-  await panel.getByRole("button", { name: "Remove chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "remove");
   await page.getByRole("dialog", { name: "Remove this chart?" })
     .getByRole("button", { name: "Remove chart" }).click();
   await expect(panel).toHaveCount(0);
