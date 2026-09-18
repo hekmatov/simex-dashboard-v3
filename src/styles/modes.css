@@ -4412,3 +4412,46 @@ body .app-frame .dashboard-map-panel .build-tree-group {
     animation: none;
   }
 }
+
+/* Lane C: phone-width View content. */
+@media (max-width: 767px) {
+  .view-shell .dashboard-header[data-header-compact="true"] {
+    min-height: 0;
+    padding: 10px 12px 6px;
+  }
+
+  .view-shell .chart-panel-footprint {
+    grid-column: auto;
+    grid-row: auto;
+    height: clamp(240px, 52vh, 420px);
+    max-height: 420px;
+    min-height: 0;
+  }
+
+  .view-shell .chart-panel-footprint:has(.chart-card-view) {
+    height: auto;
+    max-height: none;
+  }
+
+  .view-shell .layout-grid {
+    gap: 12px;
+    grid-auto-rows: auto;
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .view-shell .dashboard-attention-strip .attention-strip-items {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .view-shell .attention-strip-item {
+    flex: 0 0 min(72vw, 320px);
+    scroll-snap-align: start;
+  }
+}
