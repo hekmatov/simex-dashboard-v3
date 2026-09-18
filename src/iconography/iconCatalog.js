@@ -123,6 +123,7 @@ export const LIVE_INTERACTION_IDS = Object.freeze([
   "shell.remove-title",
   "shell.start-section",
   "panel.move",
+  "panel.actions",
   "shell.install",
   "presentation.connection-disconnected",
   "presentation.connection-reconnecting",
@@ -207,6 +208,18 @@ inventory.find(({ id }) => id === "shell")?.entries.push({
   status: "live",
   confirmation: "conditional",
   note: "Four-arrow drag handle with keyboard and single-pointer destination alternatives",
+});
+
+inventory.find(({ id }) => id === "panels")?.entries.push({
+  id: "panel.actions",
+  glyphId: "moveFourWay",
+  label: "Panel actions",
+  tooltip: "Panel actions. Drag to move.",
+  renderMode: "icon",
+  tone: "standard",
+  status: "live",
+  confirmation: "none",
+  note: "Single menu trigger that doubles as the drag handle",
 });
 
 const canonicalInteractionId = (id) => CANONICAL_INTERACTION_IDS[id] ?? id;
