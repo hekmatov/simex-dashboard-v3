@@ -4393,3 +4393,28 @@ body .app-frame .dashboard-map-panel .build-tree-group {
     transition: none;
   }
 }
+
+/* Lane B: page time context in the View context strip. */
+.page-time-context {
+  align-items: center;
+  display: flex;
+  gap: var(--simex-gap-control-group);
+  min-width: 0;
+}
+
+.page-time-context__label {
+  color: var(--simex-text-muted);
+  font-size: 12px;
+}
+
+.page-time-context__value {
+  font-family: var(--simex-style-heading-font);
+  font-variant-numeric: tabular-nums lining-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-time-context__toggle {
+  min-height: var(--simex-control-compact);
+}

@@ -101,7 +101,7 @@ export function PlaybackProvider({
     playbackSafetyGatesRef.current.delete(owner);
   }, []);
   React.useEffect(() => {
-    if (activeScene || groups.length === 0) return;
+    if (activeScene || groups.length === 0 || state.sourcePreference === "page") return;
     if (groups.some(({ id }) => id === state.activeGroupId)) return;
     const firstGroup = preferredGroupId
       ? groups.find(({ id }) => id === preferredGroupId)
@@ -112,7 +112,7 @@ export function PlaybackProvider({
       groupId: firstGroup.id,
       period: firstGroup.period,
     });
-  }, [activeScene, dispatch, groups, preferredGroupId, state.activeGroupId]);
+  }, [activeScene, dispatch, groups, preferredGroupId, state.activeGroupId, state.sourcePreference]);
   const selectedGroup = React.useMemo(
     () => resolveActiveGroup(
       validatedGroups,
@@ -255,6 +255,13 @@ export function PlaybackProvider({
     setPlaybackSafety,
     scope: state.scope,
     source: state.source,
+    sourcePreference: state.sourcePreference,
+    sourceLabel: activeScene
+      ? activeScene.name
+      : usingDefaultPage
+        ? "Whole page"
+        : selectedGroup?.name ?? "Whole page",
+
     speed: state.speed,
     traceMode: state.traceMode,
     status: playbackStatus(activeGroup, clock, activeEpochMs),
@@ -287,6 +294,9 @@ export function PlaybackProvider({
     state.playbackView,
     state.scope,
     state.source,
+    state.sourcePreference,
+    usingDefaultPage,
+    selectedGroup,
     state.traceMode,
     playing,
     state.speed,

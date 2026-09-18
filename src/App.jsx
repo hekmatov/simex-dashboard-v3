@@ -1,3 +1,5 @@
+import PageTimeContext from "./components/playback/PageTimeContext.jsx";
+import { temporalAuthoringCharts } from "./components/time/temporalAuthoringCharts.js";
 import React from "react";
 import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
 import {
@@ -398,6 +400,12 @@ function AppContent({ releaseProfile = null }) {
     closeBuildPanel();
   }
 
+  const viewPageTimeEligible = React.useMemo(() => {
+    if (mode !== "view" || !dashboard?.pages) return false;
+    const page = dashboard.pages.find(({ id }) => id === activePageId);
+    if (!page || page.landing) return false;
+    return temporalAuthoringCharts({ ...dashboard, pages: [page] }).length > 0;
+  }, [activePageId, dashboard, mode]);
   const commandCrownPageActions = mode === "home" ? (
     <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
       Theme
@@ -1736,6 +1744,7 @@ function AppContent({ releaseProfile = null }) {
       activePage={commandCrownProjection.activePage}
       pages={commandCrownProjection.pages}
       pageActions={commandCrownPageActions}
+      contextNode={viewPageTimeEligible ? <PageTimeContext /> : undefined}
       pageNavigationNode={mode === "build" ? <BuildPageNavigation
         dashboard={buildStructureProjection ?? dashboard}
         pages={commandCrownProjection.pages}

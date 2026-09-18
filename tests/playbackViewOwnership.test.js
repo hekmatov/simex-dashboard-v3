@@ -27,3 +27,15 @@ test("playback view owners release only their own lease while legacy controls re
   assert.equal(legacyClosed.playbackView, false);
   assert.deepEqual(legacyClosed.playbackViewOwners, []);
 });
+
+test("setGroup with null records an explicit whole-page preference", () => {
+  const state = reducePlaybackState(initialPlaybackState, { type: "setGroup", groupId: null });
+  assert.equal(state.sourcePreference, "page");
+  assert.deepEqual(state.source, { kind: "default", id: null });
+  const grouped = reducePlaybackState(state, { type: "setGroup", groupId: "g1" });
+  assert.equal(grouped.sourcePreference, "auto");
+  const scene = reducePlaybackState(state, { type: "setScene", sceneId: "s1" });
+  assert.equal(scene.sourcePreference, "auto");
+  const exited = reducePlaybackState(state, { type: "modeExit" });
+  assert.equal(exited.sourcePreference, "auto");
+});
