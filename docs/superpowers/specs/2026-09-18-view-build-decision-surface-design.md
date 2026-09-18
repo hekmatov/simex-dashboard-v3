@@ -82,7 +82,7 @@ Role changes are structure commands, so they travel through the layout draft wit
 - `{ type: "set-section-role", pageId, sectionId, role }` in `buildLayoutDraft.js`. Setting `attention` is refused when `attentionRoleIssues` is non-empty; the refusal names the disallowed charts or the existing attention section. Setting `standard` clears every `drill` on the section's panels.
 - `{ type: "set-panel-drill", pageId, sectionId, placementId, drill }` where `drill` is a target or `null`.
 
-Moving a disallowed chart into an attention section is refused at every entry point that already checks legality: `legalDrop` in `BuildStructureRail.jsx`, the canvas drop delegates, the Move dialog's destination list, and `canonicalMove`. Chart creation and edit commits validate through the same rule and surface a named issue in the existing review-issues stage; the chart-type catalogue is not filtered.
+Moving a disallowed chart into an attention section is refused at every entry point that already checks legality: the tree's drop test in `BuildStructureRail.jsx`, `analyzeBuildLayoutMove`, and therefore the canvas drop delegates and the Move dialog. Chart creation and edit commits already run the structure contract through `validateDashboardSessionCandidate`, so a disallowed chart fails there and the message surfaces through the existing operation status; the chart-type catalogue is not filtered.
 
 The properties pane (below) owns the role control and the drill control.
 
@@ -95,9 +95,9 @@ Every page whose charts carry temporal data can be read as of one time. The exis
 Additions:
 
 1. **Whole page as an explicit source.** `playbackReducer.js` records `sourcePreference: "auto" | "page"`. `setGroup` with `groupId: null` sets `sourcePreference: "page"` and leaves `activeGroupId` null; choosing a group or scene resets it to `auto`. `PlaybackProvider` skips its first-group auto-selection while the preference is `page`. `modeExit` resets the preference.
-2. **Source selectors list the page.** `ChronoController` and `PlaybackPageActions` add a first option `Whole page` (`page:` value) that dispatches `setGroup` with `groupId: null`. It is listed even when the dashboard has no Chrono Groups, so `PlaybackPageActions` no longer returns null on group-less dashboards when the page is time-eligible.
+2. **Source selectors list the page.** `ChronoController` and `PlaybackPageActions` add a first option `Whole page` that dispatches `setGroup` with `groupId: null`. `PlaybackPageActions` keeps its current behaviour of rendering nothing when the dashboard has no Chrono Groups; on such dashboards the page time control below is the only entry point.
 3. **Page time readout in the View context strip.** A new `src/components/playback/PageTimeContext.jsx` renders inside the crown's mode context strip in View only. It shows `Page time` followed by the resolved value: `Latest available` when playback view is closed, otherwise the canonical time label of `activeEpochMs` plus the source name (`Whole page`, a group name, or a scene name). One button follows: `Set page time` opens playback view with owner `page-time`, source `Whole page`, scope `all-page`; while open it reads `Exit page time` and closes the view for that owner. Scrubbing stays in `ChronoController`; this control does not duplicate the transport.
-4. **Eligibility.** `PlaybackProvider` exposes `pageTimeEligible`, true when at least one active-page chart is a temporal authoring chart per `temporalAuthoringCharts`. `App.jsx` passes `contextNode` for View only when eligible, so pages without temporal charts keep today's empty context strip and the existing crown tests hold.
+4. **Eligibility.** `App.jsx` computes `viewPageTimeEligible`, true when at least one active-page chart is a temporal authoring chart per `temporalAuthoringCharts` (moved to `src/components/time/temporalAuthoringCharts.js`). It passes `contextNode` for View only when eligible, so pages without temporal charts keep today's empty context strip and the existing crown tests hold.
 
 The attention strip needs nothing extra: its cards already render `item.time` and provenance from the same time context.
 
@@ -133,7 +133,7 @@ To make the command header, rails, and canvas siblings in one grid, `.canonical-
 
 `src/components/build/BuildPropertiesPane.jsx` replaces `BuildInspector.jsx` and is rendered persistently in the properties column with a heading `Properties`. Content by selection:
 
-- **Nothing selected:** the dashboard title and description fields that the header edit fields expose today, plus one sentence pointing to the Scenario Passport for identity and package controls.
+- **Nothing selected:** the dashboard title, the page count, and one sentence pointing to Structure and the canvas for selection and to the Scenario Passport for identity and package controls. Dashboard text stays editable in the Build header as today.
 - **Page:** page title, description, and `Delete page…` with the final-page protection, as today.
 - **Section:** title, description, and a `Role` choice with two options: `Standard section` and `Attention strip`. Choosing `Attention strip` when `attentionRoleIssues` is non-empty keeps the control on `Standard section` and shows the named reasons inline. When the role is `Attention strip`, a `Drill links` list follows with one row per panel: the chart title and a select whose options are `No link`, every body section on the page, and every chart in those sections. Changes dispatch the two structure commands above.
 - **Chart:** chart title, type label, and owning section, with `Edit chart` (opens or resumes the Unit Orbit through the existing resume path), `Move…`, and `Remove…`.
