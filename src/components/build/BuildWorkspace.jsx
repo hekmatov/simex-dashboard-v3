@@ -1,6 +1,8 @@
 import { temporalAuthoringCharts, isTemporalAuthoringChart } from "../time/temporalAuthoringCharts.js";
 export { temporalAuthoringCharts } from "../time/temporalAuthoringCharts.js";
 import React from "react";
+
+import { useMediaQuery } from "../common/useMediaQuery.js";
 import { createPortal } from "react-dom";
 
 import BuildCommandHeader from "./BuildCommandHeader.jsx";
@@ -193,7 +195,7 @@ export default function BuildWorkspace({
   const selectedChart = selectedChartItem?.chart ?? null;
   const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
   const inspectorFocusKey = focusLabelKey;
-  const narrowRails = React.useSyncExternalStore(subscribeRailWidth, railWidthSnapshot, () => false);
+  const narrowRails = useMediaQuery("(max-width: 1023px)");
   const [railOpen, setRailOpen] = React.useState({ structure: false, properties: false });
   React.useEffect(() => {
     setRailOpen((current) => ({ ...current, properties: true }));
@@ -1145,22 +1147,3 @@ function matchingValue(label) {
   return policy === "nearest" ? { policy, toleranceMs: 0 } : { policy };
 }
 
-
-
-
-
-
-
-
-
-
-
-function railWidthSnapshot() {
-  return typeof window !== "undefined" && window.matchMedia?.("(max-width: 1023px)").matches === true;
-}
-
-function subscribeRailWidth(callback) {
-  const media = typeof window !== "undefined" ? window.matchMedia?.("(max-width: 1023px)") : null;
-  media?.addEventListener("change", callback);
-  return () => media?.removeEventListener("change", callback);
-}
