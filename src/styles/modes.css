@@ -4350,3 +4350,36 @@ body .app-frame .dashboard-map-panel .build-tree-group {
     margin-inline-start: 0;
   }
 }
+
+/* Lane A: shared anchored action menu. */
+.action-menu {
+  display: inline-flex;
+  position: relative;
+}
+
+.action-menu-popover {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius, 10px);
+  box-shadow: var(--simex-style-panel-shadow);
+  display: grid;
+  gap: var(--simex-space-1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--simex-space-2);
+  position: fixed;
+  width: min(260px, calc(100vw - 16px));
+  z-index: 1210;
+}
+
+.action-menu-popover [role="menuitem"] {
+  justify-content: flex-start;
+  min-height: var(--simex-control-compact);
+  text-align: left;
+  width: 100%;
+}
+
+.action-menu-popover [role="menuitem"]:focus-visible {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: -3px;
+}
