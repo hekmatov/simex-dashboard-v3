@@ -38,3 +38,17 @@ test("Build frame grid places rails beside the canvas at desktop widths", async 
   assert.match(css, /\.canonical-dashboard-workspace-controls,\s*\.build-workspace-authoring-root\s*\{[^}]*display:\s*contents;/);
   assert.match(css, /@media \(min-width: 1200px\)[\s\S]*grid-template-columns:\s*minmax\(220px, 260px\) minmax\(0, 1fr\) minmax\(280px, 320px\);/);
 });
+
+test("section properties expose the role choice, refusal reasons, and drill links", () => {
+  const kpi = { id: "k1", typeId: "kpi", title: "Cases" };
+  const dash = { ...dashboard, pages: [{ id: "ops", label: "Operations", sections: [
+    { id: "top", title: "At a glance", role: "attention", panels: [{ id: "w1", chart: kpi, drill: { kind: "section", sectionId: "body" } }] },
+    { id: "body", title: "Hospital pressure", panels: [{ id: "w2", chart: { id: "b1", typeId: "bar", title: "Beds" } }] },
+  ] }] };
+  const attention = render({ dashboard: dash, dashboardDraft: dash, activePage: dash.pages[0], selection: { kind: "section", pageId: "ops", sectionId: "top" } });
+  assert.match(attention, /<select[^>]*aria-label="Role"[^>]*>[\s\S]*<option[^>]*value="attention"[^>]*selected/);
+  assert.match(attention, /<select[^>]*aria-label="Drill link for Cases"[^>]*>[\s\S]*<option[^>]*value="section:body"[^>]*selected[^>]*>Hospital pressure</);
+  const body = render({ dashboard: dash, dashboardDraft: dash, activePage: dash.pages[0], selection: { kind: "section", pageId: "ops", sectionId: "body" } });
+  assert.match(body, /<option[^>]*value="attention"[^>]*disabled/);
+  assert.match(body, /At a glance is already this page(?:&#x27;|')s attention strip\./);
+});

@@ -1,3 +1,4 @@
+import { attentionRoleIssues, drillTargetsForPage, sectionRole } from "../../charting/config/sectionRoles.js";
 import React from "react";
 
 export default function BuildPropertiesPane({
@@ -66,6 +67,66 @@ export default function BuildPropertiesPane({
             onChange={(event) => onSectionChange?.(section, { description: event.target.value })}
           />
         </label>
+        {(() => {
+          const role = sectionRole(section);
+          const issues = role === "attention" ? [] : attentionRoleIssues(page, section);
+          const targets = drillTargetsForPage(page, section.id);
+          return (
+            <>
+              <label>
+                Role
+                <select
+                  aria-label="Role"
+                  disabled={disabled}
+                  value={role}
+                  onChange={(event) => onStructureCommand?.({ type: "set-section-role", pageId: page.id, sectionId: section.id, role: event.target.value })}
+                >
+                  <option value="standard">Standard section</option>
+                  <option value="attention" disabled={issues.length > 0}>Attention strip</option>
+                </select>
+              </label>
+              {issues.length > 0 && (
+                <ul className="build-inspector-issues" aria-label="Why this section cannot be the attention strip">
+                  {issues.map((issue) => <li key={issue}>{issue}</li>)}
+                </ul>
+              )}
+              {role === "attention" && (
+                <fieldset className="build-inspector-drills">
+                  <legend>Drill links</legend>
+                  {(section.panels ?? []).map((panel) => {
+                    const chart = panel.chart ?? panel;
+                    const current = panel.drill ? `${panel.drill.kind}:${panel.drill.kind === "section" ? panel.drill.sectionId : panel.drill.chartId}` : "";
+                    return (
+                      <label key={panel.id}>
+                        {chart.title || chart.id}
+                        <select
+                          aria-label={`Drill link for ${chart.title || chart.id}`}
+                          disabled={disabled}
+                          value={current}
+                          onChange={(event) => {
+                            const [kind, id] = event.target.value.split(":");
+                            onStructureCommand?.({
+                              type: "set-panel-drill",
+                              pageId: page.id,
+                              sectionId: section.id,
+                              placementId: panel.id,
+                              drill: kind ? (kind === "section" ? { kind, sectionId: id } : { kind, chartId: id }) : null,
+                            });
+                          }}
+                        >
+                          <option value="">No link</option>
+                          {targets.map((target) => (
+                            <option key={`${target.kind}:${target.id}`} value={`${target.kind}:${target.id}`}>{target.title}</option>
+                          ))}
+                        </select>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              )}
+            </>
+          );
+        })()}
       </section>
     );
   }
