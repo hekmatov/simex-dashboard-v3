@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Surface Review</title>
+<style>
+  :root {
+    --paper: #f7f5f0;
+    --panel: #ffffff;
+    --ink: #1f2328;
+    --muted: #5f6672;
+    --rule: #d9d4c8;
+    --rule-strong: #b7b0a2;
+    --accent: #2f5f8a;
+    --ok: #2e7d4f;
+    --warn: #9a6a12;
+    --warn-soft: #fbf1dc;
+    --done: #e9f3ec;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 32px 16px 80px;
+  }
+  header.top {
+    border-bottom: 1px solid var(--rule-strong);
+    padding-bottom: 16px;
+    margin-bottom: 28px;
+  }
+  header.top h1 { font-size: 28px; line-height: 1.15; margin: 0 0 8px; }
+  header.top p { margin: 0; color: var(--muted); }
+  dl.facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 16px;
+    margin: 16px 0 0;
+    font-size: 14px;
+  }
+  dl.facts dt { color: var(--muted); }
+  dl.facts dd { margin: 0; font-family: var(--mono); font-size: 13px; }
+  h2 { font-size: 20px; margin: 36px 0 12px; }
+  h3 { font-size: 16px; margin: 24px 0 8px; }
+  section.card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  section.card h3 { margin-top: 0; }
+  ul.plain { padding-left: 20px; margin: 8px 0; }
+  ul.plain li { margin: 4px 0; }
+  code { font-family: var(--mono); font-size: 13px; background: #f0ede6; padding: 1px 5px; border-radius: 4px; }
+  pre {
+    background: #f0ede6;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .note { background: var(--warn-soft); border-left: 3px solid var(--warn); padding: 8px 12px; border-radius: 4px; margin: 12px 0; }
+  ol.tasks { list-style: none; padding: 0; margin: 0; counter-reset: task; }
+  ol.tasks > li {
+    border-top: 1px solid var(--rule);
+    padding: 12px 0;
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+  }
+  ol.tasks > li:first-child { border-top: 0; }
+  ol.tasks > li.done { background: var(--done); margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
+  ol.tasks input[type=checkbox] { width: 18px; height: 18px; margin-top: 3px; cursor: pointer; }
+  .task-title { font-weight: 600; }
+  .task-steps { margin: 4px 0 0; padding-left: 18px; }
+  .task-steps li { margin: 2px 0; }
+  .expect { margin-top: 6px; color: var(--muted); }
+  .expect strong { color: var(--ink); font-weight: 600; }
+  .progress {
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 0;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--muted);
+    z-index: 2;
+  }
+  .progress button {
+    float: right;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+    padding: 2px 10px;
+    font: inherit;
+    cursor: pointer;
+  }
+  @media (max-width: 600px) {
+    dl.facts { grid-template-columns: 1fr; }
+    ol.tasks > li.done { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>View and Build decision surface</h1>
+    <p>Review page for the branch, with what changed, how it was verified, and a hands-on checklist to run in the dashboard.</p>
+    <dl class="facts">
+      <dt>Branch</dt><dd>claude/view-build-decision-surface-ff6f8a</dd>
+      <dt>Base</dt><dd>c003d11 (origin/main)</dd>
+      <dt>Head</dt><dd>4caad250, 19 commits ahead of the plan commit</dd>
+      <dt>Spec</dt><dd>docs/superpowers/specs/2026-09-18-view-build-decision-surface-design.md</dd>
+      <dt>Plan</dt><dd>docs/superpowers/plans/2026-09-18-view-build-decision-surface.md</dd>
+      <dt>Worktree</dt><dd>.claude\worktrees\view-build-decision-surface-ff6f8a</dd>
+    </dl>
+  </header>
+
+  <h2>What changed</h2>
+
+  <section class="card">
+    <h3>View: attention strip</h3>
+    <p>A Section can now carry <code>role: "attention"</code>. In View it renders above the page body as a band of KPI cards, ignoring authored chart footprints. Each card can carry a drill link to a body Section or chart; activating it scrolls there, moves focus, and highlights the target for 1.6 seconds. Only <code>kpi</code> and <code>deltaCard</code> charts may live in the strip; the config validator, the layout move guards, and the role switch all refuse anything else by name.</p>
+    <ul class="plain">
+      <li>Contract: optional <code>role</code> on sections and <code>drill</code> on panel wrappers, version 6 unchanged.</li>
+      <li>Files: <code>sectionRoles.js</code>, <code>DashboardAttentionStrip.jsx</code>, <code>drillNavigation.js</code>, canvas wiring, structure commands <code>set-section-role</code> and <code>set-panel-drill</code>.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h3>View: page time context</h3>
+    <p>Pages with temporal charts show a <em>Page time</em> readout in the crown's context strip. <em>Set page time</em> opens playback with a new explicit <em>Whole page</em> source, scope <em>All page charts</em>, so every chart on the page reads as of one time. The Chrono source selectors gain a <em>Whole page</em> option. No categorical filters were added.</p>
+  </section>
+
+  <section class="card">
+    <h3>Build: persistent rails and one command row</h3>
+    <p>The Dashboard map drawer and its crown toggle are gone. Build is now a three-column frame: a <em>Structure</em> rail on the left, the canvas, and a <em>Properties</em> pane on the right. The properties pane replaces the old inspector and adds the Section <em>Role</em> choice and per-card <em>Drill links</em>. Below 1024px the rails fold into disclosures above and below the canvas.</p>
+    <p>The command row is three labelled groups, <em>Insert</em>, <em>Libraries</em>, <em>Session</em>. Scene Studio moved out of the retired <em>More</em> drawer into Libraries.</p>
+  </section>
+
+  <section class="card">
+    <h3>Build: section and panel menus</h3>
+    <p>The five buttons on every section header are now one <em>Actions</em> menu (Rename, Move earlier, Move later, Move to Page, Merge, Remove). The four icon controls on every panel are one trigger that opens a menu (Edit chart, Move, Start section here, Remove chart) and still works as the drag handle. A shared <code>ActionMenu</code> component provides arrow-key, Home, End, and Escape handling with focus return.</p>
+  </section>
+
+  <section class="card">
+    <h3>Mobile View</h3>
+    <p>At widths of 767px or less in View, the crown collapses to one row: the SimEx mark, the mode switcher, and a disclosure named after the active page. The disclosure holds the dashboard title and scenario, the page list, the pinned actions (Theme, Chrono view, Compare charts), and the metadata pairs. The header keeps only the page title and description. Every chart footprint is capped at <code>clamp(240px, 52vh, 420px)</code>, panels stack in one column, and the attention strip becomes a horizontal snap-scrolling row.</p>
+  </section>
+
+  <h2>Verification status</h2>
+  <section class="card">
+    <table>
+      <tr><th>Check</th><th>Result</th></tr>
+      <tr><td>Cross-lane unit selection (20 files)</td><td class="ok">129 passed, 0 failed</td></tr>
+      <tr><td>Attention strip drill and page time journeys</td><td class="ok">2 passed</td></tr>
+      <tr><td>Phone-width View journey (390 × 844)</td><td class="ok">1 passed</td></tr>
+      <tr><td>Section and panel menu journey</td><td class="ok">1 passed</td></tr>
+      <tr><td>Structure rail journeys</td><td class="ok">4 passed</td> </tr>
+      <tr><td>Pre-existing failures reproduced at base c003d11</td><td class="warn">5 (see below)</td></tr>
+      <tr><td>Full pre-merge gates (<code>test</code>, <code>build</code>, <code>test:e2e</code>)</td><td>Not run, awaiting your pre-merge declaration</td></tr>
+    </table>
+    <div class="note">
+      Five browser tests fail on this branch and on the base commit alike, because the shipped dashboard no longer contains the fixtures they assume (<code>outbreak_dynamics</code>, <code>national_outbreak</code>, Biomedical as the first page). They are the four Page and Section tests in <code>v3-anchored-structure-commands.spec.js</code> and the Scene migration test in <code>v3-structure-rail.spec.js</code>. Left untouched per AGENTS.md; a fixture refresh is a separate task.
+    </div>
+  </section>
+
+  <h2>Hands-on test tasks</h2>
+  <p>Start the dev server from the worktree, then open <code>http://localhost:5173/</code>. Tick tasks as you go; ticks are remembered in this browser only.</p>
+<pre>cd C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.claude\worktrees\view-build-decision-surface-ff6f8a
+pnpm.cmd dev</pre>
+
+  <div class="progress"><span id="progress">0 of 0 done</span><button type="button" id="reset">Clear ticks</button></div>
+
+  <h3>Build: layout and commands</h3>
+  <section class="card">
+    <ol class="tasks" data-group="build-layout">
+      <li>
+        <input type="checkbox" id="t1"><div>
+        <label class="task-title" for="t1">Enter Build and check the three-column frame</label>
+        <ol class="task-steps">
+          <li>On the landing page choose <em>Open the dashboard</em>, then pick <em>Build</em> in the mode switcher.</li>
+          <li>Look left and right of the canvas.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> a <em>Structure</em> tree on the left and a <em>Properties</em> pane on the right, both always visible, no <em>Dashboard map</em> button in the crown. Scroll the canvas: the rails stay put.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t2"><div>
+        <label class="task-title" for="t2">Read the command row groups</label>
+        <ol class="task-steps">
+          <li>Find the row above the canvas.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> three groups labelled <em>Insert</em> (Add chart, Add Text/Image), <em>Libraries</em> (Source content, Chrono Studio, Scene Studio), <em>Session</em> (Discard Build changes, Finish Build). No <em>More</em> button. Finish Build is the only filled button.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t3"><div>
+        <label class="task-title" for="t3">Selection drives the properties pane</label>
+        <ol class="task-steps">
+          <li>In Structure click a page, then a section, then a chart.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the pane switches between Page fields (title, description, Delete page), Section fields (title, description, Role), and a Chart summary with <em>Edit chart</em>, <em>Move…</em>, <em>Remove…</em>. Clicking Edit chart opens the chart settings orbit.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t4"><div>
+        <label class="task-title" for="t4">Narrow-window fallback</label>
+        <ol class="task-steps">
+          <li>Shrink the browser window below 1024px wide while in Build.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the rails become <em>Structure</em> and <em>Properties</em> disclosures above and below the canvas. Selecting something in the tree opens the Properties disclosure. Nothing overlays the canvas.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <h3>Build: section and panel menus</h3>
+  <section class="card">
+    <ol class="tasks" data-group="build-menus">
+      <li>
+        <input type="checkbox" id="t5"><div>
+        <label class="task-title" for="t5">Section Actions menu</label>
+        <ol class="task-steps">
+          <li>On any section header click <em>Actions</em>.</li>
+          <li>Press ArrowDown, End, Home, then Escape.</li>
+          <li>Open it again and choose <em>Move later</em>.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> items in order Rename, Move earlier, Move later, Move to Page…, Merge…, Remove…; disabled items are greyed (Move earlier on the first section); keys move focus and Escape returns focus to the button. Move later reorders the section and the pending-work rail shows <em>Unsaved</em> with Save and Discard Layout Changes.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t6"><div>
+        <label class="task-title" for="t6">Panel menu doubles as the drag handle</label>
+        <ol class="task-steps">
+          <li>Hover a chart panel and click the single four-arrow control in its corner.</li>
+          <li>Close it, then drag that same control onto another panel.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the menu lists Edit chart, Move…, Start section here, Remove chart. Dragging the control moves the panel. <em>Move…</em> opens the Move dialog and Cancel returns focus to the control.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <h3>Build: author an attention strip</h3>
+  <section class="card">
+    <ol class="tasks" data-group="build-strip">
+      <li>
+        <input type="checkbox" id="t7"><div>
+        <label class="task-title" for="t7">Create a section and a KPI card</label>
+        <ol class="task-steps">
+          <li>On the Biomedical page click <em>Add section</em>, name it <em>At a glance</em>, create it, then <em>Save Layout Changes</em>.</li>
+          <li>In the new empty section click <em>Add chart</em>. Data source: <em>cases WCPH eldoria</em>. Chart type: <em>KPI card</em>. Map and prepare: value <em>national_total_cases</em>, time <em>Date</em>. Title it <em>Cases today</em> and create it.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the KPI card renders inside the new section.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t8"><div>
+        <label class="task-title" for="t8">Switch the role and add a drill link</label>
+        <ol class="task-steps">
+          <li>Select <em>At a glance</em> in Structure. In Properties set <em>Role</em> to <em>Attention strip</em>.</li>
+          <li>Under <em>Drill links</em> pick a body section or chart for <em>Cases today</em>.</li>
+          <li>Click <em>Save Layout Changes</em>.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the section jumps to the top of the canvas in strip layout with an <em>Attention strip</em> tag on its header and on its tree node. The drill select offers every body section and chart, never the strip itself.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t9"><div>
+        <label class="task-title" for="t9">Guard against the wrong chart type</label>
+        <ol class="task-steps">
+          <li>Select a normal section that holds a bar or line chart and try setting its Role to <em>Attention strip</em>.</li>
+          <li>In Structure, drag a bar chart node onto the <em>At a glance</em> section.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the Attention strip option is disabled with a reason naming the offending chart; the drag is refused (no drop indicator, nothing moves).</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t10"><div>
+        <label class="task-title" for="t10">Finish Build</label>
+        <ol class="task-steps">
+          <li>Click <em>Finish Build</em>.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> View opens with the strip persisted.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <h3>View: strip and page time</h3>
+  <section class="card">
+    <ol class="tasks" data-group="view">
+      <li>
+        <input type="checkbox" id="t11"><div>
+        <label class="task-title" for="t11">Attention strip on top with a working drill</label>
+        <ol class="task-steps">
+          <li>On the Biomedical page in View, look above the first body section.</li>
+          <li>Click the <em>Open …</em> link under the KPI card.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the strip band sits first, cards share one height regardless of footprint. The page scrolls so the target sits just under the crown, the target gets a brief focus-coloured outline, and keyboard focus lands on it.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t12"><div>
+        <label class="task-title" for="t12">Page time</label>
+        <ol class="task-steps">
+          <li>Find <em>Page time: Latest available</em> in the crown's context strip.</li>
+          <li>Click <em>Set page time</em>. In the Chrono controls press <em>Next frame</em> a few times.</li>
+          <li>Open the Chrono source select.</li>
+          <li>Click <em>Exit page time</em>.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the readout shows a date and <em>Whole page</em>, the KPI card and the other temporal charts follow the frame, the source select lists <em>Whole page</em> first and keeps it selected, and exiting restores <em>Latest available</em>. The existing <em>Chrono view</em> button still works independently.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t13"><div>
+        <label class="task-title" for="t13">Pages without temporal charts</label>
+        <ol class="task-steps">
+          <li>Switch to the Scenario page.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> no context strip row appears, so the crown is two rows as before.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <h3>Mobile View</h3>
+  <section class="card">
+    <ol class="tasks" data-group="mobile">
+      <li>
+        <input type="checkbox" id="t14"><div>
+        <label class="task-title" for="t14">One-row crown and disclosure</label>
+        <ol class="task-steps">
+          <li>Open DevTools device toolbar at 390 × 844, or narrow the window under 768px, while in View.</li>
+          <li>Tap the page-name button at the right of the crown.</li>
+          <li>Choose another page, then reopen and press Escape.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> one crown row (SimEx, View/Build/Present, page name). The disclosure shows the dashboard title and scenario, the page list, Theme, Chrono view and Compare charts, and Scenario/Updated. Choosing a page closes it; Escape closes it and returns focus to the trigger.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t15"><div>
+        <label class="task-title" for="t15">Header fold and chart height cap</label>
+        <ol class="task-steps">
+          <li>Scroll the page at phone width.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> the header shows only the page title and description (no logo, no Scenario/Updated pairs). Every chart panel is at most 420px tall and panels stack in one column. The attention strip scrolls sideways with snap points; KPI cards keep their natural height.</p>
+      </div></li>
+      <li>
+        <input type="checkbox" id="t16"><div>
+        <label class="task-title" for="t16">Build and Present are unaffected</label>
+        <ol class="task-steps">
+          <li>At phone width switch to Build, then back to View and to desktop width.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> Build keeps its desktop crown plus the width advisory; returning to desktop width restores the three-row View crown with the metadata list in the header.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <h3>Regression spot checks</h3>
+  <section class="card">
+    <ol class="tasks" data-group="regression">
+      <li>
+        <input type="checkbox" id="t17"><div>
+        <label class="task-title" for="t17">Untouched flows still work</label>
+        <ol class="task-steps">
+          <li>Theme drawer opens and applies a style.</li>
+          <li>Page tabs navigate; the active tab's page menu still opens on click in Build.</li>
+          <li>Compare charts selection and fullscreen still work in View.</li>
+          <li>Source content, Chrono Studio and Scene Studio open from Libraries.</li>
+        </ol>
+        <p class="expect"><strong>Expect:</strong> no behaviour change in any of these.</p>
+      </div></li>
+    </ol>
+  </section>
+</main>
+<script>
+  (function () {
+    var key = "decision-surface-review-ticks";
+    var boxes = Array.prototype.slice.call(document.querySelectorAll("ol.tasks input[type=checkbox]"));
+    var progress = document.getElementById("progress");
+    function load() {
+      try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
+    }
+    function save(state) {
+      try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {}
+    }
+    function render(state) {
+      var done = 0;
+      boxes.forEach(function (box) {
+        var on = Boolean(state[box.id]);
+        box.checked = on;
+        box.closest("li").classList.toggle("done", on);
+        if (on) done += 1;
+      });
+      progress.textContent = done + " of " + boxes.length + " done";
+    }
+    var state = load();
+    render(state);
+    boxes.forEach(function (box) {
+      box.addEventListener("change", function () {
+        state[box.id] = box.checked;
+        save(state);
+        render(state);
+      });
+    });
+    document.getElementById("reset").addEventListener("click", function () {
+      state = {};
+      save(state);
+      render(state);
+    });
+  })();
+</script>
+</body>
+</html>
