@@ -25,12 +25,13 @@ export default function PlaybackPageActions() {
             "select",
             {
               "aria-label": "Chrono Group",
-              value: activeGroupId ?? "",
+              value: playback.sourcePreference === "page" ? "" : activeGroupId ?? "",
               onChange: (event) => dispatch({
                 type: "setGroup",
                 groupId: event.target.value || null,
               }),
             },
+            React.createElement("option", { key: "", value: "" }, "Whole page"),
             groups.map((group) => React.createElement(
               "option",
               { key: group.id, value: group.id },

@@ -52,8 +52,8 @@ const REQUIRED_FAMILIES = [
 ];
 
 const REQUIRED_EXECUTABLE_STATES = Object.freeze({
-  "dashboard-map-structure": "structure-tree",
-  "dashboard-map-inspector": "context-inspector",
+  "build-structure-rail": "structure-tree",
+  "build-properties-pane": "context-inspector",
   "build-unit-orbit": "selected-chart",
   "build-page-actions": "page-actions",
   "build-page-command-form": "page-command-form",

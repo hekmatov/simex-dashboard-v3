@@ -1,3 +1,4 @@
+import { structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { openDashboardPage } from "./support/landingWorkflow.js";
@@ -402,20 +403,16 @@ test("Dashboard map clears actionable Build controls without command overflow an
 
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
   const look = pinned.getByRole("button", { name: "Theme", exact: true });
-  const toggle = pinned.getByRole("button", { name: "Dashboard map", exact: true });
-  const drawer = page.locator(".dashboard-map-panel");
+  const drawer = structureRail(page);
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
 
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await expect(look.evaluate((node) => node.nextElementSibling?.textContent?.trim())).resolves.toBe("Dashboard map");
-  await expect(drawer).toBeHidden();
+  await expect(look).toBeVisible();
+  await expect(drawer).toBeVisible();
   const closed = await frame.boundingBox();
 
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(drawer).toBeVisible();
   await expect.poll(() => page.evaluate(() => {
-    const map = document.querySelector(".dashboard-map-panel")?.getBoundingClientRect();
+    const map = document.querySelector(".build-rail--structure")?.getBoundingClientRect();
     const commandGrid = document.querySelector(".build-command-main-row");
     const commandHeader = document.querySelector(".build-command-header");
     if (!map || !commandGrid || !commandHeader) return null;
@@ -449,8 +446,7 @@ test("Dashboard map clears actionable Build controls without command overflow an
   expect(openFrame.x).toBeGreaterThanOrEqual(0);
   expect(openDrawer.x).toBeLessThan(1440);
 
-  await toggle.click();
-  await expect(drawer).toBeHidden();
+  await expect(drawer).toBeVisible();
   const restored = await frame.boundingBox();
   expect(restored).toEqual(closed);
 });
@@ -467,17 +463,13 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  const toggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  if (await toggle.count()) await toggle.click();
-  await expect(toggle).toHaveCSS("background-color", "rgb(240, 226, 220)");
 
   const buildPaint = await page.evaluate(() => ({
     headerEyebrow: getComputedStyle(document.querySelector(".canonical-dashboard-frame .dashboard-header .eyebrow")).color,
     primaryCommand: getComputedStyle(document.querySelector('[data-build-command-action="add-chart"]')).backgroundColor,
-    mapHeading: getComputedStyle(document.querySelector(".dashboard-map-panel h2")).color,
-    inspectorControl: getComputedStyle(document.querySelector(".dashboard-map-inline-inspector .build-inspector input")).backgroundColor,
+    mapHeading: getComputedStyle(document.querySelector(".build-rail--structure h2")).color,
+    inspectorControl: getComputedStyle(document.querySelector(".build-rail--properties .build-inspector input")).backgroundColor,
     railButton: getComputedStyle(document.querySelector(".build-structure-list .build-tree-caret")).backgroundColor,
-    panelToggle: getComputedStyle(document.querySelector(".dashboard-map-toggle")).backgroundColor,
   }));
   expect(buildPaint).toEqual({
     headerEyebrow: "rgb(85, 90, 85)",
@@ -485,7 +477,6 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
     mapHeading: "rgb(29, 37, 41)",
     inspectorControl: "rgb(255, 253, 248)",
     railButton: "rgba(0, 0, 0, 0)",
-    panelToggle: "rgb(240, 226, 220)",
   });
 
   await page.getByLabel("Dashboard mode")
@@ -582,31 +573,30 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
-    await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-    const dashboardMap = page.locator(".dashboard-map-panel");
+    const dashboardMap = structureRail(page);
     await expect(dashboardMap).toBeVisible();
     await expect(page.locator('[data-context-shelf-entry="chrono-group"]'))
       .toHaveCSS("background-color", style.panelAltPaint);
     const buildChrome = await readChrome(page, {
-      layer: ".dashboard-map-panel",
-      structure: ".dashboard-map-panel .build-structure-sheet",
+      layer: ".build-rail--structure",
+      structure: ".build-rail--properties",
       look: ".dashboard-command-pinned-actions .dashboard-look-trigger",
       chronoGroups: '[data-context-shelf-entry="chrono-group"]',
     });
     expect(buildChrome.layer).toMatchObject({
       backgroundColor: style.panelPaint,
-      borderRadius: style.surfaceRadius,
+      borderRadius: style.panelRadius,
       borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     expect(buildChrome.structure).toMatchObject({
-      backgroundColor: style.panelAltPaint,
+      backgroundColor: style.panelPaint,
       borderRadius: style.panelRadius,
       borderTopColor: roleDividerPaint,
       color: style.textPaint,
     });
     const inspectorChrome = await readChrome(page, {
-      inspectorInput: ".dashboard-map-panel .dashboard-map-inline-inspector .build-inspector input",
+      inspectorInput: ".build-rail--properties .build-inspector input",
     });
     expect(inspectorChrome.inspectorInput).toMatchObject({
       backgroundColor: style.panelPaint,

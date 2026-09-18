@@ -111,7 +111,6 @@ test("partitions shared drawer and dialog classes into concrete owned boundaries
     .filter(({ role }) => role === "drawer");
 
   assert.deepEqual(drawers.map(({ id }) => id).sort(), [
-    "dashboard-map-drawer",
     "look-drawer",
   ]);
   assert.equal(drawers.some(({ selector }) => selector === ".right-side-drawer"), false);

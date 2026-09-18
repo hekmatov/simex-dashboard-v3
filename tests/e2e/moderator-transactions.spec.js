@@ -1,3 +1,4 @@
+import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
@@ -397,9 +398,8 @@ test("non-quota chart removal preserves session work with a bounded fallback", a
 test("timer-owned pending edit uses the bounded session fallback", async ({ page }) => {
   await openDashboardEditMode(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_LONG__ = true; });
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.getByLabel("Page title", { exact: true }).fill("Timer-owned failed edit");
+  const map = structureRail(page);
+  await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Timer-owned failed edit");
 
   const status = page.getByRole("status").filter({
     hasText: "Dashboard changes are applied for this session but cannot be retained after reload.",
@@ -475,9 +475,8 @@ test("reset completes with session fallback when browser storage is full", async
   const baselineTitle = (await page.locator(".dashboard-brand-block h1").textContent()).trim();
   const durableBefore = await storedDashboard(page);
   const editedLabel = "Draft retained after reset failure";
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  const pageTitleInput = map.getByLabel("Page title", { exact: true });
+  const map = structureRail(page);
+  const pageTitleInput = propertiesPane(page).getByLabel("Page title", { exact: true });
   await pageTitleInput.fill(editedLabel);
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
@@ -501,12 +500,10 @@ test("reset completes with session fallback when browser storage is full", async
 test("successful reset clears renderer drafts and preserves the chart baseline", async ({ page }) => {
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  const pageTitleInput = map.getByLabel("Page title", { exact: true });
+  const map = structureRail(page);
+  const pageTitleInput = propertiesPane(page).getByLabel("Page title", { exact: true });
   const pageTitle = await pageTitleInput.inputValue();
   await pageTitleInput.fill("Reset-only page draft");
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: /^Edit Section title:/ }).first().click();
   const sectionTitleInput = page.getByLabel("Section title", { exact: true }).first();
   const baseline = {
@@ -613,10 +610,9 @@ test("wizard create transaction coalesces, locks dismissal, and preserves sessio
 test("edit-session save and reset use session fallback when storage is full", async ({ page }) => {
   await openDashboardEditMode(page);
   const sessionTitle = "Unsaved exercise label";
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
-  await map.getByLabel("Page title", { exact: true }).fill(sessionTitle);
+  await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(sessionTitle);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))

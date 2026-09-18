@@ -1,3 +1,4 @@
+import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 
@@ -329,8 +330,7 @@ async function openDashboard(page) {
 }
 
 async function openSelectedPageInspector(page) {
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await expect(map.getByLabel("Page title", { exact: true })).toBeVisible();
+  const map = structureRail(page);
+  await expect(propertiesPane(page).getByLabel("Page title", { exact: true })).toBeVisible();
   return map;
 }

@@ -1,8 +1,10 @@
+import { temporalAuthoringCharts, isTemporalAuthoringChart } from "../time/temporalAuthoringCharts.js";
+export { temporalAuthoringCharts } from "../time/temporalAuthoringCharts.js";
 import React from "react";
 import { createPortal } from "react-dom";
 
 import BuildCommandHeader from "./BuildCommandHeader.jsx";
-import BuildInspector from "./BuildInspector.jsx";
+import BuildPropertiesPane from "./BuildPropertiesPane.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
 import {
   captureBuildCanvasState,
@@ -16,10 +18,6 @@ import {
 } from "./panelEditingModel.js";
 import UnitOrbit from "./UnitOrbit.jsx";
 import SceneEditor from "../time/SceneEditor.jsx";
-import {
-  buildTemporalChartVariables,
-  describeTemporalInterpolationSupport,
-} from "../time/temporalAuthoringData.js";
 import {
   createSceneDraft,
   reduceSceneDraft,
@@ -59,9 +57,7 @@ import {
   reduceBuildDraftCoordinator,
 } from "./buildDraftCoordinator.js";
 import { selectBuildPendingWork } from "./buildPendingWork.js";
-import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import SourceContentWorkspace, { createSourceContentViewState } from "../source-content/SourceContentWorkspace.jsx";
-import RightSideDrawer from "../common/RightSideDrawer.jsx";
 
 export default function BuildWorkspace({
   themeProjection,
@@ -78,8 +74,7 @@ export default function BuildWorkspace({
     dismiss() {},
   }),
   activePage,
-  buildPanelOpen = false,
-  onCloseDashboardMap,
+  canvasActions,
   selection,
   dashboardDraft,
   pageDrafts,
@@ -198,9 +193,22 @@ export default function BuildWorkspace({
   const selectedChart = selectedChartItem?.chart ?? null;
   const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
   const inspectorFocusKey = focusLabelKey;
-  const mapChartAnchorSelector = buildPanelOpen && chartEditorPlacementId
-    ? `#dashboard-map-panel [data-build-placement-id="${typeof CSS === "undefined" ? chartEditorPlacementId : CSS.escape(chartEditorPlacementId)}"]`
-    : "";
+  const narrowRails = React.useSyncExternalStore(subscribeRailWidth, railWidthSnapshot, () => false);
+  const [railOpen, setRailOpen] = React.useState({ structure: false, properties: false });
+  React.useEffect(() => {
+    setRailOpen((current) => ({ ...current, properties: true }));
+  }, [selection?.kind, selection?.pageId, selection?.sectionId, selection?.placementId]);
+  const railContent = (kind, title, content) => narrowRails ? (
+    <details className="build-rail__disclosure" open={railOpen[kind]} onToggle={(event) => {
+      const open = event.currentTarget.open;
+      setRailOpen((current) => current[kind] === open ? current : { ...current, [kind]: open });
+    }}>
+      <summary>{title}</summary>
+      {content}
+    </details>
+  ) : <><h2 className="build-rail__heading">{title}</h2>{content}</>;
+
+
 
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
@@ -774,8 +782,8 @@ export default function BuildWorkspace({
     },
   });
 
-  const inspector = (
-    <BuildInspector
+  const propertiesPane = (
+    <BuildPropertiesPane
       dashboard={dashboard}
       selection={selection}
       dashboardDraft={dashboardDraft}
@@ -787,9 +795,18 @@ export default function BuildWorkspace({
       onPageChange={onPageChange}
       onPageRemove={onPageRemove}
       onSectionChange={onSectionChange}
+      onEditChart={() => onResumeChartEditor?.()}
+      onMoveChart={(placementId, invoker) => canvasActions?.requestPanelMove({
+        kind: "panel",
+        pageId: selection?.pageId,
+        sectionId: selection?.sectionId,
+        placementId,
+      }, selectedChart?.title, invoker)}
+      onRemoveChart={(placementId) => canvasActions?.removePanel(placementId)}
+      onStructureCommand={(command) => canvasActions?.structureCommand(command)}
     />
   );
-  const structure = (
+  const structureRail = (
     <BuildStructureRail
       key={treeResetGeneration}
       dashboard={dashboard}
@@ -799,7 +816,6 @@ export default function BuildWorkspace({
       onRename={onRename}
       onRenameDirtyChange={onInlineRenameDirtyChange}
       onMove={onLayoutMove}
-      inspector={inspector}
     />
   );
 
@@ -822,6 +838,13 @@ export default function BuildWorkspace({
             onAddStaticContent={() => onAddStaticContent?.()}
             onOpenAuxiliary={openAuxiliary}
           />
+          <aside className="build-rail build-rail--structure" data-build-rail="structure" aria-label="Structure">
+            {railContent("structure", "Structure", structureRail)}
+          </aside>
+          <aside className="build-rail build-rail--properties" data-build-rail="properties" aria-label="Properties">
+            {railContent("properties", "Properties", propertiesPane)}
+          </aside>
+
           {(activeAuxiliary === "source-content" || sourceContentOwners.length > 0) && typeof document !== "undefined" && createPortal((
             <aside
               className="build-authoring-auxiliary build-authoring-auxiliary--source-content"
@@ -912,29 +935,11 @@ export default function BuildWorkspace({
               )}
             </aside>
           ), document.body)}
-          <RightSideDrawer
-            id="dashboard-map-panel"
-            title="Dashboard map"
-            open={buildPanelOpen}
-            onClose={onCloseDashboardMap}
-            modality="complementary"
-            className="dashboard-map-panel"
-            headerClassName="dashboard-map-header"
-            contentClassName="dashboard-map-content"
-            panelProps={{ "aria-label": "Dashboard map" }}
-            closeIcon
-          >
-            <section className="build-region-grid">
-              <section className="build-side-sheet build-structure-sheet" data-dashboard-map-region="structure">
-                {structure}
-              </section>
-            </section>
-          </RightSideDrawer>
+
           {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
               themeProjection={themeProjection}
               anchorPlacementId={chartEditorPlacementId}
-              anchorSelector={mapChartAnchorSelector}
               chartTitle={selectedChart?.title}
               capabilities={unitOrbitCapabilities}
               open={chartEditorOpen}
@@ -1014,59 +1019,7 @@ function chronoGroupDraftInput(dashboard, charts, groupOverride = undefined) {
   };
 }
 
-export function temporalAuthoringCharts(dashboard) {
-  const memberships = new Map();
-  const membershipLists = new Map();
-  for (const group of dashboard.chronoGroups ?? []) {
-    for (const member of group.members ?? []) {
-      memberships.set(member.chartId, member);
-      const entries = membershipLists.get(member.chartId) ?? [];
-      entries.push({ groupId: group.id, groupName: group.name ?? group.id });
-      membershipLists.set(member.chartId, entries);
-    }
-  }
-  const variableCache = new Map();
-  return collectChartPlacements(dashboard)
-    .filter(({ chart }) => isTemporalAuthoringChart(chart))
-    .map((placement) => {
-    const chart = placement.chart;
-    const member = memberships.get(chart.id);
-    const timeField = bindingField(chart.roles?.[member?.timeRole])
-      ?? temporalRoleField(chart.roles);
-    const rows = dashboard.loadedData?.[chart.sourceId] ?? [];
-    const valueFields = Object.entries(chart.roles ?? {})
-      .filter(([role]) => role !== member?.timeRole)
-      .flatMap(([, binding]) => bindingFields(binding))
-      .filter((field) => field && field !== timeField);
-    const cacheKey = JSON.stringify([chart.sourceId, timeField, valueFields]);
-    const variables = variableCache.get(cacheKey)
-      ?? buildTemporalChartVariables(rows, timeField, valueFields, parseEpoch);
-    variableCache.set(cacheKey, variables);
-    const interpolationSupport = describeTemporalInterpolationSupport(variables);
-    const configuredInterpolation = chart.interaction?.timeSync?.interpolationAllowed;
-    return {
-      id: chart.id,
-      title: chart.title,
-      label: chart.title ?? chart.id,
-      pageId: placement.pageId,
-      pageLabel: dashboard.pages?.find(({ id }) => id === placement.pageId)?.label
-        ?? dashboard.pages?.find(({ id }) => id === placement.pageId)?.title
-        ?? placement.pageId,
-      sectionId: placement.sectionId,
-      sectionLabel: dashboard.pages?.find(({ id }) => id === placement.pageId)
-        ?.sections?.find(({ id }) => id === placement.sectionId)?.title ?? placement.sectionId,
-      interpolationAllowed: typeof configuredInterpolation === "boolean"
-        ? configuredInterpolation
-        : interpolationSupport.allowed,
-      interpolationUnsupportedVariables: interpolationSupport.unsupportedVariables,
-      interpolationReason: interpolationSupport.reason,
-      chronoGroupMemberships: membershipLists.get(chart.id) ?? [],
-      variables,
-      sourceChart: chart,
-      timeRole: member?.timeRole ?? temporalRoleName(chart.roles),
-    };
-    });
-}
+
 
 function initialScene(dashboard, preferredPageId) {
   const group = dashboard.chronoGroups?.[0];
@@ -1152,13 +1105,7 @@ export function mergeChronoGroup(groups, saved, charts) {
     : [...groups, next];
 }
 
-function isTemporalAuthoringChart(chart) {
-  try {
-    return getChartSchema(chart?.typeId).authoringWorkflow !== "static";
-  } catch {
-    return true;
-  }
-}
+
 
 function mergeScene(scenes, saved) {
   return scenes.some(({ id }) => id === saved.id)
@@ -1198,26 +1145,22 @@ function matchingValue(label) {
   return policy === "nearest" ? { policy, toleranceMs: 0 } : { policy };
 }
 
-function bindingFields(binding) {
-  if (Array.isArray(binding)) return binding.flatMap(bindingFields);
-  const field = bindingField(binding);
-  return field ? [field] : [];
+
+
+
+
+
+
+
+
+
+
+function railWidthSnapshot() {
+  return typeof window !== "undefined" && window.matchMedia?.("(max-width: 1023px)").matches === true;
 }
 
-function bindingField(binding) {
-  return typeof binding === "string" ? binding : binding?.field;
-}
-
-function temporalRoleName(roles = {}) {
-  return Object.keys(roles).find((role) => /time|date|observation/i.test(role)) ?? "observation";
-}
-
-function temporalRoleField(roles = {}) {
-  return bindingField(roles[temporalRoleName(roles)]);
-}
-
-function parseEpoch(value) {
-  if (Number.isFinite(value)) return value;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+function subscribeRailWidth(callback) {
+  const media = typeof window !== "undefined" ? window.matchMedia?.("(max-width: 1023px)") : null;
+  media?.addEventListener("change", callback);
+  return () => media?.removeEventListener("change", callback);
 }

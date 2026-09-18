@@ -217,3 +217,18 @@ function panelName(panel) {
   const chart = panel?.chart ?? panel;
   return chart?.title || chart?.label || chart?.id || panel?.id || "panel";
 }
+
+export function legalDropForDashboard(dashboard, source, node) {
+  if (!source || !node) return false;
+  if (source.kind === "page") return node.kind === "page";
+  if (source.kind === "section") return node.kind === "page" || node.kind === "section";
+  if (node.kind !== "section" && node.kind !== "chart") return false;
+  const page = (dashboard?.pages ?? []).find(({ id }) => id === node.pageId);
+  const section = (page?.sections ?? []).find(({ id }) => id === node.sectionId);
+  if (!section || section.role !== "attention") return true;
+  const sourcePage = (dashboard?.pages ?? []).find(({ id }) => id === source.pageId);
+  const sourceSection = (sourcePage?.sections ?? []).find(({ id }) => id === source.sectionId);
+  const panel = (sourceSection?.panels ?? []).find(({ id }) => id === source.placementId);
+  const chart = panel?.chart ?? panel;
+  return ["kpi", "deltaCard"].includes(chart?.typeId);
+}

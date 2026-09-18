@@ -1,3 +1,4 @@
+import { structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
 
@@ -88,10 +89,8 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
   const savedLayout = await page.evaluate(() => (
     localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
   ));
-  const panelToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await panelToggle.click();
-  const drawer = page.locator("#dashboard-map-panel");
-  await expect(drawer).toHaveAttribute("data-open", "true");
+  const drawer = structureRail(page);
+  await expect(drawer).toBeVisible();
   const open = await readCanvasState(page);
   expect(open.panels).toEqual(closed.panels);
   expect(open.sections).toEqual(closed.sections);
@@ -101,7 +100,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
 
   const clearance = await page.evaluate(() => {
     const chart = document.querySelector('article[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
-    const panel = document.querySelector("#dashboard-map-panel").getBoundingClientRect();
+    const panel = document.querySelector('[data-build-rail="properties"]').getBoundingClientRect();
     return {
       chartWidth: chart.width,
       visibleWidth: Math.max(0, Math.min(chart.right, panel.left, window.innerWidth) - Math.max(chart.left, 0)),
@@ -109,8 +108,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
   });
   expect(clearance.visibleWidth).toBeGreaterThanOrEqual(Math.min(220, clearance.chartWidth * 0.4));
 
-  await panelToggle.click();
-  await expect(drawer).toHaveAttribute("data-open", "false");
+  await expect(drawer).toBeVisible();
   const restored = await readCanvasState(page);
   expect(restored.frame).toEqual(closed.frame);
   expect(restored.canvas).toEqual(closed.canvas);
@@ -136,7 +134,6 @@ test("Build Structure double click navigates, highlights, and opens section rena
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const section = structure.getByRole("treeitem", { name: "Outbreak dynamics", exact: true });
   await section.locator(":scope > .build-tree-row .build-tree-label").dblclick();
@@ -207,9 +204,8 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Theme", exact: true }))
     .toHaveCount(1);
-  await expect(pinned.getByRole("button", { name: "Dashboard map", exact: true }))
-    .toHaveCount(1);
-  await expect(pinned.getByRole("button")).toHaveCount(2);
+  await expect(structureRail(page)).toBeVisible();
+  await expect(pinned.getByRole("button")).toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
     .toHaveCount(0);
   await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))
@@ -290,7 +286,6 @@ test("live Build Structure tree exposes a compact utility caret without redundan
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
   const caret = biomedical.getByRole("button", { name: "Collapse Biomedical", exact: true });
@@ -445,7 +440,6 @@ test("denied dashboard writes remain usable with session-only feedback", async (
   await page.goto("/");
   await enterAuthoredDashboard(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
   await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();
@@ -475,9 +469,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
     .click();
 
   const layoutDraftValue = "Width-preserved Biomedical layout";
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await mapToggle.click();
-  const mapPanel = page.locator("#dashboard-map-panel");
+  const mapPanel = structureRail(page);
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
   await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();
@@ -490,8 +482,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   const crownPages = page.locator(".dashboard-command-page-scroller");
   const renamedCrownPage = crownPages.getByRole("button", { name: layoutDraftValue, exact: true });
   const canonicalFrame = page.locator(".canonical-dashboard-frame");
-  await mapPanel.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
-  await expect(mapPanel).toHaveAttribute("data-open", "false");
+  await expect(mapPanel).toBeVisible();
   await expect(renamedCrownPage).toBeVisible();
   await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");
 
@@ -561,15 +552,13 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await page.getByRole("dialog", { name: "Discard changes?" })
     .getByRole("button", { name: "Discard", exact: true }).click();
   await expect(editor).toHaveCount(0);
-  await mapToggle.click();
-  await expect(mapPanel).toHaveAttribute("data-open", "true");
+  await expect(mapPanel).toBeVisible();
   await expect(layoutDraft).toHaveText(layoutDraftValue);
   await renamedPage.getByRole("button", { name: `Collapse ${layoutDraftValue}`, exact: true }).click();
   await expect(renamedPage).toHaveAttribute("aria-expanded", "false");
   await renamedPage.getByRole("button", { name: `Expand ${layoutDraftValue}`, exact: true }).click();
   await expect(renamedPage).toHaveAttribute("aria-expanded", "true");
-  await mapPanel.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
-  await expect(mapPanel).toHaveAttribute("data-open", "false");
+  await expect(mapPanel).toBeVisible();
   await page.setViewportSize({ width: 900, height: 720 });
   await expect(buildNotice).toBeVisible();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();

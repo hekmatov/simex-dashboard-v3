@@ -2345,7 +2345,6 @@
 )[data-dashboard-style] :is(
   .dashboard-header,
   .chart-panel,
-  .build-side-sheet,
   .present-context-panel,
   .present-scene-panel,
   .scenario-passport-popover
@@ -2430,7 +2429,6 @@
 }
 
 :is(
-  [data-right-side-drawer="dashboard-map-panel"][data-dashboard-style],
   [data-right-side-drawer="look-drawer"][data-dashboard-style],
   [data-right-side-drawer="build-more-drawer"][data-dashboard-style]
 ),
@@ -2443,7 +2441,6 @@
   .application-recovery,
   .source-viewer-theme-root
 )[data-dashboard-style] :is(
-  [data-right-side-drawer="dashboard-map-panel"],
   [data-right-side-drawer="look-drawer"],
   [data-right-side-drawer="build-more-drawer"],
   .look-drawer,

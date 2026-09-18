@@ -41,7 +41,6 @@ test("non-modal manager restores canvas selection and scroll", async ({ page }) 
   await openBuild(page, { width: 1440, height: 900 });
   const canvas = page.locator("[data-canonical-canvas-instance]");
   const canvasInstance = await canvas.getAttribute("data-canonical-canvas-instance");
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const originalSelection = page.locator('[role="treeitem"][aria-selected="true"]').first();
   await expect(originalSelection).toBeVisible();
   const originalSelectionLabel = await originalSelection.getAttribute("aria-label");

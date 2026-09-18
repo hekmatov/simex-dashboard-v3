@@ -42,7 +42,6 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await look.getByRole("button", { name: "Close Theme", exact: true }).click();
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
   let surface = page.locator(".build-authoring-auxiliary");

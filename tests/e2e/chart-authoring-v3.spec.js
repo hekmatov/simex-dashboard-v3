@@ -1,3 +1,4 @@
+import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 
@@ -664,12 +665,9 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
   await expect(page.locator('[data-pending-work-kind="layout"]'))
     .toHaveAttribute("data-pending-work-state", "dirty");
 
-  const dashboardMap = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await dashboardMap.click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   const pendingPageTitle = "Pending Socio Page title survives quick Save";
-  await map.getByLabel("Page title", { exact: true }).fill(pendingPageTitle);
-  await dashboardMap.click();
+  await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(pendingPageTitle);
 
   const target = page.locator('[data-panel-id="socio_trust_trend"]');
   await choosePanelAction(page, await target.getAttribute("data-build-placement-id"), "edit");

@@ -1,5 +1,6 @@
 export const initialPlaybackState = Object.freeze({
   source: Object.freeze({ kind: "default", id: null }),
+  sourcePreference: "auto",
   scope: "all-page",
   frameIndex: 0,
   period: null,
@@ -112,6 +113,7 @@ export function reducePlaybackState(state, action) {
       );
     }
     return withChanges(state, {
+      sourcePreference: action.groupId === null ? "page" : "auto",
       source: action.groupId === null
         ? { kind: "default", id: null }
         : { kind: "group", id: action.groupId },
@@ -133,6 +135,7 @@ export function reducePlaybackState(state, action) {
       throw new TypeError("Playback sceneId must be null or a non-empty string.");
     }
     return withChanges(state, {
+      sourcePreference: "auto",
       source: action.sceneId === null
         ? { kind: "default", id: null }
         : { kind: "scene", id: action.sceneId },
@@ -177,7 +180,7 @@ export function reducePlaybackState(state, action) {
     }
     return withChanges(state, { placement: action.placement });
   }
-  if (["navigate", "documentHidden", "modeExit"].includes(action.type)) {
+  if (["navigate", "documentHidden"].includes(action.type)) {
     return withChanges(state, { playing: false });
   }
   if (action.type === "blackout") {
@@ -223,6 +226,9 @@ export function reducePlaybackState(state, action) {
       playbackViewOwners: Object.freeze(owners),
       playing: false,
     });
+  }
+  if (action.type === "modeExit") {
+    return withChanges(state, { sourcePreference: "auto", playing: false });
   }
   return state;
 }
