@@ -1,5 +1,7 @@
 import React from "react";
 
+import { sectionRole } from "../../charting/config/sectionRoles.js";
+
 import {
   BUILD_LAYOUT_MOVE_MIME,
   buildSiblingMove,
@@ -58,6 +60,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     });
     if (collapsing && nextFocusedKey !== focusedKey) focus(nextFocusedKey);
   };
+  const sectionFor = (node) => (dashboard.pages ?? []).find((page) => page.id === node.pageId)?.sections?.find((section) => section.id === node.sectionId);
   const labelFor = (node) => {
     const page = (dashboard.pages ?? []).find((item) => item.id === node.pageId);
     if (node.kind === "page") return page?.label || page?.title || "Untitled page";
@@ -127,6 +130,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       role="treeitem"
       className="build-tree-item-wrap"
       data-build-node-kind={node.kind}
+      data-build-node-role={node.kind === "section" && sectionRole(sectionFor(node)) === "attention" ? "attention" : undefined}
       data-build-node-id={node.placementId ?? node.sectionId ?? node.pageId}
       data-build-placement-id={node.kind === "chart" ? node.placementId : undefined}
       data-dashboard-map-node-key={node.key}
@@ -234,6 +238,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
             }}
           />
         ) : <span className="build-tree-label" title={label}>{label}</span>}
+        {node.kind === "section" && sectionRole(sectionFor(node)) === "attention" && <span className="section-role-tag">Attention strip</span>}
       </div>
       {node.hasChildren && expanded && <ul role="group" className="build-tree-group">{nodes.filter((item) => item.parentKey === node.key).map(row)}</ul>}
     </li>{selected && node.kind !== "chart" && inspector ? <li className="dashboard-map-inline-inspector">{inspector}</li> : null}</React.Fragment>;

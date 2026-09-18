@@ -4319,3 +4319,77 @@ body .app-frame .dashboard-map-panel .build-tree-group {
   min-width: var(--simex-control-utility);
   padding: 0;
 }
+
+/* Lane B: attention strip. */
+.dashboard-attention-strip .attention-strip-items {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  padding: 12px 18px 16px;
+}
+
+.attention-strip-item {
+  display: grid;
+  gap: var(--simex-space-2);
+  min-width: 0;
+}
+
+.attention-strip-item .chart-panel,
+.attention-strip-item .chart-panel-footprint {
+  grid-column: auto;
+  grid-row: auto;
+  height: auto;
+  min-height: 0;
+}
+
+.attention-strip-item .chart-panel {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  box-shadow: none;
+}
+
+.attention-drill {
+  background: transparent;
+  border: 0;
+  color: var(--simex-text-strong);
+  font: inherit;
+  justify-self: start;
+  min-height: var(--simex-control-compact);
+  padding: 0 var(--simex-space-2);
+  text-decoration: underline transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 120ms ease;
+}
+
+.attention-drill:hover,
+.attention-drill:focus-visible {
+  text-decoration-color: currentColor;
+}
+
+.attention-drill:focus-visible {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.section-role-tag {
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius, 6px);
+  color: var(--simex-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  margin-inline-start: var(--simex-space-3);
+  padding: 0 var(--simex-space-2);
+  vertical-align: middle;
+}
+
+[data-drill-highlight="true"] {
+  box-shadow: 0 0 0 3px var(--simex-focus);
+  transition: box-shadow 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-drill,
+  [data-drill-highlight="true"] {
+    transition: none;
+  }
+}

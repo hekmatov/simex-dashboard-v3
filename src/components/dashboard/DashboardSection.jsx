@@ -1,5 +1,7 @@
 import React from "react";
 
+import { sectionRole } from "../../charting/config/sectionRoles.js";
+
 import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
 import SectionStructureCommandDialog from "../build/SectionStructureCommandDialog.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
@@ -53,10 +55,12 @@ function DashboardSection({
     <section
       className={`dashboard-section${sectionSelected ? " is-build-selected" : ""}`}
       data-canonical-section-id={section.id}
+      tabIndex={-1}
     >
       {actions ? (
         <BuildSectionHeader
           sectionDraft={sectionDraft}
+          role={sectionRole(sectionDraft)}
           getDashboard={getDashboard}
           movablePageCount={movablePageCount}
           pageId={pageId}
@@ -148,7 +152,8 @@ function DashboardSection({
   );
 }
 
-function BuildSectionHeader({
+export function BuildSectionHeader({
+  role = "standard",
   sectionDraft,
   getDashboard,
   movablePageCount,
@@ -175,6 +180,7 @@ function BuildSectionHeader({
     <div className="section-header build-section-header">
       <div className="section-title-block">
         {renaming ? <input className="build-section-title-input" aria-label="Section title" autoFocus value={name} onChange={(event) => setName(event.target.value)} onBlur={commitRename} onKeyDown={(event) => { if (event.key === "Enter") commitRename(); if (event.key === "Escape") { setName(title); setRenaming(false); } }} /> : <h2><button type="button" className="build-section-title-trigger" disabled={disabled} aria-label={`Edit Section title: ${title}`} onClick={() => setRenaming(true)}>{title}</button></h2>}
+        {role === "attention" && <span className="section-role-tag">Attention strip</span>}
         {sectionDraft.description && <p>{sectionDraft.description}</p>}
       </div>
       <div className="build-section-actions" aria-label={`${title} Section actions`}>
