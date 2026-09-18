@@ -1,4 +1,4 @@
-import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
+import { panelMenu, propertiesPane, structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 
 import { normalizeStoredDashboardConfig } from "../../src/charting/config/dashboardBundleV3.js";
@@ -30,9 +30,9 @@ test("Build commands stay available beside persistent structure and properties r
     "add-text-image",
     "source-content",
     "chrono-studio",
+    "scene-studio",
     "discard-build-changes",
     "finish-build",
-    "more",
   ]);
   const commandGeometry = await actions.evaluateAll((items) => items.map((item) => {
     const rect = item.getBoundingClientRect();
@@ -125,8 +125,10 @@ test("Structure keeps visible disclosure arrows and caret-aligned branch guides"
   await collapse.click();
   const expand = biomedical.getByRole("button", { name: "Expand Biomedical", exact: true });
   await expect(expand).toBeVisible();
-  const collapsedTransform = await expand.locator("span").evaluate((glyph) => getComputedStyle(glyph).transform);
-  expect(collapsedTransform).not.toBe(expandedTransform);
+  await expect.poll(
+    () => expand.locator("span").evaluate((glyph) => getComputedStyle(glyph).transform),
+    { message: "collapsed caret glyph settles on a different rotation than the expanded one" },
+  ).not.toBe(expandedTransform);
 });
 
 test("create page and inline rename acquire only the dashboard layout draft", async ({ page }) => {
@@ -210,13 +212,17 @@ test("native drag, keyboard move and Move panel dialog share the layout owner an
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
 
   await tree.getByRole("button", { name: "Expand Biomedical", exact: true }).click();
-  const moveHandle = page.getByRole("button", { name: /^Move panel / }).first();
-  await moveHandle.focus();
-  await moveHandle.press("Enter");
-  const dialog = page.getByRole("dialog", { name: /^Move / });
+  const firstPanel = page.locator("article[data-build-placement-id]").first();
+  const placementId = await firstPanel.getAttribute("data-build-placement-id");
+  await firstPanel.hover();
+  const moveTrigger = panelMenu(page, placementId);
+  await moveTrigger.focus();
+  await moveTrigger.press("Enter");
+  await page.locator(`[id="panel-menu-${placementId}"][role="menu"] [data-action-menu-item="move"]`).click();
+  const dialog = page.getByRole("dialog", { name: /^Move/ });
   await expect(dialog.getByLabel("Destination")).toBeFocused();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(moveHandle).toBeFocused();
+  await expect(moveTrigger).toBeFocused();
 });
 
 test("whole-Scene migration and partial split confirmation preserve explicit Needs attention and playback exclusion", async ({ page }) => {
