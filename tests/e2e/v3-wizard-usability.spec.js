@@ -236,6 +236,5 @@ async function openWizard(page) {
   await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   return openChartAuthoring(page);
 }

@@ -26,7 +26,7 @@ function allExpanded(dashboard) {
   ]));
 }
 
-export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove, inspector = null }) {
+export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
   const [expandedKeys, setExpandedKeys] = React.useState(() => allExpanded(dashboard));
   const [focusedKey, setFocusedKey] = React.useState(() => selectionKey(selection));
   const [renameKey, setRenameKey] = React.useState("");
@@ -134,7 +134,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       data-build-node-role={node.kind === "section" && sectionRole(sectionFor(node)) === "attention" ? "attention" : undefined}
       data-build-node-id={node.placementId ?? node.sectionId ?? node.pageId}
       data-build-placement-id={node.kind === "chart" ? node.placementId : undefined}
-      data-dashboard-map-node-key={node.key}
+      data-build-node-key={node.key}
       aria-label={label}
       aria-expanded={node.hasChildren ? expanded : undefined}
       aria-selected={selected}
@@ -242,7 +242,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
         {node.kind === "section" && sectionRole(sectionFor(node)) === "attention" && <span className="section-role-tag">Attention strip</span>}
       </div>
       {node.hasChildren && expanded && <ul role="group" className="build-tree-group">{nodes.filter((item) => item.parentKey === node.key).map(row)}</ul>}
-    </li>{selected && node.kind !== "chart" && inspector ? <li className="dashboard-map-inline-inspector">{inspector}</li> : null}</React.Fragment>;
+    </li></React.Fragment>;
   };
   return <>
     <nav className="build-structure-rail" aria-label="Dashboard structure"><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>

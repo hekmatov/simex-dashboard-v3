@@ -1,3 +1,4 @@
+import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 
 import { normalizeStoredDashboardConfig } from "../../src/charting/config/dashboardBundleV3.js";
@@ -13,7 +14,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Build commands stay available while Dashboard map controls only structure context", async ({ page }) => {
+test("Build commands stay available beside persistent structure and properties rails", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -21,7 +22,6 @@ test("Build commands stay available while Dashboard map controls only structure 
   const commands = page.getByRole("region", { name: "Build commands" });
   const toolbar = commands.getByRole("toolbar", { name: "Primary Build commands" });
   const actions = toolbar.locator("[data-build-command-action]");
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   await expect(commands).toBeVisible();
   await expect(toolbar).toBeVisible();
   await expect(actions).toHaveCount(7);
@@ -34,7 +34,6 @@ test("Build commands stay available while Dashboard map controls only structure 
     "finish-build",
     "more",
   ]);
-  await expect(mapToggle).toHaveAttribute("aria-controls", "dashboard-map-panel");
   const commandGeometry = await actions.evaluateAll((items) => items.map((item) => {
     const rect = item.getBoundingClientRect();
     return {
@@ -60,26 +59,23 @@ test("Build commands stay available while Dashboard map controls only structure 
   }));
   expect(toolbarGeometry.scrollWidth).toBeLessThanOrEqual(toolbarGeometry.clientWidth);
 
-  await mapToggle.click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   await expect(map).toBeVisible();
   await expect(commands).toBeVisible();
   await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toBeVisible();
-  await expect(map.locator(".dashboard-map-inline-inspector .build-inspector")).toBeVisible();
-  await expect(map.getByLabel("Page title", { exact: true })).toBeVisible();
+  await expect(propertiesPane(page).locator(".build-inspector")).toBeVisible();
+  await expect(propertiesPane(page).getByLabel("Page title", { exact: true })).toBeVisible();
 
-  await mapToggle.click();
-  await expect(map).toBeHidden();
+  await expect(map).toBeVisible();
   await expect(commands).toBeVisible();
 });
 
-test("Dashboard map keeps visible disclosure arrows and caret-aligned branch guides", async ({ page }) => {
+test("Structure keeps visible disclosure arrows and caret-aligned branch guides", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   const biomedical = map.getByRole("treeitem", { name: "Biomedical", exact: true });
   const collapse = biomedical.getByRole("button", { name: "Collapse Biomedical", exact: true });
   await expect(collapse).toBeVisible();
@@ -90,7 +86,7 @@ test("Dashboard map keeps visible disclosure arrows and caret-aligned branch gui
     const glyph = caret.querySelector("span");
     const group = item.querySelector(":scope > .build-tree-group");
     const child = group.querySelector(":scope > .build-tree-item-wrap");
-    const sheet = item.closest(".build-side-sheet");
+    const sheet = item.closest(".build-rail");
     const parseRgb = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number);
     const luminance = (value) => parseRgb(value)
       .map((channel) => channel / 255)
@@ -138,9 +134,8 @@ test("create page and inline rename acquire only the dashboard layout draft", as
   await page.goto("/");
   await enterAuthoredDashboard(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   const tree = map.getByRole("tree");
   const addPage = page.locator('[data-build-page-navigation="anchored"]')
     .getByRole("button", { name: "Add page", exact: true });
@@ -195,9 +190,8 @@ test("native drag, keyboard move and Move panel dialog share the layout owner an
   await page.goto("/");
   await enterAuthoredDashboard(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   const tree = map.getByRole("tree");
   await tree.getByRole("button", { name: "Collapse Biomedical", exact: true }).click();
   await tree.getByRole("button", { name: "Collapse Socio-economic", exact: true }).click();
@@ -233,9 +227,8 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
   await page.reload();
   await enterAuthoredDashboard(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   const tree = map.getByRole("tree");
   const moveConfirmedCases = page.getByRole("button", { name: "Move panel Confirmed cases", exact: true });
   const before = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);

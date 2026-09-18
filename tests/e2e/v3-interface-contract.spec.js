@@ -1,3 +1,4 @@
+import { structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 
 import { chartAuthoringWorkflow } from "./support/chart-authoring-workflow.js";
@@ -32,16 +33,15 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
   await expect(map.getByLabel("Page title")).toHaveCSS("min-height", "32px");
   await expect(map.getByLabel("Page title")).toHaveCSS("color", await semanticColor(page, "--simex-text-strong"));
 
   const structure = map.getByRole("navigation", { name: "Dashboard structure" });
   const contrast = await structure.getByRole("treeitem", { name: "Biomedical", exact: true }).evaluate((item) => {
-    const surface = item.closest(".build-side-sheet");
+    const surface = item.closest(".build-rail");
     const parse = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number);
     const luminance = (value) => parse(value)
       .map((channel) => channel / 255)
@@ -134,9 +134,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   await expect(failedRestoreNotice).toBeVisible();
   await passport.getByRole("button", { name: "Close", exact: true }).click();
 
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await mapToggle.click();
-  const mapDrawer = page.locator("#dashboard-map-panel");
+  const mapDrawer = structureRail(page);
   const moveSection = page.getByRole("button", {
     name: "Move Outbreak dynamics later",
     exact: true,
@@ -151,7 +149,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   const integratedGeometry = await page.evaluate(() => {
     const notice = [...document.querySelectorAll('[data-operation-status]')]
       .find((item) => item.textContent.includes("Restoring online dashboard"))?.getBoundingClientRect();
-    const drawer = document.querySelector('#dashboard-map-panel')?.getBoundingClientRect();
+    const drawer = document.querySelector('[data-build-rail="structure"]')?.getBoundingClientRect();
     const pending = document.querySelector('[data-pending-work-kind="layout"]')?.getBoundingClientRect();
     const dashboardFooter = document.querySelector(".dashboard-footer")?.getBoundingClientRect();
     const overlaps = (first, second) => Boolean(first && second
@@ -159,7 +157,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
       && first.top < second.bottom && first.bottom > second.top);
     return {
       width: window.innerWidth,
-      drawerGap: drawer && notice ? drawer.left - notice.right : -1,
+      drawerGap: drawer && notice ? notice.left - drawer.right : -1,
       footerGap: dashboardFooter && notice ? dashboardFooter.top - notice.bottom : -1,
       pendingOverlap: overlaps(notice, pending),
       drawerOverlap: overlaps(notice, drawer),
@@ -176,8 +174,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   expect(integratedGeometry.footerGap).toBeGreaterThanOrEqual(15);
   console.log("stage12-1440-geometry", JSON.stringify(integratedGeometry));
   await layoutOwner.getByRole("button", { name: "Discard Layout Changes", exact: true }).click();
-  await mapDrawer.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
-  await expect(mapDrawer).toHaveAttribute("data-open", "false");
+  await expect(mapDrawer).toBeVisible();
 
   await page.setViewportSize({ width: 820, height: 900 });
   await page.getByRole("button", { name: "Theme", exact: true }).click();
@@ -196,8 +193,6 @@ test("same-page section reorder paints status first and preserves the React-owne
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await mapToggle.click();
 
   const section = page.locator('[data-canonical-section-id="outbreak_dynamics"]');
   const panel = section.locator("[data-panel-id]").first();
@@ -238,9 +233,8 @@ test("same-page section reorder paints status first and preserves the React-owne
   await expect.poll(() => page.locator("[data-canonical-section-id]").evaluateAll(
     (nodes) => nodes.map((node) => node.getAttribute("data-canonical-section-id")).slice(0, 2),
   )).toEqual(["health_system", "outbreak_dynamics"]);
-  const mapDrawer = page.locator("#dashboard-map-panel");
-  await mapDrawer.getByRole("button", { name: "Close Dashboard map", exact: true }).click();
-  await expect(mapDrawer).toHaveAttribute("data-open", "false");
+  const mapDrawer = structureRail(page);
+  await expect(mapDrawer).toBeVisible();
 
   const result = await page.evaluate(() => {
     const probe = window.__sectionZeroWorkProbe;

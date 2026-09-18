@@ -17,7 +17,7 @@ export function createBuildLayoutDraft(dashboard) {
     targetId: null,
     status: "clean",
     activity: "active",
-    surface: "dashboard-map",
+    surface: "structure-rail",
     baseline,
     value: cloneLayoutStructure(baseline),
     error: null,

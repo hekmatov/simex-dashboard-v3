@@ -147,7 +147,6 @@ test("anchored Section commands preview and discard through the live layout draf
   await move.getByRole("button", { name: "Confirm" }).click();
 
   await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await expect(page.locator('[data-pending-work-kind="layout"]'))
     .toHaveAttribute("data-pending-work-state", "dirty");
   await page.getByRole("button", { name: "Discard Layout Changes" }).click();

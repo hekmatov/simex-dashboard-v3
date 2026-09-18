@@ -25,7 +25,9 @@ const REQUIRED_ROOTS = [
   ".chart-state-recovery-harness",
 ];
 
-const rules = parseRules(css);
+const modesCss = await readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8");
+const rules = parseRules(`${css}\n${modesCss}`);
+const railRules = parseRules(modesCss);
 
 test("fails when a shared role lacks concrete selector coverage", () => {
   for (const role of DASHBOARD_REGION_ROLES) {
@@ -123,26 +125,26 @@ test("chart headings keep a shared dense inset without padding the chart canvas"
 });
 
 test("Dashboard Map branch guides stay centered on the dense utility caret", () => {
-  const group = rules
-    .filter(({ selector }) => selector === ".app-frame .dashboard-map-panel .build-tree-group")
+  const group = railRules
+    .filter(({ selector }) => selector === ".app-frame .build-rail--structure .build-tree-group")
     .at(-1)?.declarations;
-  const parentGuide = rules
+  const parentGuide = railRules
     .filter(({ selector }) => (
-      selector === ".app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded=\"true\"] > .build-tree-row::before"
+      selector === ".app-frame .build-rail--structure .build-tree-item-wrap[aria-expanded=\"true\"] > .build-tree-row::before"
     ))
     .at(-1)?.declarations;
-  const childStem = rules
+  const childStem = railRules
     .filter(({ selector }) => (
-      selector === ".app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap::after"
+      selector === ".app-frame .build-rail--structure .build-tree-group > .build-tree-item-wrap::after"
     ))
     .at(-1)?.declarations;
-  const childElbow = rules
+  const childElbow = railRules
     .filter(({ selector }) => (
-      selector === ".app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap::before"
+      selector === ".app-frame .build-rail--structure .build-tree-group > .build-tree-item-wrap::before"
     ))
     .at(-1)?.declarations;
 
-  assert.equal(group?.get("padding-left"), "24px");
+  assert.equal(group?.get("padding-left"), "14px");
   assert.equal(
     parentGuide?.get("left"),
     "calc(var(--simex-control-utility, 24px) / 2)",

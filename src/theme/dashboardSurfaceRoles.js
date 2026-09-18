@@ -9,7 +9,7 @@ export const DASHBOARD_JOURNEY_PRIMARY_ROLES = Object.freeze({
   ]),
   "command-bar": freezeSurfaceIds([]),
   panel: freezeSurfaceIds([
-    "view-chrono-controls", "dashboard-map-structure", "dashboard-map-inspector", "build-unit-orbit",
+    "view-chrono-controls", "build-structure-rail", "build-properties-pane", "view-attention-strip", "build-unit-orbit",
     "build-page-actions", "build-page-command-form", "scenario-passport-standard", "scene-unit-orbit",
     "pending-operation-row",
   ]),

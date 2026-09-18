@@ -1,5 +1,5 @@
 import { openChartAuthoring } from "./chart-authoring-workflow.js";
-import { enterBuildMode, openDashboardMap, openSourceContent } from "./buildWorkflow.js";
+import { enterBuildMode, structureRail, propertiesPane, openSourceContent } from "./buildWorkflow.js";
 import { openDashboardPage } from "./landingWorkflow.js";
 import { dashboardJourneyGroupingRoleFor } from "../../../src/theme/dashboardSurfaceRoles.js";
 
@@ -88,6 +88,16 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     setup: setupView,
   }),
   executable({
+    id: "view-attention-strip",
+    family: "view",
+    owner: "dashboard-attention-strip",
+    mode: "view",
+    state: "attention-strip",
+    viewport: DESKTOP_STANDARD,
+    root: ".dashboard-attention-strip",
+    setup: setupViewAttentionStrip,
+  }),
+  executable({
     id: "view-wide",
     family: "view",
     owner: "view-workspace",
@@ -128,24 +138,24 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     setup: setupBuild,
   }),
   executable({
-    id: "dashboard-map-structure",
+    id: "build-structure-rail",
     family: "structure-management",
-    owner: "dashboard-map",
+    owner: "build-workspace",
     mode: "build",
     state: "structure-tree",
     viewport: DESKTOP_STANDARD,
-    root: "[role='complementary'][aria-label='Dashboard map']",
-    setup: setupDashboardMap,
+    root: "[data-build-rail='structure']",
+    setup: setupBuildStructureRail,
   }),
   executable({
-    id: "dashboard-map-inspector",
+    id: "build-properties-pane",
     family: "structure-management",
-    owner: "dashboard-map",
+    owner: "build-workspace",
     mode: "build",
     state: "context-inspector",
     viewport: DESKTOP_STANDARD,
-    root: "[role='complementary'][aria-label='Dashboard map'] .build-inspector",
-    setup: setupDashboardMapInspector,
+    root: "[data-build-rail='properties']",
+    setup: setupBuildPropertiesPane,
   }),
   executable({
     id: "build-unit-orbit",
@@ -858,23 +868,25 @@ async function setupBuild(context) {
   return { page };
 }
 
-async function setupDashboardMap(context) {
+async function setupBuildStructureRail(context) {
   const { page } = await setupBuild(context);
-  const map = await openDashboardMap(page);
+  const map = await structureRail(page);
   await map.getByRole("navigation", { name: "Dashboard structure" }).waitFor();
+  await map.locator('[data-build-node-kind="section"]').first().locator(".build-tree-label").first().click();
+  await propertiesPane(page).getByLabel("Title", { exact: true }).waitFor();
   return { page };
 }
 
-async function setupDashboardMapInspector(context) {
-  const { page } = await setupDashboardMap(context);
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  await map.locator(".build-inspector").waitFor();
+async function setupBuildPropertiesPane(context) {
+  const { page } = await setupBuildStructureRail(context);
+  const map = structureRail(page);
+  await propertiesPane(page).locator(".build-inspector").waitFor();
   return { page };
 }
 
 async function setupBuildUnitOrbit(context) {
-  const { page } = await setupDashboardMap(context);
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const { page } = await setupBuildStructureRail(context);
+  const map = structureRail(page);
   await map.getByRole("tree")
     .getByRole("treeitem", { name: "Risk perception over time", exact: true })
     .click();
@@ -1141,7 +1153,7 @@ async function openBuildMapForCreate(context) {
   const { page } = await setupBuild(context);
   const addPage = page.getByRole("button", { name: "Add page", exact: true });
   if (!await addPage.isVisible()) {
-    await openDashboardMap(page);
+    await structureRail(page);
   }
   await addPage.waitFor();
   return page;
@@ -1402,5 +1414,14 @@ async function setupPresentRecommendation(context) {
   const page = await openBiomedical(context);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
   await page.locator('[data-desktop-width-notice="present"]').waitFor();
+  return { page };
+}
+
+async function setupViewAttentionStrip(context) {
+  const page = await openBiomedical(context);
+  const { authorAttentionStrip } = await import("./buildWorkflow.js");
+  await authorAttentionStrip(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  await page.locator(".dashboard-attention-strip").waitFor();
   return { page };
 }

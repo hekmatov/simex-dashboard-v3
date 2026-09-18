@@ -19,7 +19,6 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   let flow = await openChartAuthoring(page);
   let { wizard } = flow;
   await flow.selectExistingSource("Biomedical cases");

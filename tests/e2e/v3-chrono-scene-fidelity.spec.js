@@ -10,12 +10,10 @@ test.beforeEach(async ({ request, page }) => {
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 });
 
 test("005-chrono-group-authoring: staged ledger and review remain usable at desktop and tablet", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
   const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
   await expect(auxiliary.getByRole("heading", { name: "Chrono Studio", exact: true })).toBeVisible();
@@ -119,7 +117,6 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 test("006-scene-authoring amendment: three full-width stages and Unit Orbit are live", async ({ page }) => {
   test.setTimeout(120_000);
   const sceneName = "Runtime composition fidelity scene";
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("dialog", { name: "More Build commands" })
     .getByRole("button", { name: "Scene Studio", exact: true }).click();
@@ -314,7 +311,6 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
 
 test("012-temporal-content: libraries filter, open read-first pages, and restore context", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("dialog", { name: "More Build commands" })
     .getByRole("button", { name: "Scene Studio", exact: true }).click();

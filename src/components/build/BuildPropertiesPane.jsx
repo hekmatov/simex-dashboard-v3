@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function BuildInspector({
+export default function BuildPropertiesPane({
   dashboard = {},
   selection,
   dashboardDraft = {},
@@ -12,6 +12,10 @@ export default function BuildInspector({
   onPageChange,
   onPageRemove,
   onSectionChange,
+  onEditChart,
+  onMoveChart,
+  onRemoveChart,
+  onStructureCommand,
 }) {
   const labelRef = React.useRef(null);
   const page = (dashboard.pages ?? []).find(({ id }) => id === selection?.pageId);
@@ -27,9 +31,17 @@ export default function BuildInspector({
   if (selection?.kind === "chart" && chart) {
     return (
       <section className="build-inspector build-chart-selection" aria-labelledby="build-inspector-title">
-        <p className="eyebrow">Selected chart</p>
+        <p className="eyebrow">Chart</p>
         <h2 id="build-inspector-title">{chart.title || "Untitled chart"}</h2>
-        <p>Editing in the Unit Orbit attached to this chart.</p>
+        <dl className="build-inspector-facts">
+          <div><dt>Type</dt><dd>{chart.typeId}</dd></div>
+          <div><dt>Section</dt><dd>{section.title || section.id}</dd></div>
+        </dl>
+        <div className="build-inspector-actions">
+          <button type="button" disabled={disabled} onClick={() => onEditChart?.(placement.id)}>Edit chart</button>
+          <button type="button" className="secondary" disabled={disabled} onClick={(event) => onMoveChart?.(placement.id, event.currentTarget)}>Move…</button>
+          <button type="button" className="secondary danger" disabled={disabled} onClick={() => onRemoveChart?.(placement.id)}>Remove…</button>
+        </div>
       </section>
     );
   }
@@ -43,9 +55,12 @@ export default function BuildInspector({
         <p className="eyebrow">Section</p>
         <h2 id="build-inspector-title">{draft.title || "Untitled section"}</h2>
         <label>
+          Title
+          <input ref={labelRef} disabled={disabled} value={draft.title ?? ""} onChange={(event) => onSectionChange?.(section, { title: event.target.value })} />
+        </label>
+        <label>
           Description
           <textarea
-            ref={labelRef}
             disabled={disabled}
             value={draft.description ?? ""}
             onChange={(event) => onSectionChange?.(section, { description: event.target.value })}
@@ -97,9 +112,9 @@ export default function BuildInspector({
   }
   return (
     <section className="build-inspector build-inspector-empty" aria-labelledby="build-inspector-title">
-      <p className="eyebrow">Inspector</p>
-      <h2 id="build-inspector-title">Choose dashboard content</h2>
-      <p>Select a Page, Section, chart, or Chrono Group to inspect it here. Scenario identity and package controls live in the Scenario Passport above.</p>
+      <p className="eyebrow">Dashboard</p>
+      <h2 id="build-inspector-title">{dashboard.title || "Untitled dashboard"}</h2>
+      <p>{(dashboard.pages ?? []).length} pages. Select a Page, Section, or chart in Structure or on the canvas to edit it here. Scenario identity and package controls live in the Scenario Passport.</p>
     </section>
   );
 }

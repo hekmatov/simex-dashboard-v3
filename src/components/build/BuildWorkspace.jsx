@@ -4,7 +4,7 @@ import React from "react";
 import { createPortal } from "react-dom";
 
 import BuildCommandHeader from "./BuildCommandHeader.jsx";
-import BuildInspector from "./BuildInspector.jsx";
+import BuildPropertiesPane from "./BuildPropertiesPane.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
 import {
   captureBuildCanvasState,
@@ -58,7 +58,6 @@ import {
 } from "./buildDraftCoordinator.js";
 import { selectBuildPendingWork } from "./buildPendingWork.js";
 import SourceContentWorkspace, { createSourceContentViewState } from "../source-content/SourceContentWorkspace.jsx";
-import RightSideDrawer from "../common/RightSideDrawer.jsx";
 
 export default function BuildWorkspace({
   themeProjection,
@@ -75,8 +74,7 @@ export default function BuildWorkspace({
     dismiss() {},
   }),
   activePage,
-  buildPanelOpen = false,
-  onCloseDashboardMap,
+  canvasActions,
   selection,
   dashboardDraft,
   pageDrafts,
@@ -195,9 +193,22 @@ export default function BuildWorkspace({
   const selectedChart = selectedChartItem?.chart ?? null;
   const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
   const inspectorFocusKey = focusLabelKey;
-  const mapChartAnchorSelector = buildPanelOpen && chartEditorPlacementId
-    ? `#dashboard-map-panel [data-build-placement-id="${typeof CSS === "undefined" ? chartEditorPlacementId : CSS.escape(chartEditorPlacementId)}"]`
-    : "";
+  const narrowRails = React.useSyncExternalStore(subscribeRailWidth, railWidthSnapshot, () => false);
+  const [railOpen, setRailOpen] = React.useState({ structure: false, properties: false });
+  React.useEffect(() => {
+    setRailOpen((current) => ({ ...current, properties: true }));
+  }, [selection?.kind, selection?.pageId, selection?.sectionId, selection?.placementId]);
+  const railContent = (kind, title, content) => narrowRails ? (
+    <details className="build-rail__disclosure" open={railOpen[kind]} onToggle={(event) => {
+      const open = event.currentTarget.open;
+      setRailOpen((current) => current[kind] === open ? current : { ...current, [kind]: open });
+    }}>
+      <summary>{title}</summary>
+      {content}
+    </details>
+  ) : <><h2 className="build-rail__heading">{title}</h2>{content}</>;
+
+
 
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
@@ -771,8 +782,8 @@ export default function BuildWorkspace({
     },
   });
 
-  const inspector = (
-    <BuildInspector
+  const propertiesPane = (
+    <BuildPropertiesPane
       dashboard={dashboard}
       selection={selection}
       dashboardDraft={dashboardDraft}
@@ -784,9 +795,18 @@ export default function BuildWorkspace({
       onPageChange={onPageChange}
       onPageRemove={onPageRemove}
       onSectionChange={onSectionChange}
+      onEditChart={() => onResumeChartEditor?.()}
+      onMoveChart={(placementId, invoker) => canvasActions?.requestPanelMove({
+        kind: "panel",
+        pageId: selection?.pageId,
+        sectionId: selection?.sectionId,
+        placementId,
+      }, selectedChart?.title, invoker)}
+      onRemoveChart={(placementId) => canvasActions?.removePanel(placementId)}
+      onStructureCommand={(command) => canvasActions?.structureCommand(command)}
     />
   );
-  const structure = (
+  const structureRail = (
     <BuildStructureRail
       key={treeResetGeneration}
       dashboard={dashboard}
@@ -796,7 +816,6 @@ export default function BuildWorkspace({
       onRename={onRename}
       onRenameDirtyChange={onInlineRenameDirtyChange}
       onMove={onLayoutMove}
-      inspector={inspector}
     />
   );
 
@@ -821,6 +840,13 @@ export default function BuildWorkspace({
             onAccessibilityChange={onAccessibilityChange}
             onOpenAuxiliary={openAuxiliary}
           />
+          <aside className="build-rail build-rail--structure" data-build-rail="structure" aria-label="Structure">
+            {railContent("structure", "Structure", structureRail)}
+          </aside>
+          <aside className="build-rail build-rail--properties" data-build-rail="properties" aria-label="Properties">
+            {railContent("properties", "Properties", propertiesPane)}
+          </aside>
+
           {(activeAuxiliary === "source-content" || sourceContentOwners.length > 0) && typeof document !== "undefined" && createPortal((
             <aside
               className="build-authoring-auxiliary build-authoring-auxiliary--source-content"
@@ -911,29 +937,11 @@ export default function BuildWorkspace({
               )}
             </aside>
           ), document.body)}
-          <RightSideDrawer
-            id="dashboard-map-panel"
-            title="Dashboard map"
-            open={buildPanelOpen}
-            onClose={onCloseDashboardMap}
-            modality="complementary"
-            className="dashboard-map-panel"
-            headerClassName="dashboard-map-header"
-            contentClassName="dashboard-map-content"
-            panelProps={{ "aria-label": "Dashboard map" }}
-            closeIcon
-          >
-            <section className="build-region-grid">
-              <section className="build-side-sheet build-structure-sheet" data-dashboard-map-region="structure">
-                {structure}
-              </section>
-            </section>
-          </RightSideDrawer>
+
           {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
               themeProjection={themeProjection}
               anchorPlacementId={chartEditorPlacementId}
-              anchorSelector={mapChartAnchorSelector}
               chartTitle={selectedChart?.title}
               capabilities={unitOrbitCapabilities}
               open={chartEditorOpen}
@@ -1148,3 +1156,13 @@ function matchingValue(label) {
 
 
 
+
+function railWidthSnapshot() {
+  return typeof window !== "undefined" && window.matchMedia?.("(max-width: 1023px)").matches === true;
+}
+
+function subscribeRailWidth(callback) {
+  const media = typeof window !== "undefined" ? window.matchMedia?.("(max-width: 1023px)") : null;
+  media?.addEventListener("change", callback);
+  return () => media?.removeEventListener("change", callback);
+}

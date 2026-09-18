@@ -1,3 +1,4 @@
+import { structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
@@ -17,12 +18,9 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
   await openBiomedicalBuild(page);
   const baseline = await canvasIdentity(page);
   const saved = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
-  const toggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await toggle.click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  const map = structureRail(page);
   await expect(map).toBeVisible();
-  await toggle.click();
-  await expect(map).toBeHidden();
+  await expect(map).toBeVisible();
 
   const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
   await target.scrollIntoViewIfNeeded();
@@ -54,14 +52,11 @@ test("layout and selected-chart drafts stay independent through layout discard",
     .getByRole("button", { name: "Socio-economic", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await mapToggle.click();
 
   await page.getByRole("button", {
     name: "Move Public response and policy signals later",
     exact: true,
   }).click();
-  await mapToggle.click();
   const target = page.locator('article[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   const editor = page.getByRole("complementary", {
@@ -108,10 +103,7 @@ test("native drag and Move panel controls use the handle while the canvas articl
   });
   const reordered = await page.locator('article[data-build-placement-id]').evaluateAll((items) => items.map((item) => item.dataset.buildPlacementId));
   expect(reordered.indexOf(sourceId)).toBeGreaterThan(0);
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await mapToggle.click();
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
-  await mapToggle.click();
 
   const movedHandle = page.locator(`article[data-build-placement-id="${sourceId}"]`).getByRole("button", { name: /^Move panel / });
   await movedHandle.click();
@@ -132,13 +124,10 @@ test("More opens Scene Studio without losing dirty pending work", async ({ page 
     .getByRole("button", { name: "Socio-economic", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  const mapToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
-  await mapToggle.click();
   await page.getByRole("button", {
     name: "Move Public response and policy signals later",
     exact: true,
   }).click();
-  await mapToggle.click();
 
   const target = page.locator('article[data-build-placement-id="socio_trust_trend"]');
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
@@ -196,7 +185,6 @@ test("chart creation gives every stage the Configure-sized render proof while ke
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const flow = await openChartAuthoring(page);
   const { wizard } = flow;
   const deck = wizard.locator('[data-chart-proof-deck="persistent"]');

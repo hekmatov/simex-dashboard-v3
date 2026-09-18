@@ -87,7 +87,6 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await page.keyboard.press("Escape");
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
   await expect(page.locator(".build-authoring-auxiliary")).toBeVisible();
