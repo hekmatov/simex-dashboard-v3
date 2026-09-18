@@ -65,12 +65,13 @@ export function PlaybackProvider({
     const selectedGroup = resolveActiveGroup(
       groups,
       activeScene?.chronoGroupId ?? state.activeGroupId,
+      activeScene ? "auto" : state.sourcePreference,
     );
     if (state.source?.kind !== "default" || activeScene || selectedGroup) {
       validateChronoGroups(selectedGroup ? [selectedGroup] : EMPTY_ARRAY, temporalContext);
     }
     return groups;
-  }, [activeScene, groups, state.activeGroupId, state.playbackView, state.source?.kind, temporalContext]);
+  }, [activeScene, groups, state.activeGroupId, state.playbackView, state.source?.kind, state.sourcePreference, temporalContext]);
   const dispatch = React.useCallback(
     (action) => {
       if (
@@ -117,8 +118,9 @@ export function PlaybackProvider({
     () => resolveActiveGroup(
       validatedGroups,
       activeScene?.chronoGroupId ?? state.activeGroupId,
+      activeScene ? "auto" : state.sourcePreference,
     ),
-    [activeScene, validatedGroups, state.activeGroupId],
+    [activeScene, validatedGroups, state.activeGroupId, state.sourcePreference],
   );
   const usingDefaultPage = (
     state.source?.kind === "default"
@@ -458,7 +460,7 @@ function initializePlaybackState({
   const preferredGroup = preferredGroupId
     ? groups.find(({ id }) => id === preferredGroupId)
     : null;
-  const activeGroupId = hasSuppliedGroup
+  const activeGroupId = supplied.sourcePreference === "page" ? null : hasSuppliedGroup
     ? supplied.activeGroupId
     : preferredGroup?.id ?? (preferredGroupId ? null : groups[0]?.id ?? null);
   const activeScene = resolveActiveScene(scenes, supplied.activeSceneId);
@@ -475,7 +477,7 @@ function initializePlaybackState({
     profiles,
     timezone,
   };
-  const selectedGroup = resolveActiveGroup(groups, activeScene?.chronoGroupId ?? activeGroupId);
+  const selectedGroup = resolveActiveGroup(groups, activeScene?.chronoGroupId ?? activeGroupId, activeScene ? "auto" : supplied.sourcePreference);
   const shouldBuildClock = supplied.playbackView === true;
   const defaultPagePlayback = shouldBuildClock
     ? buildDefaultPagePlayback(pageCharts ?? charts, temporalContext)
@@ -515,7 +517,8 @@ function initializePlaybackState({
   };
 }
 
-function resolveActiveGroup(groups, groupId) {
+function resolveActiveGroup(groups, groupId, sourcePreference = "auto") {
+  if (sourcePreference === "page") return null;
   if (groupId !== null) {
     const selected = groups.find((group) => group.id === groupId);
     if (selected) return selected;
