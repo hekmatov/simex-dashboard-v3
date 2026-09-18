@@ -182,9 +182,9 @@
   </section>
 
   <h2>Hands-on test tasks</h2>
-  <p>Start the dev server from the worktree, then open <code>http://localhost:5173/</code>. Tick tasks as you go; ticks are remembered in this browser only.</p>
+  <p>Start Vite directly from the worktree (plain <code>pnpm dev</code> currently fails in its pre-dev step on the shipped config, at the base commit too, because two data sources are browser-uploaded GeoJSON the portable-data script tries to read from disk). Then open <code>http://localhost:5173/</code>. Tick tasks as you go; ticks are remembered in this browser only.</p>
 <pre>cd C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.claude\worktrees\view-build-decision-surface-ff6f8a
-pnpm.cmd dev</pre>
+pnpm.cmd exec vite --host</pre>
 
   <div class="progress"><span id="progress">0 of 0 done</span><button type="button" id="reset">Clear ticks</button></div>
 
