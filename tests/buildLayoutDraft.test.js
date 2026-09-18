@@ -1,3 +1,4 @@
+import { setBuildLayoutSectionRole, setBuildLayoutPanelDrill } from "../src/components/build/buildLayoutDraft.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -318,3 +319,43 @@ function structureFixture() {
     }],
   };
 }
+
+test("set-section-role refuses disallowed charts and clears drills when reverting", () => {
+  const dashboard = {
+    id: "d",
+    pages: [{ id: "ops", sections: [
+      { id: "top", title: "Top", panels: [{ id: "w1", chart: { id: "k1", typeId: "kpi", title: "Cases" }, drill: { kind: "section", sectionId: "body" } }] },
+      { id: "body", title: "Body", panels: [{ id: "w2", chart: { id: "b1", typeId: "bar", title: "Beds" } }] },
+    ] }],
+  };
+  const draft = createBuildLayoutDraft(dashboard);
+  const refused = setBuildLayoutSectionRole(draft, "ops", "body", "attention");
+  assert.equal(refused.status, "error");
+  assert.equal(refused.error.code, "SECTION_ROLE_REFUSED");
+  assert.match(refused.error.message, /Beds is a bar chart/);
+
+  const promoted = setBuildLayoutSectionRole(draft, "ops", "top", "attention");
+  assert.equal(promoted.status, "dirty");
+  assert.equal(promoted.value.pages[0].sections[0].role, "attention");
+
+  const reverted = setBuildLayoutSectionRole(promoted, "ops", "top", "standard");
+  assert.equal(reverted.value.pages[0].sections[0].role, undefined);
+  assert.equal(reverted.value.pages[0].sections[0].panels[0].drill, undefined);
+});
+
+test("set-panel-drill stores, validates, and clears a drill", () => {
+  const dashboard = {
+    id: "d",
+    pages: [{ id: "ops", sections: [
+      { id: "top", title: "Top", role: "attention", panels: [{ id: "w1", chart: { id: "k1", typeId: "kpi", title: "Cases" } }] },
+      { id: "body", title: "Body", panels: [{ id: "w2", chart: { id: "b1", typeId: "bar", title: "Beds" } }] },
+    ] }],
+  };
+  const draft = createBuildLayoutDraft(dashboard);
+  const linked = setBuildLayoutPanelDrill(draft, "ops", "top", "w1", { kind: "chart", chartId: "b1" });
+  assert.deepEqual(linked.value.pages[0].sections[0].panels[0].drill, { kind: "chart", chartId: "b1" });
+  const cleared = setBuildLayoutPanelDrill(linked, "ops", "top", "w1", null);
+  assert.equal(cleared.value.pages[0].sections[0].panels[0].drill, undefined);
+  const invalid = setBuildLayoutPanelDrill(draft, "ops", "top", "w1", { kind: "chart", chartId: "k1" });
+  assert.equal(invalid.error.code, "PANEL_DRILL_INVALID");
+});

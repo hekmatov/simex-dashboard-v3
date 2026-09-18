@@ -4,6 +4,7 @@ import { sectionRole } from "../../charting/config/sectionRoles.js";
 
 import {
   BUILD_LAYOUT_MOVE_MIME,
+  legalDropForDashboard,
   buildSiblingMove,
   canonicalMove,
   createBuildMoveDragSession,
@@ -170,7 +171,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       onDragOver={(event) => {
         const source = dragSessionRef.current.current()
           ?? decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
-        if (!legalDrop(source, node)) return;
+        if (!legalDropForDashboard(dashboard, source, node)) return;
         event.preventDefault();
         event.stopPropagation();
         const rect = event.currentTarget.getBoundingClientRect();
@@ -184,7 +185,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       }}
       onDrop={(event) => {
         const source = dragSessionRef.current.resolve(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
-        if (!legalDrop(source, node)) return;
+        if (!legalDropForDashboard(dashboard, source, node)) return;
         event.preventDefault();
         event.stopPropagation();
         const edge = resolveBuildTreeDropEdge({
@@ -248,12 +249,6 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
   </>;
 }
 
-function legalDrop(source, node) {
-  if (!source || !node) return false;
-  if (source.kind === "page") return node.kind === "page";
-  if (source.kind === "section") return node.kind === "page" || node.kind === "section";
-  return node.kind === "section" || node.kind === "chart";
-}
 
 function moveForTreeDrop(dashboard, source, node, edge) {
   if (source.kind === "page") {

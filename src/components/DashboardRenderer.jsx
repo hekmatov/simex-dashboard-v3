@@ -29,6 +29,8 @@ import {
 import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
 import {
   addBuildLayoutPage,
+  setBuildLayoutSectionRole,
+  setBuildLayoutPanelDrill,
   addBuildLayoutSection,
   beginBuildLayoutSave,
   completeBuildLayoutSave,
@@ -1474,6 +1476,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           return mergeBuildLayoutPage(draft, command.pageId, command.targetPageId);
         case "remove-page":
           return removeBuildLayoutPage(draft, command.pageId, command);
+        case "set-section-role":
+          return setBuildLayoutSectionRole(draft, command.pageId, command.sectionId, command.role);
+        case "set-panel-drill":
+          return setBuildLayoutPanelDrill(draft, command.pageId, command.sectionId, command.placementId, command.drill ?? null);
         case "rename-section":
           return renameBuildLayoutSection(draft, command.pageId, command.sectionId, command.title);
         case "move-section":

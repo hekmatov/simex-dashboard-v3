@@ -19,6 +19,9 @@ export function analyzeBuildLayoutMove(dashboardDraft, move) {
   if (!source) return immutableFailure("MOVE_SOURCE_NOT_FOUND", "The move source no longer exists.");
   const target = locateTarget(dashboard, move);
   if (!target) return immutableFailure("MOVE_TARGET_NOT_FOUND", "The move target no longer exists.");
+  const attentionIssue = attentionMoveIssue(dashboard, move);
+  if (attentionIssue) return immutableFailure(attentionIssue.code, attentionIssue.message);
+
 
   const applied = analyzeEntityMove(dashboard, move, source, target);
   if (!applied.valid) return immutableFailure(applied.code, applied.message);
@@ -435,4 +438,22 @@ function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
+}
+
+import { ATTENTION_STRIP_CHART_TYPES, sectionRole } from "../../charting/config/sectionRoles.js";
+
+export function attentionMoveIssue(dashboard, move) {
+  if (move?.kind !== "panel") return null;
+  const targetPage = (dashboard?.pages ?? []).find(({ id }) => id === move.target?.pageId);
+  const targetSection = (targetPage?.sections ?? []).find(({ id }) => id === move.target?.sectionId);
+  if (!targetSection || sectionRole(targetSection) !== "attention") return null;
+  const sourcePage = (dashboard?.pages ?? []).find(({ id }) => id === move.source?.pageId);
+  const sourceSection = (sourcePage?.sections ?? []).find(({ id }) => id === move.source?.sectionId);
+  const panel = (sourceSection?.panels ?? []).find(({ id }) => id === move.source?.placementId);
+  const chart = panel?.chart ?? panel;
+  if (!chart || ATTENTION_STRIP_CHART_TYPES.includes(chart.typeId)) return null;
+  return {
+    code: "MOVE_ATTENTION_CHART_TYPE",
+    message: `${chart.title || chart.id} cannot join the attention strip. Only KPI card and Delta card charts can.`,
+  };
 }

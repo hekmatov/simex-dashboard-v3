@@ -317,3 +317,14 @@ function fixture() {
     }],
   };
 }
+
+test("moving a non-card chart into the attention strip is refused by name", () => {
+  const dashboard = { pages: [{ id: "ops", sections: [
+    { id: "top", role: "attention", panels: [{ id: "w1", chart: { id: "k1", typeId: "kpi", title: "Cases" } }] },
+    { id: "body", panels: [{ id: "w2", chart: { id: "b1", typeId: "bar", title: "Beds" } }] },
+  ] }] };
+  const analysis = analyzeBuildLayoutMove(dashboard, { kind: "panel", source: { pageId: "ops", sectionId: "body", placementId: "w2" }, target: { pageId: "ops", sectionId: "top", index: 0 } });
+  assert.equal(analysis.status, "invalid");
+  assert.equal(analysis.error.code, "MOVE_ATTENTION_CHART_TYPE");
+  assert.match(analysis.error.message, /Beds cannot join the attention strip/);
+});
