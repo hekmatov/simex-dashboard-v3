@@ -4193,6 +4193,14 @@
   }
 }
 
+/* Keep the trailing Session command's explanation inside the toolbar edge,
+   including while hidden: absolute tooltip boxes still contribute to overflow. */
+.build-command-group[data-build-command-group="session"] > .control-tooltip:last-child > .control-tooltip__reason {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
 /* Lane A: shared anchored action menu. */
 .action-menu {
   display: inline-flex;
