@@ -29,6 +29,8 @@ import {
 import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
 import {
   addBuildLayoutPage,
+  setBuildLayoutSectionRole,
+  setBuildLayoutPanelDrill,
   addBuildLayoutSection,
   beginBuildLayoutSave,
   completeBuildLayoutSave,
@@ -191,13 +193,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onPanelReorder,
   onImportConfig,
   onExportConfig,
-  onOpenBuildPanel,
   onResolveScenarioDraft,
   onResetEditSession,
   onDeleteDashboardContent,
   onOpenDashboardLook,
-  buildPanelOpen = false,
-  onCloseBuildPanel,
   operationError = "",
   themeProjection,
 }, ref) {
@@ -354,14 +353,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   React.useEffect(() => {
     buildLayoutDraftRef.current = buildLayoutDraft;
   }, [buildLayoutDraft]);
-  React.useEffect(() => {
-    if (!buildLayoutDraftRef.current || !["dirty", "error"].includes(buildLayoutDraftRef.current.status)) return;
-    const activity = buildPanelOpen ? "active" : "suspended";
-    if (buildLayoutDraftRef.current.activity === activity) return;
-    const next = { ...buildLayoutDraftRef.current, activity };
-    buildLayoutDraftRef.current = next;
-    setBuildLayoutDraft(next);
-  }, [buildPanelOpen]);
+
   const pendingEditCallbacksRef = React.useRef(null);
   pendingEditCallbacksRef.current = {
     onApplyPendingEdits,
@@ -1102,9 +1094,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function resumeInlineRenameWork() {
-    onOpenBuildPanel?.();
     window.requestAnimationFrame(() => {
-      document.querySelector('#dashboard-map-panel input[type="text"]')?.focus();
+      document.querySelector('[data-build-rail="structure"] input')?.focus();
     });
   }
 
@@ -1314,17 +1305,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function focusLayoutOwner() {
-    if (!buildPanelOpen) return resumeLayoutOwner();
     focusLayoutMapTarget(buildLayoutDraftRef.current?.targetId);
-    return true;
-  }
-
-  function resumeLayoutOwner() {
-    onOpenBuildPanel?.();
-    requestAnimationFrame(() => {
-      document.querySelector('[data-dashboard-map-region-control="structure"]')?.click?.();
-      requestAnimationFrame(() => focusLayoutMapTarget(buildLayoutDraftRef.current?.targetId));
-    });
     return true;
   }
 
@@ -1474,6 +1455,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           return mergeBuildLayoutPage(draft, command.pageId, command.targetPageId);
         case "remove-page":
           return removeBuildLayoutPage(draft, command.pageId, command);
+        case "set-section-role":
+          return setBuildLayoutSectionRole(draft, command.pageId, command.sectionId, command.role);
+        case "set-panel-drill":
+          return setBuildLayoutPanelDrill(draft, command.pageId, command.sectionId, command.placementId, command.drill ?? null);
         case "rename-section":
           return renameBuildLayoutSection(draft, command.pageId, command.sectionId, command.title);
         case "move-section":
@@ -2782,6 +2767,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   )) : null;
   const buildWorkspace = editMode ? (
     <BuildWorkspace
+      canvasActions={dashboardCanvasActions}
       key={buildTreeResetGeneration}
       themeProjection={themeProjection}
       dashboard={managerDashboard}
@@ -2793,8 +2779,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onBeginContentOperation={beginContentOperation}
       activePage={activePage}
       pageType={landingActive ? "landing" : "analytical"}
-      buildPanelOpen={buildPanelOpen}
-      onCloseDashboardMap={onCloseBuildPanel}
       selection={buildSelection}
       dashboardDraft={dashboardDraft}
       pageDrafts={pageDrafts}
@@ -2843,8 +2827,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         kind: "layout",
         targetId: buildLayoutDraft.targetId,
         status: buildLayoutDraft.status,
-        activity: buildLayoutDraft.activity ?? (buildPanelOpen ? "active" : "suspended"),
-        surface: "dashboard-map",
+        activity: "active",
+        surface: "structure-rail",
         error: buildLayoutDraft.error,
         restoration: null,
         resolution: null,
@@ -2854,7 +2838,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       owners={staticContentOwner ? [staticContentOwner] : []}
       authoredDirtyState={authoredDirtyState}
       pendingWorkResumeActions={{
-        structure: () => onOpenBuildPanel?.(),
+        structure: focusLayoutOwner,
         chartEditor: () => {
           if (!resumeQuickChartEditSession()) {
             setChartEditorVisible(Boolean(chartEditorPlacementId));
@@ -2862,16 +2846,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         },
         chartWizard: resumeChartWizardWork,
         staticContent: resumeStaticContentWork,
-        configuration: () => onOpenBuildPanel?.(),
+        configuration: focusLayoutOwner,
         inlineRename: resumeInlineRenameWork,
         scenario: () => onResolveScenarioDraft?.(),
-        dashboardMetadata: () => onOpenBuildPanel?.(),
+        dashboardMetadata: focusLayoutOwner,
       }}
       pendingWorkOwnerActions={{
         ...(buildLayoutDraft ? {
           [buildLayoutDraft.draftId]: {
             focus: focusLayoutOwner,
-            resume: resumeLayoutOwner,
+            resume: focusLayoutOwner,
             save: saveBuildLayoutChanges,
             discard: discardBuildLayoutChanges,
           },
@@ -2926,7 +2910,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onContentDraftCommit={onContentDraftCommit}
         onContentDraftDiscard={onContentDraftDiscard}
         contentRenderContext={contentRenderContext}
-        buildPanelOpen={buildPanelOpen}
         buildStaticAuthoringOpen={false}
         buildState={editMode ? {
           selection: buildSelection,

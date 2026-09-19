@@ -55,28 +55,21 @@ test("the default Chrono date is compact and clears the dashboard identity heade
   expect(geometry).toEqual({ width: 200, height: 56, headerGap: 8 });
 });
 
-test("the single-command Build More drawer sizes to its content", async ({ page }) => {
+test("Build Libraries exposes Scene Studio directly without a More drawer", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "More", exact: true }).click();
-
-  const drawer = page.getByRole("dialog", { name: "More Build commands" });
-  const action = drawer.getByRole("button", { name: "Scene Studio", exact: true });
-  const geometry = await drawer.evaluate((node) => {
-    const drawerRect = node.getBoundingClientRect();
-    const actionRect = node.querySelector('[data-build-more-command="scene-studio"]').getBoundingClientRect();
-    return {
-      height: Math.round(drawerRect.height),
-      blankBelowAction: Math.round(drawerRect.bottom - actionRect.bottom),
-    };
-  });
-
-  await expect(action).toBeVisible();
-  expect(geometry.height).toBeLessThanOrEqual(260);
-  expect(geometry.blankBelowAction).toBeLessThanOrEqual(24);
+  const toolbar = page.getByRole("toolbar", { name: "Primary Build commands" });
+  const libraries = toolbar.getByRole("group", { name: "Libraries", exact: true });
+  const sceneStudio = libraries.locator('[data-build-command-action="scene-studio"]');
+  await expect(sceneStudio).toHaveText("Scene Studio");
+  await expect(sceneStudio).toBeVisible();
+  await expect(sceneStudio).toBeInViewport();
+  await expect(page.getByRole("button", { name: "More", exact: true })).toHaveCount(0);
+  await sceneStudio.click();
+  await expect(page.getByRole("dialog", { name: "Scene Studio authoring" })).toBeVisible();
 });
 
 test("the fixed Audience options drawer sizes to its four facts", async ({ page }) => {

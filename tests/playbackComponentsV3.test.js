@@ -728,6 +728,36 @@ test("a stale default source adopts a ready saved group instead of the whole Pag
   assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_3}],&quot;charts&quot;:[&quot;ready-member&quot;]}</output>`);
 });
 
+test("an explicit Whole page source includes non-members even when a saved group is ready", () => {
+  const rows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-03", cases: 30 },
+  ];
+  const member = lineChart({ id: "ready-member" });
+  const ordinary = lineChart({ id: "ready-ordinary" });
+  const html = renderPlaybackProbe({
+    groups: [{
+      id: "ready-group",
+      name: "Ready group",
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [{ chartId: member.id, timeRole: "observation" }],
+    }],
+    charts: [member, ordinary],
+    loadedData: { primary: rows },
+    profiles: { primary: temporalProfile(rows) },
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "default", id: null },
+      sourcePreference: "page",
+      playbackView: true,
+    },
+  });
+
+  assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_3}],&quot;charts&quot;:[&quot;ready-member&quot;,&quot;ready-ordinary&quot;]}</output>`);
+});
+
 test("visibility scope never turns ordinary Page charts into Chrono participants", () => {
   const rows = [
     { observed: "2027-05-01", cases: 10 },

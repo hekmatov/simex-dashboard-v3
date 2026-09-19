@@ -2345,7 +2345,6 @@
 )[data-dashboard-style] :is(
   .dashboard-header,
   .chart-panel,
-  .build-side-sheet,
   .present-context-panel,
   .present-scene-panel,
   .scenario-passport-popover
@@ -2430,9 +2429,7 @@
 }
 
 :is(
-  [data-right-side-drawer="dashboard-map-panel"][data-dashboard-style],
-  [data-right-side-drawer="look-drawer"][data-dashboard-style],
-  [data-right-side-drawer="build-more-drawer"][data-dashboard-style]
+  [data-right-side-drawer="look-drawer"][data-dashboard-style]
 ),
 :is(
   .app-frame,
@@ -2443,11 +2440,8 @@
   .application-recovery,
   .source-viewer-theme-root
 )[data-dashboard-style] :is(
-  [data-right-side-drawer="dashboard-map-panel"],
   [data-right-side-drawer="look-drawer"],
-  [data-right-side-drawer="build-more-drawer"],
-  .look-drawer,
-  .build-more-drawer
+  .look-drawer
 ) {
   background-image: var(--simex-style-role-rail), var(--simex-role-drawer-background);
   border-color: var(--simex-style-role-border);
@@ -2469,6 +2463,8 @@
   .accessible-listbox-option,
   .chart-export-menu,
   .build-page-action-menu,
+  [id^="section-menu-"][role="menu"],
+  [id^="panel-menu-"][role="menu"],
   .playback-menu,
   .settings-color-popover,
   .settings-color-palette

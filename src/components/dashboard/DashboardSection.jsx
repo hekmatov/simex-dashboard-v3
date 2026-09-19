@@ -1,6 +1,9 @@
 import React from "react";
 
+import { sectionRole } from "../../charting/config/sectionRoles.js";
+
 import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
+import ActionMenu from "../common/ActionMenu.jsx";
 import SectionStructureCommandDialog from "../build/SectionStructureCommandDialog.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
 import LayoutGrid from "../LayoutGrid.jsx";
@@ -53,10 +56,12 @@ function DashboardSection({
     <section
       className={`dashboard-section${sectionSelected ? " is-build-selected" : ""}`}
       data-canonical-section-id={section.id}
+      tabIndex={-1}
     >
       {actions ? (
         <BuildSectionHeader
           sectionDraft={sectionDraft}
+          role={sectionRole(sectionDraft)}
           getDashboard={getDashboard}
           movablePageCount={movablePageCount}
           pageId={pageId}
@@ -148,7 +153,8 @@ function DashboardSection({
   );
 }
 
-function BuildSectionHeader({
+export function BuildSectionHeader({
+  role = "standard",
   sectionDraft,
   getDashboard,
   movablePageCount,
@@ -175,18 +181,27 @@ function BuildSectionHeader({
     <div className="section-header build-section-header">
       <div className="section-title-block">
         {renaming ? <input className="build-section-title-input" aria-label="Section title" autoFocus value={name} onChange={(event) => setName(event.target.value)} onBlur={commitRename} onKeyDown={(event) => { if (event.key === "Enter") commitRename(); if (event.key === "Escape") { setName(title); setRenaming(false); } }} /> : <h2><button type="button" className="build-section-title-trigger" disabled={disabled} aria-label={`Edit Section title: ${title}`} onClick={() => setRenaming(true)}>{title}</button></h2>}
+        {role === "attention" && <span className="section-role-tag">Attention strip</span>}
         {sectionDraft.description && <p>{sectionDraft.description}</p>}
       </div>
       <div className="build-section-actions" aria-label={`${title} Section actions`}>
-        <button type="button" className="secondary build-section-move-button" disabled={disabled || index === 0} aria-label={`Move ${title} earlier`} title={`Move ${title} earlier`} onClick={() => onReorder(index - 1)}>
-          <SimExIcon iconId="reorderPrevious" className="build-section-move-icon build-section-move-icon--up" size={18} />
-        </button>
-        <button type="button" className="secondary build-section-move-button" disabled={disabled || index === count - 1} aria-label={`Move ${title} later`} title={`Move ${title} later`} onClick={() => onReorder(index + 1)}>
-          <SimExIcon iconId="reorderNext" className="build-section-move-icon build-section-move-icon--down" size={18} />
-        </button>
-        <button type="button" className="secondary" disabled={disabled || count === 1 || movablePageCount === 0} aria-label={`Move ${title} to Page`} onClick={() => setCommand("move")}>Move to Page</button>
-        <button type="button" className="secondary" disabled={disabled || count === 1} aria-label={`Merge ${title}`} onClick={() => setCommand("merge")}>Merge</button>
-        <button type="button" className="secondary danger" disabled={disabled || count === 1} aria-label={`Remove ${title}`} onClick={() => setCommand("remove")}>Remove</button>
+        <ActionMenu
+          id={`section-menu-${sectionDraft.id}`}
+          label={`Section actions for ${title}`}
+          disabled={disabled}
+          triggerProps={{ "data-section-menu": sectionDraft.id }}
+          items={[
+            { id: "rename", label: "Rename", onSelect: () => setRenaming(true) },
+            { id: "move-earlier", label: "Move earlier", disabled: index === 0, onSelect: () => onReorder(index - 1) },
+            { id: "move-later", label: "Move later", disabled: index === count - 1, onSelect: () => onReorder(index + 1) },
+            { id: "move-page", label: "Move to Page…", disabled: count === 1 || movablePageCount === 0, onSelect: () => setCommand("move") },
+            { id: "merge", label: "Merge…", disabled: count === 1, onSelect: () => setCommand("merge") },
+            { id: "remove", label: "Remove…", danger: true, disabled: count === 1, onSelect: () => setCommand("remove") },
+          ]}
+        >
+          <SimExIcon iconId="moveFourWay" size={16} />
+          <span>Actions</span>
+        </ActionMenu>
       </div>
       {command && <SectionStructureCommandDialog command={command} dashboard={getDashboard()} pageId={pageId} section={sectionDraft} onCancel={() => setCommand(null)} onConfirm={(operation) => { onCommand?.(operation); setCommand(null); }} />}
     </div>

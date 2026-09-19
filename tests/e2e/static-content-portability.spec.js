@@ -4,6 +4,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { choosePanelAction } from "./support/buildWorkflow.js";
 import { openAudienceSession } from "./support/present-audience-workflow.js";
 
 const APP_URL = "/";
@@ -271,8 +272,7 @@ test("Image replacement and panel removal retain reusable durable media bytes", 
   const firstPanel = canonicalPanel(page, firstId);
   await scrollPanelIntoView(page, firstId);
   await firstPanel.hover();
-  await firstPanel.getByLabel(`${firstTitle} actions`)
-    .getByRole("button", { name: "Edit chart" }).click();
+  await choosePanelAction(page, await firstPanel.getAttribute("data-canonical-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -300,7 +300,7 @@ test("Image replacement and panel removal retain reusable durable media bytes", 
   await expect(canonicalPanel(page, siblingId)
     .locator('img[alt="Shared bytes sibling rendering"]')).toBeVisible();
 
-  await removePanel(page, siblingId, siblingTitle);
+  await removePanel(page, siblingId);
   await expect.poll(() => authoredAssetState(page)).toMatchObject({
     manifestCount: 2,
     recordCount: 2,
@@ -315,7 +315,7 @@ test("Image replacement and panel removal retain reusable durable media bytes", 
   await scrollPanelIntoView(page, firstId);
   await expect(canonicalPanel(page, firstId)
     .locator('img[alt="Replacement bytes rendering"]')).toBeVisible();
-  await removePanel(page, firstId, firstTitle);
+  await removePanel(page, firstId);
   await expect.poll(() => authoredAssetState(page)).toMatchObject({
     manifestCount: 2,
     recordCount: 2,
@@ -453,12 +453,11 @@ async function createImage(page, {
   return panel.getAttribute("data-panel-id");
 }
 
-async function removePanel(page, panelId, title) {
+async function removePanel(page, panelId) {
   const panel = canonicalPanel(page, panelId);
   await scrollPanelIntoView(page, panelId);
   await panel.hover();
-  await panel.getByLabel(`${title} actions`)
-    .getByRole("button", { name: "Remove chart" }).click();
+  await choosePanelAction(page, await panel.getAttribute("data-canonical-placement-id"), "remove");
   await page.getByRole("dialog", { name: "Remove this chart?" })
     .getByRole("button", { name: "Remove chart" }).click();
   await expect(panel).toHaveCount(0);

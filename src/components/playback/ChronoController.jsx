@@ -26,6 +26,7 @@ export default function ChronoController() {
     status,
     traceMode,
   } = playback;
+  const usingDefault = playback.sourcePreference === "page" || playback.source?.kind === "default";
   const hasClock = clock.length > 0;
   const atStart = !hasClock || activeIndex <= 0;
   const atEnd = !hasClock || activeIndex >= clock.length - 1;
@@ -49,9 +50,10 @@ export default function ChronoController() {
             "aria-label": "Chrono source",
             value: activeScene
               ? `scene:${activeScene.id}`
-              : `group:${activeGroup?.id ?? ""}`,
+              : activeGroup && !usingDefault ? `group:${activeGroup.id}` : "page:",
             onChange: (event) => selectSource(event.target.value, { dispatch, groups, scenes }),
           },
+          React.createElement("option", { key: "page:", value: "page:" }, "Whole page"),
           groups.map((group) => React.createElement(
             "option",
             { key: `group:${group.id}`, value: `group:${group.id}` },
@@ -289,6 +291,10 @@ function selectControl(ariaLabel, label, value, options, onChange) {
 }
 
 function selectSource(value, { dispatch, groups, scenes }) {
+  if (value === "page:") {
+    dispatch({ type: "setGroup", groupId: null });
+    return;
+  }
   const [kind, id] = value.split(":");
   if (kind === "scene") {
     const scene = scenes.find((candidate) => candidate.id === id);

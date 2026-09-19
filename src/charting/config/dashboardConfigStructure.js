@@ -1,3 +1,7 @@
+import { ATTENTION_STRIP_CHART_TYPES, SECTION_ROLES } from "./sectionRoles.js";
+
+export { ATTENTION_STRIP_CHART_TYPES, SECTION_ROLES };
+
 import {
   validateDashboardTimezone,
 } from "../time/dashboardTemporalConfig.js";
@@ -23,6 +27,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
   version: 6,
   runtimeNonSemanticFields: RUNTIME_NON_SEMANTIC_FIELDS,
   pageTypes: PAGE_TYPES,
+  sectionRoles: SECTION_ROLES,
   domainRouteTones: DOMAIN_ROUTE_TONES,
   deliveryStates: DELIVERY_STATES,
   shapes: {
@@ -47,9 +52,10 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
     ),
     section: shape(
       ["id", "panels"],
-      ["description", "layout", "title"],
+      ["description", "layout", "role", "title"],
     ),
-    panelWrapper: shape(["chart", "id"]),
+    panelWrapper: shape(["chart", "id"], ["drill"]),
+    drill: shape(["kind"], ["chartId", "sectionId"]),
     landing: shape(["capabilities", "hero"], [
       "deliveryStatus", "domainRoutes", "faq", "previewAsset", "proofPoints",
       "resources", "tourAnchorId", "tourItems",
@@ -249,6 +255,8 @@ export function validateDashboardStructure(
       );
     }
     const sectionIds = new Set();
+    let attentionSectionId = null;
+    const drills = [];
     const sections = [];
 
     for (const rawSection of rawSections) {
@@ -274,6 +282,21 @@ export function validateDashboardStructure(
         section.layout,
         `Dashboard section "${sectionId}" layout`,
       );
+
+      if (section.role !== undefined && !SECTION_ROLES.includes(section.role)) {
+        throw new Error(
+          `Dashboard section "${sectionId}" role must be one of: ${SECTION_ROLES.join(", ")}.`,
+        );
+      }
+      const attentionSection = section.role === "attention";
+      if (attentionSection) {
+        if (attentionSectionId) {
+          throw new Error(
+            `Dashboard page "${pageId}" may hold at most one attention section; "${attentionSectionId}" and "${sectionId}" both declare the role.`,
+          );
+        }
+        attentionSectionId = sectionId;
+      }
 
       const rawPanels = denseArray(
         section.panels,
@@ -308,6 +331,19 @@ export function validateDashboardStructure(
             `Dashboard panel id in section "${sectionId}"`,
           );
         }
+        if (attentionSection && !ATTENTION_STRIP_CHART_TYPES.includes(chart.typeId)) {
+          throw new Error(
+            `Dashboard attention section "${sectionId}" chart "${chart.id}" must be one of: ${ATTENTION_STRIP_CHART_TYPES.join(", ")}.`,
+          );
+        }
+        if (wrapped && panel.drill !== undefined) {
+          if (!attentionSection) {
+            throw new Error(
+              `Dashboard panel "${panelId}" drill is only allowed inside an attention section.`,
+            );
+          }
+          drills.push({ sectionId, panelId, drill: strictShape(panel.drill, DASHBOARD_CONFIG_STRUCTURE.shapes.drill, `dashboard panel "${panelId}" drill`) });
+        }
         ensureUnique(panelIds, panelId, "Dashboard panel id");
         const chartId = requiredText(
           chart.id,
@@ -333,6 +369,25 @@ export function validateDashboardStructure(
         sectionId,
         panels: sectionPanels,
       });
+    }
+    for (const { sectionId, panelId, drill } of drills) {
+      const targetId = drill.kind === "section" ? drill.sectionId : drill.kind === "chart" ? drill.chartId : null;
+      if (!["section", "chart"].includes(drill.kind) || typeof targetId !== "string" || targetId.trim() === "") {
+        throw new Error(`Dashboard panel "${panelId}" drill must name a section or chart on page "${pageId}".`);
+      }
+      const ownSection = sections.find((entry) => entry.sectionId === sectionId);
+      const insideAttention = drill.kind === "section"
+        ? targetId === sectionId
+        : ownSection.panels.some(({ chart }) => chart.id === targetId);
+      if (insideAttention) {
+        throw new Error(`Dashboard panel "${panelId}" drill target "${targetId}" must be outside the attention section.`);
+      }
+      const exists = drill.kind === "section"
+        ? sections.some((entry) => entry.sectionId === targetId)
+        : sections.some((entry) => entry.panels.some(({ chart }) => chart.id === targetId));
+      if (!exists) {
+        throw new Error(`Dashboard panel "${panelId}" drill target "${targetId}" does not exist on page "${pageId}".`);
+      }
     }
     pages.push({ page, pageId, sections });
   }

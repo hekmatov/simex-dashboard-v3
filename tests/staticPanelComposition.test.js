@@ -70,12 +70,13 @@ test("Build and View route one saved Image model through equal content and footp
 
   assert.match(buildImage, /class="panel-actions"/);
   assert.doesNotMatch(buildImage, /<article[^>]*draggable="true"/);
-  assert.match(buildImage, /<button(?=[^>]*aria-label="Move panel Response map")(?=[^>]*draggable="true")[^>]*>/);
+  assert.match(buildImage, /<button(?=[^>]*aria-label="Panel actions for Response map")(?=[^>]*data-panel-menu="image-placement")(?=[^>]*draggable="true")[^>]*>/);
   assert.doesNotMatch(viewImage, /class="panel-actions"|Edit chart|Start section here|Remove chart/);
   assert.doesNotMatch(buildImage + viewImage, /View source CSV/);
 
   const actions = buildImage.slice(buildImage.indexOf('class="panel-actions"'), buildImage.indexOf("</div>"));
-  assert.ok(actions.indexOf('aria-label="Move panel Response map"') < actions.indexOf('data-icon-control="panel.edit-chart"'));
+  assert.equal((actions.match(/<button\b/g) ?? []).length, 1);
+  assert.match(actions, /aria-haspopup="menu"/);
 });
 
 test("fullscreen reuses DisplayedChartGrid and the saved Image model with an active viewer", () => {

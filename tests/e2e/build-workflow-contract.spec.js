@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  closeDashboardMap,
-  openDashboardMap,
+  structureRail,
+  propertiesPane,
   openSourceContent,
 } from "./support/buildWorkflow.js";
 
@@ -15,18 +15,17 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("the shared Build workflow opens and closes the structural map through its panel relationship", async ({ page }) => {
+test("the shared Build workflow exposes persistent structure and properties rails", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", {
     name: "Build",
     exact: true,
   }).click();
 
-  const map = await openDashboardMap(page);
+  const map = await structureRail(page);
   await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toBeVisible();
 
-  await closeDashboardMap(page);
-  await expect(map).toBeHidden();
+  await expect(propertiesPane(page)).toBeVisible();
 });
 
 test("the shared Build workflow enters Build before opening source management", async ({ page }) => {

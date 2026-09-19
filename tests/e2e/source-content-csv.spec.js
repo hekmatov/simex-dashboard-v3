@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { enterBuildMode, openDashboardMap, openSourceContent } from "./support/buildWorkflow.js";
+import { enterBuildMode, structureRail, openSourceContent } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { chartAuthoringWorkflow, openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
@@ -195,7 +195,7 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   await intake.getByRole("button", { name: "Cancel", exact: true }).click();
   await closeManager(page);
 
-  await openDashboardMap(page);
+  await structureRail(page);
   let flow = await openChartAuthoring(page);
   let wizard = flow.wizard;
   await flow.goToDestination();

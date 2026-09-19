@@ -167,36 +167,10 @@ test("reveal waits for canonical material clearance instead of any viewport inte
   assert.equal(waitingAfterScroll.complete, false);
 });
 
-test("Build maximum width is bounded by View and equal effective widths share a breakpoint", () => {
-  assert.equal(model.resolveCanonicalCanvasWidths({ viewMax: 1280, buildMax: 1440 }).buildMax, 1280);
-  assert.equal(model.responsiveProjectionForWidth(1016), model.responsiveProjectionForWidth(1016));
-  assert.notEqual(model.responsiveProjectionForWidth(767), model.responsiveProjectionForWidth(768));
-});
-
-test("open Build panel compresses the canvas inside the remaining viewport instead of shifting it off-screen", () => {
-  assert.equal(typeof model.resolveBuildPanelCanvasLayout, "function");
-  assert.deepEqual(model.resolveBuildPanelCanvasLayout({
-    viewportWidth: 1280,
-    panelWidth: 380,
-    gutter: 24,
-    canonicalMax: 1392,
-  }), {
-    left: 24,
-    width: 828,
-    right: 852,
-    reservedPanelWidth: 404,
-  });
-  assert.deepEqual(model.resolveBuildPanelCanvasLayout({
-    viewportWidth: 1920,
-    panelWidth: 380,
-    gutter: 24,
-    canonicalMax: 1392,
-  }), {
-    left: 62,
-    width: 1392,
-    right: 1454,
-    reservedPanelWidth: 404,
-  });
+test("Build frame allows persistent rails beside the canonical canvas", async () => {
+  const css = await readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8");
+  assert.match(css, /max-width: calc\(var\(--simex-canonical-canvas-max-width\) \+ 580px\)/);
+  assert.match(css, /@media \(min-width: 1200px\)[\s\S]*grid-template-columns: minmax\(220px, 260px\) minmax\(0, 1fr\) minmax\(280px, 320px\)/);
 });
 
 function fixtureLayout() {

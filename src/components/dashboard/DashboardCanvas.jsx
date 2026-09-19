@@ -7,7 +7,9 @@ import LayoutGrid from "../LayoutGrid.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
 import BuildLayoutCreateDialog from "../build/BuildLayoutCreateDialog.jsx";
 import SceneViewCompositionGrid from "../time/SceneViewCompositionGrid.jsx";
-import DashboardSection from "./DashboardSection.jsx";
+import DashboardSection, { BuildSectionHeader } from "./DashboardSection.jsx";
+import DashboardAttentionStrip from "./DashboardAttentionStrip.jsx";
+import { partitionPageSections } from "../../charting/config/sectionRoles.js";
 
 const EMPTY_ARRAY = Object.freeze([]);
 const EMPTY_OBJECT = Object.freeze({});
@@ -119,6 +121,7 @@ export default function DashboardCanvas({
       {creationDialog}
     </>);
   }
+  const { attention: attentionSection, body: bodySections } = partitionPageSections(activePage);
   const landingActive = hasLandingPresentation(activePage);
   return (<>
     <section
@@ -132,6 +135,45 @@ export default function DashboardCanvas({
           <LandingPage page={activePage} pages={dashboard.pages} onNavigate={onNavigate} />
         ) : (
           <>
+            {attentionSection && (
+              <DashboardAttentionStrip
+                section={attentionSection}
+                sectionDraft={buildState?.sectionDrafts?.[attentionSection.id] ?? attentionSection}
+                page={activePage}
+                pageId={activePage.id}
+                dashboard={dashboard}
+                excludedIds={excludedIds}
+                geoDataSources={geoDataSources}
+                contentRenderContext={contentRenderContext}
+                accessibilityEnabled={accessibilityEnabled}
+                showFullscreen={showFullscreen}
+                actions={buildActions}
+                disabled={Boolean(buildState?.disabled)}
+                selectedPlacementId={buildState?.selection?.kind === "chart" && buildState.selection.sectionId === attentionSection.id ? buildState.selection.placementId : null}
+                sectionSelected={buildState?.selection?.kind === "section" && buildState.selection.sectionId === attentionSection.id}
+                draggingPanelId={buildState?.draggingPanelId ?? null}
+                dragOverPanelId={buildState?.dragOverPanelId ?? null}
+                onDisplayAction={onDisplayAction}
+                multiSelectMode={multiSelectMode}
+                multiPanelIds={buildState ? EMPTY_ARRAY : multiPanelIds}
+                onToggleMultiPanel={onToggleMultiPanel}
+                onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
+                buildHeader={buildActions ? (
+                  <BuildSectionHeader
+                    sectionDraft={buildState?.sectionDrafts?.[attentionSection.id] ?? attentionSection}
+                    getDashboard={getDashboard}
+                    movablePageCount={(dashboard.pages ?? []).filter(({ id, landing }) => id !== activePage.id && !landing).length}
+                    pageId={activePage.id}
+                    index={(activePage.sections ?? []).findIndex(({ id }) => id === attentionSection.id)}
+                    count={activePage.sections?.length ?? 0}
+                    disabled={Boolean(buildState?.disabled)}
+                    role="attention"
+                    onReorder={(targetIndex) => buildActions.reorderSection(attentionSection.id, targetIndex)}
+                    onCommand={buildActions.structureCommand}
+                  />
+                ) : null}
+              />
+            )}
             {chronoMemberCount > 0 && (
               <section
                 className="dashboard-section chrono-dashboard-section"
@@ -183,7 +225,7 @@ export default function DashboardCanvas({
                 )}
               </section>
             )}
-            {(activePage.sections ?? []).map((section, sectionIndex) => {
+            {bodySections.map((section) => {
               const sectionPlacementIds = new Set((section.panels ?? []).map(({ id }) => id));
               const selectedPlacementId = buildState?.selection?.kind === "chart"
                 && buildState.selection.sectionId === section.id
@@ -195,7 +237,7 @@ export default function DashboardCanvas({
                   section={section}
                   sectionDraft={buildState?.sectionDrafts?.[section.id] ?? section}
                   pageId={activePage.id}
-                  index={sectionIndex}
+                  index={activePage.sections.findIndex(({ id }) => id === section.id)}
                   count={activePage.sections?.length ?? 0}
                   movablePageCount={(dashboard.pages ?? []).filter(({ id, landing }) => id !== activePage.id && !landing).length}
                   getDashboard={getDashboard}

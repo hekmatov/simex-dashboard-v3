@@ -1,3 +1,4 @@
+import { attentionRoleIssues, resolveDrillTarget, sectionRole } from "../../charting/config/sectionRoles.js";
 import {
   movePageByIndex,
   movePlacementBefore,
@@ -16,7 +17,7 @@ export function createBuildLayoutDraft(dashboard) {
     targetId: null,
     status: "clean",
     activity: "active",
-    surface: "dashboard-map",
+    surface: "structure-rail",
     baseline,
     value: cloneLayoutStructure(baseline),
     error: null,
@@ -461,4 +462,41 @@ function reassignPageScopedScenes(dashboard, sourcePageId, targetPageId) {
   return scenes.some((scene, index) => scene !== dashboard.scenes[index])
     ? { ...dashboard, scenes }
     : dashboard;
+}
+
+export function setBuildLayoutSectionRole(draft, pageId, sectionId, role) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
+  if (!["standard", "attention"].includes(role)) return failCommand(draft, "SECTION_ROLE_INVALID", "Choose Standard section or Attention strip.");
+  const page = findPage(draft.value, pageId);
+  const section = findSection(draft.value, pageId, sectionId);
+  if (!section) return failCommand(draft, "SECTION_NOT_FOUND", "The Section no longer exists.");
+  if (sectionRole(section) === role) return draft;
+  if (role === "attention") {
+    const issues = attentionRoleIssues(page, section);
+    if (issues.length > 0) return failCommand(draft, "SECTION_ROLE_REFUSED", issues.join(" "));
+  }
+  const value = updateSection(draft.value, pageId, sectionId, (current) => {
+    const { role: _role, ...rest } = current;
+    if (role === "attention") return { ...rest, role: "attention" };
+    return { ...rest, panels: (current.panels ?? []).map(({ drill: _drill, ...panel }) => panel) };
+  });
+  return markDirty(draft, sectionId, value);
+}
+
+export function setBuildLayoutPanelDrill(draft, pageId, sectionId, placementId, drill) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
+  const page = findPage(draft.value, pageId);
+  const section = findSection(draft.value, pageId, sectionId);
+  if (!section) return failCommand(draft, "SECTION_NOT_FOUND", "The Section no longer exists.");
+  if (sectionRole(section) !== "attention") return failCommand(draft, "PANEL_DRILL_INVALID", "Drill links belong to the attention strip only.");
+  if (!(section.panels ?? []).some(({ id }) => id === placementId)) return failCommand(draft, "PANEL_NOT_FOUND", "The panel no longer exists.");
+  if (drill !== null && !resolveDrillTarget(page, drill)) {
+    return failCommand(draft, "PANEL_DRILL_INVALID", "Choose a Section or chart on this page outside the attention strip.");
+  }
+  const value = updatePlacement(draft.value, placementId, (current) => {
+    const wrapped = Object.hasOwn(current, "chart") ? current : { id: current.id, chart: current };
+    const { drill: _drill, ...rest } = wrapped;
+    return drill === null ? rest : { ...rest, drill: structuredClone(drill) };
+  });
+  return markDirty(draft, placementId, value);
 }

@@ -120,13 +120,12 @@ test("Scenario surface exposes scoped actions without mutating its input", () =>
   assert.equal(JSON.stringify(scenario), before);
 });
 
-test("Build assigns structure inspection to Dashboard Map and Scenario to the Crown", () => {
+test("Build assigns structure inspection to the Structure rail and Scenario to the Crown", () => {
   const dashboard = structureFixture();
   const activePage = dashboard.pages[0];
   const html = renderToStaticMarkup(React.createElement(BuildWorkspace, {
     dashboard,
     activePage,
-    buildPanelOpen: true,
     selection: { kind: "page", pageId: activePage.id },
     dashboardDraft: {
       scenarioLabel: "Day 2",
@@ -139,11 +138,11 @@ test("Build assigns structure inspection to Dashboard Map and Scenario to the Cr
   }));
 
   assert.match(html, /data-build-auxiliary-contract="context-shelf"/);
-  assert.match(html, /id="dashboard-map-panel"/);
-  assert.match(html, /data-dashboard-map-region="structure"/);
+  assert.match(html, /data-build-rail="structure"/);
+  assert.match(html, /data-build-rail="properties"/);
   assert.match(html, /data-build-command-action="chrono-studio"/);
-  assert.match(html, /data-build-command-action="more"/);
-  assert.match(html, /data-build-more-command="scene-studio"/);
+  assert.match(html, /data-build-command-action="scene-studio"/);
+  assert.doesNotMatch(html, /dashboard-map-panel|data-build-command-action="more"/);
   assert.doesNotMatch(html, /Pages (?:&amp;|and) sections/);
   assert.doesNotMatch(html, /data-context-shelf-entry="structure"/);
   assert.doesNotMatch(html, />Scenario details|>Time Content/);

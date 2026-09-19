@@ -428,21 +428,11 @@
   color: var(--simex-text-muted);
 }
 
-.build-pending-work__actions,
-.build-more-command-list {
+.build-pending-work__actions {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.build-more-command-list {
-  align-items: stretch;
-  flex-direction: column;
-}
-
-.build-more-command-list > .control-tooltip > :is(button, label) {
-  width: 100%;
 }
 
 @keyframes build-pending-work-enter {
@@ -1813,7 +1803,6 @@
 }
 
 .view-page-actions,
-.dashboard-map-panel,
 .canonical-dashboard-overlay :is(button, input, select, textarea, a, [tabindex]) {
   pointer-events: auto;
 }
@@ -1826,112 +1815,6 @@
   right: 16px;
   top: 8px;
   z-index: 40;
-}
-
-.dashboard-map-panel {
-  --right-side-drawer-header-display: grid;
-  --right-side-drawer-max-width: min(300px, 100%);
-  --right-side-drawer-width: min(300px, calc(100vw - 24px));
-  max-width: calc(100vw - 24px);
-  width: 300px;
-}
-
-.dashboard-map-content {
-  padding: 6px 8px;
-}
-
-.app-frame .dashboard-map-panel .build-structure-list,
-.app-frame .dashboard-map-panel .build-tree-group,
-.app-frame .dashboard-map-panel .build-tree-item-wrap {
-  gap: 2px;
-  min-width: 0;
-  width: 100%;
-}
-
-.app-frame .dashboard-map-panel .build-tree-root {
-  padding-inline-start: 0;
-}
-
-body .app-frame .dashboard-map-panel .build-tree-group {
-  margin-inline-start: 0;
-  padding-inline-start: 14px;
-}
-
-.app-frame .dashboard-map-panel .build-tree-row {
-  grid-template-columns: var(--simex-control-utility, 24px) minmax(0, 1fr);
-  min-block-size: 28px;
-  padding: 2px 4px;
-  width: 100%;
-}
-
-.app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded] > .build-tree-row {
-  grid-template-columns: var(--simex-control-utility, 24px) minmax(0, 1fr);
-}
-
-.app-frame .dashboard-map-panel .build-tree-caret {
-  grid-column: 1;
-}
-
-.app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded] > .build-tree-row .build-tree-label,
-.app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded] > .build-tree-row input {
-  grid-column: 2;
-}
-
-.dashboard-map-panel .build-tree-label {
-  font-size: var(--simex-control-font-size);
-  line-height: var(--simex-control-line-height);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-map-inline-inspector {
-  list-style: none;
-  margin: 2px 0 4px;
-  padding-inline-start: 12px;
-}
-
-.dashboard-map-inline-inspector .build-inspector {
-  gap: 6px;
-  padding: 8px;
-}
-
-.dashboard-map-panel .build-region-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.dashboard-map-panel .build-side-sheet {
-  display: block;
-  max-height: none;
-  padding: 0;
-}
-
-.dashboard-map-header {
-  align-items: start;
-  border-bottom: 1px solid var(--simex-border-subtle);
-  display: grid;
-  gap: 10px;
-  padding-bottom: 10px;
-}
-
-.dashboard-map-header :is(h2, p) {
-  margin: 0;
-}
-
-.dashboard-map-region-switch {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.dashboard-map-region-switch button {
-  min-height: var(--simex-control-standard);
-}
-
-.dashboard-map-region-switch button[aria-pressed="true"] {
-  background: var(--simex-accent);
-  color: var(--simex-on-accent);
 }
 
 .canonical-dashboard-frame .build-section-header {
@@ -1993,53 +1876,12 @@ body .app-frame .dashboard-map-panel .build-tree-group {
   }
 }
 
-@media (max-width: 899px) {
-  .right-side-drawer.dashboard-map-panel {
-    left: auto;
-    right: 0;
-    top: min(var(--right-side-drawer-top), calc(100dvh - 220px));
-    width: min(300px, calc(100vw - 24px));
-  }
-
-  .dashboard-map-header {
-    align-items: center;
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-  }
-
-  .dashboard-map-panel .build-structure-rail > .build-region-heading {
-    display: none;
-  }
-}
-
 @media (min-width: 900px) {
-  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"]:not([data-build-static-authoring-open="true"]) {
-    --simex-dashboard-map-reserved-width: min(300px, 24vw);
-    margin-left: max(24px, calc((100vw - var(--simex-dashboard-map-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
-    margin-right: auto;
-    min-width: 0;
-    width: min(
-      var(--simex-canonical-canvas-max-width),
-      calc(100% - var(--simex-dashboard-map-reserved-width) - 48px)
-    );
-  }
-
   .scenario-passport-popover {
     inset-inline-start: 0;
     max-height: calc(100vh - 170px);
     width: min(430px, calc(100vw - 24px));
   }
-
-  .canonical-dashboard-frame.build-workspace[data-build-static-authoring-open="true"] {
-    --simex-dashboard-map-reserved-width: min(444px, 38vw);
-    margin-left: max(24px, calc((100vw - var(--simex-dashboard-map-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
-    margin-right: auto;
-    min-width: 0;
-    width: min(
-      var(--simex-canonical-canvas-max-width),
-      calc(100% - var(--simex-dashboard-map-reserved-width) - 48px)
-    );
-  }
-
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4318,4 +4160,564 @@ body .app-frame .dashboard-map-panel .build-tree-group {
   min-inline-size: var(--simex-control-utility);
   min-width: var(--simex-control-utility);
   padding: 0;
+}
+
+/* Lane A: Build command groups (Insert, Libraries, Session). */
+.build-command-main-row {
+  column-gap: var(--simex-space-5);
+  row-gap: var(--simex-space-3);
+}
+
+.build-command-group {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: var(--simex-gap-control-group);
+  width: auto;
+}
+
+.build-command-group-label {
+  color: var(--simex-text-muted);
+  font-size: 12px;
+  line-height: var(--simex-control-line-height);
+  margin-inline-end: var(--simex-space-1);
+}
+
+.build-command-group[data-build-command-group="session"] {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 1023px) {
+  .build-command-group[data-build-command-group="session"] {
+    margin-inline-start: 0;
+  }
+}
+
+/* Keep the trailing Session command's explanation inside the toolbar edge,
+   including while hidden: absolute tooltip boxes still contribute to overflow. */
+.build-command-group[data-build-command-group="session"] > .control-tooltip:last-child > .control-tooltip__reason {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+/* Lane A: shared anchored action menu. */
+.action-menu {
+  display: inline-flex;
+  position: relative;
+}
+
+.action-menu-popover {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius, 10px);
+  box-shadow: var(--simex-style-panel-shadow);
+  display: grid;
+  gap: var(--simex-space-1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--simex-space-2);
+  position: fixed;
+  width: min(260px, calc(100vw - 16px));
+  z-index: 1210;
+}
+
+.action-menu-popover [role="menuitem"] {
+  justify-content: flex-start;
+  min-height: var(--simex-control-compact);
+  text-align: left;
+  width: 100%;
+}
+
+.action-menu-popover [role="menuitem"]:focus-visible {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: -3px;
+}
+
+/* Lane C: compact View crown at phone width. */
+@media (max-width: 767px) {
+  .dashboard-command-crown[data-crown-compact="true"] .crown-compact-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--simex-gap-control-group);
+    padding-inline: 12px;
+  }
+
+  .dashboard-command-crown[data-crown-compact="true"] .mode-switcher {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .dashboard-command-crown[data-crown-compact="true"] .mode-switcher button {
+    min-height: var(--simex-control-compact);
+    padding-inline: var(--simex-space-3);
+  }
+
+  .crown-disclosure-trigger {
+    flex: 0 1 40%;
+    min-height: var(--simex-control-compact);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .crown-disclosure-trigger::before {
+    content: "▾ ";
+  }
+
+  .crown-disclosure {
+    background: var(--simex-surface-panel);
+    border-bottom: 1px solid var(--simex-border-subtle);
+    display: grid;
+    gap: var(--simex-space-4);
+    padding: var(--simex-space-4) 12px;
+    animation: crown-disclosure-open 120ms ease;
+  }
+
+  .crown-disclosure__identity {
+    display: grid;
+    gap: var(--simex-space-1);
+  }
+
+  .crown-disclosure__pages {
+    display: grid;
+    gap: var(--simex-gap-control-group);
+  }
+
+  .crown-disclosure__pages button {
+    justify-content: flex-start;
+    min-height: var(--simex-control-standard);
+    text-align: left;
+  }
+
+  .crown-disclosure__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--simex-gap-control-group);
+  }
+
+  .crown-disclosure__meta {
+    display: grid;
+    gap: var(--simex-space-2);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+  }
+
+  .crown-disclosure__meta dt {
+    color: var(--simex-text-muted);
+    font-size: 12px;
+  }
+
+  .crown-disclosure__meta dd {
+    margin: 0;
+  }
+}
+
+@keyframes crown-disclosure-open {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crown-disclosure {
+    animation: none;
+  }
+}
+
+/* Lane C: phone-width View content. */
+@media (max-width: 767px) {
+  .view-shell .dashboard-header[data-header-compact="true"] {
+    min-height: 0;
+    padding: 10px 12px 6px;
+  }
+
+  .view-shell .chart-panel-footprint {
+    grid-column: auto;
+    grid-row: auto;
+    height: clamp(240px, 52vh, 420px);
+    max-height: 420px;
+    min-height: 0;
+  }
+
+  .view-shell .chart-panel-footprint:has(.chart-card-view) {
+    height: auto;
+    max-height: none;
+  }
+
+  .view-shell .layout-grid {
+    gap: 12px;
+    grid-auto-rows: auto;
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .view-shell .dashboard-attention-strip .attention-strip-items {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .view-shell .attention-strip-item {
+    flex: 0 0 min(72vw, 320px);
+    scroll-snap-align: start;
+  }
+}
+
+/* Lane B: attention strip. */
+.dashboard-attention-strip .attention-strip-items {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  padding: 12px 18px 16px;
+}
+
+.attention-strip-item {
+  display: grid;
+  gap: var(--simex-space-2);
+  min-width: 0;
+}
+
+.attention-strip-item .chart-panel,
+.attention-strip-item .chart-panel-footprint {
+  grid-column: auto;
+  grid-row: auto;
+  height: auto;
+  min-height: 0;
+}
+
+.attention-strip-item .chart-panel {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  box-shadow: none;
+}
+
+.attention-drill {
+  background: transparent;
+  border: 0;
+  color: var(--simex-text-strong);
+  font: inherit;
+  justify-self: start;
+  min-height: var(--simex-control-compact);
+  padding: 0 var(--simex-space-2);
+  text-decoration: underline transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 120ms ease;
+}
+
+.attention-drill:hover,
+.attention-drill:focus-visible {
+  text-decoration-color: currentColor;
+}
+
+.attention-drill:focus-visible {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.section-role-tag {
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius, 6px);
+  color: var(--simex-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  margin-inline-start: var(--simex-space-3);
+  padding: 0 var(--simex-space-2);
+  vertical-align: middle;
+}
+
+[data-drill-highlight="true"] {
+  box-shadow: 0 0 0 3px var(--simex-focus);
+  transition: box-shadow 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-drill,
+  [data-drill-highlight="true"] {
+    transition: none;
+  }
+}
+
+/* Lane B: page time context in the View context strip. */
+.page-time-context {
+  align-items: center;
+  display: flex;
+  gap: var(--simex-gap-control-group);
+  min-width: 0;
+}
+
+.page-time-context__label {
+  color: var(--simex-text-muted);
+  font-size: 12px;
+}
+
+.page-time-context__value {
+  font-family: var(--simex-style-heading-font);
+  font-variant-numeric: tabular-nums lining-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-time-context__toggle {
+  min-height: var(--simex-control-compact);
+}
+
+/* Lane B: persistent Build rails. */
+.canonical-dashboard-workspace-controls,
+.build-workspace-authoring-root {
+  display: contents;
+}
+
+.canonical-dashboard-frame.build-workspace {
+  display: grid;
+  grid-template-areas:
+    "header header header"
+    "commands commands commands"
+    "structure canvas properties"
+    "footer footer footer";
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 0;
+}
+
+.canonical-dashboard-frame.build-workspace > .canonical-dashboard-header { grid-area: header; }
+.canonical-dashboard-frame.build-workspace .build-command-header { grid-area: commands; }
+.canonical-dashboard-frame.build-workspace > .canonical-dashboard-content { grid-area: canvas; min-width: 0; }
+.canonical-dashboard-frame.build-workspace > .dashboard-footer { grid-area: footer; }
+.build-rail--structure { grid-area: structure; }
+.build-rail--properties { grid-area: properties; }
+
+.build-rail {
+  background: var(--simex-surface-panel);
+  border-top: 1px solid var(--simex-border-subtle);
+  display: grid;
+  gap: var(--simex-space-3);
+  min-width: 0;
+  padding: var(--simex-padding-panel);
+}
+
+.build-rail__heading {
+  font-size: 16px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.build-rail__disclosure > summary {
+  cursor: pointer;
+  font-weight: 700;
+  min-height: var(--simex-control-standard);
+}
+
+.build-inspector-facts {
+  display: grid;
+  gap: var(--simex-space-2);
+  margin: 0;
+}
+
+.build-inspector-facts div {
+  display: flex;
+  gap: var(--simex-space-3);
+}
+
+.build-inspector-facts dt {
+  color: var(--simex-text-muted);
+  min-width: 64px;
+}
+
+.build-inspector-facts dd {
+  margin: 0;
+}
+
+.build-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--simex-gap-control-group);
+}
+
+@media (max-width: 1023px) {
+  .canonical-dashboard-frame.build-workspace {
+    grid-template-areas:
+      "header"
+      "structure"
+      "commands"
+      "canvas"
+      "properties"
+      "footer";
+  }
+}
+
+@media (min-width: 1024px) {
+  .canonical-dashboard-frame.build-workspace {
+    grid-template-columns: 220px minmax(0, 1fr) 280px;
+  }
+
+  .build-rail {
+    align-self: start;
+    border-top: 0;
+    max-height: calc(100dvh - var(--right-side-drawer-top, 12px) - 12px);
+    overflow: auto;
+    position: sticky;
+    top: var(--right-side-drawer-top, 12px);
+  }
+
+  .build-rail--structure { border-inline-end: 1px solid var(--simex-border-subtle); }
+  .build-rail--properties { border-inline-start: 1px solid var(--simex-border-subtle); }
+}
+
+@media (min-width: 1200px) {
+  .canonical-dashboard-frame.build-workspace {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(280px, 320px);
+  }
+}
+
+.app-frame .canonical-dashboard-frame.build-workspace { max-width: calc(var(--simex-canonical-canvas-max-width) + 580px); }
+
+/* Lane B: compact structure tree rows. */
+.app-frame .build-rail--structure .build-structure-list,
+.app-frame .build-rail--structure .build-tree-group,
+.app-frame .build-rail--structure .build-tree-item-wrap {
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+}
+
+.app-frame .build-rail--structure .build-tree-root {
+  padding-inline-start: 0;
+}
+
+body .app-frame .build-rail--structure .build-tree-group {
+  margin-inline-start: 0;
+  padding-inline-start: 14px;
+}
+
+.app-frame .build-rail--structure .build-tree-row {
+  grid-template-columns: var(--simex-control-utility, 24px) minmax(0, 1fr);
+  min-block-size: 28px;
+  padding: 2px 4px;
+  width: 100%;
+}
+
+.app-frame .build-rail--structure .build-tree-item-wrap[aria-expanded] > .build-tree-row {
+  grid-template-columns: var(--simex-control-utility, 24px) minmax(0, 1fr);
+}
+
+.app-frame .build-rail--structure .build-tree-caret {
+  grid-column: 1;
+}
+
+.app-frame .build-rail--structure .build-tree-item-wrap[aria-expanded] > .build-tree-row .build-tree-label,
+.app-frame .build-rail--structure .build-tree-item-wrap[aria-expanded] > .build-tree-row input {
+  grid-column: 2;
+}
+
+.build-rail--structure .build-tree-label {
+  font-size: var(--simex-control-font-size);
+  line-height: var(--simex-control-line-height);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* Lane B: retained tree branch guides and caret contrast. */
+.app-frame .build-rail--structure .build-tree-caret {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--simex-text-muted) !important;
+  padding: 0;
+}
+
+.app-frame .build-rail--structure .build-tree-caret:hover {
+  background: var(--simex-surface-panel-alt) !important;
+  color: var(--simex-text-strong) !important;
+}
+
+.app-frame .build-rail--structure .build-tree-root > .build-tree-item-wrap {
+  gap: 0;
+}
+
+.app-frame .build-rail--structure .build-tree-group::before {
+  content: none;
+}
+
+.app-frame .build-rail--structure .build-tree-item-wrap[aria-expanded="true"] > .build-tree-row::before {
+  border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  bottom: 0;
+  content: "";
+  left: calc(var(--simex-control-utility, 24px) / 2);
+  pointer-events: none;
+  position: absolute;
+  top: calc(50% + 8px);
+  width: 0;
+  z-index: 0;
+}
+
+.app-frame .build-rail--structure .build-tree-group > .build-tree-item-wrap::after {
+  border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  content: "";
+  height: calc(100% + 6px);
+  left: calc((var(--simex-control-utility, 24px) / 2) - 14px);
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 0;
+  z-index: 0;
+}
+
+.app-frame .build-rail--structure .build-tree-group > .build-tree-item-wrap:last-child::after {
+  height: 18px;
+}
+
+.app-frame .build-rail--structure .build-tree-group > .build-tree-item-wrap::before {
+  border-bottom: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  border-radius: 0 0 0 var(--build-tree-elbow-radius, 0);
+  height: 18px;
+  left: calc((var(--simex-control-utility, 24px) / 2) - 14px);
+  pointer-events: none;
+  top: 0;
+  width: 14px;
+  z-index: 0;
+}
+
+.app-frame .build-rail--structure .build-tree-group > .build-tree-item-wrap[aria-expanded]::before {
+  width: 14px;
+}
+
+.app-frame .build-rail--structure .build-tree-group > .build-tree-item-wrap[data-build-node-kind="chart"]::before {
+  width: 22px;
+}
+
+.app-frame .build-rail--structure .build-tree-row {
+  position: relative;
+  z-index: 1;
+}
+
+
+.app-frame .build-rail--structure .build-tree-group { padding-left: 14px; }
+
+/* Lane B: region paint for the persistent frame and new panels. */
+.app-frame[data-dashboard-style] .canonical-dashboard-frame.build-workspace {
+  background-image: var(--simex-style-role-rail), var(--simex-role-shell-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+}
+.app-frame[data-dashboard-style] :is([data-build-rail="structure"], [data-build-rail="properties"], .dashboard-attention-strip) {
+  background-image: var(--simex-style-role-rail), var(--simex-role-panel-background);
+  border-color: var(--simex-style-role-border);
+  border-block-start-color: var(--simex-style-role-divider);
+  border-radius: var(--simex-style-panel-radius);
+}
+.canonical-dashboard-frame.build-workspace > .canonical-dashboard-content {
+  max-width: var(--simex-canonical-canvas-max-width);
+  width: 100%;
+  justify-self: center;
 }

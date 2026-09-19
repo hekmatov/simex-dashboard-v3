@@ -12,17 +12,17 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 const [
-  { default: BuildInspector },
+  { default: BuildPropertiesPane },
   { default: BuildWorkspace },
 ] = await Promise.all([
-  vite.ssrLoadModule("/src/components/build/BuildInspector.jsx"),
+  vite.ssrLoadModule("/src/components/build/BuildPropertiesPane.jsx"),
   vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
 ]);
 await vite.close();
 
 test("selected Page inspector exposes deletion while the final Page remains guarded", () => {
   const dashboard = fixtureDashboard();
-  const html = renderToStaticMarkup(React.createElement(BuildInspector, {
+  const html = renderToStaticMarkup(React.createElement(BuildPropertiesPane, {
     dashboard,
     selection: { kind: "page", pageId: "biomedical" },
     onPageRemove() {},
@@ -30,7 +30,7 @@ test("selected Page inspector exposes deletion while the final Page remains guar
   assert.match(html, /<button(?=[^>]*aria-label="Delete Biomedical page")[^>]*>/);
   assert.doesNotMatch(html, /<button(?=[^>]*aria-label="Delete Biomedical page")(?=[^>]*disabled)[^>]*>/);
 
-  const finalPageHtml = renderToStaticMarkup(React.createElement(BuildInspector, {
+  const finalPageHtml = renderToStaticMarkup(React.createElement(BuildPropertiesPane, {
     dashboard: { pages: [dashboard.pages[0]] },
     selection: { kind: "page", pageId: "home" },
     onPageRemove() {},
@@ -46,7 +46,6 @@ test("Dashboard Map is the only live Build structure-inspection surface", () => 
   const html = renderToStaticMarkup(React.createElement(BuildWorkspace, {
     dashboard,
     activePage,
-    buildPanelOpen: true,
     selection: { kind: "page", pageId: activePage.id },
     dashboardDraft: dashboard,
     pageDrafts: {},
@@ -56,9 +55,9 @@ test("Dashboard Map is the only live Build structure-inspection surface", () => 
 
   assert.match(
     html,
-    /<aside(?=[^>]*\bid="dashboard-map-panel")(?=[^>]*\brole="complementary")[^>]*>/,
+    /<aside(?=[^>]*data-build-rail="properties")(?=[^>]*aria-label="Properties")[^>]*>/,
   );
-  assert.match(html, /data-dashboard-map-region="structure"/);
+  assert.match(html, /data-build-rail="structure"/);
   assert.match(html, /aria-label="Dashboard structure"/);
   assert.doesNotMatch(html, /Pages (?:&amp;|and) sections/);
   assert.doesNotMatch(html, /data-context-shelf-entry="structure"/);

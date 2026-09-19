@@ -1,7 +1,10 @@
 import React from "react";
 
+import { sectionRole } from "../../charting/config/sectionRoles.js";
+
 import {
   BUILD_LAYOUT_MOVE_MIME,
+  legalDropForDashboard,
   buildSiblingMove,
   canonicalMove,
   createBuildMoveDragSession,
@@ -23,7 +26,7 @@ function allExpanded(dashboard) {
   ]));
 }
 
-export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove, inspector = null }) {
+export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
   const [expandedKeys, setExpandedKeys] = React.useState(() => allExpanded(dashboard));
   const [focusedKey, setFocusedKey] = React.useState(() => selectionKey(selection));
   const [renameKey, setRenameKey] = React.useState("");
@@ -58,6 +61,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     });
     if (collapsing && nextFocusedKey !== focusedKey) focus(nextFocusedKey);
   };
+  const sectionFor = (node) => (dashboard.pages ?? []).find((page) => page.id === node.pageId)?.sections?.find((section) => section.id === node.sectionId);
   const labelFor = (node) => {
     const page = (dashboard.pages ?? []).find((item) => item.id === node.pageId);
     if (node.kind === "page") return page?.label || page?.title || "Untitled page";
@@ -127,9 +131,10 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       role="treeitem"
       className="build-tree-item-wrap"
       data-build-node-kind={node.kind}
+      data-build-node-role={node.kind === "section" && sectionRole(sectionFor(node)) === "attention" ? "attention" : undefined}
       data-build-node-id={node.placementId ?? node.sectionId ?? node.pageId}
       data-build-placement-id={node.kind === "chart" ? node.placementId : undefined}
-      data-dashboard-map-node-key={node.key}
+      data-build-node-key={node.key}
       aria-label={label}
       aria-expanded={node.hasChildren ? expanded : undefined}
       aria-selected={selected}
@@ -166,7 +171,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       onDragOver={(event) => {
         const source = dragSessionRef.current.current()
           ?? decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
-        if (!legalDrop(source, node)) return;
+        if (!legalDropForDashboard(dashboard, source, node)) return;
         event.preventDefault();
         event.stopPropagation();
         const rect = event.currentTarget.getBoundingClientRect();
@@ -180,7 +185,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       }}
       onDrop={(event) => {
         const source = dragSessionRef.current.resolve(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
-        if (!legalDrop(source, node)) return;
+        if (!legalDropForDashboard(dashboard, source, node)) return;
         event.preventDefault();
         event.stopPropagation();
         const edge = resolveBuildTreeDropEdge({
@@ -234,21 +239,16 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
             }}
           />
         ) : <span className="build-tree-label" title={label}>{label}</span>}
+        {node.kind === "section" && sectionRole(sectionFor(node)) === "attention" && <span className="section-role-tag">Attention strip</span>}
       </div>
       {node.hasChildren && expanded && <ul role="group" className="build-tree-group">{nodes.filter((item) => item.parentKey === node.key).map(row)}</ul>}
-    </li>{selected && node.kind !== "chart" && inspector ? <li className="dashboard-map-inline-inspector">{inspector}</li> : null}</React.Fragment>;
+    </li></React.Fragment>;
   };
   return <>
     <nav className="build-structure-rail" aria-label="Dashboard structure"><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
   </>;
 }
 
-function legalDrop(source, node) {
-  if (!source || !node) return false;
-  if (source.kind === "page") return node.kind === "page";
-  if (source.kind === "section") return node.kind === "page" || node.kind === "section";
-  return node.kind === "section" || node.kind === "chart";
-}
 
 function moveForTreeDrop(dashboard, source, node, edge) {
   if (source.kind === "page") {

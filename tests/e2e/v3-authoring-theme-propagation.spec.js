@@ -42,7 +42,6 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await look.getByRole("button", { name: "Close Theme", exact: true }).click();
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
   let surface = page.locator(".build-authoring-auxiliary");
@@ -51,10 +50,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await expectNoRetiredDashboardPaint(surface);
   await surface.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  const more = page.getByRole("dialog", { name: "More Build commands" });
-  await expect(more).toBeVisible();
-  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.locator('[data-build-command-action="scene-studio"]').click();
   surface = page.locator(".build-authoring-auxiliary");
   await expect(surface).toBeVisible();
   await expectSelectedThemeChrome(surface, "editor");

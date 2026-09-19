@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { choosePanelAction, chooseSectionAction, panelMenu, sectionMenu } from "./support/buildWorkflow.js";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
@@ -15,6 +16,54 @@ test.beforeEach(async ({ page, request }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
   await expect(navigation).toBeVisible();
   await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
+});
+
+test("section and panel menus preserve command order, keyboard navigation, and their authoring owners", async ({ page }) => {
+  const section = page.locator("[data-canonical-section-id]").first();
+  const sectionId = await section.getAttribute("data-canonical-section-id");
+  const title = await section.locator(".build-section-title-trigger").innerText();
+  const sectionTrigger = sectionMenu(page, sectionId);
+  await sectionTrigger.click();
+  const sectionActions = page.locator(`[id="section-menu-${sectionId}"][role="menu"]`);
+  await expect(sectionActions.getByRole("menuitem")).toHaveText([
+    "Rename", "Move earlier", "Move later", "Move to Page…", "Merge…", "Remove…",
+  ]);
+  await expect(sectionActions.locator('[data-action-menu-item="move-earlier"]')).toBeDisabled();
+  await expect(sectionActions.locator('[data-action-menu-item="rename"]')).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(sectionActions.locator('[data-action-menu-item="move-later"]')).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(sectionActions.locator('[data-action-menu-item="remove"]')).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(sectionActions.locator('[data-action-menu-item="rename"]')).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(sectionActions).toHaveCount(0);
+  await expect(sectionTrigger).toBeFocused();
+
+  await chooseSectionAction(page, sectionId, "rename");
+  await section.getByRole("textbox", { name: "Section title", exact: true }).fill(`${title} reviewed`);
+  await page.keyboard.press("Enter");
+  await expect(section.locator(".build-section-title-trigger")).toHaveText(`${title} reviewed`);
+  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
+  await page.getByRole("button", { name: "Discard Layout Changes", exact: true }).click();
+  await expect(section.locator(".build-section-title-trigger")).toHaveText(title);
+
+  const panel = section.locator("article[data-build-placement-id]").first();
+  const placementId = await panel.getAttribute("data-build-placement-id");
+  await panel.hover();
+  const panelTrigger = panelMenu(page, placementId);
+  await expect(panelTrigger).toHaveAttribute("draggable", "true");
+  await panelTrigger.click();
+  const panelActions = page.locator(`[id="panel-menu-${placementId}"][role="menu"]`);
+  await expect(panelActions.getByRole("menuitem")).toHaveText([
+    "Edit chart", "Move…", "Start section here", "Remove chart",
+  ]);
+  await expect(panelActions.locator(`[data-build-edit-for="${placementId}"]`)).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(panelTrigger).toBeFocused();
+  await choosePanelAction(page, placementId, "edit");
+  await expect(page.locator(".chart-quick-editor")).toBeVisible();
+  await expect(panelActions).toHaveCount(0);
 });
 
 test("selected Page tab toggles its five-action menu while inactive Pages only navigate", async ({ page }) => {
@@ -138,7 +187,7 @@ test("Page actions retain the final-page protections", async ({ page }) => {
 test("anchored Section commands preview and discard through the live layout draft", async ({ page }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
 
-  await page.getByRole("button", { name: "Move Outbreak dynamics to Page" }).click();
+  await chooseSectionAction(page, "outbreak_dynamics", "move-page");
   const move = page.getByRole("dialog", { name: "move Outbreak dynamics" });
   await expect(move.getByLabel("Destination Page")).toHaveValue("socio_economic");
   await expect(move.getByLabel("Placement")).toHaveValue("first");
@@ -147,7 +196,6 @@ test("anchored Section commands preview and discard through the live layout draf
   await move.getByRole("button", { name: "Confirm" }).click();
 
   await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await expect(page.locator('[data-pending-work-kind="layout"]'))
     .toHaveAttribute("data-pending-work-state", "dirty");
   await page.getByRole("button", { name: "Discard Layout Changes" }).click();

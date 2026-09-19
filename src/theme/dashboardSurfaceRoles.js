@@ -9,7 +9,7 @@ export const DASHBOARD_JOURNEY_PRIMARY_ROLES = Object.freeze({
   ]),
   "command-bar": freezeSurfaceIds([]),
   panel: freezeSurfaceIds([
-    "view-chrono-controls", "dashboard-map-structure", "dashboard-map-inspector", "build-unit-orbit",
+    "view-chrono-controls", "build-structure-rail", "build-properties-pane", "view-attention-strip", "build-unit-orbit",
     "build-page-actions", "build-page-command-form", "scenario-passport-standard", "scene-unit-orbit",
     "pending-operation-row",
   ]),
@@ -26,8 +26,8 @@ export const DASHBOARD_JOURNEY_PRIMARY_ROLES = Object.freeze({
     "delete-dashboard-content-dialog", "restore-online-dashboard-dialog", "source-content-action-dialog", "present-audience-options", "chart-editor-modal-contract",
     "build-move-dialog-contract", "build-move-confirmation-contract", "scene-observation-dialog",
   ]),
-  drawer: freezeSurfaceIds(["build-more-menu", "dashboard-look-standard", "right-side-drawer-contract"]),
-  menu: freezeSurfaceIds(["chart-wizard-source-listbox", "chart-color-palette"]),
+  drawer: freezeSurfaceIds(["dashboard-look-standard", "right-side-drawer-contract"]),
+  menu: freezeSurfaceIds(["build-section-menu", "build-panel-menu", "chart-wizard-source-listbox", "chart-color-palette"]),
   status: freezeSurfaceIds([
     "operation-status-notice", "chart-state-recovery-harness",
     "build-below-desktop-recommendation", "present-below-desktop-recommendation",

@@ -348,7 +348,7 @@ test("stable layout, Chrono, and Scene owners replace transitional dirty project
     scopeId: "dashboard-1",
     status: "dirty",
     activity: "active",
-    surface: "dashboard-map",
+    surface: "structure-rail",
     targetId: "section-a",
   }, {
     draftId: "chrono:local-chrono-draft",

@@ -19,12 +19,12 @@ test("fails when a journey is omitted from primary-role contact-sheet grouping",
   const summary = summarizeDashboardJourneyManifest(DASHBOARD_JOURNEY_MANIFEST);
   const mappedIds = Object.values(DASHBOARD_JOURNEY_PRIMARY_ROLES).flat();
 
-  assert.equal(summary.total, 71);
-  assert.equal(summary.executable, 64);
+  assert.equal(summary.total, 73);
+  assert.equal(summary.executable, 66);
   assert.equal(summary.coverageAliases, 6);
   assert.equal(summary.intentionallyOutOfScope, 1);
-  assert.equal(mappedIds.length, 71);
-  assert.equal(new Set(mappedIds).size, 71);
+  assert.equal(mappedIds.length, 73);
+  assert.equal(new Set(mappedIds).size, 73);
   assert.deepEqual(
     DASHBOARD_JOURNEY_MANIFEST.map(({ id }) => id).filter((id) => !mappedIds.includes(id)),
     [],
@@ -71,8 +71,8 @@ test("fails when the Page command-form replacement or a style matrix cell is abs
   assert.equal(commandForm.length, 3);
   assert.deepEqual(commandForm.map(({ style }) => style), STYLE_IDS);
   assert.deepEqual(commandForm.map(({ renderedDisposition }) => renderedDisposition), ["PENDING_RENDER", "PENDING_RENDER", "PENDING_RENDER"]);
-  assert.equal(matrix.length, 213);
-  assert.equal(executableCells.length, 192);
+  assert.equal(matrix.length, 219);
+  assert.equal(executableCells.length, 198);
   assert.equal(mappedCells.length, 21);
   assert.equal(mappedCells.filter(({ renderedDisposition }) => renderedDisposition === "COVERAGE_ALIAS").length, 18);
   assert.equal(mappedCells.filter(({ renderedDisposition }) => renderedDisposition === "OUT_OF_SCOPE").length, 3);

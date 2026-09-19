@@ -18,8 +18,8 @@ test("the historical 71-entry catalogue is explicitly journey execution accounti
     coverageAliases: summary.coverageAliases,
     intentionallyOutOfScope: summary.intentionallyOutOfScope,
   }, {
-    total: 71,
-    executable: 64,
+    total: 73,
+    executable: 66,
     coverageAliases: 6,
     intentionallyOutOfScope: 1,
   });
@@ -31,7 +31,7 @@ test("journey/style cells identify their accounting boundary instead of claiming
     journeyModule.DASHBOARD_JOURNEY_MANIFEST,
   );
 
-  assert.equal(matrix.length, 213);
+  assert.equal(matrix.length, 219);
   assert.equal(matrix.every(({ accounting }) => accounting === "journey-style"), true);
   assert.equal(matrix.every(({ journeyId }) => typeof journeyId === "string" && journeyId.length > 0), true);
   assert.deepEqual([...new Set(matrix.map(({ style }) => style))], STYLE_IDS);

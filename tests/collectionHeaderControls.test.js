@@ -28,7 +28,7 @@ test("embedded Collection transport uses noninteractive dots and icon-only pagin
   assert.doesNotMatch(html, />Items</);
 });
 
-test("production collection renderers target the chart-header host and Build orders Edit last", async () => {
+test("production collection renderers target the chart-header host and Build orders Remove last in the panel menu", async () => {
   const [target, card, carouselSource, display, panel] = await Promise.all([
     readFile(new URL("../src/components/charts/TargetCollectionChartView.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/charts/CardChartView.jsx", import.meta.url), "utf8"),
@@ -43,7 +43,8 @@ test("production collection renderers target the chart-header host and Build ord
   assert.match(carouselSource, /createPortal/);
   assert.match(display, /embedded:/);
   const actions = panel.slice(panel.indexOf('className="panel-actions"'), panel.indexOf("{shouldRenderChart"));
-  assert.ok(actions.lastIndexOf('interactionId="panel.edit-chart"') > actions.indexOf('interactionId="chart.remove"'));
+  assert.match(actions, /"data-panel-menu": placementId/);
+  assert.ok(actions.lastIndexOf('id: "remove"') > actions.indexOf('id: "edit"'));
 });
 
 test("the accepted multi-page fixture retains the 2 by 1 header-capable footprint", async () => {

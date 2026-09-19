@@ -5,7 +5,6 @@ export default function CanonicalDashboardFrame({
   mode,
   pageType,
   pageId,
-  buildPanelOpen = false,
   buildStaticAuthoringOpen = false,
   dashboardHeader,
   workspaceControls = null,
@@ -23,7 +22,6 @@ export default function CanonicalDashboardFrame({
       data-canonical-page-id={pageId}
       data-canonical-mode={mode}
       data-page-type={pageType}
-      data-dashboard-map-open={mode === "build" ? String(buildPanelOpen) : undefined}
       data-build-static-authoring-open={mode === "build" ? String(buildStaticAuthoringOpen) : undefined}
       tabIndex={landmarkTabIndex ?? (["home", "view"].includes(mode) ? -1 : undefined)}
       aria-labelledby={landmarkLabelledBy}

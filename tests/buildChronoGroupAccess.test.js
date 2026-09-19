@@ -10,8 +10,8 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const { default: BuildInspector } = await vite.ssrLoadModule(
-  "/src/components/build/BuildInspector.jsx",
+const { default: BuildPropertiesPane } = await vite.ssrLoadModule(
+  "/src/components/build/BuildPropertiesPane.jsx",
 );
 const { default: ChronoGroupContent } = await vite.ssrLoadModule(
   "/src/components/time/ChronoGroupContent.jsx",
@@ -31,7 +31,7 @@ test("Build routes Chrono Group editing and Scene creation through read-first gr
       members: [],
     }],
   };
-  const html = renderToStaticMarkup(React.createElement(BuildInspector, {
+  const html = renderToStaticMarkup(React.createElement(BuildPropertiesPane, {
     dashboard,
     selection: { kind: "chronoGroup", chronoGroupId: "exercise" },
   }));

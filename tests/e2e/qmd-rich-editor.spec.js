@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { panelMenu } from "./support/buildWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -58,7 +59,15 @@ test("Composer keyboard formatting, semantic styles, footprint, and always-visib
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
-  await expect(page.getByRole("button", { name: `Move panel ${title}`, exact: true })).toBeVisible();
+  const panel = page.getByLabel(`${title} actions`).locator("..");
+  await expect(panel).toBeVisible();
+  await panel.hover();
+  const placementId = await panel.getAttribute("data-canonical-placement-id");
+  const trigger = panelMenu(page, placementId);
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await expect(page.locator(`#panel-menu-${placementId}[role="menu"]`)
+    .locator('[data-action-menu-item="move"]')).toBeVisible();
 });
 
 test("sanitized paste keeps visible text and removes hostile formatting", async ({ page }) => {

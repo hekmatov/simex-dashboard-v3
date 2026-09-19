@@ -1,3 +1,4 @@
+import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -28,9 +29,8 @@ test("a pending header edit and immediate chart save commit in order", async ({
 }) => {
   await page.getByRole("button", { name: "Build" }).click();
   const map = await openBiomedicalPageInspector(page);
-  await map.getByLabel("Page title", { exact: true })
+  await propertiesPane(page).getByLabel("Page title", { exact: true })
     .fill("Race-safe exercise");
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Edit chart" }).first().click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
@@ -61,7 +61,7 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
   const map = await openBiomedicalPageInspector(page);
   const baselineHeading = (await page.locator(".dashboard-brand-block h1")
     .textContent()).trim();
-  await map.getByLabel("Page title", { exact: true })
+  await propertiesPane(page).getByLabel("Page title", { exact: true })
     .fill("Must never reappear");
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
@@ -79,9 +79,8 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
 });
 
 async function openBiomedicalPageInspector(page) {
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  const pageTitle = map.getByLabel("Page title", { exact: true });
+  const map = structureRail(page);
+  const pageTitle = propertiesPane(page).getByLabel("Page title", { exact: true });
   await expect(pageTitle).toBeVisible();
   return map;
 }

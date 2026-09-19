@@ -2,7 +2,8 @@ import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
-import { IconControl } from "./common/SimExIcon.js";
+import ActionMenu from "./common/ActionMenu.jsx";
+import { SimExIcon } from "./common/SimExIcon.js";
 import { useOptionalPlayback } from "./playback/PlaybackProvider.jsx";
 import {
   chartPanelFootprintStyle,
@@ -171,33 +172,27 @@ function ChartPanel({
       onDragEnd={onDragEnd}
     >
       {editMode && <div className="panel-actions" aria-label={`${panelLabel} actions`}>
-        {editMode && (
-          <>
-            <IconControl
-              interactionId="panel.move"
-              className="secondary panel-move-handle"
-              tooltipPlacement="below"
-              disabled={editDisabled}
-              ariaLabel={`Move panel ${panelLabel}`}
-              tooltip="Move panel"
-              draggable={!editDisabled}
-              onClick={(event) => {
-                if (!editDisabled) onMove?.(event.currentTarget);
-              }}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            />
-            <IconControl interactionId="shell.start-section" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
-              if (!editDisabled) onStartSection?.();
-            }} ariaLabel="Start section here" tooltip="Start section here" />
-            <IconControl interactionId="chart.remove" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
-              if (!editDisabled) onRemove?.();
-            }} />
-            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editControlDisabled} data-build-edit-for={placementId} onClick={() => {
-              requestEdit();
-            }} />
-          </>
-        )}
+        <ActionMenu
+          id={`panel-menu-${placementId}`}
+          label={`Panel actions for ${panelLabel}`}
+          disabled={editDisabled && editControlDisabled}
+          triggerClassName="secondary panel-move-handle panel-actions-trigger"
+          triggerProps={{
+            "data-panel-menu": placementId,
+            draggable: !editDisabled,
+            onDragStart,
+            onDragEnd,
+            title: "Panel actions. Drag to move.",
+          }}
+          items={[
+            { id: "edit", label: "Edit chart", disabled: editControlDisabled, "data-build-edit-for": placementId, onSelect: () => requestEdit() },
+            { id: "move", label: "Move…", disabled: editDisabled, onSelect: (trigger) => onMove?.(trigger) },
+            { id: "start-section", label: "Start section here", disabled: editDisabled, onSelect: () => onStartSection?.() },
+            { id: "remove", label: "Remove chart", danger: true, disabled: editDisabled, onSelect: () => onRemove?.() },
+          ]}
+        >
+          <SimExIcon iconId="moveFourWay" size={16} />
+        </ActionMenu>
       </div>}
       {shouldRenderChart ? (
         <ChartView

@@ -23,7 +23,6 @@ export default function DashboardModeWorkspace({
   onContentDraftCommit,
   onContentDraftDiscard,
   contentRenderContext,
-  buildPanelOpen = false,
   buildStaticAuthoringOpen = false,
   buildState = null,
   buildWorkspace = null,
@@ -116,11 +115,10 @@ export default function DashboardModeWorkspace({
       <CanonicalDashboardFrame
         mode={mode}
         pageType={pageType}
-        buildPanelOpen={buildPanelOpen}
         buildStaticAuthoringOpen={buildStaticAuthoringOpen}
         pageId={activePage?.id}
         dashboardHeader={dashboardHeader ?? (
-          <DashboardHeader activePage={activePage} dashboard={dashboard} />
+          <DashboardHeader activePage={activePage} dashboard={dashboard} mode={mode} />
         )}
         workspaceControls={buildMode ? buildWorkspace : null}
         pageContent={(

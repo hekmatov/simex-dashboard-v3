@@ -1,3 +1,5 @@
+import PageTimeContext from "./components/playback/PageTimeContext.jsx";
+import { temporalAuthoringCharts } from "./components/time/temporalAuthoringCharts.js";
 import React from "react";
 import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
 import {
@@ -228,7 +230,6 @@ function AppContent({ releaseProfile = null }) {
   modeRef.current = mode;
   const [modeDisabled, setModeDisabled] = React.useState(false);
   const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
-  const [buildPanelOpen, setBuildPanelOpen] = React.useState(false);
   const [buildStructureProjection, setBuildStructureProjection] = React.useState(null);
   const [scenarioPassportOpen, setScenarioPassportOpen] = React.useState(false);
   const [scenarioPassportDirty, setScenarioPassportDirty] = React.useState(false);
@@ -264,7 +265,6 @@ function AppContent({ releaseProfile = null }) {
   const validChartIdsRef = React.useRef(new Set());
   const companionClientRef = React.useRef(null);
   const dashboardRendererRef = React.useRef(null);
-  const buildPanelScrollRef = React.useRef(null);
   const contentDraftCoordinatorRef = React.useRef(null);
   const contentDraftCoordinatorDisposalRef = React.useRef(null);
   if (contentDraftCoordinatorRef.current === null) {
@@ -378,26 +378,12 @@ function AppContent({ releaseProfile = null }) {
     mode,
   ]);
 
-  function closeBuildPanel() {
-    const previousScroll = buildPanelScrollRef.current;
-    setBuildPanelOpen(false);
-    buildPanelScrollRef.current = null;
-    if (previousScroll) {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-        window.scrollTo(previousScroll);
-      }));
-    }
-  }
-
-  function toggleBuildPanel() {
-    if (!buildPanelOpen) {
-      buildPanelScrollRef.current = { left: window.scrollX, top: window.scrollY };
-      setBuildPanelOpen(true);
-      return;
-    }
-    closeBuildPanel();
-  }
-
+  const viewPageTimeEligible = React.useMemo(() => {
+    if (mode !== "view" || !dashboard?.pages) return false;
+    const page = dashboard.pages.find(({ id }) => id === activePageId);
+    if (!page || page.landing) return false;
+    return temporalAuthoringCharts({ ...dashboard, pages: [page] }).length > 0;
+  }, [activePageId, dashboard, mode]);
   const commandCrownPageActions = mode === "home" ? (
     <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
       Theme
@@ -427,17 +413,6 @@ function AppContent({ releaseProfile = null }) {
         onClick={openDashboardLook}
       >
         Theme
-      </button>
-      <button
-        type="button"
-        className="secondary dashboard-map-toggle"
-        aria-controls="dashboard-map-panel"
-        aria-expanded={buildPanelOpen}
-        aria-pressed={buildPanelOpen}
-        disabled={modeDisabled}
-        onClick={toggleBuildPanel}
-      >
-        Dashboard map
       </button>
     </>
   ) : null;
@@ -1736,6 +1711,7 @@ function AppContent({ releaseProfile = null }) {
       activePage={commandCrownProjection.activePage}
       pages={commandCrownProjection.pages}
       pageActions={commandCrownPageActions}
+      contextNode={viewPageTimeEligible ? <PageTimeContext /> : undefined}
       pageNavigationNode={mode === "build" ? <BuildPageNavigation
         dashboard={buildStructureProjection ?? dashboard}
         pages={commandCrownProjection.pages}
@@ -1782,7 +1758,7 @@ function AppContent({ releaseProfile = null }) {
       persistenceNotice={Object.values(persistenceNotices).join(" ")}
       theme={dashboardTheme}
       lookDrawerOpen={lookDrawerOpen}
-      rightDrawer={lookDrawerOpen ? "look" : buildPanelOpen ? "map" : null}
+      rightDrawer={lookDrawerOpen ? "look" : null}
       noticeNode={!releaseProfile && mode !== "home" ? <ExerciseDisclaimer /> : null}
     >
     {mode === "home" ? (
@@ -1933,13 +1909,10 @@ function AppContent({ releaseProfile = null }) {
       )}
       onImportConfig={inspectImportPackage}
       onExportConfig={exportConfig}
-      onOpenBuildPanel={() => setBuildPanelOpen(true)}
       onResolveScenarioDraft={() => setScenarioPassportOpen(true)}
       onResetEditSession={resetEditSession}
       onDeleteDashboardContent={deleteDashboardContent}
       onOpenDashboardLook={openDashboardLook}
-      buildPanelOpen={buildPanelOpen}
-      onCloseBuildPanel={() => closeBuildPanel()}
       themeProjection={dashboardThemeProjection}
       operationError={operationError}
     />

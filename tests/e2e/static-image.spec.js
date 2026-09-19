@@ -1,3 +1,4 @@
+import { structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
@@ -609,11 +610,6 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   };
 
   const activateTreeItem = async (label) => {
-    await page.evaluate(() => {
-      const mapButton = [...document.querySelectorAll("button")]
-        .find((node) => node.textContent?.trim() === "Dashboard map");
-      mapButton?.click();
-    });
     const activated = await page.evaluate((itemLabel) => {
       const item = [...document.querySelectorAll('[role="treeitem"]')]
         .find((node) => node.getAttribute("aria-label") === itemLabel);
@@ -828,10 +824,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
 
   await expect.poll(() => findPersistedChartId(page, title)).not.toBeNull();
   const chartId = await findPersistedChartId(page, title);
-  const map = page.getByRole("complementary", { name: "Dashboard map" });
-  if (await map.isVisible()) {
-    await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  }
+  const map = structureRail(page);
   const panel = canonicalPanel(page, chartId);
   await panel.scrollIntoViewIfNeeded();
   await panel.hover();
