@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { choosePanelAction, panelMenu } from "./support/buildWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -222,7 +223,7 @@ test("Free Text edit embedded image retries durably through reload", async ({ pa
   const before = await readSavedFreeText(page, "Embedded edit durability");
   let panel = canonicalPanel(page, before.panel.id);
   await panel.scrollIntoViewIfNeeded();
-  await openFreeTextEditor(panel, page, "Embedded edit durability");
+  await openFreeTextEditor(panel, page);
   const editor = page.getByRole("dialog", { name: "Text/Image editor" });
   await expect(editor.getByLabel("Portable QMD Composer editing area")).toBeVisible();
   await editor.getByRole("button", { name: "Insert image" }).click();
@@ -310,10 +311,10 @@ for (const viewport of VIEWPORTS) {
         node.scrollTop = Math.min(120, node.scrollHeight - node.clientHeight);
       });
     }
-    const discardTrigger = await prepareFreeTextEditorTrigger(panel, title);
+    const discardTrigger = await prepareFreeTextEditorTrigger(panel, page);
     const beforeDiscard = await inspectBuildStaticState(page, panel);
 
-    await openFreeTextEditor(panel, page, title, discardTrigger);
+    await openFreeTextEditor(panel, page, discardTrigger);
     let editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await expectStaticEditorOverlay(page, beforeDiscard);
     const editorSource = await rawQmdSource(editor);
@@ -343,9 +344,9 @@ for (const viewport of VIEWPORTS) {
 
     panel = canonicalPanel(page, saved.panel.id);
     await panel.scrollIntoViewIfNeeded();
-    const saveTrigger = await prepareFreeTextEditorTrigger(panel, title);
+    const saveTrigger = await prepareFreeTextEditorTrigger(panel, page);
     const beforeSave = await inspectBuildStaticState(page, panel);
-    await openFreeTextEditor(panel, page, title, saveTrigger);
+    await openFreeTextEditor(panel, page, saveTrigger);
     editor = page.getByRole("dialog", { name: "Text/Image editor" });
     await expectStaticEditorOverlay(page, beforeSave);
     await (await rawQmdSource(editor)).fill(SAVED_QMD);
@@ -589,7 +590,7 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
 
   const panel = canonicalPanel(page, saved.panel.id);
   await panel.scrollIntoViewIfNeeded();
-  await openFreeTextEditor(panel, page, "Boundary traversal");
+  await openFreeTextEditor(panel, page);
   const editor = page.getByRole("dialog", { name: "Text/Image editor" });
   const editorSource = await rawQmdSource(editor);
   await exerciseFreeTextBoundaries({
@@ -846,21 +847,18 @@ function canonicalPanel(page, panelId) {
   return page.locator(`[data-panel-id="${panelId}"][data-canonical-panel-id]`);
 }
 
-async function openFreeTextEditor(panel, page, title, preparedTrigger = null) {
+async function openFreeTextEditor(panel, page, preparedTrigger = null) {
   if (!preparedTrigger) await panel.hover();
-  const trigger = preparedTrigger ?? panel.getByLabel(`${title} actions`)
-    .getByRole("button", { name: "Edit chart" });
-  await trigger.click();
+  await choosePanelAction(page, await panel.getAttribute("data-canonical-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Text/Image editor" })).toBeVisible();
 }
 
-async function prepareFreeTextEditorTrigger(panel, title) {
+async function prepareFreeTextEditorTrigger(panel, page) {
   await panel.hover();
-  const trigger = panel.getByLabel(`${title} actions`)
-    .getByRole("button", { name: "Edit chart" });
+  const trigger = panelMenu(page, await panel.getAttribute("data-canonical-placement-id"));
   await trigger.scrollIntoViewIfNeeded();
   await expect(trigger).toBeVisible();
   return trigger;
