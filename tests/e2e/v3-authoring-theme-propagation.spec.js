@@ -50,10 +50,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await expectNoRetiredDashboardPaint(surface);
   await surface.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  const more = page.getByRole("dialog", { name: "More Build commands" });
-  await expect(more).toBeVisible();
-  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.locator('[data-build-command-action="scene-studio"]').click();
   surface = page.locator(".build-authoring-auxiliary");
   await expect(surface).toBeVisible();
   await expectSelectedThemeChrome(surface, "editor");
