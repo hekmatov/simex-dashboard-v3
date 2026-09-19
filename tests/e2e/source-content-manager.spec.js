@@ -15,14 +15,25 @@ test.beforeEach(async ({ page, request }) => {
 test("compact Build content commands preserve six/four stage contracts", async ({ page }) => {
   await openBuild(page, { width: 1440, height: 900 });
   const commands = page.getByRole("toolbar", { name: "Primary Build commands" });
+  expect(await commands.getByRole("button").evaluateAll((buttons) => (
+    buttons.map((button) => button.getAttribute("data-build-command-action"))
+  ))).toEqual([
+    "add-chart",
+    "add-text-image",
+    "source-content",
+    "chrono-studio",
+    "scene-studio",
+    "discard-build-changes",
+    "finish-build",
+  ]);
   await expect(commands.getByRole("button")).toHaveText([
     "Add chart",
     "Add Text/Image",
     "Source content",
     "Chrono Studio",
+    "Scene Studio",
     "Discard Build changes",
     "Finish Build",
-    "More",
   ]);
   await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
 
