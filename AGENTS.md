@@ -52,6 +52,36 @@ Performance and implementation progress take priority during active development.
 - This project policy overrides default TDD, E2E, and workflow verification cadence. A direct user instruction may override it for a specific task.
 - The Vite large-bundle warning is expected and is not a failed build.
 
+### Package Browser-Test Environment
+
+`pnpm test:e2e:package` is a Chromium integration test. It builds the dashboard, starts local test servers, and launches Playwright; it is not an in-process Node test.
+
+- Run it from a normal local PowerShell terminal. In a Codex task, request project filesystem access outside the restricted sandbox for the top-level `pnpm test:e2e:package` command. Restricted sandbox execution can block Vite/esbuild while resolving `vite.config.js` and its dependencies.
+- After a fresh clone, a cleared Playwright cache, or a Playwright version update, prepare the environment once from the project root:
+
+  ```powershell
+  pnpm install --frozen-lockfile
+  pnpm exec playwright install chromium
+  ```
+
+- Run the package check with:
+
+  ```powershell
+  pnpm test:e2e:package
+  ```
+
+- Treat a missing Chromium install or a Vite/esbuild filesystem-access denial as an environment prerequisite failure. Once the preparation and unrestricted execution are available, treat any test failure as a product-test result.
+
+### Environment Issue Register
+
+`docs/ENVIRONMENT-ISSUES.md` is the tracked project-wide register for reproducible local-environment blockers.
+
+- Before reporting a test as environment-blocked, consult its problem index.
+- A confirmed repeat is an incident, not just a duplicate: append a new numbered entry under the existing problem ID, then update that row's entry count and reference list.
+- A newly reproducible cause receives a new problem ID and its first numbered entry. Each entry must state the date, exact command or test, concise error or preflight evidence, scope, and outcome or workaround.
+- Do not log product-test failures, expected warnings, command-typing mistakes, or unverified suspicions.
+- Include a changed register in the task's coherent commit. When concurrent work conflicts, preserve every distinct entry and recalculate the index row instead of dropping an occurrence.
+
 ### Browser Workflow Driver and Playwright Discovery Policy
 
 - Update a browser workflow driver and every affected consumer in the same implementation slice.
