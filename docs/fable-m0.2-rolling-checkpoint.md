@@ -1,0 +1,26 @@
+# Fable M0.2 rolling repair checkpoint
+
+Date: 27 September 2026. Owner checkout: `codex/fable-m0-source-fixture`; starting tip `6b2d274d1f887b14b1062d55a7d5848f48e3a956`. Agreement: `C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\docs\FABLE-COORDINATION.md` v3; canonical roadmap v1.34 section 5 at planning commit `7bb8211fdc3ff71337643e0274fb4dd2a8a17975`. Routine work uses the current model setting. This is an operational inventory, not a milestone gate.
+
+## Frozen historical identities and dispositions
+
+The immutable identity list is the 53 failed `<testcase>` names in `docs/gates/2026-09-19-decision-surface-premerge/unit-branch.junit.xml` plus every failed or not-run `file`/`fullTitle` pair in `docs/gates/2026-09-19-decision-surface-premerge/e2e-ledger.json` (source: 154 failed; static: 3 not-run; pdpc: 2 not-run). Those records are historical and their totals must never be presented as current failures. A row below applies to the exact saved title in that file, not to the whole spec unless its count is exhausted. Accepted predecessor evidence is in the dated `docs/fable-m0-*-handoff-2026-09-27.md` files and `docs/gates/2026-09-19-decision-surface-premerge/regression-fixes-ledger.md`. E10–E39 are accepted by roadmap v1.34; later anchored-command evidence is `6b2d274d`.
+
+| Saved identity group | Disposition at freeze | Evidence or next boundary |
+| --- | --- | --- |
+| Unit JUnit, 53 failed titles | 52 repaired with focused passing evidence; 1 excluded | Accepted source-fixture, profile, catalogue, semantic, theme, shipped-dashboard/Home, analytical and geography closeouts. `portableFlashdriveLaunch.test.js` PS-04 copied-Windows flash package belongs to the deferred full portable-platform gate. |
+| `chart-authoring-v3` (12); `v3-chart-creation` (1) | Repaired | Chart driver, CSV authoring, chart creation/draft, Quick/Full, persistence and conversion closeouts. |
+| `dashboard-edit-race` (1), `dashboard-geography-authoring` (1), `dashboard-performance` (4), `dashboard-review-regressions` (4) | Repaired | Page-chart race, browser GeoJSON, editor performance, layout review and imported-profile continuity closeouts. |
+| `dense-desktop-outliers` (3), `dense-desktop-review-followups` (2) | Repaired | Desktop geometry closeout; retired More-drawer expectation is governed by the accepted direct Scene Studio command contract. |
+| `qmd-rich-editor` (1), `showcase-home` (1) | Repaired | Saved regression-fixes ledger and shipped Home closeout. |
+| `source-content-csv` (2), `source-content-geojson` (3), `source-content-manager` (2), `source-content-media` (2), `source-content-portability` (1) | Repaired | Browser CSV, GeoJSON, Source manager, media lifecycle and portability closeouts. |
+| `static-content-portability` Image replacement (1), `static-free-text` FT-11 and FT-06 (2) | Repaired | Saved regression-fixes ledger. |
+| `v3-anchored-structure-commands` (4), `v3-temporal-authoring` (2) | Repaired | Anchored commands and temporal Studios closeouts. |
+| `v3-build-structure-packages`: five canonical tree-target titles and two keyboard/pointer focus titles (7 of 11) | Repaired | Build structure and tree focus closeouts. |
+| `v3-authoring-theme-propagation`: selected style reaches Build surfaces (1 of 4) | Repaired | Saved regression-fixes ledger. |
+| `v3-build-structure-packages`: Restore online, two package-export titles, successful same-ID import (4) | Repaired | Current Scenario/Biomedical inventory and uploaded CSVs replace retired `bio_*` fixtures; package round trip asserts its actual placement ID; layout and delayed activation use current Section/Chart controls. Final evidence: 3 passed in the focused four-title run and the one corrected round-trip passed on the affected rerun (4 distinct titles, 0 remaining failures). |
+| `dashboard-density-audit` generated density manifest (1) | Excluded | Deferred generated-output audit gate. |
+| `v3-step9-final-acceptance` (1); `v3-static-offline` (2 not-run); pdpc (2 not-run) | Excluded | Final Audience / built offline / release-output gates, not M0.2 targeted consumer evidence. |
+| All other saved browser titles | Open pending targeted reconciliation/repair | Exact per-file/title identities remain in the frozen JSON. A broad Audience or portable gate is deferred, but a targeted M0.2 consumer is not excluded solely because of its spec name. |
+
+Directly caused regressions join this inventory. No full suite, build, generated audit, fresh-platform package or Audience gate is authorized here. Current implementation candidate changes only `tests/e2e/v3-build-structure-packages.spec.js` and this checkpoint; no product defect was demonstrated. Next: commit this coherent slice, then select the next open saved browser consumer, preflight its current fixture, and continue without a per-batch handoff.

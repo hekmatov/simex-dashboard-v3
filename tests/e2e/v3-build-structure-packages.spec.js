@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { chooseSectionAction } from "./support/buildWorkflow.js";
 
 const SOCIO_SECTION = Object.freeze({
   id: "socio_economic_section_1788512378053",
@@ -163,14 +164,17 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
     new URL("../../public/config/dashboard.json", import.meta.url),
     "utf8",
   ));
-  expect(sourceDashboard.pages[0].id).toBe("biomedical");
-  expect(sourceDashboard.dataSources.bio_occupancy_gauges).toBeTruthy();
-  expect(sourceDashboard.dataSources.bio_wastewater_latest).toBeTruthy();
+  const biomedicalPage = sourceDashboard.pages.find(({ id }) => id === "biomedical");
+  expect(biomedicalPage).toBeTruthy();
+  const internationalSourceId = "upload-cases-wcph-internationaal-2";
+  const nationalSourceId = "upload-cases-wcph-eldoria-3";
+  expect(sourceDashboard.dataSources[internationalSourceId]).toBeTruthy();
+  expect(sourceDashboard.dataSources[nationalSourceId]).toBeTruthy();
   const localDashboard = structuredClone(sourceDashboard);
   localDashboard.scenarioLabel = "Local-only scenario";
   localDashboard.programLabel = "Local-only program";
   localDashboard.lastUpdated = "2026-08-29";
-  localDashboard.pages[0].title = "Local-only biomedical page";
+  localDashboard.pages.find(({ id }) => id === "biomedical").title = "Local-only biomedical page";
   await page.addInitScript(({ dashboard, dashboardKey, modeKey }) => {
     localStorage.setItem(dashboardKey, JSON.stringify(dashboard));
     localStorage.setItem(modeKey, "build");
@@ -225,13 +229,13 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
   expect(stored.scenarioLabel).toBe(sourceDashboard.scenarioLabel);
   expect(stored.programLabel).toBe(sourceDashboard.programLabel);
   expect(stored.lastUpdated).toBe(sourceDashboard.lastUpdated);
-  expect(stored.pages[0].id).toBe("biomedical");
-  expect(stored.pages[0].title).toBe(sourceDashboard.pages[0].title);
-  expect(stored.dataSources.bio_occupancy_gauges).toEqual(
-    sourceDashboard.dataSources.bio_occupancy_gauges,
+  expect(stored.pages.map(({ id }) => id)).toEqual(sourceDashboard.pages.map(({ id }) => id));
+  expect(stored.pages.find(({ id }) => id === "biomedical")?.title).toBe(biomedicalPage.title);
+  expect(stored.dataSources[internationalSourceId]).toEqual(
+    sourceDashboard.dataSources[internationalSourceId],
   );
-  expect(stored.dataSources.bio_wastewater_latest).toEqual(
-    sourceDashboard.dataSources.bio_wastewater_latest,
+  expect(stored.dataSources[nationalSourceId]).toEqual(
+    sourceDashboard.dataSources[nationalSourceId],
   );
   expect(stored.pages.some(({ id }) => id === "old-homepage-content")).toBe(false);
 
@@ -530,8 +534,8 @@ test("package export resolves drafts and round-trips a self-contained source", a
   await openBuildStructure(page);
   const fixture = await packageFixture();
   const fixtureConfig = fixture.config;
-  const fixtureChart = fixtureConfig.pages[0].sections[0].panels[0].chart
-    ?? fixtureConfig.pages[0].sections[0].panels[0];
+  const fixturePlacement = fixtureConfig.pages[0].sections[0].panels[0];
+  const fixtureChart = fixturePlacement.chart ?? fixturePlacement;
   fixtureConfig.dataSources = {
     [fixtureChart.sourceId]: fixtureConfig.dataSources[fixtureChart.sourceId],
   };
@@ -601,7 +605,7 @@ test("package export resolves drafts and round-trips a self-contained source", a
   const roundtripReview = page.getByRole("dialog", { name: "Review package contents" });
   await expect(roundtripReview).toContainText("Panel: Imported Panel");
   await roundtripReview.getByRole("button", { name: "Load package", exact: true }).click();
-  await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
+  await expect(page.locator(`[data-canonical-placement-id="${fixturePlacement.id}"]`)).toBeVisible();
   const persistedSource = await page.evaluate((sourceId) => {
     const config = JSON.parse(localStorage.getItem(
       "simex-dashboard-config-v3-three-mode-v1",
@@ -611,17 +615,14 @@ test("package export resolves drafts and round-trips a self-contained source", a
   expect(persistedSource.browserAssetId).toMatch(/^sha256-[a-f0-9]{64}$/);
   expect(persistedSource).not.toHaveProperty("csvText");
   await page.reload();
-  await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
+  await expect(page.locator(`[data-canonical-placement-id="${fixturePlacement.id}"]`)).toBeVisible();
 });
 
 test("package export activates the scoped layout owner when unfinished layout work is reviewed", async ({ page }) => {
   test.setTimeout(60_000);
   await openBuildStructure(page);
 
-  await page.getByRole("button", {
-    name: "Move Outbreak dynamics later",
-    exact: true,
-  }).click();
+  await chooseSectionAction(page, "biomedical_section", "move-later");
   const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
   await expect(layoutOwner).toHaveCount(1);
   await expect(layoutOwner).toHaveAttribute("data-pending-work-id", /^layout:/);
@@ -703,7 +704,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   const review = page.getByRole("dialog", { name: "Review package contents" });
   await expect(review).toBeVisible();
   await tree.getByRole("treeitem", {
-    name: "Risk perception over time",
+    name: SOCIO_CHART.title,
     exact: true,
   }).evaluate((element) => element.click());
   await review.getByRole("button", { name: "Load package", exact: true }).click();
