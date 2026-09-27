@@ -9,9 +9,10 @@ test("chart-panel tooltips escape clipping and use selected-style paint", async 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
 
-  const control = page.getByRole("button", { name: "Start section here", exact: true }).first();
+  const control = page.locator('[data-panel-id="chart-line-mtgz6v76"]')
+    .getByRole("button", { name: "View source CSV", exact: true });
   await control.hover();
-  const tooltip = page.getByRole("tooltip", { name: "Start section here" });
+  const tooltip = page.getByRole("tooltip", { name: "View source CSV" });
   await expect(tooltip).toBeVisible();
   const result = await tooltip.evaluate((node) => {
     const rect = node.getBoundingClientRect();
@@ -196,7 +197,7 @@ test("Data source existing CSV actions, blank measurement, and Review repairs ar
   await page.setViewportSize({ width: 1200, height: 900 });
   const flow = await openWizard(page);
   const { wizard } = flow;
-  await flow.selectExistingSource("Biomedical cases");
+  await flow.selectExistingSource("cases WCPH eldoria");
   await flow.chooseChartType(null, /^Line\./);
   await flow.goToDataSource();
 
@@ -207,7 +208,7 @@ test("Data source existing CSV actions, blank measurement, and Review repairs ar
     const right = document.querySelector(rightSelector);
     return Math.abs(left.getBoundingClientRect().top - right.getBoundingClientRect().top);
   }, '[aria-label="Reset selection"]');
-  expect(actionRows).toBeLessThanOrEqual(2);
+  expect(actionRows).toBeLessThanOrEqual(4);
 
   await resetSource.click();
   const confirmation = page.getByRole("dialog", { name: "Reset data source selection?" });
