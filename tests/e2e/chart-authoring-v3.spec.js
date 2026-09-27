@@ -17,6 +17,10 @@ const WORKFORCE_VALUE_COLUMN = "Share of workforce (%)";
 const EDIT_CHART_ID = "chart-line-mtgz6v76";
 const OTHER_LINE_CHART_ID = "chart-line-mtgytrwj";
 const UNRELATED_GROUP_CHART_ID = "chart-line-a01a017d-96f1-440b-b24a-bcf2e30da1cc";
+const CONVERSION_CHART_ID = UNRELATED_GROUP_CHART_ID;
+const CONVERSION_SOURCE_ID = "upload-eldoria-misinformation-2021-2027-fictional";
+const EXPOSURE_COLUMN = "Reported regular exposure to mis- and disinformation (%)";
+const CONCERN_COLUMN = "Concern about online mis- and disinformation (%)";
 const SOCIO_EDIT_CHART_ID = "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad";
 const TARGET_CHRONO_GROUP_ID = "editor-target-group";
 const UNRELATED_CHRONO_GROUP_ID = "editor-unrelated-group";
@@ -863,22 +867,49 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
 test("editor chart conversion supports compatible changes and recoverable remapping", async ({
   page,
 }) => {
-  await openBiomedicalPage(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Socio-economic", exact: true }).click();
+  const panel = page.locator(`[data-panel-id="${CONVERSION_CHART_ID}"]`);
+  await expect(panel).toBeVisible();
+  const original = await storedConversionChart(page);
+  expect(original).toMatchObject({
+    count: 1,
+    typeId: "line",
+    sourceId: CONVERSION_SOURCE_ID,
+    observation: "Year",
+    measurements: [EXPOSURE_COLUMN, CONCERN_COLUMN],
+  });
+  const placementId = await panel.getAttribute("data-build-placement-id");
   let full = await openFullChartEditor(page, panel);
 
   await full.getByRole("button", { name: /^Chart type\./ }).click();
   await full.getByRole("button", { name: /^Bar\b/i }).click();
-  await full.locator('[data-field-id="measurements"] select').first()
-    .selectOption("national_total_cases");
-  await full.locator('[data-field-id="observation"] select').first()
-    .selectOption("date");
+  await expect(full.locator('[data-field-id="measurements"] select').first())
+    .toHaveValue(EXPOSURE_COLUMN);
+  await expect(full.locator('[data-field-id="measurements"] select').nth(2))
+    .toHaveValue(CONCERN_COLUMN);
+  await expect(full.locator('[data-field-id="observation"] select').first())
+    .toHaveValue("Year");
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  await full.getByRole("textbox", { name: "Chart title", exact: true }).fill("Confirmed cases");
+  await full.getByRole("textbox", { name: "Chart title", exact: true })
+    .fill("Exposure and concern in Eldoria");
+  await expect(full.locator(".chart-authoring-preview-ready")).toBeVisible();
   await full.getByRole("button", { name: /^Review\./ }).click();
   await full.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(full).toHaveCount(0);
-  await expectStoredChart(page, "bar", "Confirmed cases");
+  const savedBar = await storedConversionChart(page);
+  expect(savedBar).toMatchObject({
+    count: 1,
+    sectionId: original.sectionId,
+    placementId: original.placementId,
+    typeId: "bar",
+    title: "Exposure and concern in Eldoria",
+    sourceId: CONVERSION_SOURCE_ID,
+    observation: "Year",
+    measurements: [EXPOSURE_COLUMN, CONCERN_COLUMN],
+  });
+  await expect(panel).toHaveAttribute("data-build-placement-id", placementId);
+  await expect(panel.locator("canvas").first()).toBeVisible();
 
   full = await openFullChartEditor(page, panel);
   await full.getByRole("button", { name: /^Chart type\./ }).click();
@@ -887,29 +918,45 @@ test("editor chart conversion supports compatible changes and recoverable remapp
   let discard = page.getByRole("dialog", { name: "Discard changes?" });
   await discard.getByRole("button", { name: "Continue editing", exact: true }).click();
   await expect(full.locator('[data-field-id="x"] select').first()).toBeVisible();
+  expect(await storedConversionChart(page)).toEqual(savedBar);
   await full.getByRole("button", { name: "Discard changes", exact: true }).click();
   discard = page.getByRole("dialog", { name: "Discard changes?" });
   await discard.getByRole("button", { name: "Discard", exact: true }).click();
   await expect(full).toHaveCount(0);
-  await expectStoredChart(page, "bar", "Confirmed cases");
+  expect(await storedConversionChart(page)).toEqual(savedBar);
 
   full = await openFullChartEditor(page, panel);
   await full.getByRole("button", { name: /^Chart type\./ }).click();
   await full.getByRole("button", { name: /^Scatter\b/i }).click();
-  await full.locator('[data-field-id="x"] select').first().selectOption("total_deaths");
+  await full.locator('[data-field-id="x"] select').first().selectOption(EXPOSURE_COLUMN);
   await full.locator('[data-field-id="y"] select').first()
-    .selectOption("national_total_cases");
-  await full.getByLabel("Duplicate observations").selectOption("last");
+    .selectOption(CONCERN_COLUMN);
+  await expect(full.getByLabel("Duplicate observations")).toHaveCount(0);
   await full.getByRole("button", { name: /^Configure\./ }).click();
-  await full.getByRole("textbox", { name: "Chart title", exact: true }).fill("Confirmed cases");
+  await full.getByRole("textbox", { name: "Chart title", exact: true })
+    .fill("Exposure and concern in Eldoria");
   await expect(full.locator(".chart-authoring-preview-ready")).toBeVisible();
   await full.getByRole("button", { name: /^Review\./ }).click();
   await full.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(full).toHaveCount(0);
-  await expectStoredChart(page, "scatter", "Confirmed cases");
+  expect(await storedConversionChart(page)).toMatchObject({
+    count: 1,
+    sectionId: original.sectionId,
+    placementId: original.placementId,
+    typeId: "scatter",
+    title: "Exposure and concern in Eldoria",
+    sourceId: CONVERSION_SOURCE_ID,
+    x: EXPOSURE_COLUMN,
+    y: CONCERN_COLUMN,
+    duplicates: null,
+  });
+  await expect(panel).toHaveAttribute("data-build-placement-id", placementId);
+  await expect(panel).toContainText("Exposure and concern in Eldoria");
+  await expect(panel.locator("canvas").first()).toBeVisible();
 });
 
 async function openFullChartEditor(page, panel) {
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
@@ -917,6 +964,40 @@ async function openFullChartEditor(page, panel) {
   const full = page.getByRole("dialog", { name: "Edit chart" });
   await expect(full).toBeVisible();
   return full;
+}
+
+function storedConversionChart(page) {
+  return page.evaluate(async ({ key, chartId }) => {
+    const storedDashboard = localStorage.getItem(key);
+    const dashboard = storedDashboard
+      ? JSON.parse(storedDashboard)
+      : await fetch("/config/dashboard.json").then((response) => response.json());
+    const matches = dashboard.pages.flatMap(({ id: pageId, sections }) => (
+      sections.flatMap(({ id: sectionId, panels }) => panels.map((placement) => ({
+        pageId,
+        sectionId,
+        placementId: placement.id,
+        chart: placement.chart ?? placement,
+      })))
+    )).filter(({ chart }) => chart.id === chartId);
+    const match = matches[0];
+    if (!match) return { count: 0 };
+    const { chart } = match;
+    return {
+      count: matches.length,
+      pageId: match.pageId,
+      sectionId: match.sectionId,
+      placementId: match.placementId,
+      typeId: chart.typeId,
+      title: chart.title,
+      sourceId: chart.sourceId,
+      observation: chart.roles?.observation?.field ?? null,
+      measurements: chart.roles?.measurements?.map(({ field }) => field) ?? [],
+      x: chart.roles?.x?.field ?? null,
+      y: chart.roles?.y?.field ?? null,
+      duplicates: chart.transformations?.duplicates ?? null,
+    };
+  }, { key: STORAGE_KEY, chartId: CONVERSION_CHART_ID });
 }
 
 async function openBiomedicalPage(page) {
