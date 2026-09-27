@@ -1,4 +1,4 @@
-import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
+import { chooseSectionAction, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 
@@ -15,6 +15,11 @@ const WORKFORCE_SOURCE_ID = "upload-eldoria-work-sectors";
 const WORKFORCE_SOURCE_LABEL = "eldoria work sectors";
 const WORKFORCE_VALUE_COLUMN = "Share of workforce (%)";
 const EDIT_CHART_ID = "chart-line-mtgz6v76";
+const OTHER_LINE_CHART_ID = "chart-line-mtgytrwj";
+const UNRELATED_GROUP_CHART_ID = "chart-line-a01a017d-96f1-440b-b24a-bcf2e30da1cc";
+const SOCIO_EDIT_CHART_ID = "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad";
+const TARGET_CHRONO_GROUP_ID = "editor-target-group";
+const UNRELATED_CHRONO_GROUP_ID = "editor-unrelated-group";
 const TIMELINE_FIXTURE = {
   name: "timeline-events.csv",
   mimeType: "text/csv",
@@ -66,7 +71,7 @@ test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, {
     data: { mode: "absent" },
   });
-  await page.addInitScript(() => {
+  await page.addInitScript(({ removeId }) => {
     const stringify = JSON.stringify;
     JSON.stringify = function patchedStringify(value, ...args) {
       if (
@@ -84,7 +89,9 @@ test.beforeEach(async ({ page, request }) => {
         globalThis.__SIMEX_FAIL_CHART_REMOVE_SERIALIZE_ONCE__ === true
         && Array.isArray(value?.pages)
         && !value.pages.some(({ sections }) => sections?.some(({ panels }) => (
-          panels?.some((placement) => placement.id === "bio_confirmed_cases")
+          panels?.some((placement) => (
+            (placement.chart ?? placement).id === removeId
+          ))
         )))
       ) {
         globalThis.__SIMEX_FAIL_CHART_REMOVE_SERIALIZE_ONCE__ = false;
@@ -92,7 +99,7 @@ test.beforeEach(async ({ page, request }) => {
       }
       return stringify.call(this, value, ...args);
     };
-  });
+  }, { removeId: EDIT_CHART_ID });
   await page.goto("/");
   await enterAuthoredDashboard(page);
   await page.getByRole("button", { name: "Build" }).click();
@@ -626,12 +633,62 @@ async function openM0FixtureBuild(page) {
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 }
 
+async function installQuickPersistenceChronoFixture(page) {
+  await page.evaluate(async ({ key, targetId, otherLineId, unrelatedId, targetGroupId, unrelatedGroupId }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key)
+      ?? await fetch("/config/dashboard.json").then((response) => response.text()));
+    dashboard.chronoGroups = [
+      {
+        id: targetGroupId,
+        name: "Editor target group",
+        period: { start: "2027-02-14", end: "2027-02-21" },
+        matching: { policy: "exact" },
+        secondsPerFrame: 1,
+        members: [
+          { chartId: targetId, timeRole: "observation" },
+          { chartId: otherLineId, timeRole: "observation" },
+        ],
+      },
+      {
+        id: unrelatedGroupId,
+        name: "Editor unrelated group",
+        period: { start: "2021-01-01", end: "2027-12-31" },
+        matching: { policy: "exact" },
+        secondsPerFrame: 1,
+        members: [{ chartId: unrelatedId, timeRole: "observation" }],
+      },
+    ];
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, {
+    key: STORAGE_KEY,
+    targetId: EDIT_CHART_ID,
+    otherLineId: OTHER_LINE_CHART_ID,
+    unrelatedId: UNRELATED_GROUP_CHART_ID,
+    targetGroupId: TARGET_CHRONO_GROUP_ID,
+    unrelatedGroupId: UNRELATED_CHRONO_GROUP_ID,
+  });
+  await page.reload();
+  await enterAuthoredDashboard(page);
+  const build = page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true });
+  if (await build.getAttribute("aria-pressed") !== "true") await build.click();
+}
+
 test("quick edit saving failure keeps one retry owner and confirmed Remove clears it", async ({
   page,
 }) => {
+  await installQuickPersistenceChronoFixture(page);
   await openBiomedicalPage(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
   const before = await storedQuickPersistenceSnapshot(page);
+  expect(before.targetTitle).toBe("National Confirmed Cases (cumulative)");
+  expect(before.targetSourceId).toBe("upload-cases-wcph-eldoria-3");
+  expect(before.panelIds).toContain(EDIT_CHART_ID);
+  expect(before.unrelatedChart?.id).toBe(OTHER_LINE_CHART_ID);
+  expect(before.targetGroup?.members.map(({ chartId }) => chartId))
+    .toEqual([EDIT_CHART_ID, OTHER_LINE_CHART_ID]);
+  expect(before.unrelatedGroup?.members.map(({ chartId }) => chartId))
+    .toEqual([UNRELATED_GROUP_CHART_ID]);
   const today = await page.evaluate(() => {
     const now = new Date();
     return [
@@ -641,15 +698,17 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
     ].join("-");
   });
 
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
   await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Durable quick save");
-  const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
+  const ownerId = `chart-edit:${EDIT_CHART_ID}`;
+  const owner = page.locator(`[data-pending-work-id="${ownerId}"]`);
   await expect(owner).toHaveCount(1);
   const save = editor.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeEnabled();
-  await installQuickEditorSavingEvidence(page, "chart-edit:bio_confirmed_cases");
+  await installQuickEditorSavingEvidence(page, ownerId);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_CHART_SERIALIZE_ONCE__ = true; });
   await save.click();
 
@@ -681,6 +740,7 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   expect(afterSave.unrelatedChart).toEqual(before.unrelatedChart);
   expect(afterSave.chronoGroups).toEqual(before.chronoGroups);
 
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
@@ -708,13 +768,14 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   const afterRemove = await storedQuickPersistenceSnapshot(page);
   expect(afterRemove.lastUpdated).toBe(today);
   expect(afterRemove.panelIds).toEqual(
-    before.panelIds.filter((panelId) => panelId !== "bio_confirmed_cases"),
+    before.panelIds.filter((panelId) => panelId !== EDIT_CHART_ID),
   );
   expect(afterRemove.unrelatedChart).toEqual(before.unrelatedChart);
-  expect(afterRemove.municipalChronoGroup).toEqual(before.municipalChronoGroup);
-  expect(afterRemove.nationalChronoMembers).toEqual(
-    before.nationalChronoMembers.filter(({ chartId }) => chartId !== "bio_confirmed_cases"),
-  );
+  expect(afterRemove.targetGroup).toEqual({
+    ...before.targetGroup,
+    members: before.targetGroup.members.filter(({ chartId }) => chartId !== EDIT_CHART_ID),
+  });
+  expect(afterRemove.unrelatedGroup).toEqual(before.unrelatedGroup);
 });
 
 test("quick edit Save rebases pending Page content onto a live layout draft", async ({
@@ -724,24 +785,25 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
     .getByRole("button", { name: "Socio-economic", exact: true })
     .click();
   const baselineSectionIds = await storedPageSectionIds(page, "socio_economic");
-  await page.getByRole("button", {
-    name: "Move Public response and policy signals later",
-    exact: true,
-  }).click();
+  expect(baselineSectionIds.length).toBeGreaterThan(1);
+  await chooseSectionAction(page, baselineSectionIds[0], "move-later");
   await expect(page.locator('[data-pending-work-kind="layout"]'))
     .toHaveAttribute("data-pending-work-state", "dirty");
 
-  const map = structureRail(page);
   const pendingPageTitle = "Pending Socio Page title survives quick Save";
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(pendingPageTitle);
 
-  const target = page.locator('[data-panel-id="socio_trust_trend"]');
+  const target = page.locator(`[data-panel-id="${SOCIO_EDIT_CHART_ID}"]`);
+  await expect(target).toBeVisible();
+  await target.hover();
   await choosePanelAction(page, await target.getAttribute("data-build-placement-id"), "edit");
   const editor = page.locator(".chart-quick-editor");
   const savedChartTitle = "Quick Save on a live layout draft";
   await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill(savedChartTitle);
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(editor).toHaveCount(0);
+  await expect(page.locator('[data-pending-work-kind="layout"]'))
+    .toHaveAttribute("data-pending-work-state", "dirty");
 
   const saveLayout = page.getByRole("button", {
     name: "Save Layout Changes",
@@ -753,21 +815,23 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
   await expect.poll(() => page.evaluate(({ key, pageId, chartId }) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
     const pageEntry = dashboard.pages.find(({ id }) => id === pageId);
-    const chart = pageEntry.sections
+    const charts = pageEntry.sections
       .flatMap(({ panels = [] }) => panels)
       .map((placement) => placement.chart ?? placement)
-      .find(({ id }) => id === chartId);
+      .filter(({ id }) => id === chartId);
     return {
       pageTitle: pageEntry.title,
-      chartTitle: chart.title,
+      chartCount: charts.length,
+      chartTitle: charts[0]?.title ?? null,
       sectionIds: pageEntry.sections.map(({ id }) => id),
     };
   }, {
     key: STORAGE_KEY,
     pageId: "socio_economic",
-    chartId: "socio_trust_trend",
+    chartId: SOCIO_EDIT_CHART_ID,
   })).toEqual({
     pageTitle: pendingPageTitle,
+    chartCount: 1,
     chartTitle: savedChartTitle,
     sectionIds: [baselineSectionIds[1], baselineSectionIds[0], ...baselineSectionIds.slice(2)],
   });
@@ -884,7 +948,7 @@ async function expectChartTypeCardsAligned(surface, surfaceName) {
 }
 
 async function storedQuickPersistenceSnapshot(page) {
-  return page.evaluate(async (storageKey) => {
+  return page.evaluate(async ({ storageKey, targetId, otherId, targetGroupId, unrelatedGroupId }) => {
     const storedDashboard = localStorage.getItem(storageKey);
     const dashboard = storedDashboard
       ? JSON.parse(storedDashboard)
@@ -899,14 +963,13 @@ async function storedQuickPersistenceSnapshot(page) {
         }))
       ))
     ));
-    const target = placements.find(({ placement, chart }) => (
-      (placement.id ?? chart.id) === "bio_confirmed_cases"
-    ));
-    const unrelated = placements.find(({ chart }) => chart.id === "bio_daily_cases_bar");
+    const target = placements.find(({ chart }) => chart.id === targetId);
+    const unrelated = placements.find(({ chart }) => chart.id === otherId);
     const chronoGroups = structuredClone(dashboard.chronoGroups ?? []);
     return {
       lastUpdated: dashboard.lastUpdated,
       targetTitle: target?.chart?.title ?? null,
+      targetSourceId: target?.chart?.sourceId ?? null,
       panelIds: placements.map(({ placement, chart }) => placement.id ?? chart.id),
       layout: dashboard.pages.map((pageEntry) => ({
         id: pageEntry.id,
@@ -923,14 +986,20 @@ async function storedQuickPersistenceSnapshot(page) {
       })),
       unrelatedChart: structuredClone(unrelated?.chart ?? null),
       chronoGroups,
-      municipalChronoGroup: structuredClone(
-        chronoGroups.find(({ id }) => id === "municipal_outbreak") ?? null,
+      targetGroup: structuredClone(
+        chronoGroups.find(({ id }) => id === targetGroupId) ?? null,
       ),
-      nationalChronoMembers: structuredClone(
-        chronoGroups.find(({ id }) => id === "national_outbreak")?.members ?? [],
+      unrelatedGroup: structuredClone(
+        chronoGroups.find(({ id }) => id === unrelatedGroupId) ?? null,
       ),
     };
-  }, STORAGE_KEY);
+  }, {
+    storageKey: STORAGE_KEY,
+    targetId: EDIT_CHART_ID,
+    otherId: OTHER_LINE_CHART_ID,
+    targetGroupId: TARGET_CHRONO_GROUP_ID,
+    unrelatedGroupId: UNRELATED_CHRONO_GROUP_ID,
+  });
 }
 
 function storedChartCount(page) {
