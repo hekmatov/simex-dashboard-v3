@@ -15,6 +15,15 @@ import {
   SHIPPED_CASE_CHART_ID,
   SHIPPED_CASE_SOURCE_ID,
 } from "./support/importedProfileFixture.js";
+import {
+  OTHER_BIOMEDICAL_CHART_ID,
+  REMOVED_PAGE_GROUP_ID,
+  RETAINED_PAGE_GROUP_ID,
+  RETAINED_SOCIO_CHART_ID,
+  withPageRemovalGroups,
+  withWrappedCasesPanel,
+  WRAPPED_CASE_PLACEMENT_ID,
+} from "./support/layoutReviewFixture.js";
 
 const APP_URL = "http://127.0.0.1:4173";
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -33,57 +42,56 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   page,
   request,
 }) => {
-  const dashboard = await fetchJson(request, "/config/dashboard.json");
-  const section = dashboard.pages
-    .find(({ id }) => id === "biomedical")
-    .sections.find(({ panels }) => panels.some(({ id }) => (
-      id === "bio_current_cases_kpi"
-    )));
-  const index = section.panels.findIndex(({ id }) => (
-    id === "bio_current_cases_kpi"
-  ));
-  const chart = section.panels[index];
-  section.panels[index] = {
-    id: "current-cases-placement",
-    chart,
-  };
+  const dashboard = withWrappedCasesPanel(
+    await fetchJson(request, "/config/dashboard.json"),
+  );
   await installDashboard(page, dashboard);
 
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
-  const renderedPanel = page.locator('[data-panel-id="bio_current_cases_kpi"]');
+  const before = await storedLayoutReviewState(page);
+  const originalPlacement = before.placements.find(({ placementId }) => (
+    placementId === WRAPPED_CASE_PLACEMENT_ID
+  ));
+  expect(originalPlacement).toMatchObject({
+    pageId: "biomedical",
+    chart: { id: SHIPPED_CASE_CHART_ID, sourceId: SHIPPED_CASE_SOURCE_ID, typeId: "line" },
+  });
+  expect(WRAPPED_CASE_PLACEMENT_ID).not.toBe(SHIPPED_CASE_CHART_ID);
+  const unrelatedPlacements = before.placements.filter(({ placementId }) => (
+    placementId !== WRAPPED_CASE_PLACEMENT_ID
+  ));
+  expect(unrelatedPlacements.length).toBeGreaterThan(0);
+  const renderedPanel = page.locator(`[data-panel-id="${SHIPPED_CASE_CHART_ID}"]`);
   await expect(renderedPanel).toBeVisible();
+  await renderedPanel.scrollIntoViewIfNeeded();
+  await expect(renderedPanel.locator("canvas").first()).toBeVisible();
 
   await page.getByRole("button", { name: "Build" }).click();
-  const panel = page.locator(
-    'article[data-build-placement-id="current-cases-placement"]',
-  );
-  await expect(panel).toHaveAttribute("data-panel-id", "bio_current_cases_kpi");
+  const panel = page.locator(`article[data-build-placement-id="${WRAPPED_CASE_PLACEMENT_ID}"]`);
+  await expect(panel).toHaveAttribute("data-panel-id", SHIPPED_CASE_CHART_ID);
   await panel.scrollIntoViewIfNeeded();
   await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quickEditor = page.locator(".chart-quick-editor");
   await expect(quickEditor).toBeVisible();
-  await quickEditor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Updated wrapped KPI");
+  await quickEditor.getByRole("textbox", { name: "Chart title", exact: true })
+    .fill("Updated wrapped national cases");
   await quickEditor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(quickEditor).toHaveCount(0);
 
-  await expect.poll(() => page.evaluate((key) => {
-    const stored = JSON.parse(localStorage.getItem(key));
-    const placement = stored.pages
-      .flatMap(({ sections }) => sections)
-      .flatMap(({ panels }) => panels)
-      .find(({ id }) => id === "current-cases-placement");
-    return {
-      placementId: placement?.id,
-      chartId: placement?.chart?.id,
-      title: placement?.chart?.title,
-    };
-  }, STORAGE_KEY)).toEqual({
-    placementId: "current-cases-placement",
-    chartId: "bio_current_cases_kpi",
-    title: "Updated wrapped KPI",
-  });
+  await expect.poll(async () => (
+    await storedLayoutReviewState(page)
+  ).placements.find(({ placementId }) => placementId === WRAPPED_CASE_PLACEMENT_ID))
+    .toEqual({
+      ...originalPlacement,
+      chart: { ...originalPlacement.chart, title: "Updated wrapped national cases" },
+    });
+  const afterSave = await storedLayoutReviewState(page);
+  expect(afterSave.placements.filter(({ placementId }) => (
+    placementId !== WRAPPED_CASE_PLACEMENT_ID
+  ))).toEqual(unrelatedPlacements);
+  await expect(panel).toHaveAttribute("data-panel-id", SHIPPED_CASE_CHART_ID);
 
   await panel.scrollIntoViewIfNeeded();
   await panel.hover();
@@ -91,6 +99,11 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   await page.getByRole("dialog", { name: "Remove this chart?" })
     .getByRole("button", { name: "Remove chart" }).click();
   await expect(panel).toHaveCount(0);
+  await expect.poll(async () => (await storedLayoutReviewState(page)).placements)
+    .toEqual(unrelatedPlacements);
+  const afterRemove = await storedLayoutReviewState(page);
+  expect(afterRemove.pages).toEqual(before.pages);
+  expect(afterRemove.groups).toEqual(before.groups);
 });
 
 test("replacement bundle profiles survive import, edit, save, and reload", async ({
@@ -206,14 +219,39 @@ test("removing a page also removes its synchronized chart memberships", async ({
   page,
   request,
 }) => {
-  await installDashboard(page, await fetchJson(request, "/config/dashboard.json"));
+  const dashboard = withPageRemovalGroups(
+    await fetchJson(request, "/config/dashboard.json"),
+  );
+  await installDashboard(page, dashboard);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
+  const before = await storedLayoutReviewState(page);
+  const removedPlacements = before.placements.filter(({ pageId }) => pageId === "biomedical");
+  const retainedPlacements = before.placements.filter(({ pageId }) => pageId !== "biomedical");
+  const removedGroup = before.groups.find(({ id }) => id === REMOVED_PAGE_GROUP_ID);
+  const retainedGroup = before.groups.find(({ id }) => id === RETAINED_PAGE_GROUP_ID);
+  expect(before.pages.map(({ id }) => id)).toEqual(["scenario", "biomedical", "socio_economic"]);
+  expect(removedPlacements.map(({ chart }) => chart.id)).toEqual(expect.arrayContaining([
+    SHIPPED_CASE_CHART_ID,
+    OTHER_BIOMEDICAL_CHART_ID,
+  ]));
+  expect(removedGroup.members.map(({ chartId }) => chartId)).toEqual([
+    SHIPPED_CASE_CHART_ID,
+    OTHER_BIOMEDICAL_CHART_ID,
+  ]);
+  expect(retainedGroup.members.map(({ chartId }) => chartId)).toEqual([
+    RETAINED_SOCIO_CHART_ID,
+  ]);
+  expect(retainedPlacements.some(({ chart }) => chart.id === RETAINED_SOCIO_CHART_ID))
+    .toBe(true);
+
   await page.getByRole("button", { name: "Build" }).click();
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
   await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
   const actions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
   await actions.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(actions.getByRole("region", { name: "Named consequences" }))
+    .toContainText("Biomedical page group");
   await actions.getByLabel("I understand these named consequences.").check();
   await actions.getByRole("button", { name: "Confirm", exact: true }).click();
   const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
@@ -231,16 +269,22 @@ test("removing a page also removes its synchronized chart memberships", async ({
     name: "Open Biomedical",
     exact: true,
   })).toHaveCount(0);
-  await expect.poll(() => page.evaluate((key) => {
-    const stored = JSON.parse(localStorage.getItem(key));
-    return {
-      pages: stored.pages.map(({ id }) => id),
-      groups: stored.chronoGroups,
-    };
-  }, STORAGE_KEY)).toEqual({
-    pages: ["socio_economic"],
-    groups: [],
-  });
+  const expected = {
+    pages: before.pages.filter(({ id }) => id !== "biomedical"),
+    placements: retainedPlacements,
+    groups: [retainedGroup],
+  };
+  await expect.poll(() => storedLayoutReviewState(page)).toEqual(expected);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Dashboard configuration error" }))
+    .toHaveCount(0);
+  await expect.poll(() => storedLayoutReviewState(page)).toEqual(expected);
+  await openDashboardPage(page, "socio_economic");
+  const retainedPanel = page.locator(`[data-panel-id="${RETAINED_SOCIO_CHART_ID}"]`);
+  await expect(retainedPanel).toBeVisible();
+  await retainedPanel.scrollIntoViewIfNeeded();
+  await expect(retainedPanel.locator("canvas").first()).toBeVisible();
 });
 
 async function fetchJson(request, path) {
@@ -270,6 +314,24 @@ async function openSelectedPageInspector(page) {
   const inspector = propertiesPane(page);
   await expect(inspector.getByLabel("Page title", { exact: true })).toBeVisible();
   return inspector;
+}
+
+function storedLayoutReviewState(page) {
+  return page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    return {
+      pages: dashboard.pages.map(({ id, title }) => ({ id, title })),
+      placements: dashboard.pages.flatMap(({ id: pageId, sections }) => (
+        sections.flatMap(({ id: sectionId, panels }) => panels.map((placement) => ({
+          pageId,
+          sectionId,
+          placementId: placement.id,
+          chart: placement.chart ?? placement,
+        })))
+      )),
+      groups: dashboard.chronoGroups,
+    };
+  }, STORAGE_KEY);
 }
 
 function importedProfileStateExpectation({ dashboard, pageId, pageTitle, chartId, expectedFingerprint }) {
