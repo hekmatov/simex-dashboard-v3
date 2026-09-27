@@ -113,6 +113,75 @@ function lineChart(sourceId, groupId = "national-outbreak") {
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function nationalCaseFixture() {
+  const sourceId = "fixture-national-cases";
+  const source = {
+    path: "fixtures/national-cases.csv",
+    provenance: { label: "National cases contract fixture" },
+    parsingMetadata: {
+      date: { interpretation: "temporal", format: "YYYY-MM-DD", timezone: "date-only" },
+    },
+  };
+  const first = Date.UTC(2027, 1, 20);
+  const csv = [
+    "date,national_total_cases",
+    ...Array.from({ length: 177 }, (_, index) => (
+      `${new Date(first + index * DAY_MS).toISOString().slice(0, 10)},${[2, 4, 15][index % 3]}`
+    )),
+  ].join("\n");
+  const rows = parseCsvText(csv, source.path);
+  return { sourceId, source, rows, profile: reusableProfile(sourceId, source, rows) };
+}
+
+function mortalityDateFixture() {
+  const sourceId = "fixture-mortality";
+  const source = {
+    kind: "csv",
+    path: "data/mortality.csv",
+    provenance: { label: "Mortality date contract fixture" },
+    parsingMetadata: {
+      date: { interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only" },
+    },
+  };
+  const csv = [
+    "date,total_deaths,Age group",
+    "02/05/2027,2,Adults",
+    "02/05/2027,4,Children",
+    "02/05/2027,1,Older adults",
+  ].join("\n");
+  const rows = parseCsvText(csv, source.path);
+  const profile = profileDataset(rows, source.parsingMetadata);
+  return { sourceId, source, csv, rows, profile };
+}
+
+function municipalRowsFixture() {
+  const first = Date.UTC(2020, 1, 27);
+  const last = Date.UTC(2021, 3, 17);
+  const firstDate = "2020-02-27";
+  // Leave one intervening day without observations while retaining 415 distinct dates.
+  const laterDates = [];
+  for (let day = first + DAY_MS; day <= last; day += DAY_MS) {
+    const date = new Date(day).toISOString().slice(0, 10);
+    if (date !== "2020-02-28") laterDates.push(date);
+  }
+  const csv = [
+    "Datum,MunicipalityCode,infectionsPer10000",
+    ...Array.from({ length: 354 }, (_, index) => (
+      `${firstDate},GM${String(index + 1).padStart(4, "0")},${index % 5}`
+    )),
+    ...laterDates.map((date, index) => `${date},GM0001,${index % 5}`),
+  ].join("\n");
+  const rows = parseCsvText(csv, "fixtures/municipal-infections.csv");
+  return {
+    rows,
+    profile: profileDataset(rows, {
+      Datum: { interpretation: "temporal", format: "YYYY-MM-DD" },
+    }),
+  };
+}
+
 test("every retained tabular source has exactly one reusable profile", async () => {
   const dashboard = await trackedJson(dashboardPath);
   const profiles = await trackedJson(profilesPath);
@@ -132,41 +201,55 @@ test("every retained tabular source has exactly one reusable profile", async () 
 });
 
 test("mortality dates retain the complete profileDataset temporal authority", async () => {
-  const dashboard = await trackedJson(dashboardPath);
-  const profiles = await trackedJson(profilesPath);
-  const source = dashboard.dataSources.bio_mortality;
-  const rows = await trackedRows(source);
-  const date = profiles.bio_mortality.columns.find(({ name }) => name === "date");
+  const { sourceId, source, csv, rows, profile } = mortalityDateFixture();
+  await withTempDirectory(async (directory) => {
+    const publicDir = path.join(directory, "public");
+    const configDir = path.join(publicDir, "config");
+    await mkdir(path.join(publicDir, "data"), { recursive: true });
+    await mkdir(configDir, { recursive: true });
+    await writeFile(path.join(publicDir, source.path), csv, "utf8");
+    await writeFile(
+      path.join(configDir, "dashboard.json"),
+      JSON.stringify({ dataSources: { [sourceId]: source } }),
+      "utf8",
+    );
+    const { profiles } = await generateDatasetProfiles({ rootDir: directory });
+    const date = profiles[sourceId].columns.find(({ name }) => name === "date");
 
-  assert.deepEqual(date.temporal.parsingMetadata, {
-    interpretation: "temporal",
-    format: "DD/MM/YYYY",
-    timezone: "date-only",
+    assert.deepEqual(profiles[sourceId].columns, profile.columns);
+    assert.equal(date.type, "temporal");
+    assert.deepEqual(date.temporal, {
+      values: Array(rows.length).fill("2027-05-02"),
+      diagnostics: [],
+      parsingMetadata: {
+        interpretation: "temporal",
+        format: "DD/MM/YYYY",
+        timezone: "date-only",
+      },
+    });
+    assert.equal(Object.hasOwn(date, "parsing"), false);
+    assert.equal(Object.hasOwn(date, "temporalValues"), false);
+    assert.equal(Object.hasOwn(date, "warnings"), false);
   });
-  assert.equal(date.temporal.values.length, rows.length);
-  assert.deepEqual(
-    date.temporal.values,
-    Array(rows.length).fill("2027-05-02"),
-  );
-  assert.deepEqual(date.temporal.diagnostics, []);
-  assert.equal(Object.hasOwn(date, "parsing"), false);
-  assert.equal(Object.hasOwn(date, "temporalValues"), false);
-  assert.equal(Object.hasOwn(date, "warnings"), false);
 });
 
 test("profiles preserve representative numeric, temporal, and category facts", async () => {
+  const { profile: national } = nationalCaseFixture();
+  const { profile: mortality } = mortalityDateFixture();
+  const behaviour = profileDataset(parseCsvText("Answer,count\nAgree,1\nDisagree,2\nNeutral,3"));
+  const testing = profileDataset(parseCsvText("tests_per_day,group\n10,A\n20,B\n30,C"));
   const profiles = await trackedJson(profilesPath);
   const caseColumns = Object.fromEntries(
-    profiles.bio_cases.columns.map((column) => [column.name, column]),
+    national.columns.map((column) => [column.name, column]),
   );
   const behaviourColumns = Object.fromEntries(
-    profiles.socio_behaviour.columns.map((column) => [column.name, column]),
+    behaviour.columns.map((column) => [column.name, column]),
   );
   const testingColumns = Object.fromEntries(
-    profiles.bio_testing.columns.map((column) => [column.name, column]),
+    testing.columns.map((column) => [column.name, column]),
   );
 
-  assert.equal(profiles.bio_cases.rowCount, 177);
+  assert.equal(national.rowCount, 177);
   assert.equal(caseColumns.national_total_cases.type, "numeric");
   assert.deepEqual(caseColumns.national_total_cases.examples, [2, 4, 15]);
   assert.equal(caseColumns.date.type, "temporal");
@@ -188,14 +271,24 @@ test("profiles preserve representative numeric, temporal, and category facts", a
   ]);
   assert.equal(testingColumns.tests_per_day.type, "numeric");
   assert.equal(Object.hasOwn(testingColumns.tests_per_day, "temporal"), false);
-  assert.deepEqual(Object.keys(profiles.bio_cases.provenance), ["label"]);
+  assert.equal(mortality.columns.find(({ name }) => name === "Age group").type, "category");
+  assert.deepEqual(Object.keys(national.provenance), ["label"]);
+  const shippedCases = profiles["upload-cases-wcph-eldoria-3"];
+  assert.equal(shippedCases.columns.find(({ name }) => name === "national_total_cases").type, "numeric");
+  assert.equal(shippedCases.columns.find(({ name }) => name === "Date").type, "temporal");
 });
 
 test("generated columns exactly equal the runtime parser and profileDataset authority", async () => {
   const dashboard = await trackedJson(dashboardPath);
   const profiles = await trackedJson(profilesPath);
-  for (const sourceId of ["bio_cases", "bio_mortality", "socio_behaviour"]) {
+  for (const sourceId of [
+    "upload-cases-wcph-eldoria-3",
+    "upload-eldoria-work-sectors",
+    "upload-eldoria-misinformation-2021-2027-fictional",
+  ]) {
     const source = dashboard.dataSources[sourceId];
+    assert.equal(source.kind, "csv", sourceId);
+    assert.equal(profiles[sourceId].path, source.path, sourceId);
     const rows = await trackedRows(source);
     const authority = profileDataset(rows, source.parsingMetadata ?? {});
     assert.deepEqual(
@@ -212,9 +305,8 @@ test("generated columns exactly equal the runtime parser and profileDataset auth
 
 test("tracked profiles make chart binding and national time synchronization ready", async () => {
   const dashboard = await trackedJson(dashboardPath);
-  const profiles = await trackedJson(profilesPath);
-  const sourceId = "bio_cases";
-  const rows = await trackedRows(dashboard.dataSources[sourceId]);
+  const { sourceId, rows, profile } = nationalCaseFixture();
+  const profiles = { [sourceId]: profile };
   const chart = lineChart(sourceId);
   const group = {
     id: "national-outbreak",
@@ -254,10 +346,9 @@ test("tracked profiles make chart binding and national time synchronization read
 
 test("municipal repeated rows produce one playback clock point per distinct date", async () => {
   const dashboard = await trackedJson(dashboardPath);
-  const profiles = await trackedJson(profilesPath);
-  const sourceId = "bio_municipal_infections";
-  const rows = await trackedRows(dashboard.dataSources[sourceId]);
-  const profile = profiles[sourceId];
+  const sourceId = "fixture-municipal-infections";
+  const { rows, profile } = municipalRowsFixture();
+  const profiles = { [sourceId]: profile };
   const dateColumn = profile.columns.find(({ name }) => name === "Datum");
   const chart = {
     id: "municipal-map",
@@ -280,6 +371,7 @@ test("municipal repeated rows produce one playback clock point per distinct date
   };
 
   assert.equal(dateColumn.temporal.values.length, rows.length);
+  assert.equal(new Set(dateColumn.temporal.values).size, 415);
   assert.equal(
     dateColumn.temporal.values.filter((value) => value === "2020-02-27").length,
     354,
