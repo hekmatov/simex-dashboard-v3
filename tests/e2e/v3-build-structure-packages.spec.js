@@ -4,6 +4,15 @@ import { readFile } from "node:fs/promises";
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
+const SOCIO_SECTION = Object.freeze({
+  id: "socio_economic_section_1788512378053",
+  title: "Public Trust and Support",
+});
+const SOCIO_CHART = Object.freeze({
+  id: "chart-groupedBar-eafbfdd0-e768-4303-8df1-6de4f5515d73",
+  title: "Public Trust in Institutions",
+});
+
 async function openBuildStructure(page, appUrl = "/") {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto(appUrl);
@@ -290,21 +299,21 @@ test("cross-page tree selection reveals the canonical target before opening Unit
   const frame = page.locator(".canonical-dashboard-frame");
   const tree = page.getByRole("tree");
 
-  await tree.getByRole("treeitem", { name: "Public response and policy signals", exact: true }).click();
+  await tree.getByRole("treeitem", { name: SOCIO_SECTION.title, exact: true }).click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
-  const section = page.locator('[data-canonical-section-id="public_response"]');
+  const section = page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"]`);
   await expect(section).toBeInViewport();
 
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
 
-  await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).click();
+  await tree.getByRole("treeitem", { name: SOCIO_CHART.title, exact: true }).click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
-  const chart = page.locator('[data-canonical-placement-id="socio_risk_perception"]');
+  const chart = page.locator(`[data-canonical-placement-id="${SOCIO_CHART.id}"]`);
   await expect(chart).toBeVisible();
   await expect(chart).toBeInViewport();
-  await expect(page.getByRole("complementary", { name: "Chart settings for Risk perception over time" }))
+  await expect(page.getByRole("complementary", { name: `Chart settings for ${SOCIO_CHART.title}` }))
     .toBeVisible();
   await expect(page.getByText(
     "Finish or cancel the open chart editor before changing Page.", { exact: true },
@@ -315,12 +324,13 @@ test("double-click rename navigates and highlights without opening Unit Orbit", 
   await openBuildStructure(page);
   const frame = page.locator(".canonical-dashboard-frame");
   const tree = page.getByRole("tree");
-  const target = tree.getByRole("treeitem", { name: "Trust and wellbeing", exact: true });
+  const target = tree.getByRole("treeitem", { name: SOCIO_SECTION.title, exact: true });
 
+  await target.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
   await target.locator(":scope > .build-tree-row .build-tree-label").dblclick();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
-  await expect(page.locator('[data-canonical-section-id="trust_wellbeing"]')).toBeInViewport();
-  const rename = tree.getByRole("textbox", { name: "Rename section Trust and wellbeing" });
+  await expect(page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"]`)).toBeInViewport();
+  const rename = tree.getByRole("textbox", { name: `Rename section ${SOCIO_SECTION.title}` });
   await expect(rename).toBeFocused();
   await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]')).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
@@ -339,35 +349,45 @@ test("double-click rename persists complete Page Section and Chart owner updates
   await expect(page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Community response", exact: true })).toBeVisible();
 
-  await treeItemLabel(tree, "Public response and policy signals").dblclick();
+  await treeItemLabel(tree, SOCIO_SECTION.title).dblclick();
   const sectionRename = tree.getByRole("textbox", {
-    name: "Rename section Public response and policy signals",
+    name: `Rename section ${SOCIO_SECTION.title}`,
   });
-  await sectionRename.fill("Public response signals");
+  await sectionRename.fill("Public trust signals");
   await sectionRename.press("Enter");
-  await expect(tree.getByRole("treeitem", { name: "Public response signals", exact: true })).toBeVisible();
-  await expect(page.locator('[data-canonical-section-id="public_response"] h2'))
-    .toHaveText("Public response signals");
+  await expect(tree.getByRole("treeitem", { name: "Public trust signals", exact: true })).toBeVisible();
+  await expect(page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"] h2`))
+    .toHaveText("Public trust signals");
 
-  await treeItemLabel(tree, "Risk perception over time").dblclick();
+  await treeItemLabel(tree, SOCIO_CHART.title).dblclick();
   const chartRename = tree.getByRole("textbox", {
-    name: "Rename chart Risk perception over time",
+    name: `Rename chart ${SOCIO_CHART.title}`,
   });
-  await chartRename.fill("Risk perception trend");
+  await chartRename.fill("Institutional trust trend");
   await chartRename.press("Enter");
-  await expect(tree.getByRole("treeitem", { name: "Risk perception trend", exact: true })).toBeVisible();
-  await expect(page.locator('[data-canonical-placement-id="socio_risk_perception"] .panel-actions'))
-    .toHaveAttribute("aria-label", "Risk perception trend actions");
+  await expect(tree.getByRole("treeitem", { name: "Institutional trust trend", exact: true })).toBeVisible();
+  await expect(page.locator(`[data-canonical-placement-id="${SOCIO_CHART.id}"] .panel-actions`))
+    .toHaveAttribute("aria-label", "Institutional trust trend actions");
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
+  const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
+  await expect(layoutOwner).toHaveCount(1);
+  await layoutOwner.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
+  await expect.poll(() => storedSocioOwners(page)).toEqual({
+    page: { id: "socio_economic", label: "Community response" },
+    section: { id: SOCIO_SECTION.id, title: "Public trust signals" },
+    chart: { id: SOCIO_CHART.id, title: "Institutional trust trend" },
+  });
 });
 
 test("chart activation keeps the canonical target usable while mounting Unit Orbit", async ({ page }) => {
   await openBuildStructure(page);
   await page.getByRole("tree")
-    .getByRole("treeitem", { name: "Risk perception over time", exact: true })
+    .getByRole("treeitem", { name: SOCIO_CHART.title, exact: true })
     .click();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(page.locator(".unit-orbit")).toBeVisible();
-  const target = page.locator('[data-canonical-placement-id="socio_risk_perception"]');
+  const target = page.locator(`[data-canonical-placement-id="${SOCIO_CHART.id}"]`);
   await expect(target).toBeVisible();
   await expect(target).toBeInViewport();
 });
@@ -375,23 +395,41 @@ test("chart activation keeps the canonical target usable while mounting Unit Orb
 test("an untouched chart editor closes transactionally when tree navigation changes target", async ({ page }) => {
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
-  const chartItem = tree.getByRole("treeitem", { name: "Risk perception over time", exact: true });
+  const chartItem = tree.getByRole("treeitem", { name: SOCIO_CHART.title, exact: true });
   await chartItem.click();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(page.locator(".unit-orbit")).toBeVisible();
 
   await chartItem.press("ArrowLeft");
   const sectionItem = tree.getByRole("treeitem", {
-    name: "Public response and policy signals",
+    name: SOCIO_SECTION.title,
     exact: true,
   });
   await expect(sectionItem).toBeFocused();
   await sectionItem.press("Enter");
-  await expect(page.locator('[data-canonical-section-id="public_response"]')).toBeInViewport();
+  await expect(page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"]`)).toBeInViewport();
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
   await expect(page.getByText(
     "Finish or cancel the open chart editor before changing Page.", { exact: true },
   )).toHaveCount(0);
 });
+
+async function storedSocioOwners(page) {
+  return page.evaluate(({ sectionId, chartId }) => {
+    const dashboard = JSON.parse(localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
+    const owner = dashboard?.pages.find(({ id }) => id === "socio_economic");
+    const section = owner?.sections.find(({ id }) => id === sectionId);
+    const placement = section?.panels.find(({ id }) => id === chartId);
+    if (!placement) return null;
+    const chart = placement.chart ?? placement;
+    return {
+      page: { id: owner.id, label: owner.label },
+      section: { id: section.id, title: section.title },
+      chart: { id: chart.id, title: chart.title },
+    };
+  }, { sectionId: SOCIO_SECTION.id, chartId: SOCIO_CHART.id });
+}
 
 test("a storage-rejected delayed Page rename falls back to session state", async ({ page }) => {
   await page.addInitScript(() => {
