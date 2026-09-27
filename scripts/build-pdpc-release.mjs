@@ -32,6 +32,7 @@ import {
   finalizePdpcRuntimeManifest,
   verifyPdpcStaticBuild,
 } from "./verify-pdpc-static-build.mjs";
+import { createPdpcLightDefaultPlugin } from "./lib/pdpc-light-default.mjs";
 
 const execFileAsync = promisify(execFile);
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -124,13 +125,16 @@ export async function buildPdpcReleaseSet({
 }
 
 export async function buildPdpcStaticVariant({ rootDir, variant, publicDir, outputDir }) {
+  const lightDefaultPlugin = createPdpcLightDefaultPlugin({
+    themeModulePath: path.join(rootDir, "src", "theme", "dashboardTheme.js"),
+  });
   await viteBuild({
     root: rootDir,
     configFile: false,
     base: "./",
     publicDir,
     logLevel: "info",
-    plugins: [react()],
+    plugins: [react(), lightDefaultPlugin],
     define: {
       __SIMEX_PDPC_VARIANT__: JSON.stringify(variant),
     },
@@ -144,6 +148,11 @@ export async function buildPdpcStaticVariant({ rootDir, variant, publicDir, outp
       },
     },
   });
+  if (lightDefaultPlugin.appliedCount() !== 1) {
+    throw new Error(
+      `Expected the PDPC Light-default transform once; applied ${lightDefaultPlugin.appliedCount()} times.`,
+    );
+  }
   await rename(path.join(outputDir, "release.html"), path.join(outputDir, "index.html"));
 }
 

@@ -25,6 +25,20 @@ pnpm.cmd release:pdpc --bundle "C:\Users\hekma\Downloads\SimEx-dashboard-bundle-
 
 The command reads the external bundle in place. It does not copy it into the repository, modify it, or promote it over `public/config/dashboard.json`.
 
+## Cloudflare ZIP and single-file offline deliverables
+
+The combined packaging command adds a Cloudflare ZIP and a self-contained offline HTML file for each variant:
+
+```powershell
+pnpm.cmd release:pdpc:deliverables --bundle "C:\Users\hekma\Downloads\accepted-dashboard-bundle.json"
+```
+
+The default destination is `release/pdpc-deliverables`; `--out-dir` selects another local directory. The output includes `Cloudflare/biomedical`, `Cloudflare/socioeconomic`, their two upload ZIPs, and two HTML files under `Offline/`, plus manifests and a generated README. PDF generation is intentionally excluded.
+
+PDPC builds default missing, invalid or inaccessible appearance preferences to Light. Explicit saved Light, Dark and System choices are preserved; the ordinary dashboard's defaults are unchanged.
+
+The single-file converter currently recognizes specific release JavaScript, CSS, html2canvas and logo output shapes and embeds the vendor background files. Changes to chunk splitting or those assets must account for this consumer. Focused helper tests do not establish that a newly built release launches offline; verify actual artifacts at the applicable M0 or release gate.
+
 ## Validation and regeneration
 
 The command fails without publishing a partial pair when:

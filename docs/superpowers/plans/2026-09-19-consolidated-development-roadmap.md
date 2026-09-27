@@ -1,6 +1,6 @@
 # SimEx consolidated development roadmap — 19 September 2026
 
-**Document version:** 1.0; dated Markdown with Git history, as requested. This is a plan version, not an application release.
+**Document version:** 1.1; updated 27 September 2026. Dated Markdown with Git history, as requested. This is a plan version, not an application release.
 
 **Goal:** Deliver an exercise tool whose prepare → run → debrief loop is dependable, faithful across surfaces, usable by exercise staff, and ready for an approved PDPC deployment.
 
@@ -9,6 +9,8 @@
 **Stack:** React 19, Vite 6, JavaScript, ECharts 5, CSS tokens, BroadcastChannel, Node tests and Playwright. No new backend is assumed.
 
 **Status:** Planning synthesis only. Product implementation, new test results, human acceptance, publication and deployment are not claimed by this document.
+
+**27 September preparation update:** the user has paused scenario-authoring and authorized local reconciliation before M0. The [pre-M0 handoff](../../fable-pre-m0-handoff-2026-09-27.md) records the checkpoint containing the existing redesign plus the PDPC deliverables and Eldoria export carry-forwards. M0 remains unstarted; historical gate results below remain historical. Both remote mains were refreshed at `c003d111`; publishing and M0 stabilization are still outstanding. This update changes the scenario priority and records preparation, without activating any task or sending cross-chat messages.
 
 **Execution:** Implement coherent work packages with the repository's proportional workflow budget. Existing design documents already contain implementation detail; create an additional design only for a material unresolved contract. Task annotations below apply to their actions, deliverables and checks unless a sentence carries a more specific annotation. No agent roster or recurring monitor is created by this plan.
 
@@ -22,7 +24,7 @@ Yes, there are existing development plans, but they do not provide one current d
 - Repository `.planning/.continue-here.md` is an August 4 icon-design checkpoint. It is not a current product roadmap; the later icon atlas and implementation records supersede that historical pause.
 - No `docs/ROADMAP.md` existed before this consolidation. It now points here rather than duplicating this plan.
 
-### Git facts checked for this plan
+### Historical Git facts checked on 19 September
 
 | Item | Observed revision/status | Consequence |
 | --- | --- | --- |
@@ -83,8 +85,8 @@ The external workspace documents and scenario worktree records retain their exis
 | Shared chart-workflow driver | Explicit deferred follow-up | Extract/update with relevant M0 fixture repair or M1 authoring slice; preserve stable workflow IDs. [E7] |
 | PDPC release factory | Implemented foundation | Reuse for M4; revalidate only changed release boundaries. [E6] |
 | Scenario S-M1/S-M2 | Scoped complete, unmerged | Retain; no repeat implementation. [E5] |
-| Scenario S-M3 | Engineering A–D delivered, human E pending | Facilitator review and bounded correction now; supply accepted M3 rehearsal content. [E5] |
-| Scenario S-M4/S-M5/S-M6 | Planned, not completed or launched here | Detailed retained track in section 9; coordinate with dashboard M3/M4. [E5] |
+| Scenario S-M3 | Engineering A–D delivered, human E pending; workstream paused 27 September | Preserve candidate; no review or correction work until the user resumes it. Dashboard M3 may use another accepted exercise. [E5] |
+| Scenario S-M4/S-M5/S-M6 | Planned, not completed; paused 27 September | Retain section 9 as future work; do not make dashboard progress depend on this track. [E5] |
 
 The environment register records a package browser test passing from normal PowerShell after setup. That resolves that specific environment incident, not every source/static/PDPC gate. Likewise, C5's fresh-clone build failure is a recorded concern, supported by uploaded GeoJSON descriptors and the portable-builder disk-read path; this planning task has not rerun the builds.
 
@@ -109,7 +111,7 @@ The environment register records a package browser test passing from normal Powe
 | M3 Exercise rehearsal | Staff can prepare/run/debrief on actual devices | M1/M2; accepted exercise content | Pending; includes remaining mobile Option 1 |
 | M4 Deployment readiness | Governed, supportable release and real pilot | M3 blockers closed | Pending |
 
-Code splitting belongs in M0; remaining mobile changes follow M1. Scenario S-M3 review can proceed independently now. Accepted scenario content must exist before the full M3 rehearsal, but a four-model evaluation is not automatically a prerequisite for testing the dashboard with an existing accepted package.
+Code splitting belongs in M0; remaining mobile changes follow M1. Scenario-authoring is paused by the user. Accepted exercise content must exist before the full dashboard M3 rehearsal; use another accepted package while S-M3 is paused. Scenario authoring, its model evaluations and S-M3 acceptance are not prerequisites for dashboard M0–M2.
 
 **Verification discipline [E7, C5]:** add durable regressions for changed product behavior/concrete defects. Use nearest owner checks while changing code; run the complete task-specific selection once on the final candidate. Preflight fixtures, source IDs, controls and environment before browser work. Isolate setup after two failures. Repeat only invalidated checks. At explicitly declared integration/pre-merge/milestone-release gates, run required full checks once and preserve native results outside Playwright's cleared `test-results` directory. Do not call a subset a complete gate.
 
@@ -240,7 +242,7 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario S-M3 
 
 ### Ordered work packages
 
-- [ ] **M3.1 — Select and freeze the rehearsal content and device envelope. [C5, E5, N]** Obtain final S-M3 communication acceptance or use another explicitly accepted exercise. Record package/source versions, three phase cutoffs, moderator-selected Storylines, projector resolution and the least capable supported laptop/phone. Record offline setup, room roles and the actual prepare/run/debrief tasks. Do not equate the three fictional phases or weekly scenario sessions with a required wall-clock exercise duration.
+- [ ] **M3.1 — Select and freeze the rehearsal content and device envelope. [C5, E5, N]** Select another explicitly accepted exercise while scenario-authoring is paused. The S-M3 candidate is eligible only after explicit resumption and final communication acceptance. Record package/source versions, three phase cutoffs, moderator-selected Storylines, projector resolution and the least capable supported laptop/phone. Record offline setup, room roles and the actual prepare/run/debrief tasks. Do not equate the three fictional phases or weekly scenario sessions with a required wall-clock exercise duration.
   - Deliverable: a concise rehearsal packet and draft author quick start/moderator runbook, reusing existing manual and scenario artifacts.
   - Check the fixtures/packages and all required controls before the staffed rehearsal; resolve any missing candidate dependency first.
 
@@ -272,6 +274,8 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario S-M3 
 ## 9. Retained scenario-authoring milestones
 
 These remain the existing scenario programme, with its own planning steward and human fictional/content authority. `S-` is only an unambiguous label in this consolidated roadmap. No additional model runs, tasks or evaluation lanes are launched by writing it. Model availability must be checked when a run is actually authorized; retain the original comparison conditions or explicitly document a necessary revision.
+
+**Paused by the user, 27 September 2026.** All actions below are retained for a future explicit resumption. Preserve the scenario branches, worktree changes, source records and generated packages; do not merge them into dashboard main or request acceptance to unblock Fable. Existing completion and pending-acceptance records are unchanged. No messages have been sent to the scenario owners.
 
 | Milestone | Recorded state | Relationship to dashboard roadmap |
 | --- | --- | --- |
@@ -366,13 +370,13 @@ Every additional Claude recommendation is retained here or assigned above. “De
 
 ## 12. Decisions and next implementation boundary
 
-**Immediate engineering priority:** M0.1–M0.3, beginning with verified baseline and the smallest fixture/portable-build boundary. In parallel organizational work, obtain the already-pending S-M3 facilitator review through its existing owner. [C5, E5, N]
+**Next engineering priority, after review of the pre-M0 handoff:** finish M0.1 baseline/publication disposition, then M0.2–M0.3 through the smallest fixture/portable-build boundary. Local carry-forward reconciliation is prepared; no M0 implementation has started. Keep scenario-authoring paused and do not activate its owners. [C5, E5, N]
 
 The following choices are not needed to finish this planning document, but must be resolved before their dependent work closes:
 
 - **Publication/baseline [E7, N]:** reconcile the fact that the redesign is local while both remotes still point at `c003d111`; preserve explicit merge/push/deployment authority.
 - **Performance [C5, N]:** confirm reference devices and ratify measurable bundle/runtime budgets; proposed starting numbers appear in M0.4 and M3.3.
-- **Content and practitioners [C5, E5]:** accept S-M3 or select another accepted rehearsal package; nominate exercise staff and their three desired comparisons.
+- **Content and practitioners [C5, E5]:** select another accepted rehearsal package while scenario-authoring is paused; nominate exercise staff and their three desired comparisons. S-M3 acceptance becomes relevant only after explicit resumption and selection of that candidate.
 - **Release scope [C5, E5]:** decide whether supported 1.0 includes scenario-authoring or only the dashboard consuming accepted packages. Scenario milestones remain tracked either way.
 - **External commitments [C5]:** actual PDPC brand approval, support ownership/response window, hosting target and real pilot participants.
 

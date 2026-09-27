@@ -6,6 +6,6 @@ That dated document is the authoritative dashboard sequencing and carryover inde
 
 Sequence: **M0 Stable ground → M1 Fidelity → M2 Time and story → M3 Exercise rehearsal → M4 Deployment readiness**. M0 is the prerequisite before the four delivery milestones.
 
-The scenario-authoring workstream retains its own existing plan and stewardship. The consolidated plan calls its milestones **S-M1–S-M6** to distinguish them from dashboard M1–M4.
+The scenario-authoring workstream is **paused by the user as of 27 September 2026**. It retains its existing plan, branches and stewardship, but does not block dashboard work. The consolidated plan calls its milestones **S-M1–S-M6** to distinguish them from dashboard M1–M4.
 
-Baseline at preparation: local redesign merge `0e7e9e33`; refreshed `origin/main` and `public/main` both `c003d111`. Publication of the local merge remains outstanding. This planning update does not publish or deploy the application.
+The [27 September pre-M0 handoff](fable-pre-m0-handoff-2026-09-27.md) records the local reconciliation checkpoint, focused verification, preserved branches and remaining M0 work. It is a handoff for user review, not a second roadmap. M0 implementation has not started. Both refreshed remote mains remain at `c003d111`; publication remains outstanding.

@@ -22,14 +22,14 @@ The existing image sits inside the Misinformation text box under Socio-Economic 
 | Year | Regular exposure | Concern |
 | --- | ---: | ---: |
 | 2021 | 29% | 37% |
-| 2022 | 33% | 40% |
-| 2023 | 31% | 39% |
-| 2024 | 36% | 44% |
+| 2022 | 33% | 38% |
+| 2023 | 31% | 42% |
+| 2024 | 36% | 41% |
 | 2025 | 37% | 46% |
 | 2026 | 41% | 48% |
 | 2027 briefing | 52% | 58% |
 
-The earlier exposure values retain the original 2021 and 2026 endpoints, with a modest 2023 dip and slower growth in 2025. Annual changes before 2027 range from −2 to +5 percentage points; the final +11-point increase is distinctly larger. Concern broadly follows exposure but has different annual changes, so it is not a fixed-offset copy. Whole percentages avoid spurious precision. These fluctuations and the 2027 jump are authored scenario assumptions, not evidence of specific events or statistical uncertainty.
+The earlier exposure values retain the original 2021 and 2026 endpoints, with a modest 2023 dip and slower growth in 2025. Annual changes before 2027 range from −2 to +5 percentage points; the final +11-point increase is distinctly larger. Concern rises only slightly in 2022, continues rising while exposure dips in 2023, and eases in 2024 while exposure recovers. Its stronger 2025 rise contrasts with nearly flat exposure. Both then spike at the 2027 briefing, by +11 points for exposure and +10 for concern. The different timing reflects two distinct indicators rather than a mechanically linked pair. Whole percentages avoid spurious precision. These fluctuations and the 2027 jump are authored scenario assumptions, not evidence of specific events, a causal relationship or statistical uncertainty.
 
 ## Suggested section copy
 
