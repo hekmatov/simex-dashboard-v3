@@ -7,6 +7,7 @@ import {
   openDashboardFromLanding,
 } from "./support/landingWorkflow.js";
 import { openAudienceSession } from "./support/present-audience-workflow.js";
+import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -346,6 +347,8 @@ test("Present opens an audience window and sends a two-chart layout", async ({ p
 });
 
 test("Present retains synchronized time through blackout, reload, disconnect, and reopen", async ({ page }) => {
+  await installPageRemovalGroups(page);
+  await page.reload();
   await enterPresent(page);
   await installAudienceStateObserver(page);
   const audience = await openAudience(page);
