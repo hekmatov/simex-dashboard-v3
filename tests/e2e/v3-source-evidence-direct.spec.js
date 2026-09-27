@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
+const CHART_ID = "chart-line-mtgz6v76";
+const SOURCE_ID = "upload-cases-wcph-eldoria-3";
 
 test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -14,7 +16,7 @@ test.beforeEach(async ({ page, request }) => {
 
 test("Build chart evidence action opens the dedicated viewer and returns to its invoker", async ({ page }) => {
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator(`[data-panel-id="${CHART_ID}"]`);
   await panel.scrollIntoViewIfNeeded();
   const sourceAction = panel.getByRole("button", { name: "View source CSV", exact: true });
   await expect(sourceAction).toBeVisible();
@@ -29,11 +31,16 @@ test("Build chart evidence action opens the dedicated viewer and returns to its 
   await sourceAction.click();
   const viewer = await popupPromise;
   await viewer.waitForLoadState("domcontentloaded");
-  await expect(viewer.getByRole("heading", { name: "Biomedical cases", exact: true })).toBeVisible();
+  await expect(viewer.getByRole("heading", { name: "Uploaded cases WCPH-eldoria.csv", exact: true })).toBeVisible();
   const provenance = viewer.getByRole("definition");
   await expect(viewer.getByText("Invoking chart", { exact: true })).toBeVisible();
-  await expect(provenance).toContainText(["Confirmed cases", "national_total_cases", "bio_cases", "data/biomedical/cases.csv"]);
-  await expect(viewer.getByText("177 of 177 rows", { exact: true })).toBeVisible();
+  await expect(provenance).toContainText([
+    "National Confirmed Cases (cumulative)",
+    "national_total_cases",
+    SOURCE_ID,
+    "data/uploaded/cases-WCPH-eldoria-upload-cases-wcph-eldoria-3.csv",
+  ]);
+  await expect(viewer.getByText("8 of 8 rows", { exact: true })).toBeVisible();
 
   const closePromise = viewer.waitForEvent("close");
   await viewer.getByRole("button", { name: "Return to dashboard" }).click();
