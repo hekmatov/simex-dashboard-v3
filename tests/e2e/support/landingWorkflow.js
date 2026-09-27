@@ -19,7 +19,7 @@ export async function enterAuthoredDashboard(page) {
   const modes = page.getByLabel("Dashboard mode");
   await modes.waitFor({ state: "visible" });
   const home = modes.getByRole("button", { name: "Home", exact: true });
-  if (await home.getAttribute("aria-pressed") === "true") {
+  if (await home.count() > 0 && await home.getAttribute("aria-pressed") === "true") {
     await openDashboardFromLanding(page);
   }
 }

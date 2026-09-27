@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { openChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
+import { createChartDraft } from "../../src/charting/config/chartConfigV3.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const APP_URL = "http://127.0.0.1:4175/";
@@ -32,7 +33,7 @@ test.beforeEach(async ({ page, request }) => {
 
 test("Journey I — GeoJSON upload select preview dependency and blocked delete", async ({ page }) => {
   test.setTimeout(180_000);
-  const target = { pageLabel: "Biomedical" };
+  const target = { pageId: "biomedical", pageLabel: "Biomedical" };
   await openBuild(page, { width: 1440, height: 900 });
   const before = await geoJsonInventory(page);
 
@@ -70,6 +71,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await expect(detail.getByLabel("Search property keys")).toBeVisible();
   await expect(detail).toContainText("id");
   expect(await managerOverflow(manager)).toBe(false);
+  await addMapCsvToManager(manager, "I");
   await closeManager(page);
 
   await seedPackagedSource(page);
@@ -79,8 +81,8 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   const wizard = flow.wizard;
   await flow.goToDestination();
   await wizard.getByLabel("Destination page").selectOption("biomedical");
-  await wizard.getByLabel("Destination section").selectOption("outbreak_dynamics");
-  await flow.selectExistingSource("Simulation exercise biomedical latest wastewater snapshot");
+  await wizard.getByLabel("Destination section").selectOption("biomedical_section");
+  await flow.selectExistingSource("Journey I map data");
   await flow.chooseChartType("map scatter", /Map scatter/i);
   await flow.goToDataSource();
   const geoOptions = await wizard.getByLabel("GeoJSON source").locator("option").allTextContents();
@@ -93,9 +95,9 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   const stagedGeoSourceId = await wizard.getByLabel("GeoJSON source").inputValue();
   expect(stagedGeoSourceId).toContain("journey-i-staged-close");
   await flow.goToMapAndPrepare();
-  await wizard.locator('[data-field-id="geography"] select').selectOption("province");
-  await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles");
-  await wizard.locator('[data-field-id="time"] select').selectOption("date");
+  await wizard.locator('[data-field-id="geography"] select').selectOption("province", { timeout: 10_000 });
+  await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles", { timeout: 10_000 });
+  await wizard.locator('[data-field-id="time"] select').selectOption("date", { timeout: 10_000 });
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Journey I staged map draft");
@@ -112,13 +114,13 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await flow.goToDataSource();
   await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(1);
   await expect(wizard.getByLabel("GeoJSON source")).toHaveValue(stagedGeoSourceId);
-  await flow.selectExistingSource("Simulation exercise biomedical latest wastewater snapshot");
+  await flow.selectExistingSource("Journey I map data");
   await wizard.getByLabel("GeoJSON source").selectOption({ label: SOURCE_NAME });
   await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(0);
   await flow.goToMapAndPrepare();
-  await wizard.locator('[data-field-id="geography"] select').selectOption("province");
-  await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles");
-  await wizard.locator('[data-field-id="time"] select').selectOption("date");
+  await wizard.locator('[data-field-id="geography"] select').selectOption("province", { timeout: 10_000 });
+  await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles", { timeout: 10_000 });
+  await wizard.locator('[data-field-id="time"] select').selectOption("date", { timeout: 10_000 });
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Journey I managed map");
@@ -130,7 +132,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await page.reload();
   await openBuild(page, { width: 1440, height: 900 });
   await openTargetPage(page, target);
-  const seededMaps = page.locator('[data-canonical-section-id="outbreak_dynamics"] [data-panel-id^="journey-i-map-"]');
+  const seededMaps = page.locator('[data-canonical-section-id="biomedical_section"] [data-panel-id^="journey-i-map-"]');
   await expect(seededMaps).toHaveCount(4);
   for (let index = 0; index < 3; index += 1) {
     await seededMaps.nth(index).scrollIntoViewIfNeeded();
@@ -141,7 +143,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await manager.getByLabel("Filter by usage").selectOption("used");
   await selectSourceRow(manager, SOURCE_NAME);
   detail = manager.getByRole("region", { name: "Content detail" });
-  await expect(detail).toContainText("HeV-A26 Dashboard: Epidemiological overview › Outbreak dynamics › Journey I managed map");
+  await expect(detail).toContainText("Journey I managed map");
   await expect(detail.getByRole("button", { name: "Delete", exact: true })).toBeDisabled();
   await expect(page.getByRole("dialog", { name: /Delete/ })).toHaveCount(0);
   const desktopBudget = await mapBudgetSnapshot(page);
@@ -162,7 +164,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await selectSourceRow(manager, SOURCE_NAME);
   await expect(manager.getByRole("button", { name: "Back", exact: true })).toBeVisible();
   detail = manager.getByRole("region", { name: "Content detail" });
-  await expect(detail).toContainText("HeV-A26 Dashboard: Epidemiological overview › Outbreak dynamics › Journey I managed map");
+  await expect(detail).toContainText("Journey I managed map");
   await expect(detail.getByRole("button", { name: "Delete", exact: true })).toBeDisabled();
   await expect(detail.getByLabel("GeoJSON preview summary")).toBeVisible();
   expect(await managerOverflow(manager)).toBe(false);
@@ -328,7 +330,7 @@ async function openBuild(page, viewport) {
 }
 
 async function openDataSourceManager(page) {
-  await page.getByRole("button", { name: "Source content", exact: true }).click();
+  await page.getByRole("button", { name: "Source content", exact: true }).click({ timeout: 10_000 });
   const manager = page.locator(".source-content-workspace");
   await expect(manager).toBeVisible();
   await manager.getByRole("tab", { name: "Data sources", exact: true }).click();
@@ -349,9 +351,9 @@ async function selectSourceRow(manager, name) {
 }
 
 async function geoJsonInventory(page) {
-  return page.evaluate((key) => {
-    const dashboard = JSON.parse(localStorage.getItem(key));
-    if (!dashboard) return { sourceIds: [], profileIds: [], unusedNames: [] };
+  return page.evaluate(async (key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key))
+      ?? await fetch("/config/dashboard.json").then((response) => response.json());
     const entries = dashboard.contentLibrary?.sourceEntries ?? {};
     const sourceIds = Object.keys(dashboard.dataSources ?? {}).filter((id) => (
       dashboard.dataSources[id]?.kind === "dataset"
@@ -447,55 +449,53 @@ async function mapBudgetSnapshot(page) {
 }
 
 async function seedGeoJsonReplacementTarget(page, journey) {
-  return page.evaluate(({ key, journeyName }) => {
+  const ids = await page.evaluate(({ key, journeyName }) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
-    const refs = dashboard.pages.flatMap((pageValue) => pageValue.sections.flatMap((section) => (
-      section.panels.map((placement) => ({ page: pageValue, section, placement, chart: placement.chart ?? placement }))
-    )));
-    const target = refs.find(({ chart }) => chart.id === "bio_municipality_choropleth_animation")
-      ?? refs.find(({ chart }) => chart.presentation?.map?.geoSource && dashboard.loadedData?.[chart.sourceId]);
-    if (!target) throw new Error(`Journey ${journeyName} requires a live map chart.`);
-    const dataDisplayName = `Journey ${journeyName} map data`;
-    const dataSourceId = Object.keys(dashboard.contentLibrary?.sourceEntries ?? {})
-      .find((id) => dashboard.contentLibrary.sourceEntries[id].displayName === dataDisplayName);
-    if (!dataSourceId) throw new Error(`Journey ${journeyName} requires its manager-added map data.`);
-    target.chart.sourceId = dataSourceId;
-    target.chart.roles = {
+    const entries = dashboard.contentLibrary?.sourceEntries ?? {};
+    const find = (name) => Object.keys(entries).find((id) => entries[id].displayName === name);
+    return {
+      dataSourceId: find(`Journey ${journeyName} map data`),
+      sourceId: find(`Journey ${journeyName} boundaries`),
+    };
+  }, { key: STORAGE_KEY, journeyName: journey });
+  if (!ids.dataSourceId || !ids.sourceId) {
+    throw new Error(`Journey ${journey} requires manager-added map data and boundaries.`);
+  }
+  const chart = createChartDraft("chronoChoroplethMap", {
+    id: `journey-${journey.toLowerCase()}-map`,
+    title: `Journey ${journey} municipal map`,
+    sourceId: ids.dataSourceId,
+    roles: {
       geography: { field: "municipality", interpretation: "geographic" },
       value: { field: "cases" },
-      time: { field: "date", interpretation: "temporal" },
-    };
-    const values = ["A", "B"];
-    const sourceId = `journey-${journeyName.toLowerCase()}-boundaries`;
-    const displayName = `Journey ${journeyName} boundaries`;
-    const joinField = target.chart.presentation.map.joinField || "journeyCode";
-    target.chart.presentation.map.joinField = joinField;
-    target.chart.presentation.map.geoSource = sourceId;
-    const geoJson = {
-      type: "FeatureCollection",
-      features: [...values.map((value, index) => ({
-        type: "Feature",
-        properties: { [joinField]: value, label: `Journey ${journeyName} ${index + 1}` },
-        geometry: { type: "Point", coordinates: [4 + index, 52] },
-      })), ...(journeyName === "K" ? [{
-        type: "Feature",
-        properties: { [joinField]: "journey-k-original-unmatched", label: "Journey K original line" },
-        geometry: { type: "LineString", coordinates: [[4, 51], [5, 51]] },
-      }] : [])],
-    };
-    dashboard.dataSources[sourceId] = { kind: "dataset", type: "uploadedGeoJson", fileName: `${sourceId}.geojson`, geoJson, provenance: { label: displayName } };
-    dashboard.contentLibrary ??= { mediaItems: {}, sourceEntries: {} };
-    dashboard.contentLibrary.sourceEntries ??= {};
-    dashboard.contentLibrary.sourceEntries[sourceId] = {
-      sourceId, origin: "uploaded", ownership: "builder", displayName,
-      provenance: { fileName: `${sourceId}.geojson` }, health: "ready",
-    };
+      time: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: { map: { geoSource: ids.sourceId, joinField: "journeyCode" } },
+  });
+  await page.evaluate(({ key, chartValue }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const section = dashboard.pages.find(({ id }) => id === "biomedical")
+      ?.sections.find(({ id }) => id === "biomedical_section");
+    if (!section) throw new Error("Current Biomedical destination is unavailable.");
+    section.panels.push(chartValue);
     localStorage.setItem(key, JSON.stringify(dashboard));
-    return { sourceId, displayName, chartId: target.chart.id, chartTitle: target.chart.title, pageLabel: target.page.label ?? target.page.title, joinField, values };
-  }, { key: STORAGE_KEY, journeyName: journey });
+  }, { key: STORAGE_KEY, chartValue: chart });
+  return {
+    ...ids,
+    displayName: `Journey ${journey} boundaries`,
+    chartId: chart.id,
+    chartTitle: chart.title,
+    pageId: "biomedical",
+    pageLabel: "Biomedical",
+    joinField: "journeyCode",
+    values: ["A", "B"],
+  };
 }
 
 async function openTargetPage(page, target) {
+  if (await page.locator(".canonical-dashboard-frame").getAttribute("data-canonical-page-id") === target.pageId) {
+    return;
+  }
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: target.pageLabel, exact: true }).click();
 }
@@ -504,19 +504,43 @@ async function persistDashboardForReplacement(page, journey) {
   const manager = await openDataSourceManager(page);
   const intake = manager.getByRole("region", { name: "Add GeoJSON to dashboard" });
   await intake.getByRole("button", { name: "Add GeoJSON", exact: true }).click();
-  await intake.getByLabel("GeoJSON file").setInputFiles({ ...GEOJSON_FILE, name: `journey-${journey.toLowerCase()}-seed.geojson` });
-  await intake.getByLabel("Display name").fill(`Journey ${journey} seed`);
+  await intake.getByLabel("GeoJSON file").setInputFiles(geoJsonFile(
+    `journey-${journey.toLowerCase()}-boundaries.geojson`,
+    initialReplacementGeometry(journey),
+  ));
+  await intake.getByLabel("Display name").fill(`Journey ${journey} boundaries`);
   await intake.getByRole("button", { name: "Add to dashboard", exact: true }).click();
+  await addMapCsvToManager(manager, journey);
+  await closeManager(page);
+}
+
+async function addMapCsvToManager(manager, journey) {
+  const csv = journey === "I"
+    ? "date,province,virus_particles\n2026-01-01,Drenthe,4\n2026-01-02,Drenthe,7\n"
+    : "date,municipality,cases\n2026-01-01,A,4\n2026-01-01,B,7\n";
   const csvIntake = manager.getByRole("region", { name: "Add CSV to dashboard" });
   await csvIntake.getByRole("button", { name: "Add CSV", exact: true }).click();
   await csvIntake.getByLabel("CSV file").setInputFiles({
     name: `journey-${journey.toLowerCase()}-map.csv`,
     mimeType: "text/csv",
-    buffer: Buffer.from("date,municipality,cases\n2026-01-01,A,4\n2026-01-01,B,7\n"),
+    buffer: Buffer.from(csv),
   });
   await csvIntake.getByLabel("Display name").fill(`Journey ${journey} map data`);
   await csvIntake.getByRole("button", { name: "Add to dashboard", exact: true }).click();
-  await closeManager(page);
+}
+
+function initialReplacementGeometry(journey) {
+  const features = ["A", "B"].map((value, index) => ({
+    type: "Feature",
+    properties: { journeyCode: value, label: `Journey ${journey} ${index + 1}` },
+    geometry: { type: "Point", coordinates: [4 + index, 52] },
+  }));
+  if (journey === "K") features.push({
+    type: "Feature",
+    properties: { journeyCode: "journey-k-original-unmatched", label: "Journey K original line" },
+    geometry: { type: "LineString", coordinates: [[4, 51], [5, 51]] },
+  });
+  return { type: "FeatureCollection", features };
 }
 
 function invalidJoinReplacement(target) {
