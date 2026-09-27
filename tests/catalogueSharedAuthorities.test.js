@@ -4,7 +4,9 @@ import { readFile } from "node:fs/promises";
 
 import {
   createChartDraft,
+  validateChartInstance,
 } from "../src/charting/config/chartConfigV3.js";
+import { collectionConsumerFixture } from "./fixtures/collectionConsumerV3.js";
 import {
   analyzeGeographyJoin,
 } from "../src/charting/data/geographyJoin.js";
@@ -215,10 +217,8 @@ test("KPI to Bullet is a remap while exposing required target binding work", () 
 
 test("the configured current-cases KPI excludes the retired Bullet conversion while retaining its role plan", async () => {
   const { dashboard, aliases } = await trackedInputs();
-  const chart = configuredChart(
-    dashboard,
-    "bio_current_cases_kpi",
-  );
+  const chart = collectionConsumerFixture().collection;
+  assert.equal(validateChartInstance(chart), chart);
   const plan = planChartConversion(chart, "bullet");
   const bullet = listChartSchemas().find(
     ({ typeId }) => typeId === "bullet",
@@ -441,14 +441,6 @@ function maximalRoleAssignments(schema) {
       role.max === null ? [binding] : binding,
     ];
   }));
-}
-
-function configuredChart(dashboard, chartId) {
-  return dashboard.pages
-    .flatMap((page) => page.sections)
-    .flatMap((section) => section.panels)
-    .map((panel) => panel.chart ?? panel)
-    .find(({ id }) => id === chartId);
 }
 
 function expectedPreservedRoleIds(sourceRoles, target) {

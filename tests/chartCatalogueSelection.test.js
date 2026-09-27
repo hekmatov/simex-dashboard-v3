@@ -11,6 +11,7 @@ import {
   getChartSchema,
 } from "../src/charting/schemas/chartSchemaRegistry.js";
 import {
+  listManageableSourceEntries,
   resolveSourceEntryLabels,
 } from "../src/content-library/sourceEntrySchema.js";
 import { validateDatasetProfiles } from "../src/lib/loadDashboard.js";
@@ -176,22 +177,42 @@ test("shipped biomedical source names are specific and runtime-compatible with d
     "utf8",
   ));
   const expected = {
-    bio_admissions: "Biomedical admissions",
-    bio_cases: "Biomedical cases",
-    bio_healthcare_cases: "Biomedical healthcare cases",
-    bio_hospital_occupancy: "Biomedical hospital occupancy",
-    bio_icu_occupancy: "Biomedical ICU occupancy",
-    bio_mortality: "Biomedical mortality by age",
-    bio_municipal_infections: "Biomedical municipal infections",
-    bio_occupancy_gauges: "Biomedical occupancy gauges",
-    bio_province_cases: "Biomedical province cases",
-    bio_r_values: "Biomedical R values",
-    bio_testing: "Biomedical testing",
+    "upload-cases-wcph-internationaal-2": "cases WCPH internationaal",
+    "upload-cases-wcph-eldoria-3": "cases WCPH eldoria",
+    "upload-eldoria-baseline-public-support": "eldoria baseline public support",
+    "upload-eldoria-loneliness": "eldoria loneliness",
+    "upload-eldoria-trust-in-government": "eldoria trust in government",
+    "upload-eldoria-income-distribution": "eldoria income distribution",
+    "upload-eldoria-work-sectors": "eldoria work sectors",
+    "upload-eldoria-institutional-trust-comparison-fictional": "eldoria institutional trust comparison fictional",
+    "upload-eldoria-misinformation-2021-2027-fictional": "eldoria misinformation 2021 2027 fictional",
   };
 
+  const csvIds = Object.keys(dashboard.dataSources).filter(
+    (sourceId) => dashboard.dataSources[sourceId].kind === "csv",
+  );
+  assert.deepEqual(csvIds.toSorted(), Object.keys(expected).toSorted());
+  const manageable = listManageableSourceEntries(
+    dashboard.contentLibrary,
+    dashboard.dataSources,
+  );
+  const labels = new Map(resolveSourceEntryLabels(
+    manageable,
+    dashboard.dataSources,
+  ).map(({ sourceId, label }) => [sourceId, label]));
   for (const [sourceId, label] of Object.entries(expected)) {
-    assert.equal(dashboard.contentLibrary.sourceEntries[sourceId].displayName, label);
-    assert.equal(dashboard.dataSources[sourceId].provenance.label, label);
+    const entry = dashboard.contentLibrary.sourceEntries[sourceId];
+    const source = dashboard.dataSources[sourceId];
+    const profile = datasetProfiles[sourceId];
+    assert.equal(entry.sourceId, sourceId);
+    assert.equal(entry.ownership, "builder");
+    assert.equal(entry.origin, "uploaded");
+    assert.equal(entry.displayName, label);
+    assert.equal(labels.get(sourceId), label);
+    assert.equal(profile.sourceId, sourceId);
+    assert.equal(profile.kind, "csv");
+    assert.equal(profile.path, source.path);
+    assert.equal(entry.provenance.profileFingerprint, profile.fingerprint);
   }
   assert.equal(new Set(Object.values(expected)).size, Object.keys(expected).length);
   assert.doesNotThrow(() => validateDatasetProfiles(

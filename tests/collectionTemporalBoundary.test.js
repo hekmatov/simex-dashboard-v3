@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import { register } from "node:module";
 import test from "node:test";
 
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import {
   buildEditorFormModel,
   buildFormPreparationKey,
 } from "../src/charting/forms/formModel.js";
 import { validateChronoGroups } from "../src/charting/time/chronoGroupModel.js";
+import { collectionConsumerFixture } from "./fixtures/collectionConsumerV3.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -100,11 +101,8 @@ test("Collection rotation never pauses for Chrono playback", () => {
   }), false);
 });
 
-test("the tracked dashboard keeps authored Collection Displays outside Chrono Groups", async () => {
-  const dashboard = JSON.parse(await readFile(
-    new URL("../public/config/dashboard.json", import.meta.url),
-    "utf8",
-  ));
+test("the tracked dashboard keeps authored Collection Displays outside Chrono Groups", () => {
+  const { dashboard, timeline, rows: collectionRows, profile: collectionProfile } = collectionConsumerFixture();
   const collectionCharts = configuredCharts(dashboard).filter(
     (chart) => chart.presentation?.collection != null,
   );
@@ -115,6 +113,19 @@ test("the tracked dashboard keeps authored Collection Displays outside Chrono Gr
   );
 
   assert.ok(collectionCharts.length > 0);
+  assert.ok(memberIds.size > 0);
+  const preparedTimeline = prepareChartData({
+    chart: timeline,
+    rows: collectionRows,
+    datasetProfile: collectionProfile,
+  });
+  assert.equal(preparedTimeline.status, "ready");
+  assert.ok(preparedTimeline.marks.length > 0);
+  assert.doesNotThrow(() => validateChronoGroups(dashboard.chronoGroups, {
+    charts: configuredCharts(dashboard),
+    loadedData: { primary: collectionRows },
+    profiles: { primary: collectionProfile },
+  }));
   for (const chart of collectionCharts) {
     assert.equal(memberIds.has(chart.id), false, chart.id);
     assert.equal(chart.interaction?.timeSync ?? null, null, chart.id);

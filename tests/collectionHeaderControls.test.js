@@ -4,8 +4,15 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { readFile } from "node:fs/promises";
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
+import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
+import {
+  chartPanelFootprintStyle,
+  resolveChartFootprint,
+} from "../src/components/chartPanelLayout.js";
+import { collectionConsumerFixture } from "./fixtures/collectionConsumerV3.js";
 
-const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
+const vite = await createServer({ root: process.cwd(), configFile: false, appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
 const carousel = await vite.ssrLoadModule("/src/components/collection/CollectionCarousel.jsx");
 await vite.close();
 
@@ -47,8 +54,18 @@ test("production collection renderers target the chart-header host and Build ord
   assert.ok(actions.lastIndexOf('id: "remove"') > actions.indexOf('id: "edit"'));
 });
 
-test("the accepted multi-page fixture retains the 2 by 1 header-capable footprint", async () => {
-  const dashboard = JSON.parse(await readFile(new URL("../public/config/dashboard.json", import.meta.url), "utf8"));
-  const chart = dashboard.pages.flatMap(({ sections }) => sections).flatMap(({ panels }) => panels).map((panel) => panel.chart ?? panel).find(({ id }) => id === "bio_current_cases_kpi");
-  assert.equal(chart.layout.size, "standard");
+test("the accepted multi-page fixture retains the 2 by 1 header-capable footprint", () => {
+  const { dashboard, collection, rows, profile } = collectionConsumerFixture();
+  const prepared = prepareChartData({ chart: collection, rows, datasetProfile: profile });
+  const model = buildRenderModel({ chart: collection, prepared });
+  assert.equal(dashboard.pages.length, 2);
+  assert.equal(dashboard.pages[1].sections[0].panels[0].chart, collection);
+  assert.ok(collection.presentation.collection);
+  assert.equal(prepared.status, "ready");
+  assert.equal(model.items.length, 2);
+  assert.equal(Math.ceil(model.items.length / (
+    collection.presentation.collection.rows * collection.presentation.collection.columns
+  )), 2);
+  assert.deepEqual(resolveChartFootprint(collection.layout), { columns: 2, rows: 1 });
+  assert.equal(chartPanelFootprintStyle(collection.layout)["--chart-footprint-row-span"], 8);
 });
