@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 test("chart wizard stage labels and statuses use two unclipped lines at desktop width", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -33,6 +34,7 @@ test("chart wizard stage labels and statuses use two unclipped lines at desktop 
 
 test("the default Chrono date is compact and clears the dashboard identity header", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await installPageRemovalGroups(page);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();

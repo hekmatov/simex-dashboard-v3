@@ -1,6 +1,7 @@
 import { openChartAuthoring } from "./chart-authoring-workflow.js";
 import { choosePanelAction, chooseSectionAction, enterBuildMode, openSourceContent, panelMenu, propertiesPane, sectionMenu, structureRail } from "./buildWorkflow.js";
 import { openDashboardPage } from "./landingWorkflow.js";
+import { installPageRemovalGroups } from "./layoutReviewFixture.js";
 import { dashboardJourneyGroupingRoleFor } from "../../../src/theme/dashboardSurfaceRoles.js";
 
 const DESKTOP_STANDARD = Object.freeze({ width: 1440, height: 900 });
@@ -1030,6 +1031,7 @@ async function setupSceneStudioArrange(context) {
 }
 
 async function setupSceneUnitOrbit(context) {
+  await installPageRemovalGroups(context.page);
   const { page } = await setupSceneStudioArrange(context);
   const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await studio.locator(".scene-arrangement-board[data-board='scene'] .scene-chart-title").first().click();
@@ -1064,14 +1066,14 @@ async function setupChartWizardSourceListbox(context) {
 
 async function setupChartWizardChartType(context) {
   const { page, flow } = await openChartWizard(context);
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource("eldoria loneliness");
   await flow.goToChartType();
   return { page };
 }
 
 async function setupChartWizardMapAndPrepare(context) {
   const { page, flow } = await openChartWizard(context);
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource("eldoria loneliness");
   await flow.chooseChartType("pie", /^Pie\b/i);
   await flow.goToMapAndPrepare();
   return { page };
@@ -1079,11 +1081,11 @@ async function setupChartWizardMapAndPrepare(context) {
 
 async function setupChartWizardConfigure(context) {
   const { page, flow } = await openChartWizard(context);
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource("eldoria loneliness");
   await flow.chooseChartType("pie", /^Pie\b/i);
   await flow.goToMapAndPrepare();
   await flow.selectRole("category", "Age group");
-  await flow.selectRole("value", "deaths");
+  await flow.selectRole("value", "Percent reporting frequent loneliness");
   await flow.goToConfigure();
   await flow.wizard.locator(".chart-authoring-preview-ready").waitFor();
   return { page };

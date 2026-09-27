@@ -45,3 +45,12 @@ export function withPageRemovalGroups(dashboard) {
   ];
   return fixture;
 }
+
+export async function installPageRemovalGroups(page) {
+  const response = await page.request.get("http://127.0.0.1:4173/config/dashboard.json");
+  if (!response.ok()) throw new Error(`Dashboard fixture request failed: ${response.status()}`);
+  const fixture = withPageRemovalGroups(await response.json());
+  await page.addInitScript((dashboard) => {
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(dashboard));
+  }, fixture);
+}
