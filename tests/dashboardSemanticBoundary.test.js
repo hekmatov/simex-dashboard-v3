@@ -26,6 +26,7 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "configVersion",
     "contentLibrary",
     "dataSources",
+    "datasetProfiles",
     "description",
     "globalStyles",
     "home",
@@ -35,6 +36,7 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "pages",
     "programLabel",
     "scenarioLabel",
+    "scenes",
     "timezone",
     "title",
   ],
@@ -49,7 +51,6 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
   section: [
     "description",
     "id",
-    "layout",
     "panels",
     "title",
   ],
@@ -90,15 +91,47 @@ test("the strict semantic boundary covers the current showcase structure exactly
       canonicalDashboardSemanticsBytes(dashboard, aliases),
     ),
   );
+  const { datasetProfiles: _runtimeProfiles, ...semanticDashboard } = dashboard;
   assert.deepEqual(semanticDocument, {
     aliases,
-    dashboard,
+    dashboard: semanticDashboard,
   });
+});
+
+test("runtime profiles are accepted without changing packaged catalogue identity", async () => {
+  const { dashboard, aliases, profiles } = await trackedInputs();
+  const persisted = await readJson("public/integration/quorum-chart-catalogue.json");
+  const { datasetProfiles: _runtimeProfiles, ...semanticDashboard } = dashboard;
+  assert.ok(Object.keys(profiles).length > 0);
+  assert.deepEqual(dashboard.datasetProfiles, profiles);
+  const semanticDigest = nodeSha256(
+    canonicalDashboardSemanticsBytes(semanticDashboard, aliases),
+  );
+  assert.equal(
+    nodeSha256(canonicalDashboardSemanticsBytes(dashboard, aliases)),
+    semanticDigest,
+  );
+  const changedProfiles = structuredClone(dashboard);
+  changedProfiles.datasetProfiles = { ...profiles, fixture: { fingerprint: "runtime-only" } };
+  assert.equal(
+    nodeSha256(canonicalDashboardSemanticsBytes(changedProfiles, aliases)),
+    semanticDigest,
+  );
+  assert.deepEqual(
+    await buildChartCatalogueSnapshot(dashboard, aliases, nodeSha256),
+    await buildChartCatalogueSnapshot(semanticDashboard, aliases, nodeSha256),
+  );
+  assert.equal(
+    await catalogueMatchesDashboardSnapshot(semanticDashboard, aliases, persisted, nodeSha256),
+    true,
+  );
 });
 
 test("every packaged dashboard structure family participates in the digest and stale match", async (t) => {
   const { dashboard, aliases } = await trackedInputs();
   addAuthoredLandingFixture(dashboard);
+  const { chartId, sourceId } = addAuthoredChronoFixture(dashboard);
+  assert.doesNotThrow(() => buildChartCatalogue(dashboard, aliases));
   const originalBytes = Buffer.from(
     canonicalDashboardSemanticsBytes(dashboard, aliases),
   );
@@ -196,18 +229,18 @@ test("every packaged dashboard structure family participates in the digest and s
         "https://example.test/simex-dashboard-v3";
     },
     "data source descriptor": (value) => {
-      value.dashboard.dataSources.bio_cases.path =
-        "data/biomedical/cases-revised.csv";
+      value.dashboard.dataSources[sourceId].path =
+        "data/revised-cases.csv";
     },
     "time synchronization": (value) => {
       value.dashboard.chronoGroups[0].name += " alternate";
     },
     "chart semantics": (value) => {
-      configuredChart(value.dashboard, "bio_confirmed_cases").title +=
+      configuredChart(value.dashboard, chartId).title +=
         " alternate";
     },
     "alias semantics": (value) => {
-      value.aliases.bio_confirmed_cases.aliases[0] += " alternate";
+      value.aliases[chartId].aliases[0] += " alternate";
     },
   };
 
@@ -243,15 +276,13 @@ test("every packaged dashboard structure family participates in the digest and s
 test("the producer rejects unknown structural fields, wrong types, cycles, and accessors", async (t) => {
   const { dashboard, aliases } = await trackedInputs();
   addAuthoredLandingFixture(dashboard);
+  assert.doesNotThrow(() => buildChartCatalogue(dashboard, aliases));
   const cases = {
     "unknown root field": (value) => {
       value.legacyDashboard = {};
     },
     "runtime loaded data at semantic root": (value) => {
       value.loadedData = {};
-    },
-    "runtime profiles at semantic root": (value) => {
-      value.datasetProfiles = {};
     },
     "runtime preview state at semantic root": (value) => {
       value.previewState = {};
@@ -300,6 +331,37 @@ test("the producer rejects unknown structural fields, wrong types, cycles, and a
         },
       });
     },
+    "nested runtime-named accessor": (value) => {
+      value.datasetProfiles.loadedData = {};
+      Object.defineProperty(value.datasetProfiles.loadedData, "poison", {
+        enumerable: true,
+        get() { throw new Error("must not execute"); },
+      });
+    },
+    "nested runtime-named cycle": (value) => {
+      value.datasetProfiles.loadedData = {};
+      value.datasetProfiles.loadedData.self = value.datasetProfiles.loadedData;
+    },
+  };
+  const expectedErrors = {
+    "unknown root field": /legacyDashboard/,
+    "runtime loaded data at semantic root": /loadedData/,
+    "runtime preview state at semantic root": /previewState/,
+    "unknown page field": /legacyPage/,
+    "unknown section field": /legacySection/,
+    "unknown landing field": /legacyLanding/,
+    "unknown landing hero field": /legacyHero/,
+    "unknown landing action field": /legacyAction/,
+    "unknown global style field": /legacyStyles/,
+    "unknown panel color field": /legacyColor/,
+    "retired Vanta field": /vantaBackground/,
+    "wrong page field type": /label/,
+    "wrong section field type": /layout/,
+    "wrong landing field type": /FAQ.*items|items.*FAQ/i,
+    "cyclic landing data": /cyclic structural reference/i,
+    "page accessor": /title.*data property|data property.*title/i,
+    "nested runtime-named accessor": /poison.*data property/i,
+    "nested runtime-named cycle": /cyclic structural reference/i,
   };
 
   for (const [name, mutate] of Object.entries(cases)) {
@@ -308,7 +370,7 @@ test("the producer rejects unknown structural fields, wrong types, cycles, and a
       mutate(changed);
       assert.throws(
         () => buildChartCatalogue(changed, aliases),
-        undefined,
+        expectedErrors[name],
         name,
       );
     });
@@ -318,6 +380,14 @@ test("the producer rejects unknown structural fields, wrong types, cycles, and a
 test("the producer rejects duplicate structural identities and broken landing references", async (t) => {
   const { dashboard, aliases } = await trackedInputs();
   addAuthoredLandingFixture(dashboard);
+  assert.doesNotThrow(() => buildChartCatalogue(dashboard, aliases));
+  const lineIds = dashboard.pages
+    .flatMap((page) => page.sections)
+    .flatMap((section) => section.panels)
+    .map((panel) => panel.chart ?? panel)
+    .filter(({ typeId }) => typeId === "line")
+    .map(({ id }) => id);
+  assert.ok(lineIds.length >= 2);
   const cases = {
     "duplicate page ID": (value) => {
       value.pages[1].id = value.pages[0].id;
@@ -326,7 +396,16 @@ test("the producer rejects duplicate structural identities and broken landing re
       value.pages[1].sections[1].id = value.pages[1].sections[0].id;
     },
     "duplicate chart ID": (value) => {
-      configuredChart(value, "bio_r_values").id = "bio_confirmed_cases";
+      const section = value.pages.flatMap((page) => page.sections)
+        .find(({ panels }) => panels.some((panel) => (
+          (panel.chart ?? panel).id === lineIds[1]
+        )));
+      const index = section.panels.findIndex((panel) => (
+        (panel.chart ?? panel).id === lineIds[1]
+      ));
+      const chart = structuredClone(section.panels[index].chart ?? section.panels[index]);
+      chart.id = lineIds[0];
+      section.panels[index] = { id: "fixture-duplicate-chart-wrapper", chart };
     },
     "duplicate wrapper panel ID": (value) => {
       const panels = value.pages[1].sections
@@ -338,6 +417,13 @@ test("the producer rejects duplicate structural identities and broken landing re
       landing(value).hero.primaryAction.pageId = "missing-page";
     },
   };
+  const expectedErrors = {
+    "duplicate page ID": /duplicate.*page.*id/i,
+    "duplicate section ID in a page": /duplicate.*section.*id/i,
+    "duplicate chart ID": /duplicate.*chart.*id/i,
+    "duplicate wrapper panel ID": /duplicate.*panel.*id/i,
+    "broken primary page reference": /missing-page/,
+  };
 
   for (const [name, mutate] of Object.entries(cases)) {
     await t.test(name, () => {
@@ -345,7 +431,7 @@ test("the producer rejects duplicate structural identities and broken landing re
       mutate(changed);
       assert.throws(
         () => buildChartCatalogue(changed, aliases),
-        undefined,
+        expectedErrors[name],
         name,
       );
     });
@@ -362,11 +448,28 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       },
       error: /Unknown dashboard page property "legacyPage"\./,
     },
+    "wrong page field type": {
+      mutate(value) {
+        value.pages[0].label = 42;
+      },
+      error: /Dashboard page "scenario" label must be non-empty text\./,
+    },
+    "page accessor": {
+      mutate(value) {
+        Object.defineProperty(value.pages[0], "title", {
+          enumerable: true,
+          get() { throw new Error("must not execute"); },
+        });
+      },
+      error: /title.*enumerable data property/i,
+    },
     "duplicate page ID": {
       mutate(value) {
         value.pages[1].id = value.pages[0].id;
       },
-      error: /Duplicate dashboard page id "biomedical"\./,
+      error: (value) => ({
+        message: `Duplicate dashboard page id "${value.pages[0].id}".`,
+      }),
     },
     "broken landing primary action reference": {
       mutate(value) {
@@ -386,14 +489,15 @@ test("bundle validation and runtime loading enforce the same dashboard structure
     await t.test(name, async () => {
       const changed = structuredClone(dashboard);
       mutate(changed);
+      const expectedError = typeof error === "function" ? error(changed) : error;
       assert.throws(
         () => validateDashboardConfig(changed),
-        error,
+        expectedError,
         `${name} at bundle boundary`,
       );
       await assert.rejects(
         loadDashboardConfig(changed, profiles),
-        error,
+        expectedError,
         `${name} at runtime loader boundary`,
       );
     });
@@ -401,14 +505,17 @@ test("bundle validation and runtime loading enforce the same dashboard structure
 });
 
 test("structural cycle guards allow shared non-cyclic references", async () => {
-  const { dashboard, profiles } = await trackedInputs();
+  const { dashboard, aliases, profiles } = await trackedInputs();
   addAuthoredLandingFixture(dashboard);
   const sharedFaqItem = landing(dashboard).faq.items[0];
   landing(dashboard).faq.items[1] = sharedFaqItem;
   dashboard.datasetProfiles = profiles;
+  const before = structuredClone(dashboard);
 
   assert.doesNotThrow(() => validateDashboardConfig(dashboard));
   assert.doesNotThrow(() => normalizeDashboardSource(dashboard, profiles));
+  assert.doesNotThrow(() => buildChartCatalogue(dashboard, aliases));
+  assert.deepEqual(dashboard, before);
 });
 
 test("runtime loading rejects a dashboard without a migratable version", async () => {
@@ -559,6 +666,24 @@ function addAuthoredLandingFixture(dashboard) {
     },
   };
   return dashboard;
+}
+
+function addAuthoredChronoFixture(dashboard) {
+  const chart = dashboard.pages
+    .flatMap((page) => page.sections)
+    .flatMap((section) => section.panels)
+    .map((panel) => panel.chart ?? panel)
+    .find(({ typeId, roles }) => typeId === "line" && roles.observation);
+  assert.ok(chart, "semantic fixture needs a temporal line chart");
+  dashboard.chronoGroups = [{
+    id: "semantic-clock",
+    name: "Semantic clock",
+    period: { start: "2027-02-20", end: "2027-08-15" },
+    matching: { policy: "exact" },
+    secondsPerFrame: 1,
+    members: [{ chartId: chart.id, timeRole: "observation" }],
+  }];
+  return { chartId: chart.id, sourceId: chart.sourceId };
 }
 
 function configuredChart(dashboard, chartId) {

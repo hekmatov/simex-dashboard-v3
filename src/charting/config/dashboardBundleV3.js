@@ -377,9 +377,10 @@ function sanitizeStructural(value, context = "structural") {
   }
 }
 
-function assertStructuralData(
+export function assertStructuralData(
   value,
   description = "Dashboard configuration",
+  { skipRuntimeConfigurationKeys = true } = {},
   activePath = new WeakSet(),
 ) {
   if (value === null || typeof value !== "object") return;
@@ -390,13 +391,23 @@ function assertStructuralData(
   try {
   if (Array.isArray(value)) {
     denseDataArray(value, description).forEach((entry, index) => (
-      assertStructuralData(entry, `${description} ${index}`, activePath)
+      assertStructuralData(
+        entry,
+        `${description} ${index}`,
+        { skipRuntimeConfigurationKeys },
+        activePath,
+      )
     ));
     return;
   }
   for (const [key, entry] of plainDataEntries(value, description)) {
-    if (!RUNTIME_CONFIGURATION_KEYS.has(key)) {
-      assertStructuralData(entry, `${description} property "${key}"`, activePath);
+    if (!skipRuntimeConfigurationKeys || !RUNTIME_CONFIGURATION_KEYS.has(key)) {
+      assertStructuralData(
+        entry,
+        `${description} property "${key}"`,
+        { skipRuntimeConfigurationKeys },
+        activePath,
+      );
     }
   }
   } finally {
