@@ -35,12 +35,6 @@ jobs:
         run: |
           node -e "require('node:fs').mkdirSync('reports', { recursive: true })"
 
-      - name: Unit tests
-        id: unit
-        if: steps.install.outcome == 'success'
-        continue-on-error: true
-        run: node --test --test-concurrency=1 --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=reports/unit-junit.xml
-
       - name: Build source application
         id: build
         if: steps.install.outcome == 'success'
@@ -54,6 +48,12 @@ jobs:
       - name: Install Chromium (Windows)
         if: runner.os == 'Windows' && steps.install.outcome == 'success'
         run: node node_modules/@playwright/test/cli.js install chromium
+
+      - name: Unit tests
+        id: unit
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: node --test --test-concurrency=1 --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=reports/unit-junit.xml
 
       - name: Source Chromium journeys
         id: browser
