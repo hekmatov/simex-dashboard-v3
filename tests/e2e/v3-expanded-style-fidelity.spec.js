@@ -5,6 +5,8 @@ import {
   observePendingOwnerStyle,
 } from "./support/dashboard-style-audit.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { choosePanelAction } from "./support/buildWorkflow.js";
+import { installPageRemovalGroups, REMOVED_PAGE_GROUP_ID } from "./support/layoutReviewFixture.js";
 import {
   createSavedPresentationScene,
   enterPresentWithScene,
@@ -16,6 +18,7 @@ const STYLE_OPTIONS = [
   { label: "Humanist", profile: "humanist-standard/common-ground" },
   { label: "Instrument", profile: "signal-instrument/calibrated-steel" },
 ];
+const BIOMEDICAL_CHART_ID = "chart-line-mtgz6v76";
 
 test.use({ serviceWorkers: "block" });
 
@@ -79,6 +82,7 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
 test("Build studios, wizard validation, and Chrono interaction states use selected style", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
+  await installPageRemovalGroups(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Theme" });
@@ -93,11 +97,7 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await expectNoRetiredDashboardStyle(page);
   await page.locator(".build-authoring-auxiliary").getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  const more = page.getByRole("dialog", { name: "More Build commands" });
-  await expect(more).toBeVisible();
-  await expectNoRetiredDashboardStyle(page);
-  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
   await expect(page.locator(".build-authoring-auxiliary")).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
   await page.locator(".build-authoring-auxiliary").getByRole("button", { name: "Close", exact: true }).click();
@@ -155,9 +155,10 @@ test("one pending chart row keeps stable semantic paint through active, suspende
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
 
-  const ownerId = "chart-edit:bio_confirmed_cases";
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
-  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const ownerId = `chart-edit:${BIOMEDICAL_CHART_ID}`;
+  const panel = page.locator(`[data-panel-id="${BIOMEDICAL_CHART_ID}"]`);
+  await panel.hover();
+  await choosePanelAction(page, BIOMEDICAL_CHART_ID, "edit");
   let quick = page.locator(".chart-quick-editor");
   await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Durable quick save");
   const owner = page.locator(`[data-pending-work-id="${ownerId}"]`);
@@ -295,7 +296,11 @@ test("Text/Image Composer, sanitized notice, rendered preview, raw source, and P
 test("Present, Audience options, and standalone Audience use selected style", async ({ page }) => {
   test.setTimeout(150_000);
   await page.setViewportSize({ width: 1440, height: 900 });
-  const scene = await createSavedPresentationScene(page, { url: "/" });
+  await installPageRemovalGroups(page);
+  const scene = await createSavedPresentationScene(page, {
+    url: "/",
+    chronoGroupId: REMOVED_PAGE_GROUP_ID,
+  });
   await enterPresentWithScene(page, scene);
   await expectNoRetiredDashboardStyle(page);
 
@@ -317,7 +322,7 @@ test("standalone source viewer and application recovery retain dashboard style",
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator(`[data-panel-id="${BIOMEDICAL_CHART_ID}"]`);
   await panel.scrollIntoViewIfNeeded();
 
   const popupPromise = page.waitForEvent("popup");
@@ -326,7 +331,7 @@ test("standalone source viewer and application recovery retain dashboard style",
   await viewer.waitForLoadState("domcontentloaded");
   await expect(viewer).toHaveURL(/\/source-viewer\.html$/);
   await expect(viewer.locator(".source-viewer-theme-root")).toBeVisible();
-  await expect(viewer.getByText("177 of 177 rows", { exact: true })).toBeVisible();
+  await expect(viewer.getByText("8 of 8 rows", { exact: true })).toBeVisible();
   await expectNoRetiredDashboardStyle(viewer);
   await viewer.close();
 
