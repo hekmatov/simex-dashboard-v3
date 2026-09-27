@@ -1,6 +1,8 @@
 ﻿import React from "react";
 
 import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
+import { APP_VERSION } from "../lib/appVersion.js";
+import { CANONICAL_HOME_REPOSITORY_URL } from "../home/canonicalHomeContent.js";
 import { useOperationStatusActions } from "./app-shell/OperationStatusProvider.jsx";
 import {
   beginDashboardContentOperation,
@@ -3721,6 +3723,7 @@ function DashboardFooter({ dashboard }) {
       <div>
         <strong>{dashboard.footerTitle ?? "SimEx Dashboard V3"}</strong>
         <span>{dashboard.footerCredit ?? "Developed by Hekmat Alrouh"}</span>
+        <span>App version {APP_VERSION}</span>
       </div>
       <nav aria-label="Project links">
         <a href={feedbackUrl} target="_blank" rel="noreferrer">
@@ -3732,6 +3735,7 @@ function DashboardFooter({ dashboard }) {
             Project repository
           </a>
         )}
+        <a href={`${CANONICAL_HOME_REPOSITORY_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noreferrer">Changelog</a>
       </nav>
     </footer>
   );

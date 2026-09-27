@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import React from "react";
@@ -8,6 +9,7 @@ import { createServer } from "vite";
 import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
+const packageVersion = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8")).version;
 const vite = await createServer({
   root: ROOT,
   appType: "custom",
@@ -107,9 +109,10 @@ test("the PDPC footer promotes the dashboard builder and moves the plain credit 
 
   assert.match(
     html,
-    /<strong>SimEx Dashboard V3<\/strong><a[^>]*href="https:\/\/simex-dashboard-v3\.pages\.dev\/"[^>]*>Build your own dashboard<\/a>/,
+    /<strong>SimEx Dashboard V3<\/strong><span>App version [^<]+<\/span><a[^>]*href="https:\/\/simex-dashboard-v3\.pages\.dev\/"[^>]*>Build your own dashboard<\/a>/,
   );
-  assert.match(html, /<nav[^>]*aria-label="Project links"><span>Developed by Hekmat Alrouh<\/span><\/nav>/);
+  assert.ok(html.includes(`App version ${packageVersion}`));
+  assert.match(html, /<nav[^>]*aria-label="Project links"><span>Developed by Hekmat Alrouh<\/span><a[^>]*>Changelog<\/a><\/nav>/);
   assert.doesNotMatch(html, /Report a bug \/ request a feature/);
   assert.doesNotMatch(html, /<a[^>]*>Developed by Hekmat Alrouh<\/a>/);
 });

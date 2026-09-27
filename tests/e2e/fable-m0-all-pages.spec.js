@@ -1,8 +1,10 @@
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 import { withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 const storageKey = "simex-dashboard-config-v3-three-mode-v1";
+const appVersion = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8")).version;
 
 test.use({ viewport: { width: 1440, height: 1000 } });
 
@@ -24,6 +26,8 @@ test("every shipped Page renders in View and Build, then eligible content reache
   await page.goto("http://127.0.0.1:4185/?mode=view");
   const modes = page.getByLabel("Dashboard mode");
   await expect(modes.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".dashboard-footer")).toContainText(`App version ${appVersion}`);
+  await expect(page.locator(".dashboard-footer").getByRole("link", { name: "Changelog" })).toBeVisible();
   for (const { id } of pages) {
     await page.locator(`[data-dashboard-page-id="${id}"]`).click();
     await expect(page.locator(`[data-canonical-mode="view"][data-canonical-page-id="${id}"]`)).toBeVisible();
@@ -31,6 +35,7 @@ test("every shipped Page renders in View and Build, then eligible content reache
 
   await modes.getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.locator('[data-canonical-mode="build"]')).toBeVisible();
+  await expect(page.locator(".dashboard-footer")).toContainText(`App version ${appVersion}`);
   const navigation = page.getByRole("navigation", { name: "Dashboard pages" });
   for (const { id, label, title } of pages) {
     await navigation.getByRole("button", { name: label ?? title ?? id, exact: true }).click();

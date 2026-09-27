@@ -10,6 +10,7 @@ const [modesCss, globalCss, operationStatusSource] = await Promise.all([
   readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
   readFile(new URL("../src/components/app-shell/OperationStatusViewport.jsx", import.meta.url), "utf8"),
 ]);
+const packageVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 
 const vite = await createServer({
   root: process.cwd(),
@@ -48,6 +49,8 @@ test("live footer derives the public repository Issues destination without packa
     html,
     /<a href="https:\/\/github\.com\/hekmatov\/simex-dashboard-v3\/issues" target="_blank" rel="noreferrer">Report a bug \/ request a feature<\/a>/,
   );
+  assert.ok(html.includes(`App version ${packageVersion}`));
+  assert.match(html, /href="https:\/\/github\.com\/hekmatov\/simex-dashboard-v3\/blob\/main\/CHANGELOG\.md"[^>]*>Changelog<\/a>/);
 });
 
 test("Build Add section remains in document flow above footer and notification clearance", () => {
