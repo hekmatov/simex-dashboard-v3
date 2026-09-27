@@ -1,7 +1,10 @@
-import { structureRail } from "./support/buildWorkflow.js";
+import { choosePanelAction, structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { createChartDraft } from "../../src/charting/config/chartConfigV3.js";
+import { collectionConsumerFixture } from "../fixtures/collectionConsumerV3.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 const NATIVE_STYLES = Object.freeze([
   Object.freeze({
@@ -114,12 +117,31 @@ const APPROVED_TOKEN_MATRIX = readApprovedTokenMatrix(await readFile(
 test.describe.configure({ timeout: 150_000 });
 
 test("target collections inherit dark shared surfaces and text", async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem("simex-dashboard-appearance-v3", "dark");
+  const dashboard = JSON.parse(await readFile(new URL("../../public/config/dashboard.json", import.meta.url), "utf8"));
+  const collection = createChartDraft("bullet", {
+    id: "style-bullet",
+    title: "Institutional trust",
+    sourceId: "upload-eldoria-institutional-trust-comparison-fictional",
+    roles: {
+      actual: { field: "February 2027" },
+      target: { field: "February 2026" },
+      label: { field: "Institution", interpretation: "category" },
+    },
+    presentation: { collection: collectionConsumerFixture().collection.presentation.collection },
   });
+  dashboard.pages.find(({ id }) => id === "biomedical").sections[0].panels.unshift(collection);
+  await page.addInitScript((fixture) => {
+    localStorage.setItem("simex-dashboard-appearance-v3", "dark");
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(fixture));
+  }, dashboard);
   await page.goto("/");
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  const theme = page.getByRole("dialog", { name: "Theme" });
+  await theme.getByLabel("Instrument", { exact: true }).check();
+  await theme.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
+  await theme.getByRole("button", { name: "Close Theme", exact: true }).click();
   await openDashboardPage(page, "biomedical");
-  const panel = page.locator('[data-panel-id="bio_icu_capacity_bullet"]');
+  const panel = page.locator('[data-panel-id="style-bullet"]');
   await panel.scrollIntoViewIfNeeded();
   await expect(panel.locator(".chart-target-collection-item").first()).toBeVisible();
 
@@ -151,7 +173,9 @@ test("expanded Orbit starts below the live command crown", async ({ page }) => {
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.locator("[data-build-edit-for]").first().click();
+  const panel = page.locator('[data-panel-id="chart-line-mtgz6v76"]');
+  await panel.hover();
+  await choosePanelAction(page, "chart-line-mtgz6v76", "edit");
   const orbit = page.locator(".unit-orbit");
   await expect(orbit).toBeVisible();
 
@@ -242,6 +266,11 @@ test("native style signatures resolve real shell, section, panel, and control pa
 
 test("section headers adapt only to title and description content", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
+  const dashboard = JSON.parse(await readFile(new URL("../../public/config/dashboard.json", import.meta.url), "utf8"));
+  dashboard.pages.find(({ id }) => id === "biomedical").sections[0].description = "Current public-health context";
+  await page.addInitScript((fixture) => {
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(fixture));
+  }, dashboard);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
 
@@ -532,6 +561,7 @@ test("Present keeps a live themed audience mirror for monitor captures", async (
 });
 
 test("selected dashboard style reaches crown, Build authoring, and Present chrome", async ({ page }) => {
+  await installPageRemovalGroups(page);
   for (const style of NATIVE_STYLES) {
     await openBiomedicalLook(page);
     const look = await selectAutoSavedLook(page, style.label, style.profile);
@@ -598,10 +628,19 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     const inspectorChrome = await readChrome(page, {
       inspectorInput: ".build-rail--properties .build-inspector input",
     });
+    const inspectorBorderPaint = await page.locator(".build-rail--properties .build-inspector input")
+      .first().evaluate((input) => {
+        const probe = document.createElement("span");
+        probe.style.color = "color-mix(in srgb, var(--simex-text-strong) 20%, transparent)";
+        input.after(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      });
     expect(inspectorChrome.inspectorInput).toMatchObject({
       backgroundColor: style.panelPaint,
       borderRadius: style.controlRadius,
-      borderTopColor: style.borderPaint,
+      borderTopColor: inspectorBorderPaint,
       color: style.textPaint,
     });
     for (const control of [buildChrome.look, buildChrome.chronoGroups]) {
@@ -676,6 +715,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
 
 test("all 13 profiles project every approved Light and Dark palette token", async ({ page }) => {
   await openBiomedicalLook(page);
+  await page.getByLabel("Profile colors", { exact: true }).check();
   const appFrame = page.locator(".app-frame");
   for (const [profile, approvedOuter] of Object.entries(PROFILE_OUTER)) {
     await page.locator(`[data-profile-option="${profile}"] input`).check();
