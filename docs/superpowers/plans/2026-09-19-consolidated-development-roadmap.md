@@ -1,6 +1,6 @@
 # SimEx consolidated development roadmap — 19 September 2026
 
-**Document version:** 1.1; updated 27 September 2026. Dated Markdown with Git history, as requested. This is a plan version, not an application release.
+**Document version:** 1.2; updated 27 September 2026. Dated Markdown with Git history, as requested. This is a plan version, not an application release.
 
 **Goal:** Deliver an exercise tool whose prepare → run → debrief loop is dependable, faithful across surfaces, usable by exercise staff, and ready for an approved PDPC deployment.
 
@@ -8,9 +8,9 @@
 
 **Stack:** React 19, Vite 6, JavaScript, ECharts 5, CSS tokens, BroadcastChannel, Node tests and Playwright. No new backend is assumed.
 
-**Status:** Planning synthesis only. Product implementation, new test results, human acceptance, publication and deployment are not claimed by this document.
+**Status:** Roadmap and first M0 assignment updated from the reviewed preparation handoff. The user authorized creation of the first implementation task on 27 September. No M0 completion, fresh product-test result, human acceptance, publication or deployment is claimed by this update.
 
-**27 September preparation update:** the user has paused scenario-authoring and authorized local reconciliation before M0. The [pre-M0 handoff](../../fable-pre-m0-handoff-2026-09-27.md) records the checkpoint containing the existing redesign plus the PDPC deliverables and Eldoria export carry-forwards. M0 remains unstarted; historical gate results below remain historical. Both remote mains were refreshed at `c003d111`; publishing and M0 stabilization are still outstanding. This update changes the scenario priority and records preparation, without activating any task or sending cross-chat messages.
+**27 September handoff incorporation:** the user directed this steward to use the [pre-M0 handoff](../../fable-pre-m0-handoff-2026-09-27.md), update this roadmap and create the first implementation task. Its earlier review-before-dispatch hold is satisfied by that direction. The prepared checkpoint contains the existing redesign, PDPC deliverables and corrected Eldoria export. Scenario-authoring remains paused. Remote mains were last refreshed by preparation at `c003d111`; the implementation owner must refresh them at activation. Publishing and M0 stabilization remain outstanding.
 
 **Execution:** Implement coherent work packages with the repository's proportional workflow budget. Existing design documents already contain implementation detail; create an additional design only for a material unresolved contract. Task annotations below apply to their actions, deliverables and checks unless a sentence carries a more specific annotation. No agent roster or recurring monitor is created by this plan.
 
@@ -35,7 +35,21 @@ Yes, there are existing development plans, but they do not provide one current d
 | Scenario planning branch | `docs/aster-28-scenario-specs` at `37469185` | Later than the September 8 status snapshot; use its September 10 reconciliation. |
 | Scenario candidate | `feat/m3-communication-candidate` at `91105ec3` | Distinct, unmerged work; do not assume its capabilities are on dashboard main. |
 
-The supplied Claude worktree and local main contain the requested documents. No push, remote merge, deployment, or scenario-branch integration is included in preparing this plan. Before implementation, refresh published refs and explicitly establish a baseline that includes the redesign; do not silently start from stale local main or silently substitute the unmerged scenario candidate.
+These September 19 observations are historical. The September 27 baseline below supersedes them for new implementation; scenario candidates remain separate and unmerged.
+
+### Prepared implementation baseline — 27 September
+
+| Item | Revision / evidence | Use and limit |
+| --- | --- | --- |
+| Code checkpoint | Annotated tag `fable-pre-m0-2026-09-27`, peeled commit `e7e58c8432987403767d4fc973fa30df41f91cd8` | Contains the redesign and both non-scenario carry-forwards; preserve this tag. Resolve with `git rev-parse 'fable-pre-m0-2026-09-27^{commit}'`, since the bare tag names a tag object. |
+| Canonical local main and detached preparation checkout, before this roadmap edit | `cdfc7a6a69f77f9568dcf6454760956717ecf160`, clean | Only the cleanup handoff changed after the tagged code checkpoint. The implementation task must also include this roadmap update. |
+| Last refreshed published baseline | `origin/main` and `public/main`: `c003d11174f247acac10879274e73d9434c67096` | Reported by preparation; cached refs agree at planner inspection. No new remote refresh or publication claim is made here. |
+| Incorporated carry-forwards | PDPC profile `58c4650a`; single-file deliverables `cd5f1f83` | Already integrated with ancestry preserved. Keep paired Cloudflare ZIP/offline HTML outputs, release-only Light default and explicit saved choices; PDF output remains removed. |
+| Predecessor verification | Handoff reports 17 focused release tests passing on 27 September, plus theme-transform and Eldoria CSV checks | Scoped reconciliation evidence only. No production release, browser journey or full unit/build/E2E gate was run. Reuse unchanged evidence. |
+
+The clean detached preparation checkout is `.worktrees/fable-preparation`. Reuse it after verifying no other task/process needs it and creating a dedicated M0 branch at the current documented planning baseline. Otherwise create a worktree from freshly verified `origin/main` and explicitly include the prepared checkpoint through the authorized baseline setup. Preserve authored content: the old September 9 export in the detached `temp-cloudflare-version` checkout is already represented on main and must not be re-promoted; unexported browser storage was not inspected.
+
+Non-scenario branch references were cleaned up by the user's earlier direction; their recovery bundle and preserved detached/dirty checkouts are indexed in the handoff. Do not repeat cleanup, merge old experiments wholesale or modify paused scenario branches. Publication remains a separately authorized action.
 
 ## 2. Sources and annotation key
 
@@ -68,6 +82,7 @@ The September 18 [View and Build decision-surface design](../specs/2026-09-18-vi
 | E6 | [PDPC release factory guide](../../pdpc-release-factory.md) and [implementation plan](2026-09-05-pdpc-two-output-release-factory.md) | Reuse existing full/participant release machinery, isolation and versioned artifacts. |
 | E7 | [Project instructions](../../../AGENTS.md) and [environment issues](../../ENVIRONMENT-ISSUES.md) | Stable chart-workflow driver follow-up, targeted development checks, browser prerequisites, explicit publication authority. |
 | E8 | [September 18 product brief](../../../../docs/simex-product-and-ui-ux-brief-2026-09-18.md) | Updated mode/width, four-style, draft, package and scenario-workstream context. |
+| E9 | [September 27 pre-M0 handoff](../../fable-pre-m0-handoff-2026-09-27.md) | Reconciled local checkpoint, 17-test predecessor evidence and its limits, PDPC packaging constraints, preserved cleanup recovery, paused scenario scope and bounded first M0 assignment. |
 
 The external workspace documents and scenario worktree records retain their existing owners. This consolidation indexes their obligations without rewriting those records or taking over their tasks.
 
@@ -84,6 +99,7 @@ The external workspace documents and scenario worktree records retain their exis
 | Cross-style/owned-region rendered closure | Explicitly pending in latest review document | M1 affected fidelity surfaces; M3 current-scope rendered closure and room evidence. [E3] |
 | Shared chart-workflow driver | Explicit deferred follow-up | Extract/update with relevant M0 fixture repair or M1 authoring slice; preserve stable workflow IDs. [E7] |
 | PDPC release factory | Implemented foundation | Reuse for M4; revalidate only changed release boundaries. [E6] |
+| PDPC paired ZIP/single-file HTML, Light default and Eldoria export | Integrated in the prepared checkpoint; focused predecessor evidence recorded | Preserve through M0 source/code-splitting changes; actual generated-output/launch evidence remains for the affected boundary and M4. PDF output stays removed. [E9] |
 | Scenario S-M1/S-M2 | Scoped complete, unmerged | Retain; no repeat implementation. [E5] |
 | Scenario S-M3 | Engineering A–D delivered, human E pending; workstream paused 27 September | Preserve candidate; no review or correction work until the user resumes it. Dashboard M3 may use another accepted exercise. [E5] |
 | Scenario S-M4/S-M5/S-M6 | Planned, not completed; paused 27 September | Retain section 9 as future work; do not make dashboard progress depend on this track. [E5] |
@@ -105,7 +121,7 @@ The environment register records a package browser test passing from normal Powe
 
 | Milestone | Outcome | Dependency | Current state |
 | --- | --- | --- | --- |
-| M0 Stable ground | Reliable source, tests, builds and recoverable startup | Baseline resolved | Open; first engineering priority |
+| M0 Stable ground | Reliable source, tests, builds and recoverable startup | Prepared checkpoint; activation refresh required | Open; first bounded implementation assignment authorized |
 | M1 Fidelity | Authoring and monitor accurately represent their destinations | M0 core fixture/build recovery | Designed, not implemented |
 | M2 Time and story | One visible cursor and reusable cross-page Storylines | M1 geometry/monitor contracts | Designed; additive transition before V7 |
 | M3 Exercise rehearsal | Staff can prepare/run/debrief on actual devices | M1/M2; accepted exercise content | Pending; includes remaining mobile Option 1 |
@@ -121,9 +137,25 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario-autho
 
 **Purpose:** establish a trustworthy development and verification baseline before changing fidelity or time behavior. **Owner responsibility:** repository/runtime foundations; no scenario content decisions.
 
+### First authorized assignment — baseline, portable source and fixture
+
+**Owner:** one fresh task, **Implement Fable M0 source and fixture baseline**, combines implementation and coordination for this slice. The planning steward retains milestone scope and acceptance interpretation. No relay coordinator or standing worker lanes are needed.
+
+**Outcome and scope [E7, E9]:** complete M0.1 activation and the smallest connected M0.2/M0.3 repair that makes a shipped uploaded-GeoJSON source resolve through the canonical package/promoted-asset contract in a reproducible fixture. Diagnose the current cause before choosing a repair. This assignment does not close all fixture debt or all of M0.3.
+
+1. **Establish the baseline.** Read `AGENTS.md`, this brief and E9. Refresh both remote mains, compare their SHAs/ancestry with the checkpoint, inventory the selected checkout and check for a genuinely newer browser export. Prefer the clean detached preparation checkout, creating a dedicated M0 branch that contains the tagged code and this roadmap update. Record published SHA, peeled checkpoint, actual branch base and worktree path in the coherent implementation commit's closeout. If remote divergence changes the integration contract, report that specific contradiction before combining code; publication is not needed to begin local M0 work.
+2. **Reproduce and repair one source boundary.** Trace `scripts/build-portable-data.mjs`, `src/lib/loadDashboard.js` and `scripts/promote-dashboard-bundle.mjs` against actual shipped descriptors/assets. Use `buildPortableData` with explicit fixture/output paths to avoid overwriting authored source while diagnosing. Add a durable representative fixture and regression for the demonstrated defect; preserve CSV, GeoJSON and static media semantics, validation and offline embedding. Update only proven affected runtime/promotion/PDPC consumers in the same slice. Do not hide missing assets by disabling embedding or substituting unrelated data.
+3. **Verify and close the slice.** Start with the nearest cases in `tests/datasetProfilesV3.test.js`, `tests/portableFlashdriveLaunch.test.js` and `tests/staticContentPortablePackage.test.js`; include GeoJSON validation/source-entry and PDPC consumer checks only where affected. Run the complete slice-specific selection once on the final candidate. Preflight source IDs, eligibility, fixture reset and controls before the smallest relevant launch/offline journey; record anything not run. Use one scoped review where judgment is needed, then commit implementation with its direct tests and compact evidence.
+
+**Slice exit:** the documented base preserves the prepared content; the representative valid source survives promotion/portable generation with equivalent data; missing/malformed source assets have actionable failures; directly affected CSV/static-media and PDPC consumers remain correct. A bounded launch/offline check must support any runtime claim. Passing owner tests alone do not establish fresh-clone Windows/Linux builds or a full M0 gate.
+
+**Exclusions:** broad historical failure repair, test-suite reclassification, code splitting, root recovery, CI, new UI/fidelity/time features, asset-storage redesign, scenario activation/adapters, main integration, push and deployment. Leave unmodified September 27 release checks reusable. Later work packages retain their complete exits.
+
+**Decisions and reporting:** no new product decision is required to begin. Escalate a changed baseline/asset contract, material scope expansion or required external action; do not ask again for faithful planning or implementation. Send the user a compact closeout with commit, checks/date/limits, remaining M0 work and any material blocker. Keep routine logs and retries in the implementation task; no automatic cross-task messages or recurring monitoring are part of this assignment.
+
 ### Ordered work packages
 
-- [ ] **M0.1 — Resolve the implementation baseline and protect authored content. [E4, E7, N]** Record the refreshed remote SHAs and the local redesign boundary; establish an authorized implementation branch containing the redesign before feature work. Preserve the existing scenario branches and any browser-authored package. Promote browser exports only through the existing reviewed bundle-baseline workflow. The current local/remote mismatch must be explicit in release and handoff records; publishing remains a separate action.
+- [ ] **M0.1 — Resolve the implementation baseline and protect authored content. [E4, E7, E9, N]** Local reconciliation is complete at `fable-pre-m0-2026-09-27`; activation remains open. Refresh both remote mains and record their SHAs, the peeled checkpoint and actual implementation base. Reuse the clean detached preparation checkout on a dedicated M0 branch containing the current roadmap, or start from verified `origin/main` and explicitly include the checkpoint. Preserve scenario branches and authored content. Promote only a genuinely newer browser export through the existing reviewed workflow; do not re-promote the already incorporated September 9 export. Keep the local/remote discrepancy explicit; publishing is separate from local baseline activation.
   - Owners/files: `AGENTS.md` baseline policy; `public/config/dashboard.json`; bundle promotion tools only if an actual export exists.
   - Check: Git ancestry, clean/dirty inventory and artifact identity; no full test run just to create a worktree.
 
@@ -131,14 +163,18 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario-autho
   - Owners/files: `tests/fixtures/`; `tests/e2e/support/`; affected `tests/*.test.js` and `tests/e2e/*.spec.js`; three Playwright configurations. Extract the existing `chart-authoring-v3` primitives when repairing their consumers.
   - Acceptance cases: reset loads intended fixture; source eligibility/control preflight succeeds; real shipped content still launches; unknown/missing source produces the existing recoverable state.
   - Carryovers: stale Home/map/reload drivers, unscoped Build selectors, sticky-crown control interception, source-manager selection loss, and named theme failures are investigated by current cause. Import performance and the synthetic liveness fixture get boundary-specific checks rather than arbitrary timeout increases.
+  - Evidence boundary [E9]: the September failure and repair counts come from different revisions. Use their exact titles as diagnosis leads at the prepared baseline; do not rerun broad suites just to recreate those totals or assume all failures are fixture drift. The first assignment covers only the fixture/consumers needed for its source repair.
 
 - [ ] **M0.3 — Repair portable source resolution and fresh-clone commands. [C1, C5, E6, N]** Make uploaded GeoJSON source descriptors resolve through the canonical packaged/promoted asset contract instead of assuming browser storage or a nonexistent disk path. Preserve validation and offline portability. Cover missing and malformed assets with actionable errors; do not “fix” offline builds by globally turning embedding off. Verify Windows and Linux script paths; the current Cloudflare scripts are platform-specific.
   - Owners/files: `scripts/build-portable-data.mjs`; source descriptor/loading and bundle-promotion owners as needed; `public/data/uploaded/`; `package.json`; directly affected portable-data tests.
+  - Restored consumer [E9]: include `scripts/lib/pdpc-single-file.mjs` and the paired-deliverables pipeline where a changed source/asset contract reaches them. Preserve contained packaged media and offline HTML output; do not reintroduce PDFs.
   - Exit evidence: fresh checkout with locked dependencies can start `pnpm.cmd dev`, produce `pnpm.cmd build` and `pnpm.cmd build:cloudflare` on Windows; CI uses `pnpm build:cloudflare:linux` on Ubuntu. Inspect output assets, then use the existing static verifier/browser configuration for offline checks.
+  - Cadence: the full platform/build exit is retained for the declared integration boundary; a bounded source repair may close with targeted evidence and explicitly leave these broader checks outstanding.
 
 - [ ] **M0.4 — Split non-View surfaces and preserve offline lazy loading. [C2, C5, E6, N]** Lazily load Build/Present, chart editors/wizard, source workspace and studios behind mode-appropriate pending/error states. Keep the Audience launch path prompt. Confirm generated lazy chunks are included in the finalized transitive service-worker graph, so switching to Build/Present offline still works after installation.
   - Owners/files: `src/App.jsx`, `src/components/DashboardRenderer.jsx`, relevant dynamic entry points, `vite.config.js`, static finalization/precache scripts.
   - Check built dependency/request graphs, not only a regex matching `React.lazy`. Record both the compressed View entry and total initial JS; ECharts/shared dependencies count in the latter.
+  - Single-file contract [E9]: `scripts/lib/pdpc-single-file.mjs` currently expects release JS/CSS, one html2canvas dynamic import, a specific bundled-logo expression and vendor Three/Vanta files; it rejects remaining module imports. Preserve this supported output or adapt and verify the converter in the same affected slice. A working dashboard split alone is insufficient. The parked rendering experiment is not an approved implementation to merge wholesale.
   - **Added acceptance proposal [N]:** cap the compressed View entry at 250 KiB and require at least a 30% reduction in total initial View JS versus M0 baseline. If measurements show the retained rendering architecture cannot meet this, document and resolve a new numeric budget before closing M0; never quietly raise the ceiling. These numbers are planning proposals, not measurements from C2.
 
 - [ ] **M0.5 — Recover from rendering and chunk-load failures. [C5, E1, N]** Reuse `ApplicationRecovery` and existing source/plot state plates, then add the missing application-level render-error containment. Distinguish data recovery, render exceptions and failed lazy imports; provide a useful retry/reload or restore path without discarding durable work. Keep Audience last-valid output and connection status safe.
@@ -148,6 +184,7 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario-autho
 - [ ] **M0.6 — Establish CI, version visibility and practitioner smoke. [C5, E7, N]** Add Windows/Ubuntu push CI for unit tests, build and source Chromium journeys; upload native reports even on failure. Prepare Playwright dependencies once. Keep static/PDPC aggregate checks at explicit integration/release boundaries unless their owners change. Start `CHANGELOG.md`, expose app/package version in the existing information surface, and record a practitioner launch/navigation demo.
   - Owners/files: `.github/workflows/` new CI workflow; `package.json`; existing version/About surface; `CHANGELOG.md`; `docs/demos/`.
   - Before claiming CI is green, require an actual hosted run; a local YAML review is preparation only.
+  - Test organization [E9]: assess the preserved, uncommitted `.worktrees/dense-ui-audit` proposal for separating `@visual-audit` journeys. Adoption must be an explicit, visible organization decision retaining audit coverage and real failure dispositions; excluding failures to make a gate green is not acceptable. Preserve unrelated worktree changes.
 
 ### M0 exit criteria
 
@@ -160,6 +197,8 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario-autho
 ## 6. M1 — Fidelity
 
 **Purpose:** make the authoring preview represent the saved destination and the monitor represent the actual Audience output. **Dependencies:** M0 fixtures/builds; retain the decision-surface draft projection.
+
+**Carry-forward boundary [E9]:** assess only still-relevant cross-style/rendered-fidelity and Audience gaps. Existing chart, gauge, orbit and decision-surface work is already incorporated; do not reimplement it from historical checkboxes.
 
 ### Ordered work packages
 
@@ -223,7 +262,7 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario-autho
   - Owners/files: `audienceProjection.js`, presentation protocol/channel, `usePresentationRuntime.js`, `PresentWorkspace.jsx`, `AudienceDisplay.jsx`.
   - Checks: controller/Audience times and resolved observations agree; stale old-protocol messages cannot overwrite accepted state; readonly controls are disabled; reconnect receives a complete current projection. The frame stream reports the resulting accepted revision.
 
-- [ ] **M2.7 — Retire Groups through deterministic dashboard V7 migration. [C3, C5, E6, N]** Only after all live consumers support parentless Storylines, map Groups without Scenes to equivalent Storylines, map Scenes with their own period/cadence/layout intact, preserve policy overrides, remove Group references and retire Chrono Studio from Libraries. Update import review, semantic references, package serializer/normalizer, release factory, scenario adapters that consume this format, catalogues and training vocabulary together. Keep chart schema V3 unchanged.
+- [ ] **M2.7 — Retire Groups through deterministic dashboard V7 migration. [C3, C5, E6, E9, N]** Only after all live consumers support parentless Storylines, map Groups without Scenes to equivalent Storylines, map Scenes with their own period/cadence/layout intact, preserve policy overrides, remove Group references and retire Chrono Studio from Libraries. Update import review, semantic references, package serializer/normalizer, release factory, active catalogues and training vocabulary together. Record future scenario integration impact; do not implement adapters on the paused scenario branches or reactivate their owners. Keep chart schema V3 unchanged.
   - Owners/files: `dashboardBundleV3.js`, `dashboardConfigStructure.js`, temporal normalization/reference owners, Build Libraries, import/export UI, release/scripts and corresponding tests.
   - Checks: deterministic/idempotent conversion, old Group-only and Scene-bearing fixtures, shared-chart policy conflicts, invalid references and unknown future versions, export/import equivalence. Import preview names changes; preserve the original package and rollback path. Reuse existing numeric format migration patterns; do not claim older apps can read V7.
 
@@ -238,7 +277,7 @@ Code splitting belongs in M0; remaining mobile changes follow M1. Scenario-autho
 
 ## 8. M3 — Exercise rehearsal
 
-**Purpose:** prove the complete loop with staff and devices that did not build it. **Dependencies:** M1/M2 ready; facilitator-accepted reference content, including S-M3 acceptance if using that candidate.
+**Purpose:** prove the complete loop with staff and devices that did not build it. **Dependencies:** M1/M2 ready and another explicitly accepted rehearsal package while scenario-authoring is paused. The unaccepted Aster-28 S-M3 candidate is neither the default nor a prerequisite.
 
 ### Ordered work packages
 
@@ -324,7 +363,7 @@ These remain the existing scenario programme, with its own planning steward and 
 
 ## 10. M4 — Deployment readiness
 
-**Purpose:** move from a successful rehearsal to an approved, supportable deployment and real pilot. **Dependencies:** M3 blockers closed; scenario S-M6 if scenario-authoring is included in the supported release. The work below is planned release preparation; actual external publication and human sign-offs remain explicit execution boundaries.
+**Purpose:** move from a successful rehearsal to an approved, supportable deployment and real pilot. **Dependencies:** M3 blockers closed; scenario S-M6 only if the user explicitly resumes scenario-authoring and brings it into supported release scope. The work below is planned release preparation; actual external publication and human sign-offs remain explicit execution boundaries.
 
 ### Ordered work packages
 
@@ -333,6 +372,7 @@ These remain the existing scenario programme, with its own planning steward and 
 
 - [ ] **M4.2 — Close data governance and citable packaging. [C5, E5, E6, N]** Every chart exposes source, observation/as-of time and appropriate fictional/static/uncertainty context. Export identifies app version, schema/package version and a reproducible integrity checksum; import review lists changed sources, content, assets and time/Storyline structure before committing. Include source/METHOD/provenance companions for scenario-derived releases and test tampering/missing-companion diagnostics without silently losing interpretation.
   - Owners/files: chart headings/source details, bundle serializer/import review, release manifests and scenario provenance adapters where included. Reuse existing checksum machinery rather than defining a competing format.
+  - Paused-track boundary [E9]: preserve provenance on accepted packages consumed by the dashboard, but do not activate scenario-authoring or implement its paused adapters through this work package.
   - Check V7 and pre-V7 imports, source replacement, offline media, checksum mismatch, cancellation/no mutation and an exported result that a debrief report can cite unambiguously.
 
 - [ ] **M4.3 — Finalize operator and maintainer documentation. [C5, E6, E8]** Produce a short author quick start, room moderator runbook, maintainer build/release/rollback guide and one-page scope/limitations statement. Build from `docs/app-manual.md` and `docs/pdpc-release-factory.md`, correcting obsolete UI/time/version language. Cover second-screen setup, declared resolution, disconnect/reconnect, blackout/END, offline startup, browser persistence, package backup and recovery. Have an exercise staff member follow the documents without author assistance.
@@ -340,6 +380,7 @@ These remain the existing scenario programme, with its own planning steward and 
 - [ ] **M4.4 — Establish support and rehearse rollback. [C5, E7, N]** Name the person/team responsible for exercise-season incidents and the agreed response window, with a contact route and known-issues list. Preserve the previous tagged app and compatible package. Exercise a rollback from a candidate that includes service-worker caches, lazy chunks and V7 package incompatibility; restoring an older app alone is not proof it can read the newer package. Record backup/restore steps and the recovery result.
 
 - [ ] **M4.5 — Obtain branding approval and produce the release candidate. [C5, E6]** Obtain actual PDPC decisions on name, logo, color profile and disclaimer wording. Freeze accepted exercise content, document the supported feature/authoring scope, update changelog/version, and produce the PDPC variant(s) through the existing factory from a tagged candidate. Verify full-workspace versus participant isolation, reproducible manifest/checksums, static/offline launch and the approved content/branding. Run full release gates once on this exact candidate and save native reports. Prepare the deployment and rollback artifacts for review before requesting any still-required publish approval.
+  - Restored deliverables [E9]: use the existing `release:pdpc:deliverables` pipeline to validate real paired Cloudflare ZIPs and single-file offline HTML, including images/fonts, first-launch Light default, retained saved appearance choices and offline launch. PDFs remain deliberately excluded. The September 27 fixture tests do not establish actual release-output readiness.
 
 - [ ] **M4.6 — Deploy the approved candidate, run a real pilot and qualify 1.0. [C5, E5, N]** After the publication boundary is authorized, deploy the exact approved output and run one real exercise with PDPC staff. Triage findings; fix release blockers and verify affected boundaries. Promote the accepted final candidate with a new immutable `v1.0.0` tag and archive its package/manifests/docs. Do not move an existing tag to different bytes: C5's “re-tagged as 1.0” is implemented as a new release identity. Unresolved supported-scope S-M4/S-M5/S-M6 work remains visible rather than being relabelled complete.
 
@@ -370,19 +411,21 @@ Every additional Claude recommendation is retained here or assigned above. “De
 
 ## 12. Decisions and next implementation boundary
 
-**Next engineering priority, after review of the pre-M0 handoff:** finish M0.1 baseline/publication disposition, then M0.2–M0.3 through the smallest fixture/portable-build boundary. Local carry-forward reconciliation is prepared; no M0 implementation has started. Keep scenario-authoring paused and do not activate its owners. [C5, E5, N]
+**Authorized next engineering assignment, 27 September:** create **Implement Fable M0 source and fixture baseline** using the compact brief in section 5. One owner establishes M0.1 and delivers the smallest connected M0.2/M0.3 slice. Local carry-forward reconciliation is complete; M0 engineering completion is not yet evidenced. Keep scenario-authoring paused and do not activate its owners. [C5, E5, E9, N]
 
 The following choices are not needed to finish this planning document, but must be resolved before their dependent work closes:
 
-- **Publication/baseline [E7, N]:** reconcile the fact that the redesign is local while both remotes still point at `c003d111`; preserve explicit merge/push/deployment authority.
+- **Publication/baseline [E7, E9, N]:** activate the prepared local checkpoint after refreshing remote refs. Publication is not a prerequisite for the authorized local slice; merge into main, push and deployment still require their own authority and relevant verification.
 - **Performance [C5, N]:** confirm reference devices and ratify measurable bundle/runtime budgets; proposed starting numbers appear in M0.4 and M3.3.
 - **Content and practitioners [C5, E5]:** select another accepted rehearsal package while scenario-authoring is paused; nominate exercise staff and their three desired comparisons. S-M3 acceptance becomes relevant only after explicit resumption and selection of that candidate.
-- **Release scope [C5, E5]:** decide whether supported 1.0 includes scenario-authoring or only the dashboard consuming accepted packages. Scenario milestones remain tracked either way.
+- **Release scope [C5, E5, E9]:** current Fable work proceeds independently with scenario-authoring paused. Bringing supported authoring into 1.0 would require an explicit resumption/scope decision; retain its unfinished milestones without blocking dashboard work.
 - **External commitments [C5]:** actual PDPC brand approval, support ownership/response window, hosting target and real pilot participants.
 
 Dates and effort estimates should follow M0's measured repair scope and practitioner availability. No percentage-complete claim or invented delivery date is useful before those constraints are known.
 
 ## 13. Planning verification record
+
+### Original consolidation — 19 September
 
 - Read all five September 19 design documents, the preceding decision-surface plan, saved gate/repair records, legacy acceptance/cross-style records, scenario CURRENT/development milestones and release/workflow references.
 - Refreshed both Git remotes and checked the actual SHAs; inspected local merge and scenario branch checkpoints.
@@ -390,3 +433,9 @@ Dates and effort estimates should follow M0's measured repair scope and practiti
 - Parsed saved unit report counts; reused recorded test evidence without presenting it as fresh execution.
 - Inspected relevant startup/source-loading/config boundaries to distinguish existing recovery from a root error boundary and current serialization from proposed fields.
 - This is documentation-only work: no application tests, builds, browser journeys, scenario generation or model evaluations were run for the plan.
+
+### Handoff incorporation — 27 September
+
+- Read E9 and current project guidance; incorporated M0 source, packaging and test-organization carryovers, later milestone dependencies and the user's first-task authorization into this existing roadmap.
+- Verified the annotated checkpoint resolves to `e7e58c84`; inspected clean main/preparation checkouts at `cdfc7a6a` and the handoff-only diff after the code checkpoint. Inspected the portable builder, single-file converter and directly related test owners to bound the first assignment.
+- Reused the handoff's dated 17-test/theme/CSV evidence with its stated limits. Did not rerun product tests, builds or browser journeys, refresh remotes, publish, or inspect/activate scenario tasks during this planning update.
