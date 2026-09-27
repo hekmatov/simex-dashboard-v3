@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import { resetSourceDashboard } from "./support/dashboardFixture.js";
 import {
   openChartAuthoring,
   resumeChartAuthoring,
@@ -10,6 +11,9 @@ import {
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
+const WORKFORCE_SOURCE_ID = "upload-eldoria-work-sectors";
+const WORKFORCE_SOURCE_LABEL = "eldoria work sectors";
+const WORKFORCE_VALUE_COLUMN = "Share of workforce (%)";
 const TIMELINE_FIXTURE = {
   name: "timeline-events.csv",
   mimeType: "text/csv",
@@ -63,6 +67,7 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   page,
 }) => {
   test.setTimeout(240_000);
+  await openM0FixtureBuild(page);
   let flow = await openChartAuthoring(page);
   let { wizard } = flow;
 
@@ -79,7 +84,7 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   await expect(flow.stageButton("review"))
     .toHaveAttribute("data-status", "Waiting on prerequisite");
 
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource(WORKFORCE_SOURCE_LABEL);
   await flow.goToChartType();
   await expectChartTypeCardsAligned(wizard, "creation");
   await wizard.getByRole("button", { name: /^Pie\b/i }).click();
@@ -107,18 +112,18 @@ test("source-first existing CSV pie authoring progressively reveals schema field
 
   flow = await openChartAuthoring(page);
   wizard = flow.wizard;
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource(WORKFORCE_SOURCE_LABEL);
   await expect(
     wizard.getByRole("region", { name: "Selected source profile" }),
-  ).toContainText("Age group");
+  ).toContainText("Sector");
   await expect(
     wizard.getByRole("region", { name: "Selected source profile" }),
-  ).toContainText("deaths");
+  ).toContainText(WORKFORCE_VALUE_COLUMN);
   await flow.chooseChartType("pie", /^Pie\b/i);
 
   await flow.goToMapAndPrepare();
-  await flow.selectRole("category", "Age group");
-  await flow.selectRole("value", "deaths");
+  await flow.selectRole("category", "Sector");
+  await flow.selectRole("value", WORKFORCE_VALUE_COLUMN);
 
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
@@ -130,7 +135,7 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   await wizard.getByRole("button", { name: "Add color" }).click();
   await wizard.getByLabel("Color 1", { exact: true }).fill("#DC2626");
   await wizard.getByRole("textbox", { name: "Chart title", exact: true })
-    .fill("E2E mortality composition");
+    .fill("E2E workforce composition");
   await flow.goToReview();
   await wizard.getByRole("button", { name: "Create chart" }).click();
 
@@ -140,11 +145,22 @@ test("source-first existing CSV pie authoring progressively reveals schema field
     const chart = dashboard.pages
       .flatMap(({ sections }) => sections)
       .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
       .find(({ title, typeId }) => (
-        title === "E2E mortality composition" && typeId === "pie"
+        title === "E2E workforce composition" && typeId === "pie"
       ));
-    return chart?.presentation?.series?.colors ?? null;
-  }, STORAGE_KEY)).toEqual(["#DC2626"]);
+    return chart ? {
+      sourceId: chart.sourceId,
+      category: chart.roles?.category?.field,
+      value: chart.roles?.value?.field,
+      colors: chart.presentation?.series?.colors,
+    } : null;
+  }, STORAGE_KEY)).toEqual({
+    sourceId: WORKFORCE_SOURCE_ID,
+    category: "Sector",
+    value: WORKFORCE_VALUE_COLUMN,
+    colors: ["#DC2626"],
+  });
 });
 
 test("wizard eyedropper reveals the dashboard and Escape preserves the draft", async ({ page }) => {
@@ -514,26 +530,28 @@ test("quick edit previews immediately while unchanged and suspended click-away s
 test("suspended valid chart creation keeps one stable owner while incomplete creation stays absent", async ({
   page,
 }) => {
+  await openM0FixtureBuild(page);
   let flow = await openChartAuthoring(page);
   let wizard = flow.wizard;
   const creationOwner = page.locator('[data-pending-work-kind="chart-create"]');
   await expect(creationOwner).toHaveCount(0);
 
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource(WORKFORCE_SOURCE_LABEL);
   await expect(creationOwner).toHaveCount(1);
   const ownerId = await creationOwner.getAttribute("data-pending-work-id");
   expect(ownerId).toMatch(/^chart-create:.+/);
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
   await flow.chooseChartType("pie", /^Pie\b/i);
   await flow.goToMapAndPrepare();
-  await flow.selectRole("category", "Age group");
-  await flow.selectRole("value", "deaths");
+  await flow.selectRole("category", "Sector");
+  await flow.selectRole("value", WORKFORCE_VALUE_COLUMN);
   await flow.goToConfigure();
   await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Retainable owner draft");
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await expect(creationOwner).toHaveCount(1);
   await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
+  await expect(page.locator('[data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
 
   const title = wizard.getByRole("textbox", { name: "Chart title", exact: true });
   await title.focus();
@@ -553,7 +571,14 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
     .getByRole("button", { name: "Discard", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   await expect(creationOwner).toHaveCount(0);
+  await expect(page.locator('[data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
 });
+
+async function openM0FixtureBuild(page) {
+  await resetSourceDashboard(page, { fixture: "fable-m0" });
+  await expect(page.locator('[data-canonical-page-id="m0-dashboard"]')).toBeVisible();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+}
 
 test("quick edit saving failure keeps one retry owner and confirmed Remove clears it", async ({
   page,
