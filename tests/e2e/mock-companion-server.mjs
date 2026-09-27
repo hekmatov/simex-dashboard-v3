@@ -54,11 +54,37 @@ socketServer.on("connection", (socket) => {
 
 const appServer = createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
+  if (url.pathname === "/__test__/dashboard") {
+    if (request.method === "GET") {
+      // An inert same-origin page lets the browser reset storage with the app
+      // unmounted, so a pending save cannot repopulate it during reset.
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      response.end("<!doctype html><title>Dashboard test reset</title>");
+      return;
+    }
+    if (request.method === "POST") {
+      let body;
+      try { body = await readJsonBody(request); } catch {
+        return json(response, 400, { error: "invalid JSON" });
+      }
+      if (!["shipped", "fable-m0"].includes(body?.fixture)) {
+        return json(response, 400, { error: "unknown dashboard fixture" });
+      }
+      const value = body.fixture === "shipped" ? "; Max-Age=0" : "fable-m0";
+      response.setHeader("set-cookie", `simex-e2e-fixture=${value}; Path=/; HttpOnly; SameSite=Strict`);
+      return json(response, 200, { fixture: body.fixture });
+    }
+    return json(response, 405, { error: "method not allowed" });
+  }
+  if (isFixtureRequest(request) && ["/config/dashboard.json", "/config/dataset-profiles.json"].includes(url.pathname)) {
+    const config = JSON.parse(await readFile(new URL("../fixtures/fable-m0-dashboard.json", import.meta.url), "utf8"));
+    return json(response, 200, url.pathname.endsWith("dataset-profiles.json") ? config.datasetProfiles : config);
+  }
   if (url.pathname === "/__test_ready__") {
     return json(response, 200, { ready: true });
   }
   if (url.pathname === "/companion/bootstrap") {
-    if (catalogueMode === "absent") {
+    if (catalogueMode === "absent" || isFixtureRequest(request)) {
       return json(response, 404, { available: false });
     }
     return json(response, 200, {
@@ -75,6 +101,10 @@ const appServer = createServer(async (request, response) => {
     json(response, 404, { error: "not found" })
   ));
 });
+
+function isFixtureRequest(request) {
+  return String(request.headers.cookie ?? "").split(";").some((cookie) => cookie.trim() === "simex-e2e-fixture=fable-m0");
+}
 
 appServer.on("upgrade", (request, socket, head) => {
   const url = new URL(request.url, `http://${request.headers.host}`);

@@ -1,0 +1,517 @@
+{
+  "configVersion": 6,
+  "id": "fable-m0-dashboard",
+  "title": "Fable M0 fixture",
+  "timezone": "UTC",
+  "home": {
+    "enabled": false
+  },
+  "layout": "two-column",
+  "globalStyles": {
+    "dashboardStyle": "pdpc",
+    "dashboardColorProfile": "pdpc/brand",
+    "chartColorMode": "standard",
+    "accessibility": {
+      "enabled": false
+    },
+    "panelColors": {
+      "panelBackgroundColor": "#f5f8fb",
+      "panelBorderColor": "#d8e2ec",
+      "chartAreaColor": "#eaf1f6",
+      "chartAreaBorderColor": "#d8e2ec",
+      "editHighlightColor": "#043bcb",
+      "multiSelectHighlightColor": "#00a676"
+    }
+  },
+  "dataSources": {
+    "upload-cases-wcph-eldoria-3": {
+      "kind": "csv",
+      "path": "data/uploaded/cases-WCPH-eldoria-upload-cases-wcph-eldoria-3.csv",
+      "provenance": {
+        "label": "Uploaded cases WCPH-eldoria.csv"
+      }
+    },
+    "upload-eldoria-work-sectors": {
+      "kind": "csv",
+      "path": "data/uploaded/eldoria_work_sectors-upload-eldoria-work-sectors.csv",
+      "provenance": {
+        "label": "Uploaded eldoria_work_sectors.csv"
+      }
+    },
+    "static-cc1d15c3-dba6-4196-8293-7004cb03fffd-source": {
+      "kind": "staticImage",
+      "sourceVersion": 2,
+      "mediaId": "media-60f1c23b-7040-4bca-a6b5-a253c095ad79",
+      "alt": "-",
+      "decorative": false,
+      "fit": "contain",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1000,
+        "height": 1000
+      },
+      "rotation": 0
+    },
+    "m0-briefing-source": {
+      "kind": "staticText",
+      "sourceVersion": 1,
+      "revision": 1,
+      "renderingPolicy": "portable-qmd-v1",
+      "qmd": "**It is 21 February 2027.**\n\nEldoria confirmed its first 2 cases. This briefing can be edited in Build."
+    },
+    "geo_netherlands_municipalities_2026": {
+      "kind": "dataset",
+      "type": "uploadedGeoJson",
+      "fileName": "gemeente_2026.geojson",
+      "provenance": {
+        "label": "Netherlands municipality boundaries, 2026"
+      },
+      "geoJson": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    4.547,
+                    52.314
+                  ],
+                  [
+                    4.592,
+                    52.392
+                  ],
+                  [
+                    4.541,
+                    52.401
+                  ],
+                  [
+                    4.494,
+                    52.328
+                  ],
+                  [
+                    4.547,
+                    52.314
+                  ]
+                ]
+              ]
+            },
+            "properties": {
+              "statcode": "GM0473",
+              "jrstatcode": "2026GM0473",
+              "statnaam": "Zandvoort",
+              "rubriek": "gemeente",
+              "id": 137,
+              "FID": "gemeente_gegeneraliseerd.0cb7166a-9431-4cdc-8b2e-c37a4772cef5"
+            },
+            "id": "GM0473"
+          }
+        ]
+      }
+    }
+  },
+  "datasetProfiles": {
+    "upload-cases-wcph-eldoria-3": {
+      "columns": [
+        {
+          "examples": [
+            "2027-02-14",
+            "2027-02-15",
+            "2027-02-16"
+          ],
+          "geographicHint": null,
+          "missingCount": 0,
+          "name": "Date",
+          "temporal": {
+            "diagnostics": [],
+            "parsingMetadata": {
+              "format": "YYYY-MM-DD",
+              "interpretation": "auto"
+            },
+            "values": [
+              "2027-02-14",
+              "2027-02-15",
+              "2027-02-16",
+              "2027-02-17",
+              "2027-02-18",
+              "2027-02-19",
+              "2027-02-20",
+              "2027-02-21"
+            ]
+          },
+          "type": "temporal",
+          "uniqueCount": 8
+        },
+        {
+          "examples": [
+            0,
+            2
+          ],
+          "geographicHint": null,
+          "missingCount": 0,
+          "name": "national_total_cases",
+          "type": "numeric",
+          "uniqueCount": 2
+        },
+        {
+          "examples": [],
+          "geographicHint": null,
+          "missingCount": 8,
+          "name": "total_deaths",
+          "type": "category",
+          "uniqueCount": 0
+        }
+      ],
+      "fingerprint": "0fe96c239fc8e5a9afcabd87745f21b1d75e9c93e57354a54a35a24f7cccd0d6",
+      "kind": "csv",
+      "path": "data/uploaded/cases-WCPH-eldoria-upload-cases-wcph-eldoria-3.csv",
+      "provenance": {
+        "label": "Uploaded cases WCPH-eldoria.csv"
+      },
+      "rowCount": 8,
+      "sourceId": "upload-cases-wcph-eldoria-3"
+    },
+    "upload-eldoria-work-sectors": {
+      "columns": [
+        {
+          "examples": [
+            "Hospitality and tourism",
+            "Retail and personal services",
+            "Healthcare"
+          ],
+          "geographicHint": null,
+          "missingCount": 0,
+          "name": "Sector",
+          "type": "category",
+          "uniqueCount": 6
+        },
+        {
+          "examples": [
+            19,
+            15,
+            13
+          ],
+          "geographicHint": null,
+          "missingCount": 0,
+          "name": "Share of workforce (%)",
+          "type": "numeric",
+          "uniqueCount": 6
+        }
+      ],
+      "fingerprint": "e63099a4c4239c26f15b7e90f783377e9f83c3b41ca86f2aa3bd24483a78b045",
+      "kind": "csv",
+      "path": "data/uploaded/eldoria_work_sectors-upload-eldoria-work-sectors.csv",
+      "provenance": {
+        "label": "Uploaded eldoria_work_sectors.csv"
+      },
+      "rowCount": 6,
+      "sourceId": "upload-eldoria-work-sectors"
+    }
+  },
+  "contentLibrary": {
+    "sourceEntries": {
+      "upload-cases-wcph-eldoria-3": {
+        "sourceId": "upload-cases-wcph-eldoria-3",
+        "origin": "uploaded",
+        "ownership": "builder",
+        "displayName": "cases WCPH eldoria",
+        "provenance": {
+          "fileName": "cases WCPH-eldoria.csv",
+          "profileFingerprint": "0fe96c239fc8e5a9afcabd87745f21b1d75e9c93e57354a54a35a24f7cccd0d6"
+        },
+        "health": "ready"
+      },
+      "upload-eldoria-work-sectors": {
+        "sourceId": "upload-eldoria-work-sectors",
+        "origin": "uploaded",
+        "ownership": "builder",
+        "displayName": "eldoria work sectors",
+        "provenance": {
+          "fileName": "eldoria_work_sectors.csv",
+          "profileFingerprint": "e63099a4c4239c26f15b7e90f783377e9f83c3b41ca86f2aa3bd24483a78b045"
+        },
+        "health": "ready"
+      },
+      "geo_netherlands_municipalities_2026": {
+        "sourceId": "geo_netherlands_municipalities_2026",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Netherlands municipality boundaries, 2026",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      }
+    },
+    "mediaItems": {
+      "media-60f1c23b-7040-4bca-a6b5-a253c095ad79": {
+        "mediaId": "media-60f1c23b-7040-4bca-a6b5-a253c095ad79",
+        "revision": 1,
+        "current": {
+          "kind": "package",
+          "path": "data/authored/525221af149f2039d7a93992f20be22f2a9901c5600d0eb619fad50c47cc1ae3.png"
+        },
+        "displayName": "timelinewcph2026.png",
+        "defaultDescription": "timelinewcph2026.png",
+        "origin": "packaged",
+        "health": "ready",
+        "dimensions": {
+          "width": 2164,
+          "height": 592
+        },
+        "byteLength": 174126,
+        "mediaType": "image/png"
+      }
+    }
+  },
+  "chronoGroups": [],
+  "scenes": [],
+  "pages": [
+    {
+      "id": "m0-dashboard",
+      "title": "Fixture dashboard",
+      "sections": [
+        {
+          "id": "m0-data",
+          "title": "Data",
+          "panels": [
+            {
+              "configVersion": 3,
+              "id": "m0-cases",
+              "typeId": "line",
+              "title": "Fixture cases",
+              "description": "National confirmed cases in Eldoria",
+              "sourceId": "upload-cases-wcph-eldoria-3",
+              "roles": {
+                "measurements": [
+                  {
+                    "field": "national_total_cases",
+                    "axis": "primary"
+                  }
+                ],
+                "observation": {
+                  "field": "Date",
+                  "interpretation": "temporal"
+                }
+              },
+              "transformations": {
+                "filters": [],
+                "grouping": null,
+                "aggregation": null,
+                "duplicates": null,
+                "missingValues": "gap"
+              },
+              "presentation": {
+                "title": {
+                  "align": "left",
+                  "fontSize": 20
+                },
+                "collection": null,
+                "legend": {
+                  "visible": false
+                },
+                "description": {
+                  "visible": false
+                },
+                "series": {
+                  "colors": [
+                    "#36BDEB"
+                  ],
+                  "lineWidth": 2
+                },
+                "axes": {
+                  "primary": {
+                    "title": "Cases",
+                    "min": 0,
+                    "max": 4,
+                    "titlePosition": "center",
+                    "titleOrientation": "vertical",
+                    "titleFontSize": 17,
+                    "titleBold": false
+                  },
+                  "secondary": {
+                    "title": "Date"
+                  },
+                  "x": {
+                    "title": "Date",
+                    "titleFontSize": 17,
+                    "labelPreset": "ddMmmYearBoundary"
+                  }
+                },
+                "referenceLine": {
+                  "visible": true,
+                  "value": -1,
+                  "label": "",
+                  "color": "#E56B2F",
+                  "lineStyle": "dashed"
+                },
+                "labels": {
+                  "visible": false,
+                  "position": "top"
+                }
+              },
+              "interaction": {
+                "zoom": {
+                  "enabled": true,
+                  "rangeSelector": false
+                },
+                "timeSync": null
+              },
+              "layout": {
+                "size": "standard",
+                "width": 2,
+                "height": 1
+              }
+            },
+            {
+              "configVersion": 3,
+              "id": "m0-sectors",
+              "typeId": "pie",
+              "title": "Fixture employment",
+              "description": "",
+              "sourceId": "upload-eldoria-work-sectors",
+              "roles": {
+                "category": {
+                  "field": "Sector"
+                },
+                "value": {
+                  "field": "Share of workforce (%)"
+                }
+              },
+              "transformations": {
+                "filters": [],
+                "grouping": null,
+                "aggregation": null,
+                "duplicates": null,
+                "missingValues": "gap"
+              },
+              "presentation": {
+                "title": {
+                  "align": "left",
+                  "fontSize": 22
+                },
+                "collection": null,
+                "legend": {
+                  "visible": false,
+                  "fontSize": 14
+                },
+                "labels": {
+                  "visible": true,
+                  "valueMode": "percentage",
+                  "valueFontSize": 17,
+                  "labelFontSize": 19
+                },
+                "series": {
+                  "colors": [
+                    "#DC2626",
+                    "#36BDEB",
+                    "#2BAA7B",
+                    "#F1A1AD",
+                    "#F59E0B",
+                    "#043BCB"
+                  ],
+                  "verticalCenter": true
+                }
+              },
+              "interaction": {
+                "zoom": {
+                  "enabled": false,
+                  "rangeSelector": false
+                },
+                "timeSync": null
+              },
+              "layout": {
+                "size": "standard",
+                "width": 2,
+                "height": 1
+              }
+            }
+          ]
+        },
+        {
+          "id": "m0-content",
+          "title": "Briefing",
+          "panels": [
+            {
+              "id": "m0-briefing",
+              "chart": {
+                "configVersion": 3,
+                "id": "m0-briefing",
+                "typeId": "freeText",
+                "title": "Fixture briefing",
+                "description": "",
+                "sourceId": "m0-briefing-source",
+                "roles": {},
+                "transformations": {
+                  "filters": [],
+                  "grouping": null,
+                  "aggregation": null,
+                  "duplicates": null,
+                  "missingValues": "gap"
+                },
+                "presentation": {
+                  "title": {
+                    "align": "left"
+                  },
+                  "collection": null
+                },
+                "interaction": {
+                  "zoom": {
+                    "enabled": false,
+                    "rangeSelector": false
+                  },
+                  "timeSync": null
+                },
+                "layout": {
+                  "size": "standard",
+                  "width": 2,
+                  "height": 1
+                }
+              }
+            },
+            {
+              "id": "m0-image",
+              "chart": {
+                "configVersion": 3,
+                "id": "m0-image",
+                "typeId": "image",
+                "title": "Fixture timeline",
+                "description": "",
+                "sourceId": "static-cc1d15c3-dba6-4196-8293-7004cb03fffd-source",
+                "roles": {},
+                "transformations": {
+                  "filters": [],
+                  "grouping": null,
+                  "aggregation": null,
+                  "duplicates": null,
+                  "missingValues": "gap"
+                },
+                "presentation": {
+                  "title": {
+                    "align": "left"
+                  },
+                  "collection": null
+                },
+                "interaction": {
+                  "zoom": {
+                    "enabled": true,
+                    "rangeSelector": false
+                  },
+                  "timeSync": null
+                },
+                "layout": {
+                  "size": "standard",
+                  "width": 2,
+                  "height": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

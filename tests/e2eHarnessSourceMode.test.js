@@ -1,15 +1,85 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { loadDashboardConfig } from "../src/lib/loadDashboard.js";
+import { serializeDashboardBundle } from "../src/charting/config/dashboardBundleV3.js";
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
+import { buildPresentableItemIndex } from "../src/static-content/staticPanelCapabilities.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("./e2e/mock-companion-server.mjs", import.meta.url),
 );
+const FIXTURE_URL = new URL("./fixtures/fable-m0-dashboard.json", import.meta.url);
+
+test("representative fixture has ready temporal/static charts, editable content and eligible Present items", async () => {
+  const config = JSON.parse(await readFile(FIXTURE_URL, "utf8"));
+  assert.equal(config.id, "fable-m0-dashboard");
+  assert.doesNotThrow(() => serializeDashboardBundle(config, { now: null }));
+  const portableSources = {};
+  for (const [id, source] of Object.entries(config.dataSources)) {
+    if (source.kind === "csv") {
+      portableSources[id] = { kind: "csv", text: await readFile(new URL(`../public/${source.path}`, import.meta.url), "utf8") };
+    }
+  }
+  const runtime = await loadDashboardConfig(config, config.datasetProfiles, portableSources);
+  const charts = runtime.pages.flatMap((page) => page.sections.flatMap((section) => section.panels.map((panel) => panel.chart ?? panel)));
+  assert.deepEqual(charts.map((chart) => [chart.id, chart.configVersion, chart.typeId]), [
+    ["m0-cases", 3, "line"], ["m0-sectors", 3, "pie"], ["m0-briefing", 3, "freeText"], ["m0-image", 3, "image"],
+  ]);
+  for (const chart of charts.slice(0, 2)) {
+    const prepared = prepareChartData({ chart, rows: runtime.loadedData[chart.sourceId], datasetProfile: runtime.datasetProfiles[chart.sourceId] });
+    assert.equal(prepared.status, "ready", chart.id);
+    assert.ok(prepared.meta.renderableMarkCount > 1, chart.id);
+    assert.equal(runtime.dataSourceStates[chart.sourceId].status, "ready");
+  }
+  const dates = runtime.datasetProfiles[charts[0].sourceId].columns.find(({ name }) => name === "Date").temporal.values;
+  assert.ok(new Set(dates).size > 1);
+  assert.equal(charts[1].interaction.timeSync, null);
+  assert.equal(config.dataSources[charts[2].sourceId].kind, "staticText");
+  assert.match(config.dataSources[charts[2].sourceId].qmd, /Eldoria confirmed its first 2 cases/);
+  const image = config.contentLibrary.mediaItems[config.dataSources[charts[3].sourceId].mediaId];
+  assert.equal(image.current.kind, "package");
+  assert.equal((await readFile(new URL(`../public/${image.current.path}`, import.meta.url))).byteLength, image.byteLength);
+  assert.deepEqual([...buildPresentableItemIndex(runtime).keys()], ["m0-cases", "m0-sectors", "m0-image"]);
+});
+
+test("fixture selection is explicit, cookie-isolated and resettable without replacing shipped config", async (t) => {
+  const { appUrl } = await startHarness(t, { mode: "source", appPort: 43_181, controlPort: 43_182, staleDist: false });
+  const configUrl = `${appUrl}/config/dashboard.json`;
+  assert.equal((await fetch(configUrl).then((response) => response.json())).id, "shipped-harness-fixture");
+  const select = await fetch(`${appUrl}/__test__/dashboard`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fixture: "fable-m0" }),
+  });
+  assert.equal(select.status, 200);
+  const cookie = select.headers.get("set-cookie").split(";")[0];
+  const selected = await fetch(configUrl, { headers: { cookie } });
+  assert.equal(selected.headers.get("cache-control"), "no-store");
+  const fixture = await selected.json();
+  assert.equal(fixture.id, "fable-m0-dashboard");
+  assert.deepEqual(fixture, JSON.parse(await readFile(FIXTURE_URL, "utf8")));
+  const profiles = await fetch(`${appUrl}/config/dataset-profiles.json`, { headers: { cookie } }).then((response) => response.json());
+  assert.deepEqual(profiles, fixture.datasetProfiles);
+  assert.equal((await fetch(configUrl).then((response) => response.json())).id, "shipped-harness-fixture");
+  fixture.title = "Local mutation";
+  assert.equal((await fetch(configUrl, { headers: { cookie } }).then((response) => response.json())).title, "Fable M0 fixture");
+  const invalid = await fetch(`${appUrl}/__test__/dashboard`, {
+    method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify({ fixture: "../unknown" }),
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.headers.get("set-cookie"), null);
+  const reset = await fetch(`${appUrl}/__test__/dashboard`, {
+    method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify({ fixture: "shipped" }),
+  });
+  assert.equal(reset.status, 200);
+  assert.match(reset.headers.get("set-cookie"), /Max-Age=0/);
+  assert.equal((await fetch(configUrl).then((response) => response.json())).id, "shipped-harness-fixture");
+});
 
 test("harness accepts isolated app and control ports", async (t) => {
   const { appUrl, controlUrl } = await startHarness(t, {
@@ -145,6 +215,8 @@ async function startHarness(t, { mode, appPort, controlPort, staleDist }) {
 }
 
 async function writeFixture(root, { staleDist }) {
+  await mkdir(join(root, "public", "config"), { recursive: true });
+  await writeFile(join(root, "public", "config", "dashboard.json"), JSON.stringify({ id: "shipped-harness-fixture" }));
   const catalogue = JSON.stringify({
     catalogue_id: "fixture",
     digest: "a".repeat(64),
