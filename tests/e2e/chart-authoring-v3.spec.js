@@ -23,6 +23,40 @@ const TIMELINE_FIXTURE = {
     "Evacuation decision,2027-05-02,2027-05-03,Civil protection,planned",
   ].join("\n")),
 };
+const SCATTER_FIXTURE = {
+  name: "income-relationship.csv",
+  mimeType: "text/csv",
+  buffer: Buffer.from([
+    "Income bracket,Share of population (%),Share of total income (%)",
+    "Low income,35,9",
+    "Low income,35,9",
+    "Middle income,20,22",
+    "High income,6,30",
+  ].join("\n")),
+};
+const HEATMAP_FIXTURE = {
+  name: "preparedness-heatmap.csv",
+  mimeType: "text/csv",
+  buffer: Buffer.from([
+    "Question,Wave,Percentage,date",
+    "Hospital capacity,Baseline,65,2027-05-01",
+    "Hospital capacity,Baseline,65,2027-05-01",
+    "Hospital capacity,Surge,72,2027-05-02",
+    "Public awareness,Baseline,48,2027-05-01",
+    "Public awareness,Surge,61,2027-05-02",
+  ].join("\n")),
+};
+const DELTA_FIXTURE = {
+  name: "province-deltas.csv",
+  mimeType: "text/csv",
+  buffer: Buffer.from([
+    "province,date,Infected_total",
+    "Drenthe,2027-05-01,12",
+    "Drenthe,2027-05-02,18",
+    "Gelderland,2027-05-01,20",
+    "Gelderland,2027-05-02,25",
+  ].join("\n")),
+};
 
 test.describe.configure({ timeout: 150_000 });
 
@@ -201,13 +235,13 @@ for (const scenario of [
     typeId: "scatter",
     query: "scatter",
     name: /^Scatter\b/i,
-    sourceId: "bio_municipal_infections",
+    upload: SCATTER_FIXTURE,
     roles: {
-      x: "population",
-      y: "infectionsPer10000",
-      label: "Gemeentenaam",
+      x: "Share of population (%)",
+      y: "Share of total income (%)",
+      label: "Income bracket",
     },
-    title: "E2E municipal relationship",
+    title: "E2E income relationship",
     visibleSections: ["Axes", "Interactions"],
     absentSections: ["Collection", "Timeline", "Map"],
     resolveDuplicates: true,
@@ -216,10 +250,10 @@ for (const scenario of [
     typeId: "heatmap",
     query: "heatmap",
     name: /^Heatmap\b/i,
-    sourceId: "socio_behaviour",
+    upload: HEATMAP_FIXTURE,
     roles: {
       row: "Question",
-      column: "Month Label",
+      column: "Wave",
       value: "Percentage",
       time: "date",
     },
@@ -232,7 +266,7 @@ for (const scenario of [
     typeId: "deltaCard",
     query: "delta card",
     name: /^Delta card\b/i,
-    sourceId: "bio_province_deltas",
+    upload: DELTA_FIXTURE,
     roles: {
       measurement: "Infected_total",
       entity: "province",
@@ -255,7 +289,15 @@ for (const scenario of [
     test.setTimeout(scenario.typeId === "scatter" ? 360_000 : 240_000);
     const flow = await openChartAuthoring(page);
     const { wizard } = flow;
-    await flow.selectExistingSource(sourceLabel(scenario.sourceId));
+    if (scenario.upload) {
+      await flow.uploadCsv(scenario.upload);
+    } else {
+      await flow.selectExistingSource(scenario.sourceLabel);
+    }
+    const profile = wizard.getByRole("region", { name: "Selected source profile" });
+    for (const column of Object.values(scenario.roles)) {
+      await expect(profile).toContainText(column);
+    }
     await flow.chooseChartType(scenario.query, scenario.name);
     await flow.goToMapAndPrepare();
     for (const [roleId, column] of Object.entries(scenario.roles)) {
@@ -298,7 +340,7 @@ for (const scenario of [
       await expect(wizard.getByRole("heading", { name: heading })).toHaveCount(0);
     }
     await flow.createChart(scenario.title);
-    await expectStoredChart(page, scenario.typeId, scenario.title);
+    await expectStoredCreatedChart(page, scenario);
   });
 }
 
@@ -792,14 +834,6 @@ async function openBiomedicalPage(page) {
     .click();
 }
 
-function sourceLabel(sourceId) {
-  return {
-    bio_municipal_infections: "Biomedical municipal infections",
-    socio_behaviour: "Simulation exercise socio-economic behaviour dataset",
-    bio_province_deltas: "Simulation exercise biomedical derived province changes",
-  }[sourceId];
-}
-
 async function expectChartTypeCardsAligned(surface, surfaceName) {
   const cards = surface.locator(".chart-type-card");
   await expect(cards.first()).toBeVisible();
@@ -991,4 +1025,43 @@ async function expectStoredChart(page, typeId, title) {
     expectedType: typeId,
     expectedTitle: title,
   })).toBe(true);
+}
+
+async function expectStoredCreatedChart(page, scenario) {
+  const expected = {
+    count: 1,
+    sourcePresent: true,
+    profilePresent: true,
+    roles: scenario.roles,
+    duplicates: scenario.resolveDuplicates ? "last" : null,
+    filters: scenario.filter
+      ? [{ field: scenario.filter.field, operator: "equals", value: scenario.filter.value }]
+      : [],
+  };
+  await expect.poll(() => page.evaluate(({ key, typeId, title, roleIds }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const charts = dashboard.pages
+      .flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .filter((chart) => chart.typeId === typeId && chart.title === title);
+    const chart = charts[0];
+    if (!chart) return { count: charts.length };
+    return {
+      count: charts.length,
+      sourcePresent: Boolean(dashboard.dataSources?.[chart.sourceId]),
+      profilePresent: Boolean(dashboard.datasetProfiles?.[chart.sourceId]?.columns?.length),
+      roles: Object.fromEntries(roleIds.map((roleId) => {
+        const binding = chart.roles?.[roleId];
+        return [roleId, (Array.isArray(binding) ? binding[0] : binding)?.field ?? null];
+      })),
+      duplicates: chart.transformations?.duplicates ?? null,
+      filters: chart.transformations?.filters ?? [],
+    };
+  }, {
+    key: STORAGE_KEY,
+    typeId: scenario.typeId,
+    title: scenario.title,
+    roleIds: Object.keys(scenario.roles),
+  })).toEqual(expected);
 }
