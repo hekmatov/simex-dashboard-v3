@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { open, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { register } from "node:module";
 import path from "node:path";
@@ -28,6 +28,7 @@ import {
 import { makeDashboardV5 } from "./helpers/contentLibraryFixtures.js";
 import {
   buildEditorFormModel,
+  buildFormPreparationKey,
   buildWizardFormModel,
 } from "../src/charting/forms/formModel.js";
 import {
@@ -42,8 +43,7 @@ import {
 import * as geographySource from "../src/charting/forms/geographySource.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 import { validateGeoJson } from "../src/lib/loadDashboard.js";
-
-const ROOT = path.resolve(import.meta.dirname, "..");
+import { analyticalPlaybackFixture } from "./fixtures/analyticalPlaybackV3.js";
 
 const viteModuleUrl = import.meta.resolve("vite");
 register(`data:text/javascript,${encodeURIComponent(`
@@ -475,52 +475,29 @@ function findElementsByType(element, type) {
   return found;
 }
 
-async function trackedGeographyFixture(chartId) {
-  const dashboard = JSON.parse(await readFile(
-    path.join(ROOT, "public/config/dashboard.json"),
-    "utf8",
-  ));
-  const chart = dashboard.pages
-    .flatMap(({ sections }) => sections)
-    .flatMap(({ panels }) => panels)
-    .find(({ id }) => id === chartId);
-  assert.ok(chart, `Missing tracked chart ${chartId}`);
-  const source = dashboard.dataSources[chart.sourceId];
-  const geoSource = dashboard.dataSources[chart.presentation.map.geoSource];
-  const sourcePath = path.join(ROOT, "public", source.path);
-  const csvText = chart.typeId === "chronoChoroplethMap"
-    ? await readCsvPrefix(sourcePath, 40)
-    : await readFile(sourcePath, "utf8");
-  const rows = parseCsvText(csvText, source.path);
-  const geoData = JSON.parse(await readFile(
-    path.join(ROOT, "public", geoSource.path),
-    "utf8",
-  ));
-  validateGeoJson(geoData, `Tracked ${chartId} GeoJSON`);
+function geographyAuthoringFixture(chartId) {
+  const fixture = analyticalPlaybackFixture();
+  const chart = fixture.charts.find(({ id }) => id === chartId);
+  assert.ok(chart, `Missing analytical geography chart ${chartId}`);
+  const rows = fixture.loadedData[chart.sourceId];
+  assert.ok(rows.length > 0, `${chartId} needs source rows`);
+  assert.deepEqual([...new Set(rows.map(({ area }) => area))].sort(), ["A", "B"]);
+  assert.equal(chart.presentation.map.geoSource, "boundaries");
+  assert.deepEqual(fixture.geoData.features.map(({ id }) => id), ["A", "B"]);
+  assert.doesNotThrow(() => validateGeoJson(fixture.geoData, "Analytical boundaries"));
   return {
     chart,
-    dashboard,
-    geoData,
+    geoData: fixture.geoData,
     geoSourceId: chart.presentation.map.geoSource,
     rows,
-    source,
+    source: {
+      parsingMetadata: {
+        area: { interpretation: "geographic" },
+        ...(rows[0].at ? { at: { interpretation: "temporal", format: "YYYY-MM-DD" } } : {}),
+      },
+      provenance: { label: "Fixture boundaries" },
+    },
   };
-}
-
-async function readCsvPrefix(filePath, lineCount) {
-  const handle = await open(filePath, "r");
-  try {
-    const buffer = Buffer.alloc(256 * 1024);
-    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-    return buffer
-      .subarray(0, bytesRead)
-      .toString("utf8")
-      .split(/\r?\n/)
-      .slice(0, lineCount)
-      .join("\n");
-  } finally {
-    await handle.close();
-  }
 }
 
 test("chart types render in searchable registry purpose groups", () => {
@@ -2624,15 +2601,15 @@ test("style step hides presentation and interaction controls until the current p
 
 test("tracked map and choropleth data reach ready wizard style and editor previews", async () => {
   for (const chartId of [
-    "bio_wastewater_map",
-    "bio_municipality_choropleth_animation",
+    "latest-areas",
+    "municipal-map",
   ]) {
     const {
       chart,
       rows,
       geoData,
       source,
-    } = await trackedGeographyFixture(chartId);
+    } = await geographyAuthoringFixture(chartId);
     const runtime = createWizardPreparation({
       chart,
       rows,
@@ -2647,6 +2624,11 @@ test("tracked map and choropleth data reach ready wizard style and editor previe
     });
 
     assert.equal(runtime.prepared.status, "ready", chartId);
+    assert.deepEqual(runtime.prepared.marks.map(({ geography, value }) => [geography, value]),
+      chartId === "latest-areas"
+        ? [["A", 15], ["B", 25]]
+        : [["A", 10], ["B", 20], ["A", 15], ["B", 25]], chartId);
+    assert.equal(model.valid, true, chartId);
     assert.ok(
       model.sections.some(({ id }) => id === "appearance"),
       `${chartId} style controls must be reachable`,
@@ -2680,8 +2662,8 @@ test("tracked map and choropleth data reach ready wizard style and editor previe
 
 test("fresh geography drafts can select validated GeoJSON before preview readiness", async () => {
   for (const chartId of [
-    "bio_municipality_choropleth_animation",
-    "bio_wastewater_map",
+    "municipal-map",
+    "latest-areas",
   ]) {
     const {
       chart: configured,
@@ -2689,7 +2671,7 @@ test("fresh geography drafts can select validated GeoJSON before preview readine
       geoSourceId,
       rows,
       source,
-    } = await trackedGeographyFixture(chartId);
+    } = await geographyAuthoringFixture(chartId);
     const draft = createChartDraft(configured.typeId, {
       id: `fresh-${configured.typeId}`,
       title: `Fresh ${configured.typeId}`,
@@ -2702,10 +2684,9 @@ test("fresh geography drafts can select validated GeoJSON before preview readine
       authorMetadata: source.parsingMetadata,
     });
     assert.equal(missing.prepared.status, "invalid", chartId);
-    assert.ok(missing.prepared.diagnostics.some((diagnostic) => (
-      diagnostic.code === "geography-source-required"
-      && diagnostic.fieldId === "geoSource"
-    )), chartId);
+    assert.deepEqual(missing.prepared.diagnostics.filter(({ severity }) => severity === "error")
+      .map(({ code, fieldId }) => [code, fieldId]),
+    [["geography-source-required", "geoSource"]], chartId);
 
     const geoSources = [{
       value: geoSourceId,
@@ -2775,7 +2756,10 @@ test("fresh geography drafts can select validated GeoJSON before preview readine
       geoSources,
     });
     assert.equal(selected.prepared.status, "ready", chartId);
+    assert.ok(selected.prepared.marks.length >= 2, chartId);
+    assert.ok(selected.prepared.marks.every(({ feature }) => feature), chartId);
     assert.equal(wizardModel.canCreate, true, chartId);
+    assert.equal(readyModel.valid, true, chartId);
     assert.equal(readyModel.sections.some(({ id }) => id === "map"), false, chartId);
 
     const editorHtml = render(React.createElement(ChartEditorV3, {
@@ -2809,8 +2793,8 @@ test("changing a geography source invalidates stale preparation and conversion c
     geoSourceId,
     rows,
     source,
-  } = await trackedGeographyFixture(
-    "bio_municipality_choropleth_animation",
+  } = await geographyAuthoringFixture(
+    "municipal-map",
   );
   const first = createChartDraft("chronoChoroplethMap", {
     id: "fresh-geography-change",
@@ -2827,12 +2811,16 @@ test("changing a geography source invalidates stale preparation and conversion c
     geoData,
     authorMetadata: source.parsingMetadata,
   });
+  assert.equal(prepared.prepared.status, "ready");
+  assert.deepEqual(prepared.prepared.marks.map(({ geography, value }) => [geography, value]), [
+    ["A", 10], ["B", 20], ["A", 15], ["B", 25],
+  ]);
   const changedState = reduceChartEditorState(
     createChartEditorState({ chart: first }),
     {
       type: "updateChart",
       path: ["presentation", "map", "geoSource"],
-      value: "geo_netherlands_municipalities_2020",
+      value: "alternate-boundaries",
     },
   );
   const stale = buildEditorFormModel({
@@ -2840,18 +2828,32 @@ test("changing a geography source invalidates stale preparation and conversion c
     profile: prepared.profile,
     prepared: prepared.prepared,
     geoSources: [
-      { value: geoSourceId, label: "2021 municipalities" },
+      { value: geoSourceId, label: "Fixture boundaries" },
       {
-        value: "geo_netherlands_municipalities_2020",
-        label: "2020 municipalities",
+        value: "alternate-boundaries",
+        label: "Alternate boundaries",
       },
     ],
   });
+  assert.equal(first.presentation.map.geoSource, geoSourceId);
+  assert.equal(changedState.draft.presentation.map.geoSource, "alternate-boundaries");
+  assert.notEqual(prepared.prepared.meta.formPreparationKey,
+    buildFormPreparationKey({ chart: changedState.draft, profile: prepared.profile }));
   assert.equal(stale.valid, false);
   assert.equal(stale.sections.some(({ id }) => id === "map"), false);
   assert.ok(stale.sections
     .find(({ id }) => id === "data")
     .fields.some(({ id }) => id === "geoSource"));
+  const reselected = applyGeographySourceSelection(changedState.draft, {
+    sourceId: "alternate-boundaries", geoData, rows,
+  });
+  const recovered = createWizardPreparation({
+    chart: reselected, rows, geoData, authorMetadata: source.parsingMetadata,
+  });
+  assert.equal(recovered.prepared.status, "ready");
+  assert.equal(buildEditorFormModel({
+    chart: reselected, profile: recovered.profile, prepared: recovered.prepared,
+  }).valid, true);
 
   const converted = createChartDraft("mapScatter", {
     id: "converted-geography",
@@ -2872,11 +2874,28 @@ test("changing a geography source invalidates stale preparation and conversion c
     chart: converted,
     profile: conversionRuntime.profile,
     prepared: conversionRuntime.prepared,
-    geoSources: [{ value: geoSourceId, label: "2021 municipalities" }],
+    geoSources: [{ value: geoSourceId, label: "Fixture boundaries" }],
   });
+  assert.deepEqual(conversionRuntime.prepared.diagnostics.filter(({ severity }) => severity === "error")
+    .map(({ code }) => code), ["geography-source-required"]);
   assert.ok(conversionModel.sections
     .find(({ id }) => id === "data")
     .fields.some(({ id }) => id === "geoSource"));
+  const selectedConversion = applyGeographySourceSelection(converted, {
+    sourceId: geoSourceId, geoData, rows,
+  });
+  assert.equal(converted.presentation.map, undefined);
+  const conversionRecovery = createWizardPreparation({
+    chart: selectedConversion, rows, geoData, authorMetadata: source.parsingMetadata,
+  });
+  assert.equal(conversionRecovery.prepared.status, "ready");
+  assert.deepEqual([...new Set(conversionRecovery.prepared.marks.map(({ geography }) => geography))].sort(), ["A", "B"]);
+  assert.equal(buildEditorFormModel({
+    chart: selectedConversion,
+    profile: conversionRecovery.profile,
+    prepared: conversionRecovery.prepared,
+    geoSources: [{ value: geoSourceId, label: "Fixture boundaries" }],
+  }).valid, true);
 });
 
 test("property-only GeoJSON joins stay reachable and renderer-ready for both geography charts", () => {
