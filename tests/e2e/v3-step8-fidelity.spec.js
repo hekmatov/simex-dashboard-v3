@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 import {
   createSavedPresentationScene,
@@ -12,6 +13,12 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("http://127.0.0.1:4185/");
   await page.evaluate(() => localStorage.clear());
+  const response = await page.request.get("http://127.0.0.1:4185/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const fixture = withPageRemovalGroups(await response.json());
+  await page.addInitScript((dashboard) => {
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(dashboard));
+  }, fixture);
 });
 
 test("Present remains usable below the recommended 1024px width and preserves its live session", async ({ page }) => {
@@ -160,6 +167,10 @@ test("date-position endpoints remain fully visible after direct Audience draggin
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
+  await page.getByRole("button", { name: "Audience display options" }).click();
+  const options = page.getByRole("dialog", { name: "Audience display options" });
+  await options.getByRole("checkbox", { name: "Display Scene date" }).check();
+  await options.getByRole("button", { name: "Close Audience display options" }).click();
   const { popup } = await openAudienceSession(page);
   const date = popup.locator(".audience-scene-date");
   await expect(date).toHaveAttribute("data-audience-date-draggable", "true");
