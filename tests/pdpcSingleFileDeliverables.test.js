@@ -4,6 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { inflateRawSync } from "node:zlib";
+import { runInNewContext } from "node:vm";
+
+import { buildPortableData } from "../scripts/build-portable-data.mjs";
 
 test("PDPC release builds default only missing or invalid appearance preferences to Light", async () => {
   const { createPdpcLightDefaultPlugin } = await import("../scripts/lib/pdpc-light-default.mjs");
@@ -70,6 +73,34 @@ test("Cloudflare ZIP packaging keeps index.html at archive root and round-trips 
   assert.deepEqual(result.entries, ["assets/release.js", "index.html"]);
   assert.equal(entries.get("index.html").toString(), "<main>Biomedical</main>\n");
   assert.equal(entries.get("assets/release.js").toString(), "console.log('release');\n");
+});
+
+test("PDPC single-file conversion retains generated portable GeoJSON and CSV payloads", async (t) => {
+  const root = await fixtureRoot(t, "simex-pdpc-sources-");
+  const releaseDir = path.join(root, "release");
+  await createReleaseFixture(releaseDir);
+  const config = JSON.parse(await readFile(new URL("./fixtures/fable-m0-sources.json", import.meta.url), "utf8"));
+  const configPath = path.join(root, "dashboard.json");
+  const profilesPath = path.join(root, "profiles.json");
+  await writeFile(configPath, JSON.stringify(config));
+  await writeFile(profilesPath, "{}");
+  await buildPortableData({
+    rootDir: root, configPath, profilesPath,
+    outputPath: path.join(releaseDir, "portable-dashboard-data.js"),
+    embedPortableData: true,
+  });
+  const { buildPdpcSingleFile } = await import("../scripts/lib/pdpc-single-file.mjs");
+  const outputFile = path.join(root, "sources.html");
+  await buildPdpcSingleFile({ releaseDir, outputFile, variant: "biomedical" });
+  const html = await readFile(outputFile, "utf8");
+  const portableScript = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+    .map((match) => match[1]).find((script) => script.includes("window.SIMEX_PORTABLE_DASHBOARD"));
+  const window = {};
+  runInNewContext(portableScript, { window });
+  const payload = JSON.parse(JSON.stringify(window.SIMEX_PORTABLE_DASHBOARD));
+  assert.deepEqual(payload.sources.geo_netherlands_municipalities_2026.data, config.dataSources.geo_netherlands_municipalities_2026.geoJson);
+  assert.equal(payload.sources.cases.text, config.dataSources.cases.csvText);
+  assert.deepEqual(payload.config.dataSources, config.dataSources);
 });
 
 async function fixtureRoot(t, prefix) {

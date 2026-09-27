@@ -6,7 +6,7 @@ import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { chromium } from "@playwright/test";
 
@@ -22,6 +22,74 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const IMAGE_TITLE = "PS04 portable audience image";
 const IMAGE_ALT = "PS04 offline readiness marker";
 const PNG = Buffer.from(imageFixtureBytes("image/png"));
+
+test("M0 copied portable source fixture loads GeoJSON and promoted CSV with the browser offline", { timeout: 60_000 }, async (t) => {
+  const parent = path.join(ROOT, "test-results", "m0-source-launch");
+  await mkdir(parent, { recursive: true });
+  const root = await mkdtemp(path.join(parent, "fixture-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const config = JSON.parse(await readFile(new URL("./fixtures/fable-m0-sources.json", import.meta.url), "utf8"));
+  const geoId = "geo_netherlands_municipalities_2026";
+  // Preflight the exact fixture and source identities before bundling/launching.
+  assert.equal(config.id, "fable-m0-source-fixture");
+  assert.equal(config.dataSources[geoId].geoJson.features[0].id, "GM0473");
+  assert.equal(config.pages[0].sections[0].panels[0].sourceId, "cases");
+  const promoted = preparePromotedDashboard(JSON.stringify(serializeDashboardBundle(config, { now: null })));
+  const configPath = path.join(root, "public", "config", "dashboard.json");
+  const profilesPath = path.join(root, "public", "config", "dataset-profiles.json");
+  const outputPath = path.join(root, "portable.js");
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFile(configPath, JSON.stringify(promoted.config));
+  await writeFile(profilesPath, JSON.stringify(promoted.config.datasetProfiles));
+  for (const file of promoted.files) {
+    const destination = path.join(root, "public", file.relativePath);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, file.contents);
+  }
+  const { output } = await buildPortableData({ rootDir: root, configPath, profilesPath, outputPath, embedPortableData: true });
+  const { build } = await import("vite");
+  const built = await build({
+    root: ROOT, configFile: false, publicDir: false, logLevel: "silent",
+    build: {
+      write: false,
+      lib: { entry: path.join(ROOT, "tests", "fixtures", "fable-m0-source-loader.js"), formats: ["iife"], name: "M0SourceLoader" },
+    },
+  });
+  const script = [built].flat().flatMap((result) => result.output)
+    .find((item) => item.type === "chunk").code;
+  const html = `<button>Load portable fixture</button><output>Not loaded</output><script>${output}</script><script>${script}</script>`;
+  const original = path.join(root, "loader.html");
+  const copied = path.join(root, "copied", "loader.html");
+  await writeFile(original, html);
+  await mkdir(path.dirname(copied), { recursive: true });
+  await cp(original, copied);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({ offline: true });
+    const page = await context.newPage();
+    const errors = [];
+    const network = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("request", (request) => { if (/^https?:/.test(request.url())) network.push(request.url()); });
+    await page.goto(pathToFileURL(copied).href);
+    assert.equal(await page.evaluate(() => window.loadedFixture), undefined);
+    await page.getByRole("button", { name: "Load portable fixture", exact: true }).click();
+    await page.getByText("Sources ready", { exact: true }).waitFor();
+    const loaded = await page.evaluate(() => window.loadedFixture);
+    assert.equal(loaded.id, config.id);
+    assert.deepEqual(loaded.data[geoId], config.dataSources[geoId].geoJson);
+    assert.deepEqual(loaded.data.cases, [
+      { Date: "2027-02-19", national_total_cases: 1 },
+      { Date: "2027-02-20", national_total_cases: 2 },
+    ]);
+    assert.equal(loaded.states[geoId].status, "ready");
+    assert.equal(loaded.states.cases.status, "ready");
+    assert.deepEqual(errors, []);
+    assert.deepEqual(network, []);
+  } finally {
+    await browser.close();
+  }
+});
 
 test("PS-04 copied Windows flash package launches offline main and separate Audience", {
   skip: process.platform !== "win32",

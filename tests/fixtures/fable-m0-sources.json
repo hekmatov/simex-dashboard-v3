@@ -1,0 +1,197 @@
+{
+  "configVersion": 6,
+  "id": "fable-m0-source-fixture",
+  "title": "Fable M0 source fixture",
+  "home": { "enabled": false },
+  "timezone": "UTC",
+  "dataSources": {
+    "geo_netherlands_municipalities_2026": {
+      "kind": "dataset",
+      "type": "uploadedGeoJson",
+      "fileName": "gemeente_2026.geojson",
+      "provenance": {
+        "label": "Netherlands municipality boundaries, 2026"
+      },
+      "geoJson": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    4.547,
+                    52.314
+                  ],
+                  [
+                    4.592,
+                    52.392
+                  ],
+                  [
+                    4.541,
+                    52.401
+                  ],
+                  [
+                    4.494,
+                    52.328
+                  ],
+                  [
+                    4.547,
+                    52.314
+                  ]
+                ]
+              ]
+            },
+            "properties": {
+              "statcode": "GM0473",
+              "jrstatcode": "2026GM0473",
+              "statnaam": "Zandvoort",
+              "rubriek": "gemeente",
+              "id": 137,
+              "FID": "gemeente_gegeneraliseerd.0cb7166a-9431-4cdc-8b2e-c37a4772cef5"
+            },
+            "id": "GM0473"
+          }
+        ]
+      }
+    },
+    "cases": {
+      "kind": "dataset",
+      "type": "uploadedCsv",
+      "fileName": "cases.csv",
+      "csvText": "Date,national_total_cases\n2027-02-19,1\n2027-02-20,2\n",
+      "provenance": {
+        "label": "M0 test cases"
+      }
+    },
+    "briefing": {
+      "kind": "staticText",
+      "sourceVersion": 1,
+      "revision": 1,
+      "renderingPolicy": "portable-qmd-v1",
+      "qmd": "M0 source fixture."
+    }
+  },
+  "contentLibrary": {
+    "sourceEntries": {
+      "cases": {
+        "sourceId": "cases",
+        "origin": "packaged",
+        "ownership": "builder",
+        "displayName": "M0 test cases",
+        "provenance": { "label": "M0 test cases" },
+        "health": "ready"
+      },
+      "geo_netherlands_municipalities_2026": {
+        "sourceId": "geo_netherlands_municipalities_2026",
+        "origin": "legacy-import",
+        "ownership": "builder",
+        "displayName": "Netherlands municipality boundaries, 2026",
+        "provenance": {
+          "migratedFrom": "dashboard-v4"
+        },
+        "health": "ready"
+      }
+    },
+    "mediaItems": {}
+  },
+  "datasetProfiles": {},
+  "chronoGroups": [],
+  "pages": [
+    {
+      "id": "biomedical",
+      "title": "Biomedical",
+      "sections": [
+        {
+          "id": "m0-sources",
+          "title": "Sources",
+          "panels": [
+            {
+              "configVersion": 3,
+              "id": "m0-cases",
+              "typeId": "line",
+              "title": "M0 cases",
+              "description": "",
+              "sourceId": "cases",
+              "roles": {
+                "measurements": [
+                  {
+                    "field": "national_total_cases",
+                    "axis": "primary"
+                  }
+                ],
+                "observation": {
+                  "field": "Date",
+                  "interpretation": "temporal"
+                }
+              },
+              "transformations": {
+                "filters": [],
+                "grouping": null,
+                "aggregation": null,
+                "duplicates": null,
+                "missingValues": "gap"
+              },
+              "presentation": {
+                "title": {
+                  "align": "left",
+                  "fontSize": 20
+                },
+                "collection": null,
+                "series": {
+                  "colors": [
+                    "#36BDEB"
+                  ],
+                  "lineWidth": 2
+                },
+                "referenceLine": {
+                  "visible": false,
+                  "value": 0,
+                  "label": "",
+                  "color": "#E56B2F",
+                  "lineStyle": "dashed"
+                },
+                "labels": {
+                  "visible": false
+                },
+                "axes": {
+                  "primary": {
+                    "title": "Cases",
+                    "titleFontSize": 17,
+                    "labelFontSize": 14
+                  },
+                  "x": {
+                    "titleFontSize": 15,
+                    "labelPreset": "ddMmmYearBoundary",
+                    "tickFrequency": {
+                      "every": 2,
+                      "unit": "week"
+                    },
+                    "labelFontSize": 14
+                  }
+                },
+                "legend": {
+                  "visible": false
+                }
+              },
+              "interaction": {
+                "zoom": {
+                  "enabled": false,
+                  "rangeSelector": false
+                },
+                "timeSync": null
+              },
+              "layout": {
+                "size": "standard",
+                "width": 2,
+                "height": 1
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

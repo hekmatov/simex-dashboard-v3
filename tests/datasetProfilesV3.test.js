@@ -1164,10 +1164,17 @@ test("portable data embeds descriptors, full profiles, and source bytes determin
     assert.deepEqual(payload.datasetProfiles, await trackedJson(profilesPath));
     assert.deepEqual(
       Object.keys(payload.sources),
-      Object.keys(payload.config.dataSources),
+      Object.keys(payload.config.dataSources).filter((sourceId) => (
+        !["staticText", "staticImage", "inline"].includes(payload.config.dataSources[sourceId].kind)
+      )),
     );
-    assert.equal(payload.sources.bio_cases.kind, "csv");
-    assert.match(payload.sources.bio_cases.text, /^date,national_total_cases/);
+    const casesId = "upload-cases-wcph-eldoria-3";
+    assert.equal(payload.sources[casesId].kind, "csv");
+    assert.equal(
+      payload.sources[casesId].text,
+      await readFile(path.join(rootDir, "public", payload.dataSources[casesId].path), "utf8"),
+    );
+    assert.match(payload.sources[casesId].text, /^Date,national_total_cases/);
     assert.equal(
       payload.sources.geo_netherlands_provinces.kind,
       "geojson",
@@ -1176,6 +1183,10 @@ test("portable data embeds descriptors, full profiles, and source bytes determin
       payload.sources.geo_netherlands_provinces.data.type,
       "FeatureCollection",
     );
+    const shipped = await trackedJson(dashboardPath);
+    for (const sourceId of ["geo_netherlands_provinces", "geo_netherlands_municipalities_2026"]) {
+      assert.deepEqual(payload.sources[sourceId].data, shipped.dataSources[sourceId].geoJson);
+    }
     assert.equal(Object.hasOwn(payload, "generatedAt"), false);
   });
 });
