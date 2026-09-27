@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 import { openChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
-import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import { openDashboardPage } from "./support/landingWorkflow.js";
+import { validateDashboardConfig } from "../../src/charting/config/dashboardBundleV3.js";
+import { analyticalPlaybackFixture } from "../fixtures/analyticalPlaybackV3.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -22,8 +24,8 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   const viewMode = page.getByRole("button", { name: "View", exact: true });
   await page.getByRole("button", { name: "Build" }).click();
 
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  const panel = page.locator('[data-panel-id="chart-line-mtgz6v76"]');
+  await openNationalChartQuickEditor(page);
   let quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -50,13 +52,13 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await expect(editor).toHaveCount(0);
   await expect(viewMode).toBeEnabled();
 
-  await panel.getByRole("button", { name: "Edit chart" }).click();
+  await openNationalChartQuickEditor(page);
   quick = page.locator(".chart-quick-editor");
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   editor = page.getByRole("dialog", { name: "Edit chart" });
   await editor.getByRole("button", { name: /^Configure\./ }).click();
   editorTitle = editor.getByRole("textbox", { name: "Chart title", exact: true });
-  await expect(editorTitle).toHaveValue("Confirmed cases");
+  await expect(editorTitle).toHaveValue("National Confirmed Cases (cumulative)");
   await editorTitle.fill("Playback-safe saved editor title");
   await editor.getByRole("button", { name: /^Review\./ }).click();
   await editor.getByRole("button", { name: "Save changes", exact: true }).click();
@@ -65,11 +67,11 @@ test("playback entry preserves editor and wizard authoring until each workflow i
 
   const flow = await openChartAuthoring(page);
   const { wizard } = flow;
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource("eldoria work sectors");
   await flow.chooseChartType("pie", /^Pie\b/i);
   await flow.goToMapAndPrepare();
-  await flow.selectRole("category", "Age group");
-  await flow.selectRole("value", "deaths");
+  await flow.selectRole("category", "Sector");
+  await flow.selectRole("value", "Share of workforce (%)");
   await flow.goToConfigure();
   const wizardTitle = wizard.getByRole("textbox", { name: "Chart title", exact: true });
   await wizardTitle.fill("Playback-safe unsaved wizard title");
@@ -95,7 +97,9 @@ test("playback entry preserves editor and wizard authoring until each workflow i
 
 test("default synchronized playback keeps line history, bar and map snapshots, and reopens at the same time", async ({
   page,
+  request,
 }) => {
+  await installScenarioDashboard(page, request, addAnalyticalPlaybackScenario);
   await openDashboard(page);
   const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
   await chronoButton.click();
@@ -157,22 +161,23 @@ test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
   page,
 }) => {
   await openDashboard(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator('[data-panel-id="chart-line-mtgz6v76"]');
+  await panel.scrollIntoViewIfNeeded();
   let guard = panel.locator(".chart-zoom-guard");
   await guard.scrollIntoViewIfNeeded();
   await guard.hover();
   const beforePlainWheel = await page.evaluate(() => window.scrollY);
-  await page.mouse.wheel(0, 240);
+  await page.mouse.wheel(0, -240);
   await expect(guard.getByText("Hold Ctrl while scrolling to zoom"))
     .toBeVisible();
   await expect.poll(() => page.evaluate(() => window.scrollY))
-    .toBeGreaterThan(beforePlainWheel);
+    .toBeLessThan(beforePlainWheel);
 
   await guard.scrollIntoViewIfNeeded();
   await guard.hover();
   const beforeCtrlWheel = await page.evaluate(() => window.scrollY);
   await page.keyboard.down("Control");
-  await page.mouse.wheel(0, 240);
+  await page.mouse.wheel(0, -240);
   await page.keyboard.up("Control");
   await expect.poll(() => page.evaluate(() => window.scrollY))
     .toBe(beforeCtrlWheel);
@@ -183,7 +188,7 @@ test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
   }).click();
   const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
   guard = fullscreen.locator(
-    '[data-displayed-chart-id="bio_confirmed_cases"] .chart-zoom-guard',
+    '[data-displayed-chart-id="chart-line-mtgz6v76"] .chart-zoom-guard',
   );
   await expect(guard).toBeVisible();
   await guard.hover();
@@ -201,16 +206,15 @@ test("legacy accessibility preferences cannot restore removed chart summaries or
 }) => {
   await installAccessibilityEnabledDashboard(page, request);
   await openDashboard(page);
-  const chart = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const chart = page.locator('[data-panel-id="chart-line-mtgz6v76"]');
+  await chart.scrollIntoViewIfNeeded();
   await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Build" }).click();
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  const more = page.getByRole("dialog", { name: "More Build commands" });
-  await expect(more.locator('[data-build-more-command="scene-studio"]')).toHaveCount(1);
-  await expect(more.locator("[data-build-more-command]")).toHaveCount(1);
-  await expect(more.locator('[data-build-more-command="chart-accessibility"]')).toHaveCount(0);
-  await expect(more.getByRole("checkbox")).toHaveCount(0);
+  const commands = page.getByRole("toolbar", { name: "Primary Build commands" });
+  await expect(commands.locator('[data-build-command-action="scene-studio"]')).toBeVisible();
+  await expect(commands.locator('[data-build-command-action="chart-accessibility"]')).toHaveCount(0);
+  await expect(commands.getByRole("checkbox")).toHaveCount(0);
   await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
 });
 
@@ -223,9 +227,9 @@ test("matching policies produce policy-specific live values", async ({
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
   await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
-  const activeEpochMs = Date.parse("2027-02-22T00:00:00.000Z");
+  const activeEpochMs = Date.parse("2027-02-21T00:00:00.000Z");
   await controls.getByLabel("Playback frame").fill(String(activeEpochMs));
-  await expect(controls.locator(".playback-current-time time")).toHaveText("2027-02-22");
+  await expect(controls.locator(".playback-current-time time")).toHaveText("2027-02-21");
   const view = page.locator('[data-chrono-section="national_outbreak"]');
 
   for (const [chartId, expectedValue] of [
@@ -248,9 +252,9 @@ test("priority collections remain independent while Chrono advances", async ({
   const locked = page.locator('[data-panel-id="e2e_priority_locked"]');
   await reranked.scrollIntoViewIfNeeded();
   await expect(firstCollectionItem(reranked))
-    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
+    .toHaveAttribute("data-collection-entity-id", "A");
   await expect(firstCollectionItem(locked))
-    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
+    .toHaveAttribute("data-collection-entity-id", "A");
 
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
@@ -261,9 +265,9 @@ test("priority collections remain independent while Chrono advances", async ({
     '[data-chrono-section="national_outbreak"] [data-panel-id="e2e_priority_rerank"]',
   )).toHaveCount(0);
   await expect(firstCollectionItem(reranked))
-    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
+    .toHaveAttribute("data-collection-entity-id", "A");
   await expect(firstCollectionItem(locked))
-    .toHaveAttribute("data-collection-entity-id", 'target:"A"');
+    .toHaveAttribute("data-collection-entity-id", "A");
 });
 
 test("fixed, scrollable, carousel, and priority collection modes share one live display contract", async ({
@@ -373,7 +377,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   await priority.scrollIntoViewIfNeeded();
   await expect(firstCollectionItem(priority)).toHaveAttribute(
     "data-collection-entity-id",
-    'target:"Bravo"',
+    "Bravo",
   );
 });
 
@@ -423,7 +427,16 @@ test("collection carousels remain independent while Chrono plays", async ({
 
 async function openDashboard(page) {
   await page.goto("/");
-  await enterAuthoredDashboard(page);
+  await openDashboardPage(page, "biomedical");
+}
+
+async function openNationalChartQuickEditor(page) {
+  const trigger = page.locator('[data-panel-menu="chart-line-mtgz6v76"]');
+  await trigger.focus();
+  await trigger.press("Enter");
+  const menu = page.locator('#panel-menu-chart-line-mtgz6v76[role="menu"]');
+  await expect(menu).toBeVisible();
+  await menu.locator('[data-action-menu-item="edit"]').click();
 }
 
 async function readRuntimeLedger(panel) {
@@ -459,7 +472,9 @@ async function installScenarioDashboard(page, request, configure) {
   const response = await request.get("/config/dashboard.json");
   expect(response.ok()).toBe(true);
   const dashboard = await response.json();
+  nationalGroup(dashboard);
   configure(dashboard);
+  validateDashboardConfig(dashboard, { allowBrowserAssetIds: true, allowTypedStaticSources: true });
   await page.addInitScript(({ key, value }) => {
     localStorage.setItem(key, JSON.stringify(value));
   }, {
@@ -474,12 +489,12 @@ function addTemporalMatchingScenarios(dashboard) {
     "sparse-r-values.csv",
     [
       "date,R_value",
-      "2027-02-20,1",
-      "2027-02-23,7",
+      "2027-02-19,1",
+      "2027-02-22,7",
     ].join("\n"),
   );
 
-  const rChart = findChart(dashboard, "bio_r_values");
+  const rChart = findChart(dashboard, "chart-line-mtgz6v76");
   const section = biomedicalSection(dashboard);
   for (const [id, title, matching] of [
     ["e2e_last_known", "E2E last known", { policy: "lastKnown" }],
@@ -496,7 +511,13 @@ function addTemporalMatchingScenarios(dashboard) {
       typeId: "bar",
       title,
       sourceId: sparseSourceId,
+      roles: {
+        measurements: [{ field: "R_value", axis: "primary" }],
+        observation: { field: "date", interpretation: "temporal" },
+      },
     });
+    delete chart.presentation.referenceLine;
+    delete chart.presentation.series.lineWidth;
     if (matching.policy === "interpolate") {
       chart.roles.measurements = chart.roles.measurements.map((binding) => ({
         ...binding,
@@ -537,7 +558,7 @@ function addPriorityPlaybackScenarios(dashboard) {
       "2027-02-21,B,5",
     ].join("\n"),
   );
-  const kpiChart = findChart(dashboard, "bio_occupancy_collection");
+  const kpiChart = collectionTemplate(dashboard);
   const section = biomedicalSection(dashboard);
   for (const [id, rerank] of [
     ["e2e_priority_rerank", true],
@@ -583,7 +604,7 @@ function addCollectionScenarios(dashboard) {
     ].join("\n"),
     {},
   );
-  const template = findChart(dashboard, "bio_occupancy_collection");
+  const template = collectionTemplate(dashboard);
   const section = biomedicalSection(dashboard);
   const scenarios = [
     {
@@ -661,7 +682,7 @@ function addPlaybackCarouselScenarios(dashboard) {
       "2027-02-21,B,5",
     ].join("\n"),
   );
-  const template = findChart(dashboard, "bio_occupancy_collection");
+  const template = collectionTemplate(dashboard);
   const section = biomedicalSection(dashboard);
   for (const [id, pauseCarousel] of [
     ["e2e_carousel_pause", true],
@@ -755,9 +776,81 @@ function biomedicalSection(dashboard) {
 }
 
 function nationalGroup(dashboard) {
-  return dashboard.chronoGroups.find(({ id }) => (
-    id === "national_outbreak"
-  ));
+  let group = dashboard.chronoGroups.find(({ id }) => id === "national_outbreak");
+  if (!group) {
+    group = {
+      id: "national_outbreak",
+      name: "National outbreak",
+      period: { start: "2027-02-14", end: "2027-02-23" },
+      matching: { policy: "exact" },
+      secondsPerFrame: 1,
+      members: ["chart-line-mtgz6v76", "chart-line-mtgytrwj"]
+        .map((chartId) => ({ chartId, timeRole: "observation" })),
+    };
+    dashboard.chronoGroups.push(group);
+  }
+  return group;
+}
+
+function addAnalyticalPlaybackScenario(dashboard) {
+  const fixture = analyticalPlaybackFixture();
+  const chartIds = {
+    "municipal-map": "bio_municipality_choropleth_animation",
+    "municipal-trend": "bio_municipality_aggregate",
+    "national-line": "bio_confirmed_cases",
+    "national-bar": "bio_daily_cases_bar",
+  };
+  const sources = {
+    municipalMap: "municipalMap",
+    municipalTrend: "municipalTrend",
+    national: "national",
+  };
+  for (const sourceId of Object.values(sources)) {
+    const rows = fixture.loadedData[sourceId];
+    const fields = Object.keys(rows[0]);
+    dashboard.dataSources[sourceId] = uploadedCsv(
+      `${sourceId}.csv`,
+      [fields.join(","), ...rows.map((row) => fields.map((field) => row[field]).join(","))].join("\n"),
+      { at: { interpretation: "temporal", format: "YYYY-MM-DD", timezone: "date-only" } },
+    );
+  }
+  dashboard.dataSources.boundaries = {
+    kind: "dataset",
+    type: "uploadedGeoJson",
+    fileName: "analytical-boundaries.geojson",
+    geoJson: fixture.geoData,
+    provenance: { label: "Analytical boundaries" },
+  };
+  const section = biomedicalSection(dashboard);
+  for (const chart of fixture.charts.filter(({ id }) => Object.hasOwn(chartIds, id))) {
+    const copy = clone(chart);
+    copy.id = chartIds[chart.id];
+    if (copy.presentation?.map) copy.presentation.map.joinField = "name";
+    section.panels.push(copy);
+  }
+  const municipal = clone(fixture.groups.find(({ id }) => id === "municipal"));
+  municipal.id = "municipal_outbreak";
+  municipal.members = municipal.members.map((member) => ({
+    ...member,
+    chartId: chartIds[member.chartId],
+  }));
+  dashboard.chronoGroups.push(municipal);
+  const national = nationalGroup(dashboard);
+  Object.assign(national, clone(fixture.groups.find(({ id }) => id === "national")), {
+    id: "national_outbreak",
+  });
+  national.members = national.members.map((member) => ({
+    ...member,
+    chartId: chartIds[member.chartId],
+  }));
+}
+
+function collectionTemplate(dashboard) {
+  const chart = clone(findChart(dashboard, "chart-line-mtgz6v76"));
+  chart.typeId = "kpi";
+  chart.presentation = { title: { align: "left", fontSize: 20 }, collection: null };
+  chart.interaction = { zoom: { enabled: false, rangeSelector: false }, timeSync: null };
+  return chart;
 }
 
 function findChart(dashboard, chartId) {
