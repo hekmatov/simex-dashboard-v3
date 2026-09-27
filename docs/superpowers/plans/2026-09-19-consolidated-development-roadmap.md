@@ -1,6 +1,6 @@
 # SimEx consolidated development roadmap — 19 September 2026
 
-**Document version:** 1.12; updated 27 September 2026. Dated Markdown with Git history, as requested. This is a plan version, not an application release.
+**Document version:** 1.13; updated 27 September 2026 for the reusable coordination agreement. Dated Markdown with Git history, as requested. This is a plan version, not an application release; this policy update does not change recorded product completion.
 
 **Goal:** Deliver an exercise tool whose prepare → run → debrief loop is dependable, faithful across surfaces, usable by exercise staff, and ready for an approved PDPC deployment.
 
@@ -8,15 +8,25 @@
 
 **Stack:** React 19, Vite 6, JavaScript, ECharts 5, CSS tokens, BroadcastChannel, Node tests and Playwright. No new backend is assumed.
 
-**Status:** M0.1 activation and ten bounded source/fixture/driver/consumer slices through `03b88257` are reconciled within their evidence limits. All implementation remains unmerged. M0 stays open; the existing owner continues with three M0.2 geography-authoring component cases below. No whole-milestone, integration, publication or deployment completion is claimed.
+**Status:** M0 is in progress. The compact checkpoint below is the current coordination state; section 5 retains the detailed assignment and evidence. Implementation remains unmerged.
 
 **27 September handoff incorporation:** the user directed this steward to use the [pre-M0 handoff](../../fable-pre-m0-handoff-2026-09-27.md), update this roadmap and create the first implementation task. Its earlier review-before-dispatch hold is satisfied by that direction. The prepared checkpoint contains the existing redesign, PDPC deliverables and corrected Eldoria export. Scenario-authoring remains paused. The M0 owner subsequently refreshed both remote mains at `c003d111` and established its branch at `15a2daf4`; its bounded repair is recorded below. Publishing and the rest of M0 stabilization remain outstanding.
 
 **Execution:** Implement coherent work packages with the repository's proportional workflow budget. Existing design documents already contain implementation detail; create an additional design only for a material unresolved contract. Task annotations below apply to their actions, deliverables and checks unless a sentence carries a more specific annotation. No agent roster or recurring monitor is created by this plan.
 
-**Steward operating agreement, adopted 27 September:** follow [FABLE-WORKFLOW-PROMPTS.md](../../../../FABLE-WORKFLOW-PROMPTS.md). This steward owns assignment → direct owner closeout → roadmap reconciliation → next authorized assignment; operational owners own implementation, checks and routine coordination. The user authorizes bounded messages between this steward (`01a0d085-14b6-7882-9994-12c2b6652a2b`) and its named Fable owners, superseding the earlier user-only reporting restriction. Reuse the M0 owner across coherent slices; new user-facing tasks still require task-creation authority. End each checkpoint with an assigned next action, an active owner or a precise decision/blocker. Use bounded native waits while following work; an authorized closeout message resumes the steward after its turn ends. No recurring scheduler, scenario activation or publication authority is implied.
+**Coordination agreement, version 2 adopted 27 September:** every Fable steward, high-level coordinator, milestone owner and replacement follows [FABLE-COORDINATION.md](../../FABLE-COORDINATION.md). Assign coherent packages, delegate internal sequencing, reconcile direct closeouts at package completion or material blockers, then advance accepted work. Preserve in-flight criteria; define broader packages at the next coherent boundary. Maintain one compact current checkpoint here, with links to detailed criteria and evidence. Routine internal repairs do not require a separate roadmap revision or coordinator turn. This supersedes earlier per-repair handback instructions; approval and task-creation boundaries remain intact.
 
-**Task configuration and reporting preferences:** choose a lower model and reasoning level when sufficient; Astra Extra High requires a concrete task-specific justification. Record the selection and reason in each new assignment. Every new owner's startup must explicitly authorize direct closeout/material-blocker messages to the steward and include its task ID; never rely on the user to grant that permission again or relay a report. Continue that reporting authority in follow-up assignments.
+**Model and context preferences:** use Sol / Medium for routine coordination and straightforward repairs; use High for difficult contract/debug work and justify stronger settings by the actual decision. Record the setting once and repeat the reason when it changes. Each assignment retains explicit reporting authority and the current destination ID. Read this plan's checkpoint/current assignment and relevant changed evidence; consult other sections on demand. The agreement contains the reusable prompts and renewal rules.
+
+## Current coordination checkpoint
+
+**Outcome and acceptance:** stabilize M0. The in-flight assignment is the three geography-authoring component cases in section 5, preserving ready map/choropleth previews, fresh-draft geometry selection and stale-preparation recovery. Its exact assertions, targeted checks and exclusions remain intact. Broader package autonomy begins with the next explicitly assigned outcome.
+
+**Owners and reporting:** planning steward `01a0d085-14b6-7882-9994-12c2b6652a2b`; combined implementation/coordination owner `01a0e2c9-c986-7ec2-96f2-63b2ed428b0a`, both local. Direct closeout/material-blocker messages to the steward are user-authorized. Replacements must update this route and notify active owners. Routine coordination and this current implementation assignment use Sol / Medium.
+
+**Code and accepted evidence:** continue in `.worktrees/fable-preparation`, branch `codex/fable-m0-source-fixture`. Last accepted tip is `03b882571fb2385890c836ef9e5d15fb4a19e93d`; verify newer owner state before dispatch. M0.1 activation and ten bounded slices are reconciled. Latest [E19 closeout](../../../.worktrees/fable-preparation/docs/fable-m0-analytical-fixtures-handoff-2026-09-27.md) supports five analytical cases and four derivative checks, with resolved scoped review. These are scoped results, not a whole-file, milestone or release gate.
+
+**Next action and limits:** let the active owner finish its existing assignment; reconcile its direct closeout, then assign a coherent package under the version 2 agreement. Select related work from remaining M0 criteria without repeating predecessors. Browser geography and other M0.2 families, plus M0.3–M0.6, remain open. Scenario-authoring is paused; integration, publishing and human acceptance retain their explicit boundaries. No new product decision is recorded by this workflow update.
 
 ## 1. Baseline and answer to “do we have a plan?”
 

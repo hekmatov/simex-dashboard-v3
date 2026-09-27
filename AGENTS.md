@@ -115,6 +115,12 @@ When the user has approved an architecture, feature design, or other governing p
 - Ask for direction only when work exposes a genuinely new product decision, an accepted-contract contradiction, an irreversible or destructive action, an external side effect, or a scope expansion that materially changes the approved outcome.
 - Follow an explicit user request for visual or final acceptance, including any required exact-head preview URL, without inventing additional intermediate approval layers.
 
+## Fable Sprint Coordination
+
+Every Fable planning steward, high-level coordinator, milestone owner and replacement must follow [docs/FABLE-COORDINATION.md](docs/FABLE-COORDINATION.md). Read it on role startup or a material revision; use the current checkpoint and changed evidence during routine continuation. Resolve current ownership and assignment through [docs/ROADMAP.md](docs/ROADMAP.md).
+
+Delegate coherent work packages with internal sequencing authority, keep direct owner-to-coordinator reporting, and reconcile at package completion or a material blocker. Start routine coordination with Sol / Medium unless the user specifies otherwise; justify higher effort. Preserve this file's approval, worktree and verification requirements. The sprint agreement supplies the reusable startup, handoff and replacement prompts; do not copy a separate policy into each task.
+
 ## Rapid Visual Prototyping Mode
 
 ### Activation and Scope
