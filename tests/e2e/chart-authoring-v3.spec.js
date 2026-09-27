@@ -14,6 +14,7 @@ const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 const WORKFORCE_SOURCE_ID = "upload-eldoria-work-sectors";
 const WORKFORCE_SOURCE_LABEL = "eldoria work sectors";
 const WORKFORCE_VALUE_COLUMN = "Share of workforce (%)";
+const EDIT_CHART_ID = "chart-line-mtgz6v76";
 const TIMELINE_FIXTURE = {
   name: "timeline-events.csv",
   mimeType: "text/csv",
@@ -382,7 +383,8 @@ test("full editor keeps every tab's controls and render panels aligned", async (
 }) => {
   await page.setViewportSize({ width: 1645, height: 1214 });
   await openBiomedicalPage(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   await page.locator(".chart-quick-editor")
     .getByRole("button", { name: "Open full editor", exact: true })
@@ -430,8 +432,9 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   page,
 }) => {
   await openBiomedicalPage(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
   const chartCountBefore = await storedChartCount(page);
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Quick continuity title");
@@ -457,7 +460,7 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   });
   expect(fullScrollTop).toBeGreaterThan(0);
 
-  const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
+  const owner = page.locator(`[data-pending-work-id="chart-edit:${EDIT_CHART_ID}"]`);
   await expect(owner).toHaveCount(1);
   await expect(owner).toHaveAttribute("data-pending-work-activity", "active");
   await expect(owner).toHaveAttribute("data-pending-work-origin", "full");
@@ -487,16 +490,15 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   await expect(full).toHaveCount(0);
   await expect(owner).toHaveCount(0);
   await expect.poll(() => storedChartCount(page)).toBe(chartCountBefore);
-  await expect.poll(async () => (
-    await storedQuickPersistenceSnapshot(page)
-  ).targetTitle).toBe("Full-only durable title");
+  await expect.poll(() => storedChartTitle(page, EDIT_CHART_ID))
+    .toBe("Full-only durable title");
 });
 
 test("quick edit previews immediately while unchanged and suspended click-away sessions restore correctly", async ({
   page,
 }) => {
   await openBiomedicalPage(page);
-  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
   const placementId = await panel.getAttribute("data-build-placement-id");
   const storedDashboardBeforeEdit = await page.evaluate(
     (key) => localStorage.getItem(key),
@@ -507,7 +509,7 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   await choosePanelAction(page, placementId, "edit");
   let editor = page.locator(".chart-quick-editor");
   await expect(editor).toBeVisible();
-  const owner = page.locator('[data-pending-work-id="chart-edit:bio_confirmed_cases"]');
+  const owner = page.locator(`[data-pending-work-id="chart-edit:${EDIT_CHART_ID}"]`);
   await expect(owner).toHaveCount(0);
   await page.locator(".dashboard-header").click({ position: { x: 8, y: 8 } });
   await expect(editor).toHaveCount(0);
@@ -519,6 +521,8 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   editor = page.locator(".chart-quick-editor");
   const title = editor.getByRole("textbox", { name: "Chart title", exact: true });
   await title.fill("Live quick preview");
+  await editor.getByRole("combobox", { name: "Background color" })
+    .selectOption("custom");
   await editor.getByRole("textbox", {
     name: "Custom background color",
     exact: true,
@@ -940,6 +944,20 @@ function storedChartCount(page) {
       .flatMap(({ panels }) => panels)
       .length;
   }, STORAGE_KEY);
+}
+
+function storedChartTitle(page, chartId) {
+  return page.evaluate(async ({ key, id }) => {
+    const storedDashboard = localStorage.getItem(key);
+    const dashboard = storedDashboard
+      ? JSON.parse(storedDashboard)
+      : await fetch("/config/dashboard.json").then((response) => response.json());
+    return dashboard.pages
+      .flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .find((chart) => chart.id === id)?.title ?? null;
+  }, { key: STORAGE_KEY, id: chartId });
 }
 
 function installQuickEditorSavingEvidence(page, ownerId) {
