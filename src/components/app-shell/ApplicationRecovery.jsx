@@ -3,6 +3,8 @@ import React from "react";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
 
 export default function ApplicationRecovery({
+  kind = "dashboard",
+  loadStage = "source",
   busy = false,
   error = "",
   profileVersionMismatch = false,
@@ -12,6 +14,8 @@ export default function ApplicationRecovery({
   onChoosePackage,
   onConfirmPackage,
   onCancelPackage,
+  onRetry,
+  onReloadPage,
 }) {
   const fileInputRef = React.useRef(null);
   const importButtonRef = React.useRef(null);
@@ -33,8 +37,18 @@ export default function ApplicationRecovery({
     >
       <section className="application-recovery-panel">
         <p className="eyebrow">SimEx Dashboard</p>
-        <h1 id="application-recovery-title">Dashboard couldn’t load. No valid scenario is available.</h1>
-        <p>Reload the latest dashboard source or choose a current version 3 dashboard package.</p>
+        <h1 id="application-recovery-title">{kind === "chunk"
+          ? "Part of the dashboard couldn’t be loaded."
+          : kind === "render"
+            ? "The dashboard hit a display error."
+            : "Dashboard couldn’t load. No valid scenario is available."}</h1>
+        <p>{kind === "chunk"
+          ? "Reload the page to request the missing application file. Your saved dashboard is retained."
+          : kind === "render"
+            ? "Try the display again. If the error returns, reload the page. Your saved dashboard is retained; changes held only in this session may be lost."
+            : loadStage === "saved"
+              ? "The saved dashboard could not be opened. Load the latest dashboard source for this session or review a version 3 package. The saved configuration stays untouched until you save changes or confirm a package."
+              : "The dashboard source could not be opened. Try loading it again or review a version 3 package. The saved configuration stays untouched until you save changes or confirm a package."}</p>
         {profileVersionMismatch && (
           <p className="application-recovery-advice">
             The dashboard configuration and dataset profiles appear to come from different versions. Reload the dashboard first. If the problem continues, try a hard refresh with <kbd>Ctrl+Shift+R</kbd> on Windows or Linux, or <kbd>Cmd+Shift+R</kbd> on macOS.
@@ -42,10 +56,12 @@ export default function ApplicationRecovery({
         )}
         {error && <p className="application-recovery-error" role="alert">{error}</p>}
         <div className="application-recovery-actions">
-          <button type="button" disabled={busy} onClick={onReload}>
-            Reload Dashboard
-          </button>
-          <button
+          {kind !== "dashboard" && onRetry && <button type="button" onClick={onRetry}>Try Again</button>}
+          {kind !== "dashboard" && <button type="button" className={onRetry ? "secondary" : undefined} onClick={onReloadPage}>Reload Page</button>}
+          {kind === "dashboard" && <button type="button" disabled={busy} onClick={onReload}>
+            Load Dashboard Source
+          </button>}
+          {kind === "dashboard" && <button
             ref={importButtonRef}
             type="button"
             className="secondary"
@@ -53,9 +69,9 @@ export default function ApplicationRecovery({
             onClick={choosePackage}
           >
             Import Dashboard Package
-          </button>
+          </button>}
         </div>
-        <input
+        {kind === "dashboard" && <input
           ref={fileInputRef}
           className="visually-hidden"
           type="file"
@@ -66,7 +82,7 @@ export default function ApplicationRecovery({
             onChoosePackage?.(event.target.files?.[0]);
             event.target.value = "";
           }}
-        />
+        />}
       </section>
       {candidate && (
         <ModalFocusScope

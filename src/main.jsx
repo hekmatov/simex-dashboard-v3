@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App.jsx";
 import OperationStatusProvider from "./components/app-shell/OperationStatusProvider.jsx";
+import ApplicationErrorBoundary from "./components/app-shell/ApplicationErrorBoundary.jsx";
 import { registerServiceWorker } from "./serviceWorkerRegistration.js";
 import "./styles/fonts.css";
 import "./styles/tokens.css";
@@ -28,8 +29,10 @@ if ("serviceWorker" in navigator && !import.meta.env.DEV) {
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <OperationStatusProvider>
-      <App />
-    </OperationStatusProvider>
+    <ApplicationErrorBoundary>
+      <OperationStatusProvider>
+        <App />
+      </OperationStatusProvider>
+    </ApplicationErrorBoundary>
   </React.StrictMode>,
 );

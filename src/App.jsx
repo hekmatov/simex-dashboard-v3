@@ -53,7 +53,6 @@ import {
 } from "./static-content/image/imageAssetValidation.js";
 
 import {
-  hydrateConfigurationBeforeStorageWrite,
   isDashboardProfileVersionMismatch,
   recoveryPackageError,
   recoveryPackageSummary,
@@ -128,7 +127,7 @@ import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.
 const DashboardPackageReviewDialog = lazySurface(() => import("./components/build/DashboardPackageReviewDialog.jsx"), "Package review", { overlay: true });
 const BuildPageNavigation = lazySurface(() => import("./components/build/BuildPageNavigation.jsx"), "Build navigation");
 const DashboardLookDrawer = lazySurface(() => import("./components/dashboard-look/index.js"), "Dashboard appearance", { overlay: true });
-const AudienceDisplay = lazySurface(() => import("./components/presentation/AudienceDisplay.jsx"), "Audience display");
+const AudienceDisplay = lazySurface(() => import("./components/presentation/AudienceDisplay.jsx"), "Audience display", { passive: true });
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 export { validateConfigurationForPersistence };
@@ -205,7 +204,11 @@ function AppContent({ releaseProfile = null }) {
   const [dashboard, setDashboard] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [operationError, setOperationError] = React.useState("");
-  const [persistenceNotices, setPersistenceNotices] = React.useState({});
+  const [persistenceNotices, setPersistenceNotices] = React.useState(() => (
+    releaseProfile?.viewOnly || browserStorage.isAvailable()
+      ? {}
+      : { dashboard: "Browser storage is unavailable. Dashboard changes will last for this session only; export a dashboard package before reloading." }
+  ));
   const [recoveryBusy, setRecoveryBusy] = React.useState(false);
   const [recoveryError, setRecoveryError] = React.useState("");
   const [recoveryImportCandidate, setRecoveryImportCandidate] = React.useState(null);
@@ -430,8 +433,10 @@ function AppContent({ releaseProfile = null }) {
 
   React.useEffect(() => {
     let disposed = false;
+    let loadStage = "source";
     loadDashboardDefinition(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then(async (definition) => {
+        loadStage = "saved";
         const trackedProfiles = definition.datasetProfiles ?? {};
         const tracked = {
           ...definition.dashboard,
@@ -453,6 +458,7 @@ function AppContent({ releaseProfile = null }) {
           trackedProfiles,
         );
         const profiles = selected.datasetProfiles ?? trackedProfiles;
+        loadStage = stored ? "saved" : "source";
         const portableSources = stored ? null : definition.portableSources;
         const publish = (loaded) => {
           if (disposed) return;
@@ -491,7 +497,7 @@ function AppContent({ releaseProfile = null }) {
         }
       })
       .catch((loadError) => {
-        if (!disposed) setError(loadError);
+        if (!disposed) setError({ cause: loadError, stage: loadStage });
       });
     return () => {
       disposed = true;
@@ -682,6 +688,7 @@ function AppContent({ releaseProfile = null }) {
       persisted,
       SESSION_ONLY_MESSAGES.dashboard,
     );
+    if (persisted) reportPersistence("recovery", true, "");
     return persisted;
   }
 
@@ -855,24 +862,21 @@ function AppContent({ releaseProfile = null }) {
         ...definition.dashboard,
         datasetProfiles: trackedProfiles,
       };
-      const loaded = await hydrateConfigurationBeforeStorageWrite({
-        candidate: tracked,
-        hydrate: (candidate) => loadDashboardConfig(
-          candidate,
-          trackedProfiles,
-          definition.portableSources,
-        ),
-        persist: (candidate) => persistDashboardStorage(JSON.stringify(
-          configurationForStorage(candidate, trackedProfiles),
-          null,
-          2,
-        )),
-      });
+      const loaded = await loadDashboardConfig(
+        tracked,
+        trackedProfiles,
+        definition.portableSources,
+      );
       dashboardRef.current = loaded;
       replaceRecoveryDashboardController(loaded);
       setDashboard(loaded);
       setError(null);
       setOperationError("");
+      reportPersistence(
+        "recovery",
+        false,
+        "Dashboard source loaded for this session. The saved configuration is unchanged; export a dashboard package before reloading if you want to keep this version.",
+      );
     } catch {
       setRecoveryError(
         "Dashboard couldn’t be reloaded. Import a current version 3 dashboard package or try again.",
@@ -1651,7 +1655,8 @@ function AppContent({ releaseProfile = null }) {
       <ApplicationRecovery
         busy={recoveryBusy}
         error={recoveryError}
-        profileVersionMismatch={isDashboardProfileVersionMismatch(error)}
+        profileVersionMismatch={isDashboardProfileVersionMismatch(error.cause)}
+        loadStage={error.stage}
         candidate={recoveryImportCandidate}
         themeProjection={dashboardThemeProjection}
         onReload={reloadDashboardFromSource}
