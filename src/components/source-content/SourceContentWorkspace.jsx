@@ -1,4 +1,6 @@
 import React from "react";
+import { createSourceContentViewState } from "./sourceContentViewState.js";
+export { createSourceContentViewState } from "./sourceContentViewState.js";
 import { listManageableSourceEntries } from "../../content-library/sourceEntrySchema.js";
 import ContentDetail, { buildContentRenameDraft } from "./ContentDetail.jsx";
 import DataSourceCatalogue from "./DataSourceCatalogue.jsx";
@@ -322,28 +324,6 @@ export default function SourceContentWorkspace({
       </div>
     </section>
   );
-}
-
-export function createSourceContentViewState(input = {}) {
-  const queries = input.queries ?? {};
-  const filters = input.filters ?? {};
-  const selections = input.selections ?? {};
-  return {
-    tab: input.tab === "sources" ? "sources" : "media",
-    queries: {
-      media: String(queries.media ?? ""),
-      sources: String(queries.sources ?? ""),
-    },
-    filters: {
-      media: normalizedFilters(filters.media),
-      sources: normalizedFilters(filters.sources),
-    },
-    selections: {
-      media: optionalId(selections.media),
-      sources: optionalId(selections.sources),
-    },
-    tabletDetailOpen: input.tabletDetailOpen === true,
-  };
 }
 
 export function managerLayoutForWidth(width) {

@@ -1,6 +1,7 @@
 import { temporalAuthoringCharts, isTemporalAuthoringChart } from "../time/temporalAuthoringCharts.js";
 export { temporalAuthoringCharts } from "../time/temporalAuthoringCharts.js";
 import React from "react";
+import { lazySurface } from "../app-shell/lazySurface.jsx";
 
 import { useMediaQuery } from "../common/useMediaQuery.js";
 import { createPortal } from "react-dom";
@@ -19,15 +20,10 @@ import {
   compatibleUnitOrbitCapabilities,
 } from "./panelEditingModel.js";
 import UnitOrbit from "./UnitOrbit.jsx";
-import SceneEditor from "../time/SceneEditor.jsx";
 import {
   createSceneDraft,
   reduceSceneDraft,
 } from "../time/sceneDraft.js";
-import ChronoStudio from "../time/ChronoStudio.jsx";
-import ChronoGroupContent from "../time/ChronoGroupContent.jsx";
-import SceneLibrary from "../time/SceneLibrary.jsx";
-import SceneContent from "../time/SceneContent.jsx";
 import {
   createChronoContentState,
   reduceChronoContent,
@@ -38,7 +34,6 @@ import {
   selectTemporalDraftOwners,
   withTemporalOwnerScope,
 } from "../time/chronoContentState.js";
-import ChronoGroupEditor from "../time/ChronoGroupEditor.jsx";
 import {
   hasActiveLocalAuthoringDrafts,
   hasEditingLocalAuthoringDrafts,
@@ -59,7 +54,15 @@ import {
   reduceBuildDraftCoordinator,
 } from "./buildDraftCoordinator.js";
 import { selectBuildPendingWork } from "./buildPendingWork.js";
-import SourceContentWorkspace, { createSourceContentViewState } from "../source-content/SourceContentWorkspace.jsx";
+import { createSourceContentViewState } from "../source-content/sourceContentViewState.js";
+
+const SceneEditor = lazySurface(() => import("../time/SceneEditor.jsx"), "Scene editor");
+const ChronoStudio = lazySurface(() => import("../time/ChronoStudio.jsx"), "Chrono Group studio");
+const ChronoGroupContent = lazySurface(() => import("../time/ChronoGroupContent.jsx"), "Chrono Group content");
+const SceneLibrary = lazySurface(() => import("../time/SceneLibrary.jsx"), "Scene library");
+const SceneContent = lazySurface(() => import("../time/SceneContent.jsx"), "Scene content");
+const ChronoGroupEditor = lazySurface(() => import("../time/ChronoGroupEditor.jsx"), "Chrono Group editor");
+const SourceContentWorkspace = lazySurface(() => import("../source-content/SourceContentWorkspace.jsx"), "Source content workspace");
 
 export default function BuildWorkspace({
   themeProjection,

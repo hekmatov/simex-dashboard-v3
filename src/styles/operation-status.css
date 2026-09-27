@@ -1,3 +1,21 @@
+.lazy-surface-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-block-size: 48px;
+  max-inline-size: min(520px, 100%);
+  padding: 12px 20px;
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  background: var(--simex-surface-panel);
+  color: var(--simex-text-strong);
+  box-shadow: var(--simex-style-panel-shadow, 0 14px 34px rgb(18 26 28 / 18%));
+}
+
+.lazy-surface-status p { margin: 0; }
+
 .operation-status-viewport {
   font-family: var(--simex-style-body-font);
   max-width: min(360px, calc(100vw - var(--operation-status-drawer-offset) - 32px));

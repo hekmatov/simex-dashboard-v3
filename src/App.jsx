@@ -9,6 +9,7 @@ import {
 import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
+import { lazySurface } from "./components/app-shell/lazySurface.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
 import ExerciseDisclaimer from "./components/app-shell/ExerciseDisclaimer.jsx";
@@ -16,17 +17,13 @@ import { useOperationStatusActions } from "./components/app-shell/OperationStatu
 import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
 import RestoreOnlineDashboardDialog from "./components/app-shell/RestoreOnlineDashboardDialog.jsx";
-import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
-import BuildPageNavigation from "./components/build/BuildPageNavigation.jsx";
 import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
 import {
   reorderPage,
   reorderSection,
 } from "./components/build/buildStructureModel.js";
-import DashboardLookDrawer from "./components/dashboard-look/index.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
 import { createPlaybackChartCollectionSelector } from "./charting/time/playbackPageScope.js";
-import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
   integrateCreatedChart,
@@ -127,6 +124,11 @@ import {
   dashboardLookUpdates,
 } from "./theme/dashboardLookDraft.js";
 import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.jsx";
+
+const DashboardPackageReviewDialog = lazySurface(() => import("./components/build/DashboardPackageReviewDialog.jsx"), "Package review", { overlay: true });
+const BuildPageNavigation = lazySurface(() => import("./components/build/BuildPageNavigation.jsx"), "Build navigation");
+const DashboardLookDrawer = lazySurface(() => import("./components/dashboard-look/index.js"), "Dashboard appearance", { overlay: true });
+const AudienceDisplay = lazySurface(() => import("./components/presentation/AudienceDisplay.jsx"), "Audience display");
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 export { validateConfigurationForPersistence };
@@ -1917,7 +1919,7 @@ function AppContent({ releaseProfile = null }) {
       operationError={operationError}
     />
     )}
-    <DashboardLookDrawer
+    {lookDrawerOpen && <DashboardLookDrawer
       open={lookDrawerOpen}
       saved={createDashboardLookPreview(savedDashboardTheme)}
       preview={lookPreview}
@@ -1926,8 +1928,8 @@ function AppContent({ releaseProfile = null }) {
       error={lookError}
       onCancel={cancelDashboardLook}
       onPreviewChange={changeDashboardLookPreview}
-    />
-    <DashboardPackageReviewDialog
+    />}
+    {packageImportCandidate && <DashboardPackageReviewDialog
       candidate={packageImportCandidate}
       busy={packageImportBusy}
       error={packageImportError}
@@ -1937,7 +1939,7 @@ function AppContent({ releaseProfile = null }) {
         setPackageImportCandidate(null);
         setPackageImportError("");
       }}
-    />
+    />}
     <RestoreOnlineDashboardDialog
       open={onlineRestoreOpen}
       busy={onlineRestoreBusy}

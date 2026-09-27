@@ -7,16 +7,8 @@ import {
   reportDashboardContentActivity,
   runDashboardContentOperation,
 } from "../lib/dashboardContentActivity.js";
-import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
-import ChartQuickEditor from "./chart-authoring/ChartQuickEditor.jsx";
-import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
-import StaticContentEditor, { StaticContentQuickEditor } from "./static-content/StaticContentEditor.jsx";
-import StaticContentWizard, { cleanupImageDraftAssets } from "./static-content/StaticContentWizard.jsx";
-import BuildWorkspace from "./build/BuildWorkspace.jsx";
-import BuildMoveDialog from "./build/BuildMoveDialog.jsx";
-import BuildMoveConfirmationDialog from "./build/BuildMoveConfirmationDialog.jsx";
-import DashboardPackageExportDialog from "./build/DashboardPackageExportDialog.jsx";
-import DeleteDashboardContentDialog from "./build/DeleteDashboardContentDialog.jsx";
+import { lazySurface } from "./app-shell/lazySurface.jsx";
+import { cleanupImageDraftAssets } from "./static-content/cleanupImageDraftAssets.js";
 import {
   activeLocalAuthoringDrafts,
   buildLeaveBlockReason,
@@ -66,7 +58,6 @@ import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import { usePlayback } from "./playback/PlaybackProvider.jsx";
-import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
 import usePresentationRuntime from "./presentation/usePresentationRuntime.js";
 import {
   applyScenePresentTransition,
@@ -126,6 +117,22 @@ import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "../stati
 import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
 import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
 import { classifyManagedSource } from "../content-library/sourceEntrySchema.js";
+
+const ChartEditorV3 = lazySurface(() => import("./chart-authoring/ChartEditorV3.jsx"), "Chart editor", { overlay: true });
+const ChartQuickEditor = lazySurface(() => import("./chart-authoring/ChartQuickEditor.jsx"), "Chart editor");
+const ChartWizardV3 = lazySurface(() => import("./chart-authoring/ChartWizardV3.jsx"), "Chart wizard", { overlay: true });
+const StaticContentEditor = lazySurface(() => import("./static-content/StaticContentEditor.jsx"), "Content editor", { overlay: true });
+const StaticContentQuickEditor = lazySurface(
+  () => import("./static-content/StaticContentEditor.jsx").then((module) => ({ default: module.StaticContentQuickEditor })),
+  "Content editor",
+);
+const StaticContentWizard = lazySurface(() => import("./static-content/StaticContentWizard.jsx"), "Content wizard", { overlay: true });
+const BuildWorkspace = lazySurface(() => import("./build/BuildWorkspace.jsx"), "Build workspace");
+const BuildMoveDialog = lazySurface(() => import("./build/BuildMoveDialog.jsx"), "Build move dialog", { overlay: true });
+const BuildMoveConfirmationDialog = lazySurface(() => import("./build/BuildMoveConfirmationDialog.jsx"), "Build move confirmation", { overlay: true });
+const DashboardPackageExportDialog = lazySurface(() => import("./build/DashboardPackageExportDialog.jsx"), "Package export review", { overlay: true });
+const DeleteDashboardContentDialog = lazySurface(() => import("./build/DeleteDashboardContentDialog.jsx"), "Dashboard deletion review", { overlay: true });
+const PresentWorkspace = lazySurface(() => import("./presentation/PresentWorkspace.jsx"), "Present workspace");
 
 const SCENARIO_DIRTY_BLOCK_REASON =
   "Save or discard changes to Scenario before leaving this edit. Stay in Build to continue editing.";
@@ -2939,7 +2946,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       {editMode && selectedPanelIsStatic && staticContentEditorSurface === "full" && chartEditorVisible
         ? selectedChartEditor
         : null}
-      <BuildMoveDialog
+      {moveDialogRequest && <BuildMoveDialog
         open={Boolean(moveDialogRequest)}
         dashboard={workingDashboard}
         source={moveDialogRequest?.source}
@@ -2951,15 +2958,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setMoveDialogRequest(null);
           stageBuildLayoutMove(move, invoker);
         }}
-      />
-      <BuildMoveConfirmationDialog
+      />}
+      {moveConfirmation && <BuildMoveConfirmationDialog
         analysis={moveConfirmation?.analysis}
         invoker={moveConfirmation?.invoker}
         onCancel={() => setMoveConfirmation(null)}
         onConfirm={confirmBuildLayoutMove}
-      />
+      />}
       {editMode && <>
-      <ChartWizardV3
+      {(chartWizardTarget || chartWizardSuspended) && <ChartWizardV3
         key={`chart-create:${chartDraftSessionKey}:${chartWizardSessionEpoch}`}
         open={Boolean(chartWizardTarget)}
         contentDraftCoordinator={contentDraftCoordinator}
@@ -3070,7 +3077,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
             key: "content:chart.draft:create",
           });
         }}
-      />
+      />}
       {chartEditSession && (
         chartEditSession.activeSurface === "full" || chartEditSession.dirtyOrigins.full
       ) && <ChartWizardV3
@@ -3200,7 +3207,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           clearModeratorError("reset-session");
         }}
       />
-      <DeleteDashboardContentDialog
+      {deleteContentConfirmation && <DeleteDashboardContentDialog
         open={deleteContentConfirmation}
         summary={summarizeDashboardContent(dashboard)}
         busy={moderatorOperation.kind === "delete-dashboard-content"}
@@ -3211,7 +3218,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setDeleteContentConfirmation(false);
           clearModeratorError("delete-dashboard-content");
         }}
-      />
+      />}
       <ConfirmDialog
         open={pendingRemovalPageId !== null}
         title={`Delete Page ${dashboard.pages.find(({ id }) => id === pendingRemovalPageId)?.label ?? ""}?`}
@@ -3224,12 +3231,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onConfirm={confirmPageRemoval}
         onCancel={cancelPageRemoval}
       />
-      <DashboardPackageExportDialog
+      {packageExportIssues.length > 0 && <DashboardPackageExportDialog
         open={packageExportIssues.length > 0}
         issues={packageExportIssues}
         onResolve={resolvePackageExportIssue}
         onCancel={() => setPackageExportIssues([])}
-      />
+      />}
       <ConfirmDialog
         open={pendingRemovalPanelId !== null}
         title="Remove this chart?"
