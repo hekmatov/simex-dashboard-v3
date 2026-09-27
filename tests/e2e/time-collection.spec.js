@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
+import { openChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -79,8 +79,8 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await expect(wizard).toBeHidden();
   await expect(viewMode).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Resume New chart draft", exact: true }).click();
-  await expect(wizard).toBeVisible();
+  const resumed = await resumeChartAuthoring(page);
+  await expect(resumed.wizard).toBeVisible();
   await expect(wizardTitle).toHaveValue("Playback-safe unsaved wizard title");
 
   await wizard.getByRole("button", { name: "Discard chart draft" }).click();

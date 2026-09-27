@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { enterBuildMode, structureRail, openSourceContent } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
-import { chartAuthoringWorkflow, openChartAuthoring } from "./support/chart-authoring-workflow.js";
+import { openChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -227,12 +227,8 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
   const createOwner = pendingWork.locator('[data-pending-work-kind="chart-create"]');
   await expect(createOwner).toHaveCount(1);
-  await createOwner.getByRole("button", {
-    name: "Resume New chart draft",
-    exact: true,
-  }).click();
-  wizard = page.getByRole("dialog", { name: "Add new chart" });
-  flow = chartAuthoringWorkflow(wizard);
+  flow = await resumeChartAuthoring(page);
+  wizard = flow.wizard;
   await expect(flow.stageButton("dataSource")).toHaveAttribute("aria-current", "step");
   await flow.goToDataSource();
   await expect(wizard.getByLabel("CSV file")).toBeVisible();

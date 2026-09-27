@@ -4,8 +4,8 @@ import { choosePanelAction } from "./support/buildWorkflow.js";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 import {
-  chartAuthoringWorkflow,
   openChartAuthoring,
+  resumeChartAuthoring,
 } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -92,12 +92,8 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   await expect(wizard).toHaveCount(0);
   const suspendedCreation = page.locator('[data-pending-work-kind="chart-create"]');
   await expect(suspendedCreation).toHaveAttribute("data-pending-work-activity", "suspended");
-  await suspendedCreation.getByRole("button", {
-    name: "Resume New chart draft",
-    exact: true,
-  }).click();
-  wizard = page.getByRole("dialog", { name: "Add new chart" });
-  flow = chartAuthoringWorkflow(wizard);
+  flow = await resumeChartAuthoring(page);
+  wizard = flow.wizard;
 
   await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   const discard = page.getByRole("dialog", { name: "Discard chart?" });
@@ -546,9 +542,8 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "suspended");
 
-  await creationOwner.getByRole("button", { name: "Resume New chart draft", exact: true }).click();
-  wizard = page.getByRole("dialog", { name: "Add new chart" });
-  flow = chartAuthoringWorkflow(wizard);
+  flow = await resumeChartAuthoring(page);
+  wizard = flow.wizard;
   await expect(wizard).toBeVisible();
   await expect(wizard.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Retainable owner draft");
   await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);

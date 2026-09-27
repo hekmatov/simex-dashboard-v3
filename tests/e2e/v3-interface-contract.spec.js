@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { choosePanelAction, chooseSectionAction, structureRail } from "./support/buildWorkflow.js";
+import { choosePanelAction, chooseSectionAction, propertiesPane, structureRail } from "./support/buildWorkflow.js";
 
 import { chartAuthoringWorkflow } from "./support/chart-authoring-workflow.js";
+import { resetSourceDashboard } from "./support/dashboardFixture.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -31,16 +32,17 @@ test("Build Page management uses the selected Page tab as its one grouped-action
 
 test("source-first Step 7 Build controls and fields use the shared dense desktop contract", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
+  await resetSourceDashboard(page, { fixture: "fable-m0" });
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 
   const map = structureRail(page);
-  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
-  await expect(map.getByLabel("Page title")).toHaveCSS("min-height", "32px");
-  await expect(map.getByLabel("Page title")).toHaveCSS("color", await semanticColor(page, "--simex-text-strong"));
+  await map.locator('[data-build-node-id="m0-dashboard"] > .build-tree-row').click();
+  const pageTitle = propertiesPane(page).getByLabel("Page title");
+  await expect(pageTitle).toHaveCSS("min-height", "32px");
+  await expect(pageTitle).toHaveCSS("color", await semanticColor(page, "--simex-text-strong"));
 
   const structure = map.getByRole("navigation", { name: "Dashboard structure" });
-  const contrast = await structure.getByRole("treeitem", { name: "Biomedical", exact: true }).evaluate((item) => {
+  const contrast = await structure.getByRole("treeitem", { name: "Fixture dashboard", exact: true }).evaluate((item) => {
     const surface = item.closest(".build-rail");
     const parse = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number);
     const luminance = (value) => parse(value)
@@ -53,12 +55,30 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
   });
   expect(contrast).toBeGreaterThanOrEqual(4.5);
 
-  await page.getByRole("button", { name: "Add chart", exact: true }).click();
+  await page.locator('[data-build-command-action="add-chart"]').click();
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
-  const stageLabels = await wizard.getByRole("navigation", { name: "Chart creation steps" })
-    .getByRole("button").allTextContents();
-  expect(stageLabels.map((label) => label.replace(/(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u, "")))
-    .toEqual(["Destination", "Data source", "Chart type", "Map and prepare", "Configure", "Review"]);
+  const stages = await wizard.getByRole("navigation", { name: "Chart creation steps" })
+    .getByRole("button").evaluateAll((buttons) => buttons.map((button) => ({
+      id: button.id,
+      label: button.querySelector("span")?.textContent,
+      status: button.querySelector("small")?.textContent,
+      attributeStatus: button.getAttribute("data-status"),
+      accessibleName: button.getAttribute("aria-label"),
+    })));
+  expect(stages).toEqual([
+    ["destination", "Destination", "Complete"],
+    ["data-source", "Data source", "Not started"],
+    ["chart-type", "Chart type", "Waiting on prerequisite"],
+    ["map-and-prepare-data", "Map and prepare", "Waiting on prerequisite"],
+    ["configure-chart", "Configure", "Waiting on prerequisite"],
+    ["review-and-create", "Review", "Waiting on prerequisite"],
+  ].map(([id, label, status]) => ({
+    id: `chart-stage-${id}`,
+    label,
+    status,
+    attributeStatus: status,
+    accessibleName: `${label}. ${status}.`,
+  })));
   const flow = chartAuthoringWorkflow(wizard);
   await flow.goToChartType();
   await expect(wizard.locator(".chart-wizard-step-button").first()).toHaveCSS("min-height", "36px");

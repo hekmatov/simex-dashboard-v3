@@ -1,18 +1,31 @@
 import { expect } from "@playwright/test";
 
-const STAGE_NAMES = Object.freeze({
-  destination: /^Destination\./,
-  dataSource: /^Data source\./,
-  chartType: /^Chart type\./,
-  mapAndPrepare: /^Map and prepare\./,
-  configure: /^Configure\./,
-  review: /^Review\./,
+const STAGE_IDS = Object.freeze({
+  destination: "destination",
+  dataSource: "data-source",
+  chartType: "chart-type",
+  mapAndPrepare: "map-and-prepare-data",
+  configure: "configure-chart",
+  review: "review-and-create",
 });
 
-export async function openChartAuthoring(page) {
-  await page.getByRole("button", { name: "Add chart", exact: true })
-    .first()
-    .click();
+export async function openFreshChartAuthoring(page) {
+  await page.locator('[data-build-command-action="add-chart"]').click();
+  const wizard = page.getByRole("dialog", { name: "Add new chart" });
+  await expect(wizard).toBeVisible();
+  await expect(wizard.locator('[data-chart-wizard-stage="destination"]')).toBeVisible();
+  return chartAuthoringWorkflow(wizard);
+}
+
+// Preserve the existing fresh-entry API for consumers that do not need a resumed draft.
+export const openChartAuthoring = openFreshChartAuthoring;
+
+export async function resumeChartAuthoring(page) {
+  const owner = page.getByRole("navigation", { name: "Pending Build work" })
+    .locator('[data-pending-work-kind="chart-create"]');
+  await expect(owner).toHaveCount(1);
+  await expect(owner).toHaveAttribute("data-pending-work-activity", "suspended");
+  await owner.getByRole("button", { name: /^Resume / }).click();
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
   await expect(wizard).toBeVisible();
   return chartAuthoringWorkflow(wizard);
@@ -22,13 +35,20 @@ export function chartAuthoringWorkflow(wizard) {
   const navigation = wizard.getByRole("navigation", {
     name: "Chart creation steps",
   });
-  const stageButton = (stage) => navigation.getByRole("button", {
-    name: stageName(stage),
-  });
+  const stageButton = (stage) => navigation.locator(`[id="chart-stage-${stageId(stage)}"]`);
   const goToStage = async (stage) => {
+    const id = stageId(stage);
     const button = stageButton(stage);
     await button.click();
     await expect(button).toHaveAttribute("aria-current", "step");
+    await expect(wizard.locator("[data-chart-wizard-stage]")).toHaveAttribute("data-chart-wizard-stage", id);
+    return wizard;
+  };
+  const step = async (direction, stage) => {
+    const id = stageId(stage);
+    await wizard.locator(`[data-icon-control="collection.${direction}-page"]`).click();
+    await expect(wizard.locator("[data-chart-wizard-stage]")).toHaveAttribute("data-chart-wizard-stage", id);
+    await expect(stageButton(id)).toHaveAttribute("aria-current", "step");
     return wizard;
   };
 
@@ -36,6 +56,13 @@ export function chartAuthoringWorkflow(wizard) {
     wizard,
     stageButtons: navigation.getByRole("button"),
     stageButton,
+    goToStage,
+    nextStage: (stage) => step("next", stage),
+    previousStage: (stage) => step("previous", stage),
+    async suspend() {
+      await wizard.locator('[data-icon-control="wizard.close-wizard"]').click();
+      await expect(wizard).toHaveCount(0);
+    },
     goToDestination: () => goToStage("destination"),
     goToDataSource: () => goToStage("dataSource"),
     goToChartType: () => goToStage("chartType"),
@@ -71,9 +98,10 @@ export function chartAuthoringWorkflow(wizard) {
         .selectOption(column);
     },
     async createChart(title) {
+      await goToStage("configure");
       await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill(title);
       await goToStage("review");
-      const create = wizard.getByRole("button", { name: "Create chart" });
+      const create = wizard.locator('[data-icon-control="wizard.create-chart"]');
       await expect(create).toBeEnabled();
       await create.click();
       await expect(wizard).toHaveCount(0);
@@ -81,8 +109,8 @@ export function chartAuthoringWorkflow(wizard) {
   });
 }
 
-function stageName(stage) {
-  const name = STAGE_NAMES[stage];
-  if (!name) throw new TypeError(`Unknown chart-authoring stage "${stage}".`);
-  return name;
+function stageId(stage) {
+  const id = STAGE_IDS[stage] ?? (Object.values(STAGE_IDS).includes(stage) ? stage : null);
+  if (!id) throw new TypeError(`Unknown chart-authoring stage "${stage}".`);
+  return id;
 }
