@@ -208,13 +208,20 @@ test("source-first existing CSV pie authoring progressively reveals schema field
 test("wizard eyedropper reveals the dashboard and Escape preserves the draft", async ({ page }) => {
   const flow = await openChartAuthoring(page);
   const { wizard } = flow;
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource(WORKFORCE_SOURCE_LABEL);
+  const owner = page.locator('[data-pending-work-kind="chart-create"]');
+  await expect(owner).toHaveCount(1);
+  const ownerId = await owner.getAttribute("data-pending-work-id");
   await flow.chooseChartType("pie", /^Pie\b/i);
+  const draftId = await wizard.getAttribute("data-chart-draft-id");
+  expect(draftId).toMatch(/^chart-pie-/);
   await flow.goToMapAndPrepare();
-  await flow.selectRole("category", "Age group");
-  await flow.selectRole("value", "deaths");
+  await flow.selectRole("category", "Sector");
+  await flow.selectRole("value", WORKFORCE_VALUE_COLUMN);
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
+  const draftTitle = "Eyedropper retained draft";
+  await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill(draftTitle);
 
   const picker = wizard.getByRole("button", {
     name: "Pick background color from dashboard",
@@ -235,7 +242,10 @@ test("wizard eyedropper reveals the dashboard and Escape preserves the draft", a
     "true",
   );
   await expect(wizard).toBeVisible();
-  await expect(wizard.getByRole("textbox", { name: "Chart title", exact: true })).toBeVisible();
+  await expect(wizard).toHaveAttribute("data-chart-draft-id", draftId);
+  await expect(owner).toHaveAttribute("data-pending-work-id", ownerId);
+  await expect(wizard.getByRole("textbox", { name: "Chart title", exact: true }))
+    .toHaveValue(draftTitle);
 });
 
 for (const scenario of [
@@ -584,17 +594,23 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   page,
 }) => {
   await openM0FixtureBuild(page);
+  const storedPanelCount = await storedChartCount(page);
   let flow = await openChartAuthoring(page);
   let wizard = flow.wizard;
+  await expect(wizard.getByLabel("Destination page")).toHaveValue("m0-dashboard");
   const creationOwner = page.locator('[data-pending-work-kind="chart-create"]');
   await expect(creationOwner).toHaveCount(0);
 
   await flow.selectExistingSource(WORKFORCE_SOURCE_LABEL);
+  await expect(wizard.getByRole("region", { name: "Selected source profile" }))
+    .toContainText(WORKFORCE_VALUE_COLUMN);
   await expect(creationOwner).toHaveCount(1);
   const ownerId = await creationOwner.getAttribute("data-pending-work-id");
   expect(ownerId).toMatch(/^chart-create:.+/);
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
   await flow.chooseChartType("pie", /^Pie\b/i);
+  const draftId = await wizard.getAttribute("data-chart-draft-id");
+  expect(draftId).toMatch(/^chart-pie-/);
   await flow.goToMapAndPrepare();
   await flow.selectRole("category", "Sector");
   await flow.selectRole("value", WORKFORCE_VALUE_COLUMN);
@@ -604,6 +620,8 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   await expect(creationOwner).toHaveCount(1);
   await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
+  expect(await storedChartCount(page)).toBe(storedPanelCount);
+  expect(await storedChartTitle(page, draftId)).toBe(null);
   await expect(page.locator('[data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
 
   const title = wizard.getByRole("textbox", { name: "Chart title", exact: true });
@@ -612,10 +630,12 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   await expect(wizard).toHaveCount(0);
   await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "suspended");
+  expect(await storedChartTitle(page, draftId)).toBe(null);
 
   flow = await resumeChartAuthoring(page);
   wizard = flow.wizard;
   await expect(wizard).toBeVisible();
+  await expect(wizard).toHaveAttribute("data-chart-draft-id", draftId);
   await expect(wizard.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Retainable owner draft");
   await expect(creationOwner).toHaveAttribute("data-pending-work-id", ownerId);
 
@@ -624,6 +644,9 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
     .getByRole("button", { name: "Discard", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   await expect(creationOwner).toHaveCount(0);
+  await expect(page.locator('[data-canonical-page-id="m0-dashboard"]')).toBeVisible();
+  expect(await storedChartCount(page)).toBe(storedPanelCount);
+  expect(await storedChartTitle(page, draftId)).toBe(null);
   await expect(page.locator('[data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
 });
 
