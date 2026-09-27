@@ -4,6 +4,7 @@ import { choosePanelAction, chooseSectionAction, panelMenu, sectionMenu } from "
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
+const MOVED_SECTION = Object.freeze({ id: "biomedical_section", title: "International Situation" });
 
 test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -16,6 +17,8 @@ test.beforeEach(async ({ page, request }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
   await expect(navigation).toBeVisible();
   await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await expect(navigation.getByRole("button", { name: "Biomedical", exact: true }))
+    .toHaveAttribute("aria-current", "page");
 });
 
 test("section and panel menus preserve command order, keyboard navigation, and their authoring owners", async ({ page }) => {
@@ -118,14 +121,18 @@ test("selected Page tab toggles its five-action menu while inactive Pages only n
   await biomedicalActions.getByLabel("I understand these named consequences.").check();
   await expect(biomedicalActions.getByRole("button", { name: "Confirm", exact: true })).toBeEnabled();
   const reachable = await biomedicalActions.locator(".build-page-command-form").evaluate((form) => {
-    const styles = getComputedStyle(form.closest(".build-page-action-menu"));
+    const menu = form.closest(".build-page-action-menu");
+    const styles = getComputedStyle(menu);
     return {
-      bottom: form.getBoundingClientRect().bottom,
+      menuBottom: menu.getBoundingClientRect().bottom,
+      formBottom: form.getBoundingClientRect().bottom,
+      scrollable: menu.scrollHeight > menu.clientHeight,
       maxHeight: styles.maxHeight,
       overflowY: styles.overflowY,
     };
   });
-  expect(reachable.bottom).toBeLessThanOrEqual(720);
+  expect(reachable.menuBottom).toBeLessThanOrEqual(720);
+  expect(reachable.formBottom <= 720 || reachable.scrollable).toBe(true);
   expect(reachable.maxHeight).not.toBe("none");
   expect(["auto", "scroll"]).toContain(reachable.overflowY);
   await biomedicalActions.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -149,6 +156,7 @@ test("selected Page tab toggles its five-action menu while inactive Pages only n
 
 test("successful Page Rename and Merge confirmations close their in-menu forms", async ({ page }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
+  await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
   const actions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
   await expect(actions).toBeVisible();
   await actions.getByRole("button", { name: "Rename", exact: true }).click();
@@ -162,22 +170,28 @@ test("successful Page Rename and Merge confirmations close their in-menu forms",
   const renamedActions = navigation.getByRole("group", { name: "Epidemiological briefing Page actions", exact: true });
   await renamedActions.getByRole("button", { name: "Merge", exact: true }).click();
   await expect(renamedActions.locator(".build-page-command-form")).toBeVisible();
+  await renamedActions.getByLabel("Destination Page").selectOption("socio_economic");
+  await expect(renamedActions.getByRole("region", { name: "Named consequences" }))
+    .toContainText("International Confirmed Cases (Cumulative)");
   await renamedActions.getByLabel("I understand these named consequences.").check();
   await renamedActions.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(renamedActions).toHaveCount(0);
+  await expect(renamed).toHaveCount(0);
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
+  await expect(page.locator(`[data-canonical-section-id="${MOVED_SECTION.id}"]`)).toBeVisible();
 });
 
 test("Page actions retain the final-page protections", async ({ page }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
-  const biomedicalActions = navigation.getByRole("group", { name: "Biomedical Page actions", exact: true });
-  await expect(biomedicalActions).toBeVisible();
-  await biomedicalActions.getByRole("button", { name: "Remove", exact: true }).click();
-  await biomedicalActions.getByLabel("I understand these named consequences.").check();
-  await biomedicalActions.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(biomedicalActions).toHaveCount(0);
+  await removePage(navigation, "Biomedical");
+  await expect(navigation.getByRole("button", { name: "Biomedical", exact: true })).toHaveCount(0);
+  await removePage(navigation, "Scenario");
+  await expect(navigation.getByRole("button", { name: "Scenario", exact: true })).toHaveCount(0);
 
   const socioEconomic = navigation.getByRole("button", { name: "Socio-economic", exact: true });
   await expect(socioEconomic).toHaveAttribute("aria-current", "page");
+  await expect(navigation.locator(".build-page-tab")).toHaveCount(1);
   await socioEconomic.click();
   const actions = navigation.getByRole("group", { name: "Socio-economic Page actions", exact: true });
   await expect(actions.getByRole("button", { name: "Merge", exact: true })).toBeDisabled();
@@ -186,23 +200,47 @@ test("Page actions retain the final-page protections", async ({ page }) => {
 
 test("anchored Section commands preview and discard through the live layout draft", async ({ page }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
+  const frame = page.locator(".canonical-dashboard-frame");
+  const section = page.locator(`[data-canonical-section-id="${MOVED_SECTION.id}"]`);
 
-  await chooseSectionAction(page, "outbreak_dynamics", "move-page");
-  const move = page.getByRole("dialog", { name: "move Outbreak dynamics" });
+  await chooseSectionAction(page, MOVED_SECTION.id, "move-page");
+  const move = page.getByRole("dialog", { name: `move ${MOVED_SECTION.title}` });
+  await move.getByLabel("Destination Page").selectOption("socio_economic");
   await expect(move.getByLabel("Destination Page")).toHaveValue("socio_economic");
   await expect(move.getByLabel("Placement")).toHaveValue("first");
-  await expect(move.getByRole("region", { name: "Named consequences" })).toContainText("Confirmed cases");
-  await expect(move.getByRole("region", { name: "Named consequences" })).toContainText("Municipal outbreak playback");
+  await expect(move.getByRole("region", { name: "Named consequences" }))
+    .toContainText("International Confirmed Cases (Cumulative)");
+  await expect(move.getByRole("region", { name: "Named consequences" }))
+    .toContainText("Epidemiological Characteristics");
   await move.getByRole("button", { name: "Confirm" }).click();
 
-  await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toHaveCount(0);
   await expect(page.locator('[data-pending-work-kind="layout"]'))
     .toHaveAttribute("data-pending-work-state", "dirty");
+  await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
+  await expect(section).toHaveCount(0);
+  const tree = page.getByRole("tree");
+  await expect(tree.getByRole("treeitem", { name: "Socio-economic", exact: true })
+    .getByRole("treeitem", { name: MOVED_SECTION.title, exact: true })).toHaveCount(1);
   await page.getByRole("button", { name: "Discard Layout Changes" }).click();
-  await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toBeVisible();
+  await expect(section).toBeVisible();
+  await expect(tree.getByRole("treeitem", { name: "Biomedical", exact: true })
+    .getByRole("treeitem", { name: MOVED_SECTION.title, exact: true })).toHaveCount(1);
   await navigation.getByRole("button", { name: "Socio-economic", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toHaveCount(0);
+  await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
+  await expect(section).toHaveCount(0);
   await navigation.getByRole("button", { name: "Biomedical", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toBeVisible();
+  await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
+  await expect(section).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+async function removePage(navigation, name) {
+  const tab = navigation.getByRole("button", { name, exact: true });
+  if (await tab.getAttribute("aria-current") !== "page") await tab.click();
+  await tab.click();
+  const actions = navigation.getByRole("group", { name: `${name} Page actions`, exact: true });
+  await actions.getByRole("button", { name: "Remove", exact: true }).click();
+  await actions.getByLabel("I understand these named consequences.").check();
+  await actions.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(actions).toHaveCount(0);
+}
