@@ -1,4 +1,4 @@
-import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
+import { propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 
@@ -6,6 +6,15 @@ import {
   enterAuthoredDashboard,
   openDashboardPage,
 } from "./support/landingWorkflow.js";
+import {
+  additiveCaseDashboard,
+  IMPORTED_CASE_CHART_ID,
+  IMPORTED_CASE_LABEL,
+  IMPORTED_CASE_SOURCE_ID,
+  replacementCaseBundle,
+  SHIPPED_CASE_CHART_ID,
+  SHIPPED_CASE_SOURCE_ID,
+} from "./support/importedProfileFixture.js";
 
 const APP_URL = "http://127.0.0.1:4173";
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -92,73 +101,9 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
     fetchJson(request, "/config/dashboard.json"),
     fetchJson(request, "/config/dataset-profiles.json"),
   ]);
-  const source = {
-    ...structuredClone(dashboard.dataSources.bio_cases),
-    provenance: { label: "Imported exercise cases" },
-  };
-  const profile = {
-    ...structuredClone(profiles.bio_cases),
-    sourceId: "external_cases",
-    provenance: { label: "Imported exercise cases" },
-  };
-  const sourcePage = dashboard.pages.find(({ id }) => id === "biomedical");
-  const sourceSection = sourcePage.sections.find(
-    ({ id }) => id === "outbreak_dynamics",
-  );
-  const sourceChart = sourceSection.panels.find(
-    ({ id }) => id === "bio_confirmed_cases",
-  );
-  const chart = {
-    ...structuredClone(sourceChart),
-    id: "external_cases_chart",
-    title: "Imported replacement chart",
-    sourceId: "external_cases",
-    interaction: {
-      ...structuredClone(sourceChart.interaction),
-      timeSync: null,
-    },
-  };
-  const replacement = {
-    ...structuredClone(dashboard),
-    configVersion: 4,
-    id: "replacement-dashboard",
-    programLabel: "Imported replacement",
-    contentLibrary: {
-      mediaItems: {},
-      sourceEntries: {},
-    },
-    dataSources: {
-      external_cases: source,
-    },
-    datasetProfiles: {
-      external_cases: profile,
-    },
-    chronoGroups: [],
-    scenes: [],
-    pages: [{
-      ...structuredClone(sourcePage),
-      id: "replacement",
-      title: "Replacement",
-      sections: [{
-        ...structuredClone(sourceSection),
-        id: "replacement-overview",
-        title: "Overview",
-        panels: [chart],
-      }],
-    }],
-  };
-  const bundle = {
-    bundleType: "simex-dashboard-bundle",
-    version: 4,
-    metadata: {
-      exportedAt: null,
-      sourceFingerprints: {
-        external_cases: null,
-      },
-      networkDependencies: [],
-    },
-    config: replacement,
-  };
+  const bundle = replacementCaseBundle(dashboard, profiles);
+  const expectedFingerprint = profiles[SHIPPED_CASE_SOURCE_ID].fingerprint;
+  expect(expectedFingerprint).toMatch(/^[a-f0-9]{64}$/);
 
   await openDashboard(page);
   await page.getByRole("button", { name: "Build" }).click();
@@ -172,24 +117,24 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   await review.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(review).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Replacement", exact: true })).toBeVisible();
-  await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
+  const importedPanel = page.locator(`[data-panel-id="${IMPORTED_CASE_CHART_ID}"]`);
+  await expect(importedPanel).toBeVisible();
+  await expect(importedPanel.locator("canvas").first()).toBeVisible();
 
   const inspector = await openSelectedPageInspector(page);
-  await inspector.getByLabel("Page title", { exact: true }).fill("Imported profile retained");
+  await inspector.getByLabel("Page title", { exact: true })
+    .fill("Imported profile retained");
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
-  await expect.poll(() => page.evaluate((key) => {
-    const stored = JSON.parse(localStorage.getItem(key));
-    return {
-      profileIds: Object.keys(stored.datasetProfiles ?? {}),
-      sourceIds: Object.keys(stored.dataSources ?? {}),
-      pageTitle: stored.pages.find(({ id }) => id === "replacement")?.title,
-    };
-  }, STORAGE_KEY)).toEqual({
-    profileIds: ["external_cases"],
-    sourceIds: ["external_cases"],
+  const expected = importedProfileStateExpectation({
+    dashboard: bundle.config,
+    pageId: "replacement",
     pageTitle: "Imported profile retained",
+    chartId: IMPORTED_CASE_CHART_ID,
+    expectedFingerprint,
   });
+  await expect.poll(() => storedImportedProfileState(page, "replacement", IMPORTED_CASE_CHART_ID))
+    .toEqual(expected);
 
   await page.reload();
   await expect(page.getByRole("heading", {
@@ -199,11 +144,10 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
     name: "Imported profile retained",
     exact: true,
   })).toBeVisible();
-  await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
-  await expect.poll(() => page.evaluate((key) => {
-    const stored = JSON.parse(localStorage.getItem(key));
-    return stored.datasetProfiles?.external_cases?.sourceId;
-  }, STORAGE_KEY)).toBe("external_cases");
+  await expect(importedPanel).toBeVisible();
+  await expect(importedPanel.locator("canvas").first()).toBeVisible();
+  await expect.poll(() => storedImportedProfileState(page, "replacement", IMPORTED_CASE_CHART_ID))
+    .toEqual(expected);
 });
 
 test("additive imported tracked profiles survive an edit and browser reload", async ({
@@ -214,30 +158,28 @@ test("additive imported tracked profiles survive an edit and browser reload", as
     fetchJson(request, "/config/dashboard.json"),
     fetchJson(request, "/config/dataset-profiles.json"),
   ]);
-  dashboard.dataSources.external_cases = {
-    ...structuredClone(dashboard.dataSources.bio_cases),
-    provenance: { label: "Imported exercise cases" },
-  };
-  dashboard.datasetProfiles = {
-    external_cases: {
-      ...structuredClone(profiles.bio_cases),
-      sourceId: "external_cases",
-      provenance: { label: "Imported exercise cases" },
-    },
-  };
-  await installDashboard(page, dashboard);
+  const additive = additiveCaseDashboard(dashboard, profiles);
+  const expectedFingerprint = profiles[SHIPPED_CASE_SOURCE_ID].fingerprint;
+  expect(expectedFingerprint).toMatch(/^[a-f0-9]{64}$/);
+  await installDashboard(page, additive);
 
   await openDashboard(page);
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build" }).click();
   const inspector = await openSelectedPageInspector(page);
-  await inspector.getByLabel("Page title", { exact: true }).fill("Imported profile retained");
+  await inspector.getByLabel("Page title", { exact: true })
+    .fill("Imported profile retained");
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
-  await expect.poll(() => page.evaluate((key) => {
-    const stored = JSON.parse(localStorage.getItem(key));
-    return stored.datasetProfiles?.external_cases?.sourceId;
-  }, STORAGE_KEY)).toBe("external_cases");
+  const expected = importedProfileStateExpectation({
+    dashboard: additive,
+    pageId: "biomedical",
+    pageTitle: "Imported profile retained",
+    chartId: SHIPPED_CASE_CHART_ID,
+    expectedFingerprint,
+  });
+  await expect.poll(() => storedImportedProfileState(page, "biomedical", SHIPPED_CASE_CHART_ID))
+    .toEqual(expected);
 
   await page.reload();
   await expect(page.getByRole("heading", {
@@ -252,17 +194,12 @@ test("additive imported tracked profiles survive an edit and browser reload", as
     name: "Imported profile retained",
     exact: true,
   })).toBeVisible();
-  await expect(page.locator('[data-panel-id="bio_confirmed_cases"]')).toBeVisible();
-  await expect.poll(() => page.evaluate((key) => {
-    const stored = JSON.parse(localStorage.getItem(key));
-    return {
-      profileSourceId: stored.datasetProfiles?.external_cases?.sourceId,
-      sourceLabel: stored.dataSources?.external_cases?.provenance?.label,
-    };
-  }, STORAGE_KEY)).toEqual({
-    profileSourceId: "external_cases",
-    sourceLabel: "Imported exercise cases",
-  });
+  const shippedPanel = page.locator(`[data-panel-id="${SHIPPED_CASE_CHART_ID}"]`);
+  await expect(shippedPanel).toBeVisible();
+  await shippedPanel.scrollIntoViewIfNeeded();
+  await expect(shippedPanel.locator("canvas").first()).toBeVisible();
+  await expect.poll(() => storedImportedProfileState(page, "biomedical", SHIPPED_CASE_CHART_ID))
+    .toEqual(expected);
 });
 
 test("removing a page also removes its synchronized chart memberships", async ({
@@ -330,7 +267,76 @@ async function openDashboard(page) {
 }
 
 async function openSelectedPageInspector(page) {
-  const map = structureRail(page);
-  await expect(propertiesPane(page).getByLabel("Page title", { exact: true })).toBeVisible();
-  return map;
+  const inspector = propertiesPane(page);
+  await expect(inspector.getByLabel("Page title", { exact: true })).toBeVisible();
+  return inspector;
+}
+
+function importedProfileStateExpectation({ dashboard, pageId, pageTitle, chartId, expectedFingerprint }) {
+  const page = dashboard.pages.find(({ id }) => id === pageId);
+  const chart = page.sections.flatMap(({ panels }) => panels)
+    .map((placement) => placement.chart ?? placement)
+    .find(({ id }) => id === chartId);
+  const profile = dashboard.datasetProfiles[IMPORTED_CASE_SOURCE_ID];
+  return {
+    sourceIds: Object.keys(dashboard.dataSources).sort(),
+    profileIds: Object.keys(dashboard.datasetProfiles).sort(),
+    pageTitle,
+    chart: {
+      id: chartId,
+      sourceId: chart.sourceId,
+      typeId: chart.typeId,
+      roles: chart.roles,
+    },
+    imported: {
+      sourcePath: dashboard.dataSources[IMPORTED_CASE_SOURCE_ID].path,
+      sourceLabel: IMPORTED_CASE_LABEL,
+      profileSourceId: IMPORTED_CASE_SOURCE_ID,
+      profilePath: profile.path,
+      profileLabel: IMPORTED_CASE_LABEL,
+      fingerprint: expectedFingerprint,
+      rowCount: profile.rowCount,
+      columns: profile.columns.map(({ name, type }) => ({ name, type })),
+      entrySourceId: IMPORTED_CASE_SOURCE_ID,
+      entryFingerprint: expectedFingerprint,
+    },
+  };
+}
+
+function storedImportedProfileState(page, pageId, chartId) {
+  return page.evaluate(({ key, pageId, chartId, sourceId }) => {
+    const storedText = localStorage.getItem(key);
+    if (!storedText) return null;
+    const stored = JSON.parse(storedText);
+    const pageEntry = stored.pages.find(({ id }) => id === pageId);
+    const chart = pageEntry?.sections.flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .find(({ id }) => id === chartId);
+    const source = stored.dataSources?.[sourceId];
+    const profile = stored.datasetProfiles?.[sourceId];
+    const sourceEntry = stored.contentLibrary?.sourceEntries?.[sourceId];
+    return {
+      sourceIds: Object.keys(stored.dataSources ?? {}).sort(),
+      profileIds: Object.keys(stored.datasetProfiles ?? {}).sort(),
+      pageTitle: pageEntry?.title,
+      chart: chart && {
+        id: chart.id,
+        sourceId: chart.sourceId,
+        typeId: chart.typeId,
+        roles: chart.roles,
+      },
+      imported: {
+        sourcePath: source?.path,
+        sourceLabel: source?.provenance?.label,
+        profileSourceId: profile?.sourceId,
+        profilePath: profile?.path,
+        profileLabel: profile?.provenance?.label,
+        fingerprint: profile?.fingerprint,
+        rowCount: profile?.rowCount,
+        columns: profile?.columns?.map(({ name, type }) => ({ name, type })),
+        entrySourceId: sourceEntry?.sourceId,
+        entryFingerprint: sourceEntry?.provenance?.profileFingerprint,
+      },
+    };
+  }, { key: STORAGE_KEY, pageId, chartId, sourceId: IMPORTED_CASE_SOURCE_ID });
 }
