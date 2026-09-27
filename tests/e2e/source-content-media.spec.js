@@ -124,7 +124,7 @@ test("Journey A — media create reuse default external import restore dependenc
   await addExternalFixture(page);
   await page.reload();
   await openBiomedicalBuild(page, { width: 1440, height: 900 });
-  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  await expect(page.getByLabel("Page title")).toHaveValue("Biomedical Information");
   let manager = await openManager(page);
 
   const initial = await mediaInventory(page);
@@ -197,7 +197,7 @@ test("Journey A — media create reuse default external import restore dependenc
   });
 
   await closeManager(page);
-  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  await expect(page.getByLabel("Page title")).toHaveValue("Biomedical Information");
   const beforeQmdDraft = await mediaInventory(page);
   let qmdDraft = await openFreeTextContentStage(page, "Cancelled QMD local upload");
   await qmdDraft.getByRole("button", { name: "Insert image" }).click();
@@ -380,6 +380,8 @@ test("Journey B — global media replacement preserves placement state", async (
   await imagePanel.scrollIntoViewIfNeeded();
   const imageView = imagePanel.locator(".chart-image-view");
   await expect(imageView.locator('img[alt="Journey B contextual image alt"]')).toBeVisible();
+  await imageView.hover();
+  await expect(imageView.locator(".chart-image-actions")).toHaveCSS("opacity", "1");
   await imageView.getByRole("button", { name: "Zoom in" }).click();
   await imageView.getByRole("button", { name: "Zoom in" }).click();
   await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1.5");
@@ -537,8 +539,10 @@ async function renderedImageHash(image) {
 }
 
 async function openManager(page) {
-  await page.getByRole("button", { name: "Source content", exact: true }).click();
   const manager = page.locator(".source-content-workspace");
+  if (!(await manager.isVisible())) {
+    await page.getByRole("button", { name: "Source content", exact: true }).click();
+  }
   await expect(manager).toBeVisible();
   return manager;
 }
@@ -590,9 +594,9 @@ async function createImageFromPicker(page, { title, mediaName, expectedAlt }) {
 
 async function openTextImageEditor(page, panel, title) {
   await panel.hover();
-  await panel.getByLabel(`${title} actions`)
-    .getByRole("button", { name: "Edit chart", exact: true })
-    .click();
+  await panel.getByRole("button", { name: `Panel actions for ${title}` }).click();
+  await page.getByRole("menu", { name: `Panel actions for ${title}` })
+    .getByRole("menuitem", { name: "Edit chart" }).click();
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();

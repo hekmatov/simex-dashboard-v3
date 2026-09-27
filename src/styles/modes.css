@@ -1717,6 +1717,10 @@
   z-index: 31;
 }
 
+.canonical-dashboard-frame.view-shell:has(.fullscreen-backdrop--immersive) {
+  z-index: 44;
+}
+
 .canonical-dashboard-frame.build-workspace {
   display: block;
 }
