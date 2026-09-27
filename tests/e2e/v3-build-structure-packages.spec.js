@@ -746,18 +746,28 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a c
   await socio.press("ArrowRight");
   await expect(socio).toHaveAttribute("aria-expanded", "true");
   await socio.press("ArrowDown");
+  const firstSection = tree.getByRole("treeitem", { name: "Social Challanges", exact: true });
+  await expect(firstSection).toBeFocused();
+  await firstSection.press("ArrowDown");
+  const firstChart = tree.getByRole("treeitem", { name: "Mental Health Trends", exact: true });
+  await expect(firstChart).toBeFocused();
+  await firstChart.press("ArrowDown");
+  const secondChart = tree.getByRole("treeitem", { name: "Loneliness", exact: true });
+  await expect(secondChart).toBeFocused();
+  await secondChart.press("ArrowDown");
   const section = tree.getByRole("treeitem", {
-    name: "Public response and policy signals",
+    name: SOCIO_SECTION.title,
     exact: true,
   });
   await expect(section).toBeFocused();
 
-  await section.locator(":scope > .build-tree-row .build-tree-label")
-    .dblclick();
+  await section.press("F2");
   const rename = tree.getByRole("textbox", {
-    name: "Rename section Public response and policy signals",
+    name: `Rename section ${SOCIO_SECTION.title}`,
   });
   await expect(rename).toBeFocused();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]'))
     .toHaveAttribute("aria-selected", "true");
   expect(await tree.locator('[role="treeitem"]').evaluateAll(
@@ -769,14 +779,18 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a c
 
 test("pointer collapse moves descendant roving focus to the collapsing Section and Page", async ({ page }) => {
   await openBuildStructure(page);
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Socio-economic", exact: true }).click();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   const tree = page.getByRole("tree");
   const socio = tree.getByRole("treeitem", { name: "Socio-economic", exact: true });
   const section = tree.getByRole("treeitem", {
-    name: "Public response and policy signals",
+    name: SOCIO_SECTION.title,
     exact: true,
   });
   const chart = tree.getByRole("treeitem", {
-    name: "Risk perception over time",
+    name: SOCIO_CHART.title,
     exact: true,
   });
   const rovingCount = () => tree.locator('[role="treeitem"]').evaluateAll(
@@ -786,7 +800,7 @@ test("pointer collapse moves descendant roving focus to the collapsing Section a
   await chart.focus();
   await expect(chart).toBeFocused();
   await section.getByRole("button", {
-    name: "Collapse Public response and policy signals",
+    name: `Collapse ${SOCIO_SECTION.title}`,
     exact: true,
   }).click();
   await expect(section).toBeFocused();
@@ -794,7 +808,7 @@ test("pointer collapse moves descendant roving focus to the collapsing Section a
   await expect(chart).toHaveCount(0);
 
   await section.getByRole("button", {
-    name: "Expand Public response and policy signals",
+    name: `Expand ${SOCIO_SECTION.title}`,
     exact: true,
   }).click();
   await chart.focus();
