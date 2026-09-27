@@ -84,10 +84,7 @@ const DENSE_DESKTOP_VARIABLE_NAMES = new Set([
 ]);
 
 test("dashboard configuration accepts only approved saved look values", async () => {
-  const dashboard = JSON.parse(await readFile(
-    new URL("../public/config/dashboard.json", import.meta.url),
-    "utf8",
-  ));
+  const dashboard = await shippedSemanticDashboard();
   Object.assign(dashboard.globalStyles, {
     dashboardStyle: "humanist-standard",
     dashboardColorProfile: "utility/prismatic-index",
@@ -95,19 +92,23 @@ test("dashboard configuration accepts only approved saved look values", async ()
   });
 
   assert.doesNotThrow(() => validateDashboardStructure(dashboard));
-
-  dashboard.globalStyles.dashboardColorProfile = "evidence-ledger/original-baseline";
   assert.throws(
-    () => validateDashboardStructure(dashboard),
-    /dashboard color profile/i,
+    () => validateDashboardStructure({ ...dashboard, datasetProfiles: {} }),
+    /Unknown dashboard configuration property "datasetProfiles"/,
   );
+  for (const [field, value, error] of [
+    ["dashboardStyle", "retired-style", /dashboard style/i],
+    ["dashboardColorProfile", "evidence-ledger/original-baseline", /dashboard color profile/i],
+    ["chartColorMode", "retired-mode", /dashboard chart color mode/i],
+  ]) {
+    const invalid = structuredClone(dashboard);
+    invalid.globalStyles[field] = value;
+    assert.throws(() => validateDashboardStructure(invalid), error, field);
+  }
 });
 
 test("dashboard, page, and section descriptions may be intentionally blank", async () => {
-  const dashboard = JSON.parse(await readFile(
-    new URL("../public/config/dashboard.json", import.meta.url),
-    "utf8",
-  ));
+  const dashboard = await shippedSemanticDashboard();
   dashboard.description = "";
   dashboard.pages[0].description = "";
   dashboard.pages[0].sections[0].description = "";
@@ -150,20 +151,21 @@ test("theme resolver exposes the exact renamed style and 14-profile catalogue in
 });
 
 test("new, missing, and obsolete theme state resolves to Ledger with Steel without replacing explicit choices", async () => {
-  const shipped = JSON.parse(await readFile(
-    new URL("../public/config/dashboard.json", import.meta.url),
-    "utf8",
-  ));
+  const shipped = await shippedSemanticDashboard();
   assert.deepEqual(
     {
       dashboardStyle: shipped.globalStyles.dashboardStyle,
       dashboardColorProfile: shipped.globalStyles.dashboardColorProfile,
     },
     {
-      dashboardStyle: "evidence-ledger",
-      dashboardColorProfile: "signal-instrument/calibrated-steel",
+      dashboardStyle: "pdpc",
+      dashboardColorProfile: "pdpc/brand",
     },
   );
+  const authored = normalizeDashboardBoundary(shipped);
+  assert.equal(authored.globalStyles.dashboardStyle, "pdpc");
+  assert.equal(authored.globalStyles.dashboardColorProfile, "pdpc/brand");
+  assert.equal(authored.globalStyles.chartColorMode, "standard");
 
   const substantive = structuredClone({
     title: shipped.title,
@@ -214,6 +216,20 @@ test("new, missing, and obsolete theme state resolves to Ledger with Steel witho
   assert.equal(explicit.dashboardColorProfile, "humanist-standard/open-forum");
   assert.equal(explicit.chartColorMode, "standard");
   assert.equal(explicit.resolvedAppearance, "dark");
+  const explicitInput = structuredClone(shipped);
+  Object.assign(explicitInput.globalStyles, {
+    dashboardStyle: "humanist-standard",
+    dashboardColorProfile: "humanist-standard/open-forum",
+    chartColorMode: "standard",
+  });
+  assert.deepEqual(
+    normalizeDashboardBoundary(explicitInput).globalStyles,
+    explicitInput.globalStyles,
+  );
+
+  const missing = themeModule.resolveDashboardTheme({ globalStyles: {} });
+  assert.equal(missing.dashboardStyle, "evidence-ledger");
+  assert.equal(missing.dashboardColorProfile, "signal-instrument/calibrated-steel");
 
   for (const dashboardColorProfile of [
     "humanist-standard/quiet-commons",
@@ -224,6 +240,15 @@ test("new, missing, and obsolete theme state resolves to Ledger with Steel witho
     assert.throws(() => validateDashboardStructure(invalid), /dashboard color profile/i);
   }
 });
+
+async function shippedSemanticDashboard() {
+  const hydrated = JSON.parse(await readFile(
+    new URL("../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  const { datasetProfiles: _runtimeProfiles, ...semantic } = hydrated;
+  return semantic;
+}
 
 test("Audience reconstructs an exact System theme snapshot with the sender's resolved appearance", () => {
   const resolved = themeModule.resolvePresentationThemeSnapshot({
