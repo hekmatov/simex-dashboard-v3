@@ -14,13 +14,13 @@ This preparation reconciles already completed non-scenario branches and records 
 
 ## Prepared baseline
 
-The local checkpoint is **`fable-pre-m0-2026-09-27`**, a Git tag on the reconciliation commit containing this report. Local `main` and `chore/fable-preparation` point to that checkpoint after preparation. Resolve its full SHA with:
+The local code checkpoint is **`fable-pre-m0-2026-09-27`**, a Git tag at reconciliation commit `e7e58c8432987403767d4fc973fa30df41f91cd8`. Local `main` also contains a later handoff-only update recording the user-requested branch cleanup. The tag was not moved. Resolve the code checkpoint with:
 
 ```powershell
 git rev-parse fable-pre-m0-2026-09-27
 ```
 
-Preparation worktree: `C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.worktrees\fable-preparation`.
+Preparation worktree: `C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.worktrees\fable-preparation`. It is now a detached checkout; `chore/fable-preparation` was deleted after its work reached main. Create an authorized M0 branch before reusing this checkout for implementation.
 
 | Input | Exact revision | Treatment |
 | --- | --- | --- |
@@ -29,7 +29,7 @@ Preparation worktree: `C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.
 | `codex/pdpc-profile` | `58c4650a50ff91ce37304fa6cb88c62da1abdd7e` | Two previously missing commits integrated with ancestry preserved. |
 | `feature/pdpc-single-file-release` | `cd5f1f83c675c6280c869daa7a65a8ec5eddeae4` | Seven previously missing commits integrated at their final state, including removal of PDF generation. |
 
-The worktree was created directly from the refreshed published SHA, then fast-forwarded to the existing local main before the two carry-forwards were merged. Both carry-forwards merged without conflicts. The app worktree tool could not locate the nested repository, so Git created the worktree under the repository-managed `.worktrees` directory. The original feature branches remain available.
+The worktree was created directly from the refreshed published SHA, then fast-forwarded to the existing local main before the two carry-forwards were merged. Both carry-forwards merged without conflicts. The app worktree tool could not locate the nested repository, so Git created the worktree under the repository-managed `.worktrees` directory. Their original branch names are now historical: merged commits remain on main, and a verified local recovery bundle preserves all pre-cleanup refs.
 
 ### Resulting behavior
 
@@ -58,7 +58,7 @@ No production release was generated, no browser journey was run, and no reposito
 
 | Existing work package | Required continuation |
 | --- | --- |
-| **M0.1: baseline and authored content** | Refresh both remotes at activation. Preserve this checkpoint; neither current remote alone contains the redesign or these carry-forwards. For a new worktree, record the refreshed published base and explicitly integrate this checkpoint before implementation, as preparation did. Alternatively continue in the clean preparation worktree. Keep publishing as a separately authorized action after the relevant verification. |
+| **M0.1: baseline and authored content** | Refresh both remotes at activation. Preserve this checkpoint; neither current remote alone contains the redesign or these carry-forwards. For a new worktree, record the refreshed published base and explicitly integrate this checkpoint before implementation, as preparation did. Alternatively reuse the clean, detached preparation checkout after creating an authorized M0 branch. Keep publishing as a separately authorized action after the relevant verification. |
 | **M0.2: current fixtures and consumer repairs** | Diagnose the recorded unit/browser failures at the prepared baseline. Saved September evidence reports 53 unit failures, an initial source-browser result of 112 pass/154 fail, and static/PDPC suites not run. A later bounded repair selection reports 19 pass/11 fail and seven repaired candidate regressions. These are historical results at different revisions, not fresh totals or proof that every failure is harmless fixture drift. Reuse valid evidence and repair only demonstrated boundaries. |
 | **M0.3: portable source resolution** | Investigate the shipped uploaded-GeoJSON descriptor versus disk-path assumption in `scripts/build-portable-data.mjs`, including fresh-checkout dev/portable/Cloudflare behavior. No repair or fresh build claim is made here. Include the restored PDPC packaging consumer where a source/asset contract change affects it. |
 | **M0.4: code splitting** | Account for `scripts/lib/pdpc-single-file.mjs`: it currently expects release JS/CSS, one html2canvas dynamic import, a particular bundled logo expression, and vendor Three/Vanta files; it rejects remaining module imports. A successful dashboard split alone does not prove this output still works. Preserve the supported release output or adapt and verify the converter in the affected slice. Do not blindly merge the parked rendering experiment. |
@@ -76,16 +76,28 @@ At the declared integration/publication boundary, run the repository's required 
 
 ## Preserved work and branch dispositions
 
-The scan covered 59 local branches, 16 live remote branch heads and 25 registered worktrees before this preparation added one branch/worktree. Forty-two non-main local branches were already ancestors of local main. The two integrations above account for the identified non-scenario carry-forwards. No open PRs were found in either dashboard repository.
+The scan covered 59 local branches, 16 live remote branch heads and 25 registered worktrees before preparation added one branch/worktree. Forty-two non-main local branches were already ancestors of local main. The two integrations above account for the identified non-scenario carry-forwards. No open PRs were found in either dashboard repository.
+
+### User-requested branch cleanup, 27 September
+
+Following the user's explicit instruction to merge or dispose of every non-scenario branch, **54 local branch references and 14 remote feature branches were deleted**. The local branch list now contains only `main` and the five scenario branches below. Each GitHub repository retains only its unchanged `main` at `c003d111`. This deleted obsolete remote refs; it did not publish the newer local main or deploy the dashboard.
+
+Before deletion, a complete Git recovery bundle was created and verified, including every original local/remote branch tip. Remote deletion used exact-tip leases and atomic pushes per repository to reject concurrent branch changes. The bundle and ref/worktree manifest are under:
+
+`C:\Users\hekma\Documents\Projects\SimEx\branch-recovery\2026-09-27-pre-fable-cleanup`
+
+See the [local recovery instructions](C:/Users/hekma/Documents/Projects/SimEx/branch-recovery/2026-09-27-pre-fable-cleanup/README.md). Recover a specific discarded branch only when needed; do not restore the old branch list by default.
+
+Old non-scenario worktree folders remain as detached checkouts at their existing commits. They are preserved files, not active feature branches. Pending tracked/untracked files were hashed and checked across detachment; ignored files and existing previews were not deleted. Scenario checkouts remain on their original branches. No worktree or chat was removed or archived.
 
 | Work | Disposition |
 | --- | --- |
 | Scenario planning, M1, M2 and M3 | Preserve `docs/aster-28-scenario-specs` at `37469185`, `feat/m1-netherlands-contract` at `17f30d0d`, `feat/m2-repeatable-composition` at `a4423848`, and `feat/m3-communication-candidate` at `91105ec3`. Their completion/acceptance records remain historical; no scenario commits were merged. |
 | Premature scenario implementation | Keep `quarantine/astra-premature-slice1a-2026-09-06` at `51cb0359` quarantined. |
-| Older non-scenario branches | Static-content design patches already have equivalents on main. Older homepage, voice, QMD-toolbar, source/package harness and view-only branding implementations were largely incorporated or superseded; no wholesale merge is recommended. |
-| Old reconciliation/rendering experiments | Retain `codex/pre-step7s-dirty-reconciliation` and `codex/deferred-chart-rendering-experiment` for targeted reference only. Evaluate a specific remaining idea only when relevant to an approved M0 boundary. |
-| Marketplace branch | Public `claude/plugins-official-marketplace-l4t5ux` only adds developer tooling configuration; it is not required for Fable. |
-| Dirty worktrees | Preserve the density-audit edits/evidence, scenario-generated catalogue changes, local tool files and upload verification helper. Biomedical generated files reported modified in several worktrees have no textual diff. No cleanup or deletion was performed. |
+| Older non-scenario branches | Disposed of as branch references after backup. Static-content design patches already have equivalents on main. Older homepage, voice, QMD-toolbar, source/package harness and view-only branding implementations were largely incorporated or superseded; their archived history is available without merging it wholesale. |
+| Old reconciliation/rendering experiments | `codex/pre-step7s-dirty-reconciliation` and `codex/deferred-chart-rendering-experiment` are disposed of as branches; their commits remain recoverable from the bundle. Evaluate a specific idea only when relevant to an approved M0 boundary. |
+| Marketplace branch | Public `claude/plugins-official-marketplace-l4t5ux` was deleted after backup. It only added developer tooling configuration and is not required for Fable. |
+| Dirty worktrees | Density-audit edits/evidence, scenario-generated catalogue changes, local tool files and the upload verification helper remain in place. Biomedical generated files reported modified in several worktrees have no textual diff. No worktree files were deleted. |
 | Old browser export | `temp-cloudflare-version/packaged-dashboard-bundle.json`, exported 9 September, is not a newer baseline. Its pages, nine CSV payloads and four image assets are already represented on main; it predates the PDPC theme change. Do not re-promote it. This does not inspect unexported browser storage. |
 
 ## Planner's next action after user review
