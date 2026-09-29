@@ -1,6 +1,6 @@
 # Fable sprint coordination agreement
 
-Version 3 · 27 September 2026 · adopted by user instruction.
+Version 3 · adopted 27 September 2026 · model-effort rule amended 29 September 2026 by user instruction.
 
 Applies to every Fable dashboard planning steward, high-level coordinator, milestone owner and replacement in those roles. This is the canonical workflow; [ROADMAP.md](ROADMAP.md) locates the authoritative product plan and current assignment. Product criteria, explicit user decisions and repository approval/verification policies govern. Version 3 removes per-test-group reassignment: the owner carries an approved milestone workstream inventory through its defined exit, choosing internal batches without coordinator permission. Earlier small-package return instructions are superseded.
 
@@ -36,6 +36,7 @@ Keep implementation, corresponding tests and concise evidence together. The owne
 
 - **Routine stewardship and straightforward repairs:** start with GPT-6 Sol / Medium. A user's explicit override wins. Apply an authorized model setting through the task controls when supported; prose alone does not change a running model.
 - **Complex debugging, semantic contracts or demanding review:** Sol / High is appropriate. Use Astra or higher effort for concrete unresolved ambiguity or material consequences; record a brief reason for the exception. Do not use Extra High simply because a role is called steward.
+- **Effort floor within a task:** after increasing a task's reasoning effort, keep that level or higher for every later continuation unless the user explicitly directs a decrease. A new task may still start at a lower setting when its work warrants it. Apply the setting through task controls when available.
 - Record the current choice once in the assignment/checkpoint; repeat its rationale only when the choice changes. Assess accepted results and rework on comparable work, not just the speed of one turn. Raw cumulative tokens include repeated and cached input; they are not a bill or an account-quota measurement.
 - Read this agreement at role startup, replacement or a material version change. For ordinary continuation, read the compact checkpoint/current assignment and changed evidence sections. Search into detailed plans/contracts as needed; do not reload the full roadmap, prompt pack or transcripts by default.
 - Keep one concise **current checkpoint** in the existing plan or linked existing brief: goal and acceptance, authorized scope/limits, active task IDs, worktree/branch/commit, completed evidence and limitations, unresolved decisions and next action. Aim for about 200–350 words with links to detail. Older closeouts remain evidence, not required startup reading.

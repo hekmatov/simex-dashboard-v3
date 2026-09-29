@@ -1,5 +1,10 @@
 # SimEx Dashboard V3 Project Instructions
 
+## Task Model Effort
+
+- Choose a new task's starting model and effort according to its actual work; do not default to Astra Extra High without a concrete reason.
+- Once a task's reasoning effort is increased, do not lower it in later continuations unless the user explicitly directs the decrease. This applies even if a later slice looks simpler.
+
 ## Branch Policy
 
 - Version 3 chart configuration is the only supported live dashboard contract.

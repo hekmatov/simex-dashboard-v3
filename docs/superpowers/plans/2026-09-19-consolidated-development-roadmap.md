@@ -1,6 +1,6 @@
 # SimEx consolidated development roadmap — 19 September 2026
 
-**Document version:** 1.39; updated 29 September 2026 for local integration evidence and the M0 runtime boundary. Dated Markdown with Git history. This is a plan version, not an application release. Coordination follows version 3.
+**Document version:** 1.40; updated 29 September 2026 for the task effort floor. Dated Markdown with Git history. This is a plan version, not an application release. Coordination follows version 3.
 
 **Goal:** Deliver an exercise tool whose prepare → run → debrief loop is dependable, faithful across surfaces, usable by exercise staff, and ready for an approved PDPC deployment.
 
@@ -16,7 +16,7 @@
 
 **Coordination agreement, version 3 adopted 27 September:** all Fable stewards, coordinators, owners and replacements follow [FABLE-COORDINATION.md](../../FABLE-COORDINATION.md). The owner carries the approved workstream inventory through its terminal exit, selecting and committing internal batches without reassignment. Finishing a test group is local progress. The steward remains idle unless inventory completion, a decision needing its authority, or an explicit user request requires action. This supersedes all prior small-package return/redispatch instructions. Accepted product criteria, verification and approval boundaries remain intact.
 
-**Model and context preferences:** use Sol / Medium for routine coordination and straightforward repairs; use High for difficult contract/debug work and justify stronger settings by the actual decision. Record the setting once and repeat the reason when it changes. Each assignment retains explicit reporting authority and the current destination ID. Read this plan's checkpoint/current assignment and relevant changed evidence; consult other sections on demand. The agreement contains the reusable prompts and renewal rules.
+**Model and context preferences:** start a new task at Sol / Medium for routine coordination or straightforward repairs; use High for difficult contract/debug work and justify stronger settings by the actual decision. Once effort rises within a task, never lower it unless the user explicitly directs that change. The active M0 owner has reached Sol / High, which is its minimum for future continuations. Record the setting once and repeat the reason when it changes. Each assignment retains explicit reporting authority and the current destination ID. Read this plan's checkpoint/current assignment and relevant changed evidence; consult other sections on demand. The agreement contains the reusable prompts and renewal rules.
 
 ## Current coordination checkpoint
 
