@@ -21,7 +21,10 @@ import ImageTransformEditor from "./ImageTransformEditor.jsx";
 import ImagePanelPresentationFields from "./ImagePanelPresentationFields.jsx";
 import ChartView from "../charts/ChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
-import { resolveSessionImageAsset } from "../../static-content/image/imageAssetValidation.js";
+import {
+  discardUnreferencedSessionImageAssets,
+  resolveSessionImageAsset,
+} from "../../static-content/image/imageAssetValidation.js";
 import { cleanupImageDraftAssets } from "./cleanupImageDraftAssets.js";
 export { cleanupImageDraftAssets } from "./cleanupImageDraftAssets.js";
 import { buildStaticPanelContentDraftCandidate } from "../../content-library/contentDraftTransaction.js";
