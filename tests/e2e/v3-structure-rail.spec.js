@@ -331,6 +331,8 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
 async function selectSocioDestination(page) {
   const dialog = page.getByRole("dialog", { name: `Move ${MOVED_CHART_TITLE}` });
   const destination = dialog.getByLabel("Destination");
+  await expect(destination.locator("option")
+    .filter({ hasText: /^Socio-economic — Public Trust and Support/ }).first()).toHaveCount(1);
   const option = await destination.locator("option").evaluateAll((options) => (
     options.map(({ textContent, value }) => ({ label: textContent, value }))
       .find(({ label }) => label.startsWith("Socio-economic — Public Trust and Support"))

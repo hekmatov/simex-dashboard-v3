@@ -86,7 +86,7 @@ export async function createSavedPresentationScene(page, {
 
   const scene = await expect.poll(async () => page.evaluate(({ key, oldIds }) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
-    return (dashboard.scenes ?? []).find(({ id }) => !oldIds.includes(id)) ?? null;
+    return (dashboard?.scenes ?? []).find(({ id }) => !oldIds.includes(id)) ?? null;
   }, { key: DASHBOARD_STORAGE_KEY, oldIds: beforeIds })).not.toBeNull().then(async () => (
     page.evaluate(({ key, oldIds }) => {
       const dashboard = JSON.parse(localStorage.getItem(key));

@@ -96,8 +96,11 @@ test("native drag and Move panel controls use the handle while the canvas articl
       y: targetBox.height * 0.75,
     },
   });
-  const reordered = await page.locator('article[data-build-placement-id]').evaluateAll((items) => items.map((item) => item.dataset.buildPlacementId));
-  expect(reordered.indexOf(sourceId)).toBeGreaterThan(0);
+  await expect.poll(async () => {
+    const reordered = await page.locator('article[data-build-placement-id]')
+      .evaluateAll((items) => items.map((item) => item.dataset.buildPlacementId));
+    return reordered.indexOf(sourceId);
+  }).toBeGreaterThan(0);
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(1);
 
   const movedHandle = panelMenu(page, sourceId);

@@ -415,6 +415,8 @@ test("Present gives the audience monitor half the workspace without duplicate Pa
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Present", exact: true }).click();
 
+  await expect(page.locator(".present-context-panel")).toBeVisible();
+  await expect(page.locator(".present-scene-panel")).toBeVisible();
   const widths = await page.evaluate(() => ({
     context: document.querySelector(".present-context-panel").getBoundingClientRect().width,
     scene: document.querySelector(".present-scene-panel").getBoundingClientRect().width,
@@ -493,6 +495,11 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
 
+  await expect(page.locator(".canonical-dashboard-frame .dashboard-header .eyebrow")).toBeVisible();
+  await expect(page.locator('[data-build-command-action="add-chart"]')).toBeVisible();
+  await expect(page.locator(".build-rail--structure h2")).toBeVisible();
+  await expect(page.locator(".build-rail--properties .build-inspector input")).toBeVisible();
+  await expect(page.locator(".build-structure-list .build-tree-caret").first()).toBeVisible();
   const buildPaint = await page.evaluate(() => ({
     headerEyebrow: getComputedStyle(document.querySelector(".canonical-dashboard-frame .dashboard-header .eyebrow")).color,
     primaryCommand: getComputedStyle(document.querySelector('[data-build-command-action="add-chart"]')).backgroundColor,
@@ -520,6 +527,9 @@ test("Present orders monitor, displayed charts, then options and captures a shar
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Present", exact: true }).click();
 
+  await expect(page.locator(".audience-snapshot-monitor")).toBeVisible();
+  await expect(page.locator(".present-displayed-panel")).toBeVisible();
+  await expect(page.locator(".present-audience-information")).toHaveCount(1);
   const order = await page.evaluate(() => {
     const monitor = document.querySelector(".audience-snapshot-monitor");
     const displayed = document.querySelector(".present-displayed-panel");

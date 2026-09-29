@@ -62,8 +62,10 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
 
   await page.locator('[data-build-command-action="add-chart"]').click();
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
-  const stages = await wizard.getByRole("navigation", { name: "Chart creation steps" })
-    .getByRole("button").evaluateAll((buttons) => buttons.map((button) => ({
+  const stageButtons = wizard.getByRole("navigation", { name: "Chart creation steps" })
+    .getByRole("button");
+  await expect(stageButtons).toHaveCount(6);
+  const stages = await stageButtons.evaluateAll((buttons) => buttons.map((button) => ({
       id: button.id,
       label: button.querySelector("span")?.textContent,
       status: button.querySelector("small")?.textContent,

@@ -89,6 +89,8 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
     .getByRole("button", { name: "Build", exact: true })
     .click();
   await expect(page.locator(".build-workspace")).toBeVisible();
+  await expect(page.locator('[data-build-rail="structure"]')).toBeVisible();
+  await expect(page.locator('[data-build-rail="properties"]')).toBeVisible();
 
   const closed = await readCanvasState(page);
   const savedLayout = await page.evaluate(() => (
