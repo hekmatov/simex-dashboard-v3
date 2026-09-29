@@ -565,7 +565,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     mode: "build",
     state: "dirty-chart",
     viewport: DESKTOP_STANDARD,
-    root: "[data-pending-work-id='chart-edit:bio_confirmed_cases']",
+    root: "[data-pending-work-id^='chart-edit:']",
     setup: setupPendingOperation,
   }),
   executable({
@@ -867,6 +867,7 @@ async function setupView(context) {
 }
 
 async function setupViewChrono(context) {
+  await installPageRemovalGroups(context.page);
   const { page } = await setupView(context);
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   await page.getByRole("region", { name: "Chrono playback controls" }).waitFor();
@@ -898,9 +899,7 @@ async function setupBuildPropertiesPane(context) {
 async function setupBuildUnitOrbit(context) {
   const { page } = await setupBuildStructureRail(context);
   const map = structureRail(page);
-  await map.getByRole("tree")
-    .getByRole("treeitem", { name: "Risk perception over time", exact: true })
-    .click();
+  await map.locator('[data-build-node-kind="chart"]').first().click();
   await page.locator(".unit-orbit").waitFor();
   return { page };
 }
@@ -942,8 +941,10 @@ async function setupBuildPageCommandForm(context) {
 
 async function setupSectionCommandDialog(context) {
   const { page } = await setupBuild(context);
-  await chooseSectionAction(page, "outbreak_dynamics", "move-page");
-  await page.getByRole("dialog", { name: "move Outbreak dynamics" }).waitFor();
+  const sectionId = await page.locator("[data-canonical-section-id]").first()
+    .getAttribute("data-canonical-section-id");
+  await chooseSectionAction(page, sectionId, "move-page");
+  await page.locator(".section-structure-command-dialog").waitFor();
   return { page };
 }
 
@@ -988,9 +989,7 @@ async function setupChronoStudio(context) {
 async function setupChronoGroupEditor(context) {
   const { page } = await setupChronoStudio(context);
   const studio = page.getByRole("dialog", { name: "Chrono Studio authoring" });
-  await studio.locator("[data-action='open-content']").first().click();
-  await studio.getByRole("button", { name: "Edit", exact: true }).waitFor();
-  await studio.getByRole("button", { name: "Edit", exact: true }).click();
+  await studio.getByRole("button", { name: "Create Chrono Group", exact: true }).click();
   await studio.getByRole("navigation", { name: "Chrono Group stages" }).waitFor();
   return { page };
 }
@@ -1014,8 +1013,13 @@ async function setupSceneStudioSelect(context) {
 }
 
 async function setupSceneObservationDialog(context) {
-  const { page } = await setupSceneStudioSelect(context);
+  await installPageRemovalGroups(context.page);
+  const { page } = await setupSceneStudio(context);
   const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await studio.getByLabel("Owning page").selectOption("biomedical");
+  await studio.getByLabel("Parent Chrono Group")
+    .selectOption({ label: "Biomedical page group" });
+  await studio.getByRole("button", { name: /Select charts and frames/ }).click();
   await studio.getByRole("button", { name: "Inspect observations" }).first().click();
   await page.locator(".scene-observation-dialog").waitFor();
   return { page };
@@ -1100,7 +1104,8 @@ async function setupChartWizardReviewIssues(context) {
 
 async function setupFullChartEditor(context) {
   const { page } = await setupBuild(context);
-  const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
+  const panel = page.locator(".chart-panel[data-panel-id]").first();
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await quick.waitFor();
@@ -1113,7 +1118,8 @@ async function setupFullChartEditor(context) {
 
 async function setupChartQuickEditor(context) {
   const { page } = await setupBuild(context);
-  const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
+  const panel = page.locator(".chart-panel[data-panel-id]").first();
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   await page.locator(".chart-quick-editor").waitFor();
   return { page };
@@ -1286,12 +1292,14 @@ async function setupSourceContentActionDialog(context) {
 
 async function setupPendingOperation(context) {
   const { page } = await setupBuild(context);
-  const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
+  const panel = page.locator(".chart-panel[data-panel-id]").first();
+  const chartId = await panel.getAttribute("data-panel-id");
+  await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   await page.locator(".chart-quick-editor")
     .getByRole("textbox", { name: "Chart title", exact: true })
     .fill("Density audit pending edit");
-  await page.locator("[data-pending-work-id='chart-edit:bio_confirmed_cases']").waitFor();
+  await page.locator(`[data-pending-work-id='chart-edit:${chartId}']`).waitFor();
   return { page };
 }
 
@@ -1320,7 +1328,7 @@ async function setupChartComparison(context) {
 
 async function setupFocusedChart(context) {
   const { page } = await setupView(context);
-  const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
+  const panel = page.locator(".chart-panel[data-panel-id]").first();
   await panel.getByRole("button", { name: "Focus chart", exact: true }).click();
   await page.getByRole("dialog", { name: "Focused chart" }).waitFor();
   return { page };
@@ -1407,7 +1415,7 @@ async function setupAudience(context) {
 
 async function setupSourceViewer(context) {
   const { page } = await setupBuild(context);
-  const panel = page.locator("[data-panel-id='bio_confirmed_cases']");
+  const panel = page.locator(".chart-panel[data-panel-id]").first();
   await panel.scrollIntoViewIfNeeded();
   const [popup] = await Promise.all([
     page.waitForEvent("popup"),

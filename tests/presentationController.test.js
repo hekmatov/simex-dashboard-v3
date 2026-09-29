@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { validatePresentationState } from "../src/lib/presentationProtocol.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -225,6 +226,39 @@ test("implicit empty default-page playback projects as a manual static-only sour
     chrono_group_id: null,
   });
   assert.equal(projected.timeline, null);
+});
+
+test("dated default-page playback gives Audience a period covering its observed clock", () => {
+  const projected = controllerModule.buildPresentationState({
+    dashboard: { id: "dashboard-dated", configVersion: 6, lastUpdated: "2026-08-28" },
+    activePageId: "biomedical",
+    displayedChartIds: ["chart-a"],
+    layout: "solo",
+    playback: {
+      ...playback,
+      activeScene: null,
+      activeSceneId: null,
+      activeGroup: {
+        id: "default-page",
+        name: "Default page timeline",
+        members: [{ chartId: "chart-a" }],
+      },
+      activeGroupId: "default-page",
+      clock: [1_000, 2_000, 3_000],
+      source: { kind: "default" },
+    },
+    presentableItemIndex,
+    audienceFacts: {
+      dashboard_name: true,
+      page: false,
+      parent_chrono_group: false,
+      scene_name: false,
+      scene_date: false,
+    },
+  });
+
+  assert.deepEqual(projected.timeline.period, { start: 1_000, end: 3_000 });
+  assert.doesNotThrow(() => validatePresentationState(projected, { presentableItemIndex }));
 });
 
 test("END effects execute once in order and report truthful close outcomes", () => {

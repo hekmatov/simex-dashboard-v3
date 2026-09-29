@@ -58,9 +58,9 @@ export function buildPresentationState({
   themeProjection,
 }) {
   const scene = playback.activeScene ?? null;
+  const implicitDefaultPage = playback.source?.kind === "default" && !scene;
   const implicitEmptyDefaultGroup = (
-    playback.source?.kind === "default"
-    && !scene
+    implicitDefaultPage
     && (playback.clock?.length ?? 0) === 0
   );
   const group = implicitEmptyDefaultGroup ? null : playback.activeGroup ?? null;
@@ -86,7 +86,9 @@ export function buildPresentationState({
           Math.max(0, playback.activeIndex ?? 0),
           Math.max(0, clock.length - 1),
         ),
-        period: authoredInclusivePeriod(scene?.period ?? group?.period),
+        period: implicitDefaultPage
+          ? { start: clock[0], end: clock.at(-1) }
+          : authoredInclusivePeriod(scene?.period ?? group?.period),
         trace_mode: playback.traceMode === "full" ? "full" : "reveal",
         seconds_per_frame: scene?.secondsPerFrame
           ?? playback.speed
