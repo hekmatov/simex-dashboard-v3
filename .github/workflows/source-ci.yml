@@ -55,15 +55,25 @@ jobs:
         continue-on-error: true
         run: node --test --test-concurrency=1 --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=reports/unit-junit.xml
 
-      - name: Source Chromium journeys
-        id: browser
+      - name: Source Chromium companion journeys
+        id: browser_companion
         if: steps.install.outcome == 'success'
         continue-on-error: true
         env:
-          PLAYWRIGHT_JUNIT_OUTPUT_FILE: reports/source-junit.xml
-          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: reports/source-companion-junit.xml
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/companion
           PLAYWRIGHT_HTML_OPEN: never
-        run: node node_modules/@playwright/test/cli.js test --project=chromium --reporter=list,junit,html
+        run: node node_modules/@playwright/test/cli.js test tests/e2e/quorum-companion.spec.js tests/e2e/static-image-audience.spec.js --project=chromium --workers=1 --reporter=list,junit,html
+
+      - name: Source Chromium parallel journeys
+        id: browser_parallel
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: reports/source-parallel-junit.xml
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/parallel
+          PLAYWRIGHT_HTML_OPEN: never
+        run: node node_modules/@playwright/test/cli.js test --config=playwright.source-parallel.config.js --project=chromium --reporter=list,junit,html
 
       - name: Upload native test reports and traces
         if: always()
@@ -78,5 +88,5 @@ jobs:
           retention-days: 14
 
       - name: Fail when any source check failed
-        if: always() && steps.install.outcome == 'success' && (steps.unit.outcome != 'success' || steps.build.outcome != 'success' || steps.browser.outcome != 'success')
+        if: always() && steps.install.outcome == 'success' && (steps.unit.outcome != 'success' || steps.build.outcome != 'success' || steps.browser_companion.outcome != 'success' || steps.browser_parallel.outcome != 'success')
         run: node -e "process.exit(1)"

@@ -9,6 +9,8 @@ const APP_HOST = "127.0.0.1";
 requireSourceMode();
 const APP_PORT = numericArgument("--app-port", 4173);
 const CONTROL_PORT = numericArgument("--control-port", 4174);
+const defaultCatalogueMode = process.argv.includes("--catalogue-default-absent")
+  ? "absent" : "match";
 const vite = await createViteServer({
   root: process.cwd(),
   appType: "spa",
@@ -24,7 +26,7 @@ const catalogue = JSON.parse(
 const credential = "e2e-opaque-credential";
 const sessionId = "e2e-session";
 const clients = new Map();
-let catalogueMode = "match";
+let catalogueMode = defaultCatalogueMode;
 let receivedEvents = [];
 
 const socketServer = new WebSocketServer({ noServer: true });
@@ -128,7 +130,7 @@ const controlServer = createServer(async (request, response) => {
 
   const body = await readJsonBody(request);
   if (url.pathname === "/__test__/reset") {
-    catalogueMode = "match";
+    catalogueMode = defaultCatalogueMode;
     receivedEvents = [];
     closeClients();
     return json(response, 200, { reset: true });
