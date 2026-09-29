@@ -129,11 +129,18 @@ async function verifyPackagedMedia({ outputDir, config }) {
       }
       throw error;
     }
-    const assetId = path.posix.basename(relativePath, path.posix.extname(relativePath));
-    const manifest = config.assets?.[assetId];
-    if (!manifest) throw new Error(`PDPC packaged media manifest is missing: ${assetId}`);
     const digest = createHash("sha256").update(bytes).digest("hex");
-    if (bytes.byteLength !== manifest.byteLength || digest !== manifest.sha256) {
+    const shipped = /^data\/authored\/([a-f0-9]{64})\.(png|jpe?g|webp)$/.exec(relativePath);
+    const assetId = path.posix.basename(relativePath, path.posix.extname(relativePath));
+    const manifest = shipped ? mediaItem : config.assets?.[assetId];
+    if (!manifest) throw new Error(`PDPC packaged media manifest is missing: ${assetId}`);
+    const expectedDigest = shipped ? shipped[1] : manifest.sha256;
+    const expectedType = shipped && ({ png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" })[shipped[2]];
+    if (
+      bytes.byteLength !== manifest.byteLength
+      || digest !== expectedDigest
+      || (shipped && manifest.mediaType !== expectedType)
+    ) {
       throw new Error(`PDPC packaged media asset does not match its manifest: ${relativePath}`);
     }
   }
@@ -142,7 +149,8 @@ async function verifyPackagedMedia({ outputDir, config }) {
 function safePackagePath(value) {
   if (
     typeof value !== "string"
-    || !value.startsWith("assets/package/")
+    || (!value.startsWith("assets/package/")
+      && !/^data\/authored\/[a-f0-9]{64}\.(?:png|jpe?g|webp)$/.test(value))
     || value.includes("\\")
     || value.includes("%")
     || value.includes(":")
