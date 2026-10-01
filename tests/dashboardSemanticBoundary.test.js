@@ -36,7 +36,6 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "pages",
     "programLabel",
     "scenarioLabel",
-    "scenes",
     "timezone",
     "title",
   ],
@@ -51,6 +50,7 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
   section: [
     "description",
     "id",
+    "layout",
     "panels",
     "title",
   ],
@@ -452,7 +452,9 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       mutate(value) {
         value.pages[0].label = 42;
       },
-      error: /Dashboard page "scenario" label must be non-empty text\./,
+      error: (value) => ({
+        message: `Dashboard page "${value.pages[0].id}" label must be non-empty text.`,
+      }),
     },
     "page accessor": {
       mutate(value) {

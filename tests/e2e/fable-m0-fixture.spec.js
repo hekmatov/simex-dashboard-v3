@@ -96,9 +96,9 @@ test("M0 default harness launches the actual shipped dashboard without fixture s
   expect((await page.context().cookies()).some(({ name }) => name === "simex-e2e-fixture")).toBe(false);
   await enterAuthoredDashboard(page);
   await expect(page.locator(`[data-canonical-page-id="${shipped.pages[0].id}"]`)).toBeVisible();
-  const firstImage = shipped.pages[0].sections.flatMap((section) => section.panels)
-    .map((placement) => placement.chart ?? placement).find((chart) => chart.typeId === "image");
-  await expectLoadedImage(panel(page, firstImage.id));
+  const firstChart = shipped.pages[0].sections.flatMap((section) => section.panels)
+    .map((placement) => placement.chart ?? placement)[0];
+  await expectChartReady(panel(page, firstChart.id));
   expect(errors).toEqual([]);
 });
 
