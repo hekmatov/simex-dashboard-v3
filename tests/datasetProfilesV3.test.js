@@ -273,18 +273,18 @@ test("profiles preserve representative numeric, temporal, and category facts", a
   assert.equal(Object.hasOwn(testingColumns.tests_per_day, "temporal"), false);
   assert.equal(mortality.columns.find(({ name }) => name === "Age group").type, "category");
   assert.deepEqual(Object.keys(national.provenance), ["label"]);
-  const shippedCases = profiles["upload-cases-wcph-eldoria-3"];
+  const shippedCases = profiles.bio_cases;
   assert.equal(shippedCases.columns.find(({ name }) => name === "national_total_cases").type, "numeric");
-  assert.equal(shippedCases.columns.find(({ name }) => name === "Date").type, "temporal");
+  assert.equal(shippedCases.columns.find(({ name }) => name === "date").type, "temporal");
 });
 
 test("generated columns exactly equal the runtime parser and profileDataset authority", async () => {
   const dashboard = await trackedJson(dashboardPath);
   const profiles = await trackedJson(profilesPath);
   for (const sourceId of [
-    "upload-cases-wcph-eldoria-3",
-    "upload-eldoria-work-sectors",
-    "upload-eldoria-misinformation-2021-2027-fictional",
+    "bio_cases",
+    "bio_municipal_infections",
+    "socio_behaviour",
   ]) {
     const source = dashboard.dataSources[sourceId];
     assert.equal(source.kind, "csv", sourceId);
@@ -1260,13 +1260,13 @@ test("portable data embeds descriptors, full profiles, and source bytes determin
         !["staticText", "staticImage", "inline"].includes(payload.config.dataSources[sourceId].kind)
       )),
     );
-    const casesId = "upload-cases-wcph-eldoria-3";
+    const casesId = "bio_cases";
     assert.equal(payload.sources[casesId].kind, "csv");
     assert.equal(
       payload.sources[casesId].text,
       await readFile(path.join(rootDir, "public", payload.dataSources[casesId].path), "utf8"),
     );
-    assert.match(payload.sources[casesId].text, /^Date,national_total_cases/);
+    assert.match(payload.sources[casesId].text, /^date,national_total_cases/);
     assert.equal(
       payload.sources.geo_netherlands_provinces.kind,
       "geojson",

@@ -1,5 +1,15 @@
 # Fable M0.6 preparation checkpoint
 
+## User-selected authored baseline — 1 October 2026
+
+The user's explicit selection of `C:\Users\hekma\Downloads\SimEx-dashboard-bundle-20260903.json` supersedes the earlier shipped package regardless of export date. Original SHA-256: `b1582453dc2e2fd419a435f9af278b07f76325bd4867576437adf321c1dc84da`. Original, hash, inventory and check logs are preserved in `.worktrees/fable-m0-integration-evidence/m0-selected-content-20261001`. Owner remains GPT-6.1 Sol / High, branch `codex/fable-m0-source-fixture`, predecessor `f6565d27`; authored baseline tip is the commit containing this entry.
+
+The existing promotion CLI used that explicit Downloads input. Profiles, portable data and companion catalogue were regenerated. Exact promotion fidelity passed independent review: 38 sources (34 byte-identical emitted CSVs plus four preserved embedded GeoJSONs), 38 charts across 15 types, two unchanged Chrono Groups with seven member charts, no declared media network dependencies. Municipal outbreak playback has map/line members and a 2020-02-27–2021-04-17 period; National outbreak and health-system playback has five line/bar/mixed members and a 2027-02-20–2027-08-15 period. No saved Scenes. Authored text, IDs, styles, groups and source data were not synthesized or pruned.
+
+Strict companion metadata required reconciliation: 37 aliases were recovered unchanged from historical `c85d17ed`; the user's added bar `TEEEST` uses its exact-title alias and page/type/title keywords. The generated catalogue admits all 38 charts under the unchanged semantic/protocol contract. Nearest source/profile/catalogue checks initially passed 60/65 cases; stale prior-content IDs and an exact duplicate diagnostic were corrected, and affected rerun passed 15/15 (four parent cases plus 11 negative subcases). No title or assertion contract was removed. Runtime boundary inspection passed. Those logs complement the promotion fidelity assertions; no whole-suite or density rerun is claimed.
+
+Next: build the promoted content, prepare a separately identified preview, exercise representative chart/group playback and period controls, complete preview-boundary review, then hand over the final candidate and refreshed measurements. Historical preview `127.0.0.1:4279` and E44–E46 remain evidence for their prior content; they do not prove this new baseline. Hosted/Linux results, human acceptance, budget ratification and the 223 M1 geometry findings remain open.
+
 ## Current local-readiness slice — 1 October 2026
 
 Owner `01a0e2c9-c986-7ec2-96f2-63b2ed428b0a`, GPT-6.1 Sol / High. Worktree `.worktrees/fable-preparation`, branch `codex/fable-m0-source-fixture`; predecessor `d2dab23f`, current tip is the commit containing this checkpoint. Canonical assignment: roadmap section 5, planning commit `a2f4b628`; Fable coordination v3 amended 1 October. The slice prepares CI, a budget decision and an external-browser preview. Hosted execution, budget ratification and practitioner acceptance remain pending.

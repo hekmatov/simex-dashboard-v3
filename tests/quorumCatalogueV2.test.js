@@ -704,7 +704,7 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
     "missing required role": /measurements|required role/i,
     "unknown role": /unknown.*role|role.*unknown/i,
     "unknown chart property": /legacyBinding/i,
-    "duplicate chart id": /duplicate.*chart/i,
+    "duplicate chart id": new RegExp(`Duplicate dashboard panel id "${ids.primaryLine}"`),
     "orphan alias": /orphan alias/i,
     "unknown alias property": /legacyKeywords/i,
     "unknown chrono-group property": /legacyClock/i,
