@@ -34,6 +34,8 @@ Then rebuild dataset profiles, review, and commit the resulting changes to `publ
 
 If no `packaged-dashboard-bundle.json` exists but the user says they changed the dashboard in the browser, ask them to export the package default first.
 
+For Fable implementation and practitioner previews, use the user's latest explicitly selected authored-content baseline recorded through `docs/ROADMAP.md`, including its promotion commit and source identity. The September 3 bundle selected on 1 October supersedes the previous shipped-content snapshot. Use its relevant chart types and time groups when verifying features that involve them; dedicated negative-contract fixtures may remain isolated. Do not infer the accepted baseline from an export date or an older demo.
+
 ## Data Update Policy
 
 To update dashboard data from the original `sree2712/pdpcDashApp` repository:
