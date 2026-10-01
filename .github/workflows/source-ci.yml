@@ -90,3 +90,52 @@ jobs:
       - name: Fail when any source check failed
         if: always() && steps.install.outcome == 'success' && (steps.unit.outcome != 'success' || steps.build.outcome != 'success' || steps.browser_companion.outcome != 'success' || steps.browser_parallel.outcome != 'success')
         run: node -e "process.exit(1)"
+
+  cloudflare:
+    name: Cloudflare build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build-command: build:cloudflare:linux
+          - os: windows-latest
+            build-command: build:cloudflare
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Separate jobs keep Cloudflare dist/public generation away from the
+      # standard build consumed by source checks. Bash pipefail retains failure
+      # status through tee on both hosted operating systems.
+      - name: Build and verify Cloudflare application
+        shell: bash
+        run: |
+          mkdir -p reports
+          pnpm ${{ matrix.build-command }} 2>&1 | tee reports/cloudflare-build.log
+
+      - name: Upload Cloudflare build evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cloudflare-build-${{ matrix.os }}-${{ github.run_attempt }}
+          path: |
+            reports/
+            dist/index.html
+            dist/runtime-precache-manifest.js
+            dist/config/dashboard.json
+            dist/config/dataset-profiles.json
+          if-no-files-found: warn
+          retention-days: 14

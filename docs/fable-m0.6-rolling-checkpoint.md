@@ -1,5 +1,33 @@
 # Fable M0.6 preparation checkpoint
 
+## Current local-readiness slice — 1 October 2026
+
+Owner `01a0e2c9-c986-7ec2-96f2-63b2ed428b0a`, GPT-6.1 Sol / High. Worktree `.worktrees/fable-preparation`, branch `codex/fable-m0-source-fixture`; predecessor `d2dab23f`, current tip is the commit containing this checkpoint. Canonical assignment: roadmap section 5, planning commit `a2f4b628`; Fable coordination v3 amended 1 October. The slice prepares CI, a budget decision and an external-browser preview. Hosted execution, budget ratification and practitioner acceptance remain pending.
+
+CI now adds independent Windows/Ubuntu Cloudflare jobs using `pnpm build:cloudflare` / `pnpm build:cloudflare:linux`. Isolation protects standard-build consumers. A failed command propagates through the logged pipeline; build logs, entry HTML, runtime manifest and package/profile identities upload under `always()`. The existing unit and two source-browser phases remain intact. Local checks: Cloudflare contract 3/3 passed; YAML parsed with both platform commands, preserved source step IDs and unconditional report upload; local Bash retained a failing pipeline's exit code; Git whitespace check passed. A scoped GPT-6.1 Sol / Medium review found no actionable issues across CI, budget and preview boundaries. Unaffected E44/E45 passing builds and suites are reused.
+
+### View-budget decision (proposals requiring ratification)
+
+The retained E41 baseline is approximately 1,090,530 bytes gzip for the entry and 1,164,060 for the static initial module graph. The actual preview measures **780,102 / 851,580 bytes**: **26.84%** graph reduction. Two unconditional Three/Vanta scripts add 157,066 bytes; full HTTP bootstrap JS is **1,008,646 bytes**. File-only portable data, lazy imports, CSS/fonts and exercise data are excluded from those HTTP JS figures. Gzip sizes are per artifact; they do not assert actual wire compression. Measurement script/JSON are beside the preview snapshot.
+
+| Decision option | Concrete consequence |
+| --- | --- |
+| Recommend an explicit M0 ceiling: entry 800 KiB, static module graph 860 KiB, HTTP bootstrap JS 1,000 KiB | Current build fits with small headroom; retain the baseline and schedule further View optimization after M0. These ceilings supersede the unratified proposals only if the user approves them. |
+| Retain 250 KiB entry and 30% module-graph reduction | Authorize a separate View-runtime slice: entry must lose 524,102 bytes (~67%); graph must lose at least 36,738 bytes to reach 814,842. No such architecture work has been performed here. |
+| Ratify only the 30% module-graph target, decide entry later | Still needs the 36,738-byte reduction and an explicit entry decision before whole-M0 closure. |
+
+### Hosted-run proposal and deployment implications
+
+After separate push approval, publish the reviewed commit to **origin** (`https://github.com/hekmatov/simex-dashboard-private.git`), creating `codex/fable-m0-source-fixture`: `git push origin HEAD:refs/heads/codex/fable-m0-source-fixture`. Read-only remote inspection on 1 October found no existing branch, repo hooks or deployments; remote main remains `c003d111`. The branch push triggers `.github/workflows/source-ci.yml` (all-branch `push`) and four OS/job combinations; it changes neither main nor the public remote. The candidate's only workflow contains no deployment command.
+
+The candidate commit uses the **[CF-Pages-Skip]** prefix: [Cloudflare Pages documents that it suppresses its deployment](https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/), while it is absent from [GitHub Actions' skip strings](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs). External GitHub-App/Workers integrations are not established by empty hooks/deployment lists; their settings remain unverified. A push approval must account for those external integrations. This proposal has not been executed.
+
+### Practitioner candidate
+
+Live loopback preview: **http://127.0.0.1:4279/**, app **0.1.0**, actual **WCPH HeV-A26 Simulation**, config v6. The [existing five-minute walkthrough](demos/m0-launch-navigation.md) records package identity, shipped-content/controls preflight, origin/storage guidance and hidden process stop/restart instructions. No synthetic content or authored-data changes. The server remains available for feedback. Human acceptance, hosted/Linux success and the 223 M1 geometry findings are not closed by this slice.
+
+## Historical local preparation record
+
 Status: local preparation complete from clean M0.5 commit `6612cd59`; awaiting the separately authorized hosted-run boundary. Ownership covers Windows/Ubuntu push CI, app version/changelog visibility, and a practitioner launch/navigation demo script. Hosted CI and human practitioner acceptance are separate boundaries; main merge, push and deployment are not authorized here.
 
 The new source workflow runs unit tests, a source build and the source Chromium suite on both Windows and Ubuntu. It installs Playwright Chromium once per operating-system job, keeps unit JUnit and Playwright JUnit/HTML/traces, and uploads available reports on failures before a final status gate. Static and PDPC aggregate suites remain separate release/integration checks. The app remains at pre-pilot version `0.1.0`; the dashboard/chart/package schema numbers remain independent. The existing dashboard information footer exposes the app version and changelog link. The demo script is prepared for a practitioner but has not been conducted.
