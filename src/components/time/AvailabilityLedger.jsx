@@ -3,7 +3,7 @@ import { groupAvailabilityRows } from "./chronoGroupDraft.js";
 
 const REGION_COPY = Object.freeze({
   selected: "Members with at least one observation in the current period.",
-  attention: "Still selected, but unavailable after the period changed. Remove it or restore availability explicitly.",
+  attention: "Selected charts that are ineligible or unavailable in this period. Remove them or repair the affected chart.",
   available: "Eligible dashboard charts not currently selected.",
 });
 
@@ -41,7 +41,7 @@ function LedgerRegion({ title, description, rows, empty, disabled, onToggle, nee
 function LedgerRecord({ row, disabled, onToggle }) {
   const chartDateCount = uniqueTicks(row.variables).length;
   return (
-    <li data-chart-id={row.chartId} data-status={row.needsAttention ? "needs-attention" : row.selected ? "selected" : "available"}>
+    <li id={`chrono-group-chart-${row.chartId}`} tabIndex={-1} data-chart-id={row.chartId} data-status={row.needsAttention ? "needs-attention" : row.selected ? "selected" : "available"}>
       <article className="availability-record">
         <header className="availability-record__header">
           <div className="availability-record__identity">

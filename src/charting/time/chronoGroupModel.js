@@ -140,6 +140,11 @@ export function assertTimeSyncInterpolationAllowed({
   return true;
 }
 
+export function assertChronoGroupMemberEligible({ chart, timeRole, profiles }) {
+  validateMemberEligibility({ chart, schema: schemaForMember(chart), member: { timeRole }, profiles });
+  return true;
+}
+
 export function isTimeSyncInterpolationEligible(schema) {
   const semanticMark = schema?.semantics?.mark ?? "";
   return Boolean(

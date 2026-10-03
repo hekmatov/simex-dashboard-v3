@@ -1,5 +1,11 @@
 # Fable M0.6 preparation checkpoint
 
+## Chrono membership repair — 3 October 2026
+
+Practitioner feedback identified Collection displays offered by the Chrono wizard, internal chart IDs in save errors, and warnings without navigation. Add choices now use the existing strict member eligibility validator; invalid selected members remain visible for removal. Chart diagnostics use the same display title as their row. Clicking a warning opens its owning stage, scrolls to the affected record, and focuses it.
+
+The final focused selection passed **28/28** tests, the production build passed, and the shipped national group's browser regression passed **1/1**, including a warning target below five ready members. Separate fixed preview: **http://127.0.0.1:4281/**, snapshot `.worktrees/fable-m0-integration-evidence/m0-chrono-membership-20261003`, hidden PID recorded in `server.pid`. The previous 4280 snapshot and its browser storage remain intact. Authored configuration and sources are unchanged; no push, merge, deployment, full repository gate, or milestone closure is claimed.
+
 ## User-selected authored baseline — 1 October 2026
 
 The user's explicit selection of `C:\Users\hekma\Downloads\SimEx-dashboard-bundle-20260903.json` supersedes the earlier shipped package regardless of export date. Original SHA-256: `b1582453dc2e2fd419a435f9af278b07f76325bd4867576437adf321c1dc84da`. Original, hash, inventory and check logs are preserved in `.worktrees/fable-m0-integration-evidence/m0-selected-content-20261001`. Owner remains GPT-6.1 Sol / High, branch `codex/fable-m0-source-fixture`, predecessor `f6565d27`; reviewed authored baseline commit **45f9a02ef564ca8a9638d9c77844d6e7550b6345**.

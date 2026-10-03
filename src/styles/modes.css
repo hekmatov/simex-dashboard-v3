@@ -2546,6 +2546,14 @@
   border-left: 5px double var(--simex-warning);
 }
 
+.chrono-proof-callout__inspect {
+  display: grid;
+  gap: 4px;
+  grid-column: 1 / -1;
+  text-align: left;
+  width: 100%;
+}
+
 .chrono-proof-callout[data-tone="success"] {
   border-left: 5px solid var(--simex-accent);
 }

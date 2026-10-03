@@ -5,6 +5,7 @@ import {
 } from "../../charting/time/temporalMatch.js";
 import { deriveGroupPeriodChangeConsequence } from "../../charting/time/temporalNeedsAttention.js";
 import { validateIanaTimeZone } from "../../charting/time/temporalSchema.js";
+import { formatTemporalChartMessage } from "./temporalAuthoringData.js";
 
 export const CHRONO_GROUP_STAGES = Object.freeze(["period", "charts", "defaults", "review"]);
 
@@ -90,6 +91,10 @@ export function reduceChronoGroupDraft(state, action) {
       if (action.selected === false || (action.selected === undefined && selected.has(action.chartId))) {
         selected.delete(action.chartId);
       } else {
+        const chart = state.charts.find(({ id }) => id === action.chartId);
+        if (chart?.chronoGroupEligibility?.eligible === false) {
+          return withError(state, issue("MEMBER_INELIGIBLE", chart.chronoGroupEligibility.message, "chrono-group-chart-list"));
+        }
         selected.add(action.chartId);
       }
       const memberFallbacks = { ...state.value.memberFallbacks };
@@ -186,7 +191,7 @@ export function reduceChronoGroupDraft(state, action) {
       };
     }
     case "SAVE_FAILED":
-      return withError(state, normalizeSaveError(action.error));
+      return withError(state, normalizeSaveError(action.error, state.charts));
     case "DISCARD": {
       const value = clone(state.baseline);
       return {
@@ -254,7 +259,7 @@ export function validateChronoGroupStage(state, stage = state?.stage) {
     if (attention) {
       return issue(
         "MEMBER_NEEDS_ATTENTION",
-        `${attention.label} has no observations in the selected period.`,
+        attention.membershipIssue ?? `${attention.label} has no observations in the selected period.`,
         `chrono-group-chart-${attention.chartId}`,
       );
     }
@@ -344,14 +349,14 @@ export function buildChronoGroupReview(state) {
       chartId: chart.id,
       label: chart.label ?? chart.title ?? chart.id,
       observationCount,
-      repairStage: observationCount === 0 ? "charts" : null,
+      repairStage: rowsById.get(chart.id)?.needsAttention ? "charts" : null,
     };
   });
   return {
     affectedPages,
     frameCount,
     members,
-    gaps: members.filter(({ observationCount }) => observationCount === 0),
+    gaps: members.filter(({ repairStage }) => repairStage !== null),
     sceneConsequences: clone(state?.sceneConsequences ?? []),
   };
 }
@@ -375,7 +380,9 @@ export function deriveAvailabilityRows({
       timeZone,
     }).length;
     const selected = selectedOrder.has(chart.id);
-    const needsAttention = selected && inPeriodCount === 0;
+    const eligible = chart.chronoGroupEligibility?.eligible !== false;
+    const membershipIssue = eligible ? null : chart.chronoGroupEligibility.message;
+    const needsAttention = selected && (!eligible || inPeriodCount === 0);
     return {
       chartId: chart.id,
       label: chart.label ?? chart.title ?? chart.id,
@@ -387,8 +394,9 @@ export function deriveAvailabilityRows({
       periodEndEpochMs: period.endEpochMs,
       selected,
       needsAttention,
+      ...(membershipIssue ? { membershipIssue } : {}),
       statusText: needsAttention
-        ? "Needs attention — no observations in period"
+        ? membershipIssue ?? "Needs attention — no observations in period"
         : `${inPeriodCount} ${inPeriodCount === 1 ? "observation" : "observations"} in period`,
       variables,
       variableCount: variables.length,
@@ -397,11 +405,12 @@ export function deriveAvailabilityRows({
       note: chart.note ?? "Saved transformations and filters applied",
       sortIndex: selected ? selectedOrder.get(chart.id) : selectedChartIds.length + chartIndex,
       inPeriodCount,
+      eligible,
     };
-  }).filter(({ selected, inPeriodCount }) => selected || inPeriodCount > 0);
+  }).filter(({ selected, inPeriodCount, eligible }) => selected || (eligible && inPeriodCount > 0));
 
   rows.sort((left, right) => left.sortIndex - right.sortIndex);
-  return rows.map(({ sortIndex, inPeriodCount, ...row }) => row);
+  return rows.map(({ sortIndex, inPeriodCount, eligible, ...row }) => row);
 }
 
 function firstFinite(values) {
@@ -501,11 +510,14 @@ function issue(code, message, focusId = null) {
   return { code, message, focusId, retryable: false };
 }
 
-function normalizeSaveError(error) {
+function normalizeSaveError(error, charts = []) {
+  const message = error?.message ?? "The Chrono Group could not be saved.";
+  const member = charts.find(({ id }) => message.includes(`chart "${id}"`) || message.includes(`panel "${id}"`));
   return {
     code: error?.code ?? "CHRONO_GROUP_SAVE_FAILED",
-    message: error?.message ?? "The Chrono Group could not be saved.",
-    focusId: error?.focusId ?? null,
+    message: formatTemporalChartMessage(message, charts),
+    focusId: error?.focusId ?? (member ? `chrono-group-chart-${member.id}` : null),
+    ...(member ? { stage: "charts" } : {}),
     retryable: error?.retryable !== false,
   };
 }
