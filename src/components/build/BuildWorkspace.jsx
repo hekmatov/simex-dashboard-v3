@@ -31,7 +31,8 @@ import {
   selectChronoStudioCards,
   selectSceneContent,
   selectSceneStudioSections,
-  selectTemporalDraftOwners,
+  selectOpenTemporalDraftOwners,
+  sceneCreationBlockReason,
   withTemporalOwnerScope,
 } from "../time/chronoContentState.js";
 import {
@@ -122,6 +123,8 @@ export default function BuildWorkspace({
   onDiscardLayout,
   onFinish,
   onReset,
+  canDiscardBuild = false,
+  canFinishBuild = false,
   onLocalDraftsChange,
   onDisplayAction,
   selectionControllerRef,
@@ -174,9 +177,10 @@ export default function BuildWorkspace({
     scene: sceneDraft,
   }), [sceneDraft, chronoGroupDraft]);
   const temporalOwners = React.useMemo(
-    () => selectTemporalDraftOwners(localAuthoringDrafts),
+    () => selectOpenTemporalDraftOwners(localAuthoringDrafts),
     [localAuthoringDrafts],
   );
+  const sceneCreationDisabledReason = sceneCreationBlockReason(localAuthoringDrafts);
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
@@ -259,6 +263,17 @@ export default function BuildWorkspace({
       }));
     }
     return onActivate?.(next, options) ?? Promise.resolve(false);
+  };
+  chooseSelection.discardTemporalDrafts = () => {
+    setChronoGroupDraft(null);
+    setSceneDraft(null);
+    setChronoContentState(null);
+    for (const session of [draftCoordinator.activeAuxiliary, ...parkedAuxiliaries]) {
+      if (session && ["chrono-group", "scene"].includes(session.surface)) {
+        dispatchDraftCoordinator({ type: "CLOSE_AUXILIARY", draftId: session.draftId, choice: "discard" });
+      }
+    }
+    onLocalDraftsChange?.({});
   };
   if (selectionControllerRef) selectionControllerRef.current = chooseSelection;
   React.useEffect(() => () => {
@@ -345,7 +360,7 @@ export default function BuildWorkspace({
 
   const initializeAuxiliary = (surface) => {
     if (surface === "chrono-group") {
-      const resumingDraft = chronoGroupDraft?.status === "suspended";
+      const resumingDraft = Boolean(chronoGroupDraft);
       setChronoGroupDraft((current) => current?.status === "suspended"
         ? reduceChronoGroupDraft(current, { type: "RESUME" })
         : current);
@@ -353,7 +368,13 @@ export default function BuildWorkspace({
         subject: chronoGroupDraft?.value?.name ?? chronoGroupDraft?.group?.name,
         key: `content:chrono.draft:${chronoGroupDraft?.value?.id ?? chronoGroupDraft?.group?.id ?? "active"}`,
       });
-      if (!resumingDraft) setChronoContentState((current) => current
+      if (resumingDraft) setChronoContentState((current) => reduceChronoContent(current ?? createChronoContentState(), {
+        type: "RESUME_DRAFT",
+        studio: "chrono",
+        operation: chronoGroupDraft.contentOperation,
+        returnContext: chronoGroupDraft.contentReturnContext,
+      }));
+      else setChronoContentState((current) => current
         ? reduceChronoContent(current, { type: "SET_STUDIO", studio: "chrono" })
         : createChronoContentState({
           chronoGroups: dashboard.chronoGroups ?? [],
@@ -365,7 +386,7 @@ export default function BuildWorkspace({
         }));
     }
     if (surface === "scene") {
-      const resumingDraft = sceneDraft?.status === "suspended";
+      const resumingDraft = Boolean(sceneDraft);
       setSceneDraft((current) => current?.status === "suspended"
         ? reduceSceneDraft(current, { type: "RESUME" })
         : current);
@@ -373,7 +394,13 @@ export default function BuildWorkspace({
         subject: sceneDraft?.value?.name,
         key: `content:scene.draft:${sceneDraft?.value?.id ?? "active"}`,
       });
-      if (!resumingDraft) setChronoContentState((current) => current
+      if (resumingDraft) setChronoContentState((current) => reduceChronoContent(current ?? createChronoContentState(), {
+        type: "RESUME_DRAFT",
+        studio: "scene",
+        operation: sceneDraft.contentOperation,
+        returnContext: sceneDraft.contentReturnContext,
+      }));
+      else setChronoContentState((current) => current
         ? reduceChronoContent(current, { type: "SET_STUDIO", studio: "scene" })
         : createChronoContentState({
           chronoGroups: dashboard.chronoGroups ?? [],
@@ -387,7 +414,11 @@ export default function BuildWorkspace({
   };
 
   const openAuxiliary = (surface) => {
-    if (auxiliaryLocked || activeAuxiliary === surface) return;
+    if (auxiliaryLocked) return;
+    if (activeAuxiliary === surface) {
+      initializeAuxiliary(surface);
+      return;
+    }
     if (surface === "source-content" && sourceContentOwners.length > 0) {
       const parked = parkedAuxiliaries.find((entry) => entry.surface === surface);
       if (parked) {
@@ -425,7 +456,7 @@ export default function BuildWorkspace({
   const closeAuxiliary = () => {
     if (renderedAuxiliary === "source-content" && sourceContentSaving) return;
     const restoration = captureRestoration();
-    if (renderedAuxiliary === "chrono-group" && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft })) {
+    if (renderedAuxiliary === "chrono-group" && chronoGroupDraft) {
       setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
         type: "SUSPEND",
         restoration: { ...restoration, stage: current.stage },
@@ -435,7 +466,7 @@ export default function BuildWorkspace({
         key: `content:chrono.draft:${chronoGroupDraft?.value?.id ?? chronoGroupDraft?.group?.id ?? "active"}`,
       });
     }
-    if (renderedAuxiliary === "scene" && hasActiveLocalAuthoringDrafts({ scene: sceneDraft })) {
+    if (renderedAuxiliary === "scene" && sceneDraft) {
       setSceneDraft((current) => reduceSceneDraft(current, {
         type: "SUSPEND",
         restoration: { ...restoration, stage: current.stage },
@@ -469,7 +500,10 @@ export default function BuildWorkspace({
   };
 
   const resumeAuxiliary = (surface, draftId = null) => {
-    if (activeAuxiliary === surface) return;
+    if (activeAuxiliary === surface) {
+      initializeAuxiliary(surface);
+      return;
+    }
     const parked = parkedAuxiliaries.find((entry) => (
       entry.surface === surface && (draftId === null || entry.draftId === draftId)
     ));
@@ -554,7 +588,7 @@ export default function BuildWorkspace({
             : [];
           const scenes = [...(dashboard.scenes ?? []), ...duplicatedScenes];
           await commitTemporalContent({ chronoGroups, scenes });
-          setChronoGroupDraft((current) => reduceChronoGroupDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedGroup }));
+          setChronoGroupDraft(null);
           setChronoContentState((current) => completeContentOperation(current, { chronoGroups, scenes }, "chronoGroup", savedGroup.id));
           status.succeed();
         } catch (error) {
@@ -568,7 +602,7 @@ export default function BuildWorkspace({
       return;
     }
     if (action.type === "DISCARD") {
-      setChronoGroupDraft((current) => reduceChronoGroupDraft(current, action));
+      setChronoGroupDraft(null);
       setChronoContentState((current) => reduceChronoContent(current, { type: "RETURN_TO_CONTENT" }));
       onReportContentActivity("chrono.draft.discarded", {
         subject: chronoGroupDraft?.value?.name ?? chronoGroupDraft?.group?.name,
@@ -599,7 +633,7 @@ export default function BuildWorkspace({
           await status.beforeWork();
           const scenes = mergeScene(dashboard.scenes ?? [], savedScene);
           await commitTemporalContent({ scenes });
-          setSceneDraft((current) => reduceSceneDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedScene }));
+          setSceneDraft(null);
           setChronoContentState((current) => completeContentOperation(current, { scenes }, "scene", savedScene.id));
           status.succeed();
         } catch (error) {
@@ -613,7 +647,7 @@ export default function BuildWorkspace({
       return;
     }
     if (action.type === "DISCARD") {
-      setSceneDraft((current) => reduceSceneDraft(current, action));
+      setSceneDraft(null);
       setChronoContentState((current) => reduceChronoContent(current, { type: "RETURN_TO_CONTENT" }));
       onReportContentActivity("scene.draft.discarded", {
         subject: sceneDraft?.value?.name,
@@ -629,6 +663,8 @@ export default function BuildWorkspace({
   };
 
   const dispatchChronoContent = (action) => {
+    if (sceneCreationDisabledReason && (action.type === "START_CREATE_SCENE"
+      || (action.type === "START_DUPLICATE" && (action.itemType ?? chronoContentState?.selectedItemType) === "scene"))) return;
     if (action.type === "REQUEST_REMOVE") {
       const itemType = action.itemType ?? chronoContentState.selectedItemType;
       const itemId = action.itemId ?? chronoContentState.selectedItemId;
@@ -681,7 +717,7 @@ export default function BuildWorkspace({
         input.group.name = `Copy of ${input.group.name}`;
       }
       setChronoGroupDraft(withTemporalOwnerScope(
-        createChronoGroupDraft({ ...input, initialStage: "period" }),
+        { ...createChronoGroupDraft({ ...input, initialStage: "period" }), contentOperation: next.operation, contentReturnContext: next.returnContext },
         "chrono",
         draftCoordinator.activeAuxiliary?.draftId ?? "auxiliary-chrono-group",
         { intent },
@@ -706,6 +742,8 @@ export default function BuildWorkspace({
       nextDraft = withTemporalOwnerScope(
         {
           ...nextDraft,
+          contentOperation: next.operation,
+          contentReturnContext: next.returnContext,
           restoration: next.operation.focusId
             ? { stage: next.operation.stage, focusId: next.operation.focusId, scrollTop: 0 }
             : nextDraft.restoration,
@@ -727,10 +765,7 @@ export default function BuildWorkspace({
     const surface = owner.kind === "chrono" ? "chrono-group" : "scene";
     const dispatch = owner.kind === "chrono" ? dispatchChronoGroup : dispatchScene;
     const activate = () => {
-      if (activeAuxiliary !== surface) {
-        resumeAuxiliary(surface, owner.scopeId);
-        return;
-      }
+      resumeAuxiliary(surface, owner.scopeId);
       const focusId = owner.restoration?.focusId;
       if (focusId) window.requestAnimationFrame(() => document.getElementById(focusId)?.focus());
     };
@@ -785,7 +820,9 @@ export default function BuildWorkspace({
       saveLayout: onSaveLayout,
       discardLayout: discardPendingLayout,
     },
-  });
+  }).map((work) => ["chrono", "scene"].includes(work.kind) && work.state === "paused"
+    ? { ...work, label: work.kind === "chrono" ? "Chrono Studio draft" : "Scene Studio draft" }
+    : work);
 
   const propertiesPane = (
     <BuildPropertiesPane
@@ -839,16 +876,19 @@ export default function BuildWorkspace({
             auxiliaryDisabledReason={auxiliaryDisabledReason}
             onFinish={onFinish}
             onReset={onReset}
+            canDiscardBuild={canDiscardBuild}
+            canFinishBuild={canFinishBuild}
+            sceneCreationDisabledReason={sceneCreationDisabledReason}
             onAddChart={() => onAddChart?.()}
             onAddStaticContent={() => onAddStaticContent?.()}
             onOpenAuxiliary={openAuxiliary}
           />
-          <aside className="build-rail build-rail--structure" data-build-rail="structure" aria-label="Structure">
+          <div className="build-rail-slot build-rail-slot--structure"><aside className="build-rail build-rail--structure" data-build-rail="structure" aria-label="Structure">
             {railContent("structure", "Structure", structureRail)}
-          </aside>
-          <aside className="build-rail build-rail--properties" data-build-rail="properties" aria-label="Properties">
+          </aside></div>
+          <div className="build-rail-slot build-rail-slot--properties"><aside className="build-rail build-rail--properties" data-build-rail="properties" aria-label="Properties">
             {railContent("properties", "Properties", propertiesPane)}
-          </aside>
+          </aside></div>
 
           {(activeAuxiliary === "source-content" || sourceContentOwners.length > 0) && typeof document !== "undefined" && createPortal((
             <aside
@@ -915,16 +955,16 @@ export default function BuildWorkspace({
                 <ChronoStudio state={chronoContentState} cards={selectChronoStudioCards(chronoContentState)} onAction={dispatchChronoContent} />
               )}
               {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "content" && (
-                <ChronoGroupContent content={selectChronoGroupContent(chronoContentState, chronoContentState.selectedItemId)} onAction={dispatchChronoContent} />
+                <ChronoGroupContent content={selectChronoGroupContent(chronoContentState, chronoContentState.selectedItemId)} sceneCreationDisabledReason={sceneCreationDisabledReason} onOpenBlockingDraft={() => resumeAuxiliary("chrono-group")} onAction={dispatchChronoContent} />
               )}
               {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "editor" && chronoGroupDraft && (
                 <ChronoGroupEditor draft={chronoGroupDraft} disabled={locked} onAction={dispatchChronoGroup} />
               )}
               {renderedAuxiliary === "scene" && chronoContentState?.view === "library" && (
-                <SceneLibrary state={chronoContentState} sections={selectSceneStudioSections(chronoContentState)} onAction={dispatchChronoContent} />
+                <SceneLibrary state={chronoContentState} sections={selectSceneStudioSections(chronoContentState)} sceneCreationDisabledReason={sceneCreationDisabledReason} onOpenBlockingDraft={() => resumeAuxiliary("chrono-group")} onAction={dispatchChronoContent} />
               )}
               {renderedAuxiliary === "scene" && chronoContentState?.view === "content" && (
-                <SceneContent content={selectSceneContent(chronoContentState, chronoContentState.selectedItemId)} onAction={dispatchChronoContent} />
+                <SceneContent content={selectSceneContent(chronoContentState, chronoContentState.selectedItemId)} sceneCreationDisabledReason={sceneCreationDisabledReason} onOpenBlockingDraft={() => resumeAuxiliary("chrono-group")} onAction={dispatchChronoContent} />
               )}
               {renderedAuxiliary === "scene" && chronoContentState?.view === "editor" && sceneDraft && (
                 <SceneEditor
@@ -932,6 +972,7 @@ export default function BuildWorkspace({
                   themeProjection={themeProjection}
                   draft={sceneDraft}
                   charts={sceneEligibleCharts(dashboard, temporalCharts, sceneDraft.value)}
+                  parentCharts={temporalCharts}
                   chronoGroups={dashboard.chronoGroups ?? []}
                   pages={dashboard.pages ?? []}
                   disabled={locked}
@@ -1002,7 +1043,7 @@ function chronoGroupDraftInput(dashboard, charts, groupOverride = undefined) {
       name: group?.name ?? "",
       period: { startEpochMs: start, endEpochMs: end },
       chartIds: (group?.members ?? []).map(({ chartId }) => chartId),
-      defaultMatching: matchingLabel(group?.matching?.policy ?? "exact"),
+      defaultMatching: matchingLabel(group?.matching?.policy ?? (group ? "exact" : "lastKnown")),
       memberFallbacks,
       secondsPerFrame: group?.secondsPerFrame ?? 1,
     },

@@ -38,6 +38,40 @@ function dashboard() {
   });
 }
 
+test("source library displays and searches dataset-first labels without rewriting authored names", () => {
+  const data = dashboard();
+  const rawName = "Simulation exercise biomedical latest province snapshot";
+  data.contentLibrary.sourceEntries.cases.displayName = rawName;
+  data.contentLibrary.sourceEntries.boundaries.displayName = "Custom boundaries";
+  const before = JSON.stringify(data);
+  const items = visibleManagerItems(data, "sources", { query: "Latest province snapshot — Biomedical" });
+  assert.deepEqual(items.map(({ id }) => id), ["cases"]);
+  assert.equal(items[0].record.displayName, rawName);
+  const html = renderToStaticMarkup(React.createElement(SourceContentWorkspace, {
+    dashboard: data, viewportWidth: 1440,
+    viewState: createSourceContentViewState({ tab: "sources", selections: { sources: "cases" } }),
+  }));
+  assert.match(html, /source-content-row__name">Latest province snapshot — Biomedical</);
+  assert.match(html, /<dt>Name<\/dt><dd>Latest province snapshot — Biomedical<\/dd>/);
+  assert.match(html, /value="Latest province snapshot — Biomedical"/);
+  assert.match(html, /<button[^>]*disabled=""[^>]*>Save name<\/button>/);
+  assert.match(html, />Custom boundaries</);
+  assert.doesNotMatch(html, /Simulation exercise biomedical/);
+  assert.equal(JSON.stringify(data), before);
+});
+
+test("restoring the displayed source name clears rename eligibility without changing authored names", () => {
+  const data = dashboard();
+  data.contentLibrary.sourceEntries.cases.displayName = "Simulation exercise biomedical latest province snapshot";
+  const item = visibleManagerItems(data, "sources").find(({ id }) => id === "cases");
+  assert.equal(workspaceModule.buildEligibleContentRenameDraft({
+    dashboard: data, item, displayName: "Latest province snapshot — Biomedical",
+  }), null);
+  const changed = workspaceModule.buildEligibleContentRenameDraft({ dashboard: data, item, displayName: "My cases" });
+  assert.equal(changed.payload.displayName, "My cases");
+  assert.equal(data.contentLibrary.sourceEntries.cases.displayName, "Simulation exercise biomedical latest province snapshot");
+});
+
 test("manager uses desktop split and tablet list-to-detail composition", () => {
   assert.equal(managerLayoutForWidth(1440), "desktop");
   assert.equal(managerLayoutForWidth(1024), "tablet");

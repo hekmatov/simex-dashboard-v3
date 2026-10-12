@@ -171,6 +171,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onActivePageChange,
   onModeRequest,
   onBuildDraftLockChange,
+  onBuildDiscardAvailabilityChange,
   onBuildStructureProjectionChange,
   onInlineRenameDirtyChange,
   onComparisonSelectionChange,
@@ -204,6 +205,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onExportConfig,
   onResolveScenarioDraft,
   onResetEditSession,
+  buildSessionChanged = false,
   onDeleteDashboardContent,
   onOpenDashboardLook,
   operationError = "",
@@ -522,6 +524,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     dashboardMetadata: externalDirty.dashboardMetadata,
   };
   const authoredDirty = hasUnsavedAuthoredContent(authoredDirtyState);
+  const canDiscardBuild = buildSessionChanged || authoredDirty || chartAuthoringActive
+    || Boolean(localAuthoringDrafts.chronoGroup || localAuthoringDrafts.scene);
+  const canFinishBuild = (buildSessionChanged || authoredDirty)
+    && !localAuthoringDrafts.chronoGroup && !localAuthoringDrafts.scene
+    && !authoredDirtyState.pendingContent && !authoredDirtyState.scenario
+    && !chartAuthoringActive && !chartWizardDirty && !chartEditOwner && !chartCreateOwner && !staticContentOwner;
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const accessibilityEnabled = false;
   const iconAccent = dashboard.globalStyles?.iconAccent ?? ICON_TOKENS.accentBase;
@@ -770,6 +778,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     onBuildDraftLockChange?.(buildMode && buildDraftLocked);
   }, [buildMode, buildDraftLocked, onBuildDraftLockChange]);
 
+  React.useEffect(() => {
+    onBuildDiscardAvailabilityChange?.(buildMode && canDiscardBuild);
+  }, [buildMode, canDiscardBuild, onBuildDiscardAvailabilityChange]);
+
   React.useEffect(() => () => {
     onBuildDraftLockChange?.(false);
   }, [onBuildDraftLockChange]);
@@ -907,6 +919,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function requestResetEditSession() {
     if (moderatorOperationGateRef.current.isActive()) return;
+    if (!canDiscardBuild) return;
     clearModeratorError("reset-session");
     if (externalDirtyRef.current.scenario) {
       setBuildSelectionError(SCENARIO_DIRTY_BLOCK_REASON);
@@ -2463,6 +2476,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       };
       try {
         const resetDashboard = await onResetEditSession();
+        buildWorkspaceSelectionRef.current?.discardTemporalDrafts?.();
         pendingEdits.cancel();
         setDashboardDraft(dashboardTextDraftFromDashboard(resetDashboard ?? dashboard));
         setPageDrafts({});
@@ -2477,6 +2491,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartWizardTarget(null);
         setChartWizardDirty(false);
         setChartCreateOwner(null);
+        setStaticWizardTarget(null);
+        setStaticContentDraft(null);
+        setStaticContentDirty(false);
+        setStaticContentRestoration(null);
         setChartWizardSuspended(false);
         setChartWizardSuspendedTarget(null);
         setChartDraftSessionRevision((current) => current + 1);
@@ -2846,6 +2864,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       chartOwners={chartOwnerSlots}
       owners={staticContentOwner ? [staticContentOwner] : []}
       authoredDirtyState={authoredDirtyState}
+      canDiscardBuild={canDiscardBuild}
+      canFinishBuild={canFinishBuild}
       pendingWorkResumeActions={{
         structure: focusLayoutOwner,
         chartEditor: () => {
@@ -2938,7 +2958,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onActivePageChange={editMode
           ? navigateBuildCanvasPage
           : navigateToPage}
-        onAddPanelToSection={viewOnly ? undefined : recoverEmptySectionInBuild}
+        onAddPanelToSection={undefined}
         onDisplayAction={onDisplayAction}
         onToggleMultiPanel={toggleMultiPanel}
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}

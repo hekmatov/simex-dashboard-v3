@@ -1,3 +1,5 @@
+import { sourceDisplayName } from "../lib/sourceDisplayName.js";
+
 const SOURCE_ORIGINS = new Set(["uploaded", "linked-project", "packaged", "legacy-import", "generated"]);
 const SOURCE_OWNERS = new Set(["builder", "dashboard"]);
 const SOURCE_HEALTH = new Set(["ready", "missing", "corrupt", "needs-relink", "needs-review"]);
@@ -213,7 +215,7 @@ function labelEvidence(entry, descriptor, sourceId) {
     provenance?.fileName,
     descriptorPathName(provenance?.path),
     humanizeSourceId(sourceId),
-  ].map(optionalText).filter(Boolean);
+  ].map(optionalText).filter(Boolean).map((value) => sourceDisplayName(value, sourceId));
   return [...new Map(values.map((value) => [normalizedLabel(value), value])).values()];
 }
 

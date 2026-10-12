@@ -26,6 +26,8 @@ export default function DashboardCanvas({
   multiPanelIds = [],
   excludedChartIds = [],
   chronoSection = null,
+  groupOnly = false,
+  onViewAllCharts,
   geoDataSources = EMPTY_OBJECT,
   onNavigate,
   onAddPanelToSection,
@@ -267,6 +269,12 @@ export default function DashboardCanvas({
                 />
               );
             })}
+            {groupOnly && excludedChartIds.length > 0 && (
+              <div className="chrono-hidden-charts-notice" role="status">
+                <p>Other charts are hidden in Group Only view.</p>
+                <button type="button" className="secondary" onClick={onViewAllCharts}>View all charts</button>
+              </div>
+            )}
             {buildState && (
               <div className="build-add-section-row">
                 <button

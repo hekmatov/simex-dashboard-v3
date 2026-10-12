@@ -32,6 +32,38 @@ const { default: SceneEditor, ObservationChecklist } = await vite.ssrLoadModule(
 
 const scene = { id: "scene-a", name: "Admission reveal", status: "ready", chronoGroupName: "Municipal outbreak playback", members: [{ chartId: "chart-a" }] };
 
+test("a clean open Scene editor can discard its draft", () => {
+  const html = renderToStaticMarkup(React.createElement(SceneEditor, { draft: { value: scene, stage: "details", status: "clean" } }));
+  assert.match(html, /<button[^>]*>Discard Scene<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Discard Scene<\/button>/);
+});
+
+test("Scene creation and duplication show the open Chrono draft admission reason", () => {
+  const reason = "Save or discard the open Chrono Group draft before creating a Scene.";
+  const library = renderToStaticMarkup(React.createElement(SceneLibrary, { sceneCreationDisabledReason: reason }));
+  assert.match(library, /data-scene-workflow-id="create-scene"[^>]*disabled=""/);
+  assert.match(library, /Save or discard the open Chrono Group draft/);
+  assert.match(library, /<button[^>]*>Open pending Chrono Group draft<\/button>/);
+  const content = renderToStaticMarkup(React.createElement(SceneContent, { content: scene, sceneCreationDisabledReason: reason }));
+  assert.match(content, /disabled=""[^>]*>Duplicate</);
+  assert.match(content, /Save or discard the open Chrono Group draft/);
+  assert.match(content, /<button[^>]*>Open pending Chrono Group draft<\/button>/);
+});
+
+test("Scene parent chooser discovers every saved group on its selected page and switches membership", () => {
+  const charts = [{ id: "chart-a", pageId: "biomedical" }, { id: "chart-national", pageId: "biomedical" }, { id: "chart-other", pageId: "operations" }];
+  const groups = [{ id: "municipal", name: "Municipal", chartIds: ["chart-a"], period: { start: "2027-05-01", end: "2027-05-03" } }, { id: "national", name: "National", chartIds: ["chart-national"], period: { start: "2027-05-02", end: "2027-05-04" } }, { id: "other", name: "Other page", chartIds: ["chart-other"] }];
+  let draft = createSceneDraft({ ...scene, pageId: "biomedical", chronoGroupId: "municipal", frames: { mode: "source", chartId: "chart-a" } }, { chronoGroups: groups, charts });
+  const html = renderToStaticMarkup(React.createElement(SceneEditor, { draft, charts: charts.slice(0, 1), parentCharts: charts, chronoGroups: groups }));
+  assert.match(html, /<option value="municipal"[^>]*>Municipal<\/option>/);
+  assert.match(html, /<option value="national"[^>]*>National<\/option>/);
+  assert.doesNotMatch(html, /<option value="other"/);
+  draft = reduceSceneDraft(draft, { type: "SET_CHRONO_GROUP", chronoGroupId: "national" });
+  assert.equal(draft.value.chronoGroupId, "national");
+  assert.deepEqual(draft.value.members, [{ chartId: "chart-national", width: 1 }]);
+  assert.equal(draft.value.frames.chartId, "chart-national");
+});
+
 test("Scene Studio owns Create Scene and groups read-first cards by page", () => {
   const html = renderToStaticMarkup(React.createElement(SceneLibrary, { state: { query: "", statusFilter: "all" }, sections: [{ pageId: "biomedical", pageLabel: "Biomedical", scenes: [scene] }] }));
   assert.match(html, />Create Scene</);

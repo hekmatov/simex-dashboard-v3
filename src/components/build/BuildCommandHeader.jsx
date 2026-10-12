@@ -11,6 +11,8 @@ export default function BuildCommandHeader({
   disabledReason = "",
   auxiliaryLocked = false,
   auxiliaryDisabledReason = disabledReason,
+  canDiscardBuild = false,
+  canFinishBuild = false,
   onFinish,
   onReset,
   onAddChart,
@@ -60,12 +62,12 @@ export default function BuildCommandHeader({
         <div className="build-command-group" role="group" aria-label="Session" data-build-command-group="session">
           <span className="build-command-group-label" aria-hidden="true">Session</span>
           {command("discard-build-changes", "Discard Build changes", {
-            disabled: locked,
-            explain: !locked,
-            reason: locked ? disabledReason : DISCARD_BUILD_CHANGES_DESCRIPTION,
+            disabled: locked || !canDiscardBuild,
+            explain: !locked && canDiscardBuild,
+            reason: locked ? disabledReason : !canDiscardBuild ? "No Build changes to discard." : DISCARD_BUILD_CHANGES_DESCRIPTION,
             onClick: onReset,
           })}
-          {command("finish-build", "Finish Build", { primary: true, disabled: locked, reason: disabledReason, onClick: onFinish })}
+          {command("finish-build", "Finish Build", { primary: true, disabled: locked || !canFinishBuild, reason: locked ? disabledReason : "Save or discard open drafts before finishing Build, or make a change first.", onClick: onFinish })}
         </div>
       </div>
 
@@ -104,7 +106,7 @@ function BuildPendingWorkRail({ pendingWork }) {
             >
               <span className="build-pending-work__summary">
                 <strong>{work.label}</strong>
-                <small>{pendingStateLabel(work.state)}</small>
+                <small>{["chrono", "scene"].includes(work.kind) ? `Draft open${work.state === "paused" ? "" : ` · ${pendingStateLabel(work.state)}`}` : pendingStateLabel(work.state)}</small>
               </span>
               <span className="build-pending-work__actions">
                 {work.kind === "layout" ? (

@@ -1,7 +1,7 @@
 import React from "react";
 import { hasUnresolvedFrameSource } from "./chronoContentState.js";
 
-export default function SceneLibrary({ state, sections = [], onAction = () => {} }) {
+export default function SceneLibrary({ state, sections = [], sceneCreationDisabledReason = "", onOpenBlockingDraft, onAction = () => {} }) {
   const total = state?.scenes?.length ?? sections.reduce((sum, section) => sum + section.scenes.length, 0);
   const emptyMessage = total > 0
     ? "No Scenes match the current filters."
@@ -13,8 +13,9 @@ export default function SceneLibrary({ state, sections = [], onAction = () => {}
         React.createElement("h2", { id: "scene-library-title" }, "Scene Studio"),
         React.createElement("p", null, "Browse saved Scenes by dashboard page before opening their content."),
       ),
-      React.createElement("button", { type: "button", "data-scene-workflow-id": "create-scene", onClick: () => onAction({ type: "START_CREATE_SCENE" }) }, "Create Scene"),
+      React.createElement("button", { type: "button", "data-scene-workflow-id": "create-scene", disabled: Boolean(sceneCreationDisabledReason), title: sceneCreationDisabledReason || undefined, onClick: () => onAction({ type: "START_CREATE_SCENE" }) }, "Create Scene"),
     ),
+    sceneCreationDisabledReason ? React.createElement("p", { role: "status" }, sceneCreationDisabledReason, " ", React.createElement("button", { type: "button", className: "text-button", onClick: onOpenBlockingDraft }, "Open pending Chrono Group draft")) : null,
     React.createElement("div", { className: "temporal-studio__filters", role: "search" },
       React.createElement("label", null, "Search", React.createElement("input", { type: "search", value: state?.query ?? "", onChange: (event) => onAction({ type: "SET_QUERY", query: event.target.value }) })),
       React.createElement("label", null, "Status", React.createElement("select", { value: state?.statusFilter ?? "all", onChange: (event) => onAction({ type: "SET_STATUS_FILTER", statusFilter: event.target.value }) },

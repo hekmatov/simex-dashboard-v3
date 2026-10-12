@@ -1,4 +1,5 @@
 import React from "react";
+import { sourceDisplayName } from "../../lib/sourceDisplayName.js";
 
 export default function ContentCatalogue({
   label = "Content catalogue",
@@ -51,7 +52,7 @@ export default function ContentCatalogue({
                 aria-pressed={selectedId === item.id}
                 onClick={() => onSelect(item.id)}
               >
-                <span className="source-content-row__name">{item.record.displayName}</span>
+                <span className="source-content-row__name">{item.kind === "csv" ? sourceDisplayName(item.record.displayName, item.id) : item.record.displayName}</span>
                 <span className="source-content-row__meta">
                   <span>{item.typeLabel}</span>
                   <span>{item.record.origin}</span>

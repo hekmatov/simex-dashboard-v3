@@ -1,6 +1,7 @@
 import PageTimeContext from "./components/playback/PageTimeContext.jsx";
 import { temporalAuthoringCharts } from "./components/time/temporalAuthoringCharts.js";
 import React from "react";
+import { buildSessionContentSignature } from "./components/build/buildDirtyState.js";
 import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
 import {
   commitStaticPanelTransaction,
@@ -66,7 +67,7 @@ import { validateConfigurationForPersistence } from "./lib/dashboardPersistenceV
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
-import { createBlankDashboardContent } from "./lib/dashboardContentReset.js";
+import { createBlankDashboardContent, discardBuildSessionDrafts } from "./lib/dashboardContentReset.js";
 import { prepareDashboardAuthoredPersistenceCandidate } from "./lib/dashboardAuthoredRevision.js";
 import {
   commitOnlineDashboardRestore,
@@ -243,6 +244,10 @@ function AppContent({ releaseProfile = null }) {
   const [blockedReason, setBlockedReason] = React.useState("");
   const [activePageId, setActivePageId] = React.useState(null);
   const [editBaseline, setEditBaseline] = React.useState(null);
+  const buildBaselineSignatureRef = React.useRef(null);
+  const buildSessionChangedRef = React.useRef(false);
+  const [buildSessionChanged, setBuildSessionChanged] = React.useState(false);
+  const [buildDiscardAvailable, setBuildDiscardAvailable] = React.useState(false);
   const [deviceLayout, setDeviceLayout] = React.useState(() => loadDeviceLayout());
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
@@ -739,6 +744,7 @@ function AppContent({ releaseProfile = null }) {
             : SESSION_ONLY_MESSAGES.dashboardAssetStorage,
         );
         dashboardRef.current = sessionDashboard;
+        recordBuildSessionChanges(sessionDashboard);
         setDashboard(sessionDashboard);
         setError(null);
         setOperationError("");
@@ -783,6 +789,7 @@ function AppContent({ releaseProfile = null }) {
         loaded = await loadSessionCandidate();
       }
       dashboardRef.current = loaded;
+      recordBuildSessionChanges(loaded);
       setDashboard(loaded);
       setError(null);
       setOperationError("");
@@ -1145,8 +1152,14 @@ function AppContent({ releaseProfile = null }) {
           await contentDraftCoordinator.discardOwner(owner, { reason: "mode-departure" });
         }
         setEditBaseline(null);
+        buildBaselineSignatureRef.current = null;
+        buildSessionChangedRef.current = false;
+        setBuildSessionChanged(false);
       }
       if (nextMode === "build") {
+        buildBaselineSignatureRef.current = buildSessionContentSignature(dashboardRef.current ?? dashboard);
+        buildSessionChangedRef.current = false;
+        setBuildSessionChanged(false);
         setEditBaseline(configurationForEditBaseline(
           dashboardRef.current ?? dashboard,
           trackedDatasetProfilesRef.current,
@@ -1194,25 +1207,27 @@ function AppContent({ releaseProfile = null }) {
   }
 
   async function resetEditSession() {
-    const result = await prepareToLeaveBuild();
-    if (!result.ok) {
-      throw new Error(
-        result.reason ?? "Finish the current Build operation before changing mode.",
-      );
-    }
-    const resetDashboard = editBaseline
+    await ensureDashboardCommitController().whenIdle();
+    const resetDashboard = editBaseline && buildSessionChangedRef.current
       ? await commitConfiguration(editBaseline, {
           preserveAuthoredRevision: true,
           rollback: true,
           transactionId: "build-baseline-restoration",
         })
-      : configurationForPortableUse(dashboardRef.current ?? dashboard);
-    setEditBaseline(null);
-    setMode("view");
-    if (dashboardEntry.surface === "workspace") {
-      persistDashboardModePreference("view");
-    }
+      : dashboardRef.current ?? dashboard;
+    const cleanupWarnings = await discardBuildSessionDrafts(contentDraftCoordinator);
+    if (cleanupWarnings.length > 0) setOperationError("Build changes were discarded, but some unused draft source files could not be removed.");
+    buildBaselineSignatureRef.current = buildSessionContentSignature(dashboardRef.current ?? resetDashboard);
+    buildSessionChangedRef.current = false;
+    setBuildSessionChanged(false);
     return resetDashboard;
+  }
+
+  function recordBuildSessionChanges(candidate) {
+    if (modeRef.current !== "build" || buildBaselineSignatureRef.current === null) return;
+    const changed = buildSessionContentSignature(candidate) !== buildBaselineSignatureRef.current;
+    buildSessionChangedRef.current = changed;
+    setBuildSessionChanged(changed);
   }
 
   async function createChart(payload, target, { reportStatus = true } = {}) {
@@ -1539,6 +1554,9 @@ function AppContent({ releaseProfile = null }) {
           committed,
           trackedDatasetProfilesRef.current,
         ));
+        buildBaselineSignatureRef.current = buildSessionContentSignature(committed);
+        buildSessionChangedRef.current = false;
+        setBuildSessionChanged(false);
       }
       reconcileCommittedDashboardMode({
         currentMode: mode,
@@ -1736,6 +1754,7 @@ function AppContent({ releaseProfile = null }) {
       scenarioExpanded={scenarioPassportOpen}
       scenarioDirty={scenarioPassportDirty}
       scenarioNode={<ScenarioPassportPopover
+        canDiscardBuild={mode === "build" && buildDiscardAvailable}
         key={scenarioPassportResetRevision}
         open={mode === "build" && scenarioPassportOpen}
         dashboard={dashboard}
@@ -1788,6 +1807,7 @@ function AppContent({ releaseProfile = null }) {
       onActivePageChange={setActivePageId}
       onModeRequest={requestMode}
       onBuildDraftLockChange={setBuildDraftLocked}
+      onBuildDiscardAvailabilityChange={setBuildDiscardAvailable}
       onBuildStructureProjectionChange={setBuildStructureProjection}
       onComparisonSelectionChange={setCompareSelectionActive}
       onCommitPendingConfiguration={() => awaitDashboardCommitQueue(
@@ -1918,6 +1938,7 @@ function AppContent({ releaseProfile = null }) {
       onExportConfig={exportConfig}
       onResolveScenarioDraft={() => setScenarioPassportOpen(true)}
       onResetEditSession={resetEditSession}
+      buildSessionChanged={buildSessionChanged}
       onDeleteDashboardContent={deleteDashboardContent}
       onOpenDashboardLook={openDashboardLook}
       themeProjection={dashboardThemeProjection}

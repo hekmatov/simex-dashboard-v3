@@ -29,6 +29,14 @@ test("audience popup preserves the current app URL and creates a collision-safe 
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], result.url);
   assert.equal(calls[0][1], "simex-audience-session-001");
+  const features = Object.fromEntries(calls[0][2]?.split(",").map((feature) => feature.split("=")) ?? []);
+  assert.equal(features.popup, "yes", "audience opening must request a separate popup window");
+  assert.ok(Number(features.width) >= 1024);
+  assert.ok(Number(features.height) >= 720);
+  assert.equal(features.resizable, "yes");
+  assert.equal(features.scrollbars, "yes");
+  assert.equal(features.noopener, undefined, "audience must retain its opener connection");
+  assert.equal(features.noreferrer, undefined);
 });
 
 test("audience popup uses the runtime-supplied session-unique window name", () => {

@@ -56,6 +56,28 @@ test("studio selection opens read-first content before edit", () => {
   assert.deepEqual(state.operation, { intent: "edit", itemType: "chronoGroup", itemId: "chrono-a", parentChronoGroupId: null });
 });
 
+test("resuming a retained Scene draft replaces the current Chrono library destination", () => {
+  const operation = { intent: "create", itemType: "scene", itemId: null, parentChronoGroupId: "chrono-a" };
+  const state = createChronoContentState({ chronoGroups, scenes, pages, studio: "chrono" });
+  const resumed = reduceChronoContent(state, { type: "RESUME_DRAFT", studio: "scene", operation });
+  assert.equal(resumed.studio, "scene");
+  assert.equal(resumed.view, "editor");
+  assert.deepEqual(resumed.operation, operation);
+});
+
+test("clean and suspended open Chrono drafts block Scene creation without becoming dirty", async () => {
+  const { sceneCreationBlockReason, selectOpenTemporalDraftOwners } = await import("../src/components/time/chronoContentState.js");
+  assert.equal(typeof sceneCreationBlockReason, "function");
+  for (const status of ["clean", "dirty", "suspended"]) {
+    const draft = withTemporalOwnerScope({ status, suspendedStatus: status === "suspended" ? "clean" : null, stage: "period" }, "chrono", "open-chrono");
+    assert.match(sceneCreationBlockReason({ chronoGroup: draft }), /open Chrono Group draft/);
+    assert.equal(selectOpenTemporalDraftOwners({ chronoGroup: draft }).length, 1);
+    assert.equal(draft.status, status);
+  }
+  assert.equal(sceneCreationBlockReason({}), "");
+  assert.equal(sceneCreationBlockReason({ scene: { status: "dirty" } }), "");
+});
+
 test("Chrono Group content and Scene Studio are grouped by owning page", () => {
   const state = createChronoContentState({ chronoGroups, scenes, pages, studio: "scene" });
   assert.deepEqual(selectSceneStudioSections(state).map(({ pageId }) => pageId), ["biomedical", "operations"]);

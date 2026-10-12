@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function ChronoGroupContent({ content, onAction = () => {} }) {
+export default function ChronoGroupContent({ content, sceneCreationDisabledReason = "", onOpenBlockingDraft, onAction = () => {} }) {
   if (!content) return React.createElement("p", { role: "alert" }, "This Chrono Group is no longer available.");
   return React.createElement("article", { className: "temporal-content-page chrono-group-content", "aria-labelledby": "chrono-group-content-title" },
     React.createElement("header", { className: "temporal-content-page__header" },
@@ -16,7 +16,7 @@ export default function ChronoGroupContent({ content, onAction = () => {} }) {
     React.createElement("div", { className: "temporal-content-page__actions", "aria-label": "Chrono Group actions" },
       React.createElement("div", { className: "temporal-content-page__action-group", "data-content-action-group": "primary" },
         React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_EDIT", itemType: "chronoGroup", itemId: content.id }) }, "Edit"),
-        React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_CREATE_SCENE", parentChronoGroupId: content.id }) }, "Create Scene"),
+        React.createElement("button", { type: "button", disabled: Boolean(sceneCreationDisabledReason), title: sceneCreationDisabledReason || undefined, onClick: () => onAction({ type: "START_CREATE_SCENE", parentChronoGroupId: content.id }) }, "Create Scene"),
       ),
       React.createElement("div", { className: "temporal-content-page__action-group", "data-content-action-group": "management" },
         React.createElement("button", { type: "button", className: "secondary", onClick: () => onAction({ type: "START_DUPLICATE", itemType: "chronoGroup", itemId: content.id }) }, "Duplicate"),
@@ -24,6 +24,7 @@ export default function ChronoGroupContent({ content, onAction = () => {} }) {
         content.status === "needs-attention" ? React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_REPAIR", itemType: "chronoGroup", itemId: content.id }) }, "Repair") : null,
       ),
     ),
+    sceneCreationDisabledReason ? React.createElement("p", { role: "status" }, sceneCreationDisabledReason, " ", React.createElement("button", { type: "button", className: "text-button", onClick: onOpenBlockingDraft }, "Open pending Chrono Group draft")) : null,
     React.createElement("p", { className: "temporal-content-page__status", "data-status": content.status }, content.status === "needs-attention" ? "Needs attention" : "Ready"),
     ...(content.statusReasons ?? []).map((reason) => React.createElement("p", { className: "temporal-content-page__reason", key: reason }, reason)),
     React.createElement("div", { className: "temporal-content-page__sections" }, ...(content.pageSections ?? []).map((section) => React.createElement("section", { key: section.pageId },

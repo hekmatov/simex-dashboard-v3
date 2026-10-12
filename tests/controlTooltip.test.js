@@ -111,3 +111,15 @@ test("open chart work explains the Build actions it workflow-disables", () => {
   assert.doesNotMatch(html, /<button[^>]+aria-describedby/);
   assert.match(html, /role="tooltip"[^>]*>Finish or cancel the open chart draft\.<\/span>/);
 });
+
+test("Build session actions are disabled without changes and independently enable discard and finish", () => {
+  const render = (props) => renderToStaticMarkup(React.createElement(BuildCommandHeader, props));
+  const untouched = render({});
+  assert.match(untouched, /data-build-command-action="discard-build-changes"[^>]*disabled=""/);
+  assert.match(untouched, /data-build-command-action="finish-build"[^>]*disabled=""/);
+  const draft = render({ canDiscardBuild: true, canFinishBuild: false });
+  assert.doesNotMatch(draft, /data-build-command-action="discard-build-changes"[^>]*disabled=""/);
+  assert.match(draft, /data-build-command-action="finish-build"[^>]*disabled=""/);
+  const saved = render({ canDiscardBuild: true, canFinishBuild: true });
+  assert.doesNotMatch(saved, /data-build-command-action="(?:discard-build-changes|finish-build)"[^>]*disabled=""/);
+});

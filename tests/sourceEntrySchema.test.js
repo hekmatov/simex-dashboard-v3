@@ -6,9 +6,33 @@ import {
   createUploadedCsvSourceEntry,
   listManageableSourceEntries,
   renameSourceEntry,
+  resolveSourceEntryLabels,
   validateSourceEntry,
 } from "../src/content-library/sourceEntrySchema.js";
 import { makeSourceEntry } from "./helpers/contentLibraryFixtures.js";
+
+test("source label projection puts the dataset first and retains authored identity and custom names", () => {
+  const entry = makeSourceEntry("csv", { displayName: "Simulation exercise socio-economic behaviour dataset" });
+  const labels = resolveSourceEntryLabels([entry, { sourceId: "custom", displayName: "My report" }]);
+  assert.equal(labels[0].label, "Behaviour dataset — Socio-economic");
+  assert.equal(labels[0].displayName, entry.displayName);
+  assert.equal(labels[0].sourceId, entry.sourceId);
+  assert.equal(labels[1].label, "My report");
+});
+
+test("recognized biomedical and socio-economic prefixes move behind the dataset, using source identity for categoryless exercise labels", () => {
+  const entries = [
+    { sourceId: "bio_cases", displayName: "Biomedical cases" },
+    { sourceId: "socio_support", displayName: "Socio-economic support" },
+    { sourceId: "socio_education_absenteeism", displayName: "Simulation exercise education absenteeism dataset" },
+    { sourceId: "bio_custom", displayName: "Local case reports" },
+    { sourceId: "unknown", displayName: "Simulation exercise custom report" },
+  ];
+  assert.deepEqual(resolveSourceEntryLabels(entries).map(({ label }) => label), [
+    "Cases — Biomedical", "Support — Socio-economic", "Education absenteeism dataset — Socio-economic",
+    "Local case reports", "Simulation exercise custom report",
+  ]);
+});
 
 test("managed source classification trusts descriptor kind and explicit provenance, never filenames", () => {
   const cases = [

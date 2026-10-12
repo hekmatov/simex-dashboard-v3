@@ -5,6 +5,7 @@ import { listManageableSourceEntries } from "../../content-library/sourceEntrySc
 import ContentDetail, { buildContentRenameDraft } from "./ContentDetail.jsx";
 import DataSourceCatalogue from "./DataSourceCatalogue.jsx";
 import MediaCatalogue from "./MediaCatalogue.jsx";
+import { sourceDisplayName } from "../../lib/sourceDisplayName.js";
 
 const EMPTY_FILTERS = Object.freeze({ origin: "all", status: "all", usage: "all", kind: "all" });
 
@@ -340,12 +341,16 @@ export function visibleManagerItems(dashboard = {}, tab = "media", filters = {})
       .map((record) => contentItem(dashboard, record.sourceId, record.kind, record, dependencyStateFor(dashboard, record.kind, record.sourceId)));
   const query = String(filters.query ?? "").trim().toLocaleLowerCase();
   return base.filter((item) => (
-    (!query || item.record.displayName.toLocaleLowerCase().includes(query) || item.id.toLocaleLowerCase().includes(query))
+    (!query || managerItemLabel(item).toLocaleLowerCase().includes(query) || item.id.toLocaleLowerCase().includes(query))
     && (!filters.origin || filters.origin === "all" || item.record.origin === filters.origin)
     && (!filters.status || filters.status === "all" || item.record.health === filters.status)
     && (!filters.usage || filters.usage === "all" || (filters.usage === "used" ? item.usageCount > 0 : item.usageCount === 0))
     && (!filters.kind || filters.kind === "all" || item.kind === filters.kind)
-  )).sort((left, right) => left.record.displayName.localeCompare(right.record.displayName));
+  )).sort((left, right) => managerItemLabel(left).localeCompare(managerItemLabel(right)));
+}
+
+function managerItemLabel(item) {
+  return item.kind === "csv" ? sourceDisplayName(item.record.displayName, item.id) : item.record.displayName;
 }
 
 export function createSourceContentOwnerRegistry() {
@@ -396,7 +401,7 @@ export function selectSourceContentOwners(registry = {}) {
 
 export function buildEligibleContentRenameDraft({ dashboard, item, displayName, defaultDescription = "" } = {}) {
   if (!item || typeof displayName !== "string" || displayName.trim() === "") return null;
-  const currentName = String(item.record?.displayName ?? "");
+  const currentName = String(managerItemLabel(item) ?? "");
   const currentDescription = item.kind === "media" ? String(item.record?.defaultDescription ?? "") : "";
   const nextDescription = item.kind === "media" ? String(defaultDescription ?? "") : "";
   if (displayName.trim() === currentName && nextDescription === currentDescription) return null;

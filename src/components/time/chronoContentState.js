@@ -86,6 +86,17 @@ export function reduceChronoContent(state, action) {
     }
     case "SET_QUERY":
       return { ...state, query: String(action.query ?? ""), error: null };
+    case "RESUME_DRAFT":
+      assertStudio(action.studio);
+      return {
+        ...state,
+        studio: action.studio,
+        view: "editor",
+        operation: clone(action.operation),
+        returnContext: clone(action.returnContext ?? state.returnContext),
+        conflict: null,
+        error: null,
+      };
     case "SET_STATUS_FILTER":
       assertStatusFilter(action.statusFilter);
       return { ...state, statusFilter: action.statusFilter, error: null };
@@ -308,15 +319,30 @@ export function selectTemporalDraftOwners(drafts = {}) {
   ].filter(Boolean);
 }
 
-function temporalOwner(draft, kind, surface) {
+export function sceneCreationBlockReason(drafts = {}) {
+  return drafts.chronoGroup
+    ? "Save or discard the open Chrono Group draft before creating a Scene."
+    : "";
+}
+
+// Open editors need a resume affordance even before they have unsaved, save-valid content.
+export function selectOpenTemporalDraftOwners(drafts = {}) {
+  return [
+    temporalOwner(drafts.chronoGroup, "chrono", "chrono-studio", true),
+    temporalOwner(drafts.scene, "scene", "scene-studio", true),
+  ].filter(Boolean);
+}
+
+function temporalOwner(draft, kind, surface, includeOpen = false) {
   if (!draft || draft.ownerKind !== kind || !draft.ownerScopeId) return null;
-  if (draft.ownerIntent === "create" && !isRetainableTemporalCreation(draft, kind)) return null;
+  if (!includeOpen && draft.ownerIntent === "create" && !isRetainableTemporalCreation(draft, kind)) return null;
   const activity = draft.ownerActivity === "suspended"
     || (draft.ownerActivity === undefined && draft.status === "suspended")
     ? "suspended"
     : "active";
-  const status = draft.status === "suspended" ? draft.suspendedStatus : draft.status;
-  if (!new Set(["dirty", "saving", "error"]).has(status)) return null;
+  const actualStatus = draft.status === "suspended" ? draft.suspendedStatus : draft.status;
+  const status = includeOpen && actualStatus === "clean" ? "paused" : actualStatus;
+  if (!new Set(includeOpen ? ["dirty", "saving", "error", "paused"] : ["dirty", "saving", "error"]).has(status)) return null;
   return {
     draftId: `${kind}:${draft.ownerScopeId}`,
     kind,

@@ -480,7 +480,7 @@ function normalizeSavedGroup(group) {
     name: group.name ?? "",
     period: clone(group.period ?? null),
     chartIds: clone(group.chartIds ?? []),
-    defaultMatching: group.defaultMatching ?? MATCHING_POLICY_LABELS.CONCURRENT_ONLY,
+    defaultMatching: group.defaultMatching ?? MATCHING_POLICY_LABELS.SNAP_TO_LATEST,
     memberFallbacks: clone(group.memberFallbacks ?? {}),
     secondsPerFrame: group.secondsPerFrame ?? 1,
   };

@@ -4511,8 +4511,9 @@
 .canonical-dashboard-frame.build-workspace .build-command-header { grid-area: commands; }
 .canonical-dashboard-frame.build-workspace > .canonical-dashboard-content { grid-area: canvas; min-width: 0; }
 .canonical-dashboard-frame.build-workspace > .dashboard-footer { grid-area: footer; }
-.build-rail--structure { grid-area: structure; }
-.build-rail--properties { grid-area: properties; }
+.build-rail-slot--structure { grid-area: structure; }
+.build-rail-slot--properties { grid-area: properties; }
+.build-rail-slot { min-width: 0; align-self: stretch; }
 
 .build-rail {
   background: var(--simex-surface-panel);

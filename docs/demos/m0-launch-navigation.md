@@ -1,32 +1,32 @@
 # M0 practitioner launch and navigation walkthrough
 
-Status: Chrono membership repair preflighted on 3 October 2026; practitioner recheck and acceptance remain pending.
+Status: five-minute walkthrough and prior Chrono recheck accepted by the practitioner on 12 October 2026. Additional feedback repairs are preflighted; their recheck remains pending.
 
 ## Live candidate
 
-Open [the fixed local preview](http://127.0.0.1:4281/) in Chrome or Edge on this computer. It serves an immutable standard production build of the Chrono membership repair at **1c19f309e1269472309353753f7684bddef23e74** from `fable-preparation`. The selected authored content remains committed as `45f9a02ef564ca8a9638d9c77844d6e7550b6345`. App version: **0.1.0**. Package: **HeV-A26 Day 2 Simulation**, configuration version **6**, updated **2026-09-03**. The original Downloads bundle SHA-256 is `b1582453dc2e2fd419a435f9af278b07f76325bd4867576437adf321c1dc84da`; the promoted and fixed-preview `config/dashboard.json` SHA-256 remains `bb6aafbb382a8013d6c66d54e434f847409a65ca8ec04b1d97b16226af3bda07`.
+Open [the reviewed feedback preview](http://127.0.0.1:4282/) in Chrome or Edge on this computer. It serves the immutable production build of the 12 October practitioner repairs from `fable-preparation`; the exact commit and build relationship are recorded in the snapshot's `candidate-identity.json` and the rolling checkpoint. The selected authored content remains committed as `45f9a02ef564ca8a9638d9c77844d6e7550b6345`. App version: **0.1.0**. Package: **HeV-A26 Day 2 Simulation**, configuration version **6**, updated **2026-09-03**. The original Downloads bundle SHA-256 is `b1582453dc2e2fd419a435f9af278b07f76325bd4867576437adf321c1dc84da`; `config/dashboard.json` SHA-256 remains `bb6aafbb382a8013d6c66d54e434f847409a65ca8ec04b1d97b16226af3bda07`.
 
-The two Pages are **Biomedical** and **Socio-economic**, containing **38 charts across 15 types**: line, bar, mixed, horizontal bar, pie, delta list, Chrono choropleth map, bubble, KPI, bullet, grouped bar, gauge, scatter map, table and stacked bar. This package has two Chrono Groups and no saved Scenes. The 1 October content-baseline checks established all 34 exact CSV URLs, four embedded GeoJSON sources, chart rendering, playback and Present/Audience behavior; those are historical checks rather than a repeat of every journey on this repair. For the fixed build, **28/28** focused checks, the production build and **1/1** shipped-national-group browser regression passed. That regression checks Collection exclusion, display-title warnings, scrolling/focus to an affected row below five ready members, and removal. No authored content was changed.
+The two Pages are **Biomedical** and **Socio-economic**, containing **38 charts across 15 types**. This package has two Chrono Groups and no saved Scenes. The 1 October source/render/playback checks and the 3 October **28/28** checks plus **1/1** Chrono membership journey remain historical evidence; both practitioner rechecks subsequently passed. For the 12 October repairs, the focused **142/142** selection passed, affected checks were reused or rerun after scoped review corrections, and all five feedback browser journeys are covered. The rolling checkpoint records exact counts and limits. No authored content was changed.
 
-Use the same `127.0.0.1:4281` address throughout; `localhost` is a different origin. Avoid saving edits or resetting storage during this walkthrough. Export a V3 package if you later author changes. Report observations before clearing site data; a fresh browser profile can provide a clean first launch. **4280 is the historical 1 October content-baseline preview**, retained with its existing browser storage and any unsaved user edits. Do not reset that origin or overwrite its snapshot. The earlier 4279 snapshot also remains historical evidence for the superseded package.
+Use the same `127.0.0.1:4282` address throughout; `localhost` is a different origin. Avoid saving trial edits or resetting storage during this walkthrough. Export a V3 package if you later author changes. **4281 is the accepted earlier Chrono repair preview, and 4280 is the historical 1 October content-baseline preview**. Both snapshots and their browser storage, including unsaved user edits, are preserved. Do not reset those origins. The earlier 4279 snapshot also remains historical evidence.
 
 ## Preview process
 
-The hidden Vite preview process listens only on `127.0.0.1:4281` (initial PID **16276**; consult `server.pid` after a restart). Its immutable output, current PID, stdout/stderr, focused Playwright configuration and browser results live in:
+The hidden Vite preview process listens only on `127.0.0.1:4282` (reviewed-build PID **3096**; consult `server.pid` after a restart). Its immutable `reviewed-dist` output, current PID, stdout/stderr, focused Playwright configuration and browser results live in:
 
-`C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.worktrees\fable-m0-integration-evidence\m0-chrono-membership-20261003`
+`C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.worktrees\fable-m0-integration-evidence\m0-practitioner-feedback-20261012`
 
 Keep it running through feedback. To stop or restart, use PowerShell from `C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.worktrees\fable-preparation`:
 
 ```powershell
-$previewDir = 'C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.worktrees\fable-m0-integration-evidence\m0-chrono-membership-20261003'
+$previewDir = 'C:\Users\hekma\Documents\Projects\SimEx\simex-dashboard\.worktrees\fable-m0-integration-evidence\m0-practitioner-feedback-20261012'
 $previewPid = [int](Get-Content -LiteralPath (Join-Path $previewDir 'server.pid'))
 $previewProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$previewPid"
-if ($previewProcess.CommandLine -like '*vite*4281*m0-chrono-membership-20261003*') {
+if ($previewProcess.CommandLine -like '*vite*4282*m0-practitioner-feedback-20261012*reviewed-dist*') {
     Stop-Process -Id $previewPid
 }
 # Restart only after the previous process has stopped:
-$previewArgs = @('node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4281', '--strictPort', '--outDir', (Join-Path $previewDir 'dist'))
+$previewArgs = @('node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4282', '--strictPort', '--outDir', (Join-Path $previewDir 'reviewed-dist'))
 $previewProcess = Start-Process -FilePath (Get-Command node).Source -ArgumentList $previewArgs -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -RedirectStandardOutput (Join-Path $previewDir 'server.stdout.log') -RedirectStandardError (Join-Path $previewDir 'server.stderr.log') -PassThru
 $previewProcess.Id | Set-Content -LiteralPath (Join-Path $previewDir 'server.pid')
 ```
@@ -47,17 +47,25 @@ $previewProcess.Id | Set-Content -LiteralPath (Join-Path $previewDir 'server.pid
 2. Add **Vaccination rate over time**, then use **Edit period** to shorten the end date to **2027-03-01**. Continue to chart selection and attempt to continue again. Vaccination begins in June, so the warning should name **Vaccination rate over time**, matching its chart row, with no internal chart ID.
 3. Click the **Needs attention** warning. Confirm the wizard scrolls to and focuses the affected row below the five ready members. Remove that member if testing removal, then **Discard** to restore the saved group and period; do not save this trial edit. Report whether each finding is resolved.
 
+## Recheck the 12 October feedback repairs
+
+1. In **Build**, confirm Discard and Finish are disabled in an unchanged session. Scroll to the footer: the Structure rail should stop above it. CSV labels in **Source content → Data sources** should read dataset first, then **Biomedical** or **Socio-economic**.
+2. In **Chrono view**, choose the national group and **Group only**. Empty section headings and Add Panel controls should be absent. Click **View all charts** in the hidden-chart message and confirm Scope changes to **All page charts**.
+3. In **Build → Scene Studio → Create Scene**, verify Parent Chrono Group offers both municipal and national groups on Biomedical. Name the draft, switch its parent, close it, browse Chrono Studio, then use **Resume Scene Studio draft**: the same Scene and parent should return.
+4. Discard Build changes and confirm the dialog closes, the drafts clear and the mode remains Build. New Chrono Groups should default to **Snap to Latest**, followed by **Interpolate**, **Snap to Closest**, **Concurrent only**. With a Chrono draft open, new Scene creation should be disabled; its status message should link directly back to that pending draft. Discard trial edits rather than saving them.
+5. In **Present**, use **Open audience display** and confirm a separate audience window opens. Browser popup settings can affect this; report the actual browser and outcome if it still opens as a tab or is blocked.
+
 ## Observation record for the real session
 
 | Field | Record after the session |
 | --- | --- |
-| Participant role and date | Pending |
+| Participant role and date | User, 12 October 2026 |
 | App version, package identity, browser and device | Pending |
-| Launch completed without repair | Pending |
-| Pages and mode transitions completed | Pending |
+| Launch completed without repair | Passed within the reported five-minute walkthrough |
+| Pages and mode transitions completed | Passed within the reported five-minute walkthrough |
 | Three comparisons the practitioner wants | Pending |
-| Confusing controls or incorrect content | Pending |
-| Actionable follow-up, owner and priority | Pending |
-| Practitioner acceptance or rejection, in their words | Pending |
+| Confusing controls or incorrect content | Remaining 12 October feedback listed above; repairs await recheck |
+| Actionable follow-up, owner and priority | Current owner: practitioner feedback repairs; recheck at 4282 |
+| Practitioner acceptance or rejection, in their words | “Other than those comments, the five-minute walkthrough and chrono recheck both passed” |
 
 These checks prepare the practitioner session; they do not constitute human acceptance. The 223 historical M1 geometry findings remain open, and this repair did not rerun the density audit or full repository gates. Hosted CI and bundle-budget ratification also remain open. No push, merge or deployment was performed.

@@ -16,6 +16,8 @@ import {
 } from "../src/components/time/chronoGroupDraft.js";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
+
+
 const JAN_1 = Date.UTC(2027, 0, 1);
 const JAN_2 = JAN_1 + DAY_MS;
 const JAN_3 = JAN_2 + DAY_MS;
@@ -31,6 +33,25 @@ const vite = await createServer({
 const ledgerModule = await vite.ssrLoadModule("/src/components/time/AvailabilityLedger.jsx");
 const studioModule = await vite.ssrLoadModule("/src/components/time/ChronoGroupEditor.jsx");
 await vite.close();
+
+test("new Chrono Groups default to Snap to Latest and preserve explicit saved defaults", () => {
+  assert.equal(createChronoGroupDraft().value.defaultMatching, "Snap to Latest");
+  assert.equal(createChronoGroupDraft({ group: { defaultMatching: "Concurrent only" } }).value.defaultMatching, "Concurrent only");
+});
+
+test("Chrono matching choices follow the practitioner order", () => {
+  const draft = createChronoGroupDraft({ group: groupFixture(), charts: chartFixtures(), initialStage: "defaults" });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft }));
+  const labels = [...html.matchAll(/<strong>(Snap to Latest|Interpolate|Snap to Closest|Concurrent only)<\/strong>/g)].map((match) => match[1]);
+  assert.deepEqual(labels, ["Snap to Latest", "Interpolate", "Snap to Closest", "Concurrent only"]);
+});
+
+test("a clean open Chrono Group editor can discard its draft", () => {
+  const draft = createChronoGroupDraft({ group: groupFixture(), charts: chartFixtures() });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft }));
+  assert.match(html, /<button[^>]*>Discard<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Discard<\/button>/);
+});
 
 test("Chrono Group draft exposes the approved four stages and validates before advancing", () => {
   assert.deepEqual(CHRONO_GROUP_STAGES, ["period", "charts", "defaults", "review"]);

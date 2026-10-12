@@ -25,6 +25,7 @@ export default function ScenarioPassportPopover({
   onImportPackage,
   onDownloadPackage,
   onDiscardBuildChanges,
+  canDiscardBuild = true,
   onRestoreOnlineDashboard,
   onClearDashboard,
 }) {
@@ -184,14 +185,14 @@ export default function ScenarioPassportPopover({
       <section className="scenario-passport-recovery-actions" aria-labelledby="dashboard-recovery-title">
         <h3 id="dashboard-recovery-title">Dashboard recovery</h3>
         <ControlTooltip
-          disabled={scenarioMutationDisabled}
-          explain={!scenarioMutationDisabled}
-          reason={scenarioMutationDisabledReason || DISCARD_BUILD_CHANGES_DESCRIPTION}
+          disabled={scenarioMutationDisabled || !canDiscardBuild}
+          explain={!scenarioMutationDisabled && canDiscardBuild}
+          reason={scenarioMutationDisabledReason || (!canDiscardBuild ? "No Build changes to discard." : DISCARD_BUILD_CHANGES_DESCRIPTION)}
         >
           <button
             type="button"
             className="secondary"
-            disabled={scenarioMutationDisabled}
+            disabled={scenarioMutationDisabled || !canDiscardBuild}
             onClick={onDiscardBuildChanges}
           >
             Discard Build changes

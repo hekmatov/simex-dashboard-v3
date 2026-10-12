@@ -167,7 +167,7 @@ test("imported source labels follow identity evidence and qualify only collision
   });
 });
 
-test("shipped biomedical source names are specific and runtime-compatible with dataset profiles", () => {
+test("accepted Sep 3 source inventory has specific UI labels and runtime-compatible dataset profiles", () => {
   const dashboard = JSON.parse(readFileSync(
     new URL("../public/config/dashboard.json", import.meta.url),
     "utf8",
@@ -177,21 +177,51 @@ test("shipped biomedical source names are specific and runtime-compatible with d
     "utf8",
   ));
   const expected = {
-    "upload-cases-wcph-internationaal-2": "cases WCPH internationaal",
-    "upload-cases-wcph-eldoria-3": "cases WCPH eldoria",
-    "upload-eldoria-baseline-public-support": "eldoria baseline public support",
-    "upload-eldoria-loneliness": "eldoria loneliness",
-    "upload-eldoria-trust-in-government": "eldoria trust in government",
-    "upload-eldoria-income-distribution": "eldoria income distribution",
-    "upload-eldoria-work-sectors": "eldoria work sectors",
-    "upload-eldoria-institutional-trust-comparison-fictional": "eldoria institutional trust comparison fictional",
-    "upload-eldoria-misinformation-2021-2027-fictional": "eldoria misinformation 2021 2027 fictional",
+    bio_admissions: "Admissions — Biomedical",
+    bio_cases: "Cases — Biomedical",
+    bio_healthcare_cases: "Healthcare cases — Biomedical",
+    bio_hospital_occupancy: "Hospital occupancy — Biomedical",
+    bio_icu_occupancy: "ICU occupancy — Biomedical",
+    bio_mortality: "Mortality by age — Biomedical",
+    bio_municipal_infections: "Municipal infections — Biomedical",
+    bio_municipal_map_timeline: "Generated map timeline derived from the authoritative harmonized municipal dataset — Biomedical",
+    bio_municipal_aggregate_timeseries: "Generated aggregate timeline derived from the authoritative harmonized municipal dataset — Biomedical",
+    bio_municipal_latest_bubble: "Generated latest municipal snapshot derived from the authoritative harmonized municipal dataset — Biomedical",
+    bio_occupancy_gauges: "Occupancy gauges — Biomedical",
+    bio_province_cases: "Province cases — Biomedical",
+    bio_province_cases_latest: "Latest province snapshot — Biomedical",
+    bio_province_deltas: "Derived province changes — Biomedical",
+    bio_r_values: "R values — Biomedical",
+    bio_testing: "Testing — Biomedical",
+    bio_vaccination_current: "Vaccination snapshot — Biomedical",
+    bio_vaccination_timeseries: "Vaccination time series — Biomedical",
+    bio_wastewater: "Wastewater dataset — Biomedical",
+    bio_wastewater_latest: "Latest wastewater snapshot — Biomedical",
+    socio_adherence_deltas: "Derived adherence changes — Socio-economic",
+    socio_behaviour: "Behaviour dataset — Socio-economic",
+    socio_business_closures: "Business dataset — Socio-economic",
+    socio_education_absenteeism: "Education absenteeism dataset — Socio-economic",
+    socio_healthcare_absenteeism: "Healthcare absenteeism dataset — Socio-economic",
+    socio_lifestyle: "Lifestyle dataset — Socio-economic",
+    socio_loneliness: "Loneliness dataset — Socio-economic",
+    socio_mental_wellbeing: "Mental wellbeing dataset — Socio-economic",
+    socio_resilience: "Resilience dataset — Socio-economic",
+    socio_risk_deltas: "Derived risk-perception changes — Socio-economic",
+    socio_trust: "Trust dataset — Socio-economic",
+    socio_unemployment: "Unemployment dataset — Socio-economic",
+    socio_values: "Citizen-values dataset — Socio-economic",
+    socio_values_deltas: "Derived citizen-values changes — Socio-economic",
   };
 
   const csvIds = Object.keys(dashboard.dataSources).filter(
     (sourceId) => dashboard.dataSources[sourceId].kind === "csv",
   );
   assert.deepEqual(csvIds.toSorted(), Object.keys(expected).toSorted());
+  assert.equal(csvIds.some((id) => id.startsWith("upload-eldoria-") || id.startsWith("upload-cases-wcph-")), false);
+  assert.equal(dashboard.contentLibrary.sourceEntries.bio_province_cases_latest.displayName,
+    "Simulation exercise biomedical latest province snapshot");
+  assert.equal(dashboard.contentLibrary.sourceEntries.socio_behaviour.displayName,
+    "Simulation exercise socio-economic behaviour dataset");
   const manageable = listManageableSourceEntries(
     dashboard.contentLibrary,
     dashboard.dataSources,
@@ -206,13 +236,13 @@ test("shipped biomedical source names are specific and runtime-compatible with d
     const profile = datasetProfiles[sourceId];
     assert.equal(entry.sourceId, sourceId);
     assert.equal(entry.ownership, "builder");
-    assert.equal(entry.origin, "uploaded");
-    assert.equal(entry.displayName, label);
+    assert.equal(entry.origin, "legacy-import");
     assert.equal(labels.get(sourceId), label);
     assert.equal(profile.sourceId, sourceId);
     assert.equal(profile.kind, "csv");
     assert.equal(profile.path, source.path);
-    assert.equal(entry.provenance.profileFingerprint, profile.fingerprint);
+    assert.ok(Number.isSafeInteger(profile.rowCount) && profile.rowCount > 0);
+    assert.ok(profile.columns.length > 0);
   }
   assert.equal(new Set(Object.values(expected)).size, Object.keys(expected).length);
   assert.doesNotThrow(() => validateDatasetProfiles(

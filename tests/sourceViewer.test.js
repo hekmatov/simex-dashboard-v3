@@ -21,7 +21,29 @@ const {
 } = await import("../src/components/SourceViewer.jsx");
 const {
   buildSourceDownloadDescriptor,
+  buildSourceViewerDescriptor,
 } = await import("../src/components/source-data/sourceViewerProtocol.js");
+
+test("exercise source titles and CSV downloads lead with the dataset and preserve source identity", () => {
+  for (const [category, suffix] of [["biomedical", "Biomedical"], ["socio-economic", "Socio-economic"], ["socioeconomic", "Socio-economic"]]) {
+    const source = deepFreeze({
+      kind: "csv", path: `data/Simulation exercise ${category} vaccination snapshot.csv`,
+      fileName: `Simulation exercise ${category} vaccination snapshot.csv`,
+      provenance: { label: `Simulation exercise ${category} vaccination snapshot` },
+    });
+    const before = JSON.stringify(source);
+    const descriptor = buildSourceViewerDescriptor("source-original", source);
+    assert.equal(descriptor.label, `Vaccination snapshot — ${suffix}`);
+    assert.equal(descriptor.sourceId, "source-original");
+    assert.equal(descriptor.path, `/${source.path}`);
+    assert.equal(descriptor.invocation.csvPath, source.path);
+    assert.equal(buildSourceDownloadDescriptor("source-original", source).fileName, `Vaccination snapshot — ${suffix}.csv`);
+    assert.match(renderSource({ source }), new RegExp(`>Vaccination snapshot — ${suffix}</h2>`));
+    assert.equal(JSON.stringify(source), before);
+  }
+  assert.equal(buildSourceViewerDescriptor("custom", csvSource).label, "WHO surveillance");
+  assert.equal(buildSourceViewerDescriptor("custom", csvSource, { sourceLabel: "My own source" }).label, "My own source");
+});
 
 const csvSource = Object.freeze({
   type: "uploadedCsv",

@@ -64,7 +64,7 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
           <p>Dashboard-wide authored object · local draft · fixed Staged Proof Studio</p>
         </div>
         <span data-status={draft?.status ?? "clean"}>
-          {draft?.status === "saving" ? "Saving Chrono Group" : dirty ? "Unsaved Chrono Group" : "Chrono Group saved"}
+          {draft?.status === "saving" ? "Saving Chrono Group" : dirty ? "Unsaved Chrono Group" : "Chrono Group draft open"}
         </span>
       </header>
 
@@ -122,7 +122,7 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
         <span className="chrono-stage-progress">Stage {stageIndex + 1} of {CHRONO_GROUP_STAGES.length} · {STAGE_STATUS_LABELS[stageStates[stage]]}</span>
         {stage !== "review" && <button type="button" disabled={busy} onClick={() => onAction?.({ type: "NEXT_STAGE" })}>Continue</button>}
         {stage === "review" && <button type="button" disabled={busy || !dirty || Boolean(draftIssue)} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Chrono Group</button>}
-        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard</button>
+        <button type="button" disabled={busy} onClick={() => onAction?.({ type: "DISCARD" })}>Discard</button>
       </footer>
     </section>
   );
@@ -239,7 +239,7 @@ function StageCallout({ issue, busy, onInspect }) {
 }
 
 function matchingLabels() {
-  return [MATCHING_POLICY_LABELS.CONCURRENT_ONLY, MATCHING_POLICY_LABELS.INTERPOLATE, MATCHING_POLICY_LABELS.SNAP_TO_LATEST, MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST];
+  return [MATCHING_POLICY_LABELS.SNAP_TO_LATEST, MATCHING_POLICY_LABELS.INTERPOLATE, MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST, MATCHING_POLICY_LABELS.CONCURRENT_ONLY];
 }
 
 function stageStatusMark(status) {

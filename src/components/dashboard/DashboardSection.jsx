@@ -45,7 +45,7 @@ function DashboardSection({
     const chart = placement.chart ?? placement;
     return !excludedIds.has(chart.id);
   });
-  if (visiblePlacements.length === 0 && !actions && !onAddPanelToSection) return null;
+  if (visiblePlacements.length === 0 && !actions) return null;
 
   const dashboardDataState = {
     loadedData: rowsBySource,
@@ -142,11 +142,7 @@ function DashboardSection({
                 Add Text/Image
               </button>
             </div>
-          ) : (
-            <button type="button" onClick={() => onAddPanelToSection?.(section.id)}>
-              Add Panel to Section
-            </button>
-          )}
+          ) : null}
         </section>
       )}
     </section>

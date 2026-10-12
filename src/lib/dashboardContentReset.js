@@ -5,6 +5,27 @@ const RUNTIME_CONTENT_KEYS = Object.freeze([
   "chartDataStates",
 ]);
 
+export async function discardBuildSessionDrafts(coordinator) {
+  const warnings = [];
+  for (const owner of ["manager", "qmd", "qmd-panel", "image", "chart"]) {
+    const maximumAttempts = coordinator.getActiveRetainers().records.length + 1;
+    for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
+      const before = new Set(coordinator.getActiveRetainers().records.map(({ ownerId }) => ownerId));
+      try {
+        await coordinator.discardOwner(owner, { reason: "build-baseline-restoration" });
+        break;
+      } catch (error) {
+        // discardOwner stops on an asset failure after retiring that draft.
+        // Drain its remaining drafts while cleanup makes measurable progress.
+        warnings.push({ owner, message: error?.message ?? "Draft asset cleanup failed." });
+        const after = new Set(coordinator.getActiveRetainers().records.map(({ ownerId }) => ownerId));
+        if (![...before].some((id) => !after.has(id))) break;
+      }
+    }
+  }
+  return warnings;
+}
+
 export function createBlankDashboardContent(dashboard = {}) {
   const blank = structuredClone(dashboard);
   blank.pages = [];

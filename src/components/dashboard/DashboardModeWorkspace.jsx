@@ -141,9 +141,11 @@ export default function DashboardModeWorkspace({
                 multiPanelIds={buildMode ? [] : multiPanelIds}
                 excludedChartIds={chronoProjection?.hiddenChartIds}
                 chronoSection={chronoSection}
+                groupOnly={Boolean(chronoProjection && playback.scope === "group-only")}
+                onViewAllCharts={() => playback.dispatch({ type: "setScope", scope: "all-page" })}
                 geoDataSources={geoDataSources}
                 onNavigate={onActivePageChange}
-                onAddPanelToSection={buildMode ? undefined : onAddPanelToSection}
+                onAddPanelToSection={undefined}
                 onDisplayAction={onDisplayAction}
                 onToggleMultiPanel={onToggleMultiPanel}
                 onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}

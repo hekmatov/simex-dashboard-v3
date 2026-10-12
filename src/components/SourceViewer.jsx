@@ -2,6 +2,7 @@ import React from "react";
 
 import ModalFocusScope from "./common/ModalFocusScope.jsx";
 import SourceCsvViewerButton from "./source-data/SourceCsvViewerButton.jsx";
+import { sourceDisplayName } from "../lib/sourceDisplayName.js";
 
 export default function SourceViewer({
   open = false,
@@ -127,7 +128,7 @@ export function sourceViewerMetadata(sourceId, source) {
     ["retrieved", "Retrieved", nonEmpty(source?.provenance?.retrievedAt)],
   ];
   return {
-    label,
+    label: sourceDisplayName(label, sourceId),
     items: candidates
       .filter(([, , value]) => value)
       .map(([id, itemLabel, value]) => ({ id, label: itemLabel, value })),
