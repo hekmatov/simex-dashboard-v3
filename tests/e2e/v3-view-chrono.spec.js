@@ -42,6 +42,9 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   const chronoSection = page.locator(`[data-chrono-section="${REMOVED_PAGE_GROUP_ID}"]`);
   await expect(chronoSection.locator("[data-panel-id]")).toHaveCount(2);
   const ordinaryPanel = page.locator('[data-canonical-section-id="biomedical_section_1788164839437"] [data-panel-id="ordinary-national-cases"]');
+  await expect(chrono.getByLabel("Chrono chart scope")).toHaveValue("group-only");
+  await expect(ordinaryPanel).toHaveCount(0);
+  await chrono.getByLabel("Chrono chart scope").selectOption("all-page");
   await expect(ordinaryPanel).toHaveCount(1);
   await ordinaryPanel.scrollIntoViewIfNeeded();
   await expect(ordinaryPanel.locator('[data-canonical-plot-id="ordinary-national-cases"]')).toBeVisible();

@@ -30,9 +30,10 @@ test("selected shipped Chrono groups retain authored periods and synchronize eve
   await openShipped(page);
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
-  await controls.getByRole("combobox", { name: "Chrono chart scope" }).selectOption("group-only");
   for (const group of shipped.chronoGroups) {
-    await controls.getByRole("combobox", { name: "Chrono source" }).selectOption(`group:${group.id}`);
+    await page.getByRole("combobox", { name: "Chrono Group", exact: true }).selectOption(group.id);
+    await expect(controls.getByRole("combobox", { name: "Chrono chart scope" })).toHaveValue("group-only");
+    await expect(page.locator("[data-panel-id]")).toHaveCount(group.members.length);
     const frame = controls.getByRole("slider", { name: "Playback frame" });
     await expect(frame).toHaveAttribute("min", String(Date.parse(iso(group.period.start))));
     await expect(frame).toHaveAttribute("max", String(Date.parse(iso(group.period.end))));
@@ -57,6 +58,41 @@ test("selected shipped Chrono groups retain authored periods and synchronize eve
     await controls.getByRole("button", { name: "Previous frame", exact: true }).click();
     await expect(controls.locator("time")).not.toHaveAttribute("datetime", iso(group.period.end));
   }
+  expect(errors).toEqual([]);
+});
+
+test("Whole page opens latest temporal observations and keeps Collection snapshots outside synchronization", async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = observeErrors(page);
+  await openShipped(page);
+  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  const controls = page.getByRole("region", { name: "Chrono playback controls" });
+  await controls.getByRole("combobox", { name: "Chrono source" }).selectOption("page:");
+  const frame = controls.getByRole("slider", { name: "Playback frame" });
+  await expect(controls.getByRole("combobox", { name: "Chrono chart scope" })).toHaveValue("all-page");
+  await expect.poll(() => frame.inputValue()).toBe(await frame.getAttribute("max"));
+  const biomedical = charts.filter(({ pageId }) => pageId === "biomedical");
+  await expect(page.locator("[data-panel-id]")).toHaveCount(biomedical.length);
+  for (const id of ["bio_confirmed_cases", "bio_hospital_capacity_bullet", "bio_vaccination_current", "bio_municipality_aggregate"]) {
+    const chart = charts.find((entry) => entry.chart.id === id)?.chart;
+    expect(chart).toBeDefined();
+    const target = panel(page, id);
+    await chartReady(target, chart);
+    if (chart.presentation?.collection) {
+      const ledger = JSON.parse(await target.locator("[data-canonical-runtime-ledger]").getAttribute("data-canonical-runtime-ledger"));
+      expect(ledger.time?.activeEpochMs ?? null).toBeNull();
+    }
+    await expect(target).not.toContainText(/No measurement at this time|does not have a bound temporal role/);
+  }
+  await expect(page.getByText("This synchronized chart does not have a bound temporal role.", { exact: true })).toHaveCount(0);
+  // Seeking before the national data begins must retain a truthful missing state.
+  await frame.fill(await frame.getAttribute("min"));
+  await expect(panel(page, "bio_confirmed_cases")).toContainText("No measurement at this time");
+  await chartReady(panel(page, "bio_hospital_capacity_bullet"), charts.find(({ chart }) => chart.id === "bio_hospital_capacity_bullet").chart);
+  // Both source selectors must restore group scope after Whole page.
+  await controls.getByRole("combobox", { name: "Chrono source" }).selectOption("group:national_outbreak");
+  await expect(controls.getByRole("combobox", { name: "Chrono chart scope" })).toHaveValue("group-only");
+  await expect(page.locator("[data-panel-id]")).toHaveCount(5);
   expect(errors).toEqual([]);
 });
 

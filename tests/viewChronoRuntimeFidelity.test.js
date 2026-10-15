@@ -2,12 +2,44 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { createServer } from "vite";
+import { reducePlaybackState, initialPlaybackState } from "../src/charting/time/playbackReducer.js";
 
 const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
 const availability = await vite.ssrLoadModule("/src/components/playback/playbackAvailability.js");
 const controller = await vite.ssrLoadModule("/src/components/playback/ChronoController.jsx");
 const providerRuntime = await vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx");
 await vite.close();
+
+test("selecting a saved group restores Group Only after Whole page or View all charts", () => {
+  const group = reducePlaybackState({ ...initialPlaybackState, scope: "all-page" }, { type: "setGroup", groupId: "national" });
+  assert.equal(group.scope, "group-only");
+  assert.equal(reducePlaybackState(group, { type: "setGroup", groupId: null }).scope, "all-page");
+});
+
+test("Whole page excludes Collection and non-temporal charts from both its clock and synchronized members", () => {
+  const temporal = { id: "cases", typeId: "line", sourceId: "source", roles: { observation: { field: "date" }, measurements: [{ field: "value" }] } };
+  const charts = [temporal,
+    { ...temporal, id: "collection", presentation: { collection: {} } },
+    { id: "snapshot", typeId: "table", sourceId: "source", roles: { columns: [{ field: "value" }] } },
+  ];
+  const playback = providerRuntime.buildDefaultPagePlayback(charts, {
+    charts, timezone: "UTC", loadedData: { source: [{ date: "2027-05-01", value: 1 }, { date: "2027-05-04", value: 4 }] },
+    profiles: { source: { columns: [{ name: "date", type: "temporal" }, { name: "value", type: "numeric" }] } },
+  });
+  assert.deepEqual(playback.group.members.map(({ chartId }) => chartId), ["cases"]);
+  assert.equal(playback.group.matching.policy, "lastKnown");
+  assert.deepEqual(playback.clock, [Date.parse("2027-05-01"), Date.parse("2027-05-04")]);
+});
+
+test("Whole page selection opens its latest real frame while saved groups retain their start", () => {
+  const actions = [];
+  providerRuntime.dispatchPlaybackAction((action) => actions.push(action), { type: "setGroup", groupId: null }, { defaultPageClock: [1, 2, 3] });
+  let state = initialPlaybackState;
+  for (const action of actions) state = reducePlaybackState(state, action);
+  assert.equal(state.activeIndex, 2);
+  assert.equal(state.scope, "all-page");
+  assert.equal(reducePlaybackState(state, { type: "setGroup", groupId: "national" }).activeIndex, 0);
+});
 
 const DAY = 86_400_000;
 const MAY_1 = Date.parse("2027-05-01T00:00:00.000Z");
