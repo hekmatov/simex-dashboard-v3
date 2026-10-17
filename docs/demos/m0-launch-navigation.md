@@ -1,6 +1,6 @@
 # M0 practitioner launch and navigation walkthrough
 
-Status: five-minute walkthrough and prior Chrono recheck accepted by the practitioner on 12 October 2026. Additional feedback repairs and the 15 October Chrono playback correction await practitioner recheck.
+Status: five-minute walkthrough and prior Chrono recheck accepted on 12 October 2026. On 17 October the practitioner passed the 15 October Chrono correction (“check passed”), then explicitly accepted all five 12 October feedback areas (“All five checks passed”). These acceptances apply to the current port-4283 candidate `b7205d7c`; final local integration and hosted-CI readiness are separate boundaries.
 
 ## Live candidate
 
@@ -65,13 +65,13 @@ $previewProcess.Id | Set-Content -LiteralPath (Join-Path $previewDir 'server.pid
 
 | Field | Record after the session |
 | --- | --- |
-| Participant role and date | User, 12 October 2026 |
+| Participant role and date | User, 12 and 17 October 2026 |
 | App version, package identity, browser and device | Pending |
 | Launch completed without repair | Passed within the reported five-minute walkthrough |
 | Pages and mode transitions completed | Passed within the reported five-minute walkthrough |
 | Three comparisons the practitioner wants | Pending |
-| Confusing controls or incorrect content | Remaining 12 October feedback and 15 October Chrono playback correction listed above; repairs await recheck |
-| Actionable follow-up, owner and priority | Current owner: practitioner feedback repairs; recheck at 4283 |
-| Practitioner acceptance or rejection, in their words | “Other than those comments, the five-minute walkthrough and chrono recheck both passed” |
+| Confusing controls or incorrect content | All five 12 October repair areas and the 15 October Chrono correction accepted at 4283 |
+| Actionable follow-up, owner and priority | Current owner: final M0 local integration and hosted-CI readiness; retain acceptance unless a correction affects its journey |
+| Practitioner acceptance or rejection, in their words | 12 October: “Other than those comments, the five-minute walkthrough and chrono recheck both passed”. 17 October: “check passed”, then “All five checks passed. Record the 12 October feedback repairs as accepted and proceed with the next steps for closing M0.” |
 
-These checks prepare the practitioner session; they do not constitute human acceptance. The 223 historical M1 geometry findings remain open, and this repair did not rerun the density audit or full repository gates. Hosted CI and bundle-budget ratification also remain open. No push, merge or deployment was performed.
+The recorded statements supply human acceptance for those journeys, not whole-M0 closure. The 223 historical M1 geometry findings remain open. Final integration results belong in the rolling checkpoint; hosted CI and bundle-budget ratification remain separate. No push, merge or deployment was performed.

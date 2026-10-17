@@ -218,7 +218,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
       fits: document.documentElement.scrollWidth <= document.documentElement.clientWidth
         && document.documentElement.scrollHeight <= document.documentElement.clientHeight,
     }));
-    assert.deepEqual(geometry, { width: 1366, height: 768, fits: true });
+    assert.deepEqual(geometry, { width: 1280, height: 800, fits: true });
     assert.deepEqual(externalRequests, []);
     t.diagnostic(`offline Audience ${geometry.width}x${geometry.height}; MIME=image/png; traversal=${containment}`);
     await context.close();

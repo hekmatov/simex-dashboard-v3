@@ -16,7 +16,7 @@ test("production View launches from the built static output", {
   await expect(page.locator('button[data-dashboard-mode="view"]')).toBeVisible();
   await openDashboardPage(page, "biomedical");
   const chart = page.getByRole("article").filter({
-    has: page.getByRole("heading", { name: "International Confirmed Cases (Cumulative)", exact: true }),
+    has: page.getByRole("heading", { name: "Confirmed cases", exact: true }),
   });
   await chart.scrollIntoViewIfNeeded();
   await expect(chart).toBeVisible();

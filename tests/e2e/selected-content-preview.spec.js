@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
+import { openAudienceSession } from "./support/present-audience-workflow.js";
 
 const shipped = JSON.parse(await readFile(new URL("../../public/config/dashboard.json", import.meta.url), "utf8"));
 const charts = shipped.pages.flatMap((page) => page.sections.flatMap((section) =>
@@ -10,7 +11,7 @@ const mode = (page, name) => page.getByLabel("Dashboard mode").getByRole("button
 const panel = (page, id) => page.locator(`[data-panel-id="${id}"]`);
 const iso = (date) => `${date}T00:00:00.000Z`;
 
-test.use({ viewport: { width: 1440, height: 1000 } });
+test.use({ viewport: { width: 1440, height: 1000 }, storageState: { cookies: [], origins: [] } });
 
 test("selected shipped content renders every authored chart type without a fixture", async ({ page }) => {
   test.setTimeout(120_000);
@@ -109,10 +110,10 @@ test("selected shipped groups play pause seek and change period in a real Audien
   const national = shipped.chronoGroups.find(({ id }) => id === "national_outbreak");
   await source.selectOption(`group:${municipal.id}`);
   for (const { chartId } of municipal.members) await page.locator(`[data-presentable-item-id="${chartId}"]`).getByRole("checkbox").check();
-  const popupPromise = page.waitForEvent("popup");
-  await page.getByRole("button", { name: "Open audience display", exact: true }).click();
-  const audience = await popupPromise;
-  observeErrors(audience, errors);
+  // The source server can still be loading the popup graph when the page event
+  // fires. Establish its destination and DOM before timing the connection.
+  page.context().once("page", (popup) => observeErrors(popup, errors));
+  const { popup: audience } = await openAudienceSession(page, { waitForBaseline: false });
   const output = audience.locator(".audience-display");
   await expect(output).toHaveAttribute("data-connection-status", "connected");
   await expect(output).toHaveAttribute("data-output-mode", "active");

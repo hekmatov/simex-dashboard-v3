@@ -763,7 +763,8 @@ function AppContent({ releaseProfile = null }) {
         throw loadError;
       }
       try {
-        const persisted = persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
+        // Browser persistence has a strict quota; keep its JSON compact.
+        const persisted = persistDashboardStorage(JSON.stringify(prepared.storageConfig));
         if (!persisted) {
           if (requireDurableStorage) {
             await prepared.rollback();
@@ -815,7 +816,7 @@ function AppContent({ releaseProfile = null }) {
       );
       validateConfigurationForPersistence(stored, configuredFallbackProfiles);
       const prepared = await dashboardAssetPersistence.prepare(stored);
-      persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
+      persistDashboardStorage(JSON.stringify(prepared.storageConfig));
       setError(null);
       setOperationError("");
       return nextConfig;

@@ -84,9 +84,9 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(
     baselineHeading,
   );
-  await expect.poll(() => storedBiomedicalTitle(page)).toBe(
-    baselineHeading,
-  );
+  // Discard can restore an unchanged durable baseline without writing a new
+  // localStorage record; the pending callback must stay cancelled either way.
+  await expect.poll(async () => (await storedBiomedicalTitle(page)) ?? baselineHeading).toBe(baselineHeading);
 });
 
 async function openBiomedicalPageInspector(page) {
@@ -99,7 +99,7 @@ async function openBiomedicalPageInspector(page) {
 function storedBiomedicalTitle(page) {
   return page.evaluate((key) => {
     const config = JSON.parse(localStorage.getItem(key));
-    return config.pages.find(({ id }) => id === "biomedical").title;
+    return config?.pages.find(({ id }) => id === "biomedical").title ?? null;
   }, STORAGE_KEY);
 }
 

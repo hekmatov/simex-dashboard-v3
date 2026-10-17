@@ -259,6 +259,7 @@ test("priority collections remain independent while Chrono advances", async ({
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
   await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
+  await controls.getByLabel("Chrono chart scope").selectOption("all-page");
   await controls.getByLabel("Playback frame")
     .fill(String(Date.parse("2027-02-21T00:00:00.000Z")));
   await expect(page.locator(
@@ -405,6 +406,7 @@ test("collection carousels remain independent while Chrono plays", async ({
   await chronoButton.click();
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
   await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
+  await controls.getByLabel("Chrono chart scope").selectOption("all-page");
   await controls.getByLabel("Playback frame")
     .fill(String(Date.parse("2027-02-20T00:00:00.000Z")));
   await controls.getByRole("button", { name: "Play Chrono" }).click();

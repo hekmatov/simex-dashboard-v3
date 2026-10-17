@@ -81,6 +81,17 @@ test("fixture selection is explicit, cookie-isolated and resettable without repl
   assert.equal((await fetch(configUrl).then((response) => response.json())).id, "shipped-harness-fixture");
 });
 
+test("historical fixture catalogue and companion handshake stay paired while shipped requests remain untouched", async (t) => {
+  const { appUrl } = await startHarness(t, { mode: "source", appPort: 43_183, controlPort: 43_184, staleDist: false });
+  const headers = { cookie: "simex-e2e-fixture=legacy-contract" };
+  const dashboard = await fetch(`${appUrl}/config/dashboard.json`, { headers }).then((r) => r.json());
+  assert.ok(dashboard.pages.flatMap((p) => p.sections.flatMap((s) => s.panels)).some(({ id }) => id === "chart-line-mtgz6v76"));
+  const catalogue = await fetch(`${appUrl}/integration/quorum-chart-catalogue.json`, { headers }).then((r) => r.json());
+  const bootstrap = await fetch(`${appUrl}/companion/bootstrap`, { headers }).then((r) => r.json());
+  assert.equal(bootstrap.catalogue_digest, catalogue.digest);
+  assert.equal((await fetch(`${appUrl}/config/dashboard.json`).then((r) => r.json())).id, "shipped-harness-fixture");
+});
+
 test("harness accepts isolated app and control ports", async (t) => {
   const { appUrl, controlUrl } = await startHarness(t, {
     mode: "source",

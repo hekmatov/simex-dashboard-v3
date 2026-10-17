@@ -13,7 +13,7 @@ const editedBriefing = "M0 saved briefing: exercise team ready.";
 const mode = (page, name) => page.getByLabel("Dashboard mode").getByRole("button", { name, exact: true });
 const panel = (page, id) => page.locator(`[data-panel-id="${id}"]`);
 
-test.use({ viewport: { width: 1440, height: 1000 } });
+test.use({ viewport: { width: 1440, height: 1000 }, storageState: { cookies: [], origins: [] } });
 
 test("M0 fixture launches, saves QMD through reload, reaches Present and resets without changing shipped files", async ({ page }) => {
   test.setTimeout(60_000);

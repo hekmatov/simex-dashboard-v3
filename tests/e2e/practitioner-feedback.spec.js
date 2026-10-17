@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
-test.use({ viewport: { width: 1440, height: 1000 } });
+test.use({ viewport: { width: 1440, height: 1000 }, storageState: { cookies: [], origins: [] } });
 test.setTimeout(120_000);
 const mode = (page, name) => page.getByLabel("Dashboard mode").getByRole("button", { name, exact: true });
 const commands = (page) => page.getByRole("region", { name: "Build commands" });

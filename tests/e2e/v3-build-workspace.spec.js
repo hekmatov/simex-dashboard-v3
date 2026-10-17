@@ -297,7 +297,7 @@ test("Scenario Passport owns direct identity edits and package operations in Bui
   await expect(passport).toBeVisible();
   await expect(passport.getByRole("button", { name: "Upload Dashboard Package", exact: true })).toBeEnabled();
   await expect(passport.getByRole("button", { name: "Download Dashboard Package", exact: true })).toBeEnabled();
-  await expect(passport.getByRole("button", { name: "Discard Build changes", exact: true })).toBeEnabled();
+  await expect(passport.getByRole("button", { name: "Discard Build changes", exact: true })).toBeDisabled();
   await expect(passport.getByRole("button", { name: "Clear dashboard", exact: true })).toBeEnabled();
   page.once("dialog", (dialog) => dialog.accept("Scenario-Passport-test"));
   const [download] = await Promise.all([
@@ -308,6 +308,7 @@ test("Scenario Passport owns direct identity edits and package operations in Bui
 
   await passport.getByRole("button", { name: /^Edit Program:/ }).click();
   await passport.getByLabel("Program", { exact: true }).fill("Unsaved response program");
+  await expect(passport.getByRole("button", { name: "Discard Build changes", exact: true })).toBeDisabled();
   await expect(passport).toContainText("Unsaved Scenario");
   await expect(passport.getByRole("button", { name: "Upload Dashboard Package", exact: true })).toBeDisabled();
   await expect(passport).toContainText("Save or discard the Scenario changes");

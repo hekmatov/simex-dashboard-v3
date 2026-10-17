@@ -111,6 +111,8 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Operation status baseline");
+  await expect(page.getByRole("button", { name: "Finish Build", exact: true })).toBeEnabled();
 
   await page.evaluate(() => {
     window.__stage1OperationHistory = [];
@@ -318,7 +320,7 @@ test("disabled Finish Build exposes its blocking reason on pointer hover", async
 
   await quick.getByRole("button", { name: "Reset", exact: true }).click();
   await expect(quick).toHaveAttribute("data-chart-edit-dirty", "false");
-  await expect(finish).toBeEnabled();
+  await expect(finish).toBeDisabled();
   await quick.getByRole("button", { name: "Close", exact: true }).click();
   await expect(quick).toHaveCount(0);
 });

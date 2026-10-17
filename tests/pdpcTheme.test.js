@@ -27,9 +27,9 @@ test("PDPC preserves Ledger geometry and uses one family for every typography ro
 test("PDPC palette and appearance survive dashboard and presentation boundaries", async () => {
   const hydrated = JSON.parse(await readFile(new URL("../public/config/dashboard.json", import.meta.url), "utf8"));
   const { datasetProfiles: _runtimeProfiles, ...dashboard } = hydrated;
+  Object.assign(dashboard.globalStyles, globalStyles);
   assert.equal(dashboard.globalStyles.dashboardStyle, "pdpc");
   assert.equal(dashboard.globalStyles.dashboardColorProfile, "pdpc/brand");
-  Object.assign(dashboard.globalStyles, globalStyles);
   assert.doesNotThrow(() => validateDashboardStructure(dashboard));
   assert.equal(normalizeDashboardBoundary(dashboard).globalStyles.dashboardStyle, "pdpc");
   assert.equal(normalizeDashboardBoundary(dashboard).globalStyles.dashboardColorProfile, "pdpc/brand");

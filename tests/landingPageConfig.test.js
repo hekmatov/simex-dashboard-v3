@@ -25,7 +25,7 @@ test("dashboard package contains only the Home preference and ordinary Pages", (
   assert.deepEqual(dashboard.home, { enabled: true });
   assert.equal(dashboard.pages.some(({ id }) => id === "home"), false);
   assert.equal(dashboard.pages.some(({ id }) => id === "old-homepage-content"), false);
-  assert.deepEqual(dashboard.pages.map(({ id }) => id), ["scenario", "biomedical", "socio_economic"]);
+  assert.deepEqual(dashboard.pages.map(({ id }) => id), ["biomedical", "socio_economic"]);
 });
 
 test("the builder FAQ provides practical first-time orientation", () => {

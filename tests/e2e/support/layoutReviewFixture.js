@@ -22,6 +22,8 @@ export function withWrappedCasesPanel(dashboard) {
 
 export function withPageRemovalGroups(dashboard) {
   const fixture = structuredClone(dashboard);
+  const actualIds = new Set(fixture.pages.flatMap(({ sections }) => sections.flatMap(({ panels }) => panels.map((panel) => (panel.chart ?? panel).id))));
+  const historical = actualIds.has(SHIPPED_CASE_CHART_ID);
   fixture.chronoGroups = [
     {
       id: REMOVED_PAGE_GROUP_ID,
@@ -30,8 +32,8 @@ export function withPageRemovalGroups(dashboard) {
       matching: { policy: "exact" },
       secondsPerFrame: 1,
       members: [
-        { chartId: SHIPPED_CASE_CHART_ID, timeRole: "observation" },
-        { chartId: OTHER_BIOMEDICAL_CHART_ID, timeRole: "observation" },
+        { chartId: historical ? SHIPPED_CASE_CHART_ID : "bio_confirmed_cases", timeRole: "observation" },
+        { chartId: historical ? OTHER_BIOMEDICAL_CHART_ID : "bio_daily_cases_bar", timeRole: "observation" },
       ],
     },
     {
@@ -40,7 +42,7 @@ export function withPageRemovalGroups(dashboard) {
       period: { start: "2021-01-01", end: "2027-12-31" },
       matching: { policy: "exact" },
       secondsPerFrame: 1,
-      members: [{ chartId: RETAINED_SOCIO_CHART_ID, timeRole: "observation" }],
+      members: [{ chartId: historical ? RETAINED_SOCIO_CHART_ID : "socio_trust_trend", timeRole: "observation" }],
     },
   ];
   return fixture;

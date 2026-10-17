@@ -6,7 +6,7 @@ import { withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 const storageKey = "simex-dashboard-config-v3-three-mode-v1";
 const appVersion = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8")).version;
 
-test.use({ viewport: { width: 1440, height: 1000 } });
+test.use({ viewport: { width: 1440, height: 1000 }, storageState: { cookies: [], origins: [] } });
 
 test("every shipped Page renders in View and Build, then eligible content reaches Present", async ({ page }) => {
   test.setTimeout(60_000);

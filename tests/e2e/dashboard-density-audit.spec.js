@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { LEGACY_STORAGE_STATE } from "./support/legacyContractFixture.js";
 
 import {
   DASHBOARD_SURFACE_MANIFEST,
@@ -108,6 +109,7 @@ test("complete dashboard surface manifest records density evidence", async ({ br
         `Set catalogue mode for ${entry.id}`,
       );
       browserContext = await browser.newContext({
+        storageState: LEGACY_STORAGE_STATE,
         baseURL: testInfo.project.use.baseURL ?? "http://127.0.0.1:4173",
         viewport: entry.viewport,
         serviceWorkers: "block",

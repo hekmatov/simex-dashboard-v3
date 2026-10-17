@@ -117,7 +117,7 @@ const APPROVED_TOKEN_MATRIX = readApprovedTokenMatrix(await readFile(
 test.describe.configure({ timeout: 150_000 });
 
 test("target collections inherit dark shared surfaces and text", async ({ page }) => {
-  const dashboard = JSON.parse(await readFile(new URL("../../public/config/dashboard.json", import.meta.url), "utf8"));
+  const dashboard = JSON.parse(await readFile(new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url), "utf8"));
   const collection = createChartDraft("bullet", {
     id: "style-bullet",
     title: "Institutional trust",
@@ -266,7 +266,7 @@ test("native style signatures resolve real shell, section, panel, and control pa
 
 test("section headers adapt only to title and description content", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
-  const dashboard = JSON.parse(await readFile(new URL("../../public/config/dashboard.json", import.meta.url), "utf8"));
+  const dashboard = JSON.parse(await readFile(new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url), "utf8"));
   dashboard.pages.find(({ id }) => id === "biomedical").sections[0].description = "Current public-health context";
   await page.addInitScript((fixture) => {
     localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(fixture));

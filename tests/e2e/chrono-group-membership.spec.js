@@ -8,7 +8,7 @@ const charts = shipped.pages.flatMap((page) => page.sections.flatMap((section) =
 const group = shipped.chronoGroups.find(({ id }) => id === "national_outbreak");
 const vaccination = charts.find(({ id }) => id === "bio_vaccination_rate");
 
-test.use({ viewport: { width: 1440, height: 900 } });
+test.use({ viewport: { width: 1440, height: 900 }, storageState: { cookies: [], origins: [] } });
 
 test("Chrono membership omits Collection displays and warning navigation reaches the named chart", async ({ page }) => {
   test.setTimeout(90_000);

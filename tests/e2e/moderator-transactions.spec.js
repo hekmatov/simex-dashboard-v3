@@ -316,6 +316,11 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
     finish.click();
     return state;
   });
+  await expect(createDialog).toBeHidden();
+  const finishBuild = page.getByRole("button", { name: "Finish Build", exact: true });
+  await expect(finishBuild).toBeEnabled();
+  await finishBuild.click();
+  await expect(page.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
 
   const saved = await storedDashboard(page);
@@ -324,7 +329,7 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
     actionState: {
       addDisabled: false,
       createDisabled: false,
-      finishDisabled: false,
+      finishDisabled: true,
     },
     attempts: 1,
   });
@@ -503,11 +508,12 @@ test("reset completes with session fallback when browser storage is full", async
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
   const baselineTitle = (await page.locator(".dashboard-brand-block h1").textContent()).trim();
-  const durableBefore = await storedDashboard(page);
   const editedLabel = "Draft retained after reset failure";
   const map = structureRail(page);
   const pageTitleInput = propertiesPane(page).getByLabel("Page title", { exact: true });
   await pageTitleInput.fill(editedLabel);
+  await expect.poll(async () => (await storedDashboard(page))?.pages.find(({ id }) => id === "biomedical")?.title).toBe(editedLabel);
+  const durableBefore = await storedDashboard(page);
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
@@ -521,7 +527,7 @@ test("reset completes with session fallback when browser storage is full", async
   await expect(confirmation).toBeHidden();
   await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
     .toBeVisible();
-  await expect(page.getByRole("button", { name: "View", exact: true }))
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(baselineTitle);
   expect(await storedDashboard(page)).toEqual(durableBefore);
@@ -559,12 +565,12 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard Build changes?" })
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(baseline.pageTitle);
-  await expect(page.getByRole("heading", { name: baseline.sectionTitle, exact: true }))
+  await expect(page.getByRole("button", { name: `Edit Section title: ${baseline.sectionTitle}`, exact: true }))
     .toBeVisible();
 
-  await page.getByRole("button", { name: "Build" }).click();
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Pending Build work" })).toHaveCount(0);
   const attemptsBeforeDiscard = await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
@@ -655,16 +661,17 @@ test("edit-session save and reset use session fallback when storage is full", as
   await sectionTitleTrigger.click();
   await page.getByLabel("Section title", { exact: true }).first()
     .fill("Reset-only pending title");
+  await page.getByLabel("Section title", { exact: true }).first().press("Enter");
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await confirmation.getByRole("button", { name: "Discard Build changes", exact: true }).click();
   await expect(confirmation).toBeHidden();
-  await expect(page.getByRole("button", { name: "View", exact: true }))
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(sessionTitle);
-  await expect(page.getByRole("heading", { name: sectionTitle, exact: true }))
+  await expect(page.getByRole("button", { name: `Edit Section title: ${sectionTitle}`, exact: true }))
     .toBeVisible();
 });
 
@@ -680,7 +687,10 @@ test("final Build remains locked until dirty chart edit context resolves", async
   const attemptsBeforeDiscard = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
   await discardFullChartEditor(page, editor, { confirmationExpected: true });
   await expect(editor).toBeHidden();
-  await expect(finishBuild).toBeEnabled();
+  await expect(finishBuild).toBeDisabled();
   expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))
     .toBe(attemptsBeforeDiscard);
+  await structureRail(page).locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
+  await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Build session after chart discard");
+  await expect(finishBuild).toBeEnabled();
 });

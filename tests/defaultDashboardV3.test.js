@@ -32,63 +32,217 @@ const ALIASES_PATH = path.join(ROOT, "public", "config", "chart-aliases.json");
 const PROFILES_PATH = path.join(ROOT, "public", "config", "dataset-profiles.json");
 
 const EXPECTED_PAGE_SECTIONS = {
-  scenario: {
-    scenario_section_1788163593858: [
-      "static-cc1d15c3-dba6-4196-8293-7004cb03fffd",
-      "static-a98417d0-1c09-4abf-b9b4-462dd591ef30",
+  "biomedical": {
+    "outbreak_dynamics": [
+      "bio_confirmed_cases",
+      "bio_daily_cases_bar",
+      "bio_new_cases_deaths",
+      "bio_r_values",
+      "bio_region_comparison",
+      "bio_mortality_age",
+      "bio_case_deltas",
+      "bio_municipality_choropleth_animation",
+      "bio_municipality_aggregate",
+      "bio_population_infection_bubble",
+      "bio_current_cases_kpi"
     ],
-    scenario_section_1788177898051: ["static-d2adf346-9ba9-4230-8ae0-2fa8161ddc1d"],
+    "health_system": [
+      "bio_icu_capacity_bullet",
+      "bio_hospital_capacity_bullet",
+      "bio_icu_occupancy",
+      "bio_hospital_occupancy",
+      "bio_admissions",
+      "bio_delayed_healthcare",
+      "bio_testing_overlay",
+      "bio_occupancy_collection"
+    ],
+    "environmental_surveillance": [
+      "bio_wastewater_map",
+      "bio_wastewater_province"
+    ],
+    "vaccination": [
+      "bio_vaccination_current",
+      "bio_vaccination_rate"
+    ]
   },
-  biomedical: {
-    biomedical_section: [
-      "chart-line-mtgytrwj",
-      "static-998c93eb-c7d1-422b-8062-e9f2122b2399",
-      "static-1df51cee-adea-4d7b-982f-5a50a6ba73d1",
-      "static-c1a6ffb8-0c32-4ad2-bb54-16973ec3b2db",
+  "socio_economic": {
+    "public_response": [
+      "chart-bar-f349044e-4584-47c4-870f-ecccba978c53",
+      "socio_risk_deltas",
+      "socio_adherence",
+      "socio_values",
+      "socio_values_deltas"
     ],
-    biomedical_section_1788164839437: [
-      "chart-line-mtgz6v76",
-      "static-be2ad3bd-ca18-44bf-9e6a-46f81ed9a98d",
+    "trust_wellbeing": [
+      "socio_trust_trend",
+      "socio_trust_meter",
+      "socio_loneliness",
+      "socio_mental_wellbeing",
+      "socio_lifestyle",
+      "socio_resilience"
     ],
-  },
-  socio_economic: {
-    socio_economic_section: [
-      "static-de5891b4-3c59-4108-aa60-0caccfafc835",
-      "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad",
-    ],
-    socio_economic_section_1788512378053: [
-      "chart-groupedBar-eafbfdd0-e768-4303-8df1-6de4f5515d73",
-      "chart-horizontalBar-mthbdhxi",
-    ],
-    socio_economic_section_1788512398466: [
-      "chart-bar-44cbf87a-e849-4c92-a797-ebf26c444ed7",
-      "chart-pie-e58760c5-7b89-440d-bf42-f8115642210b",
-    ],
-    socio_economic_section_1788715418554: [
-      "static-e0ee5e1e-d221-42bd-8e5a-0616d95e6b09",
-      "chart-line-a01a017d-96f1-440b-b24a-bcf2e30da1cc",
-    ],
-  },
+    "economy_staffing": [
+      "socio_business_closures",
+      "socio_unemployment",
+      "socio_healthcare_absenteeism",
+      "socio_education_absenteeism"
+    ]
+  }
 };
 
 const EXPECTED_CHART_BINDINGS = {
-  "static-cc1d15c3-dba6-4196-8293-7004cb03fffd": ["image", "static-cc1d15c3-dba6-4196-8293-7004cb03fffd-source"],
-  "static-a98417d0-1c09-4abf-b9b4-462dd591ef30": ["freeText", "static-a98417d0-1c09-4abf-b9b4-462dd591ef30-source"],
-  "static-d2adf346-9ba9-4230-8ae0-2fa8161ddc1d": ["freeText", "static-d2adf346-9ba9-4230-8ae0-2fa8161ddc1d-source"],
-  "chart-line-mtgytrwj": ["line", "upload-cases-wcph-internationaal-2"],
-  "static-998c93eb-c7d1-422b-8062-e9f2122b2399": ["freeText", "static-998c93eb-c7d1-422b-8062-e9f2122b2399-source"],
-  "static-1df51cee-adea-4d7b-982f-5a50a6ba73d1": ["freeText", "static-1df51cee-adea-4d7b-982f-5a50a6ba73d1-source"],
-  "static-c1a6ffb8-0c32-4ad2-bb54-16973ec3b2db": ["freeText", "static-c1a6ffb8-0c32-4ad2-bb54-16973ec3b2db-source"],
-  "chart-line-mtgz6v76": ["line", "upload-cases-wcph-eldoria-3"],
-  "static-be2ad3bd-ca18-44bf-9e6a-46f81ed9a98d": ["freeText", "static-be2ad3bd-ca18-44bf-9e6a-46f81ed9a98d-source"],
-  "static-de5891b4-3c59-4108-aa60-0caccfafc835": ["freeText", "static-de5891b4-3c59-4108-aa60-0caccfafc835-source"],
-  "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad": ["horizontalBar", "upload-eldoria-loneliness"],
-  "chart-groupedBar-eafbfdd0-e768-4303-8df1-6de4f5515d73": ["groupedBar", "upload-eldoria-institutional-trust-comparison-fictional"],
-  "chart-horizontalBar-mthbdhxi": ["horizontalBar", "upload-eldoria-baseline-public-support"],
-  "chart-bar-44cbf87a-e849-4c92-a797-ebf26c444ed7": ["horizontalStackedBar", "upload-eldoria-income-distribution"],
-  "chart-pie-e58760c5-7b89-440d-bf42-f8115642210b": ["pie", "upload-eldoria-work-sectors"],
-  "static-e0ee5e1e-d221-42bd-8e5a-0616d95e6b09": ["freeText", "static-e0ee5e1e-d221-42bd-8e5a-0616d95e6b09-source"],
-  "chart-line-a01a017d-96f1-440b-b24a-bcf2e30da1cc": ["line", "upload-eldoria-misinformation-2021-2027-fictional"],
+  "bio_confirmed_cases": [
+    "line",
+    "bio_cases"
+  ],
+  "bio_daily_cases_bar": [
+    "bar",
+    "bio_cases"
+  ],
+  "bio_new_cases_deaths": [
+    "mixed",
+    "bio_cases"
+  ],
+  "bio_r_values": [
+    "line",
+    "bio_r_values"
+  ],
+  "bio_region_comparison": [
+    "horizontalBar",
+    "bio_province_cases_latest"
+  ],
+  "bio_mortality_age": [
+    "pie",
+    "bio_mortality"
+  ],
+  "bio_case_deltas": [
+    "deltaList",
+    "bio_province_deltas"
+  ],
+  "bio_municipality_choropleth_animation": [
+    "chronoChoroplethMap",
+    "bio_municipal_map_timeline"
+  ],
+  "bio_municipality_aggregate": [
+    "line",
+    "bio_municipal_aggregate_timeseries"
+  ],
+  "bio_population_infection_bubble": [
+    "bubble",
+    "bio_municipal_latest_bubble"
+  ],
+  "bio_current_cases_kpi": [
+    "kpi",
+    "bio_cases"
+  ],
+  "bio_icu_capacity_bullet": [
+    "bullet",
+    "bio_icu_occupancy"
+  ],
+  "bio_hospital_capacity_bullet": [
+    "bullet",
+    "bio_hospital_occupancy"
+  ],
+  "bio_icu_occupancy": [
+    "line",
+    "bio_icu_occupancy"
+  ],
+  "bio_hospital_occupancy": [
+    "line",
+    "bio_hospital_occupancy"
+  ],
+  "bio_admissions": [
+    "groupedBar",
+    "bio_admissions"
+  ],
+  "bio_delayed_healthcare": [
+    "groupedBar",
+    "bio_healthcare_cases"
+  ],
+  "bio_testing_overlay": [
+    "mixed",
+    "bio_testing"
+  ],
+  "bio_occupancy_collection": [
+    "gauge",
+    "bio_occupancy_gauges"
+  ],
+  "bio_wastewater_map": [
+    "mapScatter",
+    "bio_wastewater_latest"
+  ],
+  "bio_wastewater_province": [
+    "horizontalBar",
+    "bio_wastewater_latest"
+  ],
+  "bio_vaccination_current": [
+    "table",
+    "bio_vaccination_current"
+  ],
+  "bio_vaccination_rate": [
+    "line",
+    "bio_vaccination_timeseries"
+  ],
+  "chart-bar-f349044e-4584-47c4-870f-ecccba978c53": [
+    "bar",
+    "socio_business_closures"
+  ],
+  "socio_risk_deltas": [
+    "deltaList",
+    "socio_risk_deltas"
+  ],
+  "socio_adherence": [
+    "stackedBar",
+    "socio_behaviour"
+  ],
+  "socio_values": [
+    "horizontalBar",
+    "socio_values"
+  ],
+  "socio_values_deltas": [
+    "deltaList",
+    "socio_values_deltas"
+  ],
+  "socio_trust_trend": [
+    "line",
+    "socio_trust"
+  ],
+  "socio_trust_meter": [
+    "gauge",
+    "socio_trust"
+  ],
+  "socio_loneliness": [
+    "line",
+    "socio_loneliness"
+  ],
+  "socio_mental_wellbeing": [
+    "stackedBar",
+    "socio_mental_wellbeing"
+  ],
+  "socio_lifestyle": [
+    "stackedBar",
+    "socio_lifestyle"
+  ],
+  "socio_resilience": [
+    "stackedBar",
+    "socio_resilience"
+  ],
+  "socio_business_closures": [
+    "groupedBar",
+    "socio_business_closures"
+  ],
+  "socio_unemployment": [
+    "line",
+    "socio_unemployment"
+  ],
+  "socio_healthcare_absenteeism": [
+    "line",
+    "socio_healthcare_absenteeism"
+  ],
+  "socio_education_absenteeism": [
+    "line",
+    "socio_education_absenteeism"
+  ]
 };
 
 const LEGACY_CHART_KEYS = new Set([
@@ -155,8 +309,9 @@ function createSourceLoader(dashboard) {
     async geo(sourceId) {
       if (geo.has(sourceId)) return geo.get(sourceId);
       const source = dashboard.dataSources[sourceId];
-      assert.equal(source?.kind, "geojson", `map source ${sourceId} must be tracked GeoJSON`);
-      const parsed = await loadJson(path.join(ROOT, "public", source.path));
+      assert.ok(source?.kind === "geojson" || (source?.kind === "dataset" && source.type === "uploadedGeoJson"), `map source ${sourceId} must be packaged or embedded GeoJSON`);
+      const parsed = source.kind === "geojson" ? await loadJson(path.join(ROOT, "public", source.path)) : source.geoJson;
+      assert.equal(parsed.type, "FeatureCollection", sourceId);
       geo.set(sourceId, parsed);
       return parsed;
     },
@@ -180,14 +335,14 @@ test("the curated dashboard is a clean version 6 configuration with exact analyt
     EXPECTED_PAGE_SECTIONS,
   );
   const charts = configuredCharts(dashboard).map(({ chart }) => chart);
-  assert.equal(charts.length, 17);
+  assert.equal(charts.length, 38);
   assert.deepEqual(
     Object.fromEntries(charts.map((chart) => [chart.id, [chart.typeId, chart.sourceId]])),
     EXPECTED_CHART_BINDINGS,
   );
   assert.deepEqual(
     [...new Set(charts.map(({ typeId }) => typeId))].sort(),
-    ["freeText", "groupedBar", "horizontalBar", "horizontalStackedBar", "image", "line", "pie"],
+    ["bar", "bubble", "bullet", "chronoChoroplethMap", "deltaList", "gauge", "groupedBar", "horizontalBar", "kpi", "line", "mapScatter", "mixed", "pie", "stackedBar", "table"],
   );
   assert.deepEqual(
     charts.reduce((counts, chart) => {
@@ -195,7 +350,7 @@ test("the curated dashboard is a clean version 6 configuration with exact analyt
       counts[kind] = (counts[kind] ?? 0) + 1;
       return counts;
     }, {}),
-    { staticImage: 1, staticText: 8, csv: 8 },
+    { csv: 38 },
   );
 });
 
@@ -550,8 +705,8 @@ test("all configured geography joins resolve and the choropleth is genuinely tim
   assert.equal(model.option.series[0].data.length, geoData.features.length, "initial option must contain one bounded frame");
 });
 
-test("the shipped V6 dashboard omits legacy Home placements while retaining their shared sources", async () => {
-  const { dashboard } = await loadTrackedInputs();
+test("the historical V6 dashboard omits legacy Home placements while retaining their shared sources", async () => {
+  const dashboard = await loadJson(path.join(ROOT, "tests", "fixtures", "legacy-contract-dashboard.json"));
   const charts = configuredCharts(dashboard).map(({ chart }) => chart);
 
   assert.equal(dashboard.pages.some(({ id }) => id === "old-homepage-content"), false);

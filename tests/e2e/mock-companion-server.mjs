@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 import { WebSocketServer } from "ws";
 import { createServer as createViteServer } from "vite";
+import { legacyCatalogue, legacyContractResponse, usesLegacyContractFixture } from "./support/legacyContractFixture.js";
 
 const APP_HOST = "127.0.0.1";
 requireSourceMode();
@@ -11,13 +12,8 @@ const APP_PORT = numericArgument("--app-port", 4173);
 const CONTROL_PORT = numericArgument("--control-port", 4174);
 const defaultCatalogueMode = process.argv.includes("--catalogue-default-absent")
   ? "absent" : "match";
-const vite = await createViteServer({
-  root: process.cwd(),
-  appType: "spa",
-  logLevel: "error",
-  server: { middlewareMode: true, hmr: false },
-});
-const catalogue = JSON.parse(
+let vite;
+const shippedCatalogue = JSON.parse(
   await readFile(
     resolve("public", "integration/quorum-chart-catalogue.json"),
     "utf8",
@@ -30,7 +26,8 @@ let catalogueMode = defaultCatalogueMode;
 let receivedEvents = [];
 
 const socketServer = new WebSocketServer({ noServer: true });
-socketServer.on("connection", (socket) => {
+socketServer.on("connection", (socket, request) => {
+  const catalogue = usesLegacyContractFixture(request) ? legacyCatalogue : shippedCatalogue;
   const connection = { serverSequence: 0 };
   clients.set(socket, connection);
 
@@ -69,15 +66,17 @@ const appServer = createServer(async (request, response) => {
       try { body = await readJsonBody(request); } catch {
         return json(response, 400, { error: "invalid JSON" });
       }
-      if (!["shipped", "fable-m0"].includes(body?.fixture)) {
+      if (!["shipped", "fable-m0", "legacy-contract"].includes(body?.fixture)) {
         return json(response, 400, { error: "unknown dashboard fixture" });
       }
-      const value = body.fixture === "shipped" ? "; Max-Age=0" : "fable-m0";
+      const value = body.fixture === "shipped" ? "; Max-Age=0" : body.fixture;
       response.setHeader("set-cookie", `simex-e2e-fixture=${value}; Path=/; HttpOnly; SameSite=Strict`);
       return json(response, 200, { fixture: body.fixture });
     }
     return json(response, 405, { error: "method not allowed" });
   }
+  const historical = legacyContractResponse(request, url.pathname);
+  if (historical !== null) return json(response, 200, historical);
   if (isFixtureRequest(request) && ["/config/dashboard.json", "/config/dataset-profiles.json"].includes(url.pathname)) {
     const config = JSON.parse(await readFile(new URL("../fixtures/fable-m0-dashboard.json", import.meta.url), "utf8"));
     return json(response, 200, url.pathname.endsWith("dataset-profiles.json") ? config.datasetProfiles : config);
@@ -86,6 +85,7 @@ const appServer = createServer(async (request, response) => {
     return json(response, 200, { ready: true });
   }
   if (url.pathname === "/companion/bootstrap") {
+    const catalogue = usesLegacyContractFixture(request) ? legacyCatalogue : shippedCatalogue;
     if (catalogueMode === "absent" || isFixtureRequest(request)) {
       return json(response, 404, { available: false });
     }
@@ -108,9 +108,18 @@ function isFixtureRequest(request) {
   return String(request.headers.cookie ?? "").split(";").some((cookie) => cookie.trim() === "simex-e2e-fixture=fable-m0");
 }
 
+vite = await createViteServer({
+  root: process.cwd(),
+  cacheDir: `node_modules/.vite-e2e-source-${APP_PORT}`,
+  appType: "spa",
+  logLevel: "error",
+  server: { middlewareMode: true, hmr: { server: appServer, clientPort: APP_PORT } },
+});
+
 appServer.on("upgrade", (request, socket, head) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
-  if (url.pathname !== "/companion/ws" || catalogueMode !== "match") {
+  if (url.pathname !== "/companion/ws") return;
+  if (catalogueMode !== "match") {
     socket.destroy();
     return;
   }

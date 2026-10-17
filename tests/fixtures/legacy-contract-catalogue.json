@@ -1,0 +1,4025 @@
+{
+  "contract_version": "2",
+  "catalogue_id": "simex-dashboard",
+  "catalogue_revision": "2026-09-07",
+  "chart_schema_version": 3,
+  "chart_types": [
+    {
+      "type_id": "area",
+      "authoring_workflow": "chart",
+      "label": "Area",
+      "description": "Show how a measurement changes and accumulates over time.",
+      "group_id": "trends",
+      "purpose": "trend",
+      "mark": "area",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "line",
+          "mixed"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "bar",
+      "authoring_workflow": "chart",
+      "label": "Bar",
+      "description": "Compare values across categories.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "area",
+          "groupedBar",
+          "horizontalBar",
+          "line",
+          "stackedBar"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "bubble",
+      "authoring_workflow": "chart",
+      "label": "Bubble",
+      "description": "Show a relationship with a third measurement encoded by size.",
+      "group_id": "relationships",
+      "purpose": "relationship",
+      "mark": "bubble",
+      "data_family": "relationship",
+      "renderer": "relationship",
+      "role_ids": [
+        "x",
+        "y",
+        "size",
+        "label",
+        "cluster"
+      ],
+      "roles": [
+        {
+          "role_id": "x",
+          "label": "X measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "y",
+          "label": "Y measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "size",
+          "label": "Size",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "bullet",
+      "authoring_workflow": "chart",
+      "label": "Bullet / target",
+      "description": "Compare actual performance against a target and performance ranges.",
+      "group_id": "targets",
+      "purpose": "target",
+      "mark": "bullet",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "actual",
+        "target",
+        "entity",
+        "label",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "actual",
+          "label": "Actual",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "gauge",
+          "kpi"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "choroplethMap",
+      "authoring_workflow": "chart",
+      "label": "Choropleth",
+      "description": "Show a value by geographic region.",
+      "group_id": "geography",
+      "purpose": "geography",
+      "mark": "region",
+      "data_family": "geography",
+      "renderer": "geography",
+      "role_ids": [
+        "geography",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "geography",
+          "label": "Geographic identifier",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "geographic",
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": {
+        "version": 1,
+        "data_source": {
+          "descriptor_kind": "geojson",
+          "presentation_field": "geoSource",
+          "required": true
+        },
+        "geography_role_id": "geography",
+        "join": {
+          "presentation_field": "joinField",
+          "explicit_strategy": "feature_property",
+          "inferred_strategies": [
+            "feature_id",
+            "unique_best_feature_property"
+          ],
+          "default_strategy": null,
+          "feature_id_precedence": "score_at_least_best_property",
+          "ambiguous_property_match": "requires_explicit_selection"
+        }
+      },
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "chronoChoroplethMap",
+      "authoring_workflow": "chart",
+      "label": "Chronological choropleth",
+      "description": "Show how geographic values change over time.",
+      "group_id": "geography",
+      "purpose": "geography",
+      "mark": "temporal-region",
+      "data_family": "geography",
+      "renderer": "geography",
+      "role_ids": [
+        "geography",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "geography",
+          "label": "Geographic identifier",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "geographic",
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": {
+        "version": 1,
+        "data_source": {
+          "descriptor_kind": "geojson",
+          "presentation_field": "geoSource",
+          "required": true
+        },
+        "geography_role_id": "geography",
+        "join": {
+          "presentation_field": "joinField",
+          "explicit_strategy": "feature_property",
+          "inferred_strategies": [
+            "feature_id",
+            "unique_best_feature_property"
+          ],
+          "default_strategy": null,
+          "feature_id_precedence": "score_at_least_best_property",
+          "ambiguous_property_match": "requires_explicit_selection"
+        }
+      },
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "deltaCard",
+      "authoring_workflow": "chart",
+      "label": "Delta card",
+      "description": "Show change between observations for a single measurement.",
+      "group_id": "targets",
+      "purpose": "change",
+      "mark": "delta-card",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "measurement",
+        "entity",
+        "time",
+        "target"
+      ],
+      "roles": [
+        {
+          "role_id": "measurement",
+          "label": "Measurement",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "comparison"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "deltaList",
+          "kpi"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "targets",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "deltaList",
+      "authoring_workflow": "chart",
+      "label": "Delta list",
+      "description": "Compare change across multiple entities.",
+      "group_id": "targets",
+      "purpose": "change",
+      "mark": "delta-list",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "measurement",
+        "entity",
+        "time",
+        "target"
+      ],
+      "roles": [
+        {
+          "role_id": "measurement",
+          "label": "Measurement",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "comparison"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "deltaCard"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "targets",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "donut",
+      "authoring_workflow": "chart",
+      "label": "Donut",
+      "description": "Show category shares while leaving room for a central summary.",
+      "group_id": "composition",
+      "purpose": "composition",
+      "mark": "donut",
+      "data_family": "composition",
+      "renderer": "composition",
+      "role_ids": [
+        "category",
+        "value"
+      ],
+      "roles": [
+        {
+          "role_id": "category",
+          "label": "Category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "pie"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "freeText",
+      "authoring_workflow": "static",
+      "label": "Free text",
+      "description": "Display portable QMD-style formatted text as static dashboard content.",
+      "group_id": "operational",
+      "purpose": "narrative-context",
+      "mark": "text",
+      "data_family": "operational",
+      "renderer": "operational",
+      "role_ids": [],
+      "roles": [],
+      "data_constraints": {
+        "source_kinds": [
+          "staticText"
+        ],
+        "transforms": [],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": false,
+        "source_csv": false,
+        "time_context": false,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen"
+        ]
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "gauge",
+      "authoring_workflow": "chart",
+      "label": "Gauge",
+      "description": "Show a current value against configured threshold ranges.",
+      "group_id": "targets",
+      "purpose": "status",
+      "mark": "gauge",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "value",
+        "target",
+        "entity",
+        "label",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "kpi"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "targets",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "groupedBar",
+      "authoring_workflow": "chart",
+      "label": "Grouped bar",
+      "description": "Compare series side by side across categories.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "grouped-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "horizontalBar",
+          "horizontalStackedBar",
+          "stackedBar"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "heatmap",
+      "authoring_workflow": "chart",
+      "label": "Heatmap",
+      "description": "Show the intensity of values across two categories.",
+      "group_id": "readiness",
+      "purpose": "readiness",
+      "mark": "heatmap-cell",
+      "data_family": "matrix",
+      "renderer": "matrix",
+      "role_ids": [
+        "row",
+        "column",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "row",
+          "label": "Row category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "column",
+          "label": "Column category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "column",
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "horizontalBar",
+      "authoring_workflow": "chart",
+      "label": "Horizontal bar",
+      "description": "Compare category values when labels need more room.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "horizontal-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "groupedBar",
+          "horizontalStackedBar"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "horizontalStackedBar",
+      "authoring_workflow": "chart",
+      "label": "Horizontal stacked bar",
+      "description": "Compare horizontal totals and their composition.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "horizontal-stacked-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "groupedBar",
+          "horizontalBar",
+          "stackedBar"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "image",
+      "authoring_workflow": "static",
+      "label": "Image",
+      "description": "Display a saved image with accessible alternative text and nondestructive presentation transforms.",
+      "group_id": "operational",
+      "purpose": "operational-context",
+      "mark": "image",
+      "data_family": "operational",
+      "renderer": "operational",
+      "role_ids": [],
+      "roles": [],
+      "data_constraints": {
+        "source_kinds": [
+          "inline",
+          "staticImage"
+        ],
+        "transforms": [],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": true,
+        "source_csv": false,
+        "time_context": false,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "kpi",
+      "authoring_workflow": "chart",
+      "label": "KPI card",
+      "description": "Display one key measurement with optional context.",
+      "group_id": "targets",
+      "purpose": "status",
+      "mark": "kpi",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "value",
+        "target",
+        "entity",
+        "label",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "deltaCard",
+          "gauge"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "line",
+      "authoring_workflow": "chart",
+      "label": "Line",
+      "description": "Show how one or more measurements change.",
+      "group_id": "trends",
+      "purpose": "trend",
+      "mark": "line",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "area",
+          "bar",
+          "mixed"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "mapScatter",
+      "authoring_workflow": "chart",
+      "label": "Map scatter",
+      "description": "Show measured points or values at geographic locations.",
+      "group_id": "geography",
+      "purpose": "geography",
+      "mark": "map-point",
+      "data_family": "geography",
+      "renderer": "geography",
+      "role_ids": [
+        "geography",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "geography",
+          "label": "Geographic identifier",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "geographic",
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": {
+        "version": 1,
+        "data_source": {
+          "descriptor_kind": "geojson",
+          "presentation_field": "geoSource",
+          "required": true
+        },
+        "geography_role_id": "geography",
+        "join": {
+          "presentation_field": "joinField",
+          "explicit_strategy": "feature_property",
+          "inferred_strategies": [
+            "feature_id",
+            "unique_best_feature_property"
+          ],
+          "default_strategy": null,
+          "feature_id_precedence": "score_at_least_best_property",
+          "ambiguous_property_match": "requires_explicit_selection"
+        }
+      },
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "mixed",
+      "authoring_workflow": "chart",
+      "label": "Mixed axis",
+      "description": "Compare measures using bars and lines with primary or secondary axes.",
+      "group_id": "trends",
+      "purpose": "trend",
+      "mark": "mixed-axis",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "area",
+          "bar",
+          "line"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "pie",
+      "authoring_workflow": "chart",
+      "label": "Pie",
+      "description": "Show how categories contribute to a whole.",
+      "group_id": "composition",
+      "purpose": "composition",
+      "mark": "pie",
+      "data_family": "composition",
+      "renderer": "composition",
+      "role_ids": [
+        "category",
+        "value"
+      ],
+      "roles": [
+        {
+          "role_id": "category",
+          "label": "Category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "donut"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "readinessMatrix",
+      "authoring_workflow": "chart",
+      "label": "Readiness matrix",
+      "description": "Show readiness states across entities and criteria.",
+      "group_id": "readiness",
+      "purpose": "readiness",
+      "mark": "matrix-cell",
+      "data_family": "matrix",
+      "renderer": "matrix",
+      "role_ids": [
+        "row",
+        "column",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "row",
+          "label": "Row category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "column",
+          "label": "Column category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "column",
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "scatter",
+      "authoring_workflow": "chart",
+      "label": "Scatter",
+      "description": "Show the relationship between two measurements.",
+      "group_id": "relationships",
+      "purpose": "relationship",
+      "mark": "point",
+      "data_family": "relationship",
+      "renderer": "relationship",
+      "role_ids": [
+        "x",
+        "y",
+        "size",
+        "label",
+        "cluster"
+      ],
+      "roles": [
+        {
+          "role_id": "x",
+          "label": "X measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "y",
+          "label": "Y measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "size",
+          "label": "Size",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "stackedBar",
+      "authoring_workflow": "chart",
+      "label": "Stacked bar",
+      "description": "Compare totals and their composition across categories.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "stacked-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "pivot"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "groupedBar",
+          "horizontalStackedBar"
+        ],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "swimlane",
+      "authoring_workflow": "chart",
+      "label": "Swimlane",
+      "description": "Show events over time organized into lanes.",
+      "group_id": "timeline",
+      "purpose": "sequence",
+      "mark": "swimlane-event",
+      "data_family": "timeline",
+      "renderer": "timeline",
+      "role_ids": [
+        "event",
+        "start",
+        "end",
+        "lane",
+        "status"
+      ],
+      "roles": [
+        {
+          "role_id": "event",
+          "label": "Event",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "start",
+          "label": "Start",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "end",
+          "label": "End",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "lane",
+          "label": "Lane",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "status",
+          "label": "Status",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "start",
+          "end"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "table",
+      "authoring_workflow": "chart",
+      "label": "Table",
+      "description": "Show detailed operational records in rows and columns.",
+      "group_id": "operational",
+      "purpose": "operational-detail",
+      "mark": "row",
+      "data_family": "operational",
+      "renderer": "operational",
+      "role_ids": [
+        "columns",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "columns",
+          "label": "Columns",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "any"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "timeline",
+      "authoring_workflow": "chart",
+      "label": "Timeline",
+      "description": "Show events and intervals over time.",
+      "group_id": "timeline",
+      "purpose": "sequence",
+      "mark": "event",
+      "data_family": "timeline",
+      "renderer": "timeline",
+      "role_ids": [
+        "event",
+        "start",
+        "end",
+        "lane",
+        "status"
+      ],
+      "roles": [
+        {
+          "role_id": "event",
+          "label": "Event",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "start",
+          "label": "Start",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "end",
+          "label": "End",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "lane",
+          "label": "Lane",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "status",
+          "label": "Status",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "rules": {
+          "version": 1,
+          "compatible_when": [
+            "same_type",
+            "source_declares_target_compatible"
+          ],
+          "otherwise": "remap",
+          "preserve_roles_when": [
+            "same_role_id",
+            "target_accepts_assignment"
+          ],
+          "missing_required_target_roles": "require_binding"
+        }
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true,
+        "source_csv": true,
+        "time_context": true,
+        "surfaces": [
+          "build",
+          "view",
+          "fullscreen",
+          "present",
+          "audience"
+        ]
+      },
+      "temporal": {
+        "time_role_ids": [
+          "start",
+          "end"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "advanced"
+      ]
+    }
+  ],
+  "charts": [
+    {
+      "chart_id": "chart-bar-44cbf87a-e849-4c92-a797-ebf26c444ed7",
+      "type_id": "horizontalStackedBar",
+      "title": "Income Distribution",
+      "description": "Income distribution per income group",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512398466",
+      "aliases": [
+        "household income"
+      ],
+      "keywords": [
+        "economy",
+        "income",
+        "socio-economic",
+        "stacked bar"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-groupedBar-eafbfdd0-e768-4303-8df1-6de4f5515d73",
+      "type_id": "groupedBar",
+      "title": "Public Trust in Institutions",
+      "description": "Public Trust in Institutions",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512378053",
+      "aliases": [
+        "institutional trust"
+      ],
+      "keywords": [
+        "grouped bar",
+        "institutions",
+        "socio-economic",
+        "trust"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad",
+      "type_id": "horizontalBar",
+      "title": "Loneliness",
+      "description": "People reporting frequent loneliness stratified per age group",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section",
+      "aliases": [
+        "loneliness levels"
+      ],
+      "keywords": [
+        "horizontal bar",
+        "loneliness",
+        "social",
+        "socio-economic"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-horizontalBar-mthbdhxi",
+      "type_id": "horizontalBar",
+      "title": "Public Support for Potential Measures",
+      "description": "Measures that could be taken to prevent spread of HeV-A26",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512378053",
+      "aliases": [
+        "support for measures"
+      ],
+      "keywords": [
+        "horizontal bar",
+        "measures",
+        "public support",
+        "socio-economic"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-line-a01a017d-96f1-440b-b24a-bcf2e30da1cc",
+      "type_id": "line",
+      "title": "Exposure and Concerns about Mis- and Disinformation in Eldoria",
+      "description": "Exposure and Concerns about Mis- and Disinformation in Eldoria",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788715418554",
+      "aliases": [
+        "misinformation exposure"
+      ],
+      "keywords": [
+        "concerns",
+        "disinformation",
+        "exposure",
+        "line",
+        "misinformation"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-line-mtgytrwj",
+      "type_id": "line",
+      "title": "International Confirmed Cases (Cumulative)",
+      "description": "International Confirmed Cases (Cumulative)",
+      "page_id": "biomedical",
+      "section_id": "biomedical_section",
+      "aliases": [
+        "international cases"
+      ],
+      "keywords": [
+        "biomedical",
+        "confirmed cases",
+        "cumulative",
+        "international",
+        "line"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-line-mtgz6v76",
+      "type_id": "line",
+      "title": "National Confirmed Cases (cumulative)",
+      "description": "National confirmed cases in Eldoria",
+      "page_id": "biomedical",
+      "section_id": "biomedical_section_1788164839437",
+      "aliases": [
+        "national cases"
+      ],
+      "keywords": [
+        "biomedical",
+        "confirmed cases",
+        "cumulative",
+        "eldoria",
+        "line"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "chart-pie-e58760c5-7b89-440d-bf42-f8115642210b",
+      "type_id": "pie",
+      "title": "Workforce Disitribution",
+      "description": "Workforce Disitribution",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788512398466",
+      "aliases": [
+        "workforce distribution"
+      ],
+      "keywords": [
+        "economy",
+        "employment",
+        "pie",
+        "socio-economic",
+        "workforce"
+      ],
+      "role_ids": [
+        "category",
+        "value"
+      ],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-1df51cee-adea-4d7b-982f-5a50a6ba73d1",
+      "type_id": "freeText",
+      "title": "Clinical Characteristics",
+      "description": "Clinical Characteristics",
+      "page_id": "biomedical",
+      "section_id": "biomedical_section",
+      "aliases": [
+        "clinical profile"
+      ],
+      "keywords": [
+        "biomedical",
+        "clinical",
+        "international",
+        "text"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-998c93eb-c7d1-422b-8062-e9f2122b2399",
+      "type_id": "freeText",
+      "title": "Epidemiological Characteristics",
+      "description": "Epidemiological Characteristics",
+      "page_id": "biomedical",
+      "section_id": "biomedical_section",
+      "aliases": [
+        "epidemiological profile"
+      ],
+      "keywords": [
+        "biomedical",
+        "epidemiology",
+        "international",
+        "text"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-a98417d0-1c09-4abf-b9b4-462dd591ef30",
+      "type_id": "freeText",
+      "title": "Background",
+      "description": "Background",
+      "page_id": "scenario",
+      "section_id": "scenario_section_1788163593858",
+      "aliases": [
+        "scenario background"
+      ],
+      "keywords": [
+        "background",
+        "scenario",
+        "text"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-be2ad3bd-ca18-44bf-9e6a-46f81ed9a98d",
+      "type_id": "freeText",
+      "title": "Current Characteristics",
+      "description": "Current Characteristics",
+      "page_id": "biomedical",
+      "section_id": "biomedical_section_1788164839437",
+      "aliases": [
+        "national characteristics"
+      ],
+      "keywords": [
+        "biomedical",
+        "current",
+        "eldoria",
+        "text"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-c1a6ffb8-0c32-4ad2-bb54-16973ec3b2db",
+      "type_id": "freeText",
+      "title": "Treatment",
+      "description": "Treatment",
+      "page_id": "biomedical",
+      "section_id": "biomedical_section",
+      "aliases": [
+        "treatment information"
+      ],
+      "keywords": [
+        "biomedical",
+        "international",
+        "text",
+        "treatment"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-cc1d15c3-dba6-4196-8293-7004cb03fffd",
+      "type_id": "image",
+      "title": "Text/Image panel",
+      "description": "Text/Image panel",
+      "page_id": "scenario",
+      "section_id": "scenario_section_1788163593858",
+      "aliases": [
+        "scenario timeline"
+      ],
+      "keywords": [
+        "image",
+        "scenario",
+        "timeline"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-d2adf346-9ba9-4230-8ae0-2fa8161ddc1d",
+      "type_id": "freeText",
+      "title": "Eldoria",
+      "description": "Eldoria",
+      "page_id": "scenario",
+      "section_id": "scenario_section_1788177898051",
+      "aliases": [
+        "country profile"
+      ],
+      "keywords": [
+        "eldoria",
+        "scenario",
+        "text"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-de5891b4-3c59-4108-aa60-0caccfafc835",
+      "type_id": "freeText",
+      "title": "Mental Health Trends",
+      "description": "Mental Health Trends",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section",
+      "aliases": [
+        "mental health"
+      ],
+      "keywords": [
+        "mental health",
+        "socio-economic",
+        "text",
+        "trends"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "static-e0ee5e1e-d221-42bd-8e5a-0616d95e6b09",
+      "type_id": "freeText",
+      "title": "Text/Image panel",
+      "description": "Text/Image panel",
+      "page_id": "socio_economic",
+      "section_id": "socio_economic_section_1788715418554",
+      "aliases": [
+        "misinformation context"
+      ],
+      "keywords": [
+        "disinformation",
+        "misinformation",
+        "socio-economic",
+        "text"
+      ],
+      "role_ids": [],
+      "chrono_group_id": null,
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    }
+  ],
+  "dashboard_semantic_digest": "6bcece2337caf734e14de70def4bb6978a0a8e1814033795319708f4047c10a5",
+  "digest": "eb5640eae628511197aa8eed1cf77d18071cdd472975a1b36720b237be9fa8d5"
+}

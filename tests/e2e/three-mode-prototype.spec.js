@@ -433,7 +433,7 @@ async function enterScenarioInspector(page) {
 
 async function homeOffPackageFixture() {
   const config = JSON.parse(await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   ));
   config.home = { enabled: false };

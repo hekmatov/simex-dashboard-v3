@@ -1,0 +1,190 @@
+{
+  "static-cc1d15c3-dba6-4196-8293-7004cb03fffd": {
+    "aliases": [
+      "scenario timeline"
+    ],
+    "keywords": [
+      "image",
+      "scenario",
+      "timeline"
+    ]
+  },
+  "static-a98417d0-1c09-4abf-b9b4-462dd591ef30": {
+    "aliases": [
+      "scenario background"
+    ],
+    "keywords": [
+      "background",
+      "scenario",
+      "text"
+    ]
+  },
+  "static-d2adf346-9ba9-4230-8ae0-2fa8161ddc1d": {
+    "aliases": [
+      "country profile"
+    ],
+    "keywords": [
+      "eldoria",
+      "scenario",
+      "text"
+    ]
+  },
+  "chart-line-mtgytrwj": {
+    "aliases": [
+      "international cases"
+    ],
+    "keywords": [
+      "biomedical",
+      "confirmed cases",
+      "cumulative",
+      "international",
+      "line"
+    ]
+  },
+  "static-998c93eb-c7d1-422b-8062-e9f2122b2399": {
+    "aliases": [
+      "epidemiological profile"
+    ],
+    "keywords": [
+      "biomedical",
+      "epidemiology",
+      "international",
+      "text"
+    ]
+  },
+  "static-1df51cee-adea-4d7b-982f-5a50a6ba73d1": {
+    "aliases": [
+      "clinical profile"
+    ],
+    "keywords": [
+      "biomedical",
+      "clinical",
+      "international",
+      "text"
+    ]
+  },
+  "static-c1a6ffb8-0c32-4ad2-bb54-16973ec3b2db": {
+    "aliases": [
+      "treatment information"
+    ],
+    "keywords": [
+      "biomedical",
+      "international",
+      "text",
+      "treatment"
+    ]
+  },
+  "chart-line-mtgz6v76": {
+    "aliases": [
+      "national cases"
+    ],
+    "keywords": [
+      "biomedical",
+      "confirmed cases",
+      "cumulative",
+      "eldoria",
+      "line"
+    ]
+  },
+  "static-be2ad3bd-ca18-44bf-9e6a-46f81ed9a98d": {
+    "aliases": [
+      "national characteristics"
+    ],
+    "keywords": [
+      "biomedical",
+      "current",
+      "eldoria",
+      "text"
+    ]
+  },
+  "static-de5891b4-3c59-4108-aa60-0caccfafc835": {
+    "aliases": [
+      "mental health"
+    ],
+    "keywords": [
+      "mental health",
+      "socio-economic",
+      "text",
+      "trends"
+    ]
+  },
+  "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad": {
+    "aliases": [
+      "loneliness levels"
+    ],
+    "keywords": [
+      "horizontal bar",
+      "loneliness",
+      "social",
+      "socio-economic"
+    ]
+  },
+  "chart-groupedBar-eafbfdd0-e768-4303-8df1-6de4f5515d73": {
+    "aliases": [
+      "institutional trust"
+    ],
+    "keywords": [
+      "grouped bar",
+      "institutions",
+      "socio-economic",
+      "trust"
+    ]
+  },
+  "chart-horizontalBar-mthbdhxi": {
+    "aliases": [
+      "support for measures"
+    ],
+    "keywords": [
+      "horizontal bar",
+      "measures",
+      "public support",
+      "socio-economic"
+    ]
+  },
+  "chart-bar-44cbf87a-e849-4c92-a797-ebf26c444ed7": {
+    "aliases": [
+      "household income"
+    ],
+    "keywords": [
+      "economy",
+      "income",
+      "socio-economic",
+      "stacked bar"
+    ]
+  },
+  "chart-pie-e58760c5-7b89-440d-bf42-f8115642210b": {
+    "aliases": [
+      "workforce distribution"
+    ],
+    "keywords": [
+      "economy",
+      "employment",
+      "pie",
+      "socio-economic",
+      "workforce"
+    ]
+  },
+  "static-e0ee5e1e-d221-42bd-8e5a-0616d95e6b09": {
+    "aliases": [
+      "misinformation context"
+    ],
+    "keywords": [
+      "disinformation",
+      "misinformation",
+      "socio-economic",
+      "text"
+    ]
+  },
+  "chart-line-a01a017d-96f1-440b-b24a-bcf2e30da1cc": {
+    "aliases": [
+      "misinformation exposure"
+    ],
+    "keywords": [
+      "concerns",
+      "disinformation",
+      "exposure",
+      "line",
+      "misinformation"
+    ]
+  }
+}

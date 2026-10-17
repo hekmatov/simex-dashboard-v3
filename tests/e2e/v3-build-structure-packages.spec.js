@@ -43,7 +43,7 @@ function treeItemLabel(tree, name) {
 test("Clear dashboard in Scenario Passport preserves canonical Home identity and Look after durable deletion", async ({ page }) => {
   test.setTimeout(60_000);
   const sourceDashboard = JSON.parse(await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   ));
   await openBuildStructure(page, "http://127.0.0.1:4175/");
@@ -103,7 +103,7 @@ test("Clear dashboard in Scenario Passport preserves canonical Home identity and
 test("storage-rejected Clear dashboard is atomic and Cancel restores the Passport trigger controls", async ({ page }) => {
   test.setTimeout(60_000);
   const sourceDashboard = await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   );
   await page.addInitScript(({ dashboard, dashboardKey, modeKey }) => {
@@ -161,7 +161,7 @@ test("storage-rejected Clear dashboard is atomic and Cancel restores the Passpor
 test("Restore online dashboard in Scenario Passport replaces dirty local work with the deployed copy", async ({ page }) => {
   test.setTimeout(90_000);
   const sourceDashboard = JSON.parse(await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   ));
   const biomedicalPage = sourceDashboard.pages.find(({ id }) => id === "biomedical");
@@ -184,9 +184,12 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
     modeKey: "simex-dashboard-ui-mode-v1",
   });
   await openBuildStructure(page, "http://127.0.0.1:4175/");
-
+  await page.locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
+  await page.locator('[data-build-rail="properties"]')
+    .getByLabel("Page title", { exact: true }).fill("Pending local Page title");
   const passport = await openScenarioPassport(page);
   const discard = passport.getByRole("button", { name: "Discard Build changes", exact: true });
+  await expect(discard).toBeEnabled();
   await discard.focus();
   await expect(page.locator(`#${await discard.getAttribute("aria-describedby")}`)).toContainText(
     "baseline captured when you entered Build. It does not contact the deployed online dashboard.",
@@ -198,10 +201,10 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
   );
   await restore.click();
 
-  let exportPrompt = null;
-  page.once("dialog", async (dialog) => {
-    exportPrompt = dialog.message();
+  const exportPrompt = page.waitForEvent("dialog").then(async (dialog) => {
+    const message = dialog.message();
     await dialog.dismiss();
+    return message;
   });
   const restoreDialog = page.getByRole("dialog", { name: "Restore online dashboard?" });
   await expect(restoreDialog).toContainText("replaces your local dashboard");
@@ -209,7 +212,7 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
     "Download a dashboard package first if you want to preserve your local work.",
   );
   await restoreDialog.getByRole("button", { name: "Download package first", exact: true }).click();
-  expect(exportPrompt).toContain("Name this exported dashboard bundle");
+  expect(await exportPrompt).toContain("Name this exported dashboard bundle");
   await expect(restoreDialog).toBeVisible();
   await restoreDialog.getByRole("button", { name: "Keep local dashboard", exact: true }).click();
 
@@ -257,11 +260,11 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
 
 async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   const config = JSON.parse(await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   ));
   config.datasetProfiles = JSON.parse(await readFile(
-    new URL("../../public/config/dataset-profiles.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-profiles.json", import.meta.url),
     "utf8",
   ));
   const importedPage = structuredClone(config.pages.find(({ id }) => (
