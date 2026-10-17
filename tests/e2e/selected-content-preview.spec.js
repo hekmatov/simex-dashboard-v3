@@ -98,7 +98,9 @@ test("Whole page opens latest temporal observations and keeps Collection snapsho
 });
 
 test("selected shipped groups play pause seek and change period in a real Audience display", async ({ page }) => {
-  test.setTimeout(120_000);
+  // Cold hydration and both authored periods share this journey budget;
+  // individual readiness, connection and playback assertions keep their limits.
+  test.setTimeout(180_000);
   const errors = observeErrors(page);
   await openShipped(page);
   await mode(page, "Present").click();
@@ -114,6 +116,9 @@ test("selected shipped groups play pause seek and change period in a real Audien
   // fires. Establish its destination and DOM before timing the connection.
   page.context().once("page", (popup) => observeErrors(popup, errors));
   const { popup: audience } = await openAudienceSession(page, { waitForBaseline: false });
+  // Audience hydrates the full shipped dashboard before starting its channel.
+  // DOMContentLoaded alone also admits the bootstrap waiting surface.
+  await expect(audience.locator(".audience-theme-root")).toBeVisible({ timeout: 45_000 });
   const output = audience.locator(".audience-display");
   await expect(output).toHaveAttribute("data-connection-status", "connected");
   await expect(output).toHaveAttribute("data-output-mode", "active");
