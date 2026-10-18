@@ -27,6 +27,9 @@ test("the authoring footprint frame projects a selected panel width across the d
   }, React.createElement("p", null, "Writer")));
 
   assert.match(html, /class="authoring-footprint-grid"/);
+  assert.match(html, /--layout-grid-columns:4/);
+  assert.match(html, /--layout-grid-gap:16px/);
+  assert.match(html, /--layout-grid-row-height:38.25px/);
   assert.match(html, /--chart-footprint-columns:3/);
   assert.match(html, /--chart-footprint-row-span:8/);
   assert.match(html, /data-authoring-footprint="writer"/);

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import ChartView from "/src/components/charts/ChartView.jsx";
 import ChartPanel from "/src/components/ChartPanel.jsx";
+import { resolveChartRendering } from "/src/charting/rendering/resolveChartRendering.js";
 import {
   discardSessionImageAsset,
   stageSessionImageAsset,
@@ -14,6 +15,7 @@ const releaseCounts = new Map();
 const attemptsByAsset = new Map();
 let attemptSequence = 0;
 let buildSelections = [];
+let borrowedRendering;
 
 const PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const PNG_BYTES = Uint8Array.from(atob(PNG_BASE64), (character) => character.charCodeAt(0));
@@ -72,11 +74,11 @@ function createAsyncAttempt(assetId) {
   return promise;
 }
 
-function renderImage({ suffix, alt, storageState, mediaStorageState = storageState, resolveStaticAsset }) {
+function renderImage({ suffix, alt, storageState, mediaStorageState = storageState, resolveStaticAsset, supplied = false }) {
   const assetId = `asset-${suffix.repeat(64).slice(0, 64)}`;
   const mediaId = `media-${suffix}`;
   const staticSource = placement(mediaId, alt);
-  root.render(React.createElement(React.StrictMode, null, React.createElement(ChartView, {
+  const input = {
     chart: {
       configVersion: 3,
       id: `image-${suffix}`,
@@ -96,6 +98,11 @@ function renderImage({ suffix, alt, storageState, mediaStorageState = storageSta
       resolveStaticAsset,
     },
     surface: "view",
+  };
+  borrowedRendering = supplied ? resolveChartRendering(input) : null;
+  root.render(React.createElement(React.StrictMode, null, React.createElement(supplied ? ChartPanel : ChartView, {
+    ...input, panel: input.chart, isSelected: true,
+    resolvedRendering: borrowedRendering,
   })));
   return assetId;
 }
@@ -108,6 +115,16 @@ window.mountAsyncImage = (suffix, alt) => {
     storageState: "durable",
     resolveStaticAsset: () => createAsyncAttempt(assetId),
   });
+};
+
+window.mountSuppliedAsyncImage = (suffix, alt) => {
+  const assetId = `asset-${suffix.repeat(64).slice(0, 64)}`;
+  return renderImage({ suffix, alt, storageState: "durable", supplied: true,
+    resolveStaticAsset: () => createAsyncAttempt(assetId) });
+};
+window.releaseSuppliedAsyncImage = async () => {
+  const settled = borrowedRendering?.pending ? await borrowedRendering.pending : borrowedRendering;
+  settled?.model?.release?.();
 };
 
 window.mountSynchronousImage = (suffix, alt) => renderImage({

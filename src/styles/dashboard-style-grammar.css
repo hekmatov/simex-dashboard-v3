@@ -271,8 +271,8 @@
   .layout-grid,
   .scene-view-composition-grid
 ) {
-  gap: 16px;
-  padding: 16px 18px 18px;
+  gap: var(--layout-grid-gap, 16px);
+  padding: 16px var(--layout-grid-padding-inline, 18px) 18px;
 }
 
 .app-frame .canonical-dashboard-frame .chart-panel {

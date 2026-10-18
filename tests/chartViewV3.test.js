@@ -9,6 +9,7 @@ import { createServer } from "vite";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
+import { resolvePreparedChartRendering } from "../src/charting/rendering/resolveChartRendering.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -19,13 +20,48 @@ const vite = await createServer({
 const {
   default: ChartView,
   renderChartContent,
+  withPlaybackTimeContext,
 } = await vite.ssrLoadModule("/src/components/charts/ChartView.jsx");
 const { default: CardChartView } = await vite.ssrLoadModule("/src/components/charts/CardChartView.jsx");
 const { default: EChartsChartView, createEChartsLifecycle } = await vite.ssrLoadModule("/src/components/charts/EChartsChartView.jsx");
 const { default: ImageChartView } = await vite.ssrLoadModule("/src/components/charts/ImageChartView.jsx");
 const { default: TableChartView } = await vite.ssrLoadModule("/src/components/charts/TableChartView.jsx");
 const { default: ChartHeading } = await vite.ssrLoadModule("/src/components/charts/ChartHeading.jsx");
+const { default: ChartPanel } = await vite.ssrLoadModule("/src/components/ChartPanel.jsx");
 await vite.close();
+
+test("ChartPanel and ChartView use prepared marks, prefer reusable resolutions, and reject stale resolutions", () => {
+  const chart = { id: "prepared-capacity", typeId: "kpi", title: "Prepared capacity", roles: { value: { field: "value" } } };
+  const rows = [{ value: 8 }];
+  const datasetProfile = profileDataset(rows);
+  const renderContext = {};
+  const input = { chart, rows, datasetProfile, renderContext };
+  const prepared = prepareChartData({ ...input, rows: [{ value: 42 }] });
+  const resolvedRendering = resolvePreparedChartRendering(input, prepared);
+  const otherPrepared = prepareChartData({ ...input, rows: [{ value: 17 }] });
+  for (const Component of [ChartView, ChartPanel]) {
+    const html = (extra = {}) => renderToStaticMarkup(React.createElement(Component, {
+      ...input, panel: chart, ...extra,
+    }));
+    assert.match(html(), />8</);
+    assert.match(html({ prepared }), />42</);
+    assert.match(html({ resolvedRendering, prepared: otherPrepared }), />42</);
+    assert.match(html({ resolvedRendering, renderContext: {} }), />8</);
+    assert.match(html({ resolvedRendering, renderContext: {}, prepared: otherPrepared }), />17</);
+    assert.doesNotMatch(html({ prepared: { status: "invalid", marks: [], diagnostics: [] } }), />8</);
+  }
+});
+
+test("playback replaces supplied prepared marks only when its destination time context changes", () => {
+  const timeContext = { activeEpochMs: Date.UTC(2027, 1, 20) };
+  const prepared = { status: "ready", marks: [] };
+  const props = { chart: { id: "cases", typeId: "line" }, prepared, timeContext };
+  assert.equal(withPlaybackTimeContext(props, null).prepared, prepared);
+  assert.equal(withPlaybackTimeContext(props, { timeContextForChart: () => timeContext }).prepared, prepared);
+  const projected = withPlaybackTimeContext(props, { timeContextForChart: () => ({ activeEpochMs: Date.UTC(2027, 1, 21) }) });
+  assert.equal(projected.prepared, undefined);
+  assert.equal(projected.timeContext.activeEpochMs, Date.UTC(2027, 1, 21));
+});
 
 const deltaRows = [
   { capacity: 8, observed: "2027-05-01" },

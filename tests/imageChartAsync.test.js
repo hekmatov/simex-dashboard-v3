@@ -72,6 +72,32 @@ test("StrictMode replay owns independent attempts and keeps the active Image URL
   ), [replayDiscarded, active]), [1, 1]);
 });
 
+test("ChartPanel settles a borrowed pending Image without releasing the caller's URL", async () => {
+  const assetId = await page.evaluate(() => window.mountSuppliedAsyncImage("d", "Borrowed image"));
+  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  const [attempt] = await attemptsFor(assetId, 1);
+  await resolveAttempt(attempt);
+  await page.locator('img[alt="Borrowed image"]').waitFor();
+  await page.evaluate(() => window.unmountAsyncImage());
+  assert.equal(await page.evaluate(id => window.asyncImageReleaseCount(id), attempt), 0);
+  assert.equal(await page.evaluate(id => window.asyncImageAttemptUrlIsReadable(id), attempt), true);
+  await page.evaluate(() => window.releaseSuppliedAsyncImage());
+  await expectReleased(attempt);
+});
+
+test("ChartPanel retries a failed borrowed Image with a locally owned attempt", async () => {
+  const assetId = await page.evaluate(() => window.mountSuppliedAsyncImage("e", "Borrowed recovery"));
+  const [failed] = await attemptsFor(assetId, 1);
+  await page.evaluate(id => window.rejectAsyncImageAttempt(id), failed);
+  await page.locator('[data-static-failure="asset-read-failed"]').waitFor();
+  await page.getByRole("button", { name: "Retry" }).click();
+  const [, retry] = await attemptsFor(assetId, 2);
+  await resolveAttempt(retry);
+  await page.locator('img[alt="Borrowed recovery"]').waitFor();
+  await page.evaluate(() => window.unmountAsyncImage());
+  await expectReleased(retry);
+});
+
 test("source supersession releases every discarded attempt without revoking the replacement", async () => {
   const firstId = await page.evaluate(() => window.mountAsyncImage("d", "First leased image"));
   await page.getByText("Loading saved image…", { exact: true }).waitFor();

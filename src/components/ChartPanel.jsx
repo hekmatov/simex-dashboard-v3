@@ -19,6 +19,11 @@ function ChartPanel({
   sourceState,
   datasetProfile,
   geoData,
+  prepared,
+  resolvedRendering,
+  renderContext: suppliedRenderContext,
+  timeContext,
+  timeContextAuthority,
   dataSources = {},
   assets = {},
   contentRenderContext = {},
@@ -68,13 +73,13 @@ function ChartPanel({
     dataSources,
     datasetProfile,
   });
-  const renderContext = React.useMemo(() => ({
+  const renderContext = React.useMemo(() => suppliedRenderContext ?? ({
     ...contentRenderContext,
     sources: dataSources,
     assets,
     mapName: chart.presentation?.map?.geoSource ?? chart.id,
     accessibilityEnabled,
-  }), [accessibilityEnabled, assets, chart.id, chart.presentation?.map?.geoSource, contentRenderContext, dataSources]);
+  }), [suppliedRenderContext, accessibilityEnabled, assets, chart.id, chart.presentation?.map?.geoSource, contentRenderContext, dataSources]);
   const holdTimer = React.useRef(null);
   const suppressFullscreenClickUntil = React.useRef(0);
   const panelRef = React.useRef(null);
@@ -201,6 +206,10 @@ function ChartPanel({
           sourceState={sourceState}
           datasetProfile={datasetProfile}
           geoData={geoData}
+          prepared={prepared}
+          resolvedRendering={resolvedRendering}
+          timeContext={timeContext}
+          timeContextAuthority={timeContextAuthority}
           accessibilityEnabled={accessibilityEnabled}
           canonicalPlotId={canonicalPlotId}
           renderContext={renderContext}

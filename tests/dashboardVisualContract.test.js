@@ -252,7 +252,8 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.doesNotMatch(modes, /\.build-page-navigation\s*\{[^}]*flex-wrap:\s*wrap/s);
   assert.doesNotMatch(modes, /\.build-page-tab-scroller\s*\{[^}]*flex-basis:\s*100%/s);
   assert.match(modes, /\.build-section-actions\s*\{[^}]*align-items:\s*center[^}]*gap:\s*var\(--simex-gap-control-group\)/s);
-  assert.ok(styles.includes("grid-auto-rows: calc((418px - 112px) / 8);"));
+  assert.match(styles, /\.layout-grid\s*\{[^}]*gap:\s*var\(--layout-grid-gap\)[^}]*grid-auto-rows:\s*var\(--layout-grid-row-height\)/s);
+  assert.ok(styles.includes("grid-auto-rows: var(--layout-grid-tablet-row-height);"));
   assert.ok(modes.includes("grid-row: span var(--chart-footprint-row-span);"));
   assert.ok(modes.includes("height: var(--footprint-preview-visual-height);"));
   assert.match(modes, /\.chart-panel-footprint\[data-footprint-short="true"\]\s*:is\(\.chart-view-frame,\s*\.chart-zoom-guard\)\s*\{[^}]*overflow:\s*auto/s);
@@ -272,7 +273,7 @@ test("pending owners and named authoring surfaces consume semantic style and con
   assert.match(staticContent, /portable-qmd-composer__toolbar[^}]*button\[aria-pressed="true"\][^{]*\{[^}]*var\(--simex-selected-soft\)[^}]*var\(--simex-selected\)/s);
   assert.match(staticContent, /portable-qmd-composer__toolbar select\s*\{[^}]*min-height:\s*var\(--simex-control-standard,\s*32px\)/s);
   assert.match(staticContent, /portable-qmd-composer__toolbar button\s*\{[^}]*min-height:\s*var\(--simex-control-utility,\s*24px\)[^}]*min-width:\s*var\(--simex-control-utility,\s*24px\)/s);
-  assert.match(staticContent, /authoring-footprint-grid\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(staticContent, /authoring-footprint-grid\s*\{[^}]*display:\s*grid[^}]*gap:\s*var\(--layout-grid-gap\)[^}]*grid-auto-rows:\s*var\(--layout-grid-row-height\)[^}]*grid-template-columns:\s*repeat\(var\(--layout-grid-columns\),\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(staticContent, /authoring-footprint-frame\s*\{[^}]*grid-column:\s*span var\(--chart-footprint-columns\)/s);
   assert.ok(staticContent.includes("grid-row: span var(--chart-footprint-row-span);"));
   assert.match(staticContent, /free-text-source-editor__reference-cards\s*\{[^}]*display:\s*contents/s);

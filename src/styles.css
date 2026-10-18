@@ -272,7 +272,7 @@ body::before {
 }
 
 .app-shell[data-device-layout="tablet"] .layout-grid {
-  grid-auto-rows: calc((440px - 112px) / 8);
+  grid-auto-rows: var(--layout-grid-tablet-row-height);
 }
 
 .app-shell[data-device-layout="phone"] {
@@ -648,9 +648,9 @@ h1 {
 .layout-grid {
   align-items: stretch;
   display: grid;
-  gap: 16px;
+  gap: var(--layout-grid-gap);
   grid-auto-flow: dense;
-  grid-auto-rows: calc((418px - 112px) / 8);
+  grid-auto-rows: var(--layout-grid-row-height);
 }
 
 button,
@@ -733,7 +733,7 @@ textarea {
 .layout-two-column,
 .layout-two-by-two,
 .layout-focus-plus-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--layout-grid-columns, 4), minmax(0, 1fr));
 }
 
 .layout-focus-plus-grid > :first-child {
