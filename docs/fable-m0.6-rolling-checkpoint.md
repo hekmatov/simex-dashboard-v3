@@ -1,5 +1,21 @@
 # Fable M0.6 preparation checkpoint
 
+## Focused hosted continuation and sprint run selection — 18 October 2026
+
+The user directed focused hosted verification of the two corrected titles on **Windows and Ubuntu**, reusing passing results. This supersedes another four-job gate. The authorized child of `242f4657` carries the same tests and source/data baseline, with a branch-local workflow change and this checkpoint. Scope: two Chromium titles per OS, **four executions total**, one worker, **zero retries**. Dependencies and browser/system installation are setup; source Vite consumes tracked inputs, so a production build is unnecessary. Units, Cloudflare, density, companion journeys and the other 275 browser cases are reused from the terminal `bbc2b40a` evidence.
+
+The workflow now requires one explicit selection in the **pushed head commit message**:
+
+| Selection | Effect |
+| --- | --- |
+| `[CI-Audience]` | Only the two corrected Audience titles on Windows and Ubuntu; exact discovery count/files/titles checked before execution. |
+| `[CI-Full]` | The existing complete source and Cloudflare matrix, reserved for an explicitly authorized integration/pre-merge gate. |
+| Neither, or both | Acceptance jobs skip; a skipped job/run is not verification evidence. |
+
+Keep `[CF-Pages-Skip]` at the start of CI-only commit messages. Before every execution, state the remaining uncertainty and smallest invalidated selection. Reuse passing checks unless relevant production behavior, contracts, source inputs or setup changed. A push trigger supplies no authority to run broad checks. For a different repair, add or adjust an explicitly bounded focused selection and prove its discovery; do not use the fixed Audience lane as generic verification or fall back to the full gate for convenience. Inspect the effective workflow and final head message before an authorized push, including after adding a later commit. These safeguards apply in this implementation branch; adoption elsewhere requires carrying the workflow forward through the normal authorized integration boundary.
+
+Local preflight parsed the YAML, verified the exclusive focused/full/unmarked/ambiguous selection table, and ran the actual discovery/input-reading block: **two Chromium titles**, one worker, zero retries. It records input hashes; unchanged dashboard/profile hashes match retained `bbc2b40a` evidence. No production/data changes or local acceptance reruns were needed. Scoped workflow review found **no actionable findings**. Focused hosted outcomes remain pending; the earlier failed run stays failed. Closure evidence will combine retained passing checks with corrected-title continuation, not claim one all-green complete run.
+
 ## Replacement CI liveness and readiness correction — 18 October 2026
 
 The human approved exact head `bbc2b40a5ba08330e692b8f035983d6d6c8a9517` for the same private CI branch. Its non-force push triggered [run 39105005356](https://github.com/hekmatov/simex-dashboard-private/actions/runs/39105005356), attempt 1, with all four jobs. Both Cloudflare builds passed: Ubuntu **44 seconds**, Windows **2m02s**. Ubuntu source finished failed in **1h12m05s**: native unit CLI **2,508 tests, 2,507 passed, zero failures, one intentional Windows-only PS-04 skip**; companion **10/10**; main browser selection **276/277**, with one Audience liveness failure. Its density audit passed with **73/73 surfaces accounted for, zero setup failures and zero incomplete scans**. Windows source finished failed in **1h28m00s**: native unit CLI **2,508/2,508**, zero skips; companion **10/10**; main browser **276/277**, with a different shipped Audience readiness failure. Its density audit also passed **73/73**, zero setup failures and incomplete scans. The actual `RUNNER~1` temporary root is present in the passing copied-Windows PS-04 log; the isolated-port and stale-dist source-harness checks also pass. Both formerly unresolved hosted density/Windows-alias boundaries now have native passing evidence. Continue-on-error checkmarks alone are not used as proof.

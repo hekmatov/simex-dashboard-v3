@@ -8,6 +8,8 @@ permissions:
 
 jobs:
   source:
+    # Full integration is opt-in; an automatic push trigger is not run authority.
+    if: contains(github.event.head_commit.message, '[CI-Full]') && !contains(github.event.head_commit.message, '[CI-Audience]')
     name: Source checks (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -94,6 +96,7 @@ jobs:
         run: node -e "process.exit(1)"
 
   cloudflare:
+    if: contains(github.event.head_commit.message, '[CI-Full]') && !contains(github.event.head_commit.message, '[CI-Audience]')
     name: Cloudflare build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -139,5 +142,82 @@ jobs:
             dist/runtime-precache-manifest.js
             dist/config/dashboard.json
             dist/config/dataset-profiles.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  audience:
+    name: Focused Audience (${{ matrix.os }})
+    if: contains(github.event.head_commit.message, '[CI-Audience]') && !contains(github.event.head_commit.message, '[CI-Full]')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      AUDIENCE_SELECTION: (1920 Audience progresses passively through output, liveness, blackout, and denied-close Ended|selected shipped groups play pause seek and change period in a real Audience display)$
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup locked source dependencies
+        run: pnpm install --frozen-lockfile
+
+      # These journeys serve tracked source/data through Vite; no dist build is consumed.
+      - name: Preflight exact two-title selection and source inputs
+        shell: bash
+        run: |
+          mkdir -p reports
+          node node_modules/@playwright/test/cli.js test tests/e2e/v3-step8-fidelity.spec.js tests/e2e/selected-content-preview.spec.js --config=playwright.source-parallel.config.js --project=chromium --workers=1 --retries=0 --grep "$AUDIENCE_SELECTION" --list --reporter=json > reports/audience-discovery.json
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          const discovery = JSON.parse(readFileSync('reports/audience-discovery.json', 'utf8'));
+          const collect = (suite) => [...(suite.specs ?? []).flatMap(spec => spec.tests.map(test => ({ title: spec.title, file: spec.file, project: test.projectName }))), ...(suite.suites ?? []).flatMap(collect)];
+          const selected = discovery.suites.flatMap(collect);
+          const expected = [
+            ['1920 Audience progresses passively through output, liveness, blackout, and denied-close Ended', 'v3-step8-fidelity.spec.js'],
+            ['selected shipped groups play pause seek and change period in a real Audience display', 'selected-content-preview.spec.js'],
+          ];
+          assert.equal(selected.length, 2);
+          for (const [title, file] of expected) assert.equal(selected.filter(test => test.title === title && test.file.endsWith(file) && test.project === 'chromium').length, 1);
+          const inputs = ['public/config/dashboard.json', 'public/config/dataset-profiles.json', 'public/integration/quorum-chart-catalogue.json', 'tests/fixtures/legacy-contract-dashboard.json'];
+          const hashes = Object.fromEntries(inputs.map(path => { const bytes = readFileSync(path); JSON.parse(bytes); return [path, createHash('sha256').update(bytes).digest('hex')]; }));
+          console.log(JSON.stringify({ selected, inputHashes: hashes, workers: 1, retries: 0 }));
+          NODE
+
+      - name: Setup Chromium and system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+
+      - name: Setup Chromium (Windows)
+        if: runner.os == 'Windows'
+        run: node node_modules/@playwright/test/cli.js install chromium
+
+      - name: Verify only the two corrected Audience titles
+        shell: bash
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: reports/audience-junit.xml
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/audience
+          PLAYWRIGHT_HTML_OPEN: never
+        run: node node_modules/@playwright/test/cli.js test tests/e2e/v3-step8-fidelity.spec.js tests/e2e/selected-content-preview.spec.js --config=playwright.source-parallel.config.js --project=chromium --workers=1 --retries=0 --grep "$AUDIENCE_SELECTION" --reporter=list,junit,html
+
+      - name: Upload focused native reports and traces
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: audience-focused-${{ matrix.os }}-${{ github.run_attempt }}
+          path: |
+            reports/
+            playwright-report/
+            test-results/
           if-no-files-found: warn
           retention-days: 14
