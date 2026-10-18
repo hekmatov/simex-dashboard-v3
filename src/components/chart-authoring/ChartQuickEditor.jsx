@@ -9,6 +9,7 @@ import {
 import ChartFootprintPicker from "./ChartFootprintPicker.jsx";
 import EditSessionActions from "./EditSessionActions.jsx";
 import GeneratedFormSection from "./GeneratedFormSection.jsx";
+import AuthoringStage from "./AuthoringStage.jsx";
 
 const DANGEROUS_PATH_SEGMENTS = new Set([
   "__proto__",
@@ -22,6 +23,12 @@ const FULL_EDITOR_UNAVAILABLE_REASON = "Full editing is unavailable for this cha
 export default function ChartQuickEditor({
   session,
   profile,
+  rows,
+  geoData,
+  renderContext,
+  themeProjection,
+  deviceLayout,
+  onShowOnCanvas,
   disabled = false,
   onDraftChange = noop,
   onSave,
@@ -108,6 +115,10 @@ export default function ChartQuickEditor({
         React.createElement(
           "div",
           { className: "chart-editor-layout chart-quick-editor-layout" },
+          React.createElement(AuthoringStage, {
+            chart, rows, datasetProfile: profile, geoData, renderContext, themeProjection, deviceLayout,
+            placementId: session.placementId, onShowOnCanvas,
+          }),
           React.createElement(
             "div",
             { className: "chart-quick-editor-settings" },

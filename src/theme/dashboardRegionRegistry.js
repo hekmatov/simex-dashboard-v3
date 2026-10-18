@@ -269,6 +269,15 @@ export const DASHBOARD_OWNED_REGION_REGISTRY = Object.freeze([
     witnesses: ["chart-wizard-destination", "chart-wizard-data-source", "chart-wizard-chart-type", "chart-wizard-map-and-prepare", "chart-wizard-configure", "chart-wizard-review-issues", "full-chart-editor-configure", "chart-quick-editor"],
   }),
   region({
+    id: "chart-authoring-stage",
+    owner: "AuthoringStage",
+    selector: ".authoring-stage",
+    role: "panel",
+    lifecycle: "conditional",
+    parentId: "chart-authoring-editor",
+    witnesses: ["chart-quick-editor", "full-chart-editor-configure", "chart-wizard-configure"],
+  }),
+  region({
     id: "source-content-editor",
     owner: "SourceContentWorkspace",
     selector: ".source-content-workspace",

@@ -36,7 +36,7 @@ import { validateChronoGroups } from "../../charting/time/chronoGroupModel.js";
 import { validateGeoJson } from "../../lib/loadDashboard.js";
 import ChartConversionDialog from "./ChartConversionDialog.jsx";
 import ChartEditorModal from "./ChartEditorModal.jsx";
-import ChartPreview from "./ChartPreview.jsx";
+import AuthoringStage from "./AuthoringStage.jsx";
 import ContextualTabs from "./ContextualTabs.jsx";
 import EditSessionActions from "./EditSessionActions.jsx";
 import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
@@ -269,6 +269,12 @@ export default function ChartEditorV3({
   profiles = {},
   parsingMetadata = {},
   timezone = "UTC",
+  themeProjection,
+  deviceLayout,
+  destination,
+  placementId,
+  renderContext,
+  onShowOnCanvas,
   disabled = false,
   surface = "dialog",
   onSave = noop,
@@ -539,13 +545,14 @@ export default function ChartEditorV3({
   const preview = React.createElement(
     "div",
     { className: "chart-editor-preview" },
-    React.createElement(ChartPreview, {
+    React.createElement(AuthoringStage, {
       key: `${state.draft.id}:${state.previewRevision}`,
       chart: state.draft,
       rows: safeRows,
       geoData: selectedGeoData,
       datasetProfile: profile,
       prepared,
+      themeProjection, deviceLayout, destination, placementId, renderContext, onShowOnCanvas,
       diagnosticNamespace: state.draft.id,
     }),
   );

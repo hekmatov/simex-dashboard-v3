@@ -2310,11 +2310,25 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }, [activateBuildCanvasSelection]);
 
   function completeBuildReveal(requestId) {
+    if (buildRevealRequest?.id === requestId && buildRevealRequest?.source === "authoring") return;
     if (pendingBuildSelection?.requestId !== requestId) return;
     buildRevealResolversRef.current.get(requestId)?.(true);
     buildRevealResolversRef.current.delete(requestId);
     setPendingBuildSelection(null);
     setBuildRevealRequest(null);
+  }
+
+  function revealAuthoringDestination({ placementId, destination } = {}) {
+    const selection = placementId ? selectionForPlacement(workingDashboard, placementId) : {
+      kind: "section",
+      pageId: destination?.pageId ?? activePage?.id,
+      sectionId: destination?.sectionId ?? activePage?.sections?.[0]?.id,
+    };
+    if (!selection?.pageId) return undefined;
+    const id = ++buildRevealRequestIdRef.current;
+    if (selection.pageId !== activePage?.id) void onActivePageChange(selection.pageId);
+    setBuildRevealRequest({ id, selection, source: "authoring", behavior: "auto" });
+    return () => setBuildRevealRequest(current => current?.id === id ? null : current);
   }
 
   async function renameBuildSelection(selection, value) {
@@ -2640,6 +2654,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     resolveAsset: resolveBrowserAuthoredAsset,
     requestRepair: requestContentRepair,
   }), [requestContentRepair, runtimeMediaItems, workingDashboard.assets]);
+  const authoringRenderContext = React.useMemo(() => ({
+    ...contentRenderContext,
+    sources: workingDashboard.dataSources,
+    accessibilityEnabled: false,
+  }), [contentRenderContext, workingDashboard.dataSources]);
   const navigateContentDependency = React.useCallback((use) => {
     const selection = selectionForPlacement(dashboardStateRef.current, use.panelId);
     const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
@@ -2780,6 +2799,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   ) : (
     <ChartQuickEditor
       session={chartEditSession}
+      rows={workingDashboard.loadedData?.[chartEditSession.draft.sourceId]}
+      geoData={geoDataSources[chartEditSession.draft.presentation?.map?.geoSource]}
+      renderContext={authoringRenderContext}
+      themeProjection={themeProjection}
+      deviceLayout={deviceLayout}
+      onShowOnCanvas={() => revealAuthoringDestination({ placementId: chartEditSession.placementId })}
       profile={workingDashboard.datasetProfiles?.[chartEditSession.draft.sourceId]}
       disabled={moderatorMutationLocked}
       onDraftChange={changeQuickChartDraft}
@@ -2928,6 +2953,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     <>
       <DashboardModeWorkspace
         mode={editMode ? "build" : "view"}
+        deviceLayout={deviceLayout}
         activePage={renderingActivePage}
         pageType={landingActive ? "landing" : "analytical"}
         dashboard={renderingDashboard}
@@ -2994,6 +3020,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         contentDraftCoordinator={contentDraftCoordinator}
         destination={chartWizardTarget}
         dashboard={workingDashboard}
+        deviceLayout={deviceLayout}
+        themeProjection={themeProjection}
+        renderContext={authoringRenderContext}
+        onShowOnCanvas={revealAuthoringDestination}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}
         onContentDraftDiscard={onContentDraftDiscard}
@@ -3110,6 +3140,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         editDirty={isChartEditSessionDirty(chartEditSession)}
         destination={staticDestinationForPlacement(workingDashboard, chartEditSession.placementId)}
         dashboard={workingDashboard}
+        deviceLayout={deviceLayout}
+        themeProjection={themeProjection}
+        renderContext={authoringRenderContext}
+        onShowOnCanvas={revealAuthoringDestination}
         disabled={moderatorMutationLocked}
         dataSources={workingDashboard.dataSources}
         loadedData={workingDashboard.loadedData}
@@ -3604,6 +3638,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           <ChartEditorV3
             disabled={moderatorMutationLocked}
             chart={selectedPanel}
+            deviceLayout={deviceLayout}
+            themeProjection={themeProjection}
+            renderContext={authoringRenderContext}
+            placementId={selectedPlacement.panelId}
+            onShowOnCanvas={() => revealAuthoringDestination({ placementId: selectedPlacement.panelId })}
             chronoGroups={dashboard.chronoGroups ?? []}
             existingCharts={configuredCharts(dashboard)}
             rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
@@ -3628,6 +3667,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
         dashboard={dashboard}
+        deviceLayout={deviceLayout}
+        themeProjection={themeProjection}
+        renderContext={authoringRenderContext}
+        onShowOnCanvas={revealAuthoringDestination}
         initialDraftState={chartDraftSessionStore.get(chartDraftSessionKey)}
         suspendControllerRef={chartWizardControllerRef}
         disabled={moderatorMutationLocked}

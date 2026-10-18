@@ -4,6 +4,7 @@ import { APP_VERSION } from "../../lib/appVersion.js";
 
 export default function CanonicalDashboardFrame({
   mode,
+  deviceLayout,
   pageType,
   pageId,
   buildStaticAuthoringOpen = false,
@@ -22,6 +23,7 @@ export default function CanonicalDashboardFrame({
       className={`app-shell canonical-dashboard-frame ${mode}-shell${mode === "build" ? " build-workspace" : ""}`}
       data-canonical-page-id={pageId}
       data-canonical-mode={mode}
+      data-device-layout={deviceLayout}
       data-page-type={pageType}
       data-build-static-authoring-open={mode === "build" ? String(buildStaticAuthoringOpen) : undefined}
       tabIndex={landmarkTabIndex ?? (["home", "view"].includes(mode) ? -1 : undefined)}

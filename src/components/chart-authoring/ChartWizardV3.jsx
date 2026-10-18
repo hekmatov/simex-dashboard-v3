@@ -35,7 +35,8 @@ import ChartTypePicker from "./ChartTypePicker.jsx";
 import DataRolesStep from "./DataRolesStep.jsx";
 import DataSourceStep from "./DataSourceStep.jsx";
 import StyleLayoutStep from "./StyleLayoutStep.jsx";
-import ChartPreview from "./ChartPreview.jsx";
+import AuthoringStage, { useAuthoringDestinationGeometry } from "./AuthoringStage.jsx";
+import { chartFootprintPixelSize } from "../chartStageGeometry.js";
 import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
 import { requestRenderProof } from "../../charting/forms/chartProof.js";
 import {
@@ -363,6 +364,10 @@ export default function ChartWizardV3({
   destination = null,
   dashboard = null,
   dashboardRevision = null,
+  deviceLayout,
+  themeProjection,
+  renderContext,
+  onShowOnCanvas,
   editSession = null,
   editDirty = false,
   initialDraftState = null,
@@ -1830,6 +1835,10 @@ export default function ChartWizardV3({
           geoData,
           profile: runtime.profile,
           prepared: runtime.prepared,
+          preparationStatus: runtime.status,
+          deviceLayout, themeProjection, renderContext, onShowOnCanvas,
+          destination: reviewedDestination,
+          placementId: editSession?.placementId,
           renderProof,
           placementProof,
         }),
@@ -1989,7 +1998,16 @@ export function ChartCreationProofDeck({
   prepared = null,
   renderProof = {},
   placementProof = {},
+  preparationStatus,
+  deviceLayout,
+  themeProjection,
+  renderContext,
+  onShowOnCanvas,
+  destination,
+  placementId,
 }) {
+  const geometry = useAuthoringDestinationGeometry({ deviceLayout, destination, placementId });
+  const size = chartFootprintPixelSize(resolveChartFootprint(chart?.layout), geometry);
   const chartLabels = new Map((dashboard?.pages ?? []).flatMap((page) => (
     (page.sections ?? []).flatMap((section) => (
       (section.panels ?? []).map((placement) => {
@@ -2020,19 +2038,25 @@ export function ChartCreationProofDeck({
         "data-proof-revision": renderProof.revision ?? "awaiting",
       },
       proofHeading("Canonical render", renderProof.status, renderProof.revision),
-      renderReady
-        ? React.createElement(ChartPreview, {
+      React.createElement(AuthoringStage, {
             chart,
             rows,
             geoData,
             datasetProfile: profile,
             prepared,
-            diagnosticNamespace: chart.id,
-          })
-        : proofMessages(
+            deviceLayout, themeProjection, renderContext,
+            onShowOnCanvas: onShowOnCanvas ? () => onShowOnCanvas({ placementId, destination }) : undefined,
+            canvasWidth: geometry.canvasWidth,
+            readiness: renderReady ? undefined : {
+              status: preparationStatus === "pending" ? "pending" : "invalid",
+              diagnostics: renderProof.errors,
+            },
+            diagnosticNamespace: chart?.id,
+          }),
+      !renderReady ? proofMessages(
             renderProof.errors,
             chart ? "Canonical render is awaiting renderer-ready data." : "Choose a chart type to begin the canonical render.",
-          ),
+          ) : null,
     ),
     React.createElement(
       "article",
@@ -2060,6 +2084,7 @@ export function ChartCreationProofDeck({
           )
         : proofMessages(placementProof.errors, "Choose a valid destination to project placement."),
       React.createElement("p", { className: "chart-placement-proof-text" }, placementProof.orderedText ?? "Placement is awaiting a destination."),
+      chart ? React.createElement("p", { className: "chart-placement-proof-text" }, `${size.width} × ${size.height} on the dashboard`) : null,
     ),
   );
 }

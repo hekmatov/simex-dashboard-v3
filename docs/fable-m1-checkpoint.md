@@ -1,4 +1,33 @@
-# Fable M1.1 checkpoint
+# Fable M1 checkpoint
+
+## Current — M1.2, 18 October 2026
+
+Same owner/chat `01a14e36-2be8-7700-9efd-6b787998b007`, worktree `.worktrees/fable-m1-geometry`, branch `codex/fable-m1-geometry`; exact clean M1.2 base **07e77cf6066fac184165c0c3dbdee3095d20f6fa**, freshly integrated private main containing reviewed M1.1 `242fe679`. Public main intentionally remains `c003d111`. Preserve configured GPT-6.1 Sol / High floor, authored dashboard hash below, accepted4283/storage and other worktrees. No pending bundle.
+
+Authorized: complete AuthoringStage/editor/wizard slice, one scoped independent review plus affected revisions, focused verification, coherent commit and separate external-browser preview for explicit practitioner acceptance. Direct terminal/preview/authority reports to steward `01a0d085-14b6-7882-9994-12c2b6652a2b`, local, are authorized. No push/merge/deploy, M1.3/4, typography/historical findings, M2/scenarios, schema/content changes or full gate.
+
+Accepted Design A: real panel at measured destination dimensions, uniform Fit/Actual scaling with truthful captions; stable controls/readiness; accessible, cancellable Show on canvas through existing reveal/projection owner; desktop/tablet and phone advisory. Actual current Build uses **ChartQuickEditor in UnitOrbit** and **ChartWizardV3 edit mode for full editing**; ChartEditorV3 also retains its inspector/dialog contract. These actual owners are integrated rather than historical line references. Destination geometry uses section-grid padding-box width, excluding frame border. The canonical frame now receives the current device layout.
+
+Implementation/review checkpoint: AuthoringStage/readiness, current Quick/Full/create plus legacy editor adapters, device attribute and owned region, and existing canvas-reveal path are implemented. One scoped independent review found duplicate map-budget ownership and unmeasured empty sections; both reproduced in the bounded runtime harness, fixed, and affected-boundary re-reviewed clean. Stage maps use unique preview owners; geometry measures real grid, empty section or canvas content and cleans/rebinds observers. No deferred findings.
+
+Final owner selection passed **175/175**, zero failures/skips, **15.03s**: `node --test --test-concurrency=1 tests/authoringStage.test.js tests/authoringStageRuntime.test.js tests/chartAuthoringComponentsV3.test.js tests/chartEditSession.test.js tests/chartWizardProofDeck.test.js tests/dashboardRegionRegistry.test.js tests/dashboardMode.test.js`. A strengthened real-pointer cancellation case additionally passes 1/1. Reuse M0 E51/E53/E54 and M1.1 E56. No broad/build/hosted gates rerun.
+
+Final source fidelity journey **1/1 passed, 49.3s**, Chromium: `pnpm.cmd exec playwright test --config=node_modules/m12-fidelity.config.mjs`, selecting only `tests/e2e/v3-authoring-stage-fidelity.spec.js` against source4292. It verifies actual Quick/Full destination geometry and nonblank identical canvas output/title, Fit/Actual scrolling, immediate wide/fractional footprints, keyboard Escape and pointer cancellation, edit save/suspend/resume, and creation suspend/resume/discard. Actual Quick/Full preflight had no page errors; real standard panel/stage both379×418 at1440 viewport. Desktop/tablet/phone-advisory variants and empty/invalid/pending frame behavior have focused component/runtime coverage; the browser journey is one representative desktop path, not a full device or integration gate.
+
+Earlier journey failures were isolated setup boundaries: nested label text prevented an exact Width label match (use existing stable control IDs), and the custom runner omitted the repository's normal20s assertion timeout (restored). Creation preflight verified the actual source catalogue label, "R values — Biomedical", before the final run. No geometry or rendering assertion was weakened. Independent affected-boundary review also caught a possible blank-canvas equality false positive; the assertion now requires nonuniform pixels in both canvases as well as exact paint equality. Rereview is clean. No outstanding findings.
+
+Practitioner preview: **http://127.0.0.1:4292/**, source served directly from the commit containing this checkpoint, with no generated build. Opened in the external default browser; separate from accepted4283. Server PID **28992** at handover, exec session31305. Keep available through feedback. Stop only this preview with `Stop-Process -Id 28992`; restart from this worktree with `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4292 --strictPort`. Source edits invalidate the candidate identity; use the terminal handover's exact Git head. Authored hash remains unchanged. Human acceptance is pending; no push/merge/deploy or M1.3 advancement.
+
+Practitioner checklist:
+
+1. Open dashboard → Build → select "Reproduction value" in the structure tree. Check Quick preview captions and Fit/Actual scrolling.
+2. Set a wide/half-height footprint. Check immediate preview and canvas proportions, then open Full editor and check that preview and controls remain usable.
+3. Hold Show on canvas with the mouse; release to restore. Focus it and press Enter, then Escape; check opacity and focus restore while the editor stays open.
+4. Change a title, close and resume the draft, then save or discard. Create a chart from "R values — Biomedical" and check destination preview, suspend/resume and discard.
+
+Historical M1.1 evidence follows.
+
+## M1.1 retained evidence
 
 18 October 2026. Owner: this implementation task; steward `01a0d085-14b6-7882-9994-12c2b6652a2b` (local). Scope: shared destination geometry and ChartPanel prepared/resolved-rendering handoff only. One coherent implementation/test/evidence commit, no publication. Assigned GPT-6.1 Sol / High for shared geometry/CSS and render contracts; this runtime exposes no current-model/effort inspection control, so the requested configuration cannot independently be confirmed here. No tier change requested.
 
