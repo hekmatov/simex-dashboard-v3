@@ -1,6 +1,6 @@
 # Fable sprint coordination agreement
 
-Version 3 · adopted 27 September 2026 · amended 29 September for effort floors and 1 October for implementation-slice review and practitioner previews, by user instruction.
+Version 3 · adopted 27 September 2026 · amended 29 September for effort floors, 1 October for implementation-slice review and practitioner previews, and 18 October for focused hosted verification and evidence reuse, by user instruction.
 
 Applies to every Fable dashboard planning steward, high-level coordinator, milestone owner and replacement in those roles. This is the canonical workflow; [ROADMAP.md](ROADMAP.md) locates the authoritative product plan and current assignment. Product criteria, explicit user decisions and repository approval/verification policies govern. Version 3 removes per-test-group reassignment: the owner carries an approved milestone workstream inventory through its defined exit, choosing internal batches without coordinator permission. Earlier small-package return instructions are superseded.
 
@@ -27,6 +27,14 @@ A time checkpoint means preserve a correct, reviewable boundary and name remaini
 ## Verification, review and commits
 
 Apply the repository's proportional workflow budget. Use the nearest useful check during repair and the final implementation-slice selection once; reuse unaffected passing evidence. An inventory delegation does not authorize a full-suite aggregate. A changed shared boundary can invalidate prior checks and requires relevant consumers to be considered. Full suites/builds remain governed by explicit integration or release requirements.
+
+For the rest of this sprint, use these execution rules for local and hosted verification:
+
+- Before execution, state the unresolved question, the smallest relevant test selection/platforms, and which passing results remain valid. Put this briefly in the existing checkpoint or execution update; no new plan or evidence system is required.
+- For a bounded correction, continue failed or previously unrun cases. Reuse unaffected passes across commits when the relevant production behavior, contract and test setup remain unchanged. A new commit hash alone does not invalidate evidence. Broaden only for a concrete changed dependency or an explicitly requested integration/pre-merge gate.
+- Before a push or dispatch, inspect its effective CI triggers and selected jobs. Select focused execution before publication; automatic workflow behavior is not authorization to run the full gate. Keep complete gates available for explicit integration requests, with their execution mode documented alongside the workflow.
+- Distinguish required setup from acceptance: dependency installation, browser preparation and a source build may be necessary for a hosted browser test without authorizing unit, Cloudflare or other unrelated suites.
+- Report continuation evidence honestly: name the inherited run, correction revision, focused native titles/platform results and exclusions. A completed failed historical run remains failed; inherited passes plus successful corrections do not constitute a single all-green full run. Stop when the authorized acceptance question is resolved.
 
 Retain independent judgment where contracts, safety or assertion quality warrant it. Default to one scoped review per coherent implementation slice with a meaningful risk boundary, not one review per tiny test group. Re-review the correction and affected boundary when needed. The coordinator verifies acceptance and material gaps rather than acting as another mandatory code reviewer.
 
