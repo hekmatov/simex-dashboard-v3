@@ -85,25 +85,32 @@ test("1920 Audience progresses passively through output, liveness, blackout, and
   await page.locator('[data-presentation-control-id="restore"]').click();
   await expect(audience.locator(".audience-blackout")).toHaveCount(0);
 
-  const controllerStall = page.evaluate(() => new Promise((resolve) => {
-    setTimeout(() => {
-      const releaseAt = performance.now() + 8_000;
-      while (performance.now() < releaseAt) {
-        // Exercise a real unresponsive controller event loop without a product hook.
-      }
-      resolve();
-    }, 0);
-  }));
+  const controllerSession = await context.newCDPSession(page);
   try {
-    await expect(popup.locator(
-      '.audience-display[data-connection-status="disconnected"] [data-connection-indicator="disconnected"] svg[aria-label="Audience display disconnected"]',
-    )).toBeVisible({ timeout: 12_000 });
+    // A busy loop can also block the Audience when Chromium shares its renderer.
+    // Suspend controller scripts alone so Audience liveness can still run.
+    await controllerSession.send("Emulation.setScriptExecutionDisabled", { value: true });
+    const controllerResumed = new Promise((resolve) => setTimeout(resolve, 8_000))
+      .then(() => controllerSession.send("Emulation.setScriptExecutionDisabled", { value: false }));
+    // Observe a failed resume through the awaited promise, without an unhandled rejection.
+    controllerResumed.catch(() => {});
+    try {
+      await expect(popup.locator(
+        '.audience-display[data-connection-status="disconnected"] [data-connection-indicator="disconnected"] svg[aria-label="Audience display disconnected"]',
+      )).toBeVisible({ timeout: 12_000 });
+    } finally {
+      await controllerResumed;
+    }
 
     await expect(popup.locator(
       '.audience-display[data-connection-status="reconnecting"] [data-connection-indicator="reconnecting"] svg[aria-label="Audience display reconnecting"]',
     )).toBeVisible({ timeout: 6_000 });
   } finally {
-    await controllerStall;
+    try {
+      await controllerSession.send("Emulation.setScriptExecutionDisabled", { value: false });
+    } finally {
+      await controllerSession.detach();
+    }
   }
   await expect(audience).toHaveAttribute("data-connection-status", "connected", { timeout: 12_000 });
   await expect(audience.locator("[data-connection-indicator]")).toHaveCount(0);

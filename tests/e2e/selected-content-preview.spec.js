@@ -118,7 +118,8 @@ test("selected shipped groups play pause seek and change period in a real Audien
   const { popup: audience } = await openAudienceSession(page, { waitForBaseline: false });
   // Audience hydrates the full shipped dashboard before starting its channel.
   // DOMContentLoaded alone also admits the bootstrap waiting surface.
-  await expect(audience.locator(".audience-theme-root")).toBeVisible({ timeout: 45_000 });
+  // Hosted Windows can still be fetching authored CSVs after 45 seconds.
+  await expect(audience.locator(".audience-theme-root")).toBeVisible({ timeout: 90_000 });
   const output = audience.locator(".audience-display");
   await expect(output).toHaveAttribute("data-connection-status", "connected");
   await expect(output).toHaveAttribute("data-output-mode", "active");
