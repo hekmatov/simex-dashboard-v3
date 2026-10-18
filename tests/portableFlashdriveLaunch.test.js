@@ -8,7 +8,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 
 import { serializeDashboardBundle } from "../src/charting/config/dashboardBundleV3.js";
 import { sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
@@ -102,6 +102,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
   let launcher = null;
   let browser = null;
   let serverUrl = null;
+  const audienceDiagnostics = { errors: [], failedRequests: [], failedResponses: [] };
   assertSafeTemporaryTarget(temporaryRoot);
   try {
     await cp(path.join(ROOT, "dist"), path.join(fixtureRoot, "dist"), { recursive: true });
@@ -206,9 +207,21 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
     const choice = page.locator('[data-presentable-item-id="ps04_image_panel"]');
     await choice.getByRole("checkbox").check();
     const audiencePromise = context.waitForEvent("page");
+    context.once("page", (popup) => {
+      popup.on("pageerror", (error) => audienceDiagnostics.errors.push(error.message));
+      popup.on("requestfailed", (request) => audienceDiagnostics.failedRequests.push({
+        url: request.url(), error: request.failure()?.errorText,
+      }));
+      popup.on("response", (response) => {
+        if (response.status() >= 400) audienceDiagnostics.failedResponses.push({ url: response.url(), status: response.status() });
+      });
+    });
     await page.getByRole("button", { name: "Open audience display", exact: true }).click();
     const audience = await audiencePromise;
     await audience.waitForLoadState("domcontentloaded");
+    // Offline Audience hydrates the shipped sources before mounting its output.
+    await expect(audience.locator(".audience-theme-root")).toBeVisible({ timeout: 45_000 });
+    await expect(audience.locator(".audience-display")).toHaveAttribute("data-connection-status", "connected");
     await assertVisible(audience.locator(`img[alt="${IMAGE_ALT}"]`));
     assert.equal(await audience.locator('[data-presentation-item-kind="image"]').count(), 1);
     assert.equal(await audience.locator("button, .chart-image-actions, .static-content-state__actions").count(), 0);
@@ -223,6 +236,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
     t.diagnostic(`offline Audience ${geometry.width}x${geometry.height}; MIME=image/png; traversal=${containment}`);
     await context.close();
   } finally {
+    t.diagnostic(`offline Audience diagnostics ${JSON.stringify(audienceDiagnostics)}`);
     await browser?.close();
     if (launcher && launcher.exitCode === null && launcher.signalCode === null) {
       launcher.kill();

@@ -73,7 +73,9 @@ jobs:
           PLAYWRIGHT_JUNIT_OUTPUT_FILE: reports/source-parallel-junit.xml
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/parallel
           PLAYWRIGHT_HTML_OPEN: never
-        run: node node_modules/@playwright/test/cli.js test --config=playwright.source-parallel.config.js --project=chromium --reporter=list,junit,html
+        # Serialize resource-heavy journeys so heartbeat safety is measured without worker contention.
+        # The local reference-machine configuration remains unchanged.
+        run: node node_modules/@playwright/test/cli.js test --config=playwright.source-parallel.config.js --project=chromium --workers=1 --reporter=list,junit,html
 
       - name: Upload native test reports and traces
         if: always()

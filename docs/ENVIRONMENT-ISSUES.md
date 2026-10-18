@@ -11,6 +11,7 @@ Do not record product-test failures, expected build warnings, transient typing m
 | ENV-001 | Codex restricted sandbox denies Vite/esbuild filesystem traversal | Active in restricted Codex execution | 7 | ENV-001.001, ENV-001.002, ENV-001.003, ENV-001.004, ENV-001.005, ENV-001.006, ENV-001.007 |
 | ENV-002 | Playwright Chromium is absent from the local browser cache | Recurrent after cache removal or Playwright upgrade | 1 | ENV-002.001 |
 | ENV-003 | Git reports a linked checkout is not a worktree during restricted reads | Observed in restricted Codex execution | 1 | ENV-003.001 |
+| ENV-004 | Windows Chromium cannot read a file upload at a long native evidence path | Avoided with the same bytes supplied as a browser File | 1 | ENV-004.001 |
 
 The **Entries** value must equal the number of listed entry references. Add a new reference for every confirmed repeat; do not merely increase the count.
 
@@ -23,6 +24,13 @@ The **Entries** value must equal the number of listed entry references. Add a ne
 5. Include the register update in the task's coherent commit when it is changed. Resolve ordinary merge conflicts by preserving every distinct entry and recalculating the affected index row.
 
 ## Entries
+
+### ENV-004.001 — 2026-10-18
+
+- **Test:** `tests/e2e/static-content-portability.spec.js` — `asset commit failure restores the prior dashboard and authored store atomically`, source-parallel configuration, one worker, output under `.worktrees/fable-m0-integration-evidence/m0-final-integration-20261017/hosted-ci-20261018/repair/additional-windows-artifacts`.
+- **Evidence:** The generated 19,535-byte JSON file existed at a 282-character absolute path, but Chromium's File read rejected it with `NotFoundError: A requested file or directory could not be found at the time an operation was processed.` A controlled same-browser probe read identical bytes successfully from a 148-character native path and from a File payload; both SHA-256 values were `97230243b4e46d83e7434a3c4d5571b0dad2120bd88b697700aa31956ff98bf2`. Native reports and the probe are retained in the same `repair` directory.
+- **Scope:** Local Windows Chromium file-input delivery from deeply nested evidence paths; this does not explain the separate hosted timeout.
+- **Outcome:** The rollback test retains its exported file and supplies the same filename, MIME type and bytes through `setInputFiles({ name, mimeType, buffer })`. The focused case passed **1/1 in 27.9 seconds** from the same deep evidence location. Import, rollback and persistence assertions are unchanged.
 
 ### ENV-001.001 — 2026-08-24
 

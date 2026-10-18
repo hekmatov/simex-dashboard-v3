@@ -9,7 +9,7 @@ const appVersion = JSON.parse(await readFile(new URL("../../package.json", impor
 test.use({ viewport: { width: 1440, height: 1000 }, storageState: { cookies: [], origins: [] } });
 
 test("every shipped Page renders in View and Build, then eligible content reaches Present", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   const response = await page.request.get("http://127.0.0.1:4173/config/dashboard.json");
   expect(response.ok()).toBe(true);
   const shipped = await response.json();
@@ -25,6 +25,7 @@ test("every shipped Page renders in View and Build, then eligible content reache
   }, { key: storageKey, dashboard: fixture });
   await page.goto("http://127.0.0.1:4185/?mode=view");
   const modes = page.getByLabel("Dashboard mode");
+  await modes.waitFor({ state: "visible", timeout: 45_000 });
   await expect(modes.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".dashboard-footer")).toContainText(`App version ${appVersion}`);
   await expect(page.locator(".dashboard-footer").getByRole("link", { name: "Changelog" })).toBeVisible();

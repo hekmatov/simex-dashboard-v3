@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -175,7 +175,8 @@ test("harness requires an explicit application mode", async () => {
 });
 
 async function startHarness(t, { mode, appPort, controlPort, staleDist }) {
-  const fixtureRoot = await mkdtemp(join(tmpdir(), "simex-source-harness-"));
+  // Hosted Windows TMP can use an 8.3 alias (RUNNER~1), which Vite rejects.
+  const fixtureRoot = await realpath(await mkdtemp(join(tmpdir(), "simex-source-harness-")));
   await writeFixture(fixtureRoot, { staleDist });
 
   const server = spawn(

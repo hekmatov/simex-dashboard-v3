@@ -212,7 +212,12 @@ test("native style signatures resolve real shell, section, panel, and control pa
     await page.locator(`[data-profile-option="${style.profile}"] input`).check();
     await page.getByLabel("Light", { exact: true }).check();
     await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", style.id);
-    await page.waitForTimeout(220);
+    // Read final paint rather than an interpolated Oklab shadow when a busy
+    // runner has not delivered the transition's final animation frame yet.
+    await page.locator(".canonical-dashboard-frame, [data-canonical-panel-id]").evaluateAll(async (nodes) => {
+      await Promise.all(nodes.flatMap((node) => node.getAnimations())
+        .map((animation) => animation.finished.catch(() => {})));
+    });
 
     const metrics = await page.evaluate(() => {
       const css = (selector) => getComputedStyle(document.querySelector(selector));

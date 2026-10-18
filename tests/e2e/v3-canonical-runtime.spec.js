@@ -16,6 +16,7 @@ const EXPECTED_PRESENT_TIME = Object.freeze({
 });
 
 test("canonical runtime ledger preserves tracked semantics across View, Build, Present, and Audience", async ({ page }) => {
+  test.setTimeout(120_000);
   await installPageRemovalGroups(page);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");

@@ -647,7 +647,7 @@ test("edit-session save and reset use session fallback when storage is full", as
   await openDashboardEditMode(page);
   const sessionTitle = "Unsaved exercise label";
   const map = structureRail(page);
-  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
+  await map.locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(sessionTitle);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();

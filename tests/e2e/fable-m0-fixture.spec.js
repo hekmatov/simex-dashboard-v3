@@ -88,6 +88,7 @@ test("M0 missing fixture source shows visible recovery while other content stays
 });
 
 test("M0 default harness launches the actual shipped dashboard without fixture selection", async ({ page }) => {
+  test.setTimeout(90_000);
   const shipped = JSON.parse(await readFile(new URL("../../public/config/dashboard.json", import.meta.url), "utf8"));
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));

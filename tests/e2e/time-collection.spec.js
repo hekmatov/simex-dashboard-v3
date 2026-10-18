@@ -407,9 +407,10 @@ test("collection carousels remain independent while Chrono plays", async ({
   const controls = page.getByRole("region", { name: "Chrono playback controls" });
   await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
   await controls.getByLabel("Chrono chart scope").selectOption("all-page");
-  await controls.getByLabel("Playback frame")
-    .fill(String(Date.parse("2027-02-20T00:00:00.000Z")));
+  const frame = controls.getByLabel("Playback frame");
+  await frame.fill(await frame.getAttribute("min"));
   await controls.getByRole("button", { name: "Play Chrono" }).click();
+  await expect(controls.getByRole("button", { name: "Pause Chrono" })).toBeVisible();
   await pausesPanel.scrollIntoViewIfNeeded();
   await chronoButton.hover();
   await expect(pauses).toHaveAttribute(
@@ -673,6 +674,9 @@ function addCollectionScenarios(dashboard) {
 }
 
 function addPlaybackCarouselScenarios(dashboard) {
+  // Keep playback active while both independent carousels are inspected.
+  // Starting one frame from the end made cleanup depend on machine speed.
+  nationalGroup(dashboard).secondsPerFrame = 10;
   const sourceId = "e2e_playback_carousel_values";
   dashboard.dataSources[sourceId] = uploadedCsv(
     "playback-carousel-values.csv",

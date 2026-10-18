@@ -87,6 +87,7 @@ test("Chrono Group Only hides empty sections and View all charts switches the sc
 });
 
 test("Build rails stop above the footer and saved session changes can be discarded repeatedly", async ({ page }) => {
+  test.setTimeout(180_000);
   await openBuild(page);
   const title = page.getByRole("complementary", { name: "Properties", exact: true }).getByLabel("Page title", { exact: true });
   const baseline = await title.inputValue();
