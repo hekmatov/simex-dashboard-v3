@@ -46,8 +46,12 @@ test("Set page time opens whole-page playback and the readout follows the scrub"
   await page.getByRole("button", { name: "Set page time" }).click();
   await expect(page.getByRole("region", { name: "Chrono playback controls" }).getByLabel("Chrono source")).toHaveValue("page:");
   await expect(readout).toContainText("Whole page");
+  const controls = page.getByRole("region", { name: "Chrono playback controls" });
+  const frame = controls.getByRole("slider", { name: "Playback frame" });
+  await expect(frame).toHaveValue(await frame.getAttribute("max"));
+  await expect(controls.getByRole("button", { name: "Next frame", exact: true })).toBeDisabled();
   const before = await readout.textContent();
-  await page.getByRole("region", { name: "Chrono playback controls" }).getByRole("button", { name: "Next frame" }).click();
+  await controls.getByRole("button", { name: "Previous frame", exact: true }).click();
   await expect(readout).not.toHaveText(before);
   await page.getByRole("button", { name: "Exit page time" }).click();
   await expect(readout).toHaveText("Latest available");

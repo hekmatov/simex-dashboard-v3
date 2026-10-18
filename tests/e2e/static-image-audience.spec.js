@@ -24,6 +24,30 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
+  const response = await page.request.get("/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const fixture = await response.json();
+  const biomedical = fixture.pages.find(({ id }) => id === "biomedical");
+  const national = biomedical.sections.flatMap(({ panels }) => panels)
+    .find(({ id }) => id === "chart-line-mtgz6v76");
+  biomedical.sections[1].panels.push({
+    ...structuredClone(national),
+    id: "audience-national-clone",
+    title: "National cases comparison",
+  });
+  fixture.chronoGroups = [{
+    id: "audience-image-temporal-group",
+    name: "Biomedical comparison",
+    period: { start: "2027-02-14", end: "2027-02-21" },
+    matching: { policy: "exact" },
+    secondsPerFrame: 1,
+    members: ["chart-line-mtgytrwj", "chart-line-mtgz6v76", "audience-national-clone"]
+      .map((chartId) => ({ chartId, timeRole: "observation" })),
+  }];
+  await page.evaluate(({ key, dashboard }) => {
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY, dashboard: fixture });
+  await page.reload();
   await openBiomedical(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await createFreeText(page);

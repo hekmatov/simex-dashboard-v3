@@ -1,13 +1,16 @@
 {
   "name": "simex-dashboard-v2",
   "version": "0.1.0",
+  "packageManager": "pnpm@11.9.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test --test-concurrency=1",
     "test:unit": "node --test",
     "test:e2e": "pnpm test:e2e:source && pnpm test:e2e:static && pnpm test:e2e:pdpc",
-    "test:e2e:source": "playwright test",
+    "test:e2e:source": "pnpm test:e2e:source:companion && pnpm test:e2e:source:parallel",
+    "test:e2e:source:companion": "playwright test tests/e2e/quorum-companion.spec.js tests/e2e/static-image-audience.spec.js --workers=1",
+    "test:e2e:source:parallel": "playwright test --config=playwright.source-parallel.config.js",
     "test:e2e:static": "playwright test --config=playwright.static.config.js",
     "test:e2e:dev": "playwright test --max-failures=1",
     "audit:ui:density": "playwright test tests/e2e/dashboard-density-audit.spec.js --project=chromium --output=test-results/playwright-density",

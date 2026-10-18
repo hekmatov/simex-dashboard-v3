@@ -30,7 +30,7 @@ test("application recovery exposes only the two approved root actions", () => {
   }));
 
   assert.match(html, /Dashboard couldn’t load\. No valid scenario is available\./);
-  assert.match(html, />Reload Dashboard<\/button>/);
+  assert.match(html, />Load Dashboard Source<\/button>/);
   assert.match(html, />Import Dashboard Package<\/button>/);
   assert.match(html, /aria-label="Choose Dashboard Package"/);
   assert.match(html, /accept="application\/json,\.json"/);

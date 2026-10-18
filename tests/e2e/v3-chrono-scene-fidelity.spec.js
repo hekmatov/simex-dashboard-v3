@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -7,6 +8,7 @@ test.beforeEach(async ({ request, page }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
   await page.setViewportSize({ width: 1200, height: 900 });
+  await installPageRemovalGroups(page);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -117,9 +119,7 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 test("006-scene-authoring amendment: three full-width stages and Unit Orbit are live", async ({ page }) => {
   test.setTimeout(120_000);
   const sceneName = "Runtime composition fidelity scene";
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("dialog", { name: "More Build commands" })
-    .getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.locator('[data-build-command-action="scene-studio"]').click();
   const auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
 
@@ -302,7 +302,7 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await expect(page.getByLabel("Scene layout")).toHaveValue("sideBySide");
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  await chrono.getByLabel("Chrono source").selectOption({ label: "Municipal outbreak playback" });
+  await chrono.getByLabel("Chrono source").selectOption({ label: "Biomedical page group" });
   await chrono.getByLabel("Chrono source").selectOption({ label: sceneName });
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
   await expect(page.getByLabel("Scene layout")).toHaveValue("overUnder");
@@ -311,9 +311,7 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
 
 test("012-temporal-content: libraries filter, open read-first pages, and restore context", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("dialog", { name: "More Build commands" })
-    .getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.locator('[data-build-command-action="scene-studio"]').click();
   let auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await expect(auxiliary.getByLabel("Search")).toBeVisible();
   await expect(auxiliary.getByLabel("Status")).toBeVisible();

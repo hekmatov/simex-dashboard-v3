@@ -1,4 +1,5 @@
 import React from "react";
+import { APP_VERSION } from "../lib/appVersion.js";
 
 import pdpcLogoUrl from "./assets/pdpc-logo.png";
 
@@ -94,6 +95,7 @@ export function PdpcDashboardFooter() {
     >
       <div>
         <strong>SimEx Dashboard V3</strong>
+        <span>App version {APP_VERSION}</span>
         <a
           className="pdpc-dashboard-footer__builder-link"
           href="https://simex-dashboard-v3.pages.dev/"
@@ -105,6 +107,7 @@ export function PdpcDashboardFooter() {
       </div>
       <nav aria-label="Project links">
         <span>Developed by Hekmat Alrouh</span>
+        <a href="https://github.com/hekmatov/simex-dashboard-v3/blob/main/CHANGELOG.md" target="_blank" rel="noreferrer">Changelog</a>
       </nav>
     </footer>
   );

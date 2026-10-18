@@ -2,6 +2,9 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
+import { createChartDraft } from "../../src/charting/config/chartConfigV3.js";
+import { prepareChartData } from "../../src/charting/data/prepareChartData.js";
+import { profileDataset } from "../../src/charting/data/profileDataset.js";
 import {
   encodeAssetBase64,
   sha256HexSync,
@@ -21,6 +24,22 @@ const IMAGE_PANEL_ID = "journey-g-image-panel";
 const QMD_PANEL_ID = "journey-g-qmd-panel";
 const MAP_PANEL_ID = "journey-g-map-panel";
 const PNG = imageFixtureBytes("image/png");
+const MAP_ROWS = [
+  { Datum: "2026-01-01", MunicipalityCode: "A", infectionsPer10000: 10 },
+  { Datum: "2026-01-01", MunicipalityCode: "B", infectionsPer10000: 20 },
+];
+const MAP_CSV = [
+  "Datum,MunicipalityCode,infectionsPer10000",
+  ...MAP_ROWS.map(({ Datum, MunicipalityCode, infectionsPer10000 }) => (
+    `${Datum},${MunicipalityCode},${infectionsPer10000}`
+  )),
+  "",
+].join("\n");
+const MAP_METADATA = {
+  Datum: { interpretation: "temporal", format: "YYYY-MM-DD", timezone: "date-only" },
+  MunicipalityCode: { interpretation: "geographic" },
+  infectionsPer10000: { interpretation: "numeric" },
+};
 
 test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -48,6 +67,18 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
     const config = await dashboardResponse.json();
     config.datasetProfiles = await profilesResponse.json();
     config.configVersion = 4;
+    for (const [sourceId, source] of Object.entries(config.dataSources ?? {})) {
+      if (source.kind !== "staticImage") continue;
+      const media = config.contentLibrary?.mediaItems?.[source.mediaId];
+      if (!media) throw new Error(`Journey G cannot reconstruct V4 image source ${sourceId}.`);
+      const { mediaId: _mediaId, ...placement } = source;
+      config.dataSources[sourceId] = {
+        ...placement,
+        sourceVersion: 1,
+        revision: media.revision,
+        origin: media.current,
+      };
+    }
     delete config.contentLibrary;
     for (const group of config.chronoGroups ?? []) delete group.temporalReview;
     for (const scene of config.scenes ?? []) {
@@ -64,6 +95,7 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
   expect(migrated.configVersion).toBe(6);
   expect(migrated.chartVersions).toEqual([3]);
   expect(migrated.sourceEntryIds.length).toBeGreaterThan(0);
+  expect(migrated.migratedImage).toEqual({ sourceVersion: 2, currentKind: "package", revision: 1 });
   expect(migrated.temporalReviewCount).toBe(0);
 
   const fixture = await buildJourneyBundle(page);
@@ -81,6 +113,8 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
   });
   expect(importedFixture.assetIds).toHaveLength(1);
   expect(importedFixture.chartVersions).toEqual([3]);
+  expect(importedFixture.csvProfileFingerprint).toBe(profileDataset(MAP_ROWS, MAP_METADATA).fingerprint);
+  expect(importedFixture.geoProfilePresent).toBe(false);
 
   const downloadButton = await passportPackageDownloadButton(page);
   page.once("dialog", (dialog) => dialog.accept("journey-g-roundtrip"));
@@ -103,6 +137,8 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
   expect(exported.assetPayloads[`asset-${sha256HexSync(PNG)}`].sha256).toBe(sha256HexSync(PNG));
   expect(exported.config.dataSources[CSV_ID].csvText).toContain("MunicipalityCode");
   expect(exported.config.dataSources[GEOJSON_ID].geoJson.features).toHaveLength(2);
+  expect(exported.config.datasetProfiles?.[CSV_ID]?.fingerprint)
+    .toBe(profileDataset(MAP_ROWS, MAP_METADATA).fingerprint);
   expect(exported.config.datasetProfiles?.[GEOJSON_ID]).toBeUndefined();
   expect(exported.config.dataSources["journey-g-qmd-source"].qmd)
     .toContain(`simex-media:${MEDIA_USED}`);
@@ -163,18 +199,29 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
 async function buildJourneyBundle(page) {
   const config = await page.evaluate(async (key) => {
     const stored = JSON.parse(localStorage.getItem(key));
-    const profilesResponse = await fetch("/config/dataset-profiles.json");
-    if (!profilesResponse.ok) throw new Error("Journey G could not load the live dataset profiles.");
+    const [profilesResponse, dashboardResponse] = await Promise.all([
+      fetch("/config/dataset-profiles.json"),
+      fetch("/config/dashboard.json"),
+    ]);
+    if (!profilesResponse.ok || !dashboardResponse.ok) {
+      throw new Error("Journey G could not load the shipped profiles and geometry.");
+    }
     stored.datasetProfiles = await profilesResponse.json();
+    const shipped = await dashboardResponse.json();
+    for (const [sourceId, source] of Object.entries(stored.dataSources ?? {})) {
+      if (source.type !== "uploadedGeoJson") continue;
+      if (!source.geoJson) {
+        const geoJson = shipped.dataSources?.[sourceId]?.geoJson;
+        if (!geoJson) throw new Error(`Journey G is missing shipped GeoJSON for ${sourceId}.`);
+        source.geoJson = geoJson;
+      }
+      delete source.browserAssetId;
+    }
     return stored;
   }, STORAGE_KEY);
   const pageConfig = config.pages.find((entry) => (entry.label ?? entry.title) === PAGE_LABEL);
-  const section = pageConfig.sections.find((entry) => entry.id === "outbreak_dynamics") ?? pageConfig.sections[0];
-  const charts = config.pages.flatMap(({ sections }) => sections).flatMap(({ panels }) => panels)
-    .map((placement) => placement.chart ?? placement);
-  const mapTemplate = charts.find(({ id }) => id === "bio_municipality_choropleth_animation")
-    ?? charts.find((chart) => chart.presentation?.map?.geoSource);
-  if (!mapTemplate) throw new Error("Journey G requires the accepted live map fixture.");
+  const section = pageConfig?.sections.find((entry) => entry.id === "biomedical_section");
+  if (!section) throw new Error("Journey G requires the current Biomedical destination.");
 
   const sha256 = sha256HexSync(PNG);
   const assetId = `asset-${sha256}`;
@@ -202,12 +249,8 @@ async function buildJourneyBundle(page) {
     kind: "dataset",
     type: "uploadedCsv",
     fileName: "journey-g.csv",
-    csvText: "Datum,MunicipalityCode,infectionsPer10000\n2026-01-01,A,10\n2026-01-01,B,20\n",
-    parsingMetadata: {
-      Datum: { interpretation: "temporal", format: "YYYY-MM-DD", timezone: "date-only" },
-      MunicipalityCode: { interpretation: "geographic" },
-      infectionsPer10000: { interpretation: "numeric" },
-    },
+    csvText: MAP_CSV,
+    parsingMetadata: MAP_METADATA,
     provenance: { label: "Journey G CSV" },
   };
   config.dataSources[GEOJSON_ID] = {
@@ -219,31 +262,39 @@ async function buildJourneyBundle(page) {
   };
   config.contentLibrary.sourceEntries[CSV_ID] = sourceEntry(CSV_ID, "Journey G CSV", "journey-g.csv");
   config.contentLibrary.sourceEntries[GEOJSON_ID] = sourceEntry(GEOJSON_ID, "Journey G GeoJSON", "journey-g.geojson");
+  const mapProfile = profileDataset(MAP_ROWS, MAP_METADATA);
+  config.datasetProfiles[CSV_ID] = {
+    sourceId: CSV_ID,
+    kind: "csv",
+    path: "data/journey-g.csv",
+    provenance: { label: "Journey G CSV" },
+    ...mapProfile,
+  };
   delete config.datasetProfiles?.[GEOJSON_ID];
+
+  const geoJson = config.dataSources[GEOJSON_ID].geoJson;
+  const map = createChartDraft("chronoChoroplethMap", {
+    id: MAP_PANEL_ID,
+    title: "Journey G managed map",
+    sourceId: CSV_ID,
+    roles: {
+      geography: { field: "MunicipalityCode", interpretation: "geographic" },
+      value: { field: "infectionsPer10000" },
+      time: { field: "Datum", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: { map: { geoSource: GEOJSON_ID, joinField: "statcode" } },
+    layout: { size: "wide" },
+  });
+  const preparedMap = prepareChartData({ chart: map, rows: MAP_ROWS, datasetProfile: mapProfile, geoData: geoJson });
+  if (preparedMap.status !== "ready" || preparedMap.marks.length !== MAP_ROWS.length
+    || preparedMap.marks.some(({ feature }) => !feature)) {
+    throw new Error("Journey G map fixture must prepare two joined marks.");
+  }
 
   section.panels.push(
     chartPlacement(IMAGE_PANEL_ID, "image", "Journey G Image", "journey-g-image-source"),
     chartPlacement(QMD_PANEL_ID, "freeText", "Journey G QMD", "journey-g-qmd-source"),
-    {
-      ...structuredClone(mapTemplate),
-      id: MAP_PANEL_ID,
-      title: "Journey G managed map",
-      sourceId: CSV_ID,
-      roles: {
-        geography: { field: "MunicipalityCode" },
-        value: { field: "infectionsPer10000" },
-        time: { field: "Datum", interpretation: "temporal" },
-      },
-      presentation: {
-        ...structuredClone(mapTemplate.presentation),
-        map: {
-          ...structuredClone(mapTemplate.presentation.map),
-          geoSource: GEOJSON_ID,
-          joinField: "statcode",
-        },
-      },
-      layout: { size: "wide" },
-    },
+    map,
   );
   return serializeDashboardBundle(config, {
     now: "2026-08-26T12:00:00.000Z",
@@ -315,6 +366,11 @@ async function storedSnapshot(page) {
       configVersion: config.configVersion,
       chartVersions: [...new Set(charts.map(({ configVersion }) => configVersion))].sort(),
       sourceEntryIds: Object.keys(config.contentLibrary?.sourceEntries ?? {}).sort(),
+      migratedImage: (() => {
+        const source = Object.values(config.dataSources).find(({ kind }) => kind === "staticImage");
+        const media = config.contentLibrary?.mediaItems?.[source?.mediaId];
+        return { sourceVersion: source?.sourceVersion, currentKind: media?.current?.kind, revision: media?.revision };
+      })(),
       temporalReviewCount: JSON.stringify(config).match(/"temporalReview"/g)?.length ?? 0,
     };
   }, STORAGE_KEY);
@@ -333,6 +389,8 @@ async function journeySnapshot(page) {
       configVersion: config.configVersion,
       mediaIds: [ids.mediaUnused, ids.mediaUsed].filter((id) => config.contentLibrary.mediaItems[id]).sort(),
       sourceIds: [ids.csv, ids.geo].filter((id) => config.contentLibrary.sourceEntries[id]).sort(),
+      csvProfileFingerprint: config.datasetProfiles?.[ids.csv]?.fingerprint ?? null,
+      geoProfilePresent: Boolean(config.datasetProfiles?.[ids.geo]),
       assetIds: [...new Set([ids.mediaUsed, ids.mediaUnused].map((id) => (
         config.contentLibrary.mediaItems[id].current.assetId
       )))],

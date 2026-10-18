@@ -145,6 +145,7 @@ export async function buildPdpcStaticVariant({ rootDir, variant, publicDir, outp
         input: {
           release: path.join(rootDir, "release.html"),
         },
+        output: { inlineDynamicImports: true },
       },
     },
   });

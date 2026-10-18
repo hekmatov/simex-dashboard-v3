@@ -1,11 +1,19 @@
 import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
-import { choosePanelAction } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
+
+async function chooseChartPanelAction(page, placementId, itemId) {
+  const trigger = page.locator(`[data-panel-menu="${placementId}"]`);
+  await trigger.focus();
+  await trigger.press("Enter");
+  const menu = page.locator(`#panel-menu-${placementId}[role="menu"]`);
+  await expect(menu).toBeVisible();
+  await menu.locator(`[data-action-menu-item="${itemId}"]`).click();
+}
 
 test.beforeEach(async ({ request, page }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -46,7 +54,7 @@ async function openDashboardEditMode(page) {
 async function openFirstQuickChartEditor(page) {
   await openDashboardEditMode(page);
   const panel = page.locator(".chart-panel").first();
-  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
+  await chooseChartPanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   return quick;
@@ -54,7 +62,7 @@ async function openFirstQuickChartEditor(page) {
 
 async function openFullChartEditorForPanel(page, panel) {
   await panel.hover();
-  await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
+  await chooseChartPanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -81,15 +89,36 @@ async function storedDashboard(page) {
   return page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey)), STORAGE_KEY);
 }
 
-test("rendered version-3 layouts drive desktop spans and a taller phone full panel", async ({ page }) => {
+test("rendered version-3 layouts drive desktop spans and a taller phone full panel", async ({ page, request }) => {
   test.setTimeout(120_000);
   await page.goto("/");
+  const response = await request.get("/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const fixture = await response.json();
+  const biomedical = fixture.pages.find(({ id }) => id === "biomedical");
+  const international = biomedical.sections[0].panels.find(({ id }) => id === "chart-line-mtgytrwj");
+  const national = biomedical.sections[1].panels.find(({ id }) => id === "chart-line-mtgz6v76");
+  international.layout = { size: "standard", width: 2, height: 1 };
+  national.layout = { size: "standard", width: 2, height: 1 };
+  biomedical.sections[0].panels.push({
+    ...structuredClone(international),
+    id: "layout-wide-international",
+    layout: { size: "wide", width: 4, height: 1 },
+  }, {
+    ...structuredClone(national),
+    id: "layout-full-national",
+    layout: { size: "full", width: 4, height: 2 },
+  });
+  await page.evaluate(({ key, dashboard }) => {
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY, dashboard: fixture });
+  await page.reload();
   await openDashboardPage(page, "biomedical");
   const expected = [
-    ["bio_current_cases_kpi", "standard", "span 2", "span 8", "0px"],
-    ["bio_r_values", "standard", "span 2", "span 8", "0px"],
-    ["bio_confirmed_cases", "wide", "span 4", "span 8", "0px"],
-    ["bio_municipality_choropleth_animation", "full", "span 4", "span 16", "0px"],
+    ["chart-line-mtgytrwj", "standard", "span 2", "span 8", "0px"],
+    ["chart-line-mtgz6v76", "standard", "span 2", "span 8", "0px"],
+    ["layout-wide-international", "wide", "span 4", "span 8", "0px"],
+    ["layout-full-national", "full", "span 4", "span 16", "0px"],
   ];
   for (const [panelId, size, columnEnd, rowEnd, minHeight] of expected) {
     const panel = page.locator(`[data-panel-id="${panelId}"]`);
@@ -116,14 +145,15 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full pan
   expect(obsoleteRenderedClasses).toEqual([]);
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   const phoneHeights = await page.evaluate(() => {
     const measure = (panelId) => {
       const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
       return Number.parseFloat(getComputedStyle(panel).minHeight);
     };
     return {
-      standard: measure("bio_r_values"),
-      full: measure("bio_municipality_choropleth_animation"),
+      standard: measure("chart-line-mtgz6v76"),
+      full: measure("layout-full-national"),
     };
   });
   expect(phoneHeights.full).toBeGreaterThan(phoneHeights.standard);
@@ -253,11 +283,11 @@ async function armWizardPendingObservation(page) {
 async function preparePieWizard(page, title) {
   const flow = await openChartAuthoring(page);
   const { wizard } = flow;
-  await flow.selectExistingSource("Biomedical mortality by age");
+  await flow.selectExistingSource("eldoria work sectors");
   await flow.chooseChartType("pie", /^Pie\b/i);
   await flow.goToMapAndPrepare();
-  await flow.selectRole("category", "Age group");
-  await flow.selectRole("value", "deaths");
+  await flow.selectRole("category", "Sector");
+  await flow.selectRole("value", "Share of workforce (%)");
   await flow.goToConfigure();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill(title);
@@ -286,6 +316,11 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
     finish.click();
     return state;
   });
+  await expect(createDialog).toBeHidden();
+  const finishBuild = page.getByRole("button", { name: "Finish Build", exact: true });
+  await expect(finishBuild).toBeEnabled();
+  await finishBuild.click();
+  await expect(page.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
 
   const saved = await storedDashboard(page);
@@ -294,7 +329,7 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
     actionState: {
       addDisabled: false,
       createDisabled: false,
-      finishDisabled: false,
+      finishDisabled: true,
     },
     attempts: 1,
   });
@@ -446,7 +481,7 @@ test("removal followed by another clean Full discard does not resurrect the char
   await expect(quick).toBeHidden();
   await expect(page.locator(".chart-panel")).toHaveCount(initialPanelCount - 1);
 
-  const editor = await openFullChartEditorForPanel(page, page.locator(".chart-panel").first());
+  const editor = await openFullChartEditorForPanel(page, page.locator('[data-panel-id="chart-line-mtgz6v76"]'));
   const attemptsBeforeDiscard = await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
   ));
@@ -473,11 +508,12 @@ test("reset completes with session fallback when browser storage is full", async
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
   const baselineTitle = (await page.locator(".dashboard-brand-block h1").textContent()).trim();
-  const durableBefore = await storedDashboard(page);
   const editedLabel = "Draft retained after reset failure";
   const map = structureRail(page);
   const pageTitleInput = propertiesPane(page).getByLabel("Page title", { exact: true });
   await pageTitleInput.fill(editedLabel);
+  await expect.poll(async () => (await storedDashboard(page))?.pages.find(({ id }) => id === "biomedical")?.title).toBe(editedLabel);
+  const durableBefore = await storedDashboard(page);
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
@@ -491,7 +527,7 @@ test("reset completes with session fallback when browser storage is full", async
   await expect(confirmation).toBeHidden();
   await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
     .toBeVisible();
-  await expect(page.getByRole("button", { name: "View", exact: true }))
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(baselineTitle);
   expect(await storedDashboard(page)).toEqual(durableBefore);
@@ -529,12 +565,12 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard Build changes?" })
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(baseline.pageTitle);
-  await expect(page.getByRole("heading", { name: baseline.sectionTitle, exact: true }))
+  await expect(page.getByRole("button", { name: `Edit Section title: ${baseline.sectionTitle}`, exact: true }))
     .toBeVisible();
 
-  await page.getByRole("button", { name: "Build" }).click();
+  await page.getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Pending Build work" })).toHaveCount(0);
   const attemptsBeforeDiscard = await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
@@ -611,7 +647,7 @@ test("edit-session save and reset use session fallback when storage is full", as
   await openDashboardEditMode(page);
   const sessionTitle = "Unsaved exercise label";
   const map = structureRail(page);
-  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
+  await map.locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(sessionTitle);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
@@ -625,16 +661,17 @@ test("edit-session save and reset use session fallback when storage is full", as
   await sectionTitleTrigger.click();
   await page.getByLabel("Section title", { exact: true }).first()
     .fill("Reset-only pending title");
+  await page.getByLabel("Section title", { exact: true }).first().press("Enter");
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await confirmation.getByRole("button", { name: "Discard Build changes", exact: true }).click();
   await expect(confirmation).toBeHidden();
-  await expect(page.getByRole("button", { name: "View", exact: true }))
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(sessionTitle);
-  await expect(page.getByRole("heading", { name: sectionTitle, exact: true }))
+  await expect(page.getByRole("button", { name: `Edit Section title: ${sectionTitle}`, exact: true }))
     .toBeVisible();
 });
 
@@ -650,7 +687,10 @@ test("final Build remains locked until dirty chart edit context resolves", async
   const attemptsBeforeDiscard = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
   await discardFullChartEditor(page, editor, { confirmationExpected: true });
   await expect(editor).toBeHidden();
-  await expect(finishBuild).toBeEnabled();
+  await expect(finishBuild).toBeDisabled();
   expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))
     .toBe(attemptsBeforeDiscard);
+  await structureRail(page).locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
+  await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Build session after chart discard");
+  await expect(finishBuild).toBeEnabled();
 });

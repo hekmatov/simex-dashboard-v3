@@ -1,7 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { enterBuildMode, structureRail, openSourceContent } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
-import { chartAuthoringWorkflow, openChartAuthoring } from "./support/chart-authoring-workflow.js";
+import { openChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
+import { openAudienceSession } from "./support/present-audience-workflow.js";
+import { createChartDraft } from "../../src/charting/config/chartConfigV3.js";
+import { prepareChartData } from "../../src/charting/data/prepareChartData.js";
+import { validateChronoGroups } from "../../src/charting/time/chronoGroupModel.js";
+import { validateScene } from "../../src/charting/time/sceneSchema.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -10,11 +15,14 @@ const MANAGER_CSV = csvFile("journey-d-unused.csv", [
   "2026-01,12,North",
   "2026-02,18,South",
 ]);
+const CHART_ROWS = [
+  { date: "2026-01-01", cases: 4, region: "North" },
+  { date: "2026-01-02", cases: 7, region: "South" },
+  { date: "2026-01-03", cases: 9, region: "North" },
+];
 const CHART_CSV = csvFile("journey-d-chart.csv", [
   "date,cases,region",
-  "2026-01-01,4,North",
-  "2026-01-02,7,South",
-  "2026-01-03,9,North",
+  ...CHART_ROWS.map(({ date, cases, region }) => `${date},${cases},${region}`),
 ]);
 const INCOMPATIBLE_MAP_CSV = csvFile("journey-e-incompatible.csv", [
   "Datum,infectionsPer10000",
@@ -123,8 +131,21 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   await expect(page.getByRole("status").filter({ hasText: "Scene presentation needs review" })).toBeVisible();
   await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", target.sceneId);
   await expect(page.locator(".present-selected-chart")).toHaveCount(target.presentChartCount);
-  const protocolMessages = await page.evaluate(() => window.__journeyFProtocolMessages);
-  expect(JSON.stringify(protocolMessages)).not.toContain("temporalReview");
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  await page.getByLabel("Presentation source").selectOption(`group:${target.groupId}`);
+  const { popup } = await openAudienceSession(page);
+  await expect.poll(() => page.evaluate((groupId) => (
+    window.__journeyFProtocolMessages.filter(({ type, payload }) => (
+      type === "state" && payload?.source?.chrono_group_id === groupId
+    )).length
+  ), target.groupId)).toBeGreaterThan(0);
+  const stateMessages = await page.evaluate((groupId) => (
+    window.__journeyFProtocolMessages.filter(({ type, payload }) => (
+      type === "state" && payload?.source?.chrono_group_id === groupId
+    ))
+  ), target.groupId);
+  expect(JSON.stringify(stateMessages)).not.toContain("temporalReview");
+  await popup.close();
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
@@ -227,12 +248,8 @@ test("Journey D — CSV upload through six stages then catalogue management", as
   const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
   const createOwner = pendingWork.locator('[data-pending-work-kind="chart-create"]');
   await expect(createOwner).toHaveCount(1);
-  await createOwner.getByRole("button", {
-    name: "Resume New chart draft",
-    exact: true,
-  }).click();
-  wizard = page.getByRole("dialog", { name: "Add new chart" });
-  flow = chartAuthoringWorkflow(wizard);
+  flow = await resumeChartAuthoring(page);
+  wizard = flow.wizard;
   await expect(flow.stageButton("dataSource")).toHaveAttribute("aria-current", "step");
   await flow.goToDataSource();
   await expect(wizard.getByLabel("CSV file")).toBeVisible();
@@ -377,9 +394,7 @@ async function openDataSourceManager(page) {
 }
 
 async function openSceneStudio(page) {
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  const more = page.getByRole("dialog", { name: "More Build commands" });
-  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.getByRole("button", { name: "Scene Studio", exact: true }).click({ timeout: 10_000 });
   return page.getByRole("dialog", { name: "Scene Studio authoring" });
 }
 
@@ -432,7 +447,7 @@ function csvFile(name, lines) {
 }
 
 async function seedJourneyFTemporalUse(page) {
-  await page.evaluate(async (key) => {
+  const dashboard = await page.evaluate((key) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
     const sourceId = Object.keys(dashboard.contentLibrary.sourceEntries)
       .find((id) => dashboard.contentLibrary.sourceEntries[id].displayName === "Journey F temporal CSV");
@@ -479,15 +494,36 @@ async function seedJourneyFTemporalUse(page) {
     };
     dashboard.chronoGroups = [...(dashboard.chronoGroups ?? []).filter(({ id }) => id !== group.id), group];
     dashboard.scenes = [...(dashboard.scenes ?? []).filter(({ id }) => id !== scene.id), scene];
-    const { normalizeStoredDashboardConfig } = await import("/src/charting/config/dashboardBundleV3.js");
-    const configuredProfiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
-    try {
-      normalizeStoredDashboardConfig(dashboard, { profiles: { ...configuredProfiles, ...dashboard.datasetProfiles } });
-    } catch (error) {
-      throw new Error(`Journey F seed is invalid: ${error.message}`);
-    }
-    localStorage.setItem(key, JSON.stringify(dashboard));
+    return dashboard;
   }, STORAGE_KEY);
+  const sourceId = Object.keys(dashboard.contentLibrary.sourceEntries)
+    .find((id) => dashboard.contentLibrary.sourceEntries[id].displayName === "Journey F temporal CSV");
+  const charts = dashboard.pages.flatMap((pageValue) => pageValue.sections.flatMap((section) => (
+    section.panels.map((placement) => ({ ...(placement.chart ?? placement), pageId: pageValue.id }))
+  )));
+  const group = dashboard.chronoGroups.find(({ id }) => id === "journey-f-group");
+  const scene = dashboard.scenes.find(({ id }) => id === "journey-f-scene");
+  const chart = charts.find(({ id }) => id === group.members[0].chartId);
+  const profile = dashboard.datasetProfiles[sourceId];
+  try {
+    const prepared = prepareChartData({ chart, rows: CHART_ROWS, datasetProfile: profile });
+    if (prepared.status !== "ready" || prepared.marks.length === 0) {
+      throw new Error("temporal member does not prepare nonempty marks");
+    }
+    validateChronoGroups([group], {
+      charts,
+      loadedData: { [sourceId]: CHART_ROWS },
+      profiles: { [sourceId]: profile },
+      timezone: dashboard.timezone,
+    });
+    validateScene(scene, { chronoGroups: [group], pages: dashboard.pages, charts });
+  } catch (error) {
+    throw new Error(`Journey F seed is invalid: ${error.message}`);
+  }
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+    key: STORAGE_KEY,
+    value: dashboard,
+  });
 }
 
 async function temporalReplacementTarget(page) {
@@ -560,31 +596,39 @@ async function temporalReviewSnapshot(page, target) {
 }
 
 async function seedUploadedMapSource(page) {
-  return page.evaluate(async ({ key }) => {
+  const sourceId = await page.evaluate((key) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
-    const charts = dashboard.pages.flatMap((pageValue) => pageValue.sections.flatMap((section) => section.panels.map((placement) => ({
-      page: pageValue,
-      section,
-      placement,
-      chart: placement.chart ?? placement,
-    }))));
-    const target = charts.find(({ chart }) => chart.id === "bio_municipality_choropleth_animation")
-      ?? charts.find(({ chart }) => chart.presentation?.map?.geoSource && dashboard.datasetProfiles?.[chart.sourceId]);
-    if (!target) throw new Error("Journey E requires an existing map chart with a profiled primary CSV.");
-    const displayName = "Journey E map CSV";
-    const sourceId = Object.keys(dashboard.contentLibrary?.sourceEntries ?? {})
-      .find((candidateId) => dashboard.contentLibrary.sourceEntries[candidateId].displayName === displayName);
-    if (!sourceId) throw new Error("Journey E requires its manager-added CSV source.");
-    target.chart.sourceId = sourceId;
+    return Object.keys(dashboard.contentLibrary?.sourceEntries ?? {})
+      .find((candidateId) => dashboard.contentLibrary.sourceEntries[candidateId].displayName === "Journey E map CSV");
+  }, STORAGE_KEY);
+  if (!sourceId) throw new Error("Journey E requires its manager-added CSV source.");
+  const geoSourceId = "geo_netherlands_municipalities_2026";
+  const chart = createChartDraft("chronoChoroplethMap", {
+    id: "journey-e-map",
+    title: "Journey E municipal map",
+    sourceId,
+    roles: {
+      geography: { field: "MunicipalityCode", interpretation: "geographic" },
+      value: { field: "infectionsPer10000" },
+      time: { field: "Datum", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    presentation: { map: { geoSource: geoSourceId, joinField: "statcode" } },
+  });
+  await page.evaluate(({ key, chartValue }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const section = dashboard.pages.find(({ id }) => id === "biomedical")
+      ?.sections.find(({ id }) => id === "biomedical_section");
+    if (!section) throw new Error("Journey E requires the current Biomedical destination.");
+    section.panels.push(chartValue);
     localStorage.setItem(key, JSON.stringify(dashboard));
-    return {
-      sourceId,
-      displayName,
-      chartId: target.chart.id,
-      chartTitle: target.chart.title,
-      geoSourceId: target.chart.presentation.map.geoSource,
-    };
-  }, { key: STORAGE_KEY });
+  }, { key: STORAGE_KEY, chartValue: chart });
+  return {
+    sourceId,
+    displayName: "Journey E map CSV",
+    chartId: chart.id,
+    chartTitle: chart.title,
+    geoSourceId,
+  };
 }
 
 async function csvReplacementSnapshot(page, target) {

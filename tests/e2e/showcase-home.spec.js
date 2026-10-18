@@ -19,7 +19,9 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("Old Homepage Content is absent when Home enters the first ordinary Page through View", async ({ page }) => {
+test("Old Homepage Content is absent when Home enters the first ordinary Page through View", async ({ page, request }) => {
+  const configured = await (await request.get("http://127.0.0.1:4173/config/dashboard.json")).json();
+  const firstPageId = configured.pages[0].id;
   await openLanding(page);
   await expectLandingReady(page);
   await expect(page.locator("h1")).toHaveCount(1);
@@ -32,7 +34,7 @@ test("Old Homepage Content is absent when Home enters the first ordinary Page th
   await expect(
     page.getByRole("heading", { name: "Old Homepage Content" }),
   ).toHaveCount(0);
-  await expect(page.locator('[data-canonical-page-id="biomedical"]')).toBeVisible();
+  await expect(page.locator(`[data-canonical-page-id="${firstPageId}"]`)).toBeVisible();
   await expect(page.locator('[data-canonical-mode="view"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "View", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("navigation", { name: "Dashboard pages" })).toBeVisible();

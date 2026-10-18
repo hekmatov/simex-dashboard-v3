@@ -6,9 +6,9 @@ import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 
 import { serializeDashboardBundle } from "../src/charting/config/dashboardBundleV3.js";
 import { sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
@@ -23,6 +23,74 @@ const IMAGE_TITLE = "PS04 portable audience image";
 const IMAGE_ALT = "PS04 offline readiness marker";
 const PNG = Buffer.from(imageFixtureBytes("image/png"));
 
+test("M0 copied portable source fixture loads GeoJSON and promoted CSV with the browser offline", { timeout: 60_000 }, async (t) => {
+  const parent = path.join(ROOT, "test-results", "m0-source-launch");
+  await mkdir(parent, { recursive: true });
+  const root = await mkdtemp(path.join(parent, "fixture-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const config = JSON.parse(await readFile(new URL("./fixtures/fable-m0-sources.json", import.meta.url), "utf8"));
+  const geoId = "geo_netherlands_municipalities_2026";
+  // Preflight the exact fixture and source identities before bundling/launching.
+  assert.equal(config.id, "fable-m0-source-fixture");
+  assert.equal(config.dataSources[geoId].geoJson.features[0].id, "GM0473");
+  assert.equal(config.pages[0].sections[0].panels[0].sourceId, "cases");
+  const promoted = preparePromotedDashboard(JSON.stringify(serializeDashboardBundle(config, { now: null })));
+  const configPath = path.join(root, "public", "config", "dashboard.json");
+  const profilesPath = path.join(root, "public", "config", "dataset-profiles.json");
+  const outputPath = path.join(root, "portable.js");
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFile(configPath, JSON.stringify(promoted.config));
+  await writeFile(profilesPath, JSON.stringify(promoted.config.datasetProfiles));
+  for (const file of promoted.files) {
+    const destination = path.join(root, "public", file.relativePath);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, file.contents);
+  }
+  const { output } = await buildPortableData({ rootDir: root, configPath, profilesPath, outputPath, embedPortableData: true });
+  const { build } = await import("vite");
+  const built = await build({
+    root: ROOT, configFile: false, publicDir: false, logLevel: "silent",
+    build: {
+      write: false,
+      lib: { entry: path.join(ROOT, "tests", "fixtures", "fable-m0-source-loader.js"), formats: ["iife"], name: "M0SourceLoader" },
+    },
+  });
+  const script = [built].flat().flatMap((result) => result.output)
+    .find((item) => item.type === "chunk").code;
+  const html = `<button>Load portable fixture</button><output>Not loaded</output><script>${output}</script><script>${script}</script>`;
+  const original = path.join(root, "loader.html");
+  const copied = path.join(root, "copied", "loader.html");
+  await writeFile(original, html);
+  await mkdir(path.dirname(copied), { recursive: true });
+  await cp(original, copied);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({ offline: true });
+    const page = await context.newPage();
+    const errors = [];
+    const network = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("request", (request) => { if (/^https?:/.test(request.url())) network.push(request.url()); });
+    await page.goto(pathToFileURL(copied).href);
+    assert.equal(await page.evaluate(() => window.loadedFixture), undefined);
+    await page.getByRole("button", { name: "Load portable fixture", exact: true }).click();
+    await page.getByText("Sources ready", { exact: true }).waitFor();
+    const loaded = await page.evaluate(() => window.loadedFixture);
+    assert.equal(loaded.id, config.id);
+    assert.deepEqual(loaded.data[geoId], config.dataSources[geoId].geoJson);
+    assert.deepEqual(loaded.data.cases, [
+      { Date: "2027-02-19", national_total_cases: 1 },
+      { Date: "2027-02-20", national_total_cases: 2 },
+    ]);
+    assert.equal(loaded.states[geoId].status, "ready");
+    assert.equal(loaded.states.cases.status, "ready");
+    assert.deepEqual(errors, []);
+    assert.deepEqual(network, []);
+  } finally {
+    await browser.close();
+  }
+});
+
 test("PS-04 copied Windows flash package launches offline main and separate Audience", {
   skip: process.platform !== "win32",
   timeout: 180_000,
@@ -34,6 +102,7 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
   let launcher = null;
   let browser = null;
   let serverUrl = null;
+  const audienceDiagnostics = { errors: [], failedRequests: [], failedResponses: [] };
   assertSafeTemporaryTarget(temporaryRoot);
   try {
     await cp(path.join(ROOT, "dist"), path.join(fixtureRoot, "dist"), { recursive: true });
@@ -138,9 +207,21 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
     const choice = page.locator('[data-presentable-item-id="ps04_image_panel"]');
     await choice.getByRole("checkbox").check();
     const audiencePromise = context.waitForEvent("page");
+    context.once("page", (popup) => {
+      popup.on("pageerror", (error) => audienceDiagnostics.errors.push(error.message));
+      popup.on("requestfailed", (request) => audienceDiagnostics.failedRequests.push({
+        url: request.url(), error: request.failure()?.errorText,
+      }));
+      popup.on("response", (response) => {
+        if (response.status() >= 400) audienceDiagnostics.failedResponses.push({ url: response.url(), status: response.status() });
+      });
+    });
     await page.getByRole("button", { name: "Open audience display", exact: true }).click();
     const audience = await audiencePromise;
     await audience.waitForLoadState("domcontentloaded");
+    // Offline Audience hydrates the shipped sources before mounting its output.
+    await expect(audience.locator(".audience-theme-root")).toBeVisible({ timeout: 45_000 });
+    await expect(audience.locator(".audience-display")).toHaveAttribute("data-connection-status", "connected");
     await assertVisible(audience.locator(`img[alt="${IMAGE_ALT}"]`));
     assert.equal(await audience.locator('[data-presentation-item-kind="image"]').count(), 1);
     assert.equal(await audience.locator("button, .chart-image-actions, .static-content-state__actions").count(), 0);
@@ -150,11 +231,12 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
       fits: document.documentElement.scrollWidth <= document.documentElement.clientWidth
         && document.documentElement.scrollHeight <= document.documentElement.clientHeight,
     }));
-    assert.deepEqual(geometry, { width: 1366, height: 768, fits: true });
+    assert.deepEqual(geometry, { width: 1280, height: 800, fits: true });
     assert.deepEqual(externalRequests, []);
     t.diagnostic(`offline Audience ${geometry.width}x${geometry.height}; MIME=image/png; traversal=${containment}`);
     await context.close();
   } finally {
+    t.diagnostic(`offline Audience diagnostics ${JSON.stringify(audienceDiagnostics)}`);
     await browser?.close();
     if (launcher && launcher.exitCode === null && launcher.signalCode === null) {
       launcher.kill();

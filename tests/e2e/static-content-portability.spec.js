@@ -369,7 +369,13 @@ test("asset commit failure restores the prior dashboard and authored store atomi
       };
     });
 
-    await packageInput(importedPage).setInputFiles(bundlePath);
+    // Retain the exported file, but avoid Windows native upload path limits
+    // when test evidence lives in a deeply nested worktree directory.
+    await packageInput(importedPage).setInputFiles({
+      name: "commit-recovery-bundle-v6.json",
+      mimeType: "application/json",
+      buffer: await readFile(bundlePath),
+    });
     const review = importedPage.getByRole("dialog", { name: "Review package contents" });
     await review.getByRole("button", { name: "Load package" }).click();
     await expect(review).toBeVisible();

@@ -170,7 +170,9 @@ test("embedded image persists through reload and a second Text/Image creation", 
   await expect(panel.locator('img[alt="embedded-proof.png"]')).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Biomedical Information" })).toBeVisible();
   const reloaded = await readEmbeddedPublication(page, "Embedded durability proof");
   expect(reloaded).toEqual(first);
   panel = canonicalPanel(page, first.panelId);
@@ -257,7 +259,9 @@ test("Free Text edit embedded image retries durably through reload", async ({ pa
   await expect(panel.locator('img[alt="embedded-edit-proof.png"]')).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Biomedical Information" })).toBeVisible();
   expect(await readEmbeddedPublication(page, "Embedded edit durability")).toEqual(saved);
   panel = canonicalPanel(page, saved.panelId);
   await panel.scrollIntoViewIfNeeded();

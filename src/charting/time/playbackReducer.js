@@ -119,6 +119,7 @@ export function reducePlaybackState(state, action) {
         : { kind: "group", id: action.groupId },
       activeGroupId: action.groupId,
       activeSceneId: null,
+      scope: action.groupId === null ? "all-page" : "group-only",
       activeIndex: 0,
       frameIndex: 0,
       period: action.period === undefined

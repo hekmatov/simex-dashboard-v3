@@ -3,6 +3,16 @@ import { readFile } from "node:fs/promises";
 
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { chooseSectionAction } from "./support/buildWorkflow.js";
+
+const SOCIO_SECTION = Object.freeze({
+  id: "socio_economic_section_1788512378053",
+  title: "Public Trust and Support",
+});
+const SOCIO_CHART = Object.freeze({
+  id: "chart-groupedBar-eafbfdd0-e768-4303-8df1-6de4f5515d73",
+  title: "Public Trust in Institutions",
+});
 
 async function openBuildStructure(page, appUrl = "/") {
   await page.setViewportSize({ width: 1200, height: 900 });
@@ -33,7 +43,7 @@ function treeItemLabel(tree, name) {
 test("Clear dashboard in Scenario Passport preserves canonical Home identity and Look after durable deletion", async ({ page }) => {
   test.setTimeout(60_000);
   const sourceDashboard = JSON.parse(await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   ));
   await openBuildStructure(page, "http://127.0.0.1:4175/");
@@ -93,7 +103,7 @@ test("Clear dashboard in Scenario Passport preserves canonical Home identity and
 test("storage-rejected Clear dashboard is atomic and Cancel restores the Passport trigger controls", async ({ page }) => {
   test.setTimeout(60_000);
   const sourceDashboard = await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   );
   await page.addInitScript(({ dashboard, dashboardKey, modeKey }) => {
@@ -151,17 +161,20 @@ test("storage-rejected Clear dashboard is atomic and Cancel restores the Passpor
 test("Restore online dashboard in Scenario Passport replaces dirty local work with the deployed copy", async ({ page }) => {
   test.setTimeout(90_000);
   const sourceDashboard = JSON.parse(await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   ));
-  expect(sourceDashboard.pages[0].id).toBe("biomedical");
-  expect(sourceDashboard.dataSources.bio_occupancy_gauges).toBeTruthy();
-  expect(sourceDashboard.dataSources.bio_wastewater_latest).toBeTruthy();
+  const biomedicalPage = sourceDashboard.pages.find(({ id }) => id === "biomedical");
+  expect(biomedicalPage).toBeTruthy();
+  const internationalSourceId = "upload-cases-wcph-internationaal-2";
+  const nationalSourceId = "upload-cases-wcph-eldoria-3";
+  expect(sourceDashboard.dataSources[internationalSourceId]).toBeTruthy();
+  expect(sourceDashboard.dataSources[nationalSourceId]).toBeTruthy();
   const localDashboard = structuredClone(sourceDashboard);
   localDashboard.scenarioLabel = "Local-only scenario";
   localDashboard.programLabel = "Local-only program";
   localDashboard.lastUpdated = "2026-08-29";
-  localDashboard.pages[0].title = "Local-only biomedical page";
+  localDashboard.pages.find(({ id }) => id === "biomedical").title = "Local-only biomedical page";
   await page.addInitScript(({ dashboard, dashboardKey, modeKey }) => {
     localStorage.setItem(dashboardKey, JSON.stringify(dashboard));
     localStorage.setItem(modeKey, "build");
@@ -171,9 +184,12 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
     modeKey: "simex-dashboard-ui-mode-v1",
   });
   await openBuildStructure(page, "http://127.0.0.1:4175/");
-
+  await page.locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
+  await page.locator('[data-build-rail="properties"]')
+    .getByLabel("Page title", { exact: true }).fill("Pending local Page title");
   const passport = await openScenarioPassport(page);
   const discard = passport.getByRole("button", { name: "Discard Build changes", exact: true });
+  await expect(discard).toBeEnabled();
   await discard.focus();
   await expect(page.locator(`#${await discard.getAttribute("aria-describedby")}`)).toContainText(
     "baseline captured when you entered Build. It does not contact the deployed online dashboard.",
@@ -185,10 +201,10 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
   );
   await restore.click();
 
-  let exportPrompt = null;
-  page.once("dialog", async (dialog) => {
-    exportPrompt = dialog.message();
+  const exportPrompt = page.waitForEvent("dialog").then(async (dialog) => {
+    const message = dialog.message();
     await dialog.dismiss();
+    return message;
   });
   const restoreDialog = page.getByRole("dialog", { name: "Restore online dashboard?" });
   await expect(restoreDialog).toContainText("replaces your local dashboard");
@@ -196,7 +212,7 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
     "Download a dashboard package first if you want to preserve your local work.",
   );
   await restoreDialog.getByRole("button", { name: "Download package first", exact: true }).click();
-  expect(exportPrompt).toContain("Name this exported dashboard bundle");
+  expect(await exportPrompt).toContain("Name this exported dashboard bundle");
   await expect(restoreDialog).toBeVisible();
   await restoreDialog.getByRole("button", { name: "Keep local dashboard", exact: true }).click();
 
@@ -216,13 +232,13 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
   expect(stored.scenarioLabel).toBe(sourceDashboard.scenarioLabel);
   expect(stored.programLabel).toBe(sourceDashboard.programLabel);
   expect(stored.lastUpdated).toBe(sourceDashboard.lastUpdated);
-  expect(stored.pages[0].id).toBe("biomedical");
-  expect(stored.pages[0].title).toBe(sourceDashboard.pages[0].title);
-  expect(stored.dataSources.bio_occupancy_gauges).toEqual(
-    sourceDashboard.dataSources.bio_occupancy_gauges,
+  expect(stored.pages.map(({ id }) => id)).toEqual(sourceDashboard.pages.map(({ id }) => id));
+  expect(stored.pages.find(({ id }) => id === "biomedical")?.title).toBe(biomedicalPage.title);
+  expect(stored.dataSources[internationalSourceId]).toEqual(
+    sourceDashboard.dataSources[internationalSourceId],
   );
-  expect(stored.dataSources.bio_wastewater_latest).toEqual(
-    sourceDashboard.dataSources.bio_wastewater_latest,
+  expect(stored.dataSources[nationalSourceId]).toEqual(
+    sourceDashboard.dataSources[nationalSourceId],
   );
   expect(stored.pages.some(({ id }) => id === "old-homepage-content")).toBe(false);
 
@@ -244,11 +260,11 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
 
 async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   const config = JSON.parse(await readFile(
-    new URL("../../public/config/dashboard.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-dashboard.json", import.meta.url),
     "utf8",
   ));
   config.datasetProfiles = JSON.parse(await readFile(
-    new URL("../../public/config/dataset-profiles.json", import.meta.url),
+    new URL("../fixtures/legacy-contract-profiles.json", import.meta.url),
     "utf8",
   ));
   const importedPage = structuredClone(config.pages.find(({ id }) => (
@@ -290,21 +306,21 @@ test("cross-page tree selection reveals the canonical target before opening Unit
   const frame = page.locator(".canonical-dashboard-frame");
   const tree = page.getByRole("tree");
 
-  await tree.getByRole("treeitem", { name: "Public response and policy signals", exact: true }).click();
+  await tree.getByRole("treeitem", { name: SOCIO_SECTION.title, exact: true }).click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
-  const section = page.locator('[data-canonical-section-id="public_response"]');
+  const section = page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"]`);
   await expect(section).toBeInViewport();
 
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
 
-  await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).click();
+  await tree.getByRole("treeitem", { name: SOCIO_CHART.title, exact: true }).click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
-  const chart = page.locator('[data-canonical-placement-id="socio_risk_perception"]');
+  const chart = page.locator(`[data-canonical-placement-id="${SOCIO_CHART.id}"]`);
   await expect(chart).toBeVisible();
   await expect(chart).toBeInViewport();
-  await expect(page.getByRole("complementary", { name: "Chart settings for Risk perception over time" }))
+  await expect(page.getByRole("complementary", { name: `Chart settings for ${SOCIO_CHART.title}` }))
     .toBeVisible();
   await expect(page.getByText(
     "Finish or cancel the open chart editor before changing Page.", { exact: true },
@@ -315,12 +331,13 @@ test("double-click rename navigates and highlights without opening Unit Orbit", 
   await openBuildStructure(page);
   const frame = page.locator(".canonical-dashboard-frame");
   const tree = page.getByRole("tree");
-  const target = tree.getByRole("treeitem", { name: "Trust and wellbeing", exact: true });
+  const target = tree.getByRole("treeitem", { name: SOCIO_SECTION.title, exact: true });
 
+  await target.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
   await target.locator(":scope > .build-tree-row .build-tree-label").dblclick();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
-  await expect(page.locator('[data-canonical-section-id="trust_wellbeing"]')).toBeInViewport();
-  const rename = tree.getByRole("textbox", { name: "Rename section Trust and wellbeing" });
+  await expect(page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"]`)).toBeInViewport();
+  const rename = tree.getByRole("textbox", { name: `Rename section ${SOCIO_SECTION.title}` });
   await expect(rename).toBeFocused();
   await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]')).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
@@ -339,35 +356,45 @@ test("double-click rename persists complete Page Section and Chart owner updates
   await expect(page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Community response", exact: true })).toBeVisible();
 
-  await treeItemLabel(tree, "Public response and policy signals").dblclick();
+  await treeItemLabel(tree, SOCIO_SECTION.title).dblclick();
   const sectionRename = tree.getByRole("textbox", {
-    name: "Rename section Public response and policy signals",
+    name: `Rename section ${SOCIO_SECTION.title}`,
   });
-  await sectionRename.fill("Public response signals");
+  await sectionRename.fill("Public trust signals");
   await sectionRename.press("Enter");
-  await expect(tree.getByRole("treeitem", { name: "Public response signals", exact: true })).toBeVisible();
-  await expect(page.locator('[data-canonical-section-id="public_response"] h2'))
-    .toHaveText("Public response signals");
+  await expect(tree.getByRole("treeitem", { name: "Public trust signals", exact: true })).toBeVisible();
+  await expect(page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"] h2`))
+    .toHaveText("Public trust signals");
 
-  await treeItemLabel(tree, "Risk perception over time").dblclick();
+  await treeItemLabel(tree, SOCIO_CHART.title).dblclick();
   const chartRename = tree.getByRole("textbox", {
-    name: "Rename chart Risk perception over time",
+    name: `Rename chart ${SOCIO_CHART.title}`,
   });
-  await chartRename.fill("Risk perception trend");
+  await chartRename.fill("Institutional trust trend");
   await chartRename.press("Enter");
-  await expect(tree.getByRole("treeitem", { name: "Risk perception trend", exact: true })).toBeVisible();
-  await expect(page.locator('[data-canonical-placement-id="socio_risk_perception"] .panel-actions'))
-    .toHaveAttribute("aria-label", "Risk perception trend actions");
+  await expect(tree.getByRole("treeitem", { name: "Institutional trust trend", exact: true })).toBeVisible();
+  await expect(page.locator(`[data-canonical-placement-id="${SOCIO_CHART.id}"] .panel-actions`))
+    .toHaveAttribute("aria-label", "Institutional trust trend actions");
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
+  const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
+  await expect(layoutOwner).toHaveCount(1);
+  await layoutOwner.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
+  await expect.poll(() => storedSocioOwners(page)).toEqual({
+    page: { id: "socio_economic", label: "Community response" },
+    section: { id: SOCIO_SECTION.id, title: "Public trust signals" },
+    chart: { id: SOCIO_CHART.id, title: "Institutional trust trend" },
+  });
 });
 
 test("chart activation keeps the canonical target usable while mounting Unit Orbit", async ({ page }) => {
   await openBuildStructure(page);
   await page.getByRole("tree")
-    .getByRole("treeitem", { name: "Risk perception over time", exact: true })
+    .getByRole("treeitem", { name: SOCIO_CHART.title, exact: true })
     .click();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(page.locator(".unit-orbit")).toBeVisible();
-  const target = page.locator('[data-canonical-placement-id="socio_risk_perception"]');
+  const target = page.locator(`[data-canonical-placement-id="${SOCIO_CHART.id}"]`);
   await expect(target).toBeVisible();
   await expect(target).toBeInViewport();
 });
@@ -375,23 +402,41 @@ test("chart activation keeps the canonical target usable while mounting Unit Orb
 test("an untouched chart editor closes transactionally when tree navigation changes target", async ({ page }) => {
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
-  const chartItem = tree.getByRole("treeitem", { name: "Risk perception over time", exact: true });
+  const chartItem = tree.getByRole("treeitem", { name: SOCIO_CHART.title, exact: true });
   await chartItem.click();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(page.locator(".unit-orbit")).toBeVisible();
 
   await chartItem.press("ArrowLeft");
   const sectionItem = tree.getByRole("treeitem", {
-    name: "Public response and policy signals",
+    name: SOCIO_SECTION.title,
     exact: true,
   });
   await expect(sectionItem).toBeFocused();
   await sectionItem.press("Enter");
-  await expect(page.locator('[data-canonical-section-id="public_response"]')).toBeInViewport();
+  await expect(page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"]`)).toBeInViewport();
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
   await expect(page.getByText(
     "Finish or cancel the open chart editor before changing Page.", { exact: true },
   )).toHaveCount(0);
 });
+
+async function storedSocioOwners(page) {
+  return page.evaluate(({ sectionId, chartId }) => {
+    const dashboard = JSON.parse(localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
+    const owner = dashboard?.pages.find(({ id }) => id === "socio_economic");
+    const section = owner?.sections.find(({ id }) => id === sectionId);
+    const placement = section?.panels.find(({ id }) => id === chartId);
+    if (!placement) return null;
+    const chart = placement.chart ?? placement;
+    return {
+      page: { id: owner.id, label: owner.label },
+      section: { id: section.id, title: section.title },
+      chart: { id: chart.id, title: chart.title },
+    };
+  }, { sectionId: SOCIO_SECTION.id, chartId: SOCIO_CHART.id });
+}
 
 test("a storage-rejected delayed Page rename falls back to session state", async ({ page }) => {
   await page.addInitScript(() => {
@@ -492,8 +537,8 @@ test("package export resolves drafts and round-trips a self-contained source", a
   await openBuildStructure(page);
   const fixture = await packageFixture();
   const fixtureConfig = fixture.config;
-  const fixtureChart = fixtureConfig.pages[0].sections[0].panels[0].chart
-    ?? fixtureConfig.pages[0].sections[0].panels[0];
+  const fixturePlacement = fixtureConfig.pages[0].sections[0].panels[0];
+  const fixtureChart = fixturePlacement.chart ?? fixturePlacement;
   fixtureConfig.dataSources = {
     [fixtureChart.sourceId]: fixtureConfig.dataSources[fixtureChart.sourceId],
   };
@@ -563,7 +608,7 @@ test("package export resolves drafts and round-trips a self-contained source", a
   const roundtripReview = page.getByRole("dialog", { name: "Review package contents" });
   await expect(roundtripReview).toContainText("Panel: Imported Panel");
   await roundtripReview.getByRole("button", { name: "Load package", exact: true }).click();
-  await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
+  await expect(page.locator(`[data-canonical-placement-id="${fixturePlacement.id}"]`)).toBeVisible();
   const persistedSource = await page.evaluate((sourceId) => {
     const config = JSON.parse(localStorage.getItem(
       "simex-dashboard-config-v3-three-mode-v1",
@@ -573,17 +618,14 @@ test("package export resolves drafts and round-trips a self-contained source", a
   expect(persistedSource.browserAssetId).toMatch(/^sha256-[a-f0-9]{64}$/);
   expect(persistedSource).not.toHaveProperty("csvText");
   await page.reload();
-  await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
+  await expect(page.locator(`[data-canonical-placement-id="${fixturePlacement.id}"]`)).toBeVisible();
 });
 
 test("package export activates the scoped layout owner when unfinished layout work is reviewed", async ({ page }) => {
   test.setTimeout(60_000);
   await openBuildStructure(page);
 
-  await page.getByRole("button", {
-    name: "Move Outbreak dynamics later",
-    exact: true,
-  }).click();
+  await chooseSectionAction(page, "biomedical_section", "move-later");
   const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
   await expect(layoutOwner).toHaveCount(1);
   await expect(layoutOwner).toHaveAttribute("data-pending-work-id", /^layout:/);
@@ -665,7 +707,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   const review = page.getByRole("dialog", { name: "Review package contents" });
   await expect(review).toBeVisible();
   await tree.getByRole("treeitem", {
-    name: "Risk perception over time",
+    name: SOCIO_CHART.title,
     exact: true,
   }).evaluate((element) => element.click());
   await review.getByRole("button", { name: "Load package", exact: true }).click();
@@ -708,18 +750,28 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a c
   await socio.press("ArrowRight");
   await expect(socio).toHaveAttribute("aria-expanded", "true");
   await socio.press("ArrowDown");
+  const firstSection = tree.getByRole("treeitem", { name: "Social Challanges", exact: true });
+  await expect(firstSection).toBeFocused();
+  await firstSection.press("ArrowDown");
+  const firstChart = tree.getByRole("treeitem", { name: "Mental Health Trends", exact: true });
+  await expect(firstChart).toBeFocused();
+  await firstChart.press("ArrowDown");
+  const secondChart = tree.getByRole("treeitem", { name: "Loneliness", exact: true });
+  await expect(secondChart).toBeFocused();
+  await secondChart.press("ArrowDown");
   const section = tree.getByRole("treeitem", {
-    name: "Public response and policy signals",
+    name: SOCIO_SECTION.title,
     exact: true,
   });
   await expect(section).toBeFocused();
 
-  await section.locator(":scope > .build-tree-row .build-tree-label")
-    .dblclick();
+  await section.press("F2");
   const rename = tree.getByRole("textbox", {
-    name: "Rename section Public response and policy signals",
+    name: `Rename section ${SOCIO_SECTION.title}`,
   });
   await expect(rename).toBeFocused();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]'))
     .toHaveAttribute("aria-selected", "true");
   expect(await tree.locator('[role="treeitem"]').evaluateAll(
@@ -731,14 +783,18 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a c
 
 test("pointer collapse moves descendant roving focus to the collapsing Section and Page", async ({ page }) => {
   await openBuildStructure(page);
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Socio-economic", exact: true }).click();
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
   const tree = page.getByRole("tree");
   const socio = tree.getByRole("treeitem", { name: "Socio-economic", exact: true });
   const section = tree.getByRole("treeitem", {
-    name: "Public response and policy signals",
+    name: SOCIO_SECTION.title,
     exact: true,
   });
   const chart = tree.getByRole("treeitem", {
-    name: "Risk perception over time",
+    name: SOCIO_CHART.title,
     exact: true,
   });
   const rovingCount = () => tree.locator('[role="treeitem"]').evaluateAll(
@@ -748,7 +804,7 @@ test("pointer collapse moves descendant roving focus to the collapsing Section a
   await chart.focus();
   await expect(chart).toBeFocused();
   await section.getByRole("button", {
-    name: "Collapse Public response and policy signals",
+    name: `Collapse ${SOCIO_SECTION.title}`,
     exact: true,
   }).click();
   await expect(section).toBeFocused();
@@ -756,7 +812,7 @@ test("pointer collapse moves descendant roving focus to the collapsing Section a
   await expect(chart).toHaveCount(0);
 
   await section.getByRole("button", {
-    name: "Expand Public response and policy signals",
+    name: `Expand ${SOCIO_SECTION.title}`,
     exact: true,
   }).click();
   await chart.focus();

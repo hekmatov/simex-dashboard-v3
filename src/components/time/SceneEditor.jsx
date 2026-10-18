@@ -11,7 +11,7 @@ const STAGES = Object.freeze([
   { id: "arrange", label: "Arrange and configure" },
 ]);
 
-export default function SceneEditor({ dashboard, themeProjection, draft, charts = [], chronoGroups = [], pages = [], disabled = false, onAction }) {
+export default function SceneEditor({ dashboard, themeProjection, draft, charts = [], parentCharts = charts, chronoGroups = [], pages = [], disabled = false, onAction }) {
   const value = draft?.value ?? {};
   const busy = disabled || draft?.status === "saving";
   const dirty = ["dirty", "error", "suspended"].includes(draft?.status);
@@ -25,7 +25,7 @@ export default function SceneEditor({ dashboard, themeProjection, draft, charts 
           <h2 id="scene-studio-title">Scene Studio</h2>
           <p>{chronoGroups.find(({ id }) => id === value.chronoGroupId)?.name ?? "Choose Chrono Group"} → {value.name || "Untitled Scene"}</p>
         </div>
-        <span className="build-draft-status" data-status={draft?.status ?? "clean"}>{draft?.status === "saving" ? "Saving Scene" : dirty ? "Unsaved Scene" : "Scene saved"}</span>
+        <span className="build-draft-status" data-status={draft?.status ?? "clean"}>{draft?.status === "saving" ? "Saving Scene" : dirty ? "Unsaved Scene" : "Scene draft open"}</span>
       </header>
       <div className="scene-studio__workspace" data-layout="full-width">
         <main className="scene-studio__main">
@@ -34,7 +34,7 @@ export default function SceneEditor({ dashboard, themeProjection, draft, charts 
           </nav>
           {draft?.error && <p className="build-operation-error" role="alert">{draft.error.message}</p>}
           {draft?.stage === "details"
-            ? <SceneDetailsStage draft={draft} charts={charts} chronoGroups={chronoGroups} pages={pages} busy={busy} onAction={onAction} />
+            ? <SceneDetailsStage draft={draft} charts={charts} parentCharts={parentCharts} chronoGroups={chronoGroups} pages={pages} busy={busy} onAction={onAction} />
             : draft?.stage === "arrange"
               ? <ArrangeStage dashboard={dashboard} themeProjection={themeProjection} draft={draft} charts={charts} busy={busy} onAction={onAction} />
               : <SelectStage value={value} charts={charts} selectedIds={selectedIds} busy={busy} onAction={onAction} />}
@@ -45,11 +45,11 @@ export default function SceneEditor({ dashboard, themeProjection, draft, charts 
   );
 }
 
-function SceneDetailsStage({ draft, charts, chronoGroups, pages, busy, onAction }) {
+function SceneDetailsStage({ draft, charts, parentCharts, chronoGroups, pages, busy, onAction }) {
   const value = draft?.value ?? {};
   const eligibleGroups = chronoGroups.filter((group) => {
     const groupIds = new Set(group.chartIds ?? group.members?.map(({ chartId }) => chartId) ?? []);
-    return charts.some((chart) => groupIds.has(chart.id) && chart.pageId === value.pageId);
+    return parentCharts.some((chart) => groupIds.has(chart.id) && chart.pageId === value.pageId);
   });
   const periodDates = toDateInputs(value.period);
   const parentPeriod = eligibleGroups.find(({ id }) => id === value.chronoGroupId)?.period;
@@ -77,7 +77,7 @@ function SceneDetailsStage({ draft, charts, chronoGroups, pages, busy, onAction 
 }
 
 function SceneTransactionFooter({ readiness, draft, busy, dirty, onAction }) {
-  return <footer className="scene-transaction-footer"><section className="scene-save-readiness" aria-labelledby="scene-save-readiness-title"><h4 id="scene-save-readiness-title">Save readiness</h4><p role="status">{readiness}</p></section><div className="build-surface-actions"><button type="button" data-scene-workflow-id="save-scene" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scene</button><button type="button" className="secondary" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Scene</button></div></footer>;
+  return <footer className="scene-transaction-footer"><section className="scene-save-readiness" aria-labelledby="scene-save-readiness-title"><h4 id="scene-save-readiness-title">Save readiness</h4><p role="status">{readiness}</p></section><div className="build-surface-actions"><button type="button" data-scene-workflow-id="save-scene" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scene</button><button type="button" className="secondary" disabled={busy} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Scene</button></div></footer>;
 }
 
 function SelectStage({ value, charts, selectedIds, busy, onAction }) {

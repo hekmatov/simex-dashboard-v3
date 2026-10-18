@@ -1,22 +1,16 @@
 ﻿import React from "react";
 
 import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
+import { APP_VERSION } from "../lib/appVersion.js";
+import { CANONICAL_HOME_REPOSITORY_URL } from "../home/canonicalHomeContent.js";
 import { useOperationStatusActions } from "./app-shell/OperationStatusProvider.jsx";
 import {
   beginDashboardContentOperation,
   reportDashboardContentActivity,
   runDashboardContentOperation,
 } from "../lib/dashboardContentActivity.js";
-import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
-import ChartQuickEditor from "./chart-authoring/ChartQuickEditor.jsx";
-import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
-import StaticContentEditor, { StaticContentQuickEditor } from "./static-content/StaticContentEditor.jsx";
-import StaticContentWizard, { cleanupImageDraftAssets } from "./static-content/StaticContentWizard.jsx";
-import BuildWorkspace from "./build/BuildWorkspace.jsx";
-import BuildMoveDialog from "./build/BuildMoveDialog.jsx";
-import BuildMoveConfirmationDialog from "./build/BuildMoveConfirmationDialog.jsx";
-import DashboardPackageExportDialog from "./build/DashboardPackageExportDialog.jsx";
-import DeleteDashboardContentDialog from "./build/DeleteDashboardContentDialog.jsx";
+import { lazySurface } from "./app-shell/lazySurface.jsx";
+import { cleanupImageDraftAssets } from "./static-content/cleanupImageDraftAssets.js";
 import {
   activeLocalAuthoringDrafts,
   buildLeaveBlockReason,
@@ -66,7 +60,6 @@ import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import { usePlayback } from "./playback/PlaybackProvider.jsx";
-import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
 import usePresentationRuntime from "./presentation/usePresentationRuntime.js";
 import {
   applyScenePresentTransition,
@@ -127,6 +120,22 @@ import { buildContentDependencyGraph } from "../content-library/contentDependenc
 import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
 import { classifyManagedSource } from "../content-library/sourceEntrySchema.js";
 
+const ChartEditorV3 = lazySurface(() => import("./chart-authoring/ChartEditorV3.jsx"), "Chart editor", { overlay: true });
+const ChartQuickEditor = lazySurface(() => import("./chart-authoring/ChartQuickEditor.jsx"), "Chart editor");
+const ChartWizardV3 = lazySurface(() => import("./chart-authoring/ChartWizardV3.jsx"), "Chart wizard", { overlay: true });
+const StaticContentEditor = lazySurface(() => import("./static-content/StaticContentEditor.jsx"), "Content editor", { overlay: true });
+const StaticContentQuickEditor = lazySurface(
+  () => import("./static-content/StaticContentEditor.jsx").then((module) => ({ default: module.StaticContentQuickEditor })),
+  "Content editor",
+);
+const StaticContentWizard = lazySurface(() => import("./static-content/StaticContentWizard.jsx"), "Content wizard", { overlay: true });
+const BuildWorkspace = lazySurface(() => import("./build/BuildWorkspace.jsx"), "Build workspace");
+const BuildMoveDialog = lazySurface(() => import("./build/BuildMoveDialog.jsx"), "Build move dialog", { overlay: true });
+const BuildMoveConfirmationDialog = lazySurface(() => import("./build/BuildMoveConfirmationDialog.jsx"), "Build move confirmation", { overlay: true });
+const DashboardPackageExportDialog = lazySurface(() => import("./build/DashboardPackageExportDialog.jsx"), "Package export review", { overlay: true });
+const DeleteDashboardContentDialog = lazySurface(() => import("./build/DeleteDashboardContentDialog.jsx"), "Dashboard deletion review", { overlay: true });
+const PresentWorkspace = lazySurface(() => import("./presentation/PresentWorkspace.jsx"), "Present workspace");
+
 const SCENARIO_DIRTY_BLOCK_REASON =
   "Save or discard changes to Scenario before leaving this edit. Stay in Build to continue editing.";
 const CHART_WIZARD_TAKEOVER_BLOCK_REASON =
@@ -162,6 +171,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onActivePageChange,
   onModeRequest,
   onBuildDraftLockChange,
+  onBuildDiscardAvailabilityChange,
   onBuildStructureProjectionChange,
   onInlineRenameDirtyChange,
   onComparisonSelectionChange,
@@ -195,6 +205,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onExportConfig,
   onResolveScenarioDraft,
   onResetEditSession,
+  buildSessionChanged = false,
   onDeleteDashboardContent,
   onOpenDashboardLook,
   operationError = "",
@@ -513,6 +524,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     dashboardMetadata: externalDirty.dashboardMetadata,
   };
   const authoredDirty = hasUnsavedAuthoredContent(authoredDirtyState);
+  const canDiscardBuild = buildSessionChanged || authoredDirty || chartAuthoringActive
+    || Boolean(localAuthoringDrafts.chronoGroup || localAuthoringDrafts.scene);
+  const canFinishBuild = (buildSessionChanged || authoredDirty)
+    && !localAuthoringDrafts.chronoGroup && !localAuthoringDrafts.scene
+    && !authoredDirtyState.pendingContent && !authoredDirtyState.scenario
+    && !chartAuthoringActive && !chartWizardDirty && !chartEditOwner && !chartCreateOwner && !staticContentOwner;
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const accessibilityEnabled = false;
   const iconAccent = dashboard.globalStyles?.iconAccent ?? ICON_TOKENS.accentBase;
@@ -761,6 +778,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     onBuildDraftLockChange?.(buildMode && buildDraftLocked);
   }, [buildMode, buildDraftLocked, onBuildDraftLockChange]);
 
+  React.useEffect(() => {
+    onBuildDiscardAvailabilityChange?.(buildMode && canDiscardBuild);
+  }, [buildMode, canDiscardBuild, onBuildDiscardAvailabilityChange]);
+
   React.useEffect(() => () => {
     onBuildDraftLockChange?.(false);
   }, [onBuildDraftLockChange]);
@@ -898,6 +919,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function requestResetEditSession() {
     if (moderatorOperationGateRef.current.isActive()) return;
+    if (!canDiscardBuild) return;
     clearModeratorError("reset-session");
     if (externalDirtyRef.current.scenario) {
       setBuildSelectionError(SCENARIO_DIRTY_BLOCK_REASON);
@@ -2454,6 +2476,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       };
       try {
         const resetDashboard = await onResetEditSession();
+        buildWorkspaceSelectionRef.current?.discardTemporalDrafts?.();
         pendingEdits.cancel();
         setDashboardDraft(dashboardTextDraftFromDashboard(resetDashboard ?? dashboard));
         setPageDrafts({});
@@ -2468,6 +2491,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setChartWizardTarget(null);
         setChartWizardDirty(false);
         setChartCreateOwner(null);
+        setStaticWizardTarget(null);
+        setStaticContentDraft(null);
+        setStaticContentDirty(false);
+        setStaticContentRestoration(null);
         setChartWizardSuspended(false);
         setChartWizardSuspendedTarget(null);
         setChartDraftSessionRevision((current) => current + 1);
@@ -2837,6 +2864,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       chartOwners={chartOwnerSlots}
       owners={staticContentOwner ? [staticContentOwner] : []}
       authoredDirtyState={authoredDirtyState}
+      canDiscardBuild={canDiscardBuild}
+      canFinishBuild={canFinishBuild}
       pendingWorkResumeActions={{
         structure: focusLayoutOwner,
         chartEditor: () => {
@@ -2929,7 +2958,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onActivePageChange={editMode
           ? navigateBuildCanvasPage
           : navigateToPage}
-        onAddPanelToSection={viewOnly ? undefined : recoverEmptySectionInBuild}
+        onAddPanelToSection={undefined}
         onDisplayAction={onDisplayAction}
         onToggleMultiPanel={toggleMultiPanel}
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}
@@ -2939,7 +2968,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       {editMode && selectedPanelIsStatic && staticContentEditorSurface === "full" && chartEditorVisible
         ? selectedChartEditor
         : null}
-      <BuildMoveDialog
+      {moveDialogRequest && <BuildMoveDialog
         open={Boolean(moveDialogRequest)}
         dashboard={workingDashboard}
         source={moveDialogRequest?.source}
@@ -2951,15 +2980,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setMoveDialogRequest(null);
           stageBuildLayoutMove(move, invoker);
         }}
-      />
-      <BuildMoveConfirmationDialog
+      />}
+      {moveConfirmation && <BuildMoveConfirmationDialog
         analysis={moveConfirmation?.analysis}
         invoker={moveConfirmation?.invoker}
         onCancel={() => setMoveConfirmation(null)}
         onConfirm={confirmBuildLayoutMove}
-      />
+      />}
       {editMode && <>
-      <ChartWizardV3
+      {(chartWizardTarget || chartWizardSuspended) && <ChartWizardV3
         key={`chart-create:${chartDraftSessionKey}:${chartWizardSessionEpoch}`}
         open={Boolean(chartWizardTarget)}
         contentDraftCoordinator={contentDraftCoordinator}
@@ -3070,7 +3099,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
             key: "content:chart.draft:create",
           });
         }}
-      />
+      />}
       {chartEditSession && (
         chartEditSession.activeSurface === "full" || chartEditSession.dirtyOrigins.full
       ) && <ChartWizardV3
@@ -3200,7 +3229,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           clearModeratorError("reset-session");
         }}
       />
-      <DeleteDashboardContentDialog
+      {deleteContentConfirmation && <DeleteDashboardContentDialog
         open={deleteContentConfirmation}
         summary={summarizeDashboardContent(dashboard)}
         busy={moderatorOperation.kind === "delete-dashboard-content"}
@@ -3211,7 +3240,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setDeleteContentConfirmation(false);
           clearModeratorError("delete-dashboard-content");
         }}
-      />
+      />}
       <ConfirmDialog
         open={pendingRemovalPageId !== null}
         title={`Delete Page ${dashboard.pages.find(({ id }) => id === pendingRemovalPageId)?.label ?? ""}?`}
@@ -3224,12 +3253,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onConfirm={confirmPageRemoval}
         onCancel={cancelPageRemoval}
       />
-      <DashboardPackageExportDialog
+      {packageExportIssues.length > 0 && <DashboardPackageExportDialog
         open={packageExportIssues.length > 0}
         issues={packageExportIssues}
         onResolve={resolvePackageExportIssue}
         onCancel={() => setPackageExportIssues([])}
-      />
+      />}
       <ConfirmDialog
         open={pendingRemovalPanelId !== null}
         title="Remove this chart?"
@@ -3714,6 +3743,7 @@ function DashboardFooter({ dashboard }) {
       <div>
         <strong>{dashboard.footerTitle ?? "SimEx Dashboard V3"}</strong>
         <span>{dashboard.footerCredit ?? "Developed by Hekmat Alrouh"}</span>
+        <span>App version {APP_VERSION}</span>
       </div>
       <nav aria-label="Project links">
         <a href={feedbackUrl} target="_blank" rel="noreferrer">
@@ -3725,6 +3755,7 @@ function DashboardFooter({ dashboard }) {
             Project repository
           </a>
         )}
+        <a href={`${CANONICAL_HOME_REPOSITORY_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noreferrer">Changelog</a>
       </nav>
     </footer>
   );

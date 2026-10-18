@@ -2,10 +2,13 @@ import { panelMenu, propertiesPane, structureRail } from "./support/buildWorkflo
 import { expect, test } from "@playwright/test";
 
 import { normalizeStoredDashboardConfig } from "../../src/charting/config/dashboardBundleV3.js";
-import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
+import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
+const MOVED_CHART_ID = "chart-line-mtgz6v76";
+const RETAINED_CHART_ID = "chart-line-mtgytrwj";
+const MOVED_CHART_TITLE = "National Confirmed Cases (cumulative)";
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -232,20 +235,21 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
   await seedSceneMoveFixture(page);
   await page.reload();
   await enterAuthoredDashboard(page);
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 
   const map = structureRail(page);
   const tree = map.getByRole("tree");
-  const moveConfirmedCases = page.getByRole("button", { name: "Move panel Confirmed cases", exact: true });
+  const moveConfirmedCases = panelMenu(page, MOVED_CHART_ID);
+  await expect(moveConfirmedCases).toBeVisible();
   const before = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
 
-  await moveConfirmedCases.focus();
-  await moveConfirmedCases.press("Enter");
+  await openMovePanel(page);
   await selectSocioDestination(page);
   let consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
   await expect(consequences).toContainText("Stage 12 whole Scene");
   await expect(consequences).toContainText("Stage 12 partial Scene");
-  await expect(consequences).toContainText("Confirmed cases");
+  await expect(consequences).toContainText(MOVED_CHART_TITLE);
   await expect(consequences).toContainText("Frame source becomes unresolved");
   await expect(consequences).toContainText("Present fallback");
   await consequences.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -253,8 +257,7 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(before);
 
-  await moveConfirmedCases.focus();
-  await moveConfirmedCases.press("Enter");
+  await openMovePanel(page);
   await selectSocioDestination(page);
   consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
   await consequences.getByRole("button", { name: "Confirm move", exact: true }).click();
@@ -274,7 +277,7 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
     const whole = dashboard.scenes.find(({ id }) => id === "stage12-whole-scene");
     const partial = dashboard.scenes.find(({ id }) => id === "stage12-partial-scene");
     const movedPage = dashboard.pages.find(({ sections }) => sections.some(({ panels }) => (
-      panels.some((placement) => placement.id === "bio_confirmed_cases")
+      panels.some((placement) => placement.id === "chart-line-mtgz6v76")
     )));
     return {
       movedPageId: movedPage?.id,
@@ -291,23 +294,21 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
   }, STORAGE_KEY)).toEqual({
     movedPageId: "socio_economic",
     wholePageId: "socio_economic",
-    wholeMembers: ["bio_confirmed_cases"],
-    wholeFrameSource: "bio_confirmed_cases",
-    wholePresent: ["bio_confirmed_cases"],
+    wholeMembers: [MOVED_CHART_ID],
+    wholeFrameSource: MOVED_CHART_ID,
+    wholePresent: [MOVED_CHART_ID],
     partialPageId: "biomedical",
-    partialMembers: ["bio_daily_cases_bar"],
+    partialMembers: [RETAINED_CHART_ID],
     partialFrames: {
       mode: "unresolved",
       reason: "source-chart-moved",
-      previousChartId: "bio_confirmed_cases",
+      previousChartId: MOVED_CHART_ID,
     },
-    partialPresent: { chartIds: ["bio_daily_cases_bar"], layout: "single" },
+    partialPresent: { chartIds: [RETAINED_CHART_ID], layout: "single" },
     updated: today,
   });
 
-  await page.getByRole("button", { name: "More", exact: true }).click();
-  const more = page.getByRole("dialog", { name: "More Build commands" });
-  await more.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.locator('[data-build-command-action="scene-studio"]').click();
   const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await studio.getByLabel("Search").fill("Stage 12 partial Scene");
   await expect(studio.locator('[data-action="open-content"][data-status="needs-attention"]'))
@@ -328,15 +329,27 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
 });
 
 async function selectSocioDestination(page) {
-  const dialog = page.getByRole("dialog", { name: "Move Confirmed cases" });
+  const dialog = page.getByRole("dialog", { name: `Move ${MOVED_CHART_TITLE}` });
   const destination = dialog.getByLabel("Destination");
+  await expect(destination.locator("option")
+    .filter({ hasText: /^Socio-economic — Public Trust and Support/ }).first()).toHaveCount(1);
   const option = await destination.locator("option").evaluateAll((options) => (
     options.map(({ textContent, value }) => ({ label: textContent, value }))
-      .find(({ label }) => label.startsWith("Socio-economic — Public response and policy signals"))
+      .find(({ label }) => label.startsWith("Socio-economic — Public Trust and Support"))
   ));
   expect(option, "the shipped Socio-economic Page must expose an ordinary target Section").toBeTruthy();
   await destination.selectOption(option.value);
   await dialog.getByRole("button", { name: "Move", exact: true }).click();
+}
+
+async function openMovePanel(page) {
+  const trigger = panelMenu(page, MOVED_CHART_ID);
+  await trigger.focus();
+  await expect(trigger).toBeFocused();
+  await trigger.press("Enter");
+  const menu = page.locator(`#panel-menu-${MOVED_CHART_ID}[role="menu"]`);
+  await expect(menu).toBeVisible();
+  await menu.locator('[data-action-menu-item="move"]').click();
 }
 
 async function seedSceneMoveFixture(page) {
@@ -348,6 +361,17 @@ async function seedSceneMoveFixture(page) {
     const profiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
     return { dashboard, profiles };
   }, STORAGE_KEY);
+  dashboard.chronoGroups = [
+    ...(dashboard.chronoGroups ?? []).filter(({ id }) => id !== "national-outbreak-move"),
+    {
+      id: "national-outbreak-move",
+      name: "National outbreak move",
+      period: { start: "2027-02-20", end: "2027-08-15" },
+      matching: { policy: "exact" },
+      secondsPerFrame: 1,
+      members: [MOVED_CHART_ID, RETAINED_CHART_ID].map((chartId) => ({ chartId, timeRole: "observation" })),
+    },
+  ];
   dashboard.scenes = [
     ...(dashboard.scenes ?? []).filter(({ id }) => ![
       "stage12-whole-scene",
@@ -357,25 +381,25 @@ async function seedSceneMoveFixture(page) {
       id: "stage12-whole-scene",
       name: "Stage 12 whole Scene",
       pageId: "biomedical",
-      chronoGroupId: "national_outbreak",
+      chronoGroupId: "national-outbreak-move",
       period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
-      frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
-      members: [{ chartId: "bio_confirmed_cases", width: 4 }],
-      present: { chartIds: ["bio_confirmed_cases"], layout: "single" },
+      frames: { mode: "source", chartId: MOVED_CHART_ID, selection: "all" },
+      members: [{ chartId: MOVED_CHART_ID, width: 4 }],
+      present: { chartIds: [MOVED_CHART_ID], layout: "single" },
       audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
     },
     {
       id: "stage12-partial-scene",
       name: "Stage 12 partial Scene",
       pageId: "biomedical",
-      chronoGroupId: "national_outbreak",
+      chronoGroupId: "national-outbreak-move",
       period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
-      frames: { mode: "source", chartId: "bio_confirmed_cases", selection: "all" },
+      frames: { mode: "source", chartId: MOVED_CHART_ID, selection: "all" },
       members: [
-        { chartId: "bio_confirmed_cases", width: 2 },
-        { chartId: "bio_daily_cases_bar", width: 2 },
+        { chartId: MOVED_CHART_ID, width: 2 },
+        { chartId: RETAINED_CHART_ID, width: 2 },
       ],
-      present: { chartIds: ["bio_confirmed_cases", "bio_daily_cases_bar"], layout: "horizontal-divider" },
+      present: { chartIds: [MOVED_CHART_ID, RETAINED_CHART_ID], layout: "horizontal-divider" },
       audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
     },
   ];

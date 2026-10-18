@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import App from "../App.jsx";
 import OperationStatusProvider from "../components/app-shell/OperationStatusProvider.jsx";
+import ApplicationErrorBoundary from "../components/app-shell/ApplicationErrorBoundary.jsx";
 import { registerServiceWorker } from "../serviceWorkerRegistration.js";
 import { createPdpcReleaseProfile } from "./pdpcReleaseProfile.js";
 import "../styles/fonts.css";
@@ -35,8 +36,10 @@ const releaseProfile = createPdpcReleaseProfile(variant);
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <OperationStatusProvider>
-      <App releaseProfile={releaseProfile} />
-    </OperationStatusProvider>
+    <ApplicationErrorBoundary>
+      <OperationStatusProvider>
+        <App releaseProfile={releaseProfile} />
+      </OperationStatusProvider>
+    </ApplicationErrorBoundary>
   </React.StrictMode>,
 );

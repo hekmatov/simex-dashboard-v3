@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const FIRST_CHART = "bio_confirmed_cases";
-const SECOND_CHART = "bio_mortality_age";
+const FIRST_CHART = "chart-line-mtgz6v76";
+const SECOND_CHART = "chart-line-mtgytrwj";
 const browserErrors = new WeakMap();
 
 test.beforeEach(async ({ page, request }) => {
@@ -117,7 +117,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
     .toHaveCount(0);
 
   await page
-    .getByRole("button", { name: "Move Mortality by age group previous" })
+    .getByRole("button", { name: "Move International Confirmed Cases (Cumulative) previous" })
     .click();
   await expect
     .poll(async () => stateEvents(request).then((events) => events.at(-1)))

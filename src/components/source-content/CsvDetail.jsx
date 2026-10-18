@@ -3,6 +3,7 @@ import SourceCsvViewerButton from "../source-data/SourceCsvViewerButton.jsx";
 import { buildSourceDownloadDescriptor } from "../source-data/sourceViewerProtocol.js";
 import { parseSourceCsvText } from "../../source-viewer/SourceCsvViewer.jsx";
 import { filterSourceRows } from "../../source-viewer/sourceViewerSort.js";
+import { sourceDisplayName } from "../../lib/sourceDisplayName.js";
 
 export default function CsvDetail({ item, source, datasetProfile }) {
   const columns = datasetProfile?.columns ?? [];
@@ -22,7 +23,7 @@ export default function CsvDetail({ item, source, datasetProfile }) {
     <section aria-labelledby="csv-detail-heading">
       <h3 id="csv-detail-heading">CSV details</h3>
       <dl className="source-content-facts">
-        <div><dt>Name</dt><dd>{item.record.displayName}</dd></div>
+        <div><dt>Name</dt><dd>{sourceDisplayName(item.record.displayName, item.id)}</dd></div>
         <div><dt>Origin</dt><dd>{item.record.origin}</dd></div>
         <div><dt>Health</dt><dd>{item.record.health}</dd></div>
         <div><dt>Rows</dt><dd>{datasetProfile?.rowCount ?? 0} rows</dd></div>
@@ -31,7 +32,7 @@ export default function CsvDetail({ item, source, datasetProfile }) {
       </dl>
       {columns.length > 0 && <p>Columns: {columns.map(({ name }) => name).join(", ")}</p>}
       <div className="wizard-source-profile-actions">
-        <SourceCsvViewerButton sourceId={item.id} source={source} interactionId="wizard.view-source-csv" />
+        <SourceCsvViewerButton sourceId={item.id} source={source} context={{ sourceLabel: item.record.displayName }} interactionId="wizard.view-source-csv" />
         {downloadHref && <a className="secondary" href={downloadHref} download={download.fileName}>Download CSV</a>}
       </div>
       {parsed && (

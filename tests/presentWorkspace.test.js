@@ -349,7 +349,7 @@ test("Present exposes connecting and reconnecting moderator status copy", () => 
   }
 });
 
-test("DashboardRenderer composes Present without mounting the fullscreen display", () => {
+test("DashboardRenderer defers Present without mounting the fullscreen display", () => {
   assert.equal(
     typeof rendererModule?.default,
     "object",
@@ -358,7 +358,7 @@ test("DashboardRenderer composes Present without mounting the fullscreen display
 
   const html = renderPresent(rendererModule.default);
 
-  assert.match(html, /present-workspace/);
+  assert.match(html, /Loading Present workspace/);
   assert.doesNotMatch(html, /fullscreen-backdrop/);
 });
 

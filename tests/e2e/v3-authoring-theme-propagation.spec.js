@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { choosePanelAction } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
+
+const BIOMEDICAL_CHART_ID = "chart-line-mtgz6v76";
 
 const RADIUS_VARIABLE_BY_SURFACE_ROLE = Object.freeze({
   surface: "--simex-style-surface-radius",
@@ -129,7 +133,9 @@ test("Unit Orbit retains the selected theme outside AppFrame", async ({ page }) 
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
+  const panel = page.locator(`[data-panel-id="${BIOMEDICAL_CHART_ID}"]`);
+  await panel.hover();
+  await choosePanelAction(page, BIOMEDICAL_CHART_ID, "edit");
   const orbit = page.locator(".unit-orbit");
   await expect(orbit).toBeVisible();
   await expectSelectedThemeChrome(orbit, "panel");
@@ -137,6 +143,7 @@ test("Unit Orbit retains the selected theme outside AppFrame", async ({ page }) 
 
 test("View Chrono and Present controls contain no retired dashboard paint", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await installPageRemovalGroups(page);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
 
@@ -162,10 +169,11 @@ test("standalone source viewer receives the selected dashboard style", async ({ 
   await look.getByRole("button", { name: "Close Theme", exact: true }).click();
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
 
   const popupPromise = page.waitForEvent("popup");
-  await page.getByRole("button", { name: "View source CSV", exact: true }).first().click();
+  const panel = page.locator(`[data-panel-id="${BIOMEDICAL_CHART_ID}"]`);
+  await panel.scrollIntoViewIfNeeded();
+  await panel.getByRole("button", { name: "View source CSV", exact: true }).click();
   const viewer = await popupPromise;
   const root = viewer.locator(".source-viewer-theme-root");
   await expect(root).toBeVisible();

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 import {
   createSavedPresentationScene,
@@ -20,6 +21,12 @@ test.beforeEach(async ({ page }, testInfo) => {
   page.on("pageerror", (error) => console.error(`Browser page error: ${error.stack ?? error.message}`));
   await page.goto(LIVE_APP_URL);
   await page.evaluate(() => localStorage.clear());
+  const response = await page.request.get(`${LIVE_APP_URL}config/dashboard.json`);
+  expect(response.ok()).toBe(true);
+  const fixture = withPageRemovalGroups(await response.json());
+  await page.evaluate((dashboard) => {
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(dashboard));
+  }, fixture);
 });
 
 test("END closes Audience and terminates the old channel", async ({ page }) => {
@@ -53,6 +60,7 @@ test("an already-open Audience display follows live semantic Theme changes", asy
   await theme.getByRole("radio", { name: "Humanist", exact: true }).check();
   await theme.getByRole("radio", { name: "Forum", exact: true }).check();
   await theme.getByRole("radio", { name: "Dark", exact: true }).check();
+  await theme.getByLabel("Profile colors", { exact: true }).check();
 
   await expect(audienceRoot).toHaveAttribute("data-dashboard-style", "humanist-standard");
   await expect(audienceRoot).toHaveAttribute("data-dashboard-color-profile", "humanist-standard/open-forum");
@@ -113,14 +121,14 @@ test("Audience surface remaining after denied close shows neutral Ended projecti
 
   await page.locator('[data-presentation-control-id="end"]').click();
   await expect(first.popup.locator(".audience-display")).toHaveAttribute("data-connection-status", "ended");
-  await expect(first.popup.locator(".audience-ended h1")).toHaveText("Presentation ended");
-  await expect(first.popup.locator(".audience-ended p")).toHaveText("This display is no longer active.");
+  await expect(first.popup.locator(".audience-ended-content h1")).toHaveText("Presentation ended");
+  await expect(first.popup.locator(".audience-ended-content p")).toHaveText("This display is no longer active.");
   await expect(first.popup.locator("[data-displayed-chart-id], button, nav, a")).toHaveCount(0);
-  await expect(first.popup.locator(".audience-ended")).not.toContainText(/reconnect|disconnect|channel|session/i);
+  await expect(first.popup.locator(".audience-ended-content")).not.toContainText(/reconnect|disconnect|channel|session/i);
   expect(first.popup.isClosed()).toBe(false);
   await sendLateOldSessionState(first.popup);
   await expect(first.popup.locator(".audience-display")).toHaveAttribute("data-connection-status", "ended");
-  await expect(first.popup.locator(".audience-ended h1")).toHaveText("Presentation ended");
+  await expect(first.popup.locator(".audience-ended-content h1")).toHaveText("Presentation ended");
   await expect(first.popup.getByText("Waiting for the next scene.", { exact: true })).toHaveCount(0);
 
   const second = await openAudienceSession(page);
@@ -134,6 +142,10 @@ test("Present composes output and Audience dragging saves the Scene date positio
   await installAudienceFaultInstrumentation(context);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
+  await page.getByRole("button", { name: "Audience display options" }).click();
+  const options = page.getByRole("dialog", { name: "Audience display options" });
+  await options.getByRole("checkbox", { name: "Display Scene date" }).check();
+  await options.getByRole("button", { name: "Close Audience display options" }).click();
   const storedBefore = await readStoredDashboard(page);
   const savedBefore = (storedBefore.scenes ?? []).find(({ id }) => id === scene.id);
   const session = await openAudienceSession(page);

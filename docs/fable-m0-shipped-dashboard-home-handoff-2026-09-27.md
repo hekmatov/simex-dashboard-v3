@@ -1,0 +1,8 @@
+# Fable M0.2 shipped dashboard and Home consumers handoff
+
+- **Base:** `b57813abf8ba3a4e015274313c58a0aa068f4c64` on `codex/fable-m0-source-fixture`; canonical roadmap v1.10, section 5, planning commit `d9016309de22600c572575b5f804fa712d01e066`.
+- **Scope:** The six assigned historical titles in `tests/defaultDashboardV3.test.js` and `tests/landingPageConfig.test.js` only.
+- **Result:** Assertions now pin the shipped three-page, eight-section, 17-panel inventory and every panel's type/source binding. Eight CSV panels use tracked profiles, real rows, preparation, and renderer models. Nine static panels use their supported static resolver; the packaged image file is present. Home remains a preference, with no legacy Home page or placements; three unplaced managed sources remain in the library. The alias JSON was reformatted to the deterministic two-space output expected by the existing assertion; parsed content is unchanged. The dashboard JSON already had the required serialization.
+- **Evidence:** Exact six-title `node --test --test-name-pattern=… tests/defaultDashboardV3.test.js tests/landingPageConfig.test.js` selection: 6 passed, 0 failed. `git diff --check` clean. Read-only scoped review found one source-binding coverage gap; explicit 17-chart bindings fixed it, and reviewer confirmed the affected boundary resolved.
+- **Limits:** The other five historical failures in `tests/defaultDashboardV3.test.js` remain deferred under the roadmap. No full-file, repository, build, browser, deployment, or scenario gate was run or claimed. No canonical roadmap, main checkout, or production dashboard content changed.
+- **Next:** Planning steward to reconcile this slice and assign the next scoped M0.2 step.

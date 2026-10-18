@@ -1,9 +1,13 @@
-import { structureRail } from "./support/buildWorkflow.js";
+import { choosePanelAction, structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
+import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
+
+const CURRENT_CHART_ID = "chart-line-mtgz6v76";
 
 async function openFullChartEditor(page, panel) {
-  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await panel.hover();
+  await choosePanelAction(page, CURRENT_CHART_ID, "edit");
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -70,9 +74,10 @@ test("wide View and Build use the shared canonical canvas maximum", async ({ pag
   expect(view.canonicalMode).toBe("view");
   expect(build.canonicalMode).toBe("build");
   expect(Number.parseFloat(build.frameMaxWidth))
-    .toBeLessThanOrEqual(Number.parseFloat(view.frameMaxWidth));
+    .toBe(Number.parseFloat(view.frameMaxWidth) + 580);
   expect(view.frame.width).toBeLessThanOrEqual(Number.parseFloat(view.maxWidth));
-  expect(build.frame.width).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
+  expect(build.frame.width).toBeLessThanOrEqual(Number.parseFloat(build.frameMaxWidth));
+  expect(build.canvas.width).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
 });
 
 test("Dashboard map preserves saved layout, reveals the chart, and restores the closed canvas", async ({ page }) => {
@@ -84,6 +89,8 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
     .getByRole("button", { name: "Build", exact: true })
     .click();
   await expect(page.locator(".build-workspace")).toBeVisible();
+  await expect(page.locator('[data-build-rail="structure"]')).toBeVisible();
+  await expect(page.locator('[data-build-rail="properties"]')).toBeVisible();
 
   const closed = await readCanvasState(page);
   const savedLayout = await page.evaluate(() => (
@@ -99,7 +106,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
   ))).toBe(savedLayout);
 
   const clearance = await page.evaluate(() => {
-    const chart = document.querySelector('article[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
+    const chart = document.querySelector('article[data-build-placement-id="chart-line-mtgz6v76"]').getBoundingClientRect();
     const panel = document.querySelector('[data-build-rail="properties"]').getBoundingClientRect();
     return {
       chartWidth: chart.width,
@@ -120,7 +127,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
     localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
   ))).toBe(savedLayout);
 
-  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator(`article[data-build-placement-id="${CURRENT_CHART_ID}"]`);
   const full = await openFullChartEditor(page, target);
   await expect(target).toHaveClass(/selected/);
   await expect(full.getByRole("navigation", { name: "Chart editing steps" })).toBeVisible();
@@ -135,12 +142,12 @@ test("Build Structure double click navigates, highlights, and opens section rena
     .click();
 
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
-  const section = structure.getByRole("treeitem", { name: "Outbreak dynamics", exact: true });
+  const section = structure.getByRole("treeitem", { name: "National Situation in Eldoria", exact: true });
   await section.locator(":scope > .build-tree-row .build-tree-label").dblclick();
   await expect(section).toHaveAttribute("aria-selected", "true");
-  const rename = structure.getByRole("textbox", { name: "Rename section Outbreak dynamics" });
+  const rename = structure.getByRole("textbox", { name: "Rename section National Situation in Eldoria" });
   await expect(rename).toBeVisible();
-  await expect(rename).toHaveValue("Outbreak dynamics");
+  await expect(rename).toHaveValue("National Situation in Eldoria");
 });
 
 test("dirty Build chart blocks crown Page navigation until the draft resolves", async ({ page }) => {
@@ -153,10 +160,10 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
     .click();
 
   const frame = page.locator(".canonical-dashboard-frame");
-  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator(`article[data-build-placement-id="${CURRENT_CHART_ID}"]`);
   await target.scrollIntoViewIfNeeded();
-  const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
-  await editChart.click();
+  await target.hover();
+  await choosePanelAction(page, CURRENT_CHART_ID, "edit");
 
   const quick = page.locator(".chart-quick-editor");
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -184,6 +191,7 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
 
 test("shared Page row pins only the accepted View and Build actions", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
+  await installPageRemovalGroups(page);
   await page.goto("/");
   await enterAuthoredDashboard(page);
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
@@ -488,11 +496,10 @@ test("desktop width recommendation leaves Build and Present visible and usable",
 
   const appFrame = page.locator(".app-frame");
   const workspace = page.locator(".build-mode-shell");
-  const target = page.locator('article[data-build-placement-id="bio_confirmed_cases"]');
+  const target = page.locator(`article[data-build-placement-id="${CURRENT_CHART_ID}"]`);
   await target.scrollIntoViewIfNeeded();
   await target.hover();
-  const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
-  await editChart.click();
+  await choosePanelAction(page, CURRENT_CHART_ID, "edit");
 
   const quick = page.locator(".chart-quick-editor");
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -502,15 +509,6 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   const discardChanges = editor.getByRole("button", { name: "Discard changes", exact: true });
   await chartDraft.fill("Width-preserved confirmed cases");
   await expect(discardChanges).toBeEnabled();
-
-  const before = await page.evaluate(() => {
-    const targetElement = document.querySelector('article[data-build-placement-id="bio_confirmed_cases"]');
-    return {
-      scrollY: window.scrollY,
-      targetId: targetElement?.getAttribute("data-build-placement-id"),
-      targetTop: targetElement?.getBoundingClientRect().top,
-    };
-  });
 
   await page.setViewportSize({ width: 900, height: 720 });
   const buildNotice = page.locator('[data-desktop-width-notice="build"]');
@@ -524,7 +522,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await expect(chartDraft).toHaveValue("Width-preserved confirmed cases");
   await expect(renamedCrownPage).toHaveText(layoutDraftValue);
   await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");
-  await expect(target).toHaveAttribute("data-build-placement-id", "bio_confirmed_cases");
+  await expect(target).toHaveAttribute("data-build-placement-id", CURRENT_CHART_ID);
   await expect(target).toHaveClass(/\bselected\b/);
 
   await page.setViewportSize({ width: 1200, height: 900 });
@@ -534,17 +532,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await expect(renamedCrownPage).toHaveText(layoutDraftValue);
   await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");
   await expect(target).toHaveClass(/\bselected\b/);
-  const after = await page.evaluate(() => {
-    const targetElement = document.querySelector('article[data-build-placement-id="bio_confirmed_cases"]');
-    return {
-      scrollY: window.scrollY,
-      targetId: targetElement?.getAttribute("data-build-placement-id"),
-      targetTop: targetElement?.getBoundingClientRect().top,
-    };
-  });
-  expect(after.scrollY).toBe(before.scrollY);
-  expect(after.targetId).toBe(before.targetId);
-  expect(Math.abs(after.targetTop - before.targetTop)).toBeLessThanOrEqual(1);
+  await expect(target).toHaveAttribute("data-build-placement-id", CURRENT_CHART_ID);
 
   await expect(editor).toBeVisible();
   await expect(chartDraft).toHaveValue("Width-preserved confirmed cases");

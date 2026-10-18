@@ -6,6 +6,7 @@ import CsvDetail from "./CsvDetail.jsx";
 import GeoJsonDetail from "./GeoJsonDetail.jsx";
 import ContentActionDialog from "./ContentActionDialog.jsx";
 import DependencyList from "./DependencyList.jsx";
+import { sourceDisplayName } from "../../lib/sourceDisplayName.js";
 
 export default function DataSourceDetail({
   item,
@@ -152,7 +153,7 @@ export default function DataSourceDetail({
       <ContentActionDialog
         open={replaceOpen}
         action={isGeoJson ? "replace-geojson" : relinkSource ? "relink-csv" : "replace-csv"}
-        itemLabel={item.record.displayName}
+        itemLabel={item.kind === "csv" ? sourceDisplayName(item.record.displayName, item.id) : item.record.displayName}
         busy={replacementBusy}
         error={replacementError}
         replacementReady={replacementPlan?.status === "ready" || replacementPlan?.status === "requires-temporal-review" || replacementPlan?.status === "requires-confirmation"}
@@ -179,8 +180,9 @@ export default function DataSourceDetail({
 }
 
 function RenameSource({ item, onRename, onDraftChange, busy = false, error = "" }) {
-  const [displayName, setDisplayName] = React.useState(item.record.displayName);
-  React.useEffect(() => setDisplayName(item.record.displayName), [item.id, item.record.displayName]);
+  const currentName = item.kind === "csv" ? sourceDisplayName(item.record.displayName, item.id) : item.record.displayName;
+  const [displayName, setDisplayName] = React.useState(currentName);
+  React.useEffect(() => setDisplayName(currentName), [item.id, currentName]);
   return (
     <form className="source-content-rename" aria-busy={busy ? "true" : undefined} onSubmit={(event) => { event.preventDefault(); void onRename?.({ displayName }); }}>
       <label><span>Display name</span><input value={displayName} disabled={busy} onChange={(event) => {
@@ -188,7 +190,7 @@ function RenameSource({ item, onRename, onDraftChange, busy = false, error = "" 
         setDisplayName(value);
         onDraftChange?.({ displayName: value });
       }} required /></label>
-      <button type="submit" className="secondary" disabled={busy || !onRename || displayName.trim() === item.record.displayName}>Save name</button>
+      <button type="submit" className="secondary" disabled={busy || !onRename || displayName.trim() === currentName}>Save name</button>
       {error && <p role="alert">{error}</p>}
     </form>
   );

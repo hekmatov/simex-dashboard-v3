@@ -32,6 +32,8 @@ const POLICY_DESCRIPTIONS = Object.freeze({
 });
 
 export default function ChronoGroupEditor({ draft, disabled = false, onAction }) {
+  const editorRef = React.useRef(null);
+  const [issueTarget, setIssueTarget] = React.useState(null);
   const value = draft?.value ?? {};
   const stage = draft?.stage ?? "period";
   const busy = disabled || draft?.status === "saving";
@@ -39,9 +41,22 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
   const stageStates = deriveChronoGroupStageStates(draft);
   const stageIndex = CHRONO_GROUP_STAGES.indexOf(stage);
   const draftIssue = validateChronoGroupDraft(draft);
+  React.useEffect(() => {
+    if (!issueTarget) return;
+    const target = editorRef.current?.ownerDocument.getElementById(issueTarget);
+    if (!target || !editorRef.current.contains(target)) return;
+    target.scrollIntoView({ block: "center", behavior: "auto" });
+    target.focus({ preventScroll: true });
+    setIssueTarget(null);
+  }, [issueTarget, stage]);
+  const inspectIssue = (issue) => {
+    setIssueTarget(issue.focusId);
+    const targetStage = issue.stage ?? (issue.focusId?.startsWith("chrono-group-chart-") ? "charts" : stage);
+    onAction?.({ type: "GO_TO_STAGE", stage: targetStage });
+  };
 
   return (
-    <section className="chrono-group-studio" aria-labelledby="chrono-group-studio-title">
+    <section ref={editorRef} className="chrono-group-studio" aria-labelledby="chrono-group-studio-title">
       <header>
         <div>
           <p className="eyebrow">Temporal authoring</p>
@@ -49,7 +64,7 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
           <p>Dashboard-wide authored object · local draft · fixed Staged Proof Studio</p>
         </div>
         <span data-status={draft?.status ?? "clean"}>
-          {draft?.status === "saving" ? "Saving Chrono Group" : dirty ? "Unsaved Chrono Group" : "Chrono Group saved"}
+          {draft?.status === "saving" ? "Saving Chrono Group" : dirty ? "Unsaved Chrono Group" : "Chrono Group draft open"}
         </span>
       </header>
 
@@ -77,7 +92,7 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
       </nav>
 
       <div className="chrono-group-studio__body" aria-live="polite">
-        {draft?.error && <StageCallout issue={draft.error} />}
+        {draft?.error && <StageCallout issue={draft.error} busy={busy} onInspect={inspectIssue} />}
 
         {stage === "period" && <PeriodStage value={value} timeZone={draft?.timeZone} busy={busy} onAction={onAction} />}
 
@@ -107,7 +122,7 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
         <span className="chrono-stage-progress">Stage {stageIndex + 1} of {CHRONO_GROUP_STAGES.length} · {STAGE_STATUS_LABELS[stageStates[stage]]}</span>
         {stage !== "review" && <button type="button" disabled={busy} onClick={() => onAction?.({ type: "NEXT_STAGE" })}>Continue</button>}
         {stage === "review" && <button type="button" disabled={busy || !dirty || Boolean(draftIssue)} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Chrono Group</button>}
-        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard</button>
+        <button type="button" disabled={busy} onClick={() => onAction?.({ type: "DISCARD" })}>Discard</button>
       </footer>
     </section>
   );
@@ -216,12 +231,15 @@ function ReviewProof({ number, title, text, action, stage, busy, onAction }) {
   return <li><span>{number}</span><div><strong>{title}</strong><p>{text}</p></div>{action && <button type="button" className="secondary" disabled={busy} onClick={() => onAction?.({ type: "GO_TO_STAGE", stage })}>{action}</button>}</li>;
 }
 
-function StageCallout({ issue }) {
-  return <div className="chrono-proof-callout" data-tone="error" role="alert"><strong>Needs attention</strong><span>{issue.message}</span></div>;
+function StageCallout({ issue, busy, onInspect }) {
+  const message = <><strong>Needs attention</strong><span>{issue.message}</span></>;
+  return <div className="chrono-proof-callout" data-tone="error" role="alert">{issue.focusId
+    ? <button type="button" className="secondary chrono-proof-callout__inspect" disabled={busy} aria-controls={issue.focusId} onClick={() => onInspect(issue)}>{message}</button>
+    : message}</div>;
 }
 
 function matchingLabels() {
-  return [MATCHING_POLICY_LABELS.CONCURRENT_ONLY, MATCHING_POLICY_LABELS.INTERPOLATE, MATCHING_POLICY_LABELS.SNAP_TO_LATEST, MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST];
+  return [MATCHING_POLICY_LABELS.SNAP_TO_LATEST, MATCHING_POLICY_LABELS.INTERPOLATE, MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST, MATCHING_POLICY_LABELS.CONCURRENT_ONLY];
 }
 
 function stageStatusMark(status) {

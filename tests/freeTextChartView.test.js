@@ -39,7 +39,10 @@ async function portableQmdRepairSource(scope = page) {
   return scope.getByLabel("Portable QMD raw source");
 }
 
-test("formatted/raw switching preserves source until an edit and table cell actions stay outside the document", async () => {
+test("formatted/raw switching preserves source until an edit and table cell actions stay outside the document", async (t) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  t.after(() => t.diagnostic(`editor page errors ${JSON.stringify(pageErrors)}`));
   const source = [
     "| Facility | Ready |",
     "| --- | --- |",
@@ -47,6 +50,8 @@ test("formatted/raw switching preserves source until an edit and table cell acti
   ].join("\n");
   await page.evaluate((value) => window.mountFreeTextEditor(value), source);
 
+  // The harness module is ready before React has committed the first editor.
+  await expect(page.getByRole("button", { name: "Raw text" })).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: "Raw text" }).click();
   const raw = page.getByLabel("Portable QMD raw source");
   await expect(raw).toHaveValue(source);

@@ -140,7 +140,7 @@ test("the below-1024 recommendation never hides the workspace", async () => {
   assert.doesNotMatch(css, /display:\s*none\s*!important/);
 });
 
-test("ordinary View preserves an empty Section and routes its exact recovery action to Build", () => {
+test("ordinary View keeps empty Section authoring out of View while retaining the saved Section", () => {
   const emptyDashboard = {
     ...dashboard,
     pages: [{
@@ -171,9 +171,8 @@ test("ordinary View preserves an empty Section and routes its exact recovery act
     ),
   ));
 
-  assert.match(html, />Evidence awaiting panels</);
-  assert.match(html, /This section has no panels\./);
-  assert.match(html, />Add Panel to Section<\/button>/);
+  assert.equal(emptyDashboard.pages[0].sections[0].title, "Evidence awaiting panels");
+  assert.doesNotMatch(html, />Add Panel to Section<\/button>/);
 });
 
 function renderAppFrame(props) {

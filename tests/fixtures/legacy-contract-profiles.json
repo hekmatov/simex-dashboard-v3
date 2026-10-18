@@ -1,0 +1,489 @@
+{
+  "upload-cases-wcph-eldoria-3": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-14",
+          "2027-02-15",
+          "2027-02-16"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Date",
+        "temporal": {
+          "diagnostics": [],
+          "parsingMetadata": {
+            "format": "YYYY-MM-DD",
+            "interpretation": "auto"
+          },
+          "values": [
+            "2027-02-14",
+            "2027-02-15",
+            "2027-02-16",
+            "2027-02-17",
+            "2027-02-18",
+            "2027-02-19",
+            "2027-02-20",
+            "2027-02-21"
+          ]
+        },
+        "type": "temporal",
+        "uniqueCount": 8
+      },
+      {
+        "examples": [
+          0,
+          2
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "national_total_cases",
+        "type": "numeric",
+        "uniqueCount": 2
+      },
+      {
+        "examples": [],
+        "geographicHint": null,
+        "missingCount": 8,
+        "name": "total_deaths",
+        "type": "category",
+        "uniqueCount": 0
+      }
+    ],
+    "fingerprint": "0fe96c239fc8e5a9afcabd87745f21b1d75e9c93e57354a54a35a24f7cccd0d6",
+    "kind": "csv",
+    "path": "data/uploaded/cases-WCPH-eldoria-upload-cases-wcph-eldoria-3.csv",
+    "provenance": {
+      "label": "Uploaded cases WCPH-eldoria.csv"
+    },
+    "rowCount": 8,
+    "sourceId": "upload-cases-wcph-eldoria-3"
+  },
+  "upload-cases-wcph-internationaal-2": {
+    "columns": [
+      {
+        "examples": [
+          "2026-12-26",
+          "2026-12-27",
+          "2026-12-28"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Date",
+        "temporal": {
+          "diagnostics": [],
+          "parsingMetadata": {
+            "format": "YYYY-MM-DD",
+            "interpretation": "auto"
+          },
+          "values": [
+            "2026-12-26",
+            "2026-12-27",
+            "2026-12-28",
+            "2026-12-29",
+            "2026-12-30",
+            "2026-12-31",
+            "2027-01-01",
+            "2027-01-02",
+            "2027-01-03",
+            "2027-01-04",
+            "2027-01-05",
+            "2027-01-06",
+            "2027-01-07",
+            "2027-01-08",
+            "2027-01-09",
+            "2027-01-10",
+            "2027-01-11",
+            "2027-01-12",
+            "2027-01-13",
+            "2027-01-14",
+            "2027-01-15",
+            "2027-01-16",
+            "2027-01-17",
+            "2027-01-18",
+            "2027-01-19",
+            "2027-01-20",
+            "2027-01-21",
+            "2027-01-22",
+            "2027-01-23",
+            "2027-01-24",
+            "2027-01-25",
+            "2027-01-26",
+            "2027-01-27",
+            "2027-01-28",
+            "2027-01-29",
+            "2027-01-30",
+            "2027-01-31",
+            "2027-02-01",
+            "2027-02-02",
+            "2027-02-03",
+            "2027-02-04",
+            "2027-02-05",
+            "2027-02-06",
+            "2027-02-07",
+            "2027-02-08",
+            "2027-02-09",
+            "2027-02-10",
+            "2027-02-11",
+            "2027-02-12",
+            "2027-02-13",
+            "2027-02-14",
+            "2027-02-15",
+            "2027-02-16",
+            "2027-02-17",
+            "2027-02-18",
+            "2027-02-19",
+            "2027-02-20",
+            "2027-02-21"
+          ]
+        },
+        "type": "temporal",
+        "uniqueCount": 58
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "international_total_cases",
+        "type": "numeric",
+        "uniqueCount": 43
+      },
+      {
+        "examples": [],
+        "geographicHint": null,
+        "missingCount": 58,
+        "name": "total_deaths",
+        "type": "category",
+        "uniqueCount": 0
+      }
+    ],
+    "fingerprint": "8dd9ce8cc8b00efa904846e8297a2512979e7f5c8446ed2ea573e3c00635e1f1",
+    "kind": "csv",
+    "path": "data/uploaded/cases-WCPH-internationaal-upload-cases-wcph-internationaal-2.csv",
+    "provenance": {
+      "label": "Uploaded cases WCPH-internationaal.csv"
+    },
+    "rowCount": 58,
+    "sourceId": "upload-cases-wcph-internationaal-2"
+  },
+  "upload-eldoria-baseline-public-support": {
+    "columns": [
+      {
+        "examples": [
+          "Overall support for measures",
+          "Belief measures would be proportionate",
+          "Support limits on public gatherings"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Measure",
+        "type": "category",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          78,
+          74,
+          76
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percent support",
+        "type": "numeric",
+        "uniqueCount": 5
+      }
+    ],
+    "fingerprint": "1dae94e5f766c9eb8e95b4295db676237e3638f519b9fce7f3858361885ba518",
+    "kind": "csv",
+    "path": "data/uploaded/eldoria_baseline_public_support-upload-eldoria-baseline-public-support.csv",
+    "provenance": {
+      "label": "Uploaded eldoria_baseline_public_support.csv"
+    },
+    "rowCount": 5,
+    "sourceId": "upload-eldoria-baseline-public-support"
+  },
+  "upload-eldoria-income-distribution": {
+    "columns": [
+      {
+        "examples": [
+          "Low income",
+          "Lower-middle income",
+          "Middle income"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Income bracket",
+        "type": "category",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          35,
+          27,
+          20
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Share of population (%)",
+        "type": "numeric",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          9,
+          18,
+          22
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Share of total income (%)",
+        "type": "numeric",
+        "uniqueCount": 5
+      }
+    ],
+    "fingerprint": "e649568b7ab70cc144eac9df47b19279bc988bbbc8e6550d43d09637c7356846",
+    "kind": "csv",
+    "path": "data/uploaded/eldoria_income_distribution-upload-eldoria-income-distribution.csv",
+    "provenance": {
+      "label": "Uploaded eldoria_income_distribution.csv"
+    },
+    "rowCount": 5,
+    "sourceId": "upload-eldoria-income-distribution"
+  },
+  "upload-eldoria-institutional-trust-comparison-fictional": {
+    "columns": [
+      {
+        "examples": [
+          "Ministry of Health",
+          "Regional health authorities",
+          "National government"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Institution",
+        "type": "category",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          77,
+          71,
+          67
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "February 2026",
+        "type": "numeric",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          69,
+          62,
+          54
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "February 2027",
+        "type": "numeric",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          -8,
+          -9,
+          -13
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Change (percentage points)",
+        "type": "numeric",
+        "uniqueCount": 4
+      }
+    ],
+    "fingerprint": "e09f5f360d3e250c2ec1399ab1860f14daf2122694b82e380330f26233fefb91",
+    "kind": "csv",
+    "path": "data/uploaded/eldoria-institutional-trust-comparison-fictional-upload-eldoria-institutional-trust-comparison-fictional.csv",
+    "provenance": {
+      "label": "Uploaded eldoria-institutional-trust-comparison-fictional.csv"
+    },
+    "rowCount": 5,
+    "sourceId": "upload-eldoria-institutional-trust-comparison-fictional"
+  },
+  "upload-eldoria-loneliness": {
+    "columns": [
+      {
+        "examples": [
+          "16-24 years",
+          "25-39 years",
+          "40-54 years"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Age group",
+        "type": "category",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          32,
+          24,
+          19
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percent reporting frequent loneliness",
+        "type": "numeric",
+        "uniqueCount": 5
+      }
+    ],
+    "fingerprint": "c1651cb4868f8a6e989266482e264656852c44a4fbd3f29a619da870c9cac24b",
+    "kind": "csv",
+    "path": "data/uploaded/eldoria_loneliness-upload-eldoria-loneliness.csv",
+    "provenance": {
+      "label": "Uploaded eldoria_loneliness.csv"
+    },
+    "rowCount": 5,
+    "sourceId": "upload-eldoria-loneliness"
+  },
+  "upload-eldoria-misinformation-2021-2027-fictional": {
+    "columns": [
+      {
+        "examples": [
+          2021,
+          2022,
+          2023
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Year",
+        "temporal": {
+          "diagnostics": [],
+          "parsingMetadata": {
+            "format": "YYYY",
+            "interpretation": "auto"
+          },
+          "values": [
+            "2021-01-01",
+            "2022-01-01",
+            "2023-01-01",
+            "2024-01-01",
+            "2025-01-01",
+            "2026-01-01",
+            "2027-01-01"
+          ]
+        },
+        "type": "temporal",
+        "uniqueCount": 7
+      },
+      {
+        "examples": [
+          29,
+          33,
+          31
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Reported regular exposure to mis- and disinformation (%)",
+        "type": "numeric",
+        "uniqueCount": 7
+      },
+      {
+        "examples": [
+          37,
+          38,
+          42
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Concern about online mis- and disinformation (%)",
+        "type": "numeric",
+        "uniqueCount": 7
+      }
+    ],
+    "fingerprint": "9138d106ec0984c0842cec6a0a67096807a624b6db1c485c59625fd2fe2859a7",
+    "kind": "csv",
+    "path": "data/uploaded/eldoria-misinformation-2021-2027-fictional-upload-eldoria-misinformation-2021-2027-fictional.csv",
+    "provenance": {
+      "label": "Uploaded eldoria-misinformation-2021-2027-fictional.csv"
+    },
+    "rowCount": 7,
+    "sourceId": "upload-eldoria-misinformation-2021-2027-fictional"
+  },
+  "upload-eldoria-trust-in-government": {
+    "columns": [
+      {
+        "examples": [
+          "Ministry of Health",
+          "Regional health authorities",
+          "National government"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Institution",
+        "type": "category",
+        "uniqueCount": 5
+      },
+      {
+        "examples": [
+          69,
+          62,
+          54
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percent who trust it",
+        "type": "numeric",
+        "uniqueCount": 5
+      }
+    ],
+    "fingerprint": "c2304d1f11f956e1cced7c3b2ed0cc09a25e27efc4f745a50e9bda2303eb727c",
+    "kind": "csv",
+    "path": "data/uploaded/eldoria_trust_in_government-upload-eldoria-trust-in-government.csv",
+    "provenance": {
+      "label": "Uploaded eldoria_trust_in_government.csv"
+    },
+    "rowCount": 5,
+    "sourceId": "upload-eldoria-trust-in-government"
+  },
+  "upload-eldoria-work-sectors": {
+    "columns": [
+      {
+        "examples": [
+          "Hospitality and tourism",
+          "Retail and personal services",
+          "Healthcare"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Sector",
+        "type": "category",
+        "uniqueCount": 6
+      },
+      {
+        "examples": [
+          19,
+          15,
+          13
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Share of workforce (%)",
+        "type": "numeric",
+        "uniqueCount": 6
+      }
+    ],
+    "fingerprint": "e63099a4c4239c26f15b7e90f783377e9f83c3b41ca86f2aa3bd24483a78b045",
+    "kind": "csv",
+    "path": "data/uploaded/eldoria_work_sectors-upload-eldoria-work-sectors.csv",
+    "provenance": {
+      "label": "Uploaded eldoria_work_sectors.csv"
+    },
+    "rowCount": 6,
+    "sourceId": "upload-eldoria-work-sectors"
+  }
+}

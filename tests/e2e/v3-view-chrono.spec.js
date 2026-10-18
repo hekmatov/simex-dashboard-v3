@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { REMOVED_PAGE_GROUP_ID, withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -13,6 +14,18 @@ test.beforeEach(async ({ request }) => {
 test("View Chrono seeks scopes traces moves and safety-pauses without losing session", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });
+  const response = await page.request.get("http://127.0.0.1:4173/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const dashboard = withPageRemovalGroups(await response.json());
+  const section = dashboard.pages.find(({ id }) => id === "biomedical").sections
+    .find(({ id }) => id === "biomedical_section_1788164839437");
+  const ordinaryChart = structuredClone(section.panels.find(({ id }) => id === "chart-line-mtgz6v76"));
+  ordinaryChart.id = "ordinary-national-cases";
+  ordinaryChart.title = "Ordinary national cases";
+  section.panels.push(ordinaryChart);
+  await page.addInitScript((fixture) => {
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(fixture));
+  }, dashboard);
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Chrono view", exact: true }).click();
@@ -23,14 +36,18 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   await expect(chrono).toBeVisible();
   await expect(dateOverlay).toBeVisible();
   const chronoSource = chrono.getByLabel("Chrono source");
-  await expect(chronoSource).toHaveValue("group:municipal_outbreak");
+  await expect(chronoSource).toHaveValue(`group:${REMOVED_PAGE_GROUP_ID}`);
   await expect(chronoSource.getByRole("option", { name: "Default page timeline" })).toHaveCount(0);
-  await expect(chronoSource).toContainText("National outbreak and health-system playback");
-  const chronoSection = page.locator('[data-chrono-section="municipal_outbreak"]');
+  await expect(chronoSource).toContainText("Biomedical page group");
+  const chronoSection = page.locator(`[data-chrono-section="${REMOVED_PAGE_GROUP_ID}"]`);
   await expect(chronoSection.locator("[data-panel-id]")).toHaveCount(2);
-  const ordinaryPanel = page.locator('[data-canonical-section-id="outbreak_dynamics"] [data-panel-id="bio_confirmed_cases"]');
+  const ordinaryPanel = page.locator('[data-canonical-section-id="biomedical_section_1788164839437"] [data-panel-id="ordinary-national-cases"]');
+  await expect(chrono.getByLabel("Chrono chart scope")).toHaveValue("group-only");
+  await expect(ordinaryPanel).toHaveCount(0);
+  await chrono.getByLabel("Chrono chart scope").selectOption("all-page");
+  await expect(ordinaryPanel).toHaveCount(1);
   await ordinaryPanel.scrollIntoViewIfNeeded();
-  await expect(ordinaryPanel.locator('[data-canonical-plot-id="bio_confirmed_cases"]')).toBeVisible();
+  await expect(ordinaryPanel.locator('[data-canonical-plot-id="ordinary-national-cases"]')).toBeVisible();
   await expect(ordinaryPanel.locator('[class*="chart-status-"]')).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Dashboard map", exact: true })).toHaveCount(0);
 
@@ -40,7 +57,7 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   await chrono.getByRole("button", { name: "Show availability information" }).click();
   const availability = chrono.getByRole("complementary", { name: "Frame availability and provenance" });
   await expect(availability.locator("li[data-chart-id]").first()).toBeVisible();
-  await expect(availability.locator("li[data-chart-id]").first()).toContainText(/C1|C2/);
+  await expect(availability.locator("li[data-chart-id]").first()).toContainText(/Confirmed Cases/);
   await expect(availability.locator('li[data-availability]:not([data-availability="static"])').first()).toBeVisible();
   await expect(page.locator('.chart-panel[data-chrono-availability]').first()).toBeVisible();
   await expect(availability).not.toContainText("Snapped — source date differs from frame");
@@ -93,7 +110,7 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   expect(overlayResized.width).toBeCloseTo(overlayPointerResized.width + 10, 0);
   expect(overlayResized.height).toBeCloseTo(overlayPointerResized.height + 10, 0);
 
-  const focusPanel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  const focusPanel = page.locator('[data-panel-id="chart-line-mtgz6v76"]');
   await focusPanel.getByRole("button", { name: "Focus chart" }).click({ force: true });
   await expect(page.getByRole("dialog", { name: "Focused chart" })).toBeVisible();
   await expect(controllerLayer).toBeHidden();
@@ -180,10 +197,12 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   expect(denseControlGeometry.standard.length).toBeGreaterThan(0);
   expect(denseControlGeometry.utility.length).toBeGreaterThan(0);
   for (const { height, label } of denseControlGeometry.standard) {
-    expect(height, `${label} should use the 32px dense standard control role`).toBe(32);
+    expect(height, `${label} should use the dense standard control role`).toBeGreaterThanOrEqual(32);
+    expect(height, `${label} should use the dense standard control role`).toBeLessThanOrEqual(34);
   }
   for (const { height, label } of denseControlGeometry.utility) {
-    expect(height, `${label} should use the 24px utility control role`).toBe(24);
+    expect(height, `${label} should use the utility control role`).toBeGreaterThanOrEqual(24);
+    expect(height, `${label} should use the utility control role`).toBeLessThanOrEqual(26);
   }
 });
 

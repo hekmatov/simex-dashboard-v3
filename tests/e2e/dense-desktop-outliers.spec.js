@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { LEGACY_STORAGE_STATE } from "./support/legacyContractFixture.js";
 
 import { DASHBOARD_SURFACE_MANIFEST } from "./support/dashboard-surface-manifest.js";
 
@@ -165,6 +166,7 @@ async function openSurface(browser, id) {
   const entry = DASHBOARD_SURFACE_MANIFEST.find((candidate) => candidate.id === id);
   if (!entry) throw new Error(`Unknown dashboard surface: ${id}`);
   const context = await browser.newContext({
+    storageState: LEGACY_STORAGE_STATE,
     baseURL: APP_URL,
     viewport: entry.viewport,
     serviceWorkers: "block",

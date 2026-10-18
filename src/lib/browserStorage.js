@@ -14,6 +14,16 @@ export function createSafeBrowserStorage(
   storageProvider = () => globalThis.localStorage,
 ) {
   return Object.freeze({
+    isAvailable() {
+      try {
+        const storage = storageProvider();
+        if (typeof storage?.getItem !== "function") return false;
+        storage.getItem("simex-dashboard-storage-availability");
+        return true;
+      } catch {
+        return false;
+      }
+    },
     getItem(key) {
       try {
         return storageProvider()?.getItem?.(key) ?? null;

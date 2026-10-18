@@ -45,7 +45,7 @@ test("standalone Image page remains live without pageerror", async ({ page }) =>
   await page.setViewportSize({ width: 1280, height: 800 });
   await openBiomedicalBuild(page);
   const panelId = await createImage(page, "Standalone Image survival proof");
-  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Biomedical Information" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add Text/Image", exact: true })).toBeVisible();
   const saved = await readSavedImage(page, "Standalone Image survival proof");
   expect(saved.asset).toMatchObject({ mediaType: "image/png", storageState: "durable" });
@@ -55,7 +55,9 @@ test("standalone Image page remains live without pageerror", async ({ page }) =>
   await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "HeV-A26 Dashboard: Epidemiological overview" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Biomedical Information" })).toBeVisible();
   panel = canonicalPanel(page, panelId);
   await panel.scrollIntoViewIfNeeded();
   await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
@@ -624,7 +626,7 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   await expect(page.getByRole("dialog", { name: "Discard static content changes?" })).toHaveCount(0);
   await expect(editor.getByLabel("Alternative text")).toHaveValue("Complete retained draft");
 
-  expect(await activateTreeItem("Confirmed cases")).toBe(true);
+  expect(await activateTreeItem("National Confirmed Cases (cumulative)")).toBe(true);
   let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
   await confirmation.getByRole("button", { name: "Keep editing" }).click();
   expect(await sessionAssetInventory(page)).toEqual(stagedInventory);
@@ -636,13 +638,13 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   await expect(editor.locator(".image-rotation-controls output")).toHaveText(retainedDraft.rotation);
   await expect(editor.getByLabel("Fit", { exact: true })).toHaveValue(retainedDraft.fit);
 
-  expect(await activateTreeItem("Confirmed cases")).toBe(true);
+  expect(await activateTreeItem("National Confirmed Cases (cumulative)")).toBe(true);
   confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
   await confirmation.getByRole("button", { name: "Discard" }).click();
   await expect(editor).toHaveCount(0);
-  const requestedTarget = page.locator('[role="treeitem"][aria-label="Confirmed cases"]');
+  const requestedTarget = page.locator('[role="treeitem"][aria-label="National Confirmed Cases (cumulative)"]');
   await expect(requestedTarget).toHaveAttribute("aria-selected", "true");
-  await expect(canonicalPanel(page, "bio_confirmed_cases")).toBeVisible();
+  await expect(canonicalPanel(page, "chart-line-mtgz6v76")).toBeVisible();
   await expect.poll(() => sessionAssetInventory(page)).toEqual([]);
   await expect.poll(() => revokedObjectUrls(page)).toContain(stagedInventory[0].url);
   const savedAfter = await readSavedImage(page, "Dirty selection image");
@@ -810,14 +812,22 @@ async function createImage(page, title) {
 }
 
 async function createAndEditOrdinaryChart(page, title, imageTitle) {
+  const mediaShapeBefore = await page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    return {
+      staticImages: Object.values(dashboard.dataSources)
+        .filter(({ kind }) => kind === "staticImage").length,
+      mediaItems: Object.keys(dashboard.contentLibrary.mediaItems).length,
+    };
+  }, STORAGE_KEY);
   const flow = await openChartAuthoring(page);
   const { wizard } = flow;
   await flow.goToDestination();
-  await flow.selectExistingSource("Biomedical cases");
+  await flow.selectExistingSource("cases WCPH eldoria");
   await flow.chooseChartType(null, /^Line\./);
   await flow.goToMapAndPrepare();
   await flow.selectRole("measurements", "national_total_cases");
-  await wizard.getByLabel("Observation / X-axis").selectOption("date");
+  await wizard.getByLabel("Observation / X-axis").selectOption("Date");
   await flow.goToConfigure();
   await flow.createChart(title);
   expect((await readSavedImage(page, imageTitle)).source.crop.x).toBe(200);
@@ -827,8 +837,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
   const map = structureRail(page);
   const panel = canonicalPanel(page, chartId);
   await panel.scrollIntoViewIfNeeded();
-  await panel.hover();
-  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await openPanelEditAction(page, panel);
   const quick = page.locator(".chart-quick-editor");
   await expect(quick).toBeVisible();
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -851,7 +860,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
       mediaItems: Object.keys(dashboard.contentLibrary.mediaItems).length,
     };
   }, STORAGE_KEY);
-  expect(durableShape).toEqual({ configVersion: 6, hasAssets: true, staticImages: 1, mediaItems: 1 });
+  expect(durableShape).toEqual({ configVersion: 6, hasAssets: true, ...mediaShapeBefore });
 }
 
 async function findPersistedChartId(page, title) {
@@ -962,11 +971,18 @@ async function scrollPanelIntoView(page, panelId) {
 }
 
 async function openImageEditor(panel, page, title, preparedTrigger = null) {
-  if (!preparedTrigger) await panel.hover();
-  const trigger = preparedTrigger
-    ?? panel.getByLabel(`${title} actions`).getByRole("button", { name: "Edit chart" });
-  await trigger.click();
+  await openPanelEditAction(page, panel, preparedTrigger);
   await openFullTextImageEditor(page);
+}
+
+async function openPanelEditAction(page, panel, preparedTrigger = null) {
+  const placementId = await panel.getAttribute("data-canonical-placement-id");
+  const trigger = preparedTrigger ?? page.locator(`[data-panel-menu="${placementId}"]`);
+  await trigger.focus();
+  await trigger.press("Enter");
+  const menu = page.locator(`#panel-menu-${placementId}[role="menu"]`);
+  await expect(menu).toBeVisible();
+  await menu.locator('[data-action-menu-item="edit"]').click();
 }
 
 async function openFullTextImageEditor(page) {
@@ -980,8 +996,7 @@ async function openFullTextImageEditor(page) {
 
 async function prepareImageEditorTrigger(panel, title) {
   await panel.hover();
-  const trigger = panel.getByLabel(`${title} actions`)
-    .getByRole("button", { name: "Edit chart" });
+  const trigger = panel.locator('[data-panel-menu]');
   await trigger.scrollIntoViewIfNeeded();
   await expect(trigger).toBeVisible();
   return trigger;

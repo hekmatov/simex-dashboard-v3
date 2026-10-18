@@ -1,6 +1,7 @@
 import { collectChartPlacements } from "../build/panelEditingModel.js";
-import { buildTemporalChartVariables, describeTemporalInterpolationSupport } from "./temporalAuthoringData.js";
+import { buildTemporalChartVariables, describeTemporalInterpolationSupport, formatTemporalChartMessage } from "./temporalAuthoringData.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
+import { assertChronoGroupMemberEligible } from "../../charting/time/chronoGroupModel.js";
 
 export function temporalAuthoringCharts(dashboard) {
   const memberships = new Map();
@@ -19,6 +20,14 @@ export function temporalAuthoringCharts(dashboard) {
     .map((placement) => {
     const chart = placement.chart;
     const member = memberships.get(chart.id);
+    const timeRole = member?.timeRole ?? temporalRoleName(chart.roles);
+    let chronoGroupEligibility;
+    try {
+      assertChronoGroupMemberEligible({ chart, timeRole, profiles: dashboard.datasetProfiles });
+      chronoGroupEligibility = { eligible: true };
+    } catch (error) {
+      chronoGroupEligibility = { eligible: false, message: formatTemporalChartMessage(error.message, [chart]) };
+    }
     const timeField = bindingField(chart.roles?.[member?.timeRole])
       ?? temporalRoleField(chart.roles);
     const rows = dashboard.loadedData?.[chart.sourceId] ?? [];
@@ -51,7 +60,8 @@ export function temporalAuthoringCharts(dashboard) {
       chronoGroupMemberships: membershipLists.get(chart.id) ?? [],
       variables,
       sourceChart: chart,
-      timeRole: member?.timeRole ?? temporalRoleName(chart.roles),
+      timeRole,
+      chronoGroupEligibility,
     };
     });
 }

@@ -1,37 +1,39 @@
 import { expect, test } from "@playwright/test";
 
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 import {
   createSavedPresentationScene,
   enterPresentWithScene,
   openAudienceSession,
 } from "./support/present-audience-workflow.js";
 
-const PANEL_ID = "bio_municipality_aggregate";
+const PANEL_ID = "chart-line-mtgz6v76";
 const EXPECTED_PRESENT_TIME = Object.freeze({
-  activeEpochMs: Date.UTC(2020, 1, 27),
+  activeEpochMs: Date.UTC(2027, 1, 14),
   frameIndex: 0,
   traceMode: "full",
 });
 
 test("canonical runtime ledger preserves tracked semantics across View, Build, Present, and Audience", async ({ page }) => {
+  test.setTimeout(120_000);
+  await installPageRemovalGroups(page);
   await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
   await openDashboardPage(page, "biomedical");
 
   const view = await readLedger(page, `[data-panel-id="${PANEL_ID}"]`);
   expect(view).toMatchObject({
-    annotations: [],
+    annotations: [{ yAxis: -1 }],
     filters: [],
     panelId: PANEL_ID,
     render: { kind: "echarts", resolution: "available", status: "ready", typeId: "line" },
     series: [expect.objectContaining({
-      id: "AantalCumulatief",
-      name: "AantalCumulatief",
+      id: "national_total_cases",
+      name: "national_total_cases",
     })],
   });
-  expect(view.series[0].values[0]).toEqual(["2020-02-27", 1.009833]);
-  expect(view.series[0].values.at(-1)).toEqual(["2021-04-17", 1390326.2998229999]);
+  expect(view.series[0].values[0]).toEqual(["2027-02-14", 0]);
+  expect(view.series[0].values.at(-1)).toEqual(["2027-02-21", 2]);
 
   await page.locator('[data-dashboard-mode="build"]').click();
   const build = await readLedger(page, `[data-panel-id="${PANEL_ID}"]`);

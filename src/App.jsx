@@ -1,6 +1,7 @@
 import PageTimeContext from "./components/playback/PageTimeContext.jsx";
 import { temporalAuthoringCharts } from "./components/time/temporalAuthoringCharts.js";
 import React from "react";
+import { buildSessionContentSignature } from "./components/build/buildDirtyState.js";
 import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
 import {
   commitStaticPanelTransaction,
@@ -9,6 +10,7 @@ import {
 import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
+import { lazySurface } from "./components/app-shell/lazySurface.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
 import ExerciseDisclaimer from "./components/app-shell/ExerciseDisclaimer.jsx";
@@ -16,17 +18,13 @@ import { useOperationStatusActions } from "./components/app-shell/OperationStatu
 import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
 import RestoreOnlineDashboardDialog from "./components/app-shell/RestoreOnlineDashboardDialog.jsx";
-import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
-import BuildPageNavigation from "./components/build/BuildPageNavigation.jsx";
 import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
 import {
   reorderPage,
   reorderSection,
 } from "./components/build/buildStructureModel.js";
-import DashboardLookDrawer from "./components/dashboard-look/index.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
 import { createPlaybackChartCollectionSelector } from "./charting/time/playbackPageScope.js";
-import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
   integrateCreatedChart,
@@ -56,7 +54,6 @@ import {
 } from "./static-content/image/imageAssetValidation.js";
 
 import {
-  hydrateConfigurationBeforeStorageWrite,
   isDashboardProfileVersionMismatch,
   recoveryPackageError,
   recoveryPackageSummary,
@@ -70,7 +67,7 @@ import { validateConfigurationForPersistence } from "./lib/dashboardPersistenceV
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
-import { createBlankDashboardContent } from "./lib/dashboardContentReset.js";
+import { createBlankDashboardContent, discardBuildSessionDrafts } from "./lib/dashboardContentReset.js";
 import { prepareDashboardAuthoredPersistenceCandidate } from "./lib/dashboardAuthoredRevision.js";
 import {
   commitOnlineDashboardRestore,
@@ -127,6 +124,11 @@ import {
   dashboardLookUpdates,
 } from "./theme/dashboardLookDraft.js";
 import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.jsx";
+
+const DashboardPackageReviewDialog = lazySurface(() => import("./components/build/DashboardPackageReviewDialog.jsx"), "Package review", { overlay: true });
+const BuildPageNavigation = lazySurface(() => import("./components/build/BuildPageNavigation.jsx"), "Build navigation");
+const DashboardLookDrawer = lazySurface(() => import("./components/dashboard-look/index.js"), "Dashboard appearance", { overlay: true });
+const AudienceDisplay = lazySurface(() => import("./components/presentation/AudienceDisplay.jsx"), "Audience display", { passive: true });
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 export { validateConfigurationForPersistence };
@@ -203,7 +205,11 @@ function AppContent({ releaseProfile = null }) {
   const [dashboard, setDashboard] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [operationError, setOperationError] = React.useState("");
-  const [persistenceNotices, setPersistenceNotices] = React.useState({});
+  const [persistenceNotices, setPersistenceNotices] = React.useState(() => (
+    releaseProfile?.viewOnly || browserStorage.isAvailable()
+      ? {}
+      : { dashboard: "Browser storage is unavailable. Dashboard changes will last for this session only; export a dashboard package before reloading." }
+  ));
   const [recoveryBusy, setRecoveryBusy] = React.useState(false);
   const [recoveryError, setRecoveryError] = React.useState("");
   const [recoveryImportCandidate, setRecoveryImportCandidate] = React.useState(null);
@@ -238,6 +244,10 @@ function AppContent({ releaseProfile = null }) {
   const [blockedReason, setBlockedReason] = React.useState("");
   const [activePageId, setActivePageId] = React.useState(null);
   const [editBaseline, setEditBaseline] = React.useState(null);
+  const buildBaselineSignatureRef = React.useRef(null);
+  const buildSessionChangedRef = React.useRef(false);
+  const [buildSessionChanged, setBuildSessionChanged] = React.useState(false);
+  const [buildDiscardAvailable, setBuildDiscardAvailable] = React.useState(false);
   const [deviceLayout, setDeviceLayout] = React.useState(() => loadDeviceLayout());
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
@@ -428,8 +438,10 @@ function AppContent({ releaseProfile = null }) {
 
   React.useEffect(() => {
     let disposed = false;
+    let loadStage = "source";
     loadDashboardDefinition(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then(async (definition) => {
+        loadStage = "saved";
         const trackedProfiles = definition.datasetProfiles ?? {};
         const tracked = {
           ...definition.dashboard,
@@ -451,6 +463,7 @@ function AppContent({ releaseProfile = null }) {
           trackedProfiles,
         );
         const profiles = selected.datasetProfiles ?? trackedProfiles;
+        loadStage = stored ? "saved" : "source";
         const portableSources = stored ? null : definition.portableSources;
         const publish = (loaded) => {
           if (disposed) return;
@@ -489,7 +502,7 @@ function AppContent({ releaseProfile = null }) {
         }
       })
       .catch((loadError) => {
-        if (!disposed) setError(loadError);
+        if (!disposed) setError({ cause: loadError, stage: loadStage });
       });
     return () => {
       disposed = true;
@@ -680,6 +693,7 @@ function AppContent({ releaseProfile = null }) {
       persisted,
       SESSION_ONLY_MESSAGES.dashboard,
     );
+    if (persisted) reportPersistence("recovery", true, "");
     return persisted;
   }
 
@@ -730,6 +744,7 @@ function AppContent({ releaseProfile = null }) {
             : SESSION_ONLY_MESSAGES.dashboardAssetStorage,
         );
         dashboardRef.current = sessionDashboard;
+        recordBuildSessionChanges(sessionDashboard);
         setDashboard(sessionDashboard);
         setError(null);
         setOperationError("");
@@ -748,7 +763,8 @@ function AppContent({ releaseProfile = null }) {
         throw loadError;
       }
       try {
-        const persisted = persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
+        // Browser persistence has a strict quota; keep its JSON compact.
+        const persisted = persistDashboardStorage(JSON.stringify(prepared.storageConfig));
         if (!persisted) {
           if (requireDurableStorage) {
             await prepared.rollback();
@@ -774,6 +790,7 @@ function AppContent({ releaseProfile = null }) {
         loaded = await loadSessionCandidate();
       }
       dashboardRef.current = loaded;
+      recordBuildSessionChanges(loaded);
       setDashboard(loaded);
       setError(null);
       setOperationError("");
@@ -799,7 +816,7 @@ function AppContent({ releaseProfile = null }) {
       );
       validateConfigurationForPersistence(stored, configuredFallbackProfiles);
       const prepared = await dashboardAssetPersistence.prepare(stored);
-      persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
+      persistDashboardStorage(JSON.stringify(prepared.storageConfig));
       setError(null);
       setOperationError("");
       return nextConfig;
@@ -853,24 +870,21 @@ function AppContent({ releaseProfile = null }) {
         ...definition.dashboard,
         datasetProfiles: trackedProfiles,
       };
-      const loaded = await hydrateConfigurationBeforeStorageWrite({
-        candidate: tracked,
-        hydrate: (candidate) => loadDashboardConfig(
-          candidate,
-          trackedProfiles,
-          definition.portableSources,
-        ),
-        persist: (candidate) => persistDashboardStorage(JSON.stringify(
-          configurationForStorage(candidate, trackedProfiles),
-          null,
-          2,
-        )),
-      });
+      const loaded = await loadDashboardConfig(
+        tracked,
+        trackedProfiles,
+        definition.portableSources,
+      );
       dashboardRef.current = loaded;
       replaceRecoveryDashboardController(loaded);
       setDashboard(loaded);
       setError(null);
       setOperationError("");
+      reportPersistence(
+        "recovery",
+        false,
+        "Dashboard source loaded for this session. The saved configuration is unchanged; export a dashboard package before reloading if you want to keep this version.",
+      );
     } catch {
       setRecoveryError(
         "Dashboard couldn’t be reloaded. Import a current version 3 dashboard package or try again.",
@@ -1139,8 +1153,14 @@ function AppContent({ releaseProfile = null }) {
           await contentDraftCoordinator.discardOwner(owner, { reason: "mode-departure" });
         }
         setEditBaseline(null);
+        buildBaselineSignatureRef.current = null;
+        buildSessionChangedRef.current = false;
+        setBuildSessionChanged(false);
       }
       if (nextMode === "build") {
+        buildBaselineSignatureRef.current = buildSessionContentSignature(dashboardRef.current ?? dashboard);
+        buildSessionChangedRef.current = false;
+        setBuildSessionChanged(false);
         setEditBaseline(configurationForEditBaseline(
           dashboardRef.current ?? dashboard,
           trackedDatasetProfilesRef.current,
@@ -1188,25 +1208,27 @@ function AppContent({ releaseProfile = null }) {
   }
 
   async function resetEditSession() {
-    const result = await prepareToLeaveBuild();
-    if (!result.ok) {
-      throw new Error(
-        result.reason ?? "Finish the current Build operation before changing mode.",
-      );
-    }
-    const resetDashboard = editBaseline
+    await ensureDashboardCommitController().whenIdle();
+    const resetDashboard = editBaseline && buildSessionChangedRef.current
       ? await commitConfiguration(editBaseline, {
           preserveAuthoredRevision: true,
           rollback: true,
           transactionId: "build-baseline-restoration",
         })
-      : configurationForPortableUse(dashboardRef.current ?? dashboard);
-    setEditBaseline(null);
-    setMode("view");
-    if (dashboardEntry.surface === "workspace") {
-      persistDashboardModePreference("view");
-    }
+      : dashboardRef.current ?? dashboard;
+    const cleanupWarnings = await discardBuildSessionDrafts(contentDraftCoordinator);
+    if (cleanupWarnings.length > 0) setOperationError("Build changes were discarded, but some unused draft source files could not be removed.");
+    buildBaselineSignatureRef.current = buildSessionContentSignature(dashboardRef.current ?? resetDashboard);
+    buildSessionChangedRef.current = false;
+    setBuildSessionChanged(false);
     return resetDashboard;
+  }
+
+  function recordBuildSessionChanges(candidate) {
+    if (modeRef.current !== "build" || buildBaselineSignatureRef.current === null) return;
+    const changed = buildSessionContentSignature(candidate) !== buildBaselineSignatureRef.current;
+    buildSessionChangedRef.current = changed;
+    setBuildSessionChanged(changed);
   }
 
   async function createChart(payload, target, { reportStatus = true } = {}) {
@@ -1533,6 +1555,9 @@ function AppContent({ releaseProfile = null }) {
           committed,
           trackedDatasetProfilesRef.current,
         ));
+        buildBaselineSignatureRef.current = buildSessionContentSignature(committed);
+        buildSessionChangedRef.current = false;
+        setBuildSessionChanged(false);
       }
       reconcileCommittedDashboardMode({
         currentMode: mode,
@@ -1649,7 +1674,8 @@ function AppContent({ releaseProfile = null }) {
       <ApplicationRecovery
         busy={recoveryBusy}
         error={recoveryError}
-        profileVersionMismatch={isDashboardProfileVersionMismatch(error)}
+        profileVersionMismatch={isDashboardProfileVersionMismatch(error.cause)}
+        loadStage={error.stage}
         candidate={recoveryImportCandidate}
         themeProjection={dashboardThemeProjection}
         onReload={reloadDashboardFromSource}
@@ -1729,6 +1755,7 @@ function AppContent({ releaseProfile = null }) {
       scenarioExpanded={scenarioPassportOpen}
       scenarioDirty={scenarioPassportDirty}
       scenarioNode={<ScenarioPassportPopover
+        canDiscardBuild={mode === "build" && buildDiscardAvailable}
         key={scenarioPassportResetRevision}
         open={mode === "build" && scenarioPassportOpen}
         dashboard={dashboard}
@@ -1781,6 +1808,7 @@ function AppContent({ releaseProfile = null }) {
       onActivePageChange={setActivePageId}
       onModeRequest={requestMode}
       onBuildDraftLockChange={setBuildDraftLocked}
+      onBuildDiscardAvailabilityChange={setBuildDiscardAvailable}
       onBuildStructureProjectionChange={setBuildStructureProjection}
       onComparisonSelectionChange={setCompareSelectionActive}
       onCommitPendingConfiguration={() => awaitDashboardCommitQueue(
@@ -1911,13 +1939,14 @@ function AppContent({ releaseProfile = null }) {
       onExportConfig={exportConfig}
       onResolveScenarioDraft={() => setScenarioPassportOpen(true)}
       onResetEditSession={resetEditSession}
+      buildSessionChanged={buildSessionChanged}
       onDeleteDashboardContent={deleteDashboardContent}
       onOpenDashboardLook={openDashboardLook}
       themeProjection={dashboardThemeProjection}
       operationError={operationError}
     />
     )}
-    <DashboardLookDrawer
+    {lookDrawerOpen && <DashboardLookDrawer
       open={lookDrawerOpen}
       saved={createDashboardLookPreview(savedDashboardTheme)}
       preview={lookPreview}
@@ -1926,8 +1955,8 @@ function AppContent({ releaseProfile = null }) {
       error={lookError}
       onCancel={cancelDashboardLook}
       onPreviewChange={changeDashboardLookPreview}
-    />
-    <DashboardPackageReviewDialog
+    />}
+    {packageImportCandidate && <DashboardPackageReviewDialog
       candidate={packageImportCandidate}
       busy={packageImportBusy}
       error={packageImportError}
@@ -1937,7 +1966,7 @@ function AppContent({ releaseProfile = null }) {
         setPackageImportCandidate(null);
         setPackageImportError("");
       }}
-    />
+    />}
     <RestoreOnlineDashboardDialog
       open={onlineRestoreOpen}
       busy={onlineRestoreBusy}

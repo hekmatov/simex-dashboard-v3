@@ -1,8 +1,11 @@
 import React from "react";
+import { createSourceContentViewState } from "./sourceContentViewState.js";
+export { createSourceContentViewState } from "./sourceContentViewState.js";
 import { listManageableSourceEntries } from "../../content-library/sourceEntrySchema.js";
 import ContentDetail, { buildContentRenameDraft } from "./ContentDetail.jsx";
 import DataSourceCatalogue from "./DataSourceCatalogue.jsx";
 import MediaCatalogue from "./MediaCatalogue.jsx";
+import { sourceDisplayName } from "../../lib/sourceDisplayName.js";
 
 const EMPTY_FILTERS = Object.freeze({ origin: "all", status: "all", usage: "all", kind: "all" });
 
@@ -324,28 +327,6 @@ export default function SourceContentWorkspace({
   );
 }
 
-export function createSourceContentViewState(input = {}) {
-  const queries = input.queries ?? {};
-  const filters = input.filters ?? {};
-  const selections = input.selections ?? {};
-  return {
-    tab: input.tab === "sources" ? "sources" : "media",
-    queries: {
-      media: String(queries.media ?? ""),
-      sources: String(queries.sources ?? ""),
-    },
-    filters: {
-      media: normalizedFilters(filters.media),
-      sources: normalizedFilters(filters.sources),
-    },
-    selections: {
-      media: optionalId(selections.media),
-      sources: optionalId(selections.sources),
-    },
-    tabletDetailOpen: input.tabletDetailOpen === true,
-  };
-}
-
 export function managerLayoutForWidth(width) {
   const value = Number(width);
   if (value < 768) return "unsupported";
@@ -360,12 +341,16 @@ export function visibleManagerItems(dashboard = {}, tab = "media", filters = {})
       .map((record) => contentItem(dashboard, record.sourceId, record.kind, record, dependencyStateFor(dashboard, record.kind, record.sourceId)));
   const query = String(filters.query ?? "").trim().toLocaleLowerCase();
   return base.filter((item) => (
-    (!query || item.record.displayName.toLocaleLowerCase().includes(query) || item.id.toLocaleLowerCase().includes(query))
+    (!query || managerItemLabel(item).toLocaleLowerCase().includes(query) || item.id.toLocaleLowerCase().includes(query))
     && (!filters.origin || filters.origin === "all" || item.record.origin === filters.origin)
     && (!filters.status || filters.status === "all" || item.record.health === filters.status)
     && (!filters.usage || filters.usage === "all" || (filters.usage === "used" ? item.usageCount > 0 : item.usageCount === 0))
     && (!filters.kind || filters.kind === "all" || item.kind === filters.kind)
-  )).sort((left, right) => left.record.displayName.localeCompare(right.record.displayName));
+  )).sort((left, right) => managerItemLabel(left).localeCompare(managerItemLabel(right)));
+}
+
+function managerItemLabel(item) {
+  return item.kind === "csv" ? sourceDisplayName(item.record.displayName, item.id) : item.record.displayName;
 }
 
 export function createSourceContentOwnerRegistry() {
@@ -416,7 +401,7 @@ export function selectSourceContentOwners(registry = {}) {
 
 export function buildEligibleContentRenameDraft({ dashboard, item, displayName, defaultDescription = "" } = {}) {
   if (!item || typeof displayName !== "string" || displayName.trim() === "") return null;
-  const currentName = String(item.record?.displayName ?? "");
+  const currentName = String(managerItemLabel(item) ?? "");
   const currentDescription = item.kind === "media" ? String(item.record?.defaultDescription ?? "") : "";
   const nextDescription = item.kind === "media" ? String(defaultDescription ?? "") : "";
   if (displayName.trim() === currentName && nextDescription === currentDescription) return null;

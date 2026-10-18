@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 import {
   createSavedPresentationScene,
@@ -12,6 +13,12 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("http://127.0.0.1:4185/");
   await page.evaluate(() => localStorage.clear());
+  const response = await page.request.get("http://127.0.0.1:4185/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const fixture = withPageRemovalGroups(await response.json());
+  await page.addInitScript((dashboard) => {
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(dashboard));
+  }, fixture);
 });
 
 test("Present remains usable below the recommended 1024px width and preserves its live session", async ({ page }) => {
@@ -78,21 +85,33 @@ test("1920 Audience progresses passively through output, liveness, blackout, and
   await page.locator('[data-presentation-control-id="restore"]').click();
   await expect(audience.locator(".audience-blackout")).toHaveCount(0);
 
-  await page.evaluate(() => {
-    setTimeout(() => {
-      const releaseAt = performance.now() + 8_000;
-      while (performance.now() < releaseAt) {
-        // Exercise a real unresponsive controller event loop without a product hook.
-      }
-    }, 0);
-  });
-  await expect(popup.locator(
-    '.audience-display[data-connection-status="disconnected"] [data-connection-indicator="disconnected"] svg[aria-label="Audience display disconnected"]',
-  )).toBeVisible({ timeout: 12_000 });
+  const controllerSession = await context.newCDPSession(page);
+  try {
+    // A busy loop can also block the Audience when Chromium shares its renderer.
+    // Suspend controller scripts alone so Audience liveness can still run.
+    await controllerSession.send("Emulation.setScriptExecutionDisabled", { value: true });
+    const controllerResumed = new Promise((resolve) => setTimeout(resolve, 8_000))
+      .then(() => controllerSession.send("Emulation.setScriptExecutionDisabled", { value: false }));
+    // Observe a failed resume through the awaited promise, without an unhandled rejection.
+    controllerResumed.catch(() => {});
+    try {
+      await expect(popup.locator(
+        '.audience-display[data-connection-status="disconnected"] [data-connection-indicator="disconnected"] svg[aria-label="Audience display disconnected"]',
+      )).toBeVisible({ timeout: 12_000 });
+    } finally {
+      await controllerResumed;
+    }
 
-  await expect(popup.locator(
-    '.audience-display[data-connection-status="reconnecting"] [data-connection-indicator="reconnecting"] svg[aria-label="Audience display reconnecting"]',
-  )).toBeVisible({ timeout: 6_000 });
+    await expect(popup.locator(
+      '.audience-display[data-connection-status="reconnecting"] [data-connection-indicator="reconnecting"] svg[aria-label="Audience display reconnecting"]',
+    )).toBeVisible({ timeout: 6_000 });
+  } finally {
+    try {
+      await controllerSession.send("Emulation.setScriptExecutionDisabled", { value: false });
+    } finally {
+      await controllerSession.detach();
+    }
+  }
   await expect(audience).toHaveAttribute("data-connection-status", "connected", { timeout: 12_000 });
   await expect(audience.locator("[data-connection-indicator]")).toHaveCount(0);
   await assertAudiencePassiveAndBounded(popup, scene);
@@ -160,6 +179,10 @@ test("date-position endpoints remain fully visible after direct Audience draggin
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
+  await page.getByRole("button", { name: "Audience display options" }).click();
+  const options = page.getByRole("dialog", { name: "Audience display options" });
+  await options.getByRole("checkbox", { name: "Display Scene date" }).check();
+  await options.getByRole("button", { name: "Close Audience display options" }).click();
   const { popup } = await openAudienceSession(page);
   const date = popup.locator(".audience-scene-date");
   await expect(date).toHaveAttribute("data-audience-date-draggable", "true");

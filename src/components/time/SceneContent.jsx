@@ -1,7 +1,7 @@
 import React from "react";
 import { hasUnresolvedFrameSource } from "./chronoContentState.js";
 
-export default function SceneContent({ content, onAction = () => {} }) {
+export default function SceneContent({ content, sceneCreationDisabledReason = "", onOpenBlockingDraft, onAction = () => {} }) {
   if (!content) return React.createElement("p", { role: "alert" }, "This Scene is no longer available.");
   const repairFrameSource = hasUnresolvedFrameSource(content);
   return React.createElement("article", { className: "temporal-content-page scene-content", "aria-labelledby": "scene-content-title" },
@@ -9,7 +9,7 @@ export default function SceneContent({ content, onAction = () => {} }) {
       React.createElement("div", null, React.createElement("p", { className: "eyebrow" }, "Scene"), React.createElement("h2", { id: "scene-content-title" }, content.name), React.createElement("p", null, `Chrono Group: ${content.chronoGroupName}`)),
       React.createElement("div", { className: "temporal-content-page__actions" },
         React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_EDIT", itemType: "scene", itemId: content.id }) }, "Edit"),
-        React.createElement("button", { type: "button", className: "secondary", onClick: () => onAction({ type: "START_DUPLICATE", itemType: "scene", itemId: content.id }) }, "Duplicate"),
+        React.createElement("button", { type: "button", className: "secondary", disabled: Boolean(sceneCreationDisabledReason), title: sceneCreationDisabledReason || undefined, onClick: () => onAction({ type: "START_DUPLICATE", itemType: "scene", itemId: content.id }) }, "Duplicate"),
         React.createElement("button", { type: "button", className: "secondary", onClick: () => onAction({ type: "REQUEST_REMOVE", itemType: "scene", itemId: content.id }) }, "Remove"),
         content.status === "needs-attention" && repairFrameSource ? React.createElement("button", {
           type: "button",
@@ -29,6 +29,7 @@ export default function SceneContent({ content, onAction = () => {} }) {
         React.createElement("button", { type: "button", className: "secondary", onClick: () => onAction({ type: "RETURN_TO_STUDIO" }) }, "Back to Scene Studio"),
       ),
     ),
+    sceneCreationDisabledReason ? React.createElement("p", { role: "status" }, sceneCreationDisabledReason, " ", React.createElement("button", { type: "button", className: "text-button", onClick: onOpenBlockingDraft }, "Open pending Chrono Group draft")) : null,
     React.createElement("p", { className: "temporal-content-page__status", "data-status": content.status }, content.status === "needs-attention" ? "Needs attention" : "Ready"),
     ...(content.statusReasons ?? []).map((reason) => React.createElement("p", { className: "temporal-content-page__reason", key: reason }, reason)),
     React.createElement("section", null,

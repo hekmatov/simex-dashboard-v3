@@ -249,6 +249,46 @@ test("the static verifier rejects a missing contained package asset", async (t) 
   );
 });
 
+test("the static verifier accepts intact shipped authored media and rejects altered bytes", async (t) => {
+  const outputDir = await mkdtemp(path.join(os.tmpdir(), "simex-pdpc-verify-authored-"));
+  t.after(() => rm(outputDir, { recursive: true, force: true }));
+  const digest = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+  const mediaPath = `data/authored/${digest}.png`;
+  await mkdir(path.join(outputDir, "assets"), { recursive: true });
+  await mkdir(path.join(outputDir, "config"), { recursive: true });
+  await mkdir(path.join(outputDir, "data", "authored"), { recursive: true });
+  await mkdir(path.join(outputDir, "vendor"), { recursive: true });
+  await Promise.all([
+    writeFile(path.join(outputDir, "index.html"), '<script type="module" src="./assets/release-fixture.js"></script>\n'),
+    writeFile(path.join(outputDir, "release-manifest.json"), stableJson(metadata().variantManifests.biomedical)),
+    writeFile(path.join(outputDir, "service-worker.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "portable-dashboard-data.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "config", "dashboard.json"), stableJson({
+      ...envelope().config,
+      pages: envelope().config.pages.slice(0, 2),
+      contentLibrary: { mediaItems: { shipped: {
+        current: { kind: "package", path: mediaPath },
+        byteLength: 5,
+        mediaType: "image/png",
+      } } },
+    })),
+    writeFile(path.join(outputDir, "config", "dataset-profiles.json"), "{}\n"),
+    writeFile(path.join(outputDir, "vendor", "three.min.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "vendor", "vanta.net.min.js"), "// fixture\n"),
+    writeFile(path.join(outputDir, "assets", "pdpc-logo-fixture.png"), "official-logo-bytes"),
+    writeFile(path.join(outputDir, "assets", "release-fixture.js"), 'console.log("Fictional scenario · Exercise use only");\n'),
+    writeFile(path.join(outputDir, ...mediaPath.split("/")), "hello"),
+  ]);
+  await finalizePdpcRuntimeManifest({ outputDir, variant: "biomedical" });
+
+  await verifyPdpcStaticBuild({ outputDir, variant: "biomedical" });
+  await writeFile(path.join(outputDir, ...mediaPath.split("/")), "altered");
+  await assert.rejects(
+    verifyPdpcStaticBuild({ outputDir, variant: "biomedical" }),
+    /packaged media asset does not match/,
+  );
+});
+
 async function releaseFixture(t) {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "simex-pdpc-build-"));
   t.after(() => rm(fixtureRoot, { recursive: true, force: true }));

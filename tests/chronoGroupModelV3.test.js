@@ -752,6 +752,7 @@ test("changing groups resets the index and pauses playback", () => {
     {
       ...state,
       source: { kind: "group", id: "logistics" },
+      scope: "group-only",
       activeGroupId: "logistics",
       activeIndex: 0,
       frameIndex: 0,

@@ -10,6 +10,7 @@ import {
   expectNoViewportOverflow,
 } from "./support/final-acceptance.js";
 import { openDashboardFromLanding, openLanding } from "./support/landingWorkflow.js";
+import { REMOVED_PAGE_GROUP_ID, withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 import {
   createSavedPresentationScene,
   enterPresentWithScene,
@@ -117,7 +118,16 @@ test("desktop viewport fan-out preserves canonical Home and cross-mode analytica
 
 test("1920 Audience preserves room-distance composition through the public workflow", async ({ page }, testInfo) => {
   test.setTimeout(150_000);
+  const response = await page.request.get("http://127.0.0.1:4173/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const fixture = withPageRemovalGroups(await response.json());
+  await page.addInitScript((dashboard) => {
+    if (sessionStorage.getItem("step9-scene-fixture-seeded")) return;
+    localStorage.setItem("simex-dashboard-config-v3-three-mode-v1", JSON.stringify(dashboard));
+    sessionStorage.setItem("step9-scene-fixture-seeded", "true");
+  }, fixture);
   const scene = await createSavedPresentationScene(page, {
+    chronoGroupId: REMOVED_PAGE_GROUP_ID,
     sceneName: "Room-distance presentation fixture",
     url: "/",
   });
@@ -130,6 +140,12 @@ test("1920 Audience preserves room-distance composition through the public workf
   );
 
   await enterPresentWithScene(page, scene);
+  await page.getByRole("button", { name: "Audience display options" }).click();
+  const options = page.getByRole("dialog", { name: "Audience display options" });
+  await options.getByRole("checkbox", { name: "Display Dashboard name" }).check();
+  await options.getByRole("checkbox", { name: "Display Scene name" }).check();
+  await options.getByRole("checkbox", { name: "Display Scene date" }).check();
+  await options.getByRole("button", { name: "Close Audience display options" }).click();
   const savedScene = await readStoredScene(page, scene.id);
   const authoredDatePosition = {
     xPermille: 0,

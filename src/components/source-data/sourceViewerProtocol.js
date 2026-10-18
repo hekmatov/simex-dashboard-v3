@@ -1,4 +1,5 @@
 import { captureDashboardThemeProjection } from "../../theme/dashboardThemeRoot.js";
+import { sourceDisplayName } from "../../lib/sourceDisplayName.js";
 
 export const SOURCE_VIEWER_READY = "simex-source-viewer-ready";
 export const SOURCE_VIEWER_LOAD = "simex-source-viewer-load";
@@ -9,9 +10,10 @@ export function buildSourceViewerDescriptor(sourceId, source, context = {}) {
   if (!source || typeof source !== "object") return null;
   const id = nonEmpty(sourceId);
   if (!id) return null;
-  const label = nonEmpty(source.provenance?.label)
+  const label = sourceDisplayName(nonEmpty(context?.sourceLabel)
+    ?? nonEmpty(source.provenance?.label)
     ?? nonEmpty(source.fileName)
-    ?? id;
+    ?? id, id);
   if (source.kind === "csv" && nonEmpty(source.path)) {
     return {
       version: SOURCE_VIEWER_VERSION,
@@ -41,14 +43,14 @@ export function buildSourceDownloadDescriptor(sourceId, source) {
   const fallbackName = `${viewer.sourceId}.csv`;
   if (viewer.mode === "text") {
     return {
-      fileName: csvFileName(source?.fileName, fallbackName),
+      fileName: csvFileName(source?.fileName, fallbackName, viewer.sourceId),
       mediaType: "text/csv;charset=utf-8",
       text: viewer.csvText,
       path: null,
     };
   }
   return {
-    fileName: csvFileName(source?.fileName ?? viewer.path, fallbackName),
+    fileName: csvFileName(source?.fileName ?? viewer.path, fallbackName, viewer.sourceId),
     mediaType: "text/csv",
     text: null,
     path: viewer.path,
@@ -113,11 +115,11 @@ function nonEmpty(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function csvFileName(value, fallback) {
+function csvFileName(value, fallback, sourceId) {
   const normalized = nonEmpty(value);
   if (!normalized) return fallback;
   const name = normalized.split(/[\\/]/).at(-1);
-  return name?.toLocaleLowerCase().endsWith(".csv") ? name : fallback;
+  return name?.toLocaleLowerCase().endsWith(".csv") ? sourceDisplayName(name, sourceId) : fallback;
 }
 
 function viewerInvocation(context, datasetId, csvPath) {

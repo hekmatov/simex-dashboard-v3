@@ -25,6 +25,8 @@ import {
   discardUnreferencedSessionImageAssets,
   resolveSessionImageAsset,
 } from "../../static-content/image/imageAssetValidation.js";
+import { cleanupImageDraftAssets } from "./cleanupImageDraftAssets.js";
+export { cleanupImageDraftAssets } from "./cleanupImageDraftAssets.js";
 import { buildStaticPanelContentDraftCandidate } from "../../content-library/contentDraftTransaction.js";
 import ChartFootprintPicker from "../chart-authoring/ChartFootprintPicker.jsx";
 import { STATIC_FOOTPRINT_ROW_HEIGHTS } from "../chartPanelLayout.js";
@@ -627,22 +629,6 @@ function resolveImageDraftUrl(mediaItem) {
   if (current?.kind === "url") return current.url;
   if (current?.kind === "package") return current.path;
   return "";
-}
-
-export function cleanupImageDraftAssets(draft, dashboard, committed = null) {
-  if (draft?.contentTypeId !== "image") return;
-  const retained = new Set();
-  const replacementMediaId = committed?.mediaItem?.mediaId;
-  for (const [mediaId, item] of Object.entries(dashboard?.contentLibrary?.mediaItems ?? {})) {
-    const effectiveItem = mediaId === replacementMediaId ? committed.mediaItem : item;
-    if (effectiveItem?.current?.kind === "asset") {
-      retained.add(effectiveItem.current.assetId);
-    }
-  }
-  if (committed?.mediaItem?.current?.kind === "asset") {
-    retained.add(committed.mediaItem.current.assetId);
-  }
-  discardUnreferencedSessionImageAssets(Object.keys(draft.assets ?? {}), retained);
 }
 
 function focusRestoration(stage) {

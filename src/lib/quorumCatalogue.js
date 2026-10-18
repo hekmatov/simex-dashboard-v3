@@ -8,6 +8,7 @@ import {
   DASHBOARD_CONFIG_STRUCTURE,
   validateDashboardStructure,
 } from "../charting/config/dashboardConfigStructure.js";
+import { assertStructuralData } from "../charting/config/dashboardBundleV3.js";
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
 import { migrateDashboardV5ToV6 } from "../charting/config/migrateDashboardV5ToV6.js";
@@ -118,8 +119,11 @@ export function canonicalCatalogueBytes(catalogue) {
 
 export function canonicalDashboardSemanticsBytes(dashboard, aliasConfig) {
   const context = buildDashboardContext(dashboard);
+  const runtimeFields = new Set(DASHBOARD_CONFIG_STRUCTURE.runtimeNonSemanticFields);
   const semantics = {
-    dashboard: cloneJson(context.dashboard),
+    dashboard: cloneJson(Object.fromEntries(
+      Object.entries(context.dashboard).filter(([key]) => !runtimeFields.has(key)),
+    )),
   };
   if (aliasConfig !== undefined) {
     validateAliasConfig(context, aliasConfig);
@@ -312,6 +316,9 @@ function semanticChartType(schema) {
 }
 
 function buildDashboardContext(dashboard) {
+  assertStructuralData(dashboard, "Dashboard configuration", {
+    skipRuntimeConfigurationKeys: false,
+  });
   const input = requiredRecord(dashboard, "dashboard");
   const v4 = input.configVersion === 3 ? migrateDashboardV3ToV4(input) : input;
   const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;

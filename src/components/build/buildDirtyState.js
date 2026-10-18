@@ -20,6 +20,19 @@ export function hasUnsavedAuthoredContent(state = {}) {
   return AUTHORED_DIRTY_KEYS.some((key) => state?.[key] === true);
 }
 
+export function buildSessionContentSignature(dashboard = {}) {
+  const {
+    loadedData, chartDataStates, dataSourceStates, runtimeContentHealth,
+    ...authored
+  } = dashboard;
+  const canonical = (value) => Array.isArray(value)
+    ? value.map(canonical)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]))
+      : value;
+  return JSON.stringify(canonical(authored));
+}
+
 export function hasActiveContentRetainers(activeRetainers) {
   return Array.isArray(activeRetainers?.records) && activeRetainers.records.length > 0;
 }

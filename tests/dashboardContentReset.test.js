@@ -1,7 +1,41 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createBlankDashboardContent } from "../src/lib/dashboardContentReset.js";
+import { createBlankDashboardContent, discardBuildSessionDrafts } from "../src/lib/dashboardContentReset.js";
+
+test("post-restoration asset cleanup failure does not turn the completed Build restore into a failed reset", async () => {
+  const retained = new Set(["manager", "qmd", "qmd-panel", "image", "chart"]);
+  const warnings = await discardBuildSessionDrafts({
+    getActiveRetainers: () => ({ records: [...retained].map((ownerId) => ({ ownerId })) }),
+    async discardOwner(owner, { reason }) {
+      assert.equal(reason, "build-baseline-restoration");
+      if (!retained.has(owner)) return;
+      retained.delete(owner); // Coordinator retires the draft before asset cleanup.
+      if (owner === "image") throw new Error("Unused image rollback failed");
+    },
+  });
+  assert.equal(retained.size, 0);
+  assert.deepEqual(warnings.map(({ owner, message }) => ({ owner, message })), [
+    { owner: "image", message: "Unused image rollback failed" },
+  ]);
+});
+
+test("Build restore drains multiple drafts sharing one owner after its first cleanup fails", async () => {
+  const drafts = new Map([["manager-a", "manager"], ["manager-b", "manager"], ["image-a", "image"]]);
+  const warnings = await discardBuildSessionDrafts({
+    getActiveRetainers: () => ({ records: [...drafts.keys()].map((ownerId) => ({ ownerId })) }),
+    async discardOwner(owner) {
+      for (const [id, draftOwner] of [...drafts]) {
+        if (draftOwner !== owner) continue;
+        drafts.delete(id);
+        if (id === "manager-a") throw new Error("First manager draft asset cleanup failed");
+      }
+    },
+  });
+  assert.equal(drafts.size, 0);
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0].owner, "manager");
+});
 
 test("blanking dashboard content removes every authored and source-owned collection while preserving dashboard identity and Look", () => {
   const dashboard = {

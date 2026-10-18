@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
+import { resetSourceDashboard } from "./support/dashboardFixture.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -12,7 +13,7 @@ test.beforeEach(async ({ page, request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, {
     data: { mode: "absent" },
   });
-  await page.goto("/");
+  await resetSourceDashboard(page, { fixture: "fable-m0" });
   await enterAuthoredDashboard(page);
   await page.getByRole("button", { name: "Build" }).click();
 });
@@ -23,22 +24,24 @@ test("a fresh chronological choropleth reaches preview through the early GeoJSON
   const flow = await openChartAuthoring(page);
   const { wizard } = flow;
 
-  await flow.selectExistingSource(
-    "Generated map timeline derived from the authoritative harmonized municipal biomedical dataset",
-  );
+  await flow.uploadCsv({
+    name: "fresh-municipal-cases.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Date,MunicipalityCode,cases\n2027-05-01,GM0473,10\n2027-05-02,GM0473,12\n"),
+  });
   await flow.chooseChartType(
     "chronological choropleth",
     /Chronological choropleth/i,
   );
   await flow.goToDataSource();
   await wizard.getByLabel("GeoJSON source").selectOption(
-    "geo_netherlands_municipalities_2021",
+    "geo_netherlands_municipalities_2026",
   );
 
   await flow.goToMapAndPrepare();
   await flow.selectRole("geography", "MunicipalityCode");
-  await flow.selectRole("value", "infectionsPer10000");
-  await flow.selectRole("time", "Datum");
+  await flow.selectRole("value", "cases");
+  await flow.selectRole("time", "Date");
 
   await expect(
     wizard.locator('[data-field-id="geoSource"]'),

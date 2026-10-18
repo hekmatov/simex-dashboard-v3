@@ -483,15 +483,19 @@ test("tracked descriptors and profiles round-trip through the portable V6 bundle
   const parsed = parseDashboardBundle(JSON.stringify(bundle));
 
   assert.equal(parsed.configVersion, 6);
-  const configuredPanels = dashboard.pages.flatMap(({ sections }) => (
-    sections.flatMap(({ panels }) => panels)
-  ));
-  const roundTrippedPanels = parsed.pages.flatMap(({ sections }) => (
-    sections.flatMap(({ panels }) => panels)
-  ));
-  assert.equal(roundTrippedPanels.length, configuredPanels.length);
-  assert.equal(parsed.dataSources.bio_cases.kind, "csv");
-  assert.equal(parsed.datasetProfiles.bio_cases.sourceId, "bio_cases");
+  const csvIds = Object.entries(dashboard.dataSources)
+    .filter(([, source]) => source.kind === "csv")
+    .map(([sourceId]) => sourceId)
+    .toSorted();
+  assert.ok(csvIds.length > 0);
+  assert.deepEqual(Object.keys(datasetProfiles).toSorted(), csvIds);
+  for (const sourceId of csvIds) {
+    assert.deepEqual(parsed.dataSources[sourceId], dashboard.dataSources[sourceId]);
+    assert.deepEqual(parsed.datasetProfiles[sourceId], datasetProfiles[sourceId]);
+    assert.equal(parsed.datasetProfiles[sourceId].sourceId, sourceId);
+  }
+  assert.deepEqual(parsed.pages, dashboard.pages);
+  assert.deepEqual(portable, { ...dashboard, datasetProfiles });
 });
 
 test("the live loader hydrates inline and uploaded v3 sources with reusable profiles", async () => {

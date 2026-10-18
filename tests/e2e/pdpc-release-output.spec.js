@@ -6,14 +6,12 @@ const RELEASES = Object.freeze([
     baseUrl: "http://127.0.0.1:4191",
     disciplineId: "biomedical",
     disciplineLabel: "Biomedical Information",
-    expectedPanelTitle: "International Confirmed cases (cumulative)",
   }),
   Object.freeze({
     variant: "socioeconomic",
     baseUrl: "http://127.0.0.1:4192",
     disciplineId: "socio_economic",
     disciplineLabel: "Socio-Economic Information",
-    expectedPanelTitle: "Loneliness",
   }),
 ]);
 
@@ -21,6 +19,15 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
   const scenarioSnapshots = [];
   for (const release of RELEASES) {
     const issues = observeRuntimeIssues(page, release.baseUrl);
+    const configResponse = await page.request.get(`${release.baseUrl}/config/dashboard.json`);
+    expect(configResponse.ok()).toBe(true);
+    const releaseConfig = await configResponse.json();
+    const discipline = releaseConfig.pages.find(({ id }) => id === release.disciplineId);
+    const firstPanelTitle = discipline?.sections
+      .flatMap(({ panels }) => panels)
+      .map((panel) => panel.title ?? panel.chart?.title)
+      .find(Boolean);
+    expect(firstPanelTitle).toBeTruthy();
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${release.baseUrl}/?mode=build`, { waitUntil: "domcontentloaded" });
 
@@ -53,16 +60,18 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await expect(page.locator(".dashboard-command-crown")).toHaveCount(0);
     await expect(page.locator("button[data-dashboard-mode]")).toHaveCount(0);
     await expect(page.locator(".build-workspace, .present-workspace, .audience-display")).toHaveCount(0);
-    await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", "evidence-ledger");
+    await expect(page.locator(".app-frame")).toHaveAttribute(
+      "data-dashboard-style", releaseConfig.globalStyles.dashboardStyle,
+    );
     await expect(page.locator(".app-frame")).toHaveAttribute(
       "data-dashboard-color-profile",
-      "signal-instrument/calibrated-steel",
+      releaseConfig.globalStyles.dashboardColorProfile,
     );
     await expect(page.getByRole("button", { name: "Focus chart" })).toHaveCount(0);
 
-    const packageImages = page.locator('img[src*="assets/package/"]');
-    await expect(packageImages.first()).toBeVisible();
-    expect(await packageImages.evaluateAll((images) => images.every((image) => (
+    const scenarioImages = page.locator('[data-canonical-page-id="scenario"] .canonical-dashboard-content img');
+    await expect(scenarioImages.first()).toBeVisible();
+    expect(await scenarioImages.evaluateAll((images) => images.every((image) => (
       image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
     )))).toBe(true);
 
@@ -74,7 +83,7 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await pageNavigation.locator(`[data-dashboard-page-id="${release.disciplineId}"]`).click();
     await expect(pageNavigation.locator('[aria-current="page"]')).toHaveText(release.disciplineLabel);
     await expect(page.locator(`[data-canonical-page-id="${release.disciplineId}"]`)).toBeVisible();
-    await expect(page.getByText(release.expectedPanelTitle, { exact: true })).toBeVisible();
+    await expect(page.getByText(firstPanelTitle, { exact: true })).toBeVisible();
     await expect(page.locator(".application-recovery")).toHaveCount(0);
 
     const footer = page.locator("footer.pdpc-dashboard-footer");

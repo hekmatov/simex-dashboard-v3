@@ -1,5 +1,7 @@
 import { presentationChannelName } from "./presentationProtocol.js";
 
+const AUDIENCE_WINDOW_FEATURES = "popup=yes,width=1280,height=800,resizable=yes,scrollbars=yes";
+
 export function openAudienceWindow({
   channelId,
   windowName,
@@ -17,7 +19,7 @@ export function openAudienceWindow({
 
   const audienceUrl = url.toString();
   const requestedWindowName = windowName ?? `simex-audience-${resolvedChannelId}`;
-  const windowRef = openWindow?.(audienceUrl, requestedWindowName) ?? null;
+  const windowRef = openWindow?.(audienceUrl, requestedWindowName, AUDIENCE_WINDOW_FEATURES) ?? null;
   return {
     status: windowRef ? "opened" : "blocked",
     windowRef,

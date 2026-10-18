@@ -29,8 +29,8 @@ export async function buildPdpcSingleFile({ releaseDir, outputFile, variant }) {
   const mainName = entries.find((name) => /^release-.*\.js$/.test(name));
   const cssName = entries.find((name) => /^release-.*\.css$/.test(name));
   const html2canvasName = entries.find((name) => /^html2canvas\.esm-.*\.js$/.test(name));
-  if (!mainName || !cssName || !html2canvasName) {
-    throw new Error("PDPC single-file packaging requires release JavaScript, CSS, and html2canvas assets.");
+  if (!mainName || !cssName) {
+    throw new Error("PDPC single-file packaging requires release JavaScript and CSS assets.");
   }
 
   const three = await readFile(path.join(resolvedRelease, "vendor", "three.min.js"), "utf8");
@@ -39,20 +39,22 @@ export async function buildPdpcSingleFile({ releaseDir, outputFile, variant }) {
   const css = await inlineCss(path.join(assetsDir, cssName), resolvedRelease);
   const embeddedPackageAssets = await packageAssetData(portable, resolvedRelease);
 
-  let html2canvas = await readFile(path.join(assetsDir, html2canvasName), "utf8");
-  const html2canvasExport = /export\{([A-Za-z_$][\w$]*) as default\};?\s*$/;
-  if (!html2canvasExport.test(html2canvas)) {
-    throw new Error("The html2canvas output does not have the supported default export shape.");
-  }
-  html2canvas = html2canvas.replace(html2canvasExport, "window.html2canvas=$1;");
-
+  let html2canvas = "";
   let main = await readFile(path.join(assetsDir, mainName), "utf8");
-  const escapedChunkName = escapeRegExp(html2canvasName);
-  const dynamicImport = new RegExp(`import\\(["']\\./${escapedChunkName}["']\\)`, "g");
-  if ((main.match(dynamicImport) ?? []).length !== 1) {
-    throw new Error("The release output must contain exactly one html2canvas dynamic import.");
+  if (html2canvasName) {
+    html2canvas = await readFile(path.join(assetsDir, html2canvasName), "utf8");
+    const html2canvasExport = /export\{([A-Za-z_$][\w$]*) as default\};?\s*$/;
+    if (!html2canvasExport.test(html2canvas)) {
+      throw new Error("The html2canvas output does not have the supported default export shape.");
+    }
+    html2canvas = html2canvas.replace(html2canvasExport, "window.html2canvas=$1;");
+    const escapedChunkName = escapeRegExp(html2canvasName);
+    const dynamicImport = new RegExp(`import\\(["']\\./${escapedChunkName}["']\\)`, "g");
+    if ((main.match(dynamicImport) ?? []).length !== 1) {
+      throw new Error("The release output must contain exactly one html2canvas dynamic import.");
+    }
+    main = main.replace(dynamicImport, "Promise.resolve({default:window.html2canvas})");
   }
-  main = main.replace(dynamicImport, "Promise.resolve({default:window.html2canvas})");
 
   const logoImport = /new URL\("(pdpc-logo-[A-Za-z0-9_-]+\.png)",import\.meta\.url\)\.href/;
   const logoMatch = main.match(logoImport);
@@ -86,7 +88,7 @@ export async function buildPdpcSingleFile({ releaseDir, outputFile, variant }) {
   <script>${isolatedScript(vanta)}</script>
   <script>${isolatedScript(packageImageResolver(embeddedPackageAssets))}</script>
   <script>${isolatedScript(portable)}</script>
-  <script>${isolatedScript(html2canvas)}</script>
+  ${html2canvas ? `<script>${isolatedScript(html2canvas)}</script>` : ""}
   <script>${isolatedScript(main)}</script>
 </body>
 </html>`;
@@ -121,7 +123,7 @@ async function inlineCss(cssFile, releaseDir) {
 
 async function packageAssetData(portable, releaseDir) {
   const assetPaths = [...new Set(
-    [...portable.matchAll(/assets\/package\/[A-Za-z0-9_.-]+/g)].map((match) => match[0]),
+    [...portable.matchAll(/(?:assets\/package|data\/authored)\/[A-Za-z0-9_.-]+/g)].map((match) => match[0]),
   )];
   const embedded = {};
   for (const assetPath of assetPaths) {

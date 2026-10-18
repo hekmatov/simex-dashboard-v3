@@ -15,6 +15,7 @@ test.beforeEach(async ({ page, request }) => {
 test("compact Build content commands preserve six/four stage contracts", async ({ page }) => {
   await openBuild(page, { width: 1440, height: 900 });
   const commands = page.getByRole("toolbar", { name: "Primary Build commands" });
+  await expect(commands.getByRole("button")).toHaveCount(7);
   expect(await commands.getByRole("button").evaluateAll((buttons) => (
     buttons.map((button) => button.getAttribute("data-build-command-action"))
   ))).toEqual([
@@ -91,43 +92,48 @@ test("desktop composition keeps canvas and catalogue state without overflow", as
   await expect(manager.getByRole("region", { name: "Content detail" })).toBeVisible();
 
   await manager.getByRole("tab", { name: "Data sources" }).click();
-  const firstSource = manager.locator(".source-content-row").first();
-  await expect(firstSource).toBeVisible();
-  await firstSource.click();
+  const shippedSource = "cases WCPH eldoria";
+  const sourceRow = manager.locator(".source-content-row").filter({ hasText: shippedSource });
+  await expect(sourceRow).toContainText("uploaded");
+  await expect(sourceRow).toContainText("1 use");
+  await sourceRow.click();
   const nameField = manager.getByLabel("Display name");
   const originalName = await nameField.inputValue();
+  expect(originalName).toBe(shippedSource);
   await nameField.fill(`${originalName} managed`);
   await manager.getByRole("button", { name: "Save name" }).click();
   await expect(nameField).toHaveValue(`${originalName} managed`);
   await expect(manager.getByRole("region", { name: "Data source catalogue" })).toContainText(`${originalName} managed`);
   const sourceSearch = manager.getByLabel("Search data sources");
   await sourceSearch.fill(originalName);
-  await manager.getByLabel("Filter by origin").selectOption("legacy-import");
+  await manager.getByLabel("Filter by origin").selectOption("uploaded");
   await manager.getByLabel("Filter by status").selectOption("ready");
   await manager.getByLabel("Filter by usage").selectOption("used");
   await manager.getByLabel("Filter by kind").selectOption("csv");
 
   await manager.getByRole("tab", { name: "Media" }).click();
   const search = manager.getByLabel("Search media");
-  await search.fill("image");
-  await manager.getByLabel("Filter by origin").selectOption("legacy-import");
+  const shippedMedia = "timelinewcph2026.png";
+  await search.fill(shippedMedia);
+  await manager.getByLabel("Filter by origin").selectOption("packaged");
   await manager.getByLabel("Filter by status").selectOption("ready");
-  await manager.getByLabel("Filter by usage").selectOption("unused");
+  await manager.getByLabel("Filter by usage").selectOption("all");
+  await expect(manager.locator(".source-content-row")).toContainText(shippedMedia);
   await manager.getByRole("tab", { name: "Data sources" }).click();
   await expect(manager.getByLabel("Filter by kind")).toBeVisible();
   await manager.getByRole("tab", { name: "Media" }).click();
-  await expect(search).toHaveValue("image");
-  await expect(manager.getByLabel("Filter by origin")).toHaveValue("legacy-import");
+  await expect(search).toHaveValue(shippedMedia);
+  await expect(manager.getByLabel("Filter by origin")).toHaveValue("packaged");
   await host.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Source content", exact: true }).click();
   await expect(manager.getByRole("tab", { name: "Media" })).toHaveAttribute("aria-selected", "true");
-  await expect(manager.getByLabel("Search media")).toHaveValue("image");
-  await expect(manager.getByLabel("Filter by origin")).toHaveValue("legacy-import");
+  await expect(manager.getByLabel("Search media")).toHaveValue(shippedMedia);
+  await expect(manager.getByLabel("Filter by origin")).toHaveValue("packaged");
   await expect(manager.getByLabel("Filter by status")).toHaveValue("ready");
-  await expect(manager.getByLabel("Filter by usage")).toHaveValue("unused");
+  await expect(manager.getByLabel("Filter by usage")).toHaveValue("all");
   await manager.getByRole("tab", { name: "Data sources" }).click();
   await expect(manager.getByLabel("Search data sources")).toHaveValue(originalName);
-  await expect(manager.getByLabel("Filter by origin")).toHaveValue("legacy-import");
+  await expect(manager.getByLabel("Filter by origin")).toHaveValue("uploaded");
   await expect(manager.getByLabel("Filter by status")).toHaveValue("ready");
   await expect(manager.getByLabel("Filter by usage")).toHaveValue("used");
   await expect(manager.getByLabel("Filter by kind")).toHaveValue("csv");
@@ -235,6 +241,13 @@ async function assertMountedDeleteCheckpoint(page, manager, viewport) {
     const configuredProfiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
     const { normalizeDashboardSource } = await import("/src/lib/loadDashboard.js");
     const dashboard = normalizeDashboardSource(input, configuredProfiles);
+    const shipped = await fetch("/config/dashboard.json").then((response) => response.json());
+    for (const [sourceId, source] of Object.entries(dashboard.dataSources ?? {})) {
+      if (source.type !== "uploadedGeoJson" || source.geoJson) continue;
+      const geoJson = shipped.dataSources?.[sourceId]?.geoJson;
+      if (!geoJson) throw new Error(`Missing shipped GeoJSON for ${sourceId}`);
+      source.geoJson = geoJson;
+    }
     dashboard.contentLibrary.mediaItems["task6-unused-media"] = {
       mediaId: "task6-unused-media",
       revision: 1,

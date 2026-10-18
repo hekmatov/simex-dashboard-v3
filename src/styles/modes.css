@@ -1717,6 +1717,10 @@
   z-index: 31;
 }
 
+.canonical-dashboard-frame.view-shell:has(.fullscreen-backdrop--immersive) {
+  z-index: 44;
+}
+
 .canonical-dashboard-frame.build-workspace {
   display: block;
 }
@@ -2540,6 +2544,14 @@
 
 .chrono-proof-callout[data-tone="error"] {
   border-left: 5px double var(--simex-warning);
+}
+
+.chrono-proof-callout__inspect {
+  display: grid;
+  gap: 4px;
+  grid-column: 1 / -1;
+  text-align: left;
+  width: 100%;
 }
 
 .chrono-proof-callout[data-tone="success"] {
@@ -4187,6 +4199,15 @@
   margin-inline-start: auto;
 }
 
+@media (max-width: 767px) {
+  .build-command-main-row > .build-command-group {
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
 @media (max-width: 1023px) {
   .build-command-group[data-build-command-group="session"] {
     margin-inline-start: 0;
@@ -4490,8 +4511,9 @@
 .canonical-dashboard-frame.build-workspace .build-command-header { grid-area: commands; }
 .canonical-dashboard-frame.build-workspace > .canonical-dashboard-content { grid-area: canvas; min-width: 0; }
 .canonical-dashboard-frame.build-workspace > .dashboard-footer { grid-area: footer; }
-.build-rail--structure { grid-area: structure; }
-.build-rail--properties { grid-area: properties; }
+.build-rail-slot--structure { grid-area: structure; }
+.build-rail-slot--properties { grid-area: properties; }
+.build-rail-slot { min-width: 0; align-self: stretch; }
 
 .build-rail {
   background: var(--simex-surface-panel);

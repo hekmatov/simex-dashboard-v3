@@ -16,6 +16,8 @@ import {
 } from "../src/components/time/chronoGroupDraft.js";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
+
+
 const JAN_1 = Date.UTC(2027, 0, 1);
 const JAN_2 = JAN_1 + DAY_MS;
 const JAN_3 = JAN_2 + DAY_MS;
@@ -31,6 +33,25 @@ const vite = await createServer({
 const ledgerModule = await vite.ssrLoadModule("/src/components/time/AvailabilityLedger.jsx");
 const studioModule = await vite.ssrLoadModule("/src/components/time/ChronoGroupEditor.jsx");
 await vite.close();
+
+test("new Chrono Groups default to Snap to Latest and preserve explicit saved defaults", () => {
+  assert.equal(createChronoGroupDraft().value.defaultMatching, "Snap to Latest");
+  assert.equal(createChronoGroupDraft({ group: { defaultMatching: "Concurrent only" } }).value.defaultMatching, "Concurrent only");
+});
+
+test("Chrono matching choices follow the practitioner order", () => {
+  const draft = createChronoGroupDraft({ group: groupFixture(), charts: chartFixtures(), initialStage: "defaults" });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft }));
+  const labels = [...html.matchAll(/<strong>(Snap to Latest|Interpolate|Snap to Closest|Concurrent only)<\/strong>/g)].map((match) => match[1]);
+  assert.deepEqual(labels, ["Snap to Latest", "Interpolate", "Snap to Closest", "Concurrent only"]);
+});
+
+test("a clean open Chrono Group editor can discard its draft", () => {
+  const draft = createChronoGroupDraft({ group: groupFixture(), charts: chartFixtures() });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft }));
+  assert.match(html, /<button[^>]*>Discard<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Discard<\/button>/);
+});
 
 test("Chrono Group draft exposes the approved four stages and validates before advancing", () => {
   assert.deepEqual(CHRONO_GROUP_STAGES, ["period", "charts", "defaults", "review"]);
@@ -328,6 +349,41 @@ test("Availability Ledger omits an empty attention region and keeps Add to group
 
   assert.doesNotMatch(html, /data-region="needs-attention"/);
   assert.match(html, /class="availability-record__toggle"[^>]*>Add to group</);
+});
+
+test("Chrono choices omit ineligible charts but retain selected members for removal with display-name diagnostics", () => {
+  const blocked = {
+    ...chartFixtures()[0], id: "internal-capacity-id", label: "Hospital occupancy against capacity",
+    chronoGroupEligibility: { eligible: false, message: 'Member chart "Hospital occupancy against capacity" is a Collection display. Collection displays cannot join Chrono Groups.' },
+  };
+  const charts = [...chartFixtures(), blocked];
+  const options = { charts, period: { startEpochMs: JAN_1, endEpochMs: JAN_3 } };
+  assert.equal(deriveAvailabilityRows(options).some(({ chartId }) => chartId === blocked.id), false);
+  let draft = createChronoGroupDraft({ group: { ...groupFixture(), chartIds: [blocked.id] }, charts, initialStage: "charts" });
+  const row = draft.availabilityRows.find(({ chartId }) => chartId === blocked.id);
+  assert.equal(row.needsAttention, true);
+  assert.equal(row.statusText, blocked.chronoGroupEligibility.message);
+  const problem = validateChronoGroupStage(draft, "charts");
+  assert.equal(problem.message, blocked.chronoGroupEligibility.message);
+  assert.equal(problem.focusId, `chrono-group-chart-${blocked.id}`);
+  draft = reduceChronoGroupDraft(draft, { type: "TOGGLE_CHART", chartId: blocked.id, selected: false });
+  assert.deepEqual(draft.value.chartIds, []);
+  draft = reduceChronoGroupDraft(draft, { type: "TOGGLE_CHART", chartId: blocked.id, selected: true });
+  assert.deepEqual(draft.value.chartIds, []);
+});
+
+test("saved member errors use the row label and offer an accessible navigation target", () => {
+  const chart = { ...chartFixtures()[0], id: "internal-capacity-id", label: "Hospital occupancy against capacity" };
+  let draft = createChronoGroupDraft({ group: { ...groupFixture(), chartIds: [chart.id] }, charts: [chart], initialStage: "review" });
+  draft = reduceChronoGroupDraft(draft, { type: "SAVE_FAILED", error: { message: `Member chart "${chart.id}" is a Collection display. Collection displays cannot join Chrono Groups.` } });
+  assert.match(draft.error.message, /Hospital occupancy against capacity/);
+  assert.doesNotMatch(draft.error.message, /internal-capacity-id/);
+  assert.equal(draft.error.focusId, `chrono-group-chart-${chart.id}`);
+  assert.equal(draft.error.stage, "charts");
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft, onAction() {} }));
+  assert.match(html, /<button[^>]*aria-controls="chrono-group-chart-internal-capacity-id"/);
+  const ledger = renderToStaticMarkup(React.createElement(ledgerModule.default, { rows: draft.availabilityRows }));
+  assert.match(ledger, /id="chrono-group-chart-internal-capacity-id"[^>]*tabindex="-1"/);
 });
 
 test("Chrono Studio renders all stages and keeps Stay out of ordinary editor actions", () => {

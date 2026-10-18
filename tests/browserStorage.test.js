@@ -36,6 +36,11 @@ test("safe browser storage treats denied access as unavailable", () => {
   });
   assert.equal(denied.getItem("dashboard"), null);
   assert.equal(denied.setItem("dashboard", "value"), false);
+  assert.equal(denied.isAvailable(), false);
+  const deniedRead = storageModule.createSafeBrowserStorage(() => ({
+    getItem() { throw new Error("read denied"); },
+  }));
+  assert.equal(deniedRead.isAvailable(), false);
 });
 
 test("App reaches its loading interface when localStorage access is denied", () => {

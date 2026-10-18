@@ -41,16 +41,44 @@ export async function buildPortableData({
   if (embedPortableData) {
     for (const sourceId of Object.keys(dataSources)) {
       const source = dataSources[sourceId];
-      if (source?.kind === "staticText" || source?.kind === "staticImage") {
+      if (["staticText", "staticImage", "inline"].includes(source.kind)) {
+        // These sources are already self-contained in the embedded config.
+        continue;
+      }
+      // Descriptor validation returns a type token for uploaded sources, not a
+      // public path. Preserve the same embedded payload used by runtime/package
+      // loading; promotion deliberately retains uploaded GeoJSON in the config.
+      if (source.kind === "dataset") {
+        sources[sourceId] = source.type === "uploadedGeoJson"
+          ? { kind: "geojson", data: source.geoJson }
+          : { kind: "csv", text: source.csvText };
         continue;
       }
       const sourcePath = validateDataSourceDescriptor(sourceId, source);
       const absoluteSourcePath = path.join(publicDir, sourcePath);
-      if (source.kind === "geojson") {
-        const data = JSON.parse(
-          stripBom(await readFile(absoluteSourcePath, "utf8")),
+      let text;
+      try {
+        text = await readFile(absoluteSourcePath, "utf8");
+      } catch (error) {
+        throw new Error(
+          `Data source "${sourceId}" could not be read at "${sourcePath}".`,
+          { cause: error },
         );
-        validateGeoJson(data, `Data source "${sourceId}" GeoJSON`);
+      }
+      if (source.kind === "geojson") {
+        let data;
+        try {
+          data = JSON.parse(stripBom(text));
+        } catch (error) {
+          throw new Error(
+            `Data source "${sourceId}" at "${sourcePath}" contains malformed JSON.`,
+            { cause: error },
+          );
+        }
+        validateGeoJson(
+          data,
+          `Data source "${sourceId}" at "${sourcePath}" GeoJSON`,
+        );
         sources[sourceId] = {
           kind: "geojson",
           data,
@@ -58,7 +86,7 @@ export async function buildPortableData({
       } else {
         sources[sourceId] = {
           kind: "csv",
-          text: await readFile(absoluteSourcePath, "utf8"),
+          text,
         };
       }
     }

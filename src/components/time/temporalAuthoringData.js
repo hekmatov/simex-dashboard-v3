@@ -38,6 +38,14 @@ export function describeTemporalInterpolationSupport(variables = []) {
   };
 }
 
+export function formatTemporalChartMessage(message, charts = []) {
+  return charts.reduce((text, chart) => {
+    const label = chart.label ?? chart.title ?? chart.id;
+    return text.replaceAll(`chart "${chart.id}"`, `chart "${label}"`)
+      .replaceAll(`panel "${chart.id}"`, `panel "${label}"`);
+  }, message);
+}
+
 function parseEpoch(value) {
   if (Number.isFinite(value)) return value;
   const parsed = Date.parse(value);

@@ -103,14 +103,19 @@ test("catalogue v2 covers every registered type and configured chart", async () 
     catalogue.charts.map(({ chart_id }) => chart_id),
     configured.map(({ chart }) => chart.id).toSorted(),
   );
-  assert.equal(catalogue.chart_types.length, 27);
-  assert.equal(catalogue.charts.length, 38);
+  assert.equal(catalogue.chart_types.length, schemas.length);
+  assert.equal(catalogue.charts.length, configured.length);
   assert.ok(catalogue.charts.some(({ type_id }) => type_id === "pie"));
-  assert.ok(
-    catalogue.charts.some(
-      ({ chrono_group_id }) => chrono_group_id === "municipal_outbreak",
-    ),
-  );
+  const memberships = new Map(dashboard.chronoGroups.flatMap((group) => (
+    group.members.map(({ chartId }) => [chartId, group.id])
+  )));
+  for (const descriptor of catalogue.charts) {
+    assert.equal(
+      descriptor.chrono_group_id,
+      memberships.get(descriptor.chart_id) ?? null,
+      descriptor.chart_id,
+    );
+  }
 });
 
 test("chart type descriptors mirror schema roles, constraints, and capabilities", async () => {
@@ -253,7 +258,7 @@ test("time, collection, geography, and source contracts are explicit but bounded
 });
 
 test("configured chart descriptors use exact roles, groups, and display capabilities", async () => {
-  const { dashboard, aliases } = await trackedInputs();
+  const { dashboard, aliases, ids } = await representativeInputs();
   const catalogue = catalogueModule.buildChartCatalogue(dashboard, aliases);
   const configured = new Map(
     configuredCharts(dashboard).map(({ chart }) => [chart.id, chart]),
@@ -267,9 +272,9 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   }
 
   const municipal = catalogue.charts.find(
-    ({ chart_id }) => chart_id === "bio_municipality_choropleth_animation",
+    ({ chart_id }) => chart_id === ids.primaryLine,
   );
-  assert.equal(municipal.chrono_group_id, "municipal_outbreak");
+  assert.equal(municipal.chrono_group_id, "fixture-primary");
   assert.deepEqual(municipal.supported_display_modes, [
     "fullscreen",
     "multi_fullscreen",
@@ -277,7 +282,7 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   ]);
 
   const mortality = catalogue.charts.find(
-    ({ chart_id }) => chart_id === "bio_mortality_age",
+    ({ chart_id }) => chart_id === ids.pie,
   );
   assert.equal(mortality.type_id, "pie");
   assert.equal(mortality.chrono_group_id, null);
@@ -288,13 +293,13 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   ]);
 
   const collection = catalogue.charts.find(
-    ({ chart_id }) => chart_id === "bio_occupancy_collection",
+    ({ chart_id }) => chart_id === ids.kpi,
   );
   assert.equal(collection.collection_capability, true);
 });
 
 test("canonical Chrono Groups preserve a sole membership in catalogue v2", async () => {
-  const { dashboard, aliases } = await trackedInputs();
+  const { dashboard, aliases, ids } = await representativeInputs();
   const canonical = structuredClone(dashboard);
   for (const { chart } of configuredCharts(canonical)) {
     chart.interaction.timeSync = null;
@@ -302,10 +307,10 @@ test("canonical Chrono Groups preserve a sole membership in catalogue v2", async
 
   const catalogue = catalogueModule.buildChartCatalogue(canonical, aliases);
   const municipal = catalogue.charts.find(
-    ({ chart_id }) => chart_id === "bio_municipality_choropleth_animation",
+    ({ chart_id }) => chart_id === ids.primaryLine,
   );
 
-  assert.equal(municipal.chrono_group_id, "municipal_outbreak");
+  assert.equal(municipal.chrono_group_id, "fixture-primary");
   assert.deepEqual(municipal.supported_display_modes, [
     "fullscreen",
     "multi_fullscreen",
@@ -314,11 +319,11 @@ test("canonical Chrono Groups preserve a sole membership in catalogue v2", async
 });
 
 test("catalogue v2 rejects multiple Chrono Group memberships actionably", async () => {
-  const { dashboard, aliases } = await trackedInputs();
+  const { dashboard, aliases, ids } = await representativeInputs();
   const changed = structuredClone(dashboard);
   changed.chronoGroups[1].members.push({
-    chartId: "bio_municipality_choropleth_animation",
-    timeRole: "time",
+    chartId: ids.primaryLine,
+    timeRole: "observation",
   });
 
   assert.throws(
@@ -384,7 +389,7 @@ test("equivalent raw and normalized V6 dashboards produce one catalogue identity
 });
 
 test("dashboard semantic digest includes all packaged semantics and rejects runtime state", async () => {
-  const { dashboard, aliases } = await trackedInputs();
+  const { dashboard, aliases, ids } = await representativeInputs();
   const original = Buffer.from(
     catalogueModule.canonicalDashboardSemanticsBytes(dashboard, aliases),
   );
@@ -413,7 +418,7 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedMembershipOrder = structuredClone(dashboard);
-  changedMembershipOrder.chronoGroups[1].members.reverse();
+  changedMembershipOrder.chronoGroups[0].members.reverse();
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(
@@ -427,7 +432,7 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   const changedCollection = structuredClone(dashboard);
   const changedCollectionPresentation = configuredChart(
     changedCollection,
-    "bio_occupancy_collection",
+    ids.kpi,
   ).presentation.collection;
   changedCollectionPresentation.layout = "scroll";
   changedCollectionPresentation.overflow = "scroll";
@@ -442,8 +447,8 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedRole = structuredClone(dashboard);
-  configuredChart(changedRole, "bio_confirmed_cases")
-    .roles.measurements[0].field = "deaths";
+  configuredChart(changedRole, ids.primaryLine)
+    .roles.measurements[0].field = "revised_cases";
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(changedRole, aliases),
@@ -452,8 +457,8 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedSource = structuredClone(dashboard);
-  changedSource.dataSources.bio_cases.path =
-    "data/biomedical/cases-revised.csv";
+  changedSource.dataSources[ids.source].path =
+    "data/revised-cases.csv";
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(changedSource, aliases),
@@ -462,8 +467,8 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedPresentation = structuredClone(dashboard);
-  configuredChart(changedPresentation, "bio_confirmed_cases")
-    .presentation.title.align = "left";
+  configuredChart(changedPresentation, ids.primaryLine)
+    .presentation.title.align = "right";
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(
@@ -475,9 +480,9 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const runtimeOnly = structuredClone(dashboard);
-  runtimeOnly.loadedData = { bio_cases: [{ date: "2027-05-01" }] };
-  runtimeOnly.datasetProfiles = { bio_cases: { fingerprint: "runtime" } };
-  runtimeOnly.previewState = { selectedChartId: "bio_confirmed_cases" };
+  runtimeOnly.loadedData = { [ids.source]: [{ Date: "2027-05-01" }] };
+  runtimeOnly.datasetProfiles = { [ids.source]: { fingerprint: "runtime" } };
+  runtimeOnly.previewState = { selectedChartId: ids.primaryLine };
   runtimeOnly.compatibilityCheckedAt = "2099-01-01T00:00:00.000Z";
   assert.throws(() => (
     catalogueModule.canonicalDashboardSemanticsBytes(runtimeOnly, aliases)
@@ -517,13 +522,13 @@ test("canonical bytes sort object keys, preserve array order, and distinguish JS
 });
 
 test("declared sorted terms use JavaScript UTF-16 ordering", async () => {
-  const { dashboard, aliases } = await trackedInputs();
+  const { dashboard, aliases, ids } = await representativeInputs();
   const changedAliases = structuredClone(aliases);
-  changedAliases.bio_confirmed_cases.aliases = ["\uE000", "😀", "a"];
+  changedAliases[ids.primaryLine].aliases = ["\uE000", "😀", "a"];
   const descriptor = catalogueModule.buildChartCatalogue(
     dashboard,
     changedAliases,
-  ).charts.find(({ chart_id }) => chart_id === "bio_confirmed_cases");
+  ).charts.find(({ chart_id }) => chart_id === ids.primaryLine);
   assert.deepEqual(descriptor.aliases, ["a", "😀", "\uE000"]);
 });
 
@@ -647,31 +652,32 @@ test("runtime binding accepts only the exact self-consistent v2 snapshot", async
 });
 
 test("producer rejects invalid v3 instances, aliases, and time membership", async (t) => {
-  const { dashboard, aliases } = await trackedInputs();
+  const { dashboard, aliases, ids } = await representativeInputs();
+  assert.doesNotThrow(() => catalogueModule.buildChartCatalogue(dashboard, aliases));
   const cases = {
     "version 2 dashboard": (changed) => {
       changed.dashboard.configVersion = 2;
     },
     "unknown chart type": (changed) => {
-      configuredChart(changed.dashboard, "bio_confirmed_cases").typeId = "unknown";
+      configuredChart(changed.dashboard, ids.primaryLine).typeId = "unknown";
     },
     "missing required role": (changed) => {
       delete configuredChart(
         changed.dashboard,
-        "bio_confirmed_cases",
+        ids.primaryLine,
       ).roles.measurements;
     },
     "unknown role": (changed) => {
-      configuredChart(changed.dashboard, "bio_confirmed_cases")
+      configuredChart(changed.dashboard, ids.primaryLine)
         .roles.unknown = { field: "date" };
     },
     "unknown chart property": (changed) => {
-      configuredChart(changed.dashboard, "bio_confirmed_cases")
+      configuredChart(changed.dashboard, ids.primaryLine)
         .legacyBinding = {};
     },
     "duplicate chart id": (changed) => {
-      configuredChart(changed.dashboard, "bio_r_values").id =
-        "bio_confirmed_cases";
+      configuredChart(changed.dashboard, ids.secondaryLine).id =
+        ids.primaryLine;
     },
     "orphan alias": (changed) => {
       changed.aliases.orphan = {
@@ -680,7 +686,7 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
       };
     },
     "unknown alias property": (changed) => {
-      changed.aliases.bio_confirmed_cases.legacyKeywords = [];
+      changed.aliases[ids.primaryLine].legacyKeywords = [];
     },
     "unknown chrono-group property": (changed) => {
       changed.dashboard.chronoGroups[0].legacyClock = {};
@@ -691,6 +697,19 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
     "invalid chrono-group period": (changed) => {
       changed.dashboard.chronoGroups[0].period.end = "2019-01-01";
     },
+  };
+  const expectedErrors = {
+    "version 2 dashboard": /version/i,
+    "unknown chart type": /unknown.*type|type.*unknown/i,
+    "missing required role": /measurements|required role/i,
+    "unknown role": /unknown.*role|role.*unknown/i,
+    "unknown chart property": /legacyBinding/i,
+    "duplicate chart id": new RegExp(`Duplicate dashboard panel id "${ids.primaryLine}"`),
+    "orphan alias": /orphan alias/i,
+    "unknown alias property": /legacyKeywords/i,
+    "unknown chrono-group property": /legacyClock/i,
+    "unknown time-member property": /legacyPolicy/i,
+    "invalid chrono-group period": /period.*end/i,
   };
 
   for (const [name, mutate] of Object.entries(cases)) {
@@ -705,7 +724,7 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
           changed.dashboard,
           changed.aliases,
         )
-      ));
+      ), expectedErrors[name]);
     });
   }
 });
@@ -737,6 +756,68 @@ async function trackedInputs() {
     readJson("public/integration/quorum-chart-catalogue.json"),
   ]);
   return { dashboard, aliases, persisted };
+}
+
+async function representativeInputs() {
+  const { dashboard: shipped, aliases: shippedAliases } = await trackedInputs();
+  const dashboard = structuredClone(shipped);
+  const aliases = structuredClone(shippedAliases);
+  const lines = configuredCharts(dashboard)
+    .filter(({ chart }) => chart.typeId === "line")
+    .map(({ chart }) => chart);
+  assert.ok(lines.length >= 3, "representative catalogue needs three temporal line charts");
+  const pie = configuredCharts(dashboard)
+    .find(({ chart }) => chart.typeId === "pie")?.chart;
+  assert.ok(pie, "representative catalogue needs a pie chart");
+  const ids = {
+    primaryLine: lines[0].id,
+    secondaryLine: lines[1].id,
+    thirdLine: lines[2].id,
+    pie: pie.id,
+    kpi: "fixture-collection-kpi",
+    source: lines[0].sourceId,
+  };
+  const kpi = {
+    configVersion: 3,
+    id: ids.kpi,
+    typeId: "kpi",
+    title: "Collection capability fixture",
+    description: "A bound numeric value in a collection.",
+    sourceId: pie.sourceId,
+    roles: { value: structuredClone(pie.roles.value) },
+    transformations: structuredClone(pie.transformations),
+    presentation: {
+      title: { align: "left" },
+      collection: {
+        layout: "fixed", rows: 2, columns: 2, gap: 8,
+        overflow: "manualPages",
+        ranking: { mode: "fixed" },
+        carousel: { intervalMs: 5000, loop: true, pauseOnHover: true, transition: "fade" },
+        playback: { rerank: false, pauseCarousel: false },
+      },
+    },
+    interaction: { zoom: { enabled: false }, timeSync: null },
+    layout: { size: "standard" },
+  };
+  dashboard.pages[0].sections[0].panels.push(kpi);
+  aliases[ids.kpi] = { aliases: ["collection fixture"], keywords: ["value"] };
+  dashboard.chronoGroups = [
+    {
+      id: "fixture-primary", name: "Primary playback",
+      period: { start: "2027-02-20", end: "2027-08-15" },
+      matching: { policy: "exact" }, secondsPerFrame: 1,
+      members: [ids.primaryLine, ids.secondaryLine].map((chartId) => ({
+        chartId, timeRole: "observation",
+      })),
+    },
+    {
+      id: "fixture-secondary", name: "Secondary playback",
+      period: { start: "2027-02-20", end: "2027-08-15" },
+      matching: { policy: "exact" }, secondsPerFrame: 1,
+      members: [{ chartId: ids.thirdLine, timeRole: "observation" }],
+    },
+  ];
+  return { dashboard, aliases, ids };
 }
 
 async function readJson(path) {
