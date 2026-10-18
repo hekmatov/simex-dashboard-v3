@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Chart destination geometry fixture</title></head>
+<body><div id="root"></div><script type="module">
+import React from "react";
+import { createRoot } from "react-dom/client";
+import LayoutGrid from "/src/components/LayoutGrid.jsx";
+import ChartPanel from "/src/components/ChartPanel.jsx";
+import AuthoringFootprintFrame from "/src/components/common/AuthoringFootprintFrame.jsx";
+import "/src/styles/tokens.css";
+import "/src/styles.css";
+import "/src/styles/modes.css";
+import "/src/styles/dashboard-style-grammar.css";
+import "/src/styles/static-content.css";
+
+const dashboard = await (await fetch("/config/dashboard.json")).json();
+const sourceChart = dashboard.pages.flatMap(p => p.sections.flatMap(s => s.panels))
+  .find(c => c.id === "bio_current_cases_kpi");
+if (!sourceChart) throw new Error("Selected authored KPI fixture is absent");
+const root = createRoot(document.getElementById("root"));
+window.renderGeometryCase = ({ canvasWidth = 1392, deviceLayout = "auto" } = {}) => {
+  // The destination canvas excludes its frame border. Exercise real panel
+  // components with test-only footprints; never change the authored package.
+  root.render(React.createElement("div", { className: "app-frame" },
+    React.createElement("main", { className: "app-shell canonical-dashboard-frame", "data-device-layout": deviceLayout,
+      style: { width: canvasWidth + 2, maxWidth: "none", margin: 0 } },
+      React.createElement("section", { className: "dashboard-section" },
+        React.createElement(LayoutGrid, null, [
+          ["compact", 1, 1], ["standard", 2, 1], ["wide", 4, 1], ["full", 4, 2], ["fractional", 3, 0.5],
+        ].map(([id, width, height]) => React.createElement(ChartPanel, {
+          key: id, panel: { ...sourceChart, id, layout: { width, height } }, suspended: true, showFullscreen: false,
+        })))),
+      React.createElement(AuthoringFootprintFrame, { layout: { width: 2, height: 0.5 }, kind: "geometry" }, "Static footprint")
+    )));
+};
+window.renderGeometryCase();
+</script></body></html>

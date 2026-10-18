@@ -3,6 +3,7 @@ import React from "react";
 import {
   canReuseChartRendering,
   resolveChartRendering,
+  resolvePreparedChartRendering,
 } from "../../charting/rendering/resolveChartRendering.js";
 import { serializeCanonicalRuntimeLedger } from "../../charting/rendering/canonicalRuntimeLedger.js";
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
@@ -52,12 +53,7 @@ export default function ChartView(props) {
 
 export function renderChartContent(props, interactionMode) {
   try {
-    const resolved = canReuseChartRendering(
-      props.resolvedRendering,
-      props,
-    )
-      ? props.resolvedRendering
-      : resolveChartRendering(props);
+    const resolved = resolveDestinationRendering(props);
     const { model, prepared, schema } = resolved;
     const provenance = resolveProvenance(props);
     const panelRows = Number(props.panelFootprint?.rows);
@@ -142,14 +138,16 @@ export function renderChartContent(props, interactionMode) {
 }
 
 function ResolvedChartContent({ props, interactionMode }) {
-  const effectOwned = requiresEffectOwnedResolution(props);
+  const suppliedResolution = canReuseChartRendering(props.resolvedRendering, props)
+    ? props.resolvedRendering
+    : null;
+  const effectOwned = requiresEffectOwnedResolution(props)
+    && suppliedResolution?.status !== "available";
   const [resolutionAttempt, setResolutionAttempt] = React.useState(0);
   const initialResolution = React.useMemo(() => (
     effectOwned
-      ? pendingStaticImageResolution(props)
-      : canReuseChartRendering(props.resolvedRendering, props)
-      ? props.resolvedRendering
-      : resolveChartRendering(props)
+      ? (resolutionAttempt === 0 ? suppliedResolution : null) ?? pendingStaticImageResolution(props)
+      : resolveDestinationRendering(props)
   ), [
     effectOwned,
     props.chart,
@@ -157,6 +155,7 @@ function ResolvedChartContent({ props, interactionMode }) {
     props.geoData,
     props.renderContext,
     props.resolvedRendering,
+    props.prepared,
     props.rows,
     props.timeContext,
     resolutionAttempt,
@@ -170,9 +169,10 @@ function ResolvedChartContent({ props, interactionMode }) {
     }
     let current = true;
     let ownedResolution = null;
+    let ownsAttempt = false;
     let released = false;
     const releaseOwnedResolution = () => {
-      if (released || typeof ownedResolution?.model?.release !== "function") return false;
+      if (!ownsAttempt || released || typeof ownedResolution?.model?.release !== "function") return false;
       released = true;
       ownedResolution.model.release();
       return true;
@@ -183,7 +183,12 @@ function ResolvedChartContent({ props, interactionMode }) {
       else releaseOwnedResolution();
     };
     setSettledResolution(null);
-    const attempt = resolveChartRendering(props);
+    // A supplied pending resolution is borrowed: observe its settlement, but
+    // leave its lease with the caller. Retry creates a fresh local lease.
+    const attempt = resolutionAttempt === 0 && suppliedResolution
+      ? suppliedResolution
+      : resolveChartRendering(props);
+    ownsAttempt = attempt !== suppliedResolution;
     if (attempt.status !== "pending" || !attempt.pending) {
       publish(attempt);
     } else {
@@ -199,6 +204,7 @@ function ResolvedChartContent({ props, interactionMode }) {
     props.datasetProfile,
     props.geoData,
     props.renderContext,
+    props.resolvedRendering,
     props.rows,
     props.timeContext,
     resolutionAttempt,
@@ -216,6 +222,13 @@ function ResolvedChartContent({ props, interactionMode }) {
     resolvedRendering,
     onImageRetry: retryImageResolution,
   }, interactionMode);
+}
+
+function resolveDestinationRendering(props) {
+  if (canReuseChartRendering(props.resolvedRendering, props)) return props.resolvedRendering;
+  return props.prepared == null
+    ? resolveChartRendering(props)
+    : resolvePreparedChartRendering(props, props.prepared);
 }
 
 function requiresEffectOwnedResolution(props) {
@@ -314,7 +327,10 @@ export function withPlaybackTimeContext(props, playback) {
   if (
     Number.isFinite(memberTimeContext?.activeEpochMs)
   ) {
-    return { ...props, timeContext: memberTimeContext };
+    // Prepared marks belong to the supplied time context. Playback owns fresh
+    // preparation when it projects this chart into a different frame.
+    return { ...props, timeContext: memberTimeContext,
+      prepared: memberTimeContext === props.timeContext ? props.prepared : undefined };
   }
   return props;
 }
