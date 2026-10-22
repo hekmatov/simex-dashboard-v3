@@ -1,6 +1,18 @@
 # Fable M1 checkpoint
 
-## Current — M1.2, 18 October 2026
+## Current — M1.2 practitioner feedback, 22 October 2026
+
+Bounded repair from clean **1282657b4c6f9bdcfcd3086e34763dff2d307f7d**, same owner/worktree/branch and High effort floor. Practitioner reported intermittent Quick editor size/scrollbar flicker; acceptance of M1.2 and other checklist items remains pending. Candidate is the coherent commit containing this entry, resolved with `git log -1 --format=%H -- docs/fable-m1-checkpoint.md`; terminal handover records its exact head. No push/merge/deploy, later package, authored-content or storage changes.
+
+Reproduction/cause: selected source dashboard, Build → Reproduction value, actual UnitOrbit/ChartQuickEditor, native Chromium at1440×1200. Near natural height, scroller usable width alternated **193/208px**, Fit scale about **.377/.417**, and content height about **808/842px**. Vertical scrollbar width changed scaling and caption wrapping; Orbit then measured that changed height, creating feedback. The usual headless launch hid scrollbars and missed it. A gutter-only diagnostic at Quick's actual scroll owner removed the alternation. Production correction reserves `scrollbar-gutter: stable` only on the existing Quick `.unit-orbit-scroll`; existing overflow and scrolling remain enabled. Shared stage/destination geometry and other Orbit consumers are unchanged.
+
+Durable real-browser regression uses isolated storage and native-width scrollbars (`ignoreDefaultArgs: ["--hide-scrollbars"]`). RED on1282657b: after Actual → Fit, measured width and scale remained inconsistent by.0405 through the20s assertion timeout. GREEN after correction: **1/1,22.7s command/21.6s test**, `pnpm.cmd exec playwright test --config=node_modules/m12-stability.config.mjs`, selecting only `tests/e2e/v3-quick-editor-stability.spec.js`. Covers retained usable width, consecutive stable layouts, Fit/Actual scrolling, control reachability, wide/half-height destination geometry and constrained viewport height. Nearest owner selection **8/8,22.33s**, `node --test --test-name-pattern='[Qq]uick editor|quick gauge|Full wizard continues the shared Quick' tests/chartAuthoringComponentsV3.test.js`. One scoped correction review is clean, including assertion quality. Reuse unaffected E58 175/175 and full fidelity evidence below; no broad suites/build/hosted gates repeated. Authored SHA256 unchanged; diff check clean.
+
+Updated preview: **http://127.0.0.1:4292/**, source from this candidate. The prior server was stopped on inspection; restarted only the unused4292 port, verified HTTP200 and Vite process **56940**, exec session46602. Preserve all user browser storage/drafts and accepted4283. Keep running through feedback; stop only after confirming that PID still belongs to this preview, then `Stop-Process -Id 56940`. Restart from this worktree: `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4292 --strictPort`.
+
+Affected practitioner recheck: reopen Quick for the chart that flickered; switch Fit/Actual, change footprint and reduce available window height. Check that its width settles, the scrollbar no longer repeatedly appears/disappears, and scrolling still reaches the settings and Actual preview. Other M1.2 acceptance items remain outstanding; previous evidence follows.
+
+## M1.2 retained evidence — 18 October 2026
 
 Same owner/chat `01a14e36-2be8-7700-9efd-6b787998b007`, worktree `.worktrees/fable-m1-geometry`, branch `codex/fable-m1-geometry`; exact clean M1.2 base **07e77cf6066fac184165c0c3dbdee3095d20f6fa**, freshly integrated private main containing reviewed M1.1 `242fe679`. Public main intentionally remains `c003d111`. Preserve configured GPT-6.1 Sol / High floor, authored dashboard hash below, accepted4283/storage and other worktrees. No pending bundle.
 

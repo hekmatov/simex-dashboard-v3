@@ -6201,6 +6201,9 @@ button.danger {
 
 .unit-orbit:has(.chart-quick-editor) .unit-orbit-scroll {
   height: auto;
+  /* Keep Fit's measured width independent of vertical overflow. Otherwise a
+     scrollbar changes preview height and feeds Orbit's height measurement. */
+  scrollbar-gutter: stable;
 }
 
 .unit-orbit .chart-quick-editor .chart-quick-editor-actions {
