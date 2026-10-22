@@ -1,6 +1,6 @@
 # SimEx consolidated development roadmap — 19 September 2026
 
-**Document version:** 1.62; updated 19 October 2026 for M1.2 implementation/review completion and the explicit practitioner-acceptance boundary. Dated Markdown with Git history. This is a plan version, not an application release. Coordination follows version 3, amended 18 October.
+**Document version:** 1.63; updated 22 October 2026 for Quick editor scrollbar/size flicker feedback and bounded repair assignment. Dated Markdown with Git history. This is a plan version, not an application release. Coordination follows version 3, amended 18 October.
 
 **Goal:** Deliver an exercise tool whose prepare → run → debrief loop is dependable, faithful across surfaces, usable by exercise staff, and ready for an approved PDPC deployment.
 
@@ -8,7 +8,7 @@
 
 **Stack:** React 19, Vite 6, JavaScript, ECharts 5, CSS tokens, BroadcastChannel, Node tests and Playwright. No new backend is assumed.
 
-**Status:** M1.1 is integrated into private main at 07e77cf6. M1.2 implementation and scoped review are complete locally at clean unpushed `1282657b4c6f9bdcfcd3086e34763dff2d307f7d`: destination-sized AuthoringStage in Quick/Full/create and editor surfaces, Fit/Actual and accessible cancellable Show on canvas. Focused owner selection 175/175 and source fidelity journey 1/1 pass; review findings are resolved. Separate preview4292 is available for explicit practitioner acceptance, which remains pending. No M1.2 integration or M1.3 start. Authored content, accepted4283/storage, public main and scenario pause remain intact.
+**Status:** M1.1 remains integrated into private main at07e77cf6. M1.2 candidate1282657b has prior focused implementation/review evidence, but on22October the user reported intermittent Quick editor size flicker as its scrollbar appears/disappears. Same owner is assigned a bounded diagnosis/repair and updated preview. Practitioner acceptance remains pending; no other checklist item is accepted by this feedback. Authored content, accepted4283/storage, public main and scenario pause are preserved. No M1.2 publication or M1.3 start.
 
 **Authored-content direction, 1 October:** the user selected [SimEx-dashboard-bundle-20260903.json](C:/Users/hekma/Downloads/SimEx-dashboard-bundle-20260903.json) as the dashboard content from now onwards, explicitly superseding the prior WCPH snapshot regardless of export date. Original-file SHA-256: `b1582453dc2e2fd419a435f9af278b07f76325bd4867576437adf321c1dc84da`. Faithful promoted baseline: `45f9a02ef564ca8a9638d9c77844d6e7550b6345`; reviewed final candidate: `451ad8f990480644ba3732f3d8f7a6a63894224d`. HeV-A26 Day 2 Simulation contains 38 charts across 15 types, 34 exact emitted CSVs, four embedded GeoJSON sources, and Municipal/National outbreak playback groups with seven total member charts; no saved Scenes. Future slice briefs must use this committed baseline and its relevant chart/time-group coverage. E47 records the affected checks; E44–E46 remain evidence for their earlier content.
 
@@ -24,11 +24,11 @@
 
 **Delegated outcome:** M1.2 implemented/reviewed locally from 07e77cf6. Owner selection passed 175/175 (15.03s), zero failures/skips; strengthened pointer-cancellation case 1/1; representative source Chromium fidelity journey 1/1 (49.3s). Browser checks include actual Quick/Full geometry, nonblank identical canvas paint/title, footprint changes, controls and edit/create continuity. Scoped independent review found map-budget ownership collision and empty-section measurement; reproduced, corrected and affected-boundary re-reviewed clean. Blank-canvas equality false-positive guard was strengthened and re-reviewed. No broad/build/hosted gate.
 
-**Owners and route:** owner `01a14e36-2be8-7700-9efd-6b787998b007`, local, “Implement Fable M1.1 shared geometry and prepared rendering”, completed M1.2 engineering and the user-authorized terminal/preview report to steward `01a0d085-14b6-7882-9994-12c2b6652a2b`, local. Model/High floor preserved. Direct completion/authority reporting remains authorized, including further completion reports per the user's implementation-chat direction. Await practitioner feedback; no routine reassignment or new task.
+**Owners and route:** existing owner `01a14e36-2be8-7700-9efd-6b787998b007`, local, “Implement Fable M1.1 shared geometry and prepared rendering”, owns the22October Quick editor feedback repair through focused verification, affected-boundary review/revisions and updated practitioner preview. Preserve model/High floor. Explicit user authority for further direct completion/preview/decision reporting to steward `01a0d085-14b6-7882-9994-12c2b6652a2b`, local, remains. No new task or per-batch handback.
 
-**Code/evidence:** clean `.worktrees/fable-m1-geometry`, branch `codex/fable-m1-geometry`; M1.2 head `1282657b4c6f9bdcfcd3086e34763dff2d307f7d`, tree `6aea5af19313fc29a06a074444164556d66f2341`, base `07e77cf6066fac184165c0c3dbdee3095d20f6fa`. [E58 checkpoint/checklist](../../../.worktrees/fable-m1-geometry/docs/fable-m1-checkpoint.md) retains exact commands, scope, prior setup corrections, review and preview instructions. Authored hash unchanged. Source preview `http://127.0.0.1:4292/` serves this candidate without a generated build; restarted 19 October as hidden PID55840 after the prior server had stopped. Accepted4283/storage preserved.
+**Code/evidence:** `.worktrees/fable-m1-geometry`, branch `codex/fable-m1-geometry`; clean observed repair starting head `1282657b4c6f9bdcfcd3086e34763dff2d307f7d`, base07e77cf6. [E58 checkpoint/checklist](../../../.worktrees/fable-m1-geometry/docs/fable-m1-checkpoint.md) retains prior175/175/fidelity evidence and review corrections. Preview4292 serves this source worktree; owner must verify current process/port before changing its lifecycle. Prior process IDs are historical, not stop authority. Use isolated automated test storage, preserving user inspection drafts/storage and accepted4283.
 
-**Next and exit:** present the four practitioner checks below at preview4292 and record explicit human acceptance or feedback. Engineering completion does not supply practitioner acceptance. Keep preview available; handle bounded feedback through the same owner with targeted checks/review only where invalidated. No repeated M0/M1.1 gates, broad M1.2 gate, push/merge/deploy, public update, M1.3 or scenario resumption is authorized by the completion report.
+**Next and exit:** reproduce and diagnose the actual Quick editor sizing/overflow transitions, apply a bounded repair without hiding required scrolling or changing destination geometry, and add directly relevant regression coverage. Run nearest owner checks plus a small real-browser stability reproduction; reuse E58 checks unless the correction invalidates them. Scoped review/re-review only of the sizing correction/shared affected boundary, then coherent commit and an updated4292 preview with exact head and affected user recheck. No default175-case/fidelity/full-suite/build/hosted rerun. Human acceptance remains explicit; no push/merge/deploy, unrelated polish or M1.3.
 
 ## 1. Baseline and answer to “do we have a plan?”
 
@@ -197,7 +197,7 @@ The environment register records a package browser test passing from normal Powe
 | Milestone | Outcome | Dependency | Current state |
 | --- | --- | --- | --- |
 | M0 Stable ground | Reliable source, tests, builds and recoverable startup | Technical/practitioner exit satisfied through E49–E54; budgets accepted | Integrated into private main at 0b6c4418; public mirror unchanged [E55] |
-| M1 Fidelity | Authoring and monitor accurately represent their destinations | M1.1 integrated at 07e77cf6 | M1.2 implemented/reviewed at unpushed1282657b; practitioner acceptance pending; M1.3–M1.5 planned [E58] |
+| M1 Fidelity | Authoring and monitor accurately represent their destinations | M1.1 integrated at07e77cf6 | M1.2 Quick editor flicker feedback repair assigned22Oct; practitioner acceptance pending; M1.3–M1.5 planned |
 | M2 Time and story | One visible cursor and reusable cross-page Storylines | M1 geometry/monitor contracts | Designed; additive transition before V7 |
 | M3 Exercise rehearsal | Staff can prepare/run/debrief on actual devices | M1/M2; accepted exercise content | Pending; includes remaining mobile Option 1 |
 | M4 Deployment readiness | Governed, supportable release and real pilot | M3 blockers closed | Pending |
@@ -482,13 +482,15 @@ Read-only preapproval refs on 18 October showed remote main `c003d11174f247acac1
 
 ## 6. M1 — Fidelity
 
-**M1.2 practitioner-acceptance checkpoint, 19 October [E57, E58]:** existing owner `01a14e36-2be8-7700-9efd-6b787998b007` completed the accepted slice from integrated private main07e77cf6 at candidate1282657b. Same worktree/branch, model/High floor and explicitly authorized terminal/decision reporting route remain. Implementation, scoped independent review and affected revisions are complete; actual human acceptance is pending. No M1.2 publication or next-package assignment.
+**M1.2 practitioner-feedback checkpoint, 22 October [E57, E58]:** existing owner `01a14e36-2be8-7700-9efd-6b787998b007` delivered candidate1282657b from integrated private main07e77cf6. The22October Quick editor scrollbar/size flicker report is now an active bounded feedback repair in the same worktree/branch and High effort setting. Actual human acceptance remains pending, including the other checklist items. Direct terminal/preview/decision reporting remains user-authorized. No M1.2 publication or next-package assignment.
 
 **M1.2 acceptance/limits:** render one real destination ChartPanel with identical prepared data/render context/theme at the actual destination CSS dimensions, uniformly scaled only outside; reserve its scaled space. Consume M1.1 effective section-grid width for constrained Build/editor/wizard destinations. Fit/Actual, pixel/percentage captions, immediate footprint changes, stable controls/sticky preview, empty/invalid/loading states, desktop/tablet and honest phone advisory must work in full editor, inspector and wizard. Show on canvas must support pointer and keyboard with Escape/cancel/lost-pointer/unmount cleanup and focus/opacity restoration. Preserve wizard readiness, editability, draft save/discard/resume and current canvas projection. Use directly affected stage/editor/session/wizard/region owner checks and one focused geometry/render fidelity journey with stable controls, canonical/constrained/fractional/wide cases and matching labels/legend/plot output; broaden only for changed dependencies. One scoped independent review, affected revisions and separate external-browser preview/checklist complete the slice. Preserve accepted content/4283/storage. Exclude Audience stream/monitor/presentation resolution, typography sweep, 223 findings, M2/scenarios, schema/data changes and M1.2 publication; no full units/E2E/density/build/Cloudflare/hosted gate by default.
 
 **Purpose:** make the authoring preview represent the saved destination and the monitor represent the actual Audience output. **Dependencies:** M0 fixtures/builds; retain the decision-surface draft projection.
 
 **Carry-forward boundary [E9]:** assess only still-relevant cross-style/rendered-fidelity and Audience gaps. Existing chart, gauge, orbit and decision-surface work is already incorporated; do not reimplement it from historical checkboxes.
+
+**Active practitioner feedback, 22 October:** “the quick editor sometimes flickers in size where the scroll bar keeps appearing and disappearing”. Cause is not yet established. Owner must inspect actual sizing/overflow changes and relevant Fit/Actual/footprint/constrained-width boundaries before choosing a fix, preserve scroll/control access, and return a stable updated preview. This report does not accept other checklist items.
 
 **Practitioner checks at [preview4292](http://127.0.0.1:4292/), candidate1282657b:**
 
@@ -712,7 +714,7 @@ Every additional Claude recommendation is retained here or assigned above. “De
 
 ## 12. Decisions and next implementation boundary
 
-**Current operational boundary, 19 October:** M1.2 engineering/review is complete at clean unpushed1282657b, with focused native owner/browser results and inherited M0/M1.1 evidence. Human acceptance remains outstanding at separate source preview4292. User-authorized direct report received and reconciled; candidate/unchanged authored hash inspected without rerunning checks. Preview restarted after prior process stopped; preserve4283/storage. No integration, M1.3 or full gate follows automatically. [E58]
+**Current operational boundary, 22 October:** human reported intermittent Quick editor size flicker with scrollbar appearing/disappearing. Existing M1.2 owner has complete bounded repair authority from1282657b: reproduce/cause, fix, relevant regression/affected review, coherent commit and updated preview/recheck. Preserve user storage/drafts and accepted4283. Prior E58 checks/reviews remain valid except concretely invalidated behavior. No human acceptance, full-gate rerun, new task, publication or later-package advancement is implied.
 
 The following choices are not needed to finish this planning document, but must be resolved before their dependent work closes:
 
