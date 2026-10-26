@@ -15,6 +15,17 @@ function ChartPreview({
   prepared: suppliedPrepared,
   diagnosticNamespace = chart?.id
 } = {}) {
+  const result = prepareChartPreview({ chart, rows, datasetProfile, geoData, timeContext, renderContext, prepared: suppliedPrepared });
+  if (result.status !== "ready") return React.createElement(PreviewState, {
+    status: result.status,
+    diagnostics: buildPreviewDiagnostics(result.diagnostics, { namespace: diagnosticNamespace }),
+  });
+  return React.createElement("section", { className: "chart-authoring-preview chart-authoring-preview-ready", "aria-label": "Chart preview" }, React.createElement(ChartView, {
+    chart, rows, datasetProfile, geoData, timeContext, renderContext, resolvedRendering: result.resolvedRendering,
+  }));
+}
+
+export function prepareChartPreview({ chart, rows = [], datasetProfile, geoData, timeContext, renderContext, prepared: suppliedPrepared } = {}) {
   let prepared;
   try {
     prepared = suppliedPrepared ?? enforceRenderReadiness({
@@ -28,21 +39,14 @@ function ChartPreview({
         })
       });
   } catch (error) {
-    return /* @__PURE__ */ React.createElement(
-      PreviewState,
-      {
-        status: "invalid",
-        diagnostics: buildPreviewDiagnostics([{
+    return {
+        status: "invalid", diagnostics: [{
           message: error instanceof Error ? error.message : "The preview could not be prepared."
-        }], { namespace: diagnosticNamespace })
-      }
-    );
+        }],
+    };
   }
   if (prepared.status !== "ready") {
-    return /* @__PURE__ */ React.createElement(PreviewState, {
-      status: prepared.status,
-      diagnostics: buildPreviewDiagnostics(prepared.diagnostics, { namespace: diagnosticNamespace })
-    });
+    return { status: prepared.status, diagnostics: prepared.diagnostics, prepared };
   }
   const renderingInput = {
     chart,
@@ -56,21 +60,10 @@ function ChartPreview({
     renderingInput,
     prepared
   );
-  return /* @__PURE__ */ React.createElement("section", { className: "chart-authoring-preview chart-authoring-preview-ready", "aria-label": "Chart preview" }, /* @__PURE__ */ React.createElement(
-    ChartView,
-    {
-      chart,
-      rows,
-      datasetProfile,
-      geoData,
-      timeContext,
-      renderContext,
-      resolvedRendering
-    }
-  ));
+  return { status: "ready", prepared, resolvedRendering };
 }
-function PreviewState({ status, diagnostics }) {
-  const safeStatus = status === "empty" ? "empty" : "invalid";
+export function PreviewState({ status, diagnostics }) {
+  const safeStatus = ["empty", "pending"].includes(status) ? status : "invalid";
   const messages = Array.isArray(diagnostics) ? diagnostics.filter((diagnostic) => diagnostic && typeof diagnostic === "object").slice(0, MAX_DIAGNOSTICS) : [];
   return /* @__PURE__ */ React.createElement(
     "section",
@@ -80,7 +73,7 @@ function PreviewState({ status, diagnostics }) {
       role: "status",
       "aria-live": "polite"
     },
-    /* @__PURE__ */ React.createElement("strong", null, safeStatus === "empty" ? "No chart data to preview" : "Preview needs attention"),
+    /* @__PURE__ */ React.createElement("strong", null, safeStatus === "empty" ? "No chart data to preview" : safeStatus === "pending" ? "Preparing chart preview…" : "Preview needs attention"),
     messages.length > 0 ? /* @__PURE__ */ React.createElement("ul", null, messages.map((diagnostic, index) => /* @__PURE__ */ React.createElement(
       "li",
       {

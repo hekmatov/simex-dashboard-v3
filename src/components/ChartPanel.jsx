@@ -24,6 +24,8 @@ function ChartPanel({
   renderContext: suppliedRenderContext,
   timeContext,
   timeContextAuthority,
+  mapBudgetOwnerId,
+  mapBudgetKind = "dashboard",
   dataSources = {},
   assets = {},
   contentRenderContext = {},
@@ -214,8 +216,8 @@ function ChartPanel({
           canonicalPlotId={canonicalPlotId}
           renderContext={renderContext}
           mapBudgetRequest={chart.presentation?.map?.geoSource ? {
-            ownerId: `dashboard:${chart.id}`,
-            kind: "dashboard",
+            ownerId: mapBudgetOwnerId ?? `dashboard:${chart.id}`,
+            kind: mapBudgetKind,
             visible: chartVisible,
             active: shouldRenderChart,
           } : null}

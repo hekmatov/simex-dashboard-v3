@@ -12,6 +12,7 @@ import { BuildMapBudgetProvider } from "../build/BuildMapBudgetContext.jsx";
 
 export default function DashboardModeWorkspace({
   mode,
+  deviceLayout,
   activePage,
   pageType,
   dashboard,
@@ -114,6 +115,7 @@ export default function DashboardModeWorkspace({
     <div className={buildMode ? "build-mode-shell" : "view-mode-shell"} style={iconLanguageStyles}>
       <CanonicalDashboardFrame
         mode={mode}
+        deviceLayout={deviceLayout}
         pageType={pageType}
         buildStaticAuthoringOpen={buildStaticAuthoringOpen}
         pageId={activePage?.id}

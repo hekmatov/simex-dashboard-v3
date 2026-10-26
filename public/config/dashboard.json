@@ -9,8 +9,8 @@
   "lastUpdated": "2026-09-03",
   "layout": "two-column",
   "globalStyles": {
-    "dashboardStyle": "signal-instrument",
-    "dashboardColorProfile": "utility/monochrome-reserve",
+    "dashboardStyle": "pdpc",
+    "dashboardColorProfile": "pdpc/brand",
     "chartColorMode": "standard",
     "accessibility": {
       "enabled": false

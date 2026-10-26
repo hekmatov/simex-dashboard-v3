@@ -6020,9 +6020,6 @@ button.danger {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.chart-editor-preview {
-  min-height: 240px;
-}
 
 .chart-editor-tab-list {
   display: flex;
@@ -6152,15 +6149,10 @@ button.danger {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
   border-radius: var(--simex-style-panel-radius);
-  min-height: 260px;
   overflow: hidden;
   padding: 10px;
 }
 
-.chart-editor-preview .chart-echarts-host {
-  height: 250px;
-  min-height: 250px;
-}
 
 .chart-editor-contextual-tabs {
   background: var(--simex-surface-panel);
@@ -6207,8 +6199,18 @@ button.danger {
   width: min(210px, calc(100vw - 24px));
 }
 
+.unit-orbit:has(.chart-quick-editor .authoring-stage[data-stage-fit="actual"]) {
+  /* Include the unscaled chart and editor chrome in the intrinsic width.
+     Oversized charts keep their existing scrollable viewport. */
+  max-width: calc(100vw - 24px);
+  width: max-content;
+}
+
 .unit-orbit:has(.chart-quick-editor) .unit-orbit-scroll {
   height: auto;
+  /* Keep Fit's measured width independent of vertical overflow. Otherwise a
+     scrollbar changes preview height and feeds Orbit's height measurement. */
+  scrollbar-gutter: stable;
 }
 
 .unit-orbit .chart-quick-editor .chart-quick-editor-actions {
@@ -6672,4 +6674,69 @@ html[data-simex-eyedropper-active="true"] body * {
   text-align: center;
   top: var(--simex-command-crown-row);
   z-index: 42;
+}
+
+/* Destination-sized authoring: scale the composition, never its inner layout. */
+.authoring-stage.app-frame {
+  background: var(--simex-surface-panel);
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+.authoring-stage__toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+.authoring-stage__toolbar > [role="group"] { display: flex; gap: 4px; }
+.authoring-stage__toolbar button { min-height: var(--simex-control-standard); }
+.authoring-stage__toolbar button[aria-pressed="true"] {
+  background: var(--simex-selected-soft);
+  color: var(--simex-text-strong);
+  outline: 1px solid var(--simex-selected);
+}
+.authoring-stage__caption, .authoring-stage__advisory {
+  color: var(--simex-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin: 0;
+}
+.authoring-stage__viewport { min-width: 0; overflow: auto; overscroll-behavior: contain; }
+.authoring-stage[data-stage-fit="fit"] .authoring-stage__viewport { overflow: hidden; }
+.authoring-stage__space { position: relative; }
+.authoring-stage .authoring-stage__canvas.canonical-dashboard-frame {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  max-width: none;
+  padding: 0;
+  position: absolute;
+  transform-origin: top left;
+}
+.authoring-stage__canvas > .layout-grid { height: 100%; }
+.authoring-stage__canvas .chart-panel { min-height: 0; }
+.authoring-stage__canvas .chart-panel-footprint { grid-column: 1 / -1; }
+.authoring-stage__canvas .chart-authoring-preview { min-width: 0; }
+.authoring-stage__viewport:focus-visible { outline: 2px solid var(--simex-focus); outline-offset: 2px; }
+[data-authoring-reveal="true"] { opacity: 0.15; }
+.chart-editor-preview { position: sticky; top: 0; z-index: 2; }
+.chart-editor-contextual-tabs, .chart-editor-tab-panel { max-inline-size: 720px; }
+.chart-quick-editor .authoring-stage { margin-bottom: 10px; }
+.app-frame .chart-creation-render-proof { align-self: start; position: sticky; top: 0; z-index: 2; }
+.app-frame .canonical-dashboard-frame[data-device-layout="tablet"] { max-width: 1180px; }
+/* A stage always uses its explicit desktop/tablet tracks, including phone previews. */
+.authoring-stage .authoring-stage__canvas .layout-grid {
+  grid-auto-rows: var(--layout-grid-row-height);
+  grid-template-columns: repeat(var(--layout-grid-columns), minmax(0, 1fr));
+}
+.authoring-stage .authoring-stage__canvas .chart-panel-footprint {
+  grid-column: 1 / -1;
+  grid-row: span var(--chart-footprint-row-span);
+  min-height: 0;
+  height: auto;
+  max-height: none;
 }

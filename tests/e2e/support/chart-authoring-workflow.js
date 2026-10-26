@@ -31,9 +31,9 @@ export async function resumeChartAuthoring(page) {
   return chartAuthoringWorkflow(wizard);
 }
 
-export function chartAuthoringWorkflow(wizard) {
+export function chartAuthoringWorkflow(wizard, { mode = "create" } = {}) {
   const navigation = wizard.getByRole("navigation", {
-    name: "Chart creation steps",
+    name: mode === "edit" ? "Chart editing steps" : "Chart creation steps",
   });
   const stageButton = (stage) => navigation.locator(`[id="chart-stage-${stageId(stage)}"]`);
   const goToStage = async (stage) => {
