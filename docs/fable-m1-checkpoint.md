@@ -1,6 +1,16 @@
 # Fable M1 checkpoint
 
-## Current — M1.2 practitioner feedback, 22 October 2026
+## Current — M1.2 Actual-width feedback, 26 October 2026
+
+User requested that switching Quick edit to Actual widen the panel to show the entire chart. Bounded change from clean **169e308af7d8884801dfa1bc19924a64f2676e4d**, same worktree/branch/model effort. Actual now uses the chart's intrinsic width plus existing editor chrome; the existing UnitOrbit observer repositions it. Width remains capped at the window minus24px; existing overflow handles oversized charts. Fit returns to the compact210px panel. The stable scrollbar gutter remains. This is Quick-only CSS; stage rendering, destination geometry and draft/transaction owners are unchanged.
+
+Evidence: the revised regression was RED on169e308a, with232.5px of the Actual chart outside the visible viewport. Isolated source preflight then measured a371.5px chart in a372px preview,442.5px overall panel, positioned within the window; screenshot visually checked. Final focused native-scrollbar Chromium regression **1/1 passed,17.4s command/16.7s test**, `pnpm.cmd exec playwright test --config=node_modules/m12-stability.config.mjs`. It covers standard and wide/half-height charts, full Actual width at scale1, compact Fit restoration, consecutive stable layouts in both modes, window bounds, constrained height, scrolling and control reachability. Scoped affected-boundary review clean. The browser case does not force a chart wider than the window cap; cap/overflow rules remain in place. Updated the fidelity journey's obsolete Quick-Actual horizontal-scrolling assertion; its unrelated paint/save/resume/create paths were not rerun. Reuse their existing E58 evidence and the unaffected8 Quick owner checks below; no broad gate. Authored SHA256 unchanged; diff check clean.
+
+Preview remains **http://127.0.0.1:4292/**, source from the commit containing this entry (terminal handover supplies exact head). Verified active Vite PID **1188**, exec session81797; no restart, browser reset, storage/draft changes or4283 changes. Keep available through feedback. After confirming process identity, stop only this preview with `Stop-Process -Id 1188`; restart from this worktree with `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4292 --strictPort`.
+
+Affected recheck: open Quick → Actual and check that the complete chart width is visible; change the footprint, then switch Fit and confirm compact width returns without flicker. Practitioner acceptance of this change and outstanding M1.2 items remains pending. No push/merge/deploy or later package advancement. Prior evidence follows.
+
+## M1.2 scrollbar feedback retained evidence — 22 October 2026
 
 Bounded repair from clean **1282657b4c6f9bdcfcd3086e34763dff2d307f7d**, same owner/worktree/branch and High effort floor. Practitioner reported intermittent Quick editor size/scrollbar flicker; acceptance of M1.2 and other checklist items remains pending. Candidate is the coherent commit containing this entry, resolved with `git log -1 --format=%H -- docs/fable-m1-checkpoint.md`; terminal handover records its exact head. No push/merge/deploy, later package, authored-content or storage changes.
 

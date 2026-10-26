@@ -10,7 +10,7 @@ test.use({
   launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] },
 });
 
-test("Quick editor retains its usable width and settles across scrollbar transitions", async ({ page, request }) => {
+test("Quick editor expands Actual to the chart width and keeps Fit stable across scrollbar transitions", async ({ page, request }) => {
   test.setTimeout(90_000);
   const response = await request.get("/config/dashboard.json");
   expect(createHash("sha256").update(await response.body()).digest("hex"))
@@ -39,16 +39,10 @@ test("Quick editor retains its usable width and settles across scrollbar transit
 
   await stage.getByRole("button", { name: "Actual", exact: true }).click();
   await expect(stage).toHaveAttribute("data-stage-scale", "1");
-  await expect.poll(() => scroller.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
-  await expect.poll(() => scroller.evaluate(el => el.clientWidth)).toBe(fitWidth);
-  expect(await scroller.evaluate(el => { el.scrollTop = el.scrollHeight; return el.scrollTop; })).toBeGreaterThan(0);
-  await quick.locator("#chart-footprint-row-height").scrollIntoViewIfNeeded();
-  await expect(quick.locator("#chart-footprint-row-height")).toBeVisible();
-  await stage.getByRole("button", { name: "Actual", exact: true }).scrollIntoViewIfNeeded();
-  expect(await stage.locator(".authoring-stage__viewport").evaluate(el => {
-    el.scrollLeft = el.scrollWidth;
-    return el.scrollLeft;
-  })).toBeGreaterThan(0);
+  await actualFits(stage);
+  expect(await scroller.evaluate(el => el.clientWidth)).toBeGreaterThan(fitWidth);
+  await sameGeometry(stage, destination);
+  await stableSizing(stage);
 
   await stage.getByRole("button", { name: "Fit", exact: true }).click();
   await expect.poll(() => scroller.evaluate(el => el.clientWidth)).toBe(fitWidth);
@@ -59,15 +53,38 @@ test("Quick editor retains its usable width and settles across scrollbar transit
   await expect(stage).toHaveAttribute("data-stage-height", "201");
   await sameGeometry(stage, destination);
   await stableSizing(stage);
+  await stage.getByRole("button", { name: "Actual", exact: true }).click();
+  await actualFits(stage);
+  await sameGeometry(stage, destination);
+  await stableSizing(stage);
 
   // Constrain height without changing the width of the destination canvas.
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect.poll(() => scroller.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
-  await expect.poll(() => scroller.evaluate(el => el.clientWidth)).toBe(fitWidth);
+  await actualFits(stage);
   await stableSizing(stage);
   expect(await scroller.evaluate(el => { el.scrollTop = el.scrollHeight; return el.scrollTop; })).toBeGreaterThan(0);
+  await quick.locator("#chart-footprint-row-height").scrollIntoViewIfNeeded();
+  await expect(quick.locator("#chart-footprint-row-height")).toBeVisible();
+  await stage.getByRole("button", { name: "Fit", exact: true }).click();
+  await expect.poll(() => scroller.evaluate(el => el.clientWidth)).toBe(fitWidth);
+  await stableSizing(stage);
   await expect(quick).toHaveAttribute("data-chart-edit-dirty", "true");
 });
+
+async function actualFits(stage) {
+  await expect.poll(() => stage.evaluate(el => {
+    if (el.dataset.stageFit === "actual") return Math.abs(1 - Number(el.dataset.stageScale));
+    const viewport = el.querySelector(".authoring-stage__viewport");
+    return Number(el.dataset.stageWidth) - viewport.clientWidth;
+  })).toBeLessThanOrEqual(1);
+  expect(await stage.locator(".authoring-stage__viewport").evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+  const orbit = stage.page().locator(".unit-orbit");
+  await expect.poll(() => orbit.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    return Math.max(12 - box.left, box.right - (window.innerWidth - 12));
+  })).toBeLessThanOrEqual(1);
+}
 
 async function sameGeometry(stage, destination) {
   await expect.poll(async () => {

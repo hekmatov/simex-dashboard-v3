@@ -33,7 +33,7 @@ test("authoring stage preserves destination geometry, rendered output and draft 
   await stage.getByRole("button", { name: "Actual", exact: true }).click();
   await expect(stage).toHaveAttribute("data-stage-scale", "1");
   const actualViewport = stage.locator(".authoring-stage__viewport");
-  expect(await actualViewport.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect.poll(() => actualViewport.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
   await samePaint(stage, destination);
 
   await quick.locator("#chart-footprint-width").selectOption("4");

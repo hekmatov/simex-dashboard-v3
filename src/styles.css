@@ -6199,6 +6199,13 @@ button.danger {
   width: min(210px, calc(100vw - 24px));
 }
 
+.unit-orbit:has(.chart-quick-editor .authoring-stage[data-stage-fit="actual"]) {
+  /* Include the unscaled chart and editor chrome in the intrinsic width.
+     Oversized charts keep their existing scrollable viewport. */
+  max-width: calc(100vw - 24px);
+  width: max-content;
+}
+
 .unit-orbit:has(.chart-quick-editor) .unit-orbit-scroll {
   height: auto;
   /* Keep Fit's measured width independent of vertical overflow. Otherwise a
