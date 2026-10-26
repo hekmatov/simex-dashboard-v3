@@ -14,7 +14,7 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   test.setTimeout(90_000);
   const response = await request.get("/config/dashboard.json");
   expect(createHash("sha256").update(await response.body()).digest("hex"))
-    .toBe("bb6aafbb382a8013d6c66d54e434f847409a65ca8ec04b1d97b16226af3bda07");
+    .toBe("a6092faf3463389fea17934c005f74802c9c843abcecfb31272221a2fea11f2f");
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const scrollbarWidth = await page.evaluate(() => {
     const probe = document.createElement("div");

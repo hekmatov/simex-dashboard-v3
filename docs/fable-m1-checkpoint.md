@@ -1,6 +1,18 @@
 # Fable M1 checkpoint
 
-## Current — M1.2 Actual-width feedback, 26 October 2026
+## Current — M1.2 accepted; PDPC shipped theme ready, 26 October 2026
+
+Human acceptance: after accepting Actual-width at **b5d93db59f50bb6097390c79f523212434491450**, the user explicitly said **"remaining practitioner checks passed"**. This closes the remaining M1.2 checklist (Quick stability/scrollability, Full editor usability, accessible Show on canvas, edit draft continuity and chart creation continuity). No acceptance-only report was sent; this record accompanies completion of the already authorized next bounded job.
+
+Conditional theme instruction is now applied to shipped `public/config/dashboard.json`, through existing saved-theme keys only: `globalStyles.dashboardStyle`: `signal-instrument` → **`pdpc`**; `globalStyles.dashboardColorProfile`: `utility/monochrome-reserve` → **`pdpc/brand`**. Exact deep comparison with b5d93db5 proves these are the only configuration changes. `chartColorMode: standard`, all chart settings/identities, source data bytes/profiles, HeV-A26 content, descriptions/timestamps and time groups remain unchanged. No pending bundle. Dashboard SHA256 changes from `bb6aafbb382a8013d6c66d54e434f847409a65ca8ec04b1d97b16226af3bda07` to **`a6092faf3463389fea17934c005f74802c9c843abcecfb31272221a2fea11f2f`**; same38 charts/15 types,38 sources and2 time groups. Updated the shipped-theme expectation and three exact source-identity preflights; no runtime/default resolver or theme implementation change.
+
+Focused verification: `node --test tests/dashboardTheme.test.js tests/pdpcTheme.test.js` **13/13 passed,4.69s**, including saved boundary normalization, PDPC palette/font and presentation projection. Mechanical projection/diff review confirms only the authorized two content keys; no independent review ceremony for this configuration-only change. Small isolated source-browser comparison passed for old/new themes, Quick Actual and Full Configure; no page errors. New PDPC Avenir font and green accent `#258161` confirmed. Both before/after: actual chart **371.5×418**, preview372px wide at scale1, Quick panel442.5×684 at the same placement. Screenshots visually checked; no material geometry/readability regression found beyond the expressly selected typography/paint. Reuse accepted M1.2 and prior focused evidence; no broad/full-hosted/build reruns.
+
+Separate PDPC preview **http://127.0.0.1:4293/** opened externally and verified HTTP200, serving the commit containing this entry; terminal handover supplies exact head. Vite PID **17380**, exec session80163. Existing4292, accepted4283 and all browser storage/user drafts preserved. Keep available through feedback. Confirm PID identity before `Stop-Process -Id 17380`; restart from this worktree with `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4293 --strictPort`.
+
+Publication remains with steward `01a0d085-14b6-7882-9994-12c2b6652a2b`: inspect current ancestry/triggers/public-content boundary, push prepared work, integrate private origin/main, then forward integrated result to public/main under the user's conditional approval. No worker push/merge/mirror/deployment/settings action. Send one completion handover for this finished job; M1.3 remains outside scope. Prior evidence follows.
+
+## M1.2 Actual-width feedback retained evidence — 26 October 2026
 
 User requested that switching Quick edit to Actual widen the panel to show the entire chart. Bounded change from clean **169e308af7d8884801dfa1bc19924a64f2676e4d**, same worktree/branch/model effort. Actual now uses the chart's intrinsic width plus existing editor chrome; the existing UnitOrbit observer repositions it. Width remains capped at the window minus24px; existing overflow handles oversized charts. Fit returns to the compact210px panel. The stable scrollbar gutter remains. This is Quick-only CSS; stage rendering, destination geometry and draft/transaction owners are unchanged.
 

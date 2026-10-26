@@ -158,13 +158,13 @@ test("new, missing, and obsolete theme state resolves to Ledger with Steel witho
       dashboardColorProfile: shipped.globalStyles.dashboardColorProfile,
     },
     {
-      dashboardStyle: "signal-instrument",
-      dashboardColorProfile: "utility/monochrome-reserve",
+      dashboardStyle: "pdpc",
+      dashboardColorProfile: "pdpc/brand",
     },
   );
   const authored = normalizeDashboardBoundary(shipped);
-  assert.equal(authored.globalStyles.dashboardStyle, "signal-instrument");
-  assert.equal(authored.globalStyles.dashboardColorProfile, "utility/monochrome-reserve");
+  assert.equal(authored.globalStyles.dashboardStyle, "pdpc");
+  assert.equal(authored.globalStyles.dashboardColorProfile, "pdpc/brand");
   assert.equal(authored.globalStyles.chartColorMode, "standard");
 
   const substantive = structuredClone({

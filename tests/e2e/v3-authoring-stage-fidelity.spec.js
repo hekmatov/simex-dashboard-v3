@@ -9,7 +9,7 @@ test("authoring stage preserves destination geometry, rendered output and draft 
   // Source/destination/control preflight before the representative journey.
   const config = await request.get("/config/dashboard.json");
   const bytes = await config.body();
-  expect(createHash("sha256").update(bytes).digest("hex")).toBe("bb6aafbb382a8013d6c66d54e434f847409a65ca8ec04b1d97b16226af3bda07");
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe("a6092faf3463389fea17934c005f74802c9c843abcecfb31272221a2fea11f2f");
   const dashboard = JSON.parse(bytes);
   const sourceChart = dashboard.pages.find(p => p.id === "biomedical").sections.find(s => s.id === "outbreak_dynamics").panels.find(c => c.id === "bio_r_values");
   expect(sourceChart.roles.measurements[0].field).toBe("R_value");
