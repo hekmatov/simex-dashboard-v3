@@ -1041,6 +1041,7 @@ export default function ChartWizardV3({
           next,
           getChartSchema(next.draft.typeId),
           nextUi.manualColumns,
+          nextUi.manualTable?.rows ?? [],
         );
       }
       await csvDraftLifecycle.adoptPending("chart-csv-source-changed");
@@ -1225,6 +1226,7 @@ export default function ChartWizardV3({
           next,
           getChartSchema(next.draft.typeId),
           pendingSourceUi.manualColumns,
+          pendingSourceUi.manualTable?.rows ?? [],
         );
       }
       setWizard(next);
@@ -2670,12 +2672,16 @@ function legacyPlacementProof(destination, footprint) {
   };
 }
 
-function assignManualRoles(state, schema, columns) {
+export function assignManualRoles(state, schema, columns, rows = []) {
   let next = state;
   for (const role of schema.roles) {
     const matches = columns.filter(({ roleId }) => roleId === role.id);
     if (matches.length === 0) continue;
-    const bindings = matches.map(({ fieldId, expectedType }) => ({
+    const bindings = matches.filter(({ fieldId }) => role.min > 0 || rows.some((row) => {
+      const value = row?.[fieldId];
+      return value !== null && value !== undefined
+        && !(typeof value === "string" && value.trim() === "");
+    })).map(({ fieldId, expectedType }) => ({
       field: fieldId,
       ...(expectedType === "temporal"
         ? { interpretation: "temporal" }
@@ -2684,7 +2690,8 @@ function assignManualRoles(state, schema, columns) {
     next = reduceWizardState(next, {
       type: "updateRole",
       roleId: role.id,
-      value: role.max === null || role.max > 1 ? bindings : bindings[0],
+      value: bindings.length === 0 ? undefined
+        : role.max === null || role.max > 1 ? bindings : bindings[0],
     });
   }
   return next;

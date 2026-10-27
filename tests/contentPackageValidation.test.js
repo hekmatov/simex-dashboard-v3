@@ -76,7 +76,7 @@ test("package validation rejects forged manifest and media-item dimensions", () 
   );
 });
 
-test("package validation requires logical records for builder-managed sources and CSV-only profiles", () => {
+test("package validation requires logical records for builder-managed sources and tabular profiles", () => {
   const missingEntry = completePackage();
   delete missingEntry.config.contentLibrary.sourceEntries.boundaries;
   assert.throws(
@@ -90,6 +90,21 @@ test("package validation requires logical records for builder-managed sources an
     () => validateContentPackage(geoJsonProfile),
     /profile.*boundaries|boundaries.*profile/i,
   );
+
+  for (const [sourceId, source] of [
+    ["missing-source", undefined],
+    ["notes", { kind: "staticText", qmd: "Notes" }],
+    ["other-dataset", { kind: "dataset", type: "other" }],
+  ]) {
+    const input = completePackage();
+    if (source) input.config.dataSources[sourceId] = source;
+    input.config.datasetProfiles = { [sourceId]: { columns: [] } };
+    assert.throws(() => validateContentPackage(input), /must belong to a CSV or inline source/);
+  }
+
+  const missingCsvPayload = completePackage();
+  delete missingCsvPayload.config.dataSources.cases.csvText;
+  assert.throws(() => validateContentPackage(missingCsvPayload), /CSV source.*missing its package payload/);
 });
 
 test("package validation derives only the canonical lean GeoJSON facts and keeps unknown QMD media inert", () => {

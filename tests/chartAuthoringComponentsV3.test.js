@@ -15,6 +15,8 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { createManualDataTemplate, validateManualData } from "../src/charting/forms/manualData.js";
+import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
 import { validateChronoGroups } from "../src/charting/time/chronoGroupModel.js";
 import {
   createWizardState,
@@ -139,6 +141,7 @@ const chartWizardModule = await import(
 );
 const {
   default: ChartWizardV3,
+  assignManualRoles,
   applyWizardMembership,
   buildChartEditPlacementMove,
   buildChartWizardEditCommitPayload,
@@ -2343,6 +2346,55 @@ test("local CSV upload rejects oversized files before reading them", async () =>
     /too large|maximum/i,
   );
   assert.equal(read, false);
+});
+
+test("manual role assignment omits empty optional fields and clears their previous bindings", () => {
+  for (const typeId of ["kpi", "gauge"]) {
+    const schema = getChartSchema(typeId);
+    const table = createManualDataTemplate(schema);
+    table.rows = [
+      { value: "125", target: "", entity: "Hospital", label: "A", time: "" },
+      { value: "140", target: "   ", entity: "gh", label: "", time: "" },
+    ];
+    const initial = createWizardState({ draft: createChartDraft(typeId, {
+      title: "TEEEST2", sourceId: "inline-test",
+      roles: { time: { field: "time", interpretation: "temporal" }, target: { field: "target" } },
+    }) });
+    const before = structuredClone(initial);
+    const assigned = assignManualRoles(initial, schema, table.columns, table.rows);
+    assert.equal(assigned.draft.roles.time, undefined);
+    assert.equal(assigned.draft.roles.target, undefined);
+    assert.deepEqual(assigned.draft.roles.value, { field: "value" });
+    assert.deepEqual(assigned.draft.roles.label, { field: "label" });
+    assert.equal(validateManualData(schema, table).valid, true);
+    const profile = profileDataset(table.rows);
+    assert.doesNotThrow(() => validateChartInstance(assigned.draft, {
+      columnTypes: new Map(profile.columns.map((column) => [column.name, column])),
+    }));
+    assert.deepEqual(initial, before);
+  }
+});
+
+test("manual role assignment retains supplied optional values and required empty bindings", () => {
+  const schema = getChartSchema("kpi");
+  const table = createManualDataTemplate(schema);
+  const state = createWizardState({ draft: createChartDraft("kpi", { title: "Optional values", sourceId: "inline-test" }) });
+  for (const row of [
+    { value: "12", target: 0, label: false, time: "2026-10-27" },
+    { value: "12", target: "invalid", time: "not a date" },
+  ]) {
+    const assigned = assignManualRoles(state, schema, table.columns, [row]);
+    assert.deepEqual(assigned.draft.roles.target, { field: "target" });
+    assert.deepEqual(assigned.draft.roles.time, { field: "time", interpretation: "temporal" });
+    if (row.label === false) assert.deepEqual(assigned.draft.roles.label, { field: "label" });
+    if (row.target === "invalid") assert.equal(validateManualData(schema, { ...table, rows: [row] }).valid, false);
+  }
+  const bulletSchema = getChartSchema("bullet");
+  const bullet = createManualDataTemplate(bulletSchema);
+  const assigned = assignManualRoles(createWizardState({ draft: createChartDraft("bullet") }), bulletSchema, bullet.columns, bullet.rows);
+  assert.deepEqual(assigned.draft.roles.target, { field: "target" });
+  assert.deepEqual(assigned.draft.roles.actual, { field: "actual" });
+  assert.equal(validateManualData(bulletSchema, bullet).valid, false);
 });
 
 test("manual entry is offered only when the selected schema permits concise inline data", () => {

@@ -82,9 +82,10 @@ function validateManagedSources(config) {
   }
   for (const sourceId of Object.keys(profiles)) {
     const source = dataSources[sourceId];
-    const csv = source?.kind === "csv"
+    // Runtime profiling covers both CSV datasets and manually authored rows.
+    const tabular = source?.kind === "inline" || source?.kind === "csv"
       || (source?.kind === "dataset" && source.type === "uploadedCsv");
-    if (!csv) throw new Error(`Dataset profile "${sourceId}" must belong to a CSV source.`);
+    if (!tabular) throw new Error(`Dataset profile "${sourceId}" must belong to a CSV or inline source.`);
   }
 }
 

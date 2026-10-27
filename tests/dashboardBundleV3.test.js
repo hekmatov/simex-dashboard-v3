@@ -20,6 +20,25 @@ import {
   sha256HexSync,
 } from "../src/static-content/assets/assetPayloadEnvelope.js";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+
+test("already-authored manual chart profiles survive package export and import", () => {
+  const dashboard = version3Dashboard();
+  const sourceId = "inline-chart-kpi-78ea1d4a-4198-4e20-9927-2b77fe7d6052";
+  const source = structuredClone(dashboard.dataSources["manual-status"]);
+  dashboard.dataSources[sourceId] = source;
+  dashboard.datasetProfiles = { [sourceId]: profileDataset(source.rows, source.parsingMetadata) };
+  dashboard.pages[0].sections[0].panels.push(kpiChart({ sourceId }));
+  const before = structuredClone(dashboard);
+
+  const bundle = serializeDashboardBundle(dashboard);
+  const imported = parseDashboardBundle(JSON.stringify(bundle));
+  assert.deepEqual(imported.dataSources[sourceId], source);
+  assert.deepEqual(imported.datasetProfiles[sourceId], dashboard.datasetProfiles[sourceId]);
+  assert.deepEqual(imported.pages[0].sections[0].panels[1], normalizeChartInstance(kpiChart({ sourceId })));
+  assert.deepEqual(readDashboardStorage({ getItem: () => JSON.stringify(imported) }, "isolated-dashboard"), imported);
+  assert.deepEqual(dashboard, before);
+});
 
 function lineChart(overrides = {}) {
   return {
