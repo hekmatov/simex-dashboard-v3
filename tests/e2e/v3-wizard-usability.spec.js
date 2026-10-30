@@ -1,6 +1,147 @@
 import { expect, test } from "@playwright/test";
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { choosePanelAction } from "./support/buildWorkflow.js";
+
+const ISSUE_CONTROLS = "V3 #11 #16 #19 #28 #29 existing controls remain editable and persistent";
+const ISSUE_STORAGE = "simex-dashboard-config-v3-three-mode-v1";
+
+test(`${ISSUE_CONTROLS}: gauge range typing`, async ({ page }) => {
+  test.setTimeout(90_000);
+  const flow = await openWizard(page);
+  await flow.selectExistingSource("cases WCPH eldoria");
+  await flow.chooseChartType("gauge", /^Gauge\./);
+  await flow.goToDataSource();
+  await flow.wizard.locator('[data-icon-control="wizard.enter-data-manually"]').click();
+  await flow.wizard.getByLabel("Value row 1", { exact: true }).fill("72");
+  await flow.goToConfigure();
+  const ranges = flow.wizard.getByLabel("Status-band upper limits");
+  await ranges.fill("");
+  let typed = "";
+  for (const character of "50, 80, 100") {
+    typed += character;
+    await ranges.pressSequentially(character);
+    await expect(ranges).toHaveValue(typed);
+  }
+  await ranges.press("Backspace");
+  await expect(ranges).toHaveValue("50, 80, 10");
+  await ranges.pressSequentially("0");
+  await flow.createChart("Incremental ranges proof");
+  const saved = await issueSavedChart(page, "Incremental ranges proof");
+  expect(saved.presentation.targets.ranges).toEqual([50, 80, 100]);
+  const editor = await issueOpenEditor(page, saved.id);
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  await expect(editor.getByLabel("Status-band upper limits")).toHaveValue("50, 80, 100");
+});
+
+test(`${ISSUE_CONTROLS}: category labels and ordinary axis bounds`, async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1117, height: 766 });
+  const flow = await issueBarFlow(page);
+  await flow.goToConfigure();
+  const x = flow.wizard.getByRole("group", { name: "X axis", exact: true });
+  await x.getByLabel("Tick label font size", { exact: true }).fill("10");
+  await x.getByLabel("Wrap long labels", { exact: true }).check();
+  await x.getByLabel("Wrapped label width (× tick-label font size)").fill("4");
+  const primary = flow.wizard.getByRole("group", { name: "Primary axis", exact: true });
+  await primary.getByLabel("Maximum", { exact: true }).fill("100");
+  await primary.getByLabel("Minimum", { exact: true }).fill("40");
+  await expect(primary.getByLabel("Maximum", { exact: true })).toHaveValue("100");
+  await flow.createChart("Axis controls proof");
+  const saved = await issueSavedChart(page, "Axis controls proof");
+  expect(saved.presentation.axes.x).toMatchObject({ labelWrap: true, labelFontSize: 10, labelMaxWidthEm: 4 });
+  expect(saved.presentation.axes.primary).toMatchObject({ min: 40, max: 100 });
+  const panel = page.locator(`[data-canonical-panel-id="${saved.id}"]`);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator("canvas").first()).toBeVisible();
+  const option = await issueRenderedAxis(panel);
+  expect(option).toMatchObject({ minimum: 40, maximum: 100, wrap: "break", width: 40, clip: true });
+  const editor = await issueOpenEditor(page, saved.id);
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  const reset = editor.getByRole("group", { name: "Primary axis", exact: true });
+  await reset.getByLabel("Minimum", { exact: true }).fill("");
+  await reset.getByLabel("Maximum", { exact: true }).fill("");
+  await editor.locator('[data-icon-control="editor.save-changes"]').click();
+  await expect(editor).toHaveCount(0);
+  expect((await issueSavedChart(page, "Axis controls proof")).presentation.axes.primary?.min).toBeUndefined();
+});
+
+test(`${ISSUE_CONTROLS}: categorical filter source suggestions`, async ({ page }) => {
+  test.setTimeout(90_000);
+  const flow = await issueBarFlow(page, "category,value\nNorth,50\nSouth,60\nEast,70\n");
+  await flow.goToMapAndPrepare();
+  await flow.wizard.locator('[data-field-id="filters"] [data-icon-control="editor.add-filter"]').click();
+  await flow.wizard.getByRole("combobox", { name: "Filter column", exact: true }).selectOption("category");
+  const values = flow.wizard.locator('[data-field-id="filters"] datalist option');
+  await expect(values).toHaveCount(3);
+  expect(await values.evaluateAll(nodes => nodes.map(n => n.value))).toEqual(["North", "South", "East"]);
+  await flow.wizard.getByRole("combobox", { name: "Filter column", exact: true }).selectOption("value");
+  await expect(values).toHaveCount(0);
+  await flow.wizard.getByRole("combobox", { name: "Filter column", exact: true }).selectOption("category");
+  await expect(values).toHaveCount(3);
+  await flow.wizard.getByLabel("Value", { exact: true }).fill("North");
+  await flow.uploadCsv({ name: "replacement.csv", mimeType: "text/csv", buffer: Buffer.from("category,value\nWest,70\nCentral,80\nWest,90\n") });
+  await flow.goToMapAndPrepare();
+  await expect(flow.wizard.getByLabel("Value", { exact: true })).toHaveValue("North");
+  expect(await values.evaluateAll(nodes => nodes.map(n => n.value))).toEqual(["West", "Central"]);
+});
+
+test(`${ISSUE_CONTROLS}: palette reachability and keyboard dismissal`, async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1117, height: 766 });
+  const flow = await issueBarFlow(page);
+  await flow.goToConfigure();
+  await flow.wizard.locator('[data-icon-control="editor.add-color"]').click();
+  const toggle = flow.wizard.getByRole("button", { name: "Open Color 1 color options", exact: true });
+  await toggle.click();
+  const palette = flow.wizard.getByRole("dialog", { name: "Color 1 color options", exact: true });
+  await palette.getByRole("tab", { name: "Gradients", exact: true }).click();
+  const last = palette.getByRole("button").last();
+  await last.scrollIntoViewIfNeeded();
+  await expect(last).toBeInViewport();
+  await last.click();
+  await expect(flow.wizard.getByLabel("Color 1", { exact: true })).toHaveValue("#36BDEB");
+  await last.focus();
+  await last.press("Escape");
+  await expect(palette).toHaveCount(0);
+  await expect(toggle).toBeFocused();
+});
+
+async function issueBarFlow(page, csv = "category,value\nA long category about hospital readiness,20\nA long category about infection prevention,50\nA long category about clinical staffing,60\nA long category about medical supplies,70\nA long category about community response,80\nA long category about coordination,90\n") {
+  await page.addInitScript(() => performance.setResourceTimingBufferSize(5000));
+  page.setDefaultTimeout(15_000);
+  const flow = await openWizard(page);
+  await flow.uploadCsv({ name: "issue-controls.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await flow.chooseChartType(null, /^Bar\./);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("measurements", "value");
+  await flow.selectRole("observation", "category");
+  return flow;
+}
+
+async function issueSavedChart(page, title) {
+  return page.evaluate(({ key, title }) => JSON.parse(localStorage.getItem(key)).pages.flatMap(p => p.sections).flatMap(s => s.panels).map(p => p.chart ?? p).find(c => c.title === title), { key: ISSUE_STORAGE, title });
+}
+
+async function issueOpenEditor(page, chartId) {
+  const panel = page.locator(`[data-canonical-panel-id="${chartId}"]`);
+  await panel.scrollIntoViewIfNeeded();
+  await panel.hover();
+  await choosePanelAction(page, await panel.getAttribute("data-canonical-placement-id"), "edit");
+  await page.locator(".chart-quick-editor").getByRole("button", { name: "Open full editor", exact: true }).click();
+  return page.getByRole("dialog", { name: "Edit chart", exact: true });
+}
+
+async function issueRenderedAxis(panel) {
+  return panel.evaluate(async node => {
+    const url = performance.getEntriesByType("resource").find(r => /\/deps\/echarts\.js\?/.test(r.name))?.name;
+    if (!url) throw new Error("The rendered chart's ECharts module was not loaded.");
+    const { getInstanceByDom } = await import(url);
+    const instance = getInstanceByDom(node.querySelector(".chart-echarts-host"));
+    const option = instance.getOption();
+    return { minimum: option.yAxis[0].min, maximum: option.yAxis[0].max, wrap: option.xAxis[0].axisLabel.overflow, width: option.xAxis[0].axisLabel.width, clip: instance.getModel().getSeriesByIndex(0).get("clip") };
+  });
+}
 
 test("chart-panel tooltips escape clipping and use selected-style paint", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });

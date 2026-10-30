@@ -67,6 +67,25 @@ test("V3 #24 lower-is-favorable gauge status agrees with automatic colors", () =
     }
   }
 });
+
+test("V3 #16 #29 category wrapping and independent value limits retain source data", () => {
+  const marks = [
+    { x: "A long category", value: 20, measure: "a", axis: "primary" },
+    { x: "Another long category", value: 90, measure: "a", axis: "primary" },
+    { x: "A long category", value: -30, measure: "b", axis: "secondary" },
+  ];
+  const model = buildRenderModel({ chart: chart("bar", { presentation: { axes: {
+    x: { labelFontSize: 10, labelWrap: true, labelMaxWidthEm: 4 },
+    primary: { min: 40, max: 100 }, secondary: { min: -20, max: 20 },
+  } } }), prepared: ready(marks) });
+  assert.deepEqual(model.option.yAxis.map(({ min, max }) => [min, max]), [[40, 100], [-20, 20]]);
+  assert.equal(model.option.xAxis.axisLabel.width, 40);
+  assert.equal(model.option.xAxis.axisLabel.overflow, "break");
+  assert.deepEqual(model.option.series.map(s => s.data), [[20, 90], [-30, null]]);
+  const reset = buildRenderModel({ chart: chart("bar"), prepared: ready(marks) });
+  assert.equal(reset.option.yAxis[0].min, undefined);
+  assert.equal(reset.option.yAxis[1].max, undefined);
+});
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
 

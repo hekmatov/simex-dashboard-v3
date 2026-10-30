@@ -68,6 +68,7 @@ function ColorField({
       if (event.key !== "Escape" || event.defaultPrevented) return;
       event.preventDefault();
       setPaletteOpen(false);
+      colorFieldRef.current?.querySelector(".settings-color-swatch")?.focus({ preventScroll: true });
     }
     document.addEventListener("pointerdown", closeOnOutsidePointer);
     document.addEventListener("keydown", closeOnEscape);
