@@ -3,6 +3,32 @@ import test from "node:test";
 
 import { STATIC_CONTENT_STAGE_LABELS, STATIC_CONTENT_STAGES, createStaticContentDraft, finalizeStaticContentDraft, isStaticContentDraftDirty, projectStaticContentDraftOwner, reduceStaticContentDraft, staticContentStageReadiness } from "../src/static-content/forms/staticContentDraft.js";
 
+test("V3 #25 image-to-text drafts normalize supported interactions", () => {
+  for (const resumed of [false, true]) {
+    let draft = createStaticContentDraft({
+      contentTypeId: "image", stage: "content-type",
+      destination: { pageId: "overview", sectionId: "response" },
+      ...(resumed ? { panel: { ...panel(), interaction: { zoom: { enabled: true }, timeSync: null } } } : {}),
+    });
+    const saved = structuredClone(draft);
+    assert.equal(draft.panel.interaction.zoom.enabled, true);
+    draft = reduceStaticContentDraft(draft, { type: "setContentType", contentTypeId: "freeText" });
+    assert.equal(draft.panel.interaction.zoom.enabled, false);
+    assert.equal(draft.panel.id, saved.panel.id);
+    assert.deepEqual(draft.panel.layout, saved.panel.layout);
+    draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "content" });
+    draft = reduceStaticContentDraft(draft, { type: "setPanel", updates: { title: "Text after image" } });
+    draft = reduceStaticContentDraft(draft, { type: "updateSource", updates: { qmd: "Authored text" } });
+    draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
+    assert.equal(finalizeStaticContentDraft(draft).panel.interaction.zoom.enabled, false);
+    const reset = reduceStaticContentDraft(draft, { type: "reset" });
+    assert.deepEqual(reset.panel, saved.panel);
+    draft = reduceStaticContentDraft(draft, { type: "previous" });
+    draft = reduceStaticContentDraft(draft, { type: "setContentType", contentTypeId: "image" });
+    assert.equal(draft.panel.interaction.zoom.enabled, true);
+  }
+});
+
 test("static authoring retains the exact four-stage workflow", () => {
   assert.deepEqual(STATIC_CONTENT_STAGES, ["destination", "content-type", "content", "preview-and-add"]);
   assert.deepEqual(STATIC_CONTENT_STAGE_LABELS, ["Destination", "Content type", "Content", "Preview & add"]);

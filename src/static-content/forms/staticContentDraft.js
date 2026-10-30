@@ -135,7 +135,13 @@ export function reduceStaticContentDraft(state, action = {}) {
       const contentTypeId = normalizeTypeId(action.contentTypeId);
       if (!contentTypeId) throw new Error("Static content type is required.");
       const panel = normalizePanel(
-        { ...state.panel, typeId: contentTypeId },
+        {
+          ...state.panel,
+          typeId: contentTypeId,
+          ...(state.contentTypeId === contentTypeId ? {} : {
+            interaction: createChartDraft({ typeId: contentTypeId }).interaction,
+          }),
+        },
         contentTypeId,
         state.draftIdentity,
       );

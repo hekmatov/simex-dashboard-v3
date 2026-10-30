@@ -96,6 +96,29 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
+test("V3 #25 image-to-text creates and reopens valid text", async ({ page }) => {
+  test.setTimeout(120_000);
+  await openBiomedicalBuild(page);
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.locator('input[type="radio"][value="image"]').check();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill("Type switch proof");
+  await wizard.getByLabel("Portable QMD Composer editing area").fill("Text after an Image selection");
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+  const saved = await readSavedFreeText(page, "Type switch proof");
+  expect(saved.panel.interaction.zoom.enabled).toBe(false);
+  const panel = canonicalPanel(page, saved.panel.id);
+  await panel.scrollIntoViewIfNeeded();
+  await openFreeTextEditor(panel, page);
+  await expect(page.getByRole("dialog", { name: "Text/Image editor" })
+    .getByLabel("Portable QMD Composer editing area")).toHaveText("Text after an Image selection");
+});
+
 test("Free-text composer authors portable semantic styles, keyboard emphasis, lists, tables, and preview", async ({ page }) => {
   await openBiomedicalBuild(page);
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();

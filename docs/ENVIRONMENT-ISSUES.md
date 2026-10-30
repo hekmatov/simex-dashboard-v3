@@ -12,6 +12,7 @@ Do not record product-test failures, expected build warnings, transient typing m
 | ENV-002 | Playwright Chromium is absent from the local browser cache | Recurrent after cache removal or Playwright upgrade | 1 | ENV-002.001 |
 | ENV-003 | Git reports a linked checkout is not a worktree during restricted reads | Observed in restricted Codex execution | 1 | ENV-003.001 |
 | ENV-004 | Windows Chromium cannot read a file upload at a long native evidence path | Avoided with the same bytes supplied as a browser File | 1 | ENV-004.001 |
+| ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Scoped fixed-input fixtures disable watching and discovery | 1 | ENV-005.001 |
 
 The **Entries** value must equal the number of listed entry references. Add a new reference for every confirmed repeat; do not merely increase the count.
 
@@ -24,6 +25,13 @@ The **Entries** value must equal the number of listed entry references. Add a ne
 5. Include the register update in the task's coherent commit when it is changed. Resolve ordinary merge conflicts by preserving every distinct entry and recalculating the affected index row.
 
 ## Entries
+
+### ENV-005.001 — 2026-10-30
+
+- **Command:** `pnpm.cmd exec playwright test tests/e2e/static-free-text.spec.js --project=chromium --grep 'V3 #25'`.
+- **Evidence:** Source navigation timed out at 30 and 120 seconds before authoring. An isolated fixture probe also timed out fetching HTML/modules. A minimal server with watching and dependency discovery disabled served HTML successfully; the exact companion fixture then served readiness, HTML and App.jsx (200), and an isolated Chromium navigation loaded successfully.
+- **Scope:** Local source fixtures in the private checkout, which contains managed worktrees and exported repository copies. The precise contribution of watcher traversal versus automatic discovery was not separately measured.
+- **Outcome:** Fixed-input fixture servers disable watching and dependency discovery while retaining the configured dependency includes. After correcting a separate Image radio locator, the scoped journey passed 1/1 in 20.4s. No production Vite configuration or product assertion was changed.
 
 ### ENV-004.001 — 2026-10-18
 

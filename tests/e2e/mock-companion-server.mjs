@@ -109,11 +109,12 @@ function isFixtureRequest(request) {
 }
 
 vite = await createViteServer({
+  optimizeDeps: { noDiscovery: true },
   root: process.cwd(),
   cacheDir: `node_modules/.vite-e2e-source-${APP_PORT}`,
   appType: "spa",
   logLevel: "error",
-  server: { middlewareMode: true, hmr: { server: appServer, clientPort: APP_PORT } },
+  server: { middlewareMode: true, hmr: { server: appServer, clientPort: APP_PORT }, watch: null },
 });
 
 appServer.on("upgrade", (request, socket, head) => {
