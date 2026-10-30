@@ -4,8 +4,30 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { readFile } from "node:fs/promises";
+import * as layout from "../src/components/build/buildLayoutDraft.js";
 
-const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
+test("V3 #26 start-section splits at canonical placements", () => {
+  for (const typeId of ["line", "gauge", "freeText"]) {
+    const source = fixture();
+    const panels = ["before", "anchor", "after"].map(id => ({ id: `placement-${id}`, chart: { id: `chart-${id}`, typeId } }));
+    source.pages[1].sections[0].panels = panels;
+    const original = structuredClone(source);
+    const draft = layout.createBuildLayoutDraft(source);
+    const split = layout.splitBuildLayoutSection(draft, "biomedical", "pressure", "placement-anchor", { id: "new-section", title: "New section" });
+    assert.equal(split.status, "dirty");
+    assert.deepEqual(split.value.pages[1].sections.map(s => [s.id, s.panels.map(p => p.id)]), [
+      ["pressure", ["placement-before"]], ["new-section", ["placement-anchor", "placement-after"]], ["surveillance", []],
+    ]);
+    assert.deepEqual(source, original);
+    assert.deepEqual(draft.value.pages, original.pages);
+    const missing = layout.splitBuildLayoutSection(draft, "biomedical", "pressure", "missing", { id: "new-section", title: "New section" });
+    assert.equal(missing.status, "error");
+    assert.match(missing.error.message, /placement.*no longer exists/i);
+    assert.deepEqual(missing.value, draft.value);
+  }
+});
+
+const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true, watch: null } });
 const pageNav = await vite.ssrLoadModule("/src/components/build/BuildPageNavigation.jsx");
 const canvas = await vite.ssrLoadModule("/src/components/dashboard/DashboardCanvas.jsx");
 await vite.close();

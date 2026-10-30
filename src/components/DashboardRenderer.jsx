@@ -26,6 +26,7 @@ import {
   setBuildLayoutSectionRole,
   setBuildLayoutPanelDrill,
   addBuildLayoutSection,
+  splitBuildLayoutSection,
   beginBuildLayoutSave,
   completeBuildLayoutSave,
   createBuildLayoutDraft,
@@ -1483,6 +1484,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           return setBuildLayoutPanelDrill(draft, command.pageId, command.sectionId, command.placementId, command.drill ?? null);
         case "rename-section":
           return renameBuildLayoutSection(draft, command.pageId, command.sectionId, command.title);
+        case "split-section":
+          return splitBuildLayoutSection(draft, command.pageId, command.sectionId, command.placementId, command.section);
         case "move-section":
           return moveBuildLayoutSection(draft, command.pageId, command.sectionId, command.targetPageId, command.placement);
         case "merge-section":
@@ -1513,9 +1516,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     }
   }
 
-  function saveBuildLayoutChanges() {
+  async function saveBuildLayoutChanges({ throwOnError = false } = {}) {
     const current = buildLayoutDraftRef.current ?? buildLayoutDraft;
-    if (!current || !layoutDraftDirty || current.status === "saving") return;
+    if (!current || current.status === "clean") return;
+    if (current.status === "saving") {
+      if (throwOnError) throw new Error("Wait for layout changes to finish saving, then retry chart creation.");
+      return;
+    }
     const status = beginOperation({
       key: "layout-save",
       label: "Saving layout changes",
@@ -1524,31 +1531,28 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const saving = beginBuildLayoutSave(current);
     buildLayoutDraftRef.current = saving;
     setBuildLayoutDraft(saving);
-    void status.beforeWork()
+    return status.beforeWork()
       .then(() => onStructureChange?.({
         pages: saving.value.pages,
         chronoGroups: saving.value.chronoGroups ?? dashboard.chronoGroups ?? [],
         scenes: saving.value.scenes ?? dashboard.scenes ?? [],
       }))
       .then(() => {
-        setBuildLayoutDraft((latest) => {
-          const completed = completeBuildLayoutSave(latest ?? buildLayoutDraftRef.current, saving);
-          buildLayoutDraftRef.current = completed;
-          return completed;
-        });
+        const completed = completeBuildLayoutSave(buildLayoutDraftRef.current, saving);
+        buildLayoutDraftRef.current = completed;
+        setBuildLayoutDraft(completed);
         status.succeed("Layout changes saved.");
       })
       .catch((error) => {
         status.fail(error);
-        setBuildLayoutDraft((latest) => {
-          const failed = failBuildLayoutSave(latest ?? buildLayoutDraftRef.current, saving, {
-            code: error?.name === "QuotaExceededError" ? "QUOTA_EXHAUSTED" : "LAYOUT_SAVE_FAILED",
-            message: error?.message ?? "Layout changes could not be saved.",
-            retryable: true,
-          });
-          buildLayoutDraftRef.current = failed;
-          return failed;
+        const failed = failBuildLayoutSave(buildLayoutDraftRef.current, saving, {
+          code: error?.name === "QuotaExceededError" ? "QUOTA_EXHAUSTED" : "LAYOUT_SAVE_FAILED",
+          message: error?.message ?? "Layout changes could not be saved.",
+          retryable: true,
         });
+        buildLayoutDraftRef.current = failed;
+        setBuildLayoutDraft(failed);
+        if (throwOnError) throw error;
       });
   }
 
@@ -2099,22 +2103,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
-  function startSectionAtPanel(section, panel) {
+  function startSectionAtPanel(pageId, sectionId, placementId) {
     if (moderatorOperationGateRef.current.isActive()) return;
     const title = window.prompt("Section title", "New section");
     if (!title) {
       return;
     }
-    const description = window.prompt("Section subtext", "") ?? "";
-    flushPendingEditsInBackground();
-    onSectionInsert(activePage.id, section.id, panel.id, {
-      id: `${section.id}_${Date.now()}`,
-      title,
-      description,
+    const description = window.prompt("Section subtext", "");
+    if (description === null) return;
+    applyBuildStructureCommand({
+      type: "split-section", pageId, sectionId, placementId,
+      section: { id: `${sectionId}_${Date.now()}`, title, description },
     });
     reportContentActivity("section.created", {
       subject: title,
-      key: `content:section:${activePage.id}:${title}`,
+      key: `content:section:${pageId}:${title}`,
     });
   }
 
@@ -2695,6 +2698,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     panelDragEnd: clearDragState,
     reorderSection: reorderBuildSection,
     structureCommand: applyBuildStructureCommand,
+    startSection: startSectionAtPanel,
     addPage: addBuildPage,
     addSection,
     addChart: openChartWizard,
@@ -3058,6 +3062,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         }}
         onClose={() => {
           if (!moderatorOperationGateRef.current.isActive()) setChartWizardTarget(null);
+        }}
+        onBeforeCreate={async () => {
+          await pendingEdits.flush();
+          // All source paths (including uploaded CSV) must commit against the
+          // same structure the destination preview accepted.
+          await saveBuildLayoutChanges({ throwOnError: true });
         }}
         onCreate={async (payload, reviewedPlacement) => {
           if (moderatorOperationGateRef.current.isActive()) {
@@ -3624,7 +3634,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                       onDragOver={(event) => handlePanelDragOver(event, panelId)}
                       onDrop={(event) => handlePanelDrop(event, panelId)}
                       onDragEnd={clearDragState}
-                      onStartSection={() => startSectionAtPanel(section, placement)}
+                      onStartSection={() => startSectionAtPanel(activePage.id, section.id, placement.id)}
                     />
                   );
                 })}

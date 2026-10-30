@@ -10,6 +10,7 @@ export const DASHBOARD_CANVAS_ACTION_NAMES = Object.freeze([
   "panelDragEnd",
   "reorderSection",
   "structureCommand",
+  "startSection",
   "addPage",
   "addSection",
   "addChart",

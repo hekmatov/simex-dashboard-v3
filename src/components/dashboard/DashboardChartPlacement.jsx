@@ -87,6 +87,7 @@ function DashboardChartPlacement({
       onBuildSelect={actions?.select}
       onRemove={actions ? onRemove : undefined}
       onMove={actions ? onMove : undefined}
+      onStartSection={actions ? () => actions.startSection(pageId, sectionId, placementId) : undefined}
       onDragStart={actions ? onDragStart : undefined}
       onDragOver={actions ? onDragOver : undefined}
       onDrop={actions ? onDrop : undefined}

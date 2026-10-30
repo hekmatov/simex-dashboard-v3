@@ -2295,8 +2295,10 @@ test("confirmed uploaded CSV replacement adopts only the pending authority and c
   );
 });
 
-test("chart CSV completion commits the selected source profile entry and chart from one active slot", async () => {
-  const harness = chartCsvLifecycleHarness();
+for (const failFirst of [false, true, "destination"]) test(failFirst
+  ? `V3 #32 failed CSV creation retains a retryable source authority${failFirst === "destination" ? " after destination repair" : ""}`
+  : "chart CSV completion commits the selected source profile entry and chart from one active slot", async () => {
+  const harness = chartCsvLifecycleHarness({ failFirst: failFirst === true });
   const staged = chartCsvInput("upload-complete", "complete.csv", [{ date: "2026-01-01", value: 9 }]);
   await harness.lifecycle.stagePendingUpload(staged, chartCsvCandidate(staged));
   await harness.lifecycle.adoptPending("initial-upload");
@@ -2321,15 +2323,25 @@ test("chart CSV completion commits the selected source profile entry and chart f
     profile: staged.profile,
     displayName: "Complete",
     finalized,
-    destination: { pageId: "overview", sectionId: "response", relation: "append" },
+    destination: { pageId: "overview", sectionId: failFirst === "destination" ? "new-section" : "response", relation: "append" },
   });
 
+  if (failFirst) {
+    const before = structuredClone(harness.dashboard);
+    await assert.rejects(harness.lifecycle.completeActive("upload-complete", complete), failFirst === "destination" ? /destination no longer exists/ : /first persistence failed/);
+    assert.deepEqual(harness.dashboard, before);
+    assert.deepEqual(harness.lifecycle.activeCandidate("upload-complete"), chartCsvCandidate(staged));
+    assert.deepEqual(harness.coordinator.getActiveRetainers().sourceIds, ["upload-complete"]);
+    if (failFirst === "destination") harness.acceptNewSection();
+  }
   await harness.lifecycle.completeActive("upload-complete", complete);
   assert.equal(harness.dashboard.dataSources["upload-complete"].fileName, "complete.csv");
   assert.equal(harness.dashboard.datasetProfiles["upload-complete"].fingerprint, staged.profile.fingerprint);
   assert.equal(harness.dashboard.contentLibrary.sourceEntries["upload-complete"].ownership, "builder");
-  assert.equal(harness.dashboard.pages[0].sections[0].panels.at(-1).sourceId, "upload-complete");
+  assert.equal(harness.dashboard.pages[0].sections.at(-1).panels.at(-1).sourceId, "upload-complete");
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+  assert.equal(harness.dashboard.pages.flatMap(p => p.sections).flatMap(s => s.panels)
+    .filter(p => (p.chart ?? p).id === finalized.chart.id).length, 1);
 });
 
 test("local CSV upload rejects oversized files before reading them", async () => {
@@ -5304,11 +5316,12 @@ function buttonMarkupById(html, id) {
   return html.slice(start, end + "</button>".length);
 }
 
-function chartCsvLifecycleHarness() {
+function chartCsvLifecycleHarness({ failFirst = false } = {}) {
   let dashboard = makeDashboardV5();
   const coordinator = createContentDraftCoordinator({
     getDashboard: () => dashboard,
     async commitDashboard(candidate) {
+      if (failFirst) { failFirst = false; throw new Error("first persistence failed"); }
       dashboard = structuredClone(candidate);
       return dashboard;
     },
@@ -5331,6 +5344,7 @@ function chartCsvLifecycleHarness() {
   return {
     coordinator,
     lifecycle,
+    acceptNewSection() { dashboard.pages[0].sections.push({ id: "new-section", title: "New section", panels: [] }); },
     get dashboard() { return dashboard; },
   };
 }

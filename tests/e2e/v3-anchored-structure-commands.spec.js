@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chartAuthoringWorkflow } from "./support/chart-authoring-workflow.js";
 import { choosePanelAction, chooseSectionAction, panelMenu, sectionMenu } from "./support/buildWorkflow.js";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
@@ -67,6 +68,55 @@ test("section and panel menus preserve command order, keyboard navigation, and t
   await choosePanelAction(page, placementId, "edit");
   await expect(page.locator(".chart-quick-editor")).toBeVisible();
   await expect(panelActions).toHaveCount(0);
+});
+
+test("V3 #26 start-section splits the selected canonical placement and survives reload", async ({ page }) => {
+  test.setTimeout(90_000);
+  const section = page.locator('[data-canonical-section-id="biomedical_section"]');
+  const panels = section.locator("article[data-canonical-placement-id]");
+  const ids = await panels.evaluateAll(nodes => nodes.map(n => n.dataset.canonicalPlacementId));
+  expect(ids.length).toBeGreaterThan(1);
+  let prompt = 0;
+  page.on("dialog", dialog => dialog.accept(prompt++ === 0 ? "Split proof" : "Section description"));
+  await panels.nth(1).scrollIntoViewIfNeeded();
+  await panels.nth(1).hover();
+  await choosePanelAction(page, ids[1], "start-section");
+  const split = page.locator("[data-canonical-section-id]", { has: page.getByRole("button", { name: "Edit Section title: Split proof", exact: true }) });
+  await expect(split).toBeVisible();
+  expect(await split.locator("article[data-canonical-placement-id]").evaluateAll(nodes => nodes.map(n => n.dataset.canonicalPlacementId))).toEqual(ids.slice(1));
+  expect(await section.locator("article[data-canonical-placement-id]").evaluateAll(nodes => nodes.map(n => n.dataset.canonicalPlacementId))).toEqual(ids.slice(0, 1));
+  await page.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save Layout Changes", exact: true })).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("navigation", { name: "Dashboard pages" }).getByRole("button", { name: "Biomedical", exact: true }).click();
+  await expect(page.locator(`[data-canonical-placement-id="${ids[1]}"]`)).toBeVisible();
+  await expect(page.locator("[data-canonical-section-id]", { has: page.getByRole("button", { name: "Edit Section title: Split proof", exact: true }) })).toBeVisible();
+});
+
+test("V3 #18 full editor destination move retains chart and placement identity", async ({ page }) => {
+  test.setTimeout(90_000);
+  page.setDefaultTimeout(15_000);
+  const panel = page.locator('[data-canonical-section-id="biomedical_section"] article[data-canonical-placement-id]').first();
+  const placementId = await panel.getAttribute("data-canonical-placement-id");
+  const chartId = await panel.getAttribute("data-panel-id");
+  await panel.hover();
+  await choosePanelAction(page, placementId, "edit");
+  await page.locator(".chart-quick-editor").getByRole("button", { name: "Open full editor", exact: true }).click();
+  const full = page.getByRole("dialog", { name: "Edit chart", exact: true });
+  const flow = chartAuthoringWorkflow(full, { mode: "edit" });
+  await flow.goToDestination();
+  const pageId = await full.getByLabel("Destination page").locator("option").evaluateAll(options => options.find(o => o.value !== "biomedical" && !o.disabled)?.value);
+  expect(pageId).toBeTruthy();
+  await full.getByLabel("Destination page").selectOption(pageId);
+  const sectionId = await full.getByLabel("Destination section").inputValue();
+  await full.getByRole("combobox", { name: "Insertion", exact: true }).selectOption("append");
+  await full.locator('[data-icon-control="editor.save-changes"]').click();
+  await expect(full).toHaveCount(0);
+  const saved = await page.evaluate(({ placementId }) => {
+    const d = JSON.parse(localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
+    return d.pages.flatMap(p => p.sections.flatMap(s => s.panels.filter(c => c.id === placementId).map(c => ({ pageId: p.id, sectionId: s.id, chartId: (c.chart ?? c).id }))));
+  }, { placementId });
+  expect(saved).toEqual([{ pageId, sectionId, chartId }]);
 });
 
 test("selected Page tab toggles its five-action menu while inactive Pages only navigate", async ({ page }) => {

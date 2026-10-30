@@ -206,14 +206,11 @@ export function createChartCsvDraftLifecycle({
           throw new Error(`Active chart CSV authority does not match selected source "${String(sourceId)}".`);
         }
         updateDraft(active.draftId, { payload: input.payload, sourceIds: input.sourceIds });
-        try {
-          const result = await commitDraft(active.draftId, input.buildCandidate);
-          active = null;
-          return result;
-        } catch (error) {
-          active = null;
-          throw error;
-        }
+        // The coordinator retains finalized failed drafts, including their source
+        // bytes and ownership. Retire our slot only after that authority commits.
+        const result = await commitDraft(active.draftId, input.buildCandidate);
+        active = null;
+        return result;
       });
     },
     discardAll(reason = "chart-csv-discarded") {
@@ -387,6 +384,7 @@ export default function ChartWizardV3({
   onSaveChanges,
   onDiscardChanges = noop,
   onCommitSuccess = noop,
+  onBeforeCreate = noop,
   onCreate,
 }) {
   const editMode = mode === "edit";
@@ -1373,6 +1371,7 @@ export default function ChartWizardV3({
         }));
         const result = await executeChartCreate(snapshot, {
           persist: async (payload, reviewedPlacement) => {
+            if (!editMode) await onBeforeCreate(reviewedPlacement);
             const activeGeoDraft = geoDraftRef.current;
             const selectedGeoSourceId = finalized.chart.presentation?.map?.geoSource;
             if (shouldCommitActiveGeoDraft(activeGeoDraft, selectedGeoSourceId)) {

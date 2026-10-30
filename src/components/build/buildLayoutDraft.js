@@ -85,6 +85,24 @@ export function renameBuildLayoutSection(draft, pageId, sectionId, title) {
   return markDirty(draft, sectionId, value);
 }
 
+export function splitBuildLayoutSection(draft, pageId, sectionId, placementId, section) {
+  if (!isBuildLayoutDraftMutable(draft)) return draft;
+  const page = findPage(draft.value, pageId);
+  const source = findSection(draft.value, pageId, sectionId);
+  const anchor = source?.panels?.findIndex(({ id }) => id === placementId) ?? -1;
+  if (anchor < 0) return failCommand(draft, "PLACEMENT_NOT_FOUND", "The selected placement no longer exists. Choose a panel in the current Section.");
+  if (!section?.id || !String(section.title ?? "").trim()
+    || draft.value.pages.some(p => p.sections?.some(s => s.id === section.id))) {
+    return failCommand(draft, "SECTION_ID_INVALID", "The new Section needs a title and a unique stable ID.");
+  }
+  const index = page.sections.indexOf(source);
+  const sections = page.sections.slice();
+  sections.splice(index, 1,
+    { ...source, panels: source.panels.slice(0, anchor) },
+    { ...structuredClone(section), panels: source.panels.slice(anchor) });
+  return markDirty(draft, section.id, updatePage(draft.value, pageId, current => ({ ...current, sections })));
+}
+
 export function renameBuildLayoutPanel(draft, placementId, title) {
   if (!isBuildLayoutDraftMutable(draft)) return draft;
   const placement = draft.value.pages

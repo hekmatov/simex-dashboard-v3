@@ -14,6 +14,55 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
+test("V3 #32 destination upload and failed persistence retry share saved structure", async ({ page }) => {
+  test.setTimeout(120_000);
+  await resetSourceDashboard(page, { fixture: "fable-m0" });
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Add section", exact: true }).click();
+  const sectionDialog = page.getByRole("dialog", { name: "Create Section", exact: true });
+  await sectionDialog.getByLabel("Section name").fill("Retry destination");
+  await sectionDialog.getByRole("button", { name: "Create section" }).click();
+  const section = page.locator("[data-canonical-section-id]", { has: page.getByRole("button", { name: "Edit Section title: Retry destination", exact: true }) });
+  await expect(section).toBeVisible();
+  const sectionId = await section.getAttribute("data-canonical-section-id");
+  await section.getByRole("button", { name: "Add chart", exact: true }).click();
+  const { chartAuthoringWorkflow } = await import("./support/chart-authoring-workflow.js");
+  const flow = chartAuthoringWorkflow(page.getByRole("dialog", { name: "Add new chart" }));
+  await expect(flow.wizard.getByLabel("Destination section")).toHaveValue(sectionId);
+  await flow.uploadCsv({ name: "retry.csv", mimeType: "text/csv", buffer: Buffer.from("date,value\n2026-01-01,10\n2026-01-02,20\n") });
+  await flow.chooseChartType(null, /^Line\./);
+  await flow.goToMapAndPrepare();
+  await flow.selectRole("measurements", "value");
+  await flow.selectRole("observation", "date");
+  await flow.goToConfigure();
+  await flow.wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Retry CSV proof");
+  await flow.goToReview();
+  await page.evaluate(key => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(k, value) {
+      if (k === key && globalThis.__failIssue32Save !== false
+        && JSON.parse(value).pages.some(p => p.sections.some(s => s.panels.some(p => (p.chart ?? p).title === "Retry CSV proof")))) {
+        globalThis.__failIssue32Save = false;
+        throw new DOMException("Issue32 save blocked once", "QuotaExceededError");
+      }
+      return original.call(this, k, value);
+    };
+  }, STORAGE_KEY);
+  await flow.wizard.locator('[data-icon-control="wizard.create-chart"]').click();
+  await expect(flow.wizard.getByRole("alert").filter({ hasText: /Browser storage is full/ })).toBeVisible();
+  await flow.createChart("Retry CSV proof");
+  const saved = await page.evaluate(({ key, sectionId }) => {
+    const d = JSON.parse(localStorage.getItem(key));
+    const section = d.pages.flatMap(p => p.sections).find(s => s.id === sectionId);
+    const charts = section.panels.map(p => p.chart ?? p).filter(c => c.title === "Retry CSV proof");
+    return { charts, sources: Object.keys(d.dataSources).filter(id => d.dataSources[id].fileName === "retry.csv") };
+  }, { key: STORAGE_KEY, sectionId });
+  expect(saved.charts).toHaveLength(1);
+  expect(saved.sources).toEqual([saved.charts[0].sourceId]);
+  await page.reload();
+  await expect(page.locator(`[data-canonical-section-id="${sectionId}"] [data-panel-id="${saved.charts[0].id}"]`)).toBeVisible();
+});
+
 test("six-stage chart creation suspends and commits exactly once", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });
