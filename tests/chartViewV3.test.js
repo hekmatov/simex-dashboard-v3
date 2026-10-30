@@ -15,7 +15,7 @@ const vite = await createServer({
   root: process.cwd(),
   appType: "custom",
   logLevel: "silent",
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, watch: null }, optimizeDeps: { noDiscovery: true },
 });
 const {
   default: ChartView,
@@ -29,6 +29,17 @@ const { default: TableChartView } = await vite.ssrLoadModule("/src/components/ch
 const { default: ChartHeading } = await vite.ssrLoadModule("/src/components/charts/ChartHeading.jsx");
 const { default: ChartPanel } = await vite.ssrLoadModule("/src/components/ChartPanel.jsx");
 await vite.close();
+
+test("V3 #24 precision gauge preserves resolved colors and favorable direction", () => {
+  for (const direction of ["decrease-is-good", "neutral"]) {
+    const model = buildRenderModel({ chart: { id: "inverted", typeId: "gauge", title: "Waiting time", presentation: { targets: { direction, ranges: [50, 80, 100] } } }, prepared: { status: "ready", marks: [{ value: 20, target: 50 }], meta: {} } });
+    const html = renderToStaticMarkup(React.createElement(EChartsChartView, { chart: { id: "inverted", title: "Waiting time" }, model }));
+    assert.ok(html.includes(direction === "decrease-is-good" ? "ON TRACK" : "BELOW TARGET"));
+    assert.equal(html.includes("ON TRACK"), direction === "decrease-is-good");
+    const colors = [...html.matchAll(/class="precision-arc-gauge-range"[^>]*stroke="([^"]+)"/g)].map(m => m[1]);
+    assert.deepEqual(colors, model.precisionGauge.segments.map(s => s[1]));
+  }
+});
 
 test("ChartPanel and ChartView use prepared marks, prefer reusable resolutions, and reject stale resolutions", () => {
   const chart = { id: "prepared-capacity", typeId: "kpi", title: "Prepared capacity", roles: { value: { field: "value" } } };
@@ -143,9 +154,9 @@ test("precision gauges render the approved arc instead of an ECharts canvas", ()
   assert.match(html, /precision-arc-gauge-tick/);
   assert.match(html, /precision-arc-gauge-status/);
   assert.match(html, /ON TRACK/);
-  assert.match(html, /stroke="#dc2626"/);
-  assert.match(html, /stroke="#f59e0b"/);
-  assert.match(html, /stroke="#16a34a"/);
+  assert.match(html, /stroke="#d73027"/);
+  assert.match(html, /stroke="#fdae61"/);
+  assert.match(html, /stroke="#1a9850"/);
   assert.doesNotMatch(html, /chart-echarts-host/);
 });
 
@@ -823,7 +834,7 @@ test("gauge models retain exact values while the dashboard renders the precision
   const model = buildModel(chart, rows, datasetProfile);
   const html = renderToStaticMarkup(React.createElement(ChartView, { chart, rows, datasetProfile }));
 
-  assert.deepEqual(model.semanticSummary.items, [{ label: "Supply readiness", actual: 8, target: 10, time: null }]);
+  assert.deepEqual(model.semanticSummary.items, [{ label: "Supply readiness", actual: 8, target: 10, time: null, targetStatus: "BELOW TARGET · 2 POINTS BELOW TARGET", favorability: "unfavorable" }]);
   assert.equal(model.option.aria.enabled, false);
   assert.match(html, /<h3[^>]*>Supply readiness<\/h3>/);
   assert.match(html, /class="precision-arc-gauge/);

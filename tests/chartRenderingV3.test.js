@@ -38,6 +38,35 @@ const {
 } = await import("../src/charting/rendering/axisTitleGraphics.js");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
+
+test("V3 #24 lower-is-favorable gauge status agrees with automatic colors", () => {
+  for (const direction of ["increase-is-good", "decrease-is-good", "neutral"]) {
+    for (const actual of [20, 50, 80]) {
+      const model = buildRenderModel({ chart: chart("gauge", { presentation: { targets: { ranges: [50, 100, 200], direction } } }), prepared: ready([{ value: actual, target: 50 }]) });
+      assert.equal(model.option.series[0].min, 0);
+      assert.equal(model.option.series[0].max, 200);
+      assert.equal(model.precisionGauge.direction, direction);
+      assert.deepEqual(model.precisionGauge.segments, model.option.series[0].axisLine.lineStyle.color);
+      const expected = direction === "neutral" || actual === 50 ? "neutral"
+        : ((actual < 50) === (direction === "decrease-is-good") ? "favorable" : "unfavorable");
+      assert.equal(model.semanticSummary.items[0].favorability, expected);
+      assert.equal(model.semanticSummary.items[0].targetStatus, model.precisionGauge.targetStatus);
+      assert.ok(model.option.series[0].detail.formatter(actual).includes(model.precisionGauge.targetStatus));
+      const colors = model.precisionGauge.segments.map(s => s[1]);
+      assert.deepEqual(colors, direction === "neutral" ? ["#64748b", "#64748b", "#64748b"]
+        : direction === "decrease-is-good" ? ["#1a9850", "#fdae61", "#d73027"] : ["#d73027", "#fdae61", "#1a9850"]);
+    }
+  }
+  for (const target of [null, 0]) {
+    const model = buildRenderModel({ chart: chart("gauge", { presentation: { targets: { direction: "decrease-is-good", ranges: [{ max: 50, color: "#d73027" }, { max: 200, color: "#123456" }] } } }), prepared: ready([{ value: 20, target, entity: "A" }, { value: 0, target, entity: "B" }]) });
+    for (const item of model.items) {
+      assert.deepEqual(item.model.precisionGauge.segments.map(s => s[1]), ["#d73027", "#123456"]);
+      assert.equal(item.model.precisionGauge.target, target);
+      assert.equal(item.model.option.series.length, target === null ? 1 : 2);
+      assert.equal(item.model.option.series[0].detail.formatter(item.value).includes("Target"), target !== null);
+    }
+  }
+});
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
 
@@ -2609,8 +2638,8 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
   assert.deepEqual(gauge.option.series[0].center, ["50%", "54%"]);
   assert.equal(gauge.option.series[0].radius, "52%");
   assert.equal(gauge.option.title.left, "right");
-  assert.equal(gauge.option.series[0].detail.formatter(72), "72\nTarget 80");
-  assert.deepEqual(gauge.semanticSummary.items, [{ label: "gauge title", actual: 72, target: 80, time: "2027-05-02" }]);
+  assert.equal(gauge.option.series[0].detail.formatter(72), "72\nTarget 80\nBELOW TARGET · 8 POINTS BELOW TARGET");
+  assert.deepEqual(gauge.semanticSummary.items, [{ label: "gauge title", actual: 72, target: 80, time: "2027-05-02", targetStatus: "BELOW TARGET · 8 POINTS BELOW TARGET", favorability: "unfavorable" }]);
   assert.equal(bullet.option.series[0].type, "bar");
   assert.deepEqual(bullet.option.series[0].data, [8]);
   assert.equal(bullet.option.series[1].name, "Target");
@@ -2633,6 +2662,8 @@ test("gauge uses a precision arc with a detached needle and target ring", () => 
     actual: 76,
     target: 72,
     maximum: 100,
+    direction: "increase-is-good",
+    targetStatus: "ON TRACK · 4 POINTS ABOVE TARGET",
     segments: [[0.5, "#d73027"], [0.8, "#fdae61"], [1, "#1a9850"]],
     readoutLabel: "OF TARGET RANGE",
     showReadoutLabel: true,
@@ -2732,8 +2763,8 @@ test("multi-item gauges preserve every prepared mark as renderer-neutral collect
   assert.deepEqual(
     model.items.map(({ model: itemModel }) => itemModel.semanticSummary.items[0]),
     [
-      { label: "Clinic A", actual: 72, target: 80, time: "2027-05-02" },
-      { label: "Clinic B", actual: 55, target: 70, time: "2027-05-03" },
+      { label: "Clinic A", actual: 72, target: 80, time: "2027-05-02", targetStatus: "BELOW TARGET · 8 POINTS BELOW TARGET", favorability: "unfavorable" },
+      { label: "Clinic B", actual: 55, target: 70, time: "2027-05-03", targetStatus: "BELOW TARGET · 15 POINTS BELOW TARGET", favorability: "unfavorable" },
     ],
   );
 });

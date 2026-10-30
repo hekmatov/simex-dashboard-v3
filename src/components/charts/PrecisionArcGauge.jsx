@@ -1,4 +1,5 @@
 import React from "react";
+import { gaugeAssessment } from "../../charting/presentation/gaugeAssessment.js";
 
 const START_ANGLE = 180;
 const END_ANGLE = 360;
@@ -6,7 +7,6 @@ const CENTER_X = 250;
 const CENTER_Y = 202;
 const ARC_RADIUS = 178;
 const TAU = Math.PI * 2;
-const STANDARD_STATUS_COLORS = ["#dc2626", "#f59e0b", "#16a34a"];
 
 export default function PrecisionArcGauge({ gauge, label = "Gauge", audienceScale = null }) {
   const actual = finiteValue(gauge?.actual);
@@ -18,7 +18,7 @@ export default function PrecisionArcGauge({ gauge, label = "Gauge", audienceScal
   const pointer = actualRatio === null ? null : pointerPoints(actualRatio);
   const targetPoint = targetRatio === null ? null : polarPoint(ARC_RADIUS, angleFor(targetRatio));
   const targetLabel = targetPoint === null ? null : targetLabelPosition(targetPoint);
-  const status = gaugeStatus(actual, target);
+  const status = gaugeAssessment(actual, target, gauge?.direction).status;
   const unit = displayUnit(gauge?.unit);
   const readoutLabel = displayReadoutLabel(gauge?.readoutLabel);
   const showReadoutLabel = gauge?.showReadoutLabel !== false && Boolean(readoutLabel);
@@ -45,7 +45,7 @@ export default function PrecisionArcGauge({ gauge, label = "Gauge", audienceScal
     key: `${end}-${color}-${index}`,
     className: "precision-arc-gauge-range",
     d: arcPath(angleFor(start, 1.1), angleFor(end, -1.1)),
-    stroke: displaySegmentColor(color, index),
+    stroke: color,
   })),
   Array.from({ length: 7 }, (_, index) => React.createElement("line", {
     key: `tick-${index}`,
@@ -183,23 +183,6 @@ function typographyStyle(audienceScale) {
     "--precision-arc-value-size": `${value}px`,
     "--precision-arc-text-size": `${text}px`,
   };
-}
-
-function displaySegmentColor(color, index) {
-  const defaultColors = ["#d73027", "#fdae61", "#1a9850", "#2c7bb6"];
-  return defaultColors.includes(String(color).toLowerCase())
-    ? STANDARD_STATUS_COLORS[Math.min(index, STANDARD_STATUS_COLORS.length - 1)]
-    : color;
-}
-
-function gaugeStatus(actual, target) {
-  if (actual === null || target === null) return "";
-  const difference = round(actual - target);
-  if (difference === 0) return "ON TARGET";
-  const points = displayValue(Math.abs(difference));
-  return difference > 0
-    ? `ON TRACK · ${points} POINT${Math.abs(difference) === 1 ? "" : "S"} ABOVE TARGET`
-    : `BELOW TARGET · ${points} POINT${Math.abs(difference) === 1 ? "" : "S"} BELOW TARGET`;
 }
 
 function finiteValue(value) {

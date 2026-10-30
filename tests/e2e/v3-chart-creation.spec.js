@@ -90,6 +90,29 @@ test("V3 #17 type changes retain partial and complete mappings and explain incom
   await flow.createChart("Retained type proof");
 });
 
+test("V3 #24 lower favorable gauge keeps an ascending scale after save", async ({ page }) => {
+  test.setTimeout(90_000);
+  await resetSourceDashboard(page, { fixture: "fable-m0" });
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  const flow = await openFreshChartAuthoring(page);
+  await flow.selectExistingSource("cases WCPH eldoria");
+  await flow.chooseChartType("gauge", /^Gauge\./);
+  await flow.goToDataSource();
+  await flow.wizard.locator('[data-icon-control="wizard.enter-data-manually"]').click();
+  await flow.wizard.getByLabel("Value row 1", { exact: true }).fill("20");
+  await flow.wizard.getByLabel("Target row 1", { exact: true }).fill("50");
+  await flow.goToConfigure();
+  await flow.wizard.getByLabel("Favorable gauge values").selectOption("decrease-is-good");
+  await flow.createChart("Lower gauge proof");
+  const panel = page.locator("[data-canonical-panel-id]", { hasText: "Lower gauge proof" });
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator(".precision-arc-gauge")).toHaveAttribute("aria-label", /on track.*below target/);
+  await expect(panel.locator(".precision-arc-gauge-bound")).toHaveText(["0", "100"]);
+  expect(await panel.locator(".precision-arc-gauge-range").evaluateAll(nodes => nodes.map(n => n.getAttribute("stroke")))).toEqual(["#1a9850", "#fdae61", "#d73027"]);
+  await page.reload();
+  await expect(page.locator(".precision-arc-gauge").filter({ hasText: "ON TRACK" })).toBeVisible();
+});
+
 test("six-stage chart creation suspends and commits exactly once", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });

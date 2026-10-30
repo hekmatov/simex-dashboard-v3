@@ -2409,6 +2409,20 @@ test("manual role assignment retains supplied optional values and required empty
   assert.equal(validateManualData(bulletSchema, bullet).valid, false);
 });
 
+test("V3 #23 absent KPI target stays absent while explicit zero remains", () => {
+  const schema = getChartSchema("kpi");
+  for (const target of ["", 0]) {
+    const table = createManualDataTemplate(schema);
+    table.rows = [{ value: "12", target }];
+    const state = createWizardState({ draft: createChartDraft("kpi", { title: "Optional target", sourceId: "inline-test", roles: { target: { field: "target" } } }) });
+    const assigned = assignManualRoles(state, schema, table.columns, table.rows);
+    assert.equal(Boolean(assigned.draft.roles.target), target === 0);
+    const prepared = prepareChartData({ chart: assigned.draft, rows: table.rows, datasetProfile: profileDataset(table.rows) });
+    assert.equal(prepared.status, "ready");
+    assert.equal(prepared.marks[0].target, target === 0 ? 0 : null);
+  }
+});
+
 test("manual entry is offered only when the selected schema permits concise inline data", () => {
   const common = {
     dataSources: {},

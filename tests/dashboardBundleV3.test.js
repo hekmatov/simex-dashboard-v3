@@ -22,6 +22,25 @@ import {
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 
+test("V3 #23 #24 optional targets and gauge direction survive package round-trip", () => {
+  const dashboard = version3Dashboard();
+  dashboard.dataSources["manual-status"].rows[0].target = 0;
+  const charts = [];
+  for (const typeId of ["kpi", "gauge"]) for (const withTarget of [false, true]) {
+    charts.push(createChartDraft(typeId, {
+      id: `${typeId}-${withTarget ? "zero" : "absent"}`, sourceId: "manual-status", title: "Target contract",
+      roles: { value: { field: "value" }, ...(withTarget ? { target: { field: "target" } } : {}) },
+      ...(typeId === "gauge" ? { presentation: { targets: { direction: "decrease-is-good" } } } : {}),
+    }));
+  }
+  dashboard.pages[0].sections[0].panels.push(...charts);
+  const restored = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(dashboard)));
+  for (const chart of charts) {
+    const actual = restored.pages[0].sections[0].panels.map(p => p.chart ?? p).find(c => c.id === chart.id);
+    assert.deepEqual(actual, chart);
+  }
+});
+
 test("already-authored manual chart profiles survive package export and import", () => {
   const dashboard = version3Dashboard();
   const sourceId = "inline-chart-kpi-78ea1d4a-4198-4e20-9927-2b77fe7d6052";

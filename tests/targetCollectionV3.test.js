@@ -139,6 +139,8 @@ test("repeated gauges become stable detached one-mark collection models with ran
       actual: item.actual,
       target: item.target,
       time: "2027-05-02",
+      targetStatus: item.actual === 72 ? "BELOW TARGET · 8 POINTS BELOW TARGET" : "BELOW TARGET · 15 POINTS BELOW TARGET",
+      favorability: "unfavorable",
     }]);
     assert.equal(item.accessibleSummary, undefined);
     assert.equal(item.model.accessibility, undefined);
@@ -346,6 +348,7 @@ test("single Gauge and Bullet observations retain the ordinary ECharts path", ()
       actual: typeId === "gauge" ? 72 : 8,
       target: typeId === "gauge" ? 80 : 10,
       time: "2027-05-02",
+      ...(typeId === "gauge" ? { targetStatus: "BELOW TARGET · 8 POINTS BELOW TARGET", favorability: "unfavorable" } : {}),
     }]);
     assert.equal(model.accessibility, undefined);
     assert.equal(model.option.aria.enabled, false);

@@ -9,7 +9,7 @@ const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 const TITLE = "Manual package repair check";
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test("manual KPI saves with empty optional Target and Time fields after clearing a target", async ({ page }) => {
+for (const target of ["", "0"]) test(`V3 #23 manual KPI saves after clearing a target ${target === "" ? "absent" : "explicit zero"}`, async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto(APP_URL);
   await enterBuildMode(page);
@@ -22,16 +22,16 @@ test("manual KPI saves with empty optional Target and Time fields after clearing
   await flow.wizard.getByLabel("Target row 1", { exact: true }).fill("30");
   await flow.wizard.getByLabel("Entity row 1", { exact: true }).fill("Hospital");
   await flow.wizard.getByLabel("Label row 1", { exact: true }).fill("A");
-  await flow.wizard.getByLabel("Target row 1", { exact: true }).fill("");
+  await flow.wizard.getByLabel("Target row 1", { exact: true }).fill(target);
   await flow.wizard.getByRole("button", { name: "Add row", exact: true }).click();
   await flow.wizard.getByLabel("Value row 2", { exact: true }).fill("140");
   await flow.wizard.getByLabel("Entity row 2", { exact: true }).fill("gh");
   await flow.createChart(TITLE);
   const authored = await snapshot(page);
-  expect(authored.chart.roles.target).toBeUndefined();
+  expect(authored.chart.roles.target).toEqual(target === "" ? undefined : { field: "target" });
   expect(authored.chart.roles.time).toBeUndefined();
   expect(authored.source.rows).toEqual([
-    { value: "125", target: "", entity: "Hospital", label: "A", time: "" },
+    { value: "125", target, entity: "Hospital", label: "A", time: "" },
     { value: "140", target: "", entity: "gh", label: "", time: "" },
   ]);
   await page.reload();
@@ -41,6 +41,8 @@ test("manual KPI saves with empty optional Target and Time fields after clearing
   await panel.scrollIntoViewIfNeeded();
   await expect(panel).toContainText("125");
   await expect(panel).toContainText("140");
+  if (target === "") await expect(panel).not.toContainText("Target");
+  else await expect(panel).toContainText("Target 0");
 });
 
 test("manual KPI creation downloads a package that imports and reloads with its data and bindings", async ({ page, browser }, testInfo) => {

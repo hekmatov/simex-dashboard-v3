@@ -359,10 +359,10 @@ function structuredControls(control, value, onChange, field = {}) {
   }
   if (control === "targets") {
     const controls = new Set(field.controls ?? ["direction", "ranges"]);
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, controls.has("direction") ? /* @__PURE__ */ React.createElement("label", null, "Which change is favorable", /* @__PURE__ */ React.createElement("select", {
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid dashboard-authoring-grid" }, controls.has("direction") ? /* @__PURE__ */ React.createElement("label", null, controls.has("ranges") ? "Favorable gauge values" : "Which change is favorable", /* @__PURE__ */ React.createElement("select", {
       value: current.direction ?? "",
       onChange: (event) => emit(["direction"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, "Increase is favorable"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, "Decrease is favorable"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))) : null, controls.has("ranges") ? /* @__PURE__ */ React.createElement(TargetRangesControl, {
+    }, controls.has("ranges") ? null : /* @__PURE__ */ React.createElement("option", { value: "" }, "Not specified"), /* @__PURE__ */ React.createElement("option", { value: "increase-is-good" }, controls.has("ranges") ? "Higher values are favorable" : "Increase is favorable"), /* @__PURE__ */ React.createElement("option", { value: "decrease-is-good" }, controls.has("ranges") ? "Lower values are favorable" : "Decrease is favorable"), /* @__PURE__ */ React.createElement("option", { value: "neutral" }, "Neutral"))) : null, controls.has("ranges") ? /* @__PURE__ */ React.createElement(TargetRangesControl, {
       ranges: current.ranges,
       onChange: (nextRanges) => emit(["ranges"], nextRanges)
     }) : null, controls.has("readoutLabel") ? textControl("Readout label", current.readoutLabel, (nextValue) => emit(["readoutLabel"], nextValue)) : null, controls.has("showReadoutLabel") ? inlineToggle(

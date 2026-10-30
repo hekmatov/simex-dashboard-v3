@@ -1,3 +1,5 @@
+import { gaugeAssessment } from "../presentation/gaugeAssessment.js";
+
 const GAUGE_COLORS = ["#d73027", "#fdae61", "#1a9850", "#2c7bb6"];
 
 export function buildTargetRenderModel({ chart, prepared }) {
@@ -107,6 +109,8 @@ function singleTargetModel(chart, mark, activeTime, embedded = false) {
 }
 
 function gaugeModel(chart, mark, activeTime, embedded = false) {
+  const direction = chart.presentation?.targets?.direction ?? "increase-is-good";
+  const assessment = gaugeAssessment(mark?.value, mark?.target, direction);
   const configuredRanges = chart.presentation?.targets?.ranges;
   const ranges = Array.isArray(configuredRanges) && configuredRanges.length > 0
     ? configuredRanges
@@ -162,7 +166,9 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
           actual: Number.isFinite(mark.value) ? mark.value : null,
           target: hasTarget ? target : null,
           maximum,
-          segments: gaugeSegments(ranges, maximum),
+          direction,
+          targetStatus: assessment.status,
+          segments: gaugeSegments(ranges, maximum, direction),
           readoutLabel: chart.presentation?.targets?.readoutLabel ?? "OF TARGET RANGE",
           showReadoutLabel: chart.presentation?.targets?.showReadoutLabel !== false,
           unit: chart.presentation?.targets?.unit ?? "",
@@ -178,7 +184,7 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
         }),
     option: {
       ...(embedded ? {} : { title: titleOption(chart) }),
-      aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
+      aria: { enabled: true, description: [chart.description ?? chart.title ?? "", assessment.status].filter(Boolean).join(". ") },
       series: mark
         ? [{
           name,
@@ -191,7 +197,7 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
           radius: embedded ? "68%" : "52%",
           axisLine: {
             roundCap: true,
-            lineStyle: { width: 14, color: gaugeSegments(ranges, maximum) },
+            lineStyle: { width: 14, color: gaugeSegments(ranges, maximum, direction) },
           },
           axisLabel: { show: false },
           axisTick: { show: false },
@@ -207,7 +213,7 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
             valueAnimation: false,
             fontSize: embedded ? 26 : 32,
             offsetCenter: [0, "38%"],
-            formatter: (value) => formatGaugeDetail(value, mark.target),
+            formatter: (value) => formatGaugeDetail(value, mark.target, direction),
           },
           title: {
             show: !embedded && Boolean(name),
@@ -370,6 +376,10 @@ function targetSemanticSummary(chart, marks, activeTime, embedded = false) {
         actual: mark.value ?? mark.actual ?? null,
         target: mark.target ?? null,
         time: mark.time ?? null,
+        ...(chart.typeId === "gauge" ? (() => {
+          const assessment = gaugeAssessment(mark.value, mark.target, chart.presentation?.targets?.direction);
+          return { targetStatus: assessment.status, favorability: assessment.favorability };
+        })() : {}),
         ...(provenance
           ? {
               activeTime: activeTime.canonical,
@@ -441,12 +451,14 @@ function favorability(direction, favorableDirection) {
   return direction === favorableMovement ? "favorable" : "unfavorable";
 }
 
-function gaugeSegments(ranges, maximum) {
+function gaugeSegments(ranges, maximum, direction) {
   if (!ranges.length) return [[1, GAUGE_COLORS[2]]];
+  const automatic = ranges.map((_, index) => GAUGE_COLORS[index % GAUGE_COLORS.length]);
+  if (direction === "decrease-is-good") automatic.reverse();
   return ranges
     .map((range, index) => [
       Math.min(1, Math.max(0, rangeEnd(range) / maximum)),
-      typeof range === "object" && range?.color ? range.color : GAUGE_COLORS[index % GAUGE_COLORS.length],
+      typeof range === "object" && range?.color ? range.color : direction === "neutral" ? "#64748b" : automatic[index],
     ])
     .sort((left, right) => left[0] - right[0]);
 }
@@ -466,10 +478,11 @@ function formatTargetValue(value) {
   }).format(Number(value));
 }
 
-function formatGaugeDetail(value, target) {
+function formatGaugeDetail(value, target, direction) {
   const current = formatTargetValue(value);
-  return Number.isFinite(Number(target))
-    ? `${current}\nTarget ${formatTargetValue(target)}`
+  const status = gaugeAssessment(value, target, direction).status;
+  return Number.isFinite(target)
+    ? `${current}\nTarget ${formatTargetValue(target)}${status ? `\n${status}` : ""}`
     : current;
 }
 

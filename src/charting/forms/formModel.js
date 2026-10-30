@@ -642,7 +642,7 @@ function axesFields({ chart, schema, prepared }) {
 
 function targetsFields({ chart }) {
   const controls = chart.typeId === "gauge"
-    ? ["ranges", "readoutLabel", "showReadoutLabel", "unit"]
+    ? ["direction", "ranges", "readoutLabel", "showReadoutLabel", "unit"]
     : ["deltaCard", "deltaList"].includes(chart.typeId)
       ? ["direction"]
       : [];
@@ -665,6 +665,7 @@ function targetsFields({ chart }) {
 function gaugeTargetSettings(targets) {
   return {
     ranges: [50, 80, 100],
+    direction: "increase-is-good",
     readoutLabel: "OF TARGET RANGE",
     showReadoutLabel: true,
     ...(targets ?? {}),
