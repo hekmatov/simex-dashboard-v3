@@ -3,10 +3,35 @@ import test from "node:test";
 
 import {
   createChartDraft,
+  normalizeChartInstance,
   validateChartInstance,
 } from "../src/charting/config/chartConfigV3.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { validateChartDataCompatibility } from "../src/charting/data/prepareChartData.js";
+
+test("V3 #28 order validation rejects active arrays and true temporal axes", () => {
+  const chart = createChartDraft("line", { id: "time", title: "Time", sourceId: "data", roles: {
+    measurements: [{ field: "value" }], observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+  } });
+  chart.presentation.series = { order: ["series-key"] };
+  assert.throws(() => validateChartInstance(chart), /categorical/);
+  delete chart.presentation.series;
+  chart.presentation.axes = { x: { categoryOrder: ["category-key"] } };
+  assert.throws(() => validateChartInstance(chart), /categorical/);
+  let evaluated = false;
+  Object.defineProperty(chart.presentation.axes.x.categoryOrder, "0", { enumerable: true, get() { evaluated = true; return "key"; } });
+  assert.throws(() => normalizeChartInstance(chart), /direct key entries/);
+  assert.equal(evaluated, false);
+  chart.roles.observation.interpretation = "category";
+  delete chart.roles.observation.format;
+  for (const [parent, key] of [[{ series: {} }, "order"], [{ legend: {} }, "entries"], [{ axes: { x: {} } }, "categoryOrder"]]) {
+    const record = parent.series ?? parent.legend ?? parent.axes.x;
+    Object.defineProperty(record, key, { enumerable: true, get() { evaluated = true; return []; } });
+    chart.presentation = { title: { align: "left" }, ...parent };
+    assert.throws(() => validateChartInstance(chart), /data propert/);
+    assert.equal(evaluated, false);
+  }
+});
 
 test("direct compatibility reports the exact missing configured column without changing chart V3", () => {
   const chart = createChartDraft("line", {

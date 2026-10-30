@@ -87,6 +87,7 @@ const WIDE_CONTROLS = new Set([
   "textarea", "filters", "labels", "axes", "targets", "map", "timeline",
   "role", "palette", "referenceLine", "citation", "collection", "timeSync",
   "deltaComparison", "quickBackground",
+  "presentationOrder", "legendEntries", "categoryColors", "seriesColorsByIdentity",
 ]);
 const DUPLICATE_SAFE_STRUCTURED_CONTROLS = new Set([
   "labels", "axes", "targets", "map", "timeline",

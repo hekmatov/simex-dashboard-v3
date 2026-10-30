@@ -10,6 +10,7 @@ import {
   isDeltaCardType,
 } from "../presentation/cardPresentationContract.js";
 import { chartDescriptionVisible } from "../presentation/chartCitation.js";
+import { categoryDescriptors, chartLegendDescriptors } from "../presentation/categorySeriesPresentation.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
@@ -361,7 +362,7 @@ function dataFields({
   return fields;
 }
 
-function appearanceFields({ chart, schema }) {
+function appearanceFields({ chart, schema, prepared }) {
   const common = [
     {
       id: "title",
@@ -474,7 +475,32 @@ function appearanceFields({ chart, schema }) {
         chart.presentation?.referenceLine,
       )
     )).filter(Boolean),
+    ...memberPresentationFields(chart, schema, prepared),
   ];
+}
+
+function memberPresentationFields(chart, schema, prepared) {
+  if (!LEGEND_PRESENTATION_RENDERERS.has(schema.renderer)) return [];
+  const descriptors = chartLegendDescriptors(schema.renderer, prepared?.marks);
+  const fields = [{
+    id: "legendEntries", label: "Legend entries", control: "legendEntries",
+    path: ["presentation", "legend", "entries"], value: chart.presentation?.legend?.entries, descriptors,
+  }];
+  if (schema.renderer === "axis") fields.push({ id: "seriesColorsByIdentity", label: "Colors by series", control: "seriesColorsByIdentity",
+    path: ["presentation", "series", "overrides"], value: chart.presentation?.series?.overrides, descriptors });
+  const categorical = schema.renderer === "axis" && prepared
+    && !["temporal", "number"].includes(prepared.meta?.axisInterpretation);
+  if (!categorical) return fields;
+  const categories = categoryDescriptors(prepared.marks);
+  fields.push({ id: "categoryOrder", label: "Category order", control: "presentationOrder", orderKind: "category",
+    path: ["presentation", "axes", "x", "categoryOrder"], value: chart.presentation?.axes?.x?.categoryOrder, descriptors: categories },
+  { id: "seriesOrder", label: "Series order", control: "presentationOrder", orderKind: "series",
+    path: ["presentation", "series", "order"], value: chart.presentation?.series?.order, descriptors });
+  if (descriptors.length === 1 && schema.form.appearance.includes("barWidth")) fields.push({
+    id: "categoryColors", label: "Bar colors by category", control: "categoryColors",
+    path: ["presentation", "series", "categoryOverrides"], value: chart.presentation?.series?.categoryOverrides, descriptors: categories,
+  });
+  return fields;
 }
 
 function cardAppearanceFields(chart) {

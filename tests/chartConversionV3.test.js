@@ -28,6 +28,27 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 
+test("V3 #20 #28 conversion retains compatible identities and announces incompatible presentation losses", () => {
+  const chart = createChartDraft("bar", { id: "ordered", title: "Ordered", sourceId: "source",
+    roles: { measurements: [{ field: "value" }], observation: { field: "category", interpretation: "category" } },
+    presentation: { axes: { x: { categoryOrder: ["category-A"] } }, series: {
+      order: ["series-A"], overrides: { "series-A": { color: "#123456" } }, categoryOverrides: { "category-A": { color: "#abcdef" } },
+    }, legend: { entries: { "series-A": { label: "Renamed", visible: false } } } } });
+  assert.deepEqual(applyChartConversion(chart, "horizontalBar").presentation, chart.presentation);
+  const plan = planChartConversion(chart, "pie");
+  assert.ok(plan.removedSettings.some(s => s.path === "presentation.axes"));
+  assert.ok(plan.removedSettings.some(s => s.path === "presentation.series.order"));
+  const relation = applyChartConversion(chart, "scatter", { x: { field: "value" }, y: { field: "other" } });
+  assert.equal(relation.typeId, "scatter");
+  assert.equal(relation.presentation.axes?.x?.categoryOrder, undefined);
+  assert.equal(relation.presentation.series?.order, undefined);
+  const targetPlan = planChartConversion(chart, "kpi");
+  assert.ok(targetPlan.removedSettings.some(s => s.path === "presentation.legend.entries"));
+  const target = applyChartConversion(chart, "kpi", { value: { field: "value" } });
+  assert.equal(target.typeId, "kpi");
+  assert.equal(target.presentation.legend?.entries, undefined);
+});
+
 function lineChart(overrides = {}) {
   return createChartDraft("line", {
     id: "exercise-trend",

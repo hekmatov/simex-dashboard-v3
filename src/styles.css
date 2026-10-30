@@ -1469,6 +1469,13 @@ th {
   min-width: 0;
 }
 
+.chart-presentation-members { min-width: 0; grid-column: 1 / -1; }
+.chart-presentation-members__list { display: grid; gap: 10px; margin: 8px 0; padding-inline-start: 24px; }
+.chart-presentation-members__list > li { min-width: 0; overflow-wrap: anywhere; }
+.chart-presentation-members__moves { display: flex; gap: 6px; margin-block: 4px; }
+.chart-presentation-members__entry { display: grid; gap: 6px; }
+.chart-presentation-members [data-presentation-unavailable="true"] > span { color: var(--simex-text-muted); }
+
 .chart-authoring-field-required-marker {
   white-space: nowrap;
 }

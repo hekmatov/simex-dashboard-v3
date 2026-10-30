@@ -142,7 +142,7 @@ function convertChart(chart, targetTypeId, roleAssignments, { complete }) {
       sourceId: snapshot.sourceId,
       roles,
       transformations: targetTransformations(snapshot.transformations, target),
-      presentation: targetPresentation(snapshot.presentation, target),
+      presentation: targetPresentation(snapshot.presentation, target, roles),
       interaction: targetInteraction(snapshot.interaction, target, roles),
       layout: snapshot.layout,
     });
@@ -247,6 +247,16 @@ function removedSettings(chart, target, preserved, effectiveRoles = preserved) {
     }
   }
   removed.push(...removedSeriesSettings(presentation.series, target));
+  if (presentation.axes?.x?.categoryOrder !== undefined && !categoricalAxis(target, effectiveRoles)) {
+    removed.push(setting("presentation.axes.x.categoryOrder", "Category ordering requires a categorical observation axis."));
+  }
+  if (presentation.legend?.entries !== undefined && !["axis", "composition", "relationship"].includes(target.renderer)) {
+    removed.push(setting("presentation.legend.entries", "The selected chart type has no legend entries."));
+  }
+  if (presentation.series?.order !== undefined && !categoricalAxis(target, effectiveRoles)
+    && seriesStylePropertySupported(target.form.appearance, "order")) {
+    removed.push(setting("presentation.series.order", "Series ordering requires a categorical observation axis."));
+  }
 
   const interaction = isRecord(chart.interaction) ? chart.interaction : {};
   if (
@@ -325,7 +335,7 @@ function comparisonCompatible(comparison, target) {
   );
 }
 
-function targetPresentation(sourceValue, target) {
+function targetPresentation(sourceValue, target, roles) {
   const source = isRecord(sourceValue) ? sourceValue : {};
   const presentation = {};
   if (Object.hasOwn(source, "title")) {
@@ -351,7 +361,26 @@ function targetPresentation(sourceValue, target) {
   if (series !== undefined) {
     presentation.series = series;
   }
+  if (!categoricalAxis(target, roles)) {
+    if (presentation.axes?.x) {
+      delete presentation.axes.x.categoryOrder;
+      if (!Object.keys(presentation.axes.x).length) delete presentation.axes.x;
+      if (!Object.keys(presentation.axes).length) delete presentation.axes;
+    }
+    if (presentation.series?.order !== undefined) {
+      delete presentation.series.order;
+      if (!Object.keys(presentation.series).length) delete presentation.series;
+    }
+  }
+  if (presentation.legend?.entries !== undefined && !["axis", "composition", "relationship"].includes(target.renderer)) {
+    delete presentation.legend.entries;
+    if (!Object.keys(presentation.legend).length) delete presentation.legend;
+  }
   return presentation;
+}
+
+function categoricalAxis(target, roles) {
+  return target.renderer === "axis" && !["temporal", "number", "numeric"].includes(roles?.observation?.interpretation);
 }
 
 function presentationAllowed(target, key, section, value) {

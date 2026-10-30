@@ -1,6 +1,6 @@
 # V3 Open Issues Implementation Plan
 
-> **Status: implementation in progress, authorized on 30 October 2026.** Executed directly on local private `main` under the proportional workflow policy. Issue #22 remains explicitly deferred; the other 16 issues are active.
+> **Status: completed locally on 30 October 2026.** Implemented and verified directly on private `main` under the proportional workflow policy. All 16 active issues have dispositions below; #22 remains explicitly deferred. No publication or remote reconciliation was performed.
 
 ## Execution record
 
@@ -33,8 +33,37 @@
   - Browser selection: `pnpm.cmd exec playwright test tests/e2e/v3-wizard-usability.spec.js --project=chromium --grep 'V3 #11 #16 #19 #28 #29'`: gauge typing passed **18.6s**; initial axis/filter fixtures needed resource timing capacity and native-select lookup corrections; palette focus regression observed RED.
   - After the focus fix and fixture corrections, axis, suggestions and palette passed **3/3 (37.9s)**. Expanded source/column refresh passed **12.9s**. Final palette selection/focus case (correctly pinning the last PDPC gradient midpoint) passed **1/1 (18.6s)**. Passing gauge and axis journeys were not repeated after unrelated fixture changes. All four independently runnable cases now have passing results.
   - #11/#16/#19/#29 are verified already addressed locally; #28 palette reachability verified with a bounded keyboard-focus repair. No broken axes, changed dataset values, replacement filter language or speculative overflow framework.
-- S7 pending. #30 fixture blocker: read the report through GitHub; it has no attachment/configuration. Neither named chart is in local authored defaults/fixtures or uploaded CSV text. Requested its local export path from the user while continuing #20/#28. No speculative per-category color feature has been added.
+- S7 / #20, #28 ordering, #30: implemented the shared stable-identity presentation contract across strict validation/normalization, authoring, rendering, conversion and package boundaries. Whole-legend hiding retains settings; entry aliases and omission use distinct internal tokens, with no selected/deselected state or data removal. Independent keyboard category/series ordering retains dormant settings and original mark/axis bindings; source order remains the default. First ordering captures authored palette assignments atomically; keyed series colors remain editable. Category colors apply to the proven single-series bar case. Unstyled series retain theme colors by original source index when reordered.
+  - #30 reproduction unblocked by the user's `C:/Users/hekma/Downloads/SimEx-dashboard-bundle-20261030.json` (SHA-256 `3bd6603cd76f61b4307a22a8cd4cf59d3501a9914c1508f2efa7b63a698d0430`). Extracted only the three reported charts, source CSVs, profiles and source-entry metadata into `tests/fixtures/v3-issue-30-charts.json`; did not promote the bundle or rewrite authored defaults. “Priorities of lifting measures” is horizontalBar, one `percentage` measurement against `easing_priority`, no grouping/pivot, five categories and five saved palette colors: `#043BCB,#36BDEB,#2BAA7B,#F1A1AD,#F59E0B`. Actual rendered series count is one, so changing Color 2 cannot recolor category 2. “Current support measures” is a line chart with four measurements against `wave` and four rows; its final-week comparison is horizontalBar with the same four measurements and one row. Both render four series and have no authored series palette. This evidence justified category-keyed overrides rather than a speculative palette rewrite.
+  - `node --test tests/categorySeriesPresentation.test.js tests/chartConfigV3.test.js tests/chartFormModelV3.test.js tests/chartConversionV3.test.js tests/chartAuthoringComponentsV3.test.js tests/dashboardBundleV3.test.js`: final candidate **274 passed, 0 failed**. Covers strict inert records/arrays, malformed settings and unsupported families, dormant members, duplicate aliases, atomic palette capture, capability-aligned forms, independent axis edits, incompatible conversion warnings, and package round-trip.
+  - `node --test --test-name-pattern='V3 #(20|28|30)|pivot|axis|bars|line|mixed|legend|pie|donut|scatter|bubble|relationship|composition|palette|series' tests/chartRenderingV3.test.js tests/chartDataPipelineV3.test.js`: final candidate **67 passed, 0 failed**. Includes actual #30 fixture/SVG colors, category/series independence, horizontal ordering, mixed mark/axis binding, missing/reappearing playback members, typed identities, provenance-aware tooltips and theme colors. New pivot identity probe reproduced distinct measurements colliding when their display aliases matched; consolidation now uses measurement-owned category identity. Source rows remain unchanged.
+  - `pnpm.cmd exec playwright test tests/e2e/v3-series-presentation.spec.js --project=chromium --list`: **2 valid tests** after dashboard/source/destination preflight. `pnpm.cmd exec playwright test tests/e2e/v3-series-presentation.spec.js --project=chromium`: **2 passed (31.9s)**. Actual reported chart controls cover keyboard reorder, individual bar colors, series colors/order, duplicate legend aliases, individual omission, whole-legend hide/restore, reset-to-generated alias, save/reopen and reload; all plotted data remains. These passing journeys were not repeated after engine-only pivot/composition corrections covered deterministically.
+  - Fresh whole-branch review, including committed S1–S6 and S7 working tree: two P2 composition regressions found, reproduced RED and corrected. Alias formatting now preserves wrapped category labels as literal text (including braces); grouped pie tooltips retain group context. Final affected review selection **11/11 passed**, bounded rereview complete, **no unresolved material findings**. No review-driven scope expansion.
+- Local slice history before S7: S1 `c6495e5a`; S2 `c1b79cc1`; S3 `2afb46bb`; S4 `b0061707`; S5 `1417052b`; S6 `98bd76ae`. S7 is the coherent commit containing this record and its directly corresponding implementation/tests.
+- Delivery boundary: targeted development checks and representative journeys passed as recorded above. No full repository suite, complete build, release/package-browser gate or public deployment acceptance was run or claimed. No remaining implementation blocker. The planning steward was not contacted: the user's condition requires a public merge/push first, while this task explicitly prohibits publication.
 - #22: **deferred by user**, no catalogue/listing/eligibility changes authorized.
+
+### Final issue dispositions
+
+| Issue | Local disposition | Slice |
+| --- | --- | --- |
+| #11 | Existing gauge range typing verified through save/reopen. | S6 |
+| #16 | Existing categorical-label font/wrapping controls verified. | S6 |
+| #17 | Repaired draft conversion retention and warnings before incompatible losses. | S4 |
+| #18 | Existing full-editor destination/move verified with canonical identity retained. | S2 |
+| #19 | Existing scalar categorical suggestions and source refresh verified. | S6 |
+| #20 | Added entry aliases and individual omission alongside whole-legend visibility; plotted data retained. | S7 |
+| #21 | Repaired destination-width text preview and wrapping. | S3 |
+| #22 | **Explicitly deferred; no media-list changes.** | Deferred |
+| #23 | Existing absent-versus-zero target repair verified through save/reload/export contract. | S5 |
+| #24 | Added favorable-direction authoring/assessment and consistent automatic colors on ascending scales. | S5 |
+| #25 | Repaired stale image zoom capabilities surviving conversion to Text. | S1 |
+| #26 | Repaired Start section here through canonical Build layout transactions. | S2 |
+| #28 | Added independent category/series order; verified reachable palette and repaired Escape focus return. | S6, S7 |
+| #29 | Existing ordinary Y minimum/maximum, reset and independent secondary controls verified. | S6 |
+| #30 | Reproduced actual one-series/four-series distinction; added stable per-category bar colors. | S7 |
+| #31 | Repaired usable writer geometry independent of preview footprint. | S3 |
+| #32 | Repaired pending-layout persistence boundary and CSV retry ownership; real failure/retry preserves one chart/source. | S2 |
 
 **Goal:** Address the complete 17-issue V3 inventory: repair or verify the 16 active issues, and retain #22 as an explicit user-directed deferral. Preserve already-working behavior and authored content.
 
@@ -208,14 +237,14 @@ Recommended sequence: **S1 text blocker → S2 creation/placement transactions �
 
 **Tests:** `tests/chartRenderingV3.test.js`, `tests/chartFormModelV3.test.js`, `tests/chartConfigV3.test.js`, `tests/chartConversionV3.test.js`, `tests/dashboardBundleV3.test.js`; one affected chart authoring journey.
 
-- [ ] Obtain/identify the reporter's “priorities of lifting measures” chart and the comparison “current support measures” chart. Record actual type, mappings, pivot/grouping, saved palette, and rendered series count. This evidence decides whether the bug is a lost palette, an overriding style, or a request for per-category colors on one series.
-- [ ] Retain whole-legend visibility and add per-entry display-name editing and a **Show in legend** toggle. Omit hidden entries from the legend without using ECharts' selected/deselected-series state, deleting series/data, or changing totals. Resetting a name restores the generated label. Whole-legend hiding must retain all per-entry settings for later restoration. Do not rename source CSV columns.
-- [ ] Provide two independent keyboard-accessible ordered lists: **Category order** and **Series order**. Support Move up/Move down and Reset to source order; drag-and-drop is optional polish. Category order applies to the categorical dimension, including the physical Y axis of horizontal bars; do not manually reorder true time/numeric axes.
-- [ ] Define stable category/series keys separately from display labels; retain source order by default; retain explicit order when filtering or playback temporarily removes members; append previously unseen members deterministically without deleting their data. Display unavailable configured entries clearly without dropping their stored settings.
-- [ ] Use the same resolved order for bars/lines, legend, tooltip, and colors. Keep measurement-to-axis binding stable, especially for mixed charts. A reorder must not silently change mark type or move data to the secondary axis.
-- [ ] Repair #30 at the proven boundary. If per-category styling is required, author and persist it by stable category identity; do not pretend that editing a second series color can affect a chart with only one series. Retain the existing series palette for its current purpose.
-- [ ] Implement the presentation contract below across validation, normalization, form generation, rendering, conversion, and package round-trip in one coherent change. Extend `seriesStyleContract.js` rather than bypassing its capability/known-key checks.
-- [ ] Verify the actual reported fixtures, order changes, filter/playback changes, saved/reopened configuration, and chart-type conversion preserve intended labels and styling.
+- [x] Obtain/identify the reporter's “priorities of lifting measures” chart and the comparison “current support measures” chart. Record actual type, mappings, pivot/grouping, saved palette, and rendered series count. This evidence decides whether the bug is a lost palette, an overriding style, or a request for per-category colors on one series.
+- [x] Retain whole-legend visibility and add per-entry display-name editing and a **Show in legend** toggle. Omit hidden entries from the legend without using ECharts' selected/deselected-series state, deleting series/data, or changing totals. Resetting a name restores the generated label. Whole-legend hiding must retain all per-entry settings for later restoration. Do not rename source CSV columns.
+- [x] Provide two independent keyboard-accessible ordered lists: **Category order** and **Series order**. Support Move up/Move down and Reset to source order; drag-and-drop is optional polish. Category order applies to the categorical dimension, including the physical Y axis of horizontal bars; do not manually reorder true time/numeric axes.
+- [x] Define stable category/series keys separately from display labels; retain source order by default; retain explicit order when filtering or playback temporarily removes members; append previously unseen members deterministically without deleting their data. Display unavailable configured entries clearly without dropping their stored settings.
+- [x] Use the same resolved order for bars/lines, legend, tooltip, and colors. Keep measurement-to-axis binding stable, especially for mixed charts. A reorder must not silently change mark type or move data to the secondary axis.
+- [x] Repair #30 at the proven boundary. If per-category styling is required, author and persist it by stable category identity; do not pretend that editing a second series color can affect a chart with only one series. Retain the existing series palette for its current purpose.
+- [x] Implement the presentation contract below across validation, normalization, form generation, rendering, conversion, and package round-trip in one coherent change. Extend `seriesStyleContract.js` rather than bypassing its capability/known-key checks.
+- [x] Verify the actual reported fixtures, order changes, filter/playback changes, saved/reopened configuration, and chart-type conversion preserve intended labels and styling.
 
 **Exit:** Users can express the confirmed label/order/color choices without changing data, and the choices remain consistent across preview, save/reload, playback, and export.
 
@@ -228,6 +257,7 @@ These are engineering decisions for the implementation, based on the confirmed b
 | `presentation.axes.x.categoryOrder` | Optional array of unique category keys, only for a categorical observation dimension. The logical `x` dimension remains the owner for horizontal charts. Absent means source order. |
 | `presentation.series.order` | Optional array of unique series keys, supported by Cartesian category charts. Absent means source order. The form capability and series-style validator must agree. |
 | `presentation.series.overrides` | Optional record keyed by series identity, with `{ color?: '#RRGGBB' }` entries. Used to preserve explicit styling when series are reordered. Retain `series.colors` as the legacy/default palette input; an explicit keyed override wins. Do not reassign existing authored colors by the new visual index. |
+| `presentation.series.categoryOverrides` | Optional category-keyed record with `{ color?: '#RRGGBB' }` entries, justified by the actual #30 reproduction. Applies to individual bars on single-series categorical bar charts. Retain dormant entries and preserve provenance paint; category overrides take precedence over the series/default palette. |
 | `presentation.legend.entries` | Optional record keyed by legend-entry identity, each `{ label?: string, visible?: boolean }`. Absent label uses the generated display label; absent visibility is true. Trim an empty edited label back to the default. |
 
 Reject malformed types, duplicate order keys, unknown entry properties, and invalid colors through the existing strict validators. A well-formed key temporarily absent from the current data remains a dormant setting, not a validation error. Clearing the final optional value should prune empty records consistently with existing authoring behavior.
@@ -330,7 +360,7 @@ Read-only in-memory probes additionally showed:
 
 The latter probes are diagnosis evidence, not newly added durable regression tests. The future implementation slices must add those tests. #26, #30, and the initial missing-destination failure in #32 remain hypotheses requiring the focused reproductions specified above.
 
-## Completion criteria for the future implementation
+## Completion criteria
 
 - Every issue has an explicit disposition: repaired with evidence, already addressed locally with user-journey evidence, or still blocked on a named external reproduction/product decision. No issue silently drops from scope.
 - All confirmed defects have corresponding regression coverage; every selected final task-specific check passes or has a clearly separated environment blocker.

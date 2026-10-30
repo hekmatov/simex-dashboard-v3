@@ -1,4 +1,5 @@
 import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+import { relationshipSeriesKey, chartLegendDescriptors, legendProjection, legendTooltipFormatter } from "../presentation/categorySeriesPresentation.js";
 import {
   buildEChartsDataZoom,
   rangeSelectorVisible,
@@ -12,13 +13,16 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
   const bubble = mark === "bubble";
   const colors = chart.presentation?.series?.colors;
   const labels = chart.presentation?.labels;
+  const descriptors = chartLegendDescriptors("relationship", prepared.marks);
+  const entries = chart.presentation?.legend?.entries;
+  const customLegend = entries && Object.keys(entries).length > 0;
   return {
     kind: "echarts",
     option: {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
-      tooltip: { trigger: "item" },
-      legend: legendOption(chart),
+      tooltip: { trigger: "item", ...(customLegend ? { formatter: legendTooltipFormatter(descriptors, entries) } : {}) },
+      legend: legendProjection(legendOption(chart), descriptors, entries),
       ...(Array.isArray(colors) ? { color: [...colors] } : {}),
       grid: {
         containLabel: true,
@@ -29,8 +33,9 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
       },
       xAxis: { type: "value", name: chart.presentation?.axes?.primary?.xTitle ?? "" },
       yAxis: { type: "value", name: chart.presentation?.axes?.primary?.yTitle ?? "" },
-      series: groupMarks(prepared.marks).map(({ name, marks }) => ({
-        name,
+      series: groupMarks(prepared.marks).map(({ key, name, marks }) => ({
+        id: key,
+        name: customLegend ? key : name,
         type: "scatter",
         data: marks.map((mark) => ({
           name: mark.label == null ? "" : String(mark.label),
@@ -73,10 +78,10 @@ function relationshipLabelOption(labels) {
 function groupMarks(marks) {
   const groups = new Map();
   for (const mark of marks) {
-    const key = JSON.stringify([mark.clusterKey ?? mark.cluster ?? "", mark.groupKey ?? mark.group ?? ""]);
+    const key = relationshipSeriesKey(mark);
     if (!groups.has(key)) {
       const name = [mark.cluster, mark.group].filter((value) => value !== null && value !== undefined && value !== "").join(" · ") || "Values";
-      groups.set(key, { name, marks: [] });
+      groups.set(key, { key, name, marks: [] });
     }
     groups.get(key).marks.push(mark);
   }

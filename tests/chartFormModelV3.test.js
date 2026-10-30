@@ -13,6 +13,33 @@ import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { getChartSchema, listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
 
+test("V3 #20 #28 presentation controls match prepared families and axis interpretation", () => {
+  for (const typeId of ["bar", "horizontalBar", "line", "pie", "scatter"]) {
+    const roles = ["pie"].includes(typeId) ? { category: { field: "category" }, value: { field: "value" } }
+      : typeId === "scatter" ? { x: { field: "value" }, y: { field: "other" }, cluster: { field: "category" } }
+        : { measurements: [{ field: "value" }], observation: { field: "category", interpretation: "category" } };
+    const chart = createChartDraft(typeId, { id: "presentation", title: "Presentation", sourceId: "data", roles });
+    const rows = [{ category: "A", value: 2, other: 3 }, { category: "B", value: 4, other: 5 }];
+    const profile = profileDataset(rows);
+    const prepared = prepareChartData({ chart, rows, datasetProfile: profile });
+    assert.equal(prepared.status, "ready", typeId);
+    const model = buildEditorFormModel({ chart, profile, prepared: preparedFor(chart, profile, prepared) });
+    const fields = allFields(model);
+    assert.equal(fields.find(f => f.id === "legendEntries").descriptors.length, typeId === "pie" || typeId === "scatter" ? 2 : 1);
+    assert.equal(fields.some(f => f.id === "categoryOrder"), !["pie", "scatter"].includes(typeId));
+    assert.equal(fields.some(f => f.id === "seriesOrder"), !["pie", "scatter"].includes(typeId));
+    assert.equal(fields.some(f => f.id === "categoryColors"), ["bar", "horizontalBar"].includes(typeId));
+  }
+  const chart = lineChart();
+  const rows = [{ reportedAt: "2027-05-01", value: 10 }, { reportedAt: "2027-05-02", value: 12 }];
+  const profile = profileDataset(rows);
+  const prepared = prepareChartData({ chart, rows, datasetProfile: profile });
+  assert.equal(prepared.status, "ready");
+  const fields = allFields(buildEditorFormModel({ chart, profile, prepared: preparedFor(chart, profile, prepared) }));
+  assert.equal(fields.some(f => f.id === "seriesOrder" || f.id === "categoryOrder"), false);
+  assert.equal(fields.some(f => f.id === "seriesColorsByIdentity"), true);
+});
+
 function lineChart(overrides = {}) {
   return createChartDraft("line", {
     id: "exercise-trend",

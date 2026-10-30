@@ -9,6 +9,10 @@ import {
   xAxisPresentation,
 } from "./axisPresentation.js";
 import { createValueAxisTitleProjection } from "./axisTitleGraphics.js";
+import {
+  categoryPresentationKey, categoryDescriptors, axisSeriesDescriptors,
+  resolveOrderedKeys, legendProjection, legendTooltipFormatter,
+} from "../presentation/categorySeriesPresentation.js";
 
 const BAR_MARKS = new Set([
   "bar",
@@ -36,9 +40,17 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const activeTime = prepared.meta?.activeTime ?? null;
   const seriesStyle = chart.presentation?.series;
   const referenceLine = chart.presentation?.referenceLine;
-  const categories = unique(prepared.marks.map(({ x }) => x));
-  const categoryIndexes = new Map(categories.map((category, index) => [category, index]));
-  const grouped = groupSeries(prepared.marks);
+  const categorical = !["temporal", "number"].includes(prepared.meta?.axisInterpretation);
+  const sourceCategories = categoryDescriptors(prepared.marks);
+  const categoryByKey = new Map(sourceCategories.map(entry => [entry.key, entry]));
+  const categoryKeys = resolveOrderedKeys(sourceCategories.map(entry => entry.key), categorical ? chart.presentation?.axes?.x?.categoryOrder : undefined);
+  const categories = categoryKeys.map(key => categoryByKey.get(key).value);
+  const categoryIndexes = new Map(categoryKeys.map((key, index) => [key, index]));
+  const sourceGroups = axisSeriesDescriptors(prepared.marks);
+  const groupByKey = new Map(sourceGroups.map(group => [group.key, group]));
+  const grouped = resolveOrderedKeys(sourceGroups.map(group => group.key), categorical ? seriesStyle?.order : undefined).map(key => groupByKey.get(key));
+  const legendEntries = chart.presentation?.legend?.entries;
+  const customLegend = legendEntries && Object.keys(legendEntries).length > 0;
   const hasSecondary = grouped.some(({ axis }) => axis === "secondary");
   const axes = chart.presentation?.axes;
   const xSettings = {
@@ -107,8 +119,9 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       : null,
   ].filter(Boolean);
   const series = grouped.map((group, index) => {
-    const type = seriesType(mark, group, index);
-    const values = temporal
+    const measureIndex = chart.roles?.measurements?.findIndex(binding => binding.field === group.marks[0]?.measure) ?? -1;
+    const type = seriesType(mark, group, measureIndex >= 0 ? measureIndex : group.sourceIndex);
+    let values = temporal
       ? [...group.marks]
           .sort((left, right) => String(left.x).localeCompare(String(right.x)))
           .map((mark) => axisDataValue(
@@ -120,11 +133,23 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
             type,
           ))
       : categoryValues(group.marks, categoryIndexes, categories.length, activeTime, type);
+    if (categorical && type === "bar" && grouped.length === 1 && seriesStyle?.categoryOverrides) {
+      values = values.map((point, position) => {
+        const color = seriesStyle.categoryOverrides[categoryKeys[position]]?.color;
+        return !color || point == null ? point : {
+          ...(typeof point === "object" && !Array.isArray(point) ? point : { value: point }),
+          itemStyle: { color, ...(point?.itemStyle ?? {}) },
+        };
+      });
+    }
+    const color = seriesStyle?.overrides?.[group.key]?.color
+      ?? (seriesStyle?.order && seriesStyle?.colors?.length ? seriesStyle.colors[group.sourceIndex % seriesStyle.colors.length] : undefined);
     const marker = type === "line"
       ? playbackMarker(group.marks, activeTime, fixedTemporalTicks)
       : undefined;
     return {
-      name: group.name,
+      id: group.key,
+      name: customLegend ? group.key : group.defaultLabel,
       type,
       data: values,
       xAxisIndex: horizontal ? group.axis === "secondary" ? 1 : 0 : undefined,
@@ -140,6 +165,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
         prepared.marks.length,
       ),
       emphasis: { focus: "series" },
+      ...(color ? { itemStyle: { color } } : {}),
       ...(type === "line" && Number.isFinite(seriesStyle?.lineWidth)
         ? { lineStyle: { width: seriesStyle.lineWidth } }
         : {}),
@@ -154,12 +180,13 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
 
   return {
     kind: "echarts",
+    ...(seriesStyle?.order ? { seriesPresentation: grouped.map(({ key, sourceIndex }) => ({ key, sourceIndex })) } : {}),
     valueAxisTitleProjection,
     option: {
       title: titleOption(chart),
       aria: ariaOption(chart),
-      tooltip: { trigger: "axis" },
-      legend: legendOption(chart),
+      tooltip: { trigger: "axis", ...(customLegend ? { formatter: legendTooltipFormatter(grouped, legendEntries) } : {}) },
+      legend: legendProjection(legendOption(chart), grouped, legendEntries),
       ...(Array.isArray(seriesStyle?.colors)
         ? { color: [...seriesStyle.colors] }
         : {}),
@@ -343,37 +370,6 @@ function temporalAxisValue(value) {
   return Number.isFinite(numeric) ? numeric : undefined;
 }
 
-function groupSeries(marks) {
-  const groups = new Map();
-  for (const mark of marks) {
-    const key = JSON.stringify([
-      mark.measure ?? "",
-      mark.clusterKey ?? mark.cluster ?? "",
-      mark.groupKey ?? mark.group ?? "",
-      mark.label ?? "",
-      mark.axis ?? "primary",
-    ]);
-    if (!groups.has(key)) {
-      groups.set(key, {
-        axis: mark.axis ?? "primary",
-        name: seriesName(mark),
-        marks: [],
-      });
-    }
-    groups.get(key).marks.push(mark);
-  }
-  return [...groups.values()];
-}
-
-function seriesName(mark) {
-  return unique([
-    mark.measureLabel ?? mark.measure ?? "Value",
-    mark.cluster,
-    mark.group,
-    mark.label,
-  ].filter((value) => value !== null && value !== undefined && value !== "").map(String)).join(" · ");
-}
-
 function seriesType(mark, group, index) {
   if (mark === "line" || mark === "area") return "line";
   if (mark === "mixed-axis") {
@@ -397,14 +393,10 @@ function ariaOption(chart) {
   };
 }
 
-function unique(values) {
-  return [...new Set(values)];
-}
-
 function categoryValues(marks, indexes, count, activeTime, type) {
   const values = Array.from({ length: count }, () => null);
   for (const mark of marks) {
-    const index = indexes.get(mark.x);
+    const index = indexes.get(mark.categoryKey ?? categoryPresentationKey(mark.x));
     if (index !== undefined) {
       values[index] = axisDataValue(mark, mark.value, activeTime, type);
     }

@@ -11,6 +11,7 @@ import {
 } from "../presentation/seriesStyleContract.js";
 import { validateCardPresentation } from "../presentation/cardPresentationContract.js";
 import { isNormalizedImageCustomColor } from "../presentation/imagePresentation.js";
+import { normalizePresentationOrder, normalizeKeyedPresentation } from "../presentation/categorySeriesPresentation.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
   CHART_COMPARISON_MATCHING_POLICIES,
@@ -469,7 +470,7 @@ function validatePresentation(chart, schema, temporalRoles) {
   validateTable(descriptors.table?.value, schema);
   validateImagePresentation(descriptors.image, schema);
   validateBackground(descriptors.background?.value);
-  validateLegend(descriptors.legend?.value);
+  validateLegend(descriptors.legend?.value, schema);
   validateAccessibility(descriptors.accessibility?.value);
   validateDescription(descriptors.description?.value);
   validateCitation(descriptors.citation?.value);
@@ -477,10 +478,13 @@ function validatePresentation(chart, schema, temporalRoles) {
   validateCardPresentation(descriptors.card?.value, schema.typeId);
   optionalObject(descriptors.advanced?.value, "Chart presentation advanced", new Set());
   if (Object.hasOwn(descriptors, "series")) {
-    normalizeSeriesStyle(
+    const normalizedSeries = normalizeSeriesStyle(
       descriptors.series.value,
       schema.form.appearance,
     );
+    if (normalizedSeries?.order !== undefined && axisXKind(schema, temporalRoles) !== "category") {
+      throw new Error("Manual series order requires a categorical observation axis.");
+    }
   }
 }
 
@@ -525,7 +529,12 @@ function validateAxes(axes, schema, temporalRoles) {
   const x = axes?.x;
   if (x !== undefined) {
     ensureObject(x, "Chart presentation axes x");
-    checkKnownKeys(x, new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth", "labelMaxWidthEm"]), "chart presentation axes x");
+    checkKnownKeys(x, new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth", "labelMaxWidthEm", "categoryOrder"]), "chart presentation axes x");
+    const categoryOrder = ownEnumerableDataValue(x, "categoryOrder", "Chart X axis");
+    if (categoryOrder.present) {
+      if (schema.renderer !== "axis" || xKind !== "category") throw new Error("Category order requires a categorical observation axis.");
+      normalizePresentationOrder(categoryOrder.value, "Category order");
+    }
     if (x.title !== undefined && typeof x.title !== "string") throw new Error("Chart presentation axes x title must be a string.");
     if (x.titleFontSize !== undefined && (!Number.isInteger(x.titleFontSize) || x.titleFontSize < 10 || x.titleFontSize > 24)) {
       throw new Error("Chart presentation axes x titleFontSize must be an integer from 10 through 24.");
@@ -703,8 +712,13 @@ function validateBackground(background) {
   if (background?.transparent !== undefined && typeof background.transparent !== "boolean") throw new Error("Chart presentation background transparent must be boolean.");
 }
 
-function validateLegend(legend) {
-  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "orientation", "wrap", "fontSize"]));
+function validateLegend(legend, schema) {
+  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "orientation", "wrap", "fontSize", "entries"]));
+  const entries = legend == null ? { present: false } : ownEnumerableDataValue(legend, "entries", "Chart legend");
+  if (entries.present) {
+    if (!["axis", "composition", "relationship"].includes(schema.renderer)) throw new Error("Legend entries require a legend-bearing chart type.");
+    normalizeKeyedPresentation(entries.value, "legend");
+  }
   if (legend?.orientation !== undefined && !["horizontal", "vertical"].includes(legend.orientation)) throw new Error("Chart presentation legend orientation must be horizontal or vertical.");
   if (legend?.visible !== undefined && typeof legend.visible !== "boolean") throw new Error("Chart presentation legend visible must be boolean.");
   if (legend?.wrap !== undefined && typeof legend.wrap !== "boolean") throw new Error("Chart presentation legend wrap must be boolean.");
@@ -907,6 +921,23 @@ export function normalizeChartInstance(chart) {
         schema.form.appearance,
       )
     : undefined;
+  const legend = ownEnumerableDataValue(presentation, "legend", "Chart presentation").value;
+  let normalizedEntries;
+  if (legend !== undefined) {
+    strictRecordDescriptors(legend, "Chart legend");
+    const entries = ownEnumerableDataValue(legend, "entries", "Chart legend");
+    if (entries.present) normalizedEntries = normalizeKeyedPresentation(entries.value, "legend");
+  }
+  const rawAxes = ownEnumerableDataValue(presentation, "axes", "Chart presentation").value;
+  if (rawAxes !== undefined) {
+    strictRecordDescriptors(rawAxes, "Chart axes");
+    const x = ownEnumerableDataValue(rawAxes, "x", "Chart axes").value;
+    if (x !== undefined) {
+      strictRecordDescriptors(x, "Chart X axis");
+      const order = ownEnumerableDataValue(x, "categoryOrder", "Chart X axis");
+      if (order.present) normalizePresentationOrder(order.value, "Category order");
+    }
+  }
   const normalized = structuredClone(chart);
   normalizeAxisTitles(normalized.presentation?.axes);
   if (collectionProperty.present) {
@@ -914,6 +945,10 @@ export function normalizeChartInstance(chart) {
   }
   if (seriesProperty.present) {
     normalized.presentation.series = normalizedSeries;
+  }
+  if (normalizedEntries !== undefined) {
+    if (Object.keys(normalizedEntries).length) normalized.presentation.legend.entries = normalizedEntries;
+    else delete normalized.presentation.legend.entries;
   }
   return normalized;
 }

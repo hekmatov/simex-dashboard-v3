@@ -2,7 +2,7 @@ import React from "react";
 import { IconControl, SimExIcon } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
 const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "labelFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
-const X_AXIS_PROPERTIES = new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth", "labelMaxWidthEm"]);
+const X_AXIS_PROPERTIES = new Set(["title", "titleFontSize", "min", "max", "labelPreset", "hoverLabelPreset", "tickFrequency", "labelFontSize", "labelWrap", "labelMaxWidth", "labelMaxWidthEm", "categoryOrder"]);
 const EXACT_MONTH_TICK_FREQUENCIES = Object.freeze([1, 2, 3]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
 function StandardField({
@@ -791,6 +791,7 @@ function sanitizeXAxis(value) {
   if (!isRecord(value)) return void 0;
   const axis = {};
   for (const property of X_AXIS_PROPERTIES) {
+    if (property === "categoryOrder" && Array.isArray(value[property])) { axis[property] = [...value[property]]; continue; }
     if (["min", "max"].includes(property) && (Number.isFinite(value[property]) || nonemptyString(value[property]))) axis[property] = typeof value[property] === "string" ? value[property].trim() : value[property];
     else if (property === "tickFrequency" && sanitizeTickFrequency(value[property])) axis[property] = sanitizeTickFrequency(value[property]);
     else if (property === "title" && nonemptyString(value[property])) axis[property] = value[property];

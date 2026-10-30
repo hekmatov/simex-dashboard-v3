@@ -67,6 +67,25 @@ const { default: ChartTypePicker } = await import(
 const { default: GeneratedFormSection } = await import(
   "../src/components/chart-authoring/GeneratedFormSection.jsx"
 );
+const { default: CategorySeriesPresentationFields } = await import(
+  "../src/components/chart-authoring/CategorySeriesPresentationFields.jsx"
+);
+
+test("V3 #28 ordering captures authored colors atomically and displays dormant entries", () => {
+  const changes = [];
+  const chart = { presentation: { series: { colors: ["#112233", "#445566"], lineWidth: 3 } } };
+  const field = { id: "seriesOrder", label: "Series order", control: "presentationOrder", orderKind: "series",
+    path: ["presentation", "series", "order"], descriptors: [{ key: "a", defaultLabel: "First", sourceIndex: 0 }, { key: "b", defaultLabel: "Second", sourceIndex: 1 }] };
+  const element = CategorySeriesPresentationFields({ field, chart, onChange: (...args) => changes.push(args) });
+  const descendants = node => React.isValidElement(node) ? [node, ...React.Children.toArray(node.props.children).flatMap(descendants)] : [];
+  descendants(element).find(node => node.props["aria-label"] === "Move Second up").props.onClick();
+  assert.deepEqual(changes, [[["presentation", "series"], {
+    colors: ["#112233", "#445566"], lineWidth: 3, order: ["b", "a"], overrides: { a: { color: "#112233" }, b: { color: "#445566" } },
+  }]]);
+  const markup = renderToStaticMarkup(React.createElement(CategorySeriesPresentationFields, { field: { ...field, value: ["dormant", "a"] }, chart }));
+  assert.match(markup, /unavailable in current data/);
+  assert.match(markup, /data-presentation-key="dormant"/);
+});
 const {
   default: CollectionSettingsField,
   updateCollectionSettings,
@@ -1044,6 +1063,7 @@ test("structured presentation controls emit only validator-approved nested contr
     ["labels", { visible: true }, ["position"], "top", { visible: true, position: "top" }],
     ["labels", { visible: true }, ["format"], "{value}", { visible: true, format: "{value}" }],
     ["axes", {}, ["primary", "title"], "Capacity", { primary: { title: "Capacity" } }],
+      ["axes", { x: { categoryOrder: ["a"] } }, ["x", "labelFontSize"], 12, { x: { categoryOrder: ["a"], labelFontSize: 12 } }],
     ["axes", { primary: { title: "Capacity" } }, ["secondary", "grid"], false, {
       primary: { title: "Capacity" },
       secondary: { grid: false },

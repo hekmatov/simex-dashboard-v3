@@ -6,6 +6,7 @@ import DeltaComparisonField from "./DeltaComparisonField.jsx";
 import RoleField from "./RoleField.jsx";
 import ReferenceLineField from "./ReferenceLineField.jsx";
 import SeriesColorsField from "./SeriesColorsField.jsx";
+import CategorySeriesPresentationFields from "./CategorySeriesPresentationFields.jsx";
 import QuickBackgroundField from "./QuickBackgroundField.jsx";
 import StandardField, {
   fieldControlId,
@@ -38,6 +39,9 @@ function SchemaField({
   const decoratedField = diagnosticIds.length > 0 ? { ...field, diagnosticIds } : field;
   const emit = (nextValue) => onChange(field.path, nextValue);
   const shared = { field: decoratedField, value, onChange: emit };
+  if (["presentationOrder", "legendEntries", "categoryColors", "seriesColorsByIdentity"].includes(field.control)) {
+    return <CategorySeriesPresentationFields field={{ ...decoratedField, value }} chart={chart} onChange={onChange} />;
+  }
   if (field.control === "role") {
     return /* @__PURE__ */ React.createElement(RoleField, { ...shared, columns });
   }

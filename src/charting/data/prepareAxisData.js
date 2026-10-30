@@ -14,6 +14,7 @@ import {
   profileColumn as findProfileColumn,
   resolveEffectiveBinding as effectiveBinding,
 } from "./bindings.js";
+import { categoryPresentationKey } from "../presentation/categorySeriesPresentation.js";
 
 export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
   const measurements = roleBindings(chart, "measurements");
@@ -37,6 +38,7 @@ export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
       const pivotCluster = pivotClusterValue(x, cluster);
       candidates.push({
         x: pivotMeasures ? measurement?.label ?? bindingField(measurement) : x,
+        ...(pivotMeasures ? { categoryKey: categoryPresentationKey(bindingField(measurement)) } : {}),
         value: missing.value,
         measure: pivotMeasures ? "__pivot_value__" : bindingField(measurement),
         measureLabel: pivotMeasures ? "" : measurement?.label ?? bindingField(measurement),
@@ -51,7 +53,7 @@ export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
 
   const consolidated = consolidateCandidates(
     candidates,
-    (mark) => stableKey(mark.x, mark.measure, mark.clusterKey, mark.label, mark.groupKey),
+    (mark) => stableKey(mark.categoryKey ?? mark.x, mark.measure, mark.clusterKey, mark.label, mark.groupKey),
     transformed,
     (group, method) => ({ ...group[0], value: aggregateNumbers(group.map(({ value }) => value), method) }),
   );

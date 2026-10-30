@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { register } from "node:module";
+import { readFileSync } from "node:fs";
+import { categoryPresentationKey, seriesPresentationKey, axisSeriesDescriptors, chartLegendDescriptors, captureSeriesColors } from "../src/charting/presentation/categorySeriesPresentation.js";
+import { parseCsvText } from "../src/lib/loadCsv.js";
 
 import * as echarts from "echarts";
 
@@ -38,6 +41,143 @@ const {
 } = await import("../src/charting/rendering/axisTitleGraphics.js");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
+
+test("V3 #20 #28 legend presentation and ordering preserve chart semantics", () => {
+  const marks = [
+    { x: "First", value: 11, measure: "actual", measureLabel: "Original actual", axis: "primary" },
+    { x: "Second", value: 12, measure: "actual", measureLabel: "Original actual", axis: "primary" },
+    { x: "First", value: 21, measure: "target", measureLabel: "Original target", axis: "secondary" },
+    { x: "Second", value: 22, measure: "target", measureLabel: "Original target", axis: "secondary" },
+  ];
+  const a = seriesPresentationKey(marks[0]), b = seriesPresentationKey(marks[2]);
+  const overrides = captureSeriesColors(axisSeriesDescriptors(marks), { colors: ["#112233", "#445566"] });
+  const instance = chart("mixed", { presentation: {
+    axes: { x: { categoryOrder: [categoryPresentationKey("Second"), categoryPresentationKey("First")] } },
+    series: { colors: ["#112233", "#445566"], order: [b, a], overrides },
+    legend: { entries: { [a]: { label: "Same" }, [b]: { label: "Same", visible: false } } },
+  } });
+  const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
+  assert.deepEqual(model.option.xAxis.data, ["Second", "First"]);
+  assert.deepEqual(model.option.series.map(s => [s.id, s.type, s.yAxisIndex, s.data, s.itemStyle.color]), [
+    [b, "line", 1, [22, 21], "#445566"], [a, "bar", 0, [12, 11], "#112233"],
+  ]);
+  assert.deepEqual(model.option.legend.data, [a]);
+  assert.equal(model.option.legend.formatter(a), "Same");
+  assert.equal(model.option.legend.selected, undefined);
+  const tooltip = model.option.tooltip.formatter([{ seriesName: b, value: 22, data: { provenance: { label: "Carried evidence" } } }]);
+  assert.match(tooltip, /Same/);
+  assert.match(tooltip, /Carried evidence/);
+  instance.presentation.legend.visible = false;
+  const hidden = buildRenderModel({ chart: instance, prepared: ready(marks) });
+  assert.equal(hidden.option.legend.show, false);
+  assert.equal(hidden.option.series.length, 2);
+  const filtered = buildRenderModel({ chart: instance, prepared: ready(marks.filter(m => m.x === "Second")) });
+  assert.deepEqual(filtered.option.series.map(s => s.itemStyle.color), ["#445566", "#112233"]);
+  const beforePlayback = structuredClone(instance);
+  const sparse = buildRenderModel({ chart: instance, prepared: ready(marks.filter(m => m.measure === "target" && m.x === "Second"), {
+    activeTime: { groupId: "clock", epochMs: MAY_1, mode: "snapshot", status: "observed" },
+  }) });
+  assert.deepEqual(sparse.option.series.map(s => [s.id, s.type, s.yAxisIndex, s.itemStyle.color]), [[b, "line", 1, "#445566"]]);
+  assert.deepEqual(sparse.option.legend.data, []);
+  assert.deepEqual(instance, beforePlayback);
+  const restored = buildRenderModel({ chart: instance, prepared: ready(marks) });
+  assert.deepEqual(restored.option.series.map(s => s.id), [b, a]);
+  assert.deepEqual(restored.option.xAxis.data, ["Second", "First"]);
+  const horizontal = buildRenderModel({ chart: { ...instance, typeId: "horizontalBar" }, prepared: ready(marks) });
+  assert.deepEqual(horizontal.option.yAxis.data, ["Second", "First"]);
+});
+
+test("V3 #28 pivot category identity survives display aliases and theme colors survive ordering", () => {
+  const instance = chart("horizontalStackedBar", { sourceId: "source", roles: {
+    measurements: [{ field: "one", label: "Shared category" }, { field: "two", label: "Shared category" }], observation: { field: "place" },
+  }, transformations: { pivot: { mode: "measuresToRows" } } });
+  const rows = [{ place: "A", one: 2, two: 3 }, { place: "B", one: 4, two: 5 }];
+  const prepared = prepareChartData({ chart: instance, rows, datasetProfile: profileDataset(rows) });
+  assert.equal(prepared.status, "ready");
+  assert.equal(new Set(prepared.marks.map(m => m.categoryKey)).size, 2);
+  instance.presentation = { axes: { x: { categoryOrder: [categoryPresentationKey("two"), categoryPresentationKey("one")] } }, series: { order: axisSeriesDescriptors(prepared.marks).map(s => s.key).reverse() } };
+  const model = buildRenderModel({ chart: instance, prepared });
+  const styled = applyEChartsPresentation(model, instance, false, { dataColors: ["#123456", "#abcdef"] });
+  assert.deepEqual(styled.option.series.map(s => s.itemStyle.color), ["#ABCDEF", "#123456"]);
+  assert.deepEqual(model.option.yAxis.data, ["Shared category", "Shared category"]);
+  assert.deepEqual(model.option.series.map(s => s.data), [[5, 4], [3, 2]]);
+  instance.roles.measurements[1].label = "Renamed category";
+  const renamed = prepareChartData({ chart: instance, rows, datasetProfile: profileDataset(rows) });
+  assert.equal(renamed.status, "ready");
+  assert.deepEqual(buildRenderModel({ chart: instance, prepared: renamed }).option.yAxis.data, ["Renamed category", "Shared category"]);
+});
+
+test("V3 #20 composition aliases preserve wrapped labels as literal text", () => {
+  const marks = [{ category: "A long original category label", value: 2, share: 1 }];
+  const key = chartLegendDescriptors("composition", marks)[0].key;
+  const alias = "Renamed label with {literal|braces} that still wraps";
+  const instance = chart("pie", { presentation: { labels: { labelWrap: true, labelFontSize: 13 }, legend: { entries: { [key]: { label: alias, visible: false } } } } });
+  const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
+  const label = model.option.series.find(series => series.silent).label;
+  assert.equal(label.width, 120);
+  assert.equal(label.overflow, "break");
+  assert.equal(label.fontSize, 13);
+  assert.equal(label.rich, undefined);
+  assert.equal(label.formatter({ name: key }), alias);
+  const svg = renderSvg(model.option);
+  assert.match(svg, /literal\|braces/);
+  assert.doesNotMatch(svg, /composition:category/);
+});
+
+test("V3 #20 grouped pie tooltips retain group context with category aliases", () => {
+  const marks = [{ category: "A", group: "North", groupKey: "north", value: 2, share: 1 }, { category: "A", group: "South", groupKey: "south", value: 2, share: 1 }];
+  const key = chartLegendDescriptors("composition", marks)[0].key;
+  const instance = chart("pie", { presentation: { legend: { entries: { [key]: { label: "Alias A" } } } } });
+  const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
+  const tooltip = group => model.option.tooltip.formatter({ seriesName: group, name: key, value: 2 });
+  assert.equal(tooltip("North"), "North · Alias A: 2");
+  assert.equal(tooltip("South"), "South · Alias A: 2");
+});
+
+test("V3 #30 reported lifting-measures colors reach the rendered chart", () => {
+  const fixture = JSON.parse(readFileSync(new URL("./fixtures/v3-issue-30-charts.json", import.meta.url)));
+  const reports = fixture.charts.map(instance => {
+    const rows = parseCsvText(fixture.dataSources[instance.sourceId].csvText);
+    const prepared = prepareChartData({ chart: instance, rows, datasetProfile: profileDataset(rows) });
+    assert.equal(prepared.status, "ready");
+    return { instance: structuredClone(instance), prepared };
+  });
+  for (const { instance, prepared } of reports) {
+    const model = buildRenderModel({ chart: instance, prepared });
+    assert.equal(model.option.series.length, instance.title.startsWith("Priorities") ? 1 : 4);
+  }
+  const { instance, prepared } = reports.find(r => r.instance.title.startsWith("Priorities"));
+  instance.presentation.series.colors[1] = "#FF0000";
+  const positional = buildRenderModel({ chart: instance, prepared });
+  assert.doesNotMatch(renderSvg(positional.option), /fill="#FF0000"/i, "a second series color cannot recolor one series' second category");
+  const key = categoryPresentationKey("More social contact");
+  instance.presentation.series.categoryOverrides = { [key]: { color: "#FF0000" } };
+  const keyed = buildRenderModel({ chart: instance, prepared });
+  assert.match(renderSvg(keyed.option), /fill="#FF0000"/i);
+  instance.presentation.axes = { x: { categoryOrder: [key] } };
+  const reordered = buildRenderModel({ chart: instance, prepared });
+  assert.equal(reordered.option.yAxis.data[0], "More social contact");
+  assert.equal(reordered.option.series[0].data[0].itemStyle.color, "#FF0000");
+});
+
+test("V3 #20 composition and relationship legend aliases never remove plotted members", () => {
+  for (const [typeId, renderer, marks] of [
+    ["pie", "composition", [{ category: "A", value: 2 }, { category: "B", value: 3 }]],
+    ["scatter", "relationship", [{ x: 1, y: 2, cluster: "A", clusterKey: "a" }, { x: 2, y: 3, cluster: "B", clusterKey: "b" }]],
+  ]) {
+    const descriptors = chartLegendDescriptors(renderer, marks);
+    const entries = Object.fromEntries(descriptors.map((d, index) => [d.key, { label: "Same name", visible: index === 0 }]));
+    const model = buildRenderModel({ chart: chart(typeId, { presentation: { legend: { entries } } }), prepared: ready(marks) });
+    assert.deepEqual(model.option.legend.data, [descriptors[0].key]);
+    assert.equal(model.option.legend.formatter(descriptors[0].key), "Same name");
+    const plotted = model.option.series.filter(s => !s.silent);
+    assert.equal(plotted.reduce((sum, s) => sum + s.data.length, 0), 2);
+    assert.equal(model.option.legend.selected, undefined);
+    const svg = renderSvg(model.option);
+    assert.match(svg, /Same name/);
+    assert.doesNotMatch(svg, /axis:|relationship:|composition:category:/);
+  }
+});
 
 test("V3 #24 lower-is-favorable gauge status agrees with automatic colors", () => {
   for (const direction of ["increase-is-good", "decrease-is-good", "neutral"]) {

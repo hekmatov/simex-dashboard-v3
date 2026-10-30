@@ -103,7 +103,7 @@ function SeriesColorsField({
     React.createElement(
       "small",
       null,
-      `Colors are assigned in plotted order. Add up to ${MAX_SERIES_COLORS}.`,
+      `Default colors follow source series order. Colors by series and bar-category overrides take precedence. Add up to ${MAX_SERIES_COLORS}.`,
     ),
   );
 }

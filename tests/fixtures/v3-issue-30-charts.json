@@ -1,0 +1,493 @@
+{
+  "sourceFile": "SimEx-dashboard-bundle-20261030.json",
+  "sha256": "3bd6603cd76f61b4307a22a8cd4cf59d3501a9914c1508f2efa7b63a698d0430",
+  "charts": [
+    {
+      "configVersion": 3,
+      "id": "chart-bar-b6d04ec5-9dcd-4f42-b24c-e59e67706c1f",
+      "typeId": "line",
+      "title": "Current support measures ",
+      "description": "",
+      "sourceId": "upload-02-support-current-measures",
+      "roles": {
+        "measurements": [
+          {
+            "field": "measures_perceived_proportionate_pct",
+            "axis": "primary"
+          },
+          {
+            "field": "hospitality_and_culture_closure_support_pct",
+            "axis": "primary"
+          },
+          {
+            "field": "gatherings_ban_support_pct",
+            "axis": "primary"
+          },
+          {
+            "field": "school_closure_support_pct",
+            "axis": "primary"
+          }
+        ],
+        "observation": {
+          "field": "wave"
+        },
+        "cluster": null
+      },
+      "transformations": {
+        "filters": [],
+        "grouping": null,
+        "aggregation": null,
+        "duplicates": null,
+        "missingValues": "gap"
+      },
+      "presentation": {
+        "title": {
+          "align": "left"
+        },
+        "legend": {
+          "orientation": "vertical"
+        },
+        "collection": null
+      },
+      "interaction": {
+        "zoom": {
+          "enabled": true,
+          "rangeSelector": false
+        },
+        "timeSync": null
+      },
+      "layout": {
+        "size": "standard",
+        "width": 2,
+        "height": 1
+      }
+    },
+    {
+      "configVersion": 3,
+      "id": "chart-bar-d9b6ef8e-ebb3-4ce8-8e39-c2a1563d2568",
+      "typeId": "horizontalBar",
+      "title": "Current support measures week 7 ",
+      "description": "",
+      "sourceId": "upload-support-current-measures-final-week",
+      "roles": {
+        "measurements": [
+          {
+            "field": "hospitality_and_culture_closure_support_pct",
+            "axis": "primary"
+          },
+          {
+            "field": "measures_perceived_proportionate_pct",
+            "axis": "primary"
+          },
+          {
+            "field": "gatherings_ban_support_pct",
+            "axis": "primary"
+          },
+          {
+            "field": "school_closure_support_pct",
+            "axis": "primary"
+          }
+        ],
+        "observation": {
+          "field": "wave"
+        }
+      },
+      "transformations": {
+        "filters": [],
+        "grouping": null,
+        "aggregation": null,
+        "duplicates": null,
+        "missingValues": "gap"
+      },
+      "presentation": {
+        "title": {
+          "align": "left"
+        },
+        "legend": {
+          "orientation": "vertical"
+        },
+        "collection": null
+      },
+      "interaction": {
+        "zoom": {
+          "enabled": true,
+          "rangeSelector": false
+        },
+        "timeSync": null
+      },
+      "layout": {
+        "size": "standard",
+        "width": 2,
+        "height": 1
+      }
+    },
+    {
+      "configVersion": 3,
+      "id": "chart-bar-b8ea4cef-d6af-4dc8-b678-ec1fbd07ff42",
+      "typeId": "horizontalBar",
+      "title": "Priorities of lifting measures ",
+      "description": "",
+      "sourceId": "upload-04-priorities-easing-measures",
+      "roles": {
+        "measurements": [
+          {
+            "field": "percentage",
+            "axis": "primary"
+          }
+        ],
+        "observation": {
+          "field": "easing_priority"
+        }
+      },
+      "transformations": {
+        "filters": [],
+        "grouping": null,
+        "aggregation": null,
+        "duplicates": null,
+        "missingValues": "gap"
+      },
+      "presentation": {
+        "title": {
+          "align": "left"
+        },
+        "collection": null,
+        "labels": {
+          "visible": true
+        },
+        "series": {
+          "colors": [
+            "#043BCB",
+            "#36BDEB",
+            "#2BAA7B",
+            "#F1A1AD",
+            "#F59E0B"
+          ],
+          "verticalFill": false
+        }
+      },
+      "interaction": {
+        "zoom": {
+          "enabled": true,
+          "rangeSelector": false
+        },
+        "timeSync": null
+      },
+      "layout": {
+        "size": "standard",
+        "width": 3,
+        "height": 0.875
+      }
+    }
+  ],
+  "dataSources": {
+    "upload-02-support-current-measures": {
+      "kind": "dataset",
+      "type": "uploadedCsv",
+      "fileName": "02_Support_current_measures.csv",
+      "csvText": "wave,period_start,period_end,overall_support_pct,measures_perceived_proportionate_pct,hospitality_and_culture_closure_support_pct,gatherings_ban_support_pct,school_closure_support_pct\r\nWeek 1,2027-03-23,2027-03-29,79,74,81,76,70\r\nWeek 3,2027-04-06,2027-04-12,78,74,78,74,67\r\nWeek 5,2027-04-20,2027-04-26,76,72,76,74,63\r\nWeek 7,2027-04-27,2027-05-02,70,65,67,64,55\r\n"
+    },
+    "upload-support-current-measures-final-week": {
+      "kind": "dataset",
+      "type": "uploadedCsv",
+      "fileName": "support current measures final week.csv",
+      "csvText": "wave,period_start,period_end,overall_support_pct,measures_perceived_proportionate_pct,hospitality_and_culture_closure_support_pct,gatherings_ban_support_pct,school_closure_support_pct\r\nWeek 7,27/04/2027,02/05/2027,70,65,67,64,55\r\n"
+    },
+    "upload-04-priorities-easing-measures": {
+      "kind": "dataset",
+      "type": "uploadedCsv",
+      "fileName": "04_Priorities_easing_measures.csv",
+      "csvText": "easing_priority,percentage\r\nReopening primary schools,29\r\nMore social contact,24\r\nReopening hospitality venues,23\r\nReopening cultural sector,12\r\nLifting domestic travel restrictions,11\r\n"
+    }
+  },
+  "datasetProfiles": {
+    "upload-02-support-current-measures": {
+      "rowCount": 4,
+      "columns": [
+        {
+          "name": "wave",
+          "type": "category",
+          "missingCount": 0,
+          "uniqueCount": 4,
+          "examples": [
+            "Week 1",
+            "Week 3",
+            "Week 5"
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "period_start",
+          "type": "temporal",
+          "missingCount": 0,
+          "uniqueCount": 4,
+          "examples": [
+            "2027-03-23",
+            "2027-04-06",
+            "2027-04-20"
+          ],
+          "geographicHint": null,
+          "temporal": {
+            "values": [
+              "2027-03-23",
+              "2027-04-06",
+              "2027-04-20",
+              "2027-04-27"
+            ],
+            "diagnostics": [],
+            "parsingMetadata": {
+              "interpretation": "auto",
+              "format": "YYYY-MM-DD"
+            }
+          }
+        },
+        {
+          "name": "period_end",
+          "type": "temporal",
+          "missingCount": 0,
+          "uniqueCount": 4,
+          "examples": [
+            "2027-03-29",
+            "2027-04-12",
+            "2027-04-26"
+          ],
+          "geographicHint": null,
+          "temporal": {
+            "values": [
+              "2027-03-29",
+              "2027-04-12",
+              "2027-04-26",
+              "2027-05-02"
+            ],
+            "diagnostics": [],
+            "parsingMetadata": {
+              "interpretation": "auto",
+              "format": "YYYY-MM-DD"
+            }
+          }
+        },
+        {
+          "name": "overall_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 4,
+          "examples": [
+            79,
+            78,
+            76
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "measures_perceived_proportionate_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 3,
+          "examples": [
+            74,
+            72,
+            65
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "hospitality_and_culture_closure_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 4,
+          "examples": [
+            81,
+            78,
+            76
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "gatherings_ban_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 3,
+          "examples": [
+            76,
+            74,
+            64
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "school_closure_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 4,
+          "examples": [
+            70,
+            67,
+            63
+          ],
+          "geographicHint": null
+        }
+      ],
+      "fingerprint": "c4fd3d2b64ca6c694bec5487a992b1815c426b3b1c5ff1ed808bccffdc2d3312"
+    },
+    "upload-support-current-measures-final-week": {
+      "rowCount": 1,
+      "columns": [
+        {
+          "name": "wave",
+          "type": "category",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            "Week 7"
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "period_start",
+          "type": "temporal",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            "27/04/2027"
+          ],
+          "geographicHint": null,
+          "temporal": {
+            "values": [
+              "2027-04-27"
+            ],
+            "diagnostics": [],
+            "parsingMetadata": {
+              "interpretation": "auto",
+              "format": "DD/MM/YYYY"
+            }
+          }
+        },
+        {
+          "name": "period_end",
+          "type": "category",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            "02/05/2027"
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "overall_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            70
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "measures_perceived_proportionate_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            65
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "hospitality_and_culture_closure_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            67
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "gatherings_ban_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            64
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "school_closure_support_pct",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 1,
+          "examples": [
+            55
+          ],
+          "geographicHint": null
+        }
+      ],
+      "fingerprint": "99fc1f9180f86c0b844bfd2d88a89223da9e1501c6f95bdf5b2e3bc54526aa14"
+    },
+    "upload-04-priorities-easing-measures": {
+      "rowCount": 5,
+      "columns": [
+        {
+          "name": "easing_priority",
+          "type": "category",
+          "missingCount": 0,
+          "uniqueCount": 5,
+          "examples": [
+            "Reopening primary schools",
+            "More social contact",
+            "Reopening hospitality venues"
+          ],
+          "geographicHint": null
+        },
+        {
+          "name": "percentage",
+          "type": "numeric",
+          "missingCount": 0,
+          "uniqueCount": 5,
+          "examples": [
+            29,
+            24,
+            23
+          ],
+          "geographicHint": null
+        }
+      ],
+      "fingerprint": "5b733494c248d3a2150177f0c4d217ca77bda9240fad0fd673a96ab804c5f77d"
+    }
+  },
+  "sourceEntries": {
+    "upload-02-support-current-measures": {
+      "sourceId": "upload-02-support-current-measures",
+      "origin": "uploaded",
+      "ownership": "builder",
+      "displayName": "02 Support current measures",
+      "provenance": {
+        "fileName": "02_Support_current_measures.csv",
+        "profileFingerprint": "c4fd3d2b64ca6c694bec5487a992b1815c426b3b1c5ff1ed808bccffdc2d3312"
+      },
+      "health": "ready"
+    },
+    "upload-support-current-measures-final-week": {
+      "sourceId": "upload-support-current-measures-final-week",
+      "origin": "uploaded",
+      "ownership": "builder",
+      "displayName": "support current measures final week",
+      "provenance": {
+        "fileName": "support current measures final week.csv",
+        "profileFingerprint": "99fc1f9180f86c0b844bfd2d88a89223da9e1501c6f95bdf5b2e3bc54526aa14"
+      },
+      "health": "ready"
+    },
+    "upload-04-priorities-easing-measures": {
+      "sourceId": "upload-04-priorities-easing-measures",
+      "origin": "uploaded",
+      "ownership": "builder",
+      "displayName": "04 Priorities easing measures",
+      "provenance": {
+        "fileName": "04_Priorities_easing_measures.csv",
+        "profileFingerprint": "5b733494c248d3a2150177f0c4d217ca77bda9240fad0fd673a96ab804c5f77d"
+      },
+      "health": "ready"
+    }
+  }
+}

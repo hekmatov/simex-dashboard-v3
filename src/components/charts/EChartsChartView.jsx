@@ -265,7 +265,12 @@ export function applyEChartsPresentation(
               bodyFont,
               dataFont,
               audienceScale,
-            ),
+            ).map((series, index) => {
+              const descriptor = model.seriesPresentation?.[index];
+              if (!descriptor) return series;
+              const palette = Array.isArray(option.color) && option.color.length ? option.color : dataColors;
+              return { ...series, itemStyle: { color: palette[descriptor.sourceIndex % palette.length], ...series.itemStyle } };
+            }),
           }),
       aria: {
         ...(option.aria ?? {}),

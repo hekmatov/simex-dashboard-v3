@@ -21,6 +21,42 @@ import {
 } from "../src/static-content/assets/assetPayloadEnvelope.js";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { categoryPresentationKey, seriesPresentationKey } from "../src/charting/presentation/categorySeriesPresentation.js";
+import { applyChartConversion } from "../src/charting/forms/chartConversion.js";
+
+test("V3 #20 #28 presentation overrides survive package round-trip", () => {
+  const dashboard = version3Dashboard();
+  const seriesKey = seriesPresentationKey({ measure: "cases", axis: "primary" });
+  const categoryKey = categoryPresentationKey("2027-05-01");
+  const instance = createChartDraft("bar", {
+    id: "presentation-proof", sourceId: "uploaded-cases", title: "Presentation contract",
+    roles: { measurements: [{ field: "cases", axis: "primary" }], observation: { field: "reportedAt", interpretation: "category" } },
+    presentation: {
+      axes: { x: { categoryOrder: [categoryKey, "dormant-category"] } },
+      series: { order: [seriesKey, "dormant-series"], overrides: { [seriesKey]: { color: "#123456" } }, categoryOverrides: { [categoryKey]: { color: "#abcdef" } } },
+      legend: { visible: false, entries: { [seriesKey]: { label: "  Cases  ", visible: false }, dormant: { label: "Later" } } },
+    },
+  });
+  dashboard.pages[0].sections[0].panels.push(instance);
+  const restored = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(dashboard)));
+  assert.deepEqual(restored.pages[0].sections[0].panels.at(-1), instance);
+  assert.equal(instance.presentation.legend.entries[seriesKey].label, "Cases");
+  const converted = applyChartConversion(instance, "horizontalBar");
+  assert.deepEqual(converted.presentation, instance.presentation);
+  const malformed = [
+    c => { c.presentation.series.order = [seriesKey, seriesKey]; },
+    c => { c.presentation.axes.x.categoryOrder = [1]; },
+    c => { c.presentation.legend.entries[seriesKey].selected = false; },
+    c => { c.presentation.legend.entries[seriesKey].visible = "false"; },
+    c => { c.presentation.series.overrides[seriesKey].color = "red"; },
+    c => { c.presentation.series.categoryOverrides[categoryKey].unknown = true; },
+  ];
+  for (const mutate of malformed) {
+    const candidate = structuredClone(instance);
+    mutate(candidate);
+    assert.throws(() => validateChartInstance(candidate));
+  }
+});
 
 test("V3 #23 #24 optional targets and gauge direction survive package round-trip", () => {
   const dashboard = version3Dashboard();

@@ -1,3 +1,5 @@
+import { normalizePresentationOrder, normalizeKeyedPresentation } from "./categorySeriesPresentation.js";
+
 export const SERIES_APPEARANCE_FIELD_IDS = Object.freeze([
   "seriesColors",
   "lineWidth",
@@ -15,6 +17,9 @@ export const SERIES_STYLE_PROPERTIES = Object.freeze([
   "barSeparation",
   "verticalFill",
   "verticalCenter",
+  "order",
+  "overrides",
+  "categoryOverrides",
 ]);
 
 export const SERIES_STYLE_LIMITS = Object.freeze({
@@ -93,6 +98,11 @@ export function seriesAppearanceFieldForProperty(property) {
 }
 
 export function seriesStylePropertySupported(appearance, property) {
+  if (["order", "overrides", "categoryOverrides"].includes(property)) {
+    return Array.isArray(appearance) && (property === "categoryOverrides"
+      ? appearance.includes("barWidth")
+      : appearance.includes("barWidth") || appearance.includes("lineWidth"));
+  }
   const fieldId = seriesAppearanceFieldForProperty(property);
   return fieldId !== null
     && Array.isArray(appearance)
@@ -126,6 +136,10 @@ export function normalizeSeriesStyle(series, appearance) {
   }
 
   const normalized = {};
+  if (Object.hasOwn(descriptors, "order")) normalized.order = normalizePresentationOrder(descriptors.order.value, "Series order");
+  for (const property of ["overrides", "categoryOverrides"]) {
+    if (Object.hasOwn(descriptors, property)) normalized[property] = normalizeKeyedPresentation(descriptors[property].value, "color");
+  }
   if (Object.hasOwn(descriptors, "colors")) {
     normalized.colors = normalizeColors(descriptors.colors.value);
   }

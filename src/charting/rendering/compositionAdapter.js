@@ -1,4 +1,5 @@
 import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+import { categoryPresentationKey, chartLegendDescriptors, resolveLegendEntries, legendProjection, legendTooltipFormatter } from "../presentation/categorySeriesPresentation.js";
 
 export function buildCompositionRenderModel({ chart, prepared }, schema) {
   const mark = validateSeriesRendererMark(
@@ -11,20 +12,24 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
     chart.presentation?.series?.verticalCenter === true,
   );
   const colors = chart.presentation?.series?.colors;
+  const descriptors = chartLegendDescriptors("composition", prepared.marks);
+  const entries = chart.presentation?.legend?.entries;
+  const customLegend = entries && Object.keys(entries).length > 0;
+  const labelsByKey = new Map(resolveLegendEntries(descriptors, entries).all.map(entry => [entry.key, entry.label]));
   return {
     kind: "echarts",
     option: {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
-      tooltip: { trigger: "item" },
-      legend: legendOption(chart),
+      tooltip: { trigger: "item", ...(customLegend ? { formatter: legendTooltipFormatter(descriptors, entries) } : {}) },
+      legend: legendProjection(legendOption(chart), descriptors, entries),
       ...(Array.isArray(colors) ? { color: [...colors] } : {}),
       series: groups.flatMap(({ name, marks }, index) => {
         const radius = mark === "donut"
           ? [layout.innerRadius, layout.outerRadius]
           : ["0%", layout.outerRadius];
         const labels = chart.presentation?.labels;
-        const data = marks.map(({ category, value, share }) => ({ name: String(category), value, share }));
+        const data = marks.map(({ category, value, share }) => ({ name: customLegend ? `composition:${categoryPresentationKey(category)}` : String(category), value, share }));
         const showCategoryLabels = labels?.visible !== false && marks.length <= 8;
         return [
           {
@@ -47,7 +52,8 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
             avoidLabelOverlap: true,
             itemStyle: { color: "transparent", borderColor: "transparent" },
             emphasis: { disabled: true },
-            label: compositionCategoryLabel(labels, marks.length),
+            label: compositionCategoryLabel(labels, marks.length,
+              customLegend ? param => labelsByKey.get(param.name) ?? param.name : undefined),
             labelLine: { show: true, lineStyle: { color: "#64748B" } },
             data,
           }] : []),
@@ -94,7 +100,7 @@ function compositionReadoutLabel(labels = {}, markCount) {
   };
 }
 
-function compositionCategoryLabel(labels = {}, markCount) {
+function compositionCategoryLabel(labels = {}, markCount, displayFormatter) {
   const rich = {};
   if (Number.isInteger(labels?.labelFontSize) || labels?.labelWrap === true) {
     rich.label = {
@@ -106,8 +112,10 @@ function compositionCategoryLabel(labels = {}, markCount) {
   return {
     show: labels?.visible !== false && markCount <= 8,
     position: "outside",
-    formatter: usesRichLabel ? "{label|{b}}" : "{b}",
-    ...(usesRichLabel ? { rich } : {}),
+    ...(displayFormatter ? { formatter: displayFormatter, ...(rich.label ?? {}) } : {
+      formatter: usesRichLabel ? "{label|{b}}" : "{b}",
+      ...(usesRichLabel ? { rich } : {}),
+    }),
   };
 }
 
