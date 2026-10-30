@@ -2745,6 +2745,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     />
   ) : selectedPanelIsStatic ? (
     <StaticContentEditor
+      deviceLayout={deviceLayout}
       dashboard={workingDashboard}
       contentDraftCoordinator={contentDraftCoordinator}
       contentRenderContext={contentRenderContext}
@@ -3171,6 +3172,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onDiscardChanges={discardChartEditOwner}
       />}
       {staticWizardTarget && <StaticContentWizard
+        deviceLayout={deviceLayout}
         open
         contentDraftCoordinator={contentDraftCoordinator}
         contentRenderContext={contentRenderContext}

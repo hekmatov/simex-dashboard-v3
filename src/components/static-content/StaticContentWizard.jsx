@@ -62,6 +62,7 @@ export function getStaticContentDiscardAction({ dirty = false, disabled = false 
 export function StaticContentWizard({
   open = false,
   dashboard = {},
+  deviceLayout = "desktop",
   destination,
   initialDraft,
   restoration = null,
@@ -319,6 +320,7 @@ export function StaticContentWizard({
               dashboard={dashboard}
               contentRenderContext={contentRenderContext}
               disabled={workflowDisabled}
+              deviceLayout={deviceLayout}
               dispatch={dispatch}
               onFreeTextValidation={setFreeTextValidation}
               restoration={restoration}
@@ -327,7 +329,7 @@ export function StaticContentWizard({
               onRestorePreviousImage={() => void discardActiveContentDraft("restore-previous-image")}
             />
           )}
-          {draft.stage === "preview-and-add" && <StaticPreview draft={draft} contentRenderContext={contentRenderContext} />}
+          {draft.stage === "preview-and-add" && <StaticPreview draft={draft} deviceLayout={deviceLayout} contentRenderContext={contentRenderContext} />}
           {submitError && <p className="form-error" role="alert">{submitError}</p>}
         </section>
 
@@ -428,7 +430,7 @@ function ContentTypeFields({ draft, dispatch, disabled }) {
   );
 }
 
-export function StaticContentFields({ draft, dashboard = {}, contentRenderContext = {}, restoration, disabled = false, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage, onSurfaceChange }) {
+export function StaticContentFields({ draft, dashboard = {}, deviceLayout = "desktop", contentRenderContext = {}, restoration, disabled = false, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage, onSurfaceChange }) {
   const titleError = draft.validation?.errors?.find((error) => error.field === "title");
   const titleDescription = [
     disabled ? "static-content-pending-reason" : null,
@@ -492,14 +494,14 @@ export function StaticContentFields({ draft, dashboard = {}, contentRenderContex
       />
       <div className="dashboard-authoring-field--wide">
         {draft.contentTypeId === "freeText"
-          ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} restoration={restoration} disabled={disabled} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} onSurfaceChange={onSurfaceChange} />
+          ? <FreeTextFields draft={draft} dashboard={dashboard} deviceLayout={deviceLayout} contentRenderContext={contentRenderContext} restoration={restoration} disabled={disabled} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} onSurfaceChange={onSurfaceChange} />
           : <ImageFields draft={draft} dashboard={dashboard} disabled={disabled} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
       </div>
     </div>
   );
 }
 
-function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, disabled, dispatch, onValidationChange, onRetainMedia, onSurfaceChange }) {
+function FreeTextFields({ draft, dashboard, deviceLayout, contentRenderContext, restoration, disabled, dispatch, onValidationChange, onRetainMedia, onSurfaceChange }) {
   return (
     <FreeTextSourceEditor
       id="static-qmd-source"
@@ -507,6 +509,8 @@ function FreeTextFields({ draft, dashboard, contentRenderContext, restoration, d
       panelId={draft.panel?.id ?? "static-text-preview"}
       panelTitle={draft.panel?.title ?? ""}
       layout={draft.panel?.layout}
+      destination={draft.destination}
+      deviceLayout={deviceLayout}
       initialSurface={restoration?.surface}
       disabled={disabled}
       onSurfaceChange={onSurfaceChange}
@@ -582,7 +586,7 @@ function ImageFields({ draft, dashboard, disabled, dispatch, onRetainMedia, onRe
   );
 }
 
-export function StaticPreview({ draft, contentRenderContext = {} }) {
+export function StaticPreview({ draft, deviceLayout, contentRenderContext = {} }) {
   const sourceId = draft.panel?.sourceId;
   const draftMediaItems = {
     ...(draft.pendingMediaItems ?? {}),
@@ -595,8 +599,8 @@ export function StaticPreview({ draft, contentRenderContext = {} }) {
     assets: { ...(contentRenderContext.assets ?? {}), ...(draft.assets ?? {}) },
   };
   return (
-    <AuthoringFootprintFrame layout={draft.panel?.layout} kind="preview-and-add">
-      <section className="static-content-dialog__preview" aria-label="Text/Image preview">
+    <section className="static-content-dialog__preview" aria-label="Text/Image preview">
+      <AuthoringFootprintFrame layout={draft.panel?.layout} kind="preview-and-add" destination={draft.destination} deviceLayout={deviceLayout}>
         <StaticContentStateBoundary state={{ status: "ready" }} surface="build">
           {draft.contentTypeId === "freeText" ? (
             <div data-static-preview-type="freeText">
@@ -617,9 +621,9 @@ export function StaticPreview({ draft, contentRenderContext = {} }) {
             </div>
           )}
         </StaticContentStateBoundary>
-        <p>Text/Image panels have no CSV, Chrono Group, Scene, or time controls.</p>
-      </section>
-    </AuthoringFootprintFrame>
+      </AuthoringFootprintFrame>
+      <p>Text/Image panels have no CSV, Chrono Group, Scene, or time controls.</p>
+    </section>
   );
 }
 

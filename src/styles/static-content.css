@@ -454,9 +454,9 @@
   padding: var(--simex-space-3, 8px) var(--simex-padding-panel, 12px);
 }
 
-.free-text-source-editor__preview .free-text-chart-view {
-  padding: var(--simex-padding-panel, 12px);
-}
+.free-text-source-editor__writer-card { min-inline-size: 0; inline-size: 100%; }
+.static-content-dialog__preview [data-static-preview-type] { height: 100%; }
+.free-text-source-editor__preview > .authoring-stage { padding: 8px; }
 
 .free-text-source-editor__markdown pre {
   box-sizing: border-box;

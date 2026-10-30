@@ -14,7 +14,7 @@ import { prepareStaticPanelTransaction } from "../src/static-content/staticPanel
 import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
 
 const vite = await createServer({
-  root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true },
+  root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true, watch: null }, optimizeDeps: { noDiscovery: true },
 });
 const editorModule = await vite.ssrLoadModule("/src/components/static-content/StaticContentEditor.jsx");
 const freeTextEditorModule = await vite.ssrLoadModule("/src/components/static-content/FreeTextSourceEditor.jsx");
@@ -457,7 +457,7 @@ test("Text/Image footer Cancel closes a clean editor and confirms only dirty wor
   assert.equal(wizardModule.getStaticContentDiscardAction({ dirty: true, disabled: true }), "ignore");
 });
 
-test("Free-text authoring forwards the draft panel footprint to writer and preview", () => {
+test("Free-text authoring applies the panel footprint only to the preview", () => {
   const draft = createStaticContentDraft({
     destination: { pageId: "overview", sectionId: "response" },
     contentTypeId: "freeText",
@@ -471,9 +471,9 @@ test("Free-text authoring forwards the draft panel footprint to writer and previ
     dispatch() {},
   }));
 
-  assert.equal((html.match(/--chart-footprint-columns:3/g) ?? []).length, 2);
-  assert.equal((html.match(/--chart-footprint-row-span:6/g) ?? []).length, 2);
-  assert.match(html, /data-authoring-footprint="writer"/);
+  assert.equal((html.match(/--chart-footprint-columns:3/g) ?? []).length, 1);
+  assert.equal((html.match(/--chart-footprint-row-span:6/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-authoring-footprint="writer"/);
   assert.match(html, /data-authoring-footprint="preview"/);
 });
 
@@ -493,7 +493,7 @@ test("Text/Image panel sizing offers numbered eighth-row steps through a 400% ro
 
   assert.match(html, /<option value="0.125"[^>]*>1<\/option>/);
   assert.match(html, /<option value="4"[^>]*>32<\/option>/);
-  assert.equal((html.match(/--chart-footprint-row-span:32/g) ?? []).length, 2);
+  assert.equal((html.match(/--chart-footprint-row-span:32/g) ?? []).length, 1);
 });
 
 test("Text/Image stages and footer slots stay mounted from Destination", () => {

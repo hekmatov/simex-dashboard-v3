@@ -119,6 +119,71 @@ test("V3 #25 image-to-text creates and reopens valid text", async ({ page }) => 
     .getByLabel("Portable QMD Composer editing area")).toHaveText("Text after an Image selection");
 });
 
+for (const viewport of [{ width: 1401, height: 833 }, { width: 1117, height: 766 }]) {
+  test(`V3 #21 #31 text editing stays usable while preview matches panel width ${viewport.width}`, async ({ page }) => {
+    test.setTimeout(120_000);
+    page.setDefaultTimeout(15_000);
+    await page.setViewportSize(viewport);
+    await openBiomedicalBuild(page);
+    for (const width of [1, 2, 3, 4]) {
+      const title = `Footprint ${viewport.width} ${width}`;
+      const text = "A longer authored paragraph keeps its exact line wrapping at the selected destination width. ".repeat(5);
+      await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+      const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
+      await wizard.getByRole("button", { name: "Continue" }).click();
+      await wizard.getByLabel("Free text").check();
+      await wizard.getByRole("button", { name: "Continue" }).click();
+      await wizard.getByLabel("Panel title").fill(title);
+      await wizard.getByRole("combobox", { name: "Width", exact: true }).selectOption(String(width));
+      const composer = wizard.getByLabel("Portable QMD Composer editing area");
+      await composer.fill(text);
+      await composer.scrollIntoViewIfNeeded();
+      const writerWidth = (await composer.boundingBox()).width;
+      expect(writerWidth).toBeGreaterThan(Math.min(650, viewport.width * 0.6));
+      await wizard.getByRole("button", { name: "Bold", exact: true }).scrollIntoViewIfNeeded();
+      await expect(wizard.getByRole("button", { name: "Bold", exact: true })).toBeInViewport();
+      const preview = wizard.getByRole("region", { name: "Rendered preview", exact: true });
+      await expect(preview.locator(".free-text-chart-view__content")).toContainText("longer authored paragraph");
+      await preview.getByRole("button", { name: "Actual", exact: true }).click();
+      const inline = await textPreviewGeometry(preview);
+      await preview.getByRole("button", { name: "Fit", exact: true }).click();
+      const fit = await textPreviewGeometry(preview);
+      expect(fit.contentWidth).toBe(inline.contentWidth);
+      expect(fit.lines).toBe(inline.lines);
+      expect(fit.scale).toBeLessThanOrEqual(1);
+      await wizard.getByRole("button", { name: "Continue" }).click();
+      const final = wizard.getByRole("region", { name: "Text/Image preview", exact: true });
+      await final.getByRole("button", { name: "Actual", exact: true }).click();
+      const finalGeometry = await textPreviewGeometry(final);
+      expect(Math.abs(finalGeometry.contentWidth - inline.contentWidth)).toBeLessThanOrEqual(1);
+      expect(finalGeometry.lines).toBe(inline.lines);
+      await wizard.getByRole("button", { name: "Add", exact: true }).click();
+      await expect(wizard).toHaveCount(0);
+      const saved = await readSavedFreeText(page, title);
+      expect(saved.panel.layout.width).toBe(width);
+      const panel = canonicalPanel(page, saved.panel.id);
+      await panel.scrollIntoViewIfNeeded();
+      const actual = await textPreviewGeometry(panel);
+      expect(Math.abs(actual.contentWidth - inline.contentWidth)).toBeLessThanOrEqual(1);
+      expect(actual.lines).toBe(inline.lines);
+      await openFreeTextEditor(panel, page);
+      const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+      await expect(editor.getByLabel("Portable QMD Composer editing area")).toHaveText(text.trim());
+      await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(editor).toHaveCount(0);
+    }
+  });
+}
+
+async function textPreviewGeometry(surface) {
+  return surface.evaluate(node => {
+    const content = node.querySelector(".free-text-chart-view__content");
+    const paragraph = content.querySelector("p");
+    const stage = node.querySelector("[data-stage-scale]");
+    return { contentWidth: content.clientWidth, lines: paragraph.offsetHeight / parseFloat(getComputedStyle(paragraph).lineHeight), scale: Number(stage?.dataset.stageScale ?? 1) };
+  });
+}
+
 test("Free-text composer authors portable semantic styles, keyboard emphasis, lists, tables, and preview", async ({ page }) => {
   await openBiomedicalBuild(page);
   await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();

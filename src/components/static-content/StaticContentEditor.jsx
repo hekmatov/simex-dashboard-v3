@@ -17,6 +17,7 @@ import { StaticContentWizard } from "./StaticContentWizard.jsx";
 export function StaticContentEditor({
   open = true,
   dashboard,
+  deviceLayout,
   destination,
   panel,
   placement,
@@ -52,6 +53,7 @@ export function StaticContentEditor({
       open={open}
       editor
       dashboard={dashboard}
+      deviceLayout={deviceLayout}
       {...staticContentEditorWizardProps({
         contentDraftCoordinator,
         contentRenderContext,

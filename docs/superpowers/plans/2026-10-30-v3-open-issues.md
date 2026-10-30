@@ -16,7 +16,11 @@
   - `node --test tests/chartCreateTransaction.test.js tests/chartEditSession.test.js tests/buildLayoutMove.test.js tests/anchoredStructureCommands.test.js`: **51 passed, 0 failed**, including ambiguity reconciliation, identity, references, rollback and cancellation boundaries.
   - `pnpm.cmd exec playwright test tests/e2e/v3-chart-creation.spec.js tests/e2e/v3-anchored-structure-commands.spec.js --project=chromium --grep 'V3 #(18|26|32)'`: #32 **passed (6.1s)**; #18/#26 initially failed on fixture lookup/reload navigation. After correcting only those boundaries, `pnpm.cmd exec playwright test tests/e2e/v3-anchored-structure-commands.spec.js --project=chromium --grep 'V3 #(18|26)'`: **2 passed (30.1s)**. #32 was not rerun after unrelated fixture corrections.
   - Scoped ownership review: finalized CSV failures are retained by the real coordinator (not a dead reference); success/discard retire only owned slots. Creation waits for structure persistence and propagates failure. Existing duplicate/ambiguous protection remains unchanged. Browser journeys verify unsaved-section upload, actual CSV commit failure/retry, split/save/reload and a cross-page full-editor move.
-- S3–S7: pending.
+- S3 / #21, #31: writer now uses the available editor width/height independently of panel sizing. Inline Rendered preview and Preview & add use `chartFootprintPixelSize` and the shared measured destination geometry, with whole-panel Fit/Actual scaling and saved-panel chrome/padding. Device layout is forwarded to static creation/editing. Media selection/catalogue code is unchanged.
+  - `node --test tests/authoringStage.test.js tests/staticContentEditor.test.js`: **27 passed, 0 failed**. New #21 destination geometry case observed RED before the frame change, then GREEN. Updated existing footprint tests to assert the confirmed independent-writer contract.
+  - `pnpm.cmd exec playwright test tests/e2e/static-free-text.spec.js --project=chromium --grep 'V3 #21 #31' --max-failures=1`: **2 passed (1.1m)**. Each viewport (1401×833 and 1117×766) exercises widths 1–4, usable writer/toolbar/footer, Fit versus Actual logical wrapping, inline versus final versus saved content width within 1 CSS pixel, save and reopen with exact text.
+  - `pnpm.cmd exec playwright test tests/e2e/static-free-text.spec.js --project=chromium --grep 'embedded image persists through reload and a second Text/Image creation' --max-failures=1`: **1 passed (29.2s)**, covering media reachability and durable content after the shared frame change. #22 remains deferred.
+- S4–S7: pending.
 - #22: **deferred by user**, no catalogue/listing/eligibility changes authorized.
 
 **Goal:** Address the complete 17-issue V3 inventory: repair or verify the 16 active issues, and retain #22 as an explicit user-directed deferral. Preserve already-working behavior and authored content.
@@ -94,10 +98,10 @@ Recommended sequence: **S1 text blocker → S2 creation/placement transactions �
 
 **Tests:** `tests/staticContentDraft.test.js`, `tests/staticPanelTransaction.test.js`, `tests/e2e/static-free-text.spec.js`.
 
-- [ ] Add a regression that creates an Image draft, selects Text, authors content, and finalizes a valid text panel with zoom disabled. Include a resumed draft carrying incompatible image interactions.
-- [ ] At static type changes, preserve shared identity/title/layout while reconstructing type-specific interaction settings from the selected type's capabilities. Do not broadly disable image zoom or bypass validation.
-- [ ] Verify reverse switching retains supported image behavior, and cancel/reset does not mutate the saved panel.
-- [ ] Run the exact added deterministic cases. After they pass, run one Text creation journey that includes a type switch and save/reopen.
+- [x] Add a regression that creates an Image draft, selects Text, authors content, and finalizes a valid text panel with zoom disabled. Include a resumed draft carrying incompatible image interactions.
+- [x] At static type changes, preserve shared identity/title/layout while reconstructing type-specific interaction settings from the selected type's capabilities. Do not broadly disable image zoom or bypass validation.
+- [x] Verify reverse switching retains supported image behavior, and cancel/reset does not mutate the saved panel.
+- [x] Run the exact added deterministic cases. After they pass, run one Text creation journey that includes a type switch and save/reopen.
 
 **Exit:** A supported wizard sequence cannot generate the screenshot's unsupported-zoom error; malformed externally supplied configurations still receive valid diagnostics.
 
@@ -109,13 +113,13 @@ Recommended sequence: **S1 text blocker → S2 creation/placement transactions �
 
 **Existing interfaces to preserve:** `createChartCsvDraftLifecycle(...)`, `buildChartEditPlacementMove(...)`, `integrateCreatedChart(dashboard, payload, target)`, and the existing canonical layout-move transaction.
 
-- [ ] Reproduce creation into an existing section and an unsaved newly created section, including uploaded CSV, source replacement/cancellation, and a first commit failure. Capture which dashboard revision destination proof and persistence each use.
-- [ ] Make reviewed destination and final insertion use the same canonical structure authority. Apply pending structure atomically with chart creation where supported, or explicitly complete/revalidate its existing save boundary before committing. Never choose a different destination silently.
-- [ ] Define recoverable versus terminal CSV commit failures using the coordinator's actual ownership contract. Keep or safely restage the uploaded bytes, profile, source identity, mappings, and destination for a recoverable failure. Do not merely keep a JavaScript reference to a coordinator draft that has already been retired.
-- [ ] Preserve ambiguous-commit reconciliation and duplicate prevention. A retry must create exactly one source and one placement; cancel must clean up only resources owned by the discarded draft.
-- [ ] Exercise the existing edit destination/insertion controls for within-section and cross-page moves. Save must retain chart and placement identity; cancel leaves the dashboard unchanged. Preserve time/scenario references and existing move confirmations.
-- [ ] Route “Start section here” through the existing canonical Build structure owner. Split at the selected placement, including it and its successors in the new section. Reject a missing anchor with an actionable message; never silently create an unrelated empty section. Check chart, gauge, and static-text placements.
-- [ ] After focused unit checks pass, run one representative destination/upload/retry journey and one section-split/move journey using valid canonical fixtures.
+- [x] Reproduce creation into an existing section and an unsaved newly created section, including uploaded CSV, source replacement/cancellation, and a first commit failure. Capture which dashboard revision destination proof and persistence each use.
+- [x] Make reviewed destination and final insertion use the same canonical structure authority. Apply pending structure atomically with chart creation where supported, or explicitly complete/revalidate its existing save boundary before committing. Never choose a different destination silently.
+- [x] Define recoverable versus terminal CSV commit failures using the coordinator's actual ownership contract. Keep or safely restage the uploaded bytes, profile, source identity, mappings, and destination for a recoverable failure. Do not merely keep a JavaScript reference to a coordinator draft that has already been retired.
+- [x] Preserve ambiguous-commit reconciliation and duplicate prevention. A retry must create exactly one source and one placement; cancel must clean up only resources owned by the discarded draft.
+- [x] Exercise the existing edit destination/insertion controls for within-section and cross-page moves. Save must retain chart and placement identity; cancel leaves the dashboard unchanged. Preserve time/scenario references and existing move confirmations.
+- [x] Route “Start section here” through the existing canonical Build structure owner. Split at the selected placement, including it and its successors in the new section. Reject a missing anchor with an actionable message; never silently create an unrelated empty section. Check chart, gauge, and static-text placements.
+- [x] After focused unit checks pass, run one representative destination/upload/retry journey and one section-split/move journey using valid canonical fixtures.
 
 **Exit:** Creation and retry preserve authored data, truthful destination status, and exactly-once persistence. Section splits and chart moves target the selected canonical placement and survive save/reload.
 
@@ -127,13 +131,13 @@ Recommended sequence: **S1 text blocker → S2 creation/placement transactions �
 
 **Tests:** `tests/staticContentEditor.test.js`, `tests/staticContentDraft.test.js`, `tests/authoringStage.test.js`; `tests/e2e/static-free-text.spec.js`. Existing media behavior is a regression boundary only if the editor changes touch it; #22 is not part of this slice.
 
-- [ ] Establish a valid text fixture at 1-, 2-, 3-, and 4-column panel widths. Use the two #31 screenshot viewport sizes (1401×833 and 1117×766) as representative regressions, not exact-pixel snapshots.
-- [ ] Give the writing surface usable width and height independent of the saved panel footprint. Keep toolbar, editable text, validation, and navigation reachable with keyboard and scroll. Do not let the source-fidelity message displace or clip the editor.
-- [ ] Calculate preview dimensions with `chartFootprintPixelSize(footprint, resolveCanvasGeometry(...))` using the selected destination's effective width. Feed this geometry to both the inline **Rendered preview** and **Preview & add**. Do not calculate panel width as a fraction of the writer/dialog column.
-- [ ] Render preview content at the intended logical panel width. If it must fit a smaller viewport, scale the complete preview after layout and expose Fit/Actual sizing consistently with chart authoring; do not reflow text at the smaller display width. Changing panel size must not shrink the writing controls.
-- [ ] Match the preview's content-box width, font/theme, and wrapping to the saved panel, accounting for the same panel chrome/padding. In Actual mode, compare like-for-like geometry within one CSS pixel; in Fit mode, assert the measured scale and unchanged logical wrapping. Destination/viewport changes must update the preview.
-- [ ] Verify text, title, width, and content survive navigation, save, and reopen. Keep existing media controls reachable without altering their catalogue or eligibility behavior.
-- [ ] Run changed model checks, then one parameterized text-writing/preview journey across representative widths and both viewport sizes.
+- [x] Establish a valid text fixture at 1-, 2-, 3-, and 4-column panel widths. Use the two #31 screenshot viewport sizes (1401×833 and 1117×766) as representative regressions, not exact-pixel snapshots.
+- [x] Give the writing surface usable width and height independent of the saved panel footprint. Keep toolbar, editable text, validation, and navigation reachable with keyboard and scroll. Do not let the source-fidelity message displace or clip the editor.
+- [x] Calculate preview dimensions with `chartFootprintPixelSize(footprint, resolveCanvasGeometry(...))` using the selected destination's effective width. Feed this geometry to both the inline **Rendered preview** and **Preview & add**. Do not calculate panel width as a fraction of the writer/dialog column.
+- [x] Render preview content at the intended logical panel width. If it must fit a smaller viewport, scale the complete preview after layout and expose Fit/Actual sizing consistently with chart authoring; do not reflow text at the smaller display width. Changing panel size must not shrink the writing controls.
+- [x] Match the preview's content-box width, font/theme, and wrapping to the saved panel, accounting for the same panel chrome/padding. In Actual mode, compare like-for-like geometry within one CSS pixel; in Fit mode, assert the measured scale and unchanged logical wrapping. Destination/viewport changes must update the preview.
+- [x] Verify text, title, width, and content survive navigation, save, and reopen. Keep existing media controls reachable without altering their catalogue or eligibility behavior.
+- [x] Run changed model checks, then one parameterized text-writing/preview journey across representative widths and both viewport sizes.
 
 **Exit:** Text can be authored at ordinary laptop sizes regardless of panel footprint. Rendered preview and the saved panel have the same logical content width and wrapping. #22 remains deferred.
 

@@ -5,13 +5,26 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 
-const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
+const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true, watch: null }, optimizeDeps: { noDiscovery: true } });
 const { default: AuthoringStage, authoringStageScale } = await vite.ssrLoadModule("/src/components/chart-authoring/AuthoringStage.jsx");
+const { default: AuthoringFootprintFrame } = await vite.ssrLoadModule("/src/components/common/AuthoringFootprintFrame.jsx");
 await vite.close();
 const rows = [{ value: 42 }];
 const chart = { id: "stage-kpi", typeId: "kpi", title: "Capacity", roles: { value: { field: "value" } }, layout: { width: 2, height: 1 } };
 const props = { chart, rows, datasetProfile: profileDataset(rows) };
 const render = extra => renderToStaticMarkup(React.createElement(AuthoringStage, { ...props, ...extra }));
+
+test("V3 #21 text preview uses destination footprint dimensions", () => {
+  for (const width of [1, 2, 3, 4]) {
+    const expected = ((1000 - 36 - 48) / 4) * width + 16 * (width - 1);
+    const html = renderToStaticMarkup(React.createElement(AuthoringFootprintFrame, {
+      layout: { width, height: 1 }, kind: "preview", canvasWidth: 1000, fit: "actual",
+    }, React.createElement("p", null, "Logical text")));
+    assert.ok(html.includes(`data-stage-width="${expected}"`));
+    assert.ok(html.includes(`width:${expected}px`));
+    assert.match(html, /data-stage-scale="1"/);
+  }
+});
 
 test("stage renders one real destination panel at literal pixels with reserved scaled space", () => {
   const html = render({ availableWidth: 335, maxHeight: 600 });
