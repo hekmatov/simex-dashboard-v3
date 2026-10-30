@@ -1,5 +1,19 @@
 # SimEx Dashboard V3 Project Instructions
 
+## Agent skills
+
+### Issue tracker
+
+Use GitHub Issues in `hekmatov/simex-dashboard-v3` by default; implement changes in the private repository. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-label triage vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.
+
 ## Task Model Effort
 
 - Choose a new task's starting model and effort according to its actual work; do not default to Astra Extra High without a concrete reason.
