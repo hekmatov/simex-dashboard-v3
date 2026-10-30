@@ -1,6 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+test("V3 #17 conversion retains shared metadata and pivot and warns for reference lines", () => {
+  const chart = lineChart();
+  chart.roles.measurements.push({ field: "other" });
+  chart.transformations.pivot = { mode: "measuresToRows" };
+  chart.presentation.description = { visible: true };
+  chart.presentation.citation = { label: "Authored evidence" };
+  chart.presentation.referenceLine = { visible: true, value: 5, label: "Threshold" };
+  const plan = planChartConversion(chart, "bar");
+  assert.ok(plan.removedSettings.some(s => s.path === "presentation.referenceLine"));
+  const bar = applyChartConversion(chart, "bar");
+  assert.equal(bar.typeId, "bar");
+  assert.deepEqual(bar.transformations.pivot, chart.transformations.pivot);
+  assert.deepEqual(bar.presentation.description, chart.presentation.description);
+  assert.deepEqual(bar.presentation.citation, chart.presentation.citation);
+  assert.equal(bar.presentation.referenceLine, undefined);
+});
+
 import {
   applyChartConversion,
   planChartConversion,

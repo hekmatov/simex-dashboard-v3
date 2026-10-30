@@ -20,7 +20,11 @@
   - `node --test tests/authoringStage.test.js tests/staticContentEditor.test.js`: **27 passed, 0 failed**. New #21 destination geometry case observed RED before the frame change, then GREEN. Updated existing footprint tests to assert the confirmed independent-writer contract.
   - `pnpm.cmd exec playwright test tests/e2e/static-free-text.spec.js --project=chromium --grep 'V3 #21 #31' --max-failures=1`: **2 passed (1.1m)**. Each viewport (1401×833 and 1117×766) exercises widths 1–4, usable writer/toolbar/footer, Fit versus Actual logical wrapping, inline versus final versus saved content width within 1 CSS pixel, save and reopen with exact text.
   - `pnpm.cmd exec playwright test tests/e2e/static-free-text.spec.js --project=chromium --grep 'embedded image persists through reload and a second Text/Image creation' --max-failures=1`: **1 passed (29.2s)**, covering media reachability and durable content after the shared frame change. #22 remains deferred.
-- S4–S7: pending.
+- S4 / #17: added draft-only conversion through the existing conversion projections, retaining partial assignments without weakening final-save validation. Same-type selection preserves authored state. Compatible cross-type changes retain source identity, mappings, transformations, palette, legend, layout, destination, explicit or detected temporal playback, and membership. Incompatible losses are named before applying, with exact draft retention on cancellation. Added missing conversion ownership for pivot, description/citation, table/image settings and reference-line warnings; existing saved-editor consumers explicitly confirm the new warning.
+  - `node --test tests/wizardDraftV3.test.js tests/chartConversionV3.test.js`: **45 passed, 0 failed**. New partial/same-type, detected-time and metadata/pivot/reference-line regressions each observed RED, then GREEN. Earlier intermediate failures identified and corrected null-draft initialization and stale tests that applied incompatible changes without confirmation.
+  - `node --test --test-name-pattern='wizard exposes|Full wizard continues|wizard membership keeps|wizard submit callback|edit-mode wizard commit|guided synchronized conversion|multi-temporal conversion' tests/chartAuthoringComponentsV3.test.js`: **8 passed, 0 failed**.
+  - `pnpm.cmd exec playwright test tests/e2e/v3-chart-creation.spec.js tests/e2e/chart-authoring-v3.spec.js --project=chromium --grep 'V3 #17|editor chart conversion supports' --max-failures=1`: **2 passed (31.8s)**. After replacing internal paths with readable warning names, only the affected new-chart journey was rerun: **1 passed (13.0s)**. Full-editor compatible conversion, incompatible remapping, discard and saved identity remain covered by the passing existing journey.
+- S5–S7: pending.
 - #22: **deferred by user**, no catalogue/listing/eligibility changes authorized.
 
 **Goal:** Address the complete 17-issue V3 inventory: repair or verify the 16 active issues, and retain #22 as an explicit user-directed deferral. Preserve already-working behavior and authored content.
@@ -147,11 +151,11 @@ Recommended sequence: **S1 text blocker → S2 creation/placement transactions �
 
 **Tests:** `tests/wizardDraftV3.test.js`, `tests/chartConversionV3.test.js`, `tests/chartAuthoringComponentsV3.test.js`; smallest corresponding journey in `tests/e2e/chart-authoring-v3.spec.js`.
 
-- [ ] Cover cross-type switches explicitly: complete and incomplete Line↔Bar mappings retain compatible source, roles, filters, transformations, styling, placement, and time settings.
-- [ ] Make same-type selection idempotent for roles, source, transformations, presentation, layout, destination, and time-group membership.
-- [ ] Preserve compatible partial role assignments without requiring a complete renderable target chart. Keep draft validation separate from final save validation.
-- [ ] Preserve compatible presentation and time semantics across different types; explain concrete losses before an incompatible change. Cancellation must restore the exact original draft.
-- [ ] Cover partial and complete line/bar mappings, incompatible targets, and supported time-group membership. Keep source identity stable and preserve uploaded source ownership.
+- [x] Cover cross-type switches explicitly: complete and incomplete Line↔Bar mappings retain compatible source, roles, filters, transformations, styling, placement, and time settings.
+- [x] Make same-type selection idempotent for roles, source, transformations, presentation, layout, destination, and time-group membership.
+- [x] Preserve compatible partial role assignments without requiring a complete renderable target chart. Keep draft validation separate from final save validation.
+- [x] Preserve compatible presentation and time semantics across different types; explain concrete losses before an incompatible change. Cancellation must restore the exact original draft.
+- [x] Cover partial and complete line/bar mappings, incompatible targets, and supported time-group membership. Keep source identity stable and preserve uploaded source ownership.
 
 **Exit:** Selecting a chart type cannot silently erase still-compatible authored choices. Existing complete conversion behavior remains passing.
 

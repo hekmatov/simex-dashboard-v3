@@ -63,6 +63,33 @@ test("V3 #32 destination upload and failed persistence retry share saved structu
   await expect(page.locator(`[data-canonical-section-id="${sectionId}"] [data-panel-id="${saved.charts[0].id}"]`)).toBeVisible();
 });
 
+test("V3 #17 type changes retain partial and complete mappings and explain incompatible loss", async ({ page }) => {
+  test.setTimeout(90_000);
+  page.setDefaultTimeout(15_000);
+  await resetSourceDashboard(page, { fixture: "fable-m0" });
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  const flow = await openFreshChartAuthoring(page);
+  await flow.selectExistingSource("cases WCPH eldoria");
+  await flow.chooseChartType(null, /^Line\./);
+  await flow.selectRole("measurements", "national_total_cases");
+  await flow.chooseChartType(null, /^Bar\./);
+  await expect(flow.wizard.locator('[data-field-id="measurements"] select').first()).toHaveValue("national_total_cases");
+  await flow.selectRole("observation", "Date");
+  await flow.goToConfigure();
+  await flow.wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill("Retained type proof");
+  await flow.chooseChartType(null, /^Line\./);
+  await expect(flow.wizard.locator('[data-field-id="observation"] select').first()).toHaveValue("Date");
+  await flow.chooseChartType(null, /^Pie\./);
+  const warning = page.getByRole("dialog", { name: "Change chart type?", exact: true });
+  await expect(warning).toContainText("Measurements");
+  await warning.getByRole("button", { name: "Keep current type", exact: true }).click();
+  await flow.goToMapAndPrepare();
+  await expect(flow.wizard.locator('[data-field-id="measurements"] select').first()).toHaveValue("national_total_cases");
+  await flow.goToConfigure();
+  await expect(flow.wizard.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Retained type proof");
+  await flow.createChart("Retained type proof");
+});
+
 test("six-stage chart creation suspends and commits exactly once", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });

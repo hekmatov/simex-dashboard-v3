@@ -46,6 +46,56 @@ const loadedRows = [
   { reportedAt: "2027-05-02", value: 12 },
 ];
 
+test("V3 #17 cross-type changes preserve compatible partial and complete authoring", () => {
+  for (const complete of [false, true]) {
+    const chart = createChartDraft("line", {
+      id: "conversion-proof", sourceId: "exercise", title: "Authored title",
+      roles: { measurements: [{ field: "value", axis: "primary" }], ...(complete ? { observation: { field: "reportedAt", interpretation: "temporal", format: "YYYY-MM-DD" } } : {}) },
+      presentation: { series: { colors: ["#123456"] }, legend: { visible: false } },
+      interaction: { zoom: { enabled: false, rangeSelector: true } },
+      transformations: { filters: [{ field: "value", operator: "greaterThan", value: 0 }] },
+    });
+    const groups = complete ? [{ id: "clock", members: [{ chartId: chart.id, timeRole: "observation" }] }] : [];
+    const state = createWizardState({ draft: chart, chronoGroups: groups, destination: { pageId: "page", sectionId: "section" }, loadedData: { exercise: loadedRows }, profiles: { exercise: profile() } });
+    const same = reduceWizardState(state, { type: "selectType", typeId: "line" });
+    assert.deepEqual(same.draft, state.draft);
+    assert.deepEqual(same.chronoGroups, state.chronoGroups);
+    let converted = reduceWizardState(state, { type: "selectType", typeId: "bar" });
+    assert.equal(converted.confirmation, null);
+    assert.equal(converted.draft.typeId, "bar");
+    for (const key of ["roles", "sourceId", "transformations", "presentation", "interaction", "layout", "title"]) assert.deepEqual(converted.draft[key], state.draft[key], key);
+    assert.deepEqual(converted.destination, state.destination);
+    assert.deepEqual(converted.chronoGroups, state.chronoGroups);
+    converted = reduceWizardState(converted, { type: "selectType", typeId: "line" });
+    assert.deepEqual(converted.draft, state.draft);
+    const pending = reduceWizardState(state, { type: "selectType", typeId: "pie" });
+    assert.equal(pending.confirmation, "changeType");
+    assert.deepEqual(pending.draft, state.draft);
+    assert.ok(pending.pendingTypeChange.losses.some(loss => loss.path.startsWith("roles.")));
+    const canceled = reduceWizardState(pending, { type: "cancelConfirmation" });
+    assert.deepEqual(canceled.draft, state.draft);
+    assert.deepEqual(canceled.chronoGroups, state.chronoGroups);
+    const confirmed = reduceWizardState(pending, { type: "confirmTypeChange" });
+    assert.equal(confirmed.draft.typeId, "pie");
+    assert.deepEqual(confirmed.chronoGroups, []);
+    assert.equal(confirmed.draft.sourceId, chart.sourceId);
+  }
+});
+
+test("V3 #17 detected temporal bindings retain playback without rewriting roles", () => {
+  const draft = createChartDraft("line", {
+    id: "detected-time", sourceId: "exercise", title: "Detected time",
+    roles: { measurements: [{ field: "value" }], observation: { field: "reportedAt" } },
+    interaction: { timeSync: { groupId: "clock" } },
+  });
+  const state = createWizardState({ draft, profiles: { exercise: profile() }, loadedData: { exercise: loadedRows }, chronoGroups: [{ id: "clock", members: [{ chartId: draft.id, timeRole: "observation" }] }] });
+  const changed = reduceWizardState(state, { type: "selectType", typeId: "bar" });
+  assert.equal(changed.confirmation, null);
+  assert.deepEqual(changed.draft.roles, state.draft.roles);
+  assert.deepEqual(changed.draft.interaction.timeSync, state.draft.interaction.timeSync);
+  assert.deepEqual(changed.chronoGroups, state.chronoGroups);
+});
+
 test("Add chart retains its exact six-stage contract", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
     "destination",
@@ -653,6 +703,8 @@ test("changing chart type keeps logical identity and removes only the draft's st
     typeId: "pie",
     chart: { title: "Readiness mix" },
   });
+  assert.equal(state.confirmation, "changeType");
+  state = reduceWizardState(state, { type: "confirmTypeChange" });
 
   assert.equal(state.draft.id, "changing-chart");
   assert.equal(state.draft.sourceId, "exercise-data");
@@ -768,6 +820,8 @@ test("changing the sole member's type removes only the now-empty runtime group",
     typeId: "pie",
     chart: { title: "Readiness mix" },
   });
+  assert.equal(state.confirmation, "changeType");
+  state = reduceWizardState(state, { type: "confirmTypeChange" });
 
   assert.equal(state.chronoGroups.length, 1);
   assert.equal(

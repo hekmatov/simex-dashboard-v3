@@ -11,7 +11,7 @@ import {
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateChronoGroups } from "../time/chronoGroupModel.js";
-import { applyChartConversion } from "./chartConversion.js";
+import { applyChartDraftConversion, planChartConversion } from "./chartConversion.js";
 
 export const WIZARD_STEPS = Object.freeze([
   "source",
@@ -296,6 +296,10 @@ export function reduceWizardState(state, action) {
       return navigate(state, action.step);
     case "selectType":
       return selectType(state, action);
+    case "confirmTypeChange":
+      return state.pendingTypeChange
+        ? selectType(state, { ...state.pendingTypeChange.action, confirmed: true })
+        : state;
     case "selectSource":
       return selectSource(state, action);
     case "requestSourceChange":
@@ -333,6 +337,7 @@ export function reduceWizardState(state, action) {
         ...state,
         confirmation: null,
         pendingSourceChange: null,
+        pendingTypeChange: null,
       };
     default:
       throw new Error(`Unknown wizard action "${action.type}".`);
@@ -472,9 +477,44 @@ function selectType(state, action) {
   const sourceSelection = state.sourceSelection
     ?? selectionFromDraftState(state);
   const sourceId = sourceSelection?.sourceId ?? null;
-  const groups = previousDraftId
-    ? removeChartFromGroups(state.chronoGroups, previousDraftId)
-    : state.chronoGroups;
+  if (state.draft?.typeId === action.typeId) {
+    return withStageStatuses({
+      ...state,
+      activeStep: sourceId ? "roles" : "source",
+      stage: sourceId ? "map-and-prepare-data" : "data-source",
+    });
+  }
+  const plan = state.draft ? planChartConversion(state.draft, action.typeId) : null;
+  const retainedRoles = plan?.preservedRoles ?? {};
+  const profile = state.draft ? profileForChart(state.profiles, state.draft) : null;
+  const temporalRoleCompatible = role => {
+    const binding = retainedRoles[role.id];
+    return role.accepts.includes("temporal") && binding
+      && resolveEffectiveBinding(binding, profile?.columns?.find(column => column.name === binding.field)).type === "temporal";
+  };
+  const hasCompatibleTime = targetSchema.capabilities.timeSync && targetSchema.roles.some(temporalRoleCompatible);
+  const groups = previousDraftId ? state.chronoGroups.flatMap(group => {
+    const members = (group.members ?? []).filter(member => member.chartId !== previousDraftId
+      || (targetSchema.capabilities.timeSync && targetSchema.roles.some(role => role.id === member.timeRole && temporalRoleCompatible(role))));
+    if (members.length === (group.members ?? []).length) return [group];
+    return members.length ? [{ ...group, members }] : [];
+  }) : state.chronoGroups;
+  const groupsChanged = JSON.stringify(groups) !== JSON.stringify(state.chronoGroups);
+  const losses = [
+    ...(plan?.removedSettings ?? []).filter(({ path }) => path !== "interaction.timeSync" || !hasCompatibleTime),
+    ...(groupsChanged ? [{ path: "chronoGroups", label: "The selected type cannot retain this chart's playback time role." }] : []),
+  ];
+  if (losses.length && action.confirmed !== true) {
+    return { ...state, confirmation: "changeType", pendingTypeChange: { action: structuredClone(action), losses } };
+  }
+  const draft = selectTypeDraft(state.draft, action.typeId, targetSchema, {
+    ...overrides,
+    ...(draftId ? { id: draftId } : {}),
+    ...(sourceId ? { sourceId } : {}),
+  });
+  if (hasCompatibleTime && state.draft?.interaction?.timeSync) {
+    draft.interaction.timeSync = structuredClone(state.draft.interaction.timeSync);
+  }
   return withStageStatuses({
     ...state,
     activeStep: sourceId ? "roles" : "source",
@@ -482,17 +522,14 @@ function selectType(state, action) {
     chartTypeId: action.typeId,
     chartTypeRevision: action.schemaRevision ?? state.chartTypeRevision ?? null,
     discarded: false,
-    draft: selectTypeDraft(state.draft, action.typeId, targetSchema, {
-      ...overrides,
-      ...(draftId ? { id: draftId } : {}),
-      ...(sourceId ? { sourceId } : {}),
-    }),
+    draft,
     sourceSelection,
     source: sourceSelection?.source ?? state.source,
-    chronoGroups: groups,
+    chronoGroups: groupsChanged ? groups : state.chronoGroups,
     chronoGroupsProvided: state.chronoGroupsProvided
-      || groups !== state.chronoGroups,
+      || groupsChanged,
     confirmation: null,
+    pendingTypeChange: null,
     pendingSourceChange: null,
     closed: false,
   });
@@ -500,7 +537,7 @@ function selectType(state, action) {
 
 function selectTypeDraft(previousDraft, typeId, targetSchema, overrides) {
   if (!previousDraft) return createChartDraft(typeId, overrides);
-  const converted = applyChartConversion(previousDraft, typeId, {});
+  const converted = applyChartDraftConversion(previousDraft, typeId, {});
   if (converted !== previousDraft && converted.typeId === typeId) {
     return {
       ...converted,

@@ -884,6 +884,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
 
   await full.getByRole("button", { name: /^Chart type\./ }).click();
   await full.getByRole("button", { name: /^Bar\b/i }).click();
+  await page.getByRole("dialog", { name: "Change chart type?", exact: true }).getByRole("button", { name: "Change type", exact: true }).click();
   await expect(full.locator('[data-field-id="measurements"] select').first())
     .toHaveValue(EXPOSURE_COLUMN);
   await expect(full.locator('[data-field-id="measurements"] select').nth(2))
@@ -914,6 +915,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
   full = await openFullChartEditor(page, panel);
   await full.getByRole("button", { name: /^Chart type\./ }).click();
   await full.getByRole("button", { name: /^Scatter\b/i }).click();
+  await page.getByRole("dialog", { name: "Change chart type?", exact: true }).getByRole("button", { name: "Change type", exact: true }).click();
   await full.getByRole("button", { name: "Discard changes", exact: true }).click();
   let discard = page.getByRole("dialog", { name: "Discard changes?" });
   await discard.getByRole("button", { name: "Continue editing", exact: true }).click();
@@ -928,6 +930,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
   full = await openFullChartEditor(page, panel);
   await full.getByRole("button", { name: /^Chart type\./ }).click();
   await full.getByRole("button", { name: /^Scatter\b/i }).click();
+  await page.getByRole("dialog", { name: "Change chart type?", exact: true }).getByRole("button", { name: "Change type", exact: true }).click();
   await full.locator('[data-field-id="x"] select').first().selectOption(EXPOSURE_COLUMN);
   await full.locator('[data-field-id="y"] select').first()
     .selectOption(CONCERN_COLUMN);

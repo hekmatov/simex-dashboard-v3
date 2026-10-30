@@ -36,6 +36,11 @@ const PRESENTATION_SECTIONS = Object.freeze({
   accessibility: "advanced",
   advanced: "advanced",
   card: "appearance",
+  description: "appearance",
+  citation: "appearance",
+  referenceLine: "appearance",
+  table: "appearance",
+  image: "appearance",
 });
 
 const DANGEROUS_PROPERTY_KEYS = new Set([
@@ -102,6 +107,15 @@ export function planChartConversion(
  * returns the exact original chart reference.
  */
 export function applyChartConversion(chart, targetTypeId, roleAssignments = {}) {
+  return convertChart(chart, targetTypeId, roleAssignments, { complete: true });
+}
+
+// Authoring may be incomplete; final save still uses the strict chart validator.
+export function applyChartDraftConversion(chart, targetTypeId, roleAssignments = {}) {
+  return convertChart(chart, targetTypeId, roleAssignments, { complete: false });
+}
+
+function convertChart(chart, targetTypeId, roleAssignments, { complete }) {
   if (roleAssignments === null) return chart;
   const assignmentSnapshot = cloneRoleAssignments(roleAssignments);
 
@@ -118,7 +132,7 @@ export function applyChartConversion(chart, targetTypeId, roleAssignments = {}) 
     assignmentSnapshot,
     target,
   );
-  if (roles === null || !requiredRolesComplete(roles, target)) return chart;
+  if (roles === null || (complete && !requiredRolesComplete(roles, target))) return chart;
 
   try {
     const candidate = createChartDraft(targetId, {
@@ -132,7 +146,7 @@ export function applyChartConversion(chart, targetTypeId, roleAssignments = {}) 
       interaction: targetInteraction(snapshot.interaction, target, roles),
       layout: snapshot.layout,
     });
-    validateChartInstance(candidate);
+    if (complete) validateChartInstance(candidate);
     return normalizeChartInstance(candidate);
   } catch {
     return chart;
@@ -215,6 +229,9 @@ function removedSettings(chart, target, preserved, effectiveRoles = preserved) {
       "Comparison settings are not supported by the target chart.",
     ));
   }
+  if (transformations.pivot != null && !target.transforms.includes("pivot")) {
+    removed.push(setting("transformations.pivot", "Pivoting measures into rows is not supported by the target chart."));
+  }
 
   const presentation = isRecord(chart.presentation) ? chart.presentation : {};
   for (const [key, section] of Object.entries(PRESENTATION_SECTIONS)) {
@@ -233,7 +250,7 @@ function removedSettings(chart, target, preserved, effectiveRoles = preserved) {
 
   const interaction = isRecord(chart.interaction) ? chart.interaction : {};
   if (
-    interaction.zoom?.enabled === true
+    (interaction.zoom?.enabled === true || interaction.zoom?.rangeSelector === true)
     && !target.capabilities.zoom
   ) {
     removed.push(setting(
@@ -293,6 +310,9 @@ function targetTransformations(sourceValue, target) {
       ? clonePlainData(source.comparison, "Comparison transformation")
       : { mode: target.comparison.defaultMode };
   }
+  if (target.transforms.includes("pivot") && Object.hasOwn(source, "pivot")) {
+    transformations.pivot = clonePlainData(source.pivot, "Pivot transformation");
+  }
   return transformations;
 }
 
@@ -335,6 +355,9 @@ function targetPresentation(sourceValue, target) {
 }
 
 function presentationAllowed(target, key, section, value) {
+  if (key === "description" || key === "citation") return true;
+  if (key === "referenceLine") return target.semantics?.mark === "line";
+  if (key === "table" || key === "image") return target.typeId === key;
   if (key === "collection") return target.capabilities.collection;
   if (key === "card") return cardPresentationCompatible(value, target.typeId);
   return target.form.sections.includes(section);
@@ -374,6 +397,7 @@ function targetInteraction(sourceValue, target, roles) {
   const source = isRecord(sourceValue) ? sourceValue : {};
   return {
     zoom: {
+      ...(target.capabilities.zoom ? clonePlainData(source.zoom ?? {}, "Chart zoom interaction") : {}),
       enabled: target.capabilities.zoom
         ? source.zoom?.enabled !== false
         : false,

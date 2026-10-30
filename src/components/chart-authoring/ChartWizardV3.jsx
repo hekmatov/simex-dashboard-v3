@@ -1915,6 +1915,18 @@ export default function ChartWizardV3({
       disabled: disabled || submitting,
     }),
     React.createElement(ConfirmDialog, {
+      open: wizard.confirmation === "changeType",
+      title: "Change chart type?",
+      message: `These settings will be removed: ${(wizard.pendingTypeChange?.losses ?? []).map(({ path }) => path === "chronoGroups"
+        ? "Playback group membership"
+        : path.split(".").at(-1).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, letter => letter.toUpperCase())).join(", ")}.`,
+      confirmLabel: "Change type",
+      cancelLabel: "Keep current type",
+      onConfirm: () => { if (!operationLocked()) dispatch({ type: "confirmTypeChange" }); },
+      onCancel: () => { if (!operationLocked()) dispatch({ type: "cancelConfirmation" }); },
+      disabled: disabled || submitting,
+    }),
+    React.createElement(ConfirmDialog, {
       open: wizard.confirmation === "discardChart",
       title: editMode ? "Discard changes?" : "Discard chart?",
       message: editMode
