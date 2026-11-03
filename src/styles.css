@@ -6711,7 +6711,8 @@ html[data-simex-eyedropper-active="true"] body * {
   line-height: 1.4;
   margin: 0;
 }
-.authoring-stage__viewport { min-width: 0; overflow: auto; overscroll-behavior: contain; }
+/* Keep horizontal inspection contained; vertical wheel input can continue into the editor. */
+.authoring-stage__viewport { min-width: 0; overflow: auto; overscroll-behavior: contain auto; }
 .authoring-stage[data-stage-fit="fit"] .authoring-stage__viewport { overflow: hidden; }
 .authoring-stage__space { position: relative; }
 .authoring-stage .authoring-stage__canvas.canonical-dashboard-frame {

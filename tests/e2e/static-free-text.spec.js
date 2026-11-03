@@ -96,6 +96,76 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
+test("full text editor scrolls through rendered preview boundaries", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1117, height: 766 });
+  await openBiomedicalBuild(page);
+  await page.getByRole("button", { name: "Add Text/Image", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add Text/Image" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill("Preview wheel proof");
+  await wizard.getByLabel("Portable QMD Composer editing area").fill("Short rendered text.");
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+  const saved = await readSavedFreeText(page, "Preview wheel proof");
+  const panel = canonicalPanel(page, saved.panel.id);
+  await panel.scrollIntoViewIfNeeded();
+  await openFreeTextEditor(panel, page);
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  const preview = editor.getByRole("region", { name: "Rendered preview", exact: true });
+  const body = editor.locator(".dashboard-dialog__body");
+  const viewport = preview.locator(".authoring-stage__viewport");
+  const height = editor.getByRole("combobox", { name: "Height step (12.5% of a row)", exact: true });
+  const positionPreview = async () => {
+    // Wheel input completes before Chromium's native scrolling animation does.
+    await body.evaluate(node => new Promise(resolve => {
+      let previous = node.scrollTop, stillFrames = 0;
+      const settle = () => {
+        const current = node.scrollTop;
+        stillFrames = current === previous ? stillFrames + 1 : 0;
+        previous = current;
+        if (stillFrames >= 4) resolve(); else requestAnimationFrame(settle);
+      };
+      requestAnimationFrame(settle);
+    }));
+    await viewport.evaluate(node => {
+      const body = node.closest(".dashboard-dialog__body");
+      body.scrollTop += node.getBoundingClientRect().top - body.getBoundingClientRect().top - 40;
+    });
+    const bounds = await viewport.boundingBox();
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + Math.min(60, bounds.height / 2));
+    const space = await body.evaluate(node => ({ top: node.scrollTop, remaining: node.scrollHeight - node.clientHeight - node.scrollTop }));
+    expect(space.remaining, "Preview fixture must leave room to scroll the editor").toBeGreaterThan(80);
+    return space.top;
+  };
+  for (const mode of ["Fit", "Actual"]) {
+    await preview.getByRole("button", { name: mode, exact: true }).click();
+    await viewport.evaluate(node => { node.scrollTop = node.scrollHeight; });
+    expect(await viewport.evaluate(node => node.scrollHeight - node.clientHeight - node.scrollTop), "Preview must be at its boundary before testing scroll handoff").toBeLessThanOrEqual(1);
+    const before = await positionPreview();
+    await page.mouse.wheel(0, 120);
+    await page.mouse.wheel(0, 120);
+    await expect.poll(() => body.evaluate(node => node.scrollTop), { timeout: 5000, message: `${mode} preview must let the editor scroll` }).toBeGreaterThan(before + 20);
+  }
+  await height.selectOption({ value: "3" });
+  await expect(height).toHaveValue("3");
+  await preview.getByRole("button", { name: "Actual", exact: true }).click();
+  await viewport.evaluate(node => { node.scrollTop = 0; });
+  expect(await viewport.evaluate(node => node.scrollHeight - node.clientHeight)).toBeGreaterThan(120);
+  const beforeInner = await positionPreview();
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeGreaterThan(20);
+  expect(await body.evaluate(node => node.scrollTop)).toBe(beforeInner);
+  await viewport.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  const beforeBoundary = await positionPreview();
+  await page.mouse.wheel(0, 120);
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => body.evaluate(node => node.scrollTop)).toBeGreaterThan(beforeBoundary + 20);
+});
+
 test("V3 #25 image-to-text creates and reopens valid text", async ({ page }) => {
   test.setTimeout(120_000);
   await openBiomedicalBuild(page);
