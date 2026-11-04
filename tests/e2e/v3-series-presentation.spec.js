@@ -94,6 +94,61 @@ test("V3 #20 #28 reported multi-series chart preserves legend choices data and c
   expect(records.filter(entry => entry.label === "Shared alias")).toHaveLength(1);
 });
 
+test("chart ordering and label-axis value entries stay beside their names", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1806, height: 1244 });
+  const editor = await edit(page, support.id);
+  const labels = editor.locator('[data-field-id="labels"]');
+  const axes = editor.locator('[data-field-id="axes"]');
+  const x = axes.getByRole("group", { name: "X axis", exact: true });
+  const primary = axes.getByRole("group", { name: "Primary axis", exact: true });
+  await expect(labels.getByLabel("Label format", { exact: true })).toHaveCount(1);
+  await expect(x.getByLabel("X-axis title font size", { exact: true })).toHaveAttribute("type", "number");
+  await expect(primary.getByLabel("Title font size", { exact: true })).toHaveAttribute("min", "10");
+  await expect(primary.getByLabel("Title font size", { exact: true })).toHaveAttribute("max", "24");
+  for (const width of [1806, 1265]) {
+    await page.setViewportSize({ width, height: 1244 });
+    const fields = editor.locator('.chart-authoring-labels .chart-authoring-inline-field, .chart-authoring-axis-group .chart-authoring-inline-field');
+    expect(await fields.count()).toBeGreaterThanOrEqual(12);
+    for (const field of await fields.all()) {
+      const geometry = await field.evaluate(node => {
+        const label = node.querySelector(':scope > span').getBoundingClientRect();
+        const input = node.querySelector(':scope > input, :scope > select').getBoundingClientRect();
+        return { right: label.right, x: input.x, labelY: label.y + label.height / 2, inputY: input.y + input.height / 2, overflow: node.scrollWidth > node.clientWidth + 1 };
+      });
+      expect(geometry.x).toBeGreaterThanOrEqual(geometry.right);
+      expect(Math.abs(geometry.labelY - geometry.inputY)).toBeLessThan(2);
+      expect(geometry.overflow).toBe(false);
+    }
+    const row = editor.locator('[data-field-id="categoryOrder"] li').first();
+    const name = await row.locator('span').boundingBox();
+    for (const button of await row.getByRole('button').all()) {
+      const bounds = await button.boundingBox();
+      expect(bounds.x).toBeGreaterThanOrEqual(name.x + name.width);
+      expect(Math.abs(bounds.y + bounds.height / 2 - name.y - name.height / 2)).toBeLessThan(2);
+    }
+  }
+  await x.getByLabel("X-axis title font size", { exact: true }).fill("17");
+  await x.getByLabel("X-axis title font size", { exact: true }).press("ArrowUp");
+  await expect(x.getByLabel("X-axis title font size", { exact: true })).toHaveValue("18");
+  await primary.getByLabel("Title font size", { exact: true }).fill("16");
+  await primary.getByLabel("Title font size", { exact: true }).press("ArrowDown");
+  await expect(primary.getByLabel("Title font size", { exact: true })).toHaveValue("15");
+  await labels.getByLabel("Label unit", { exact: true }).fill("%");
+  await primary.getByLabel("Horizontal offset", { exact: true }).fill("-12");
+  await primary.getByLabel("Minimum", { exact: true }).fill("5");
+  await save(editor);
+  await page.reload();
+  await openDashboardPage(page, "presentation-proof");
+  const reopened = await edit(page, support.id);
+  await expect(reopened.getByLabel("X-axis title font size", { exact: true })).toHaveValue("18");
+  const savedPrimary = reopened.getByRole("group", { name: "Primary axis", exact: true });
+  await expect(savedPrimary.getByLabel("Title font size", { exact: true })).toHaveValue("15");
+  await expect(savedPrimary.getByLabel("Horizontal offset", { exact: true })).toHaveValue("-12");
+  await expect(savedPrimary.getByLabel("Minimum", { exact: true })).toHaveValue("5");
+  await expect(reopened.getByLabel("Label unit", { exact: true })).toHaveValue("%");
+});
+
 test("explicit point labels support matrix bulk selection, cancel and reload", async ({ page }) => {
   test.setTimeout(120_000);
   const editor = await edit(page, support.id);

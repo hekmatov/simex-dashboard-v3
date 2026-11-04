@@ -293,6 +293,52 @@
   min-inline-size: 0;
 }
 
+/* Keep compact chart labels beside their value entry without changing toggles. */
+:is(.chart-authoring-labels, .chart-authoring-axis-group) .chart-authoring-inline-field {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 145px) minmax(64px, 1fr);
+  min-inline-size: 0;
+}
+
+:is(.chart-authoring-labels, .chart-authoring-axis-group) .chart-authoring-inline-field > :is(input, select) {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.chart-authoring-axis-group .chart-authoring-number-pair {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+
+.chart-authoring-axis-group .chart-authoring-number-pair > .chart-authoring-inline-field {
+  grid-column: auto;
+}
+
+.chart-presentation-members__order-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-inline-size: 0;
+}
+
+.chart-presentation-members__order-row > span {
+  min-inline-size: 0;
+}
+
+.chart-presentation-members [data-presentation-unavailable="true"] .chart-presentation-members__order-row > span {
+  color: var(--simex-text-muted);
+}
+
+.chart-presentation-members__order-row > .chart-presentation-members__moves {
+  flex-shrink: 0;
+  margin-block: 0;
+  white-space: nowrap;
+}
+
 .dashboard-authoring-boolean-row {
   align-items: center;
   display: grid;

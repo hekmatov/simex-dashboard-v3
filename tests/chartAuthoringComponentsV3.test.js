@@ -1242,8 +1242,9 @@ test("axis controls expose independent title and tick-label typography for avail
   assert.match(html, /Primary axis/);
   assert.match(html, /Secondary axis/);
   assert.match(html, /Title font size/);
-  assert.match(html, /Decrease title font size/);
-  assert.match(html, /Increase title font size/);
+  assert.doesNotMatch(html, /(?:Decrease|Increase) title font size/);
+  assert.match(html, /type="number" min="10" max="24" step="1" value="10"/);
+  assert.match(html, /type="number" min="10" max="24" step="1" value="24"/);
   assert.match(html, /Bold/);
   assert.match(html, /Horizontal offset/);
   assert.match(html, /Vertical offset/);
@@ -1265,11 +1266,12 @@ test("axis controls expose independent title and tick-label typography for avail
     value: { primary: { titleFontSize: 14 } },
     onChange(value) { changes.push(value); },
   });
-  findElement(tree, (element) => element.props?.["aria-label"] === "Increase title font size").props.onClick();
-  findElement(tree, (element) => element.props?.["aria-label"] === "Decrease title font size").props.onClick();
+  const titleSize = findElement(tree, element => element.type === "label" && element.props.children[0]?.props?.children === "Title font size").props.children[1];
+  titleSize.props.onChange({ target: { value: "18" } });
+  titleSize.props.onChange({ target: { value: "" } });
   assert.deepEqual(changes, [
-    { primary: { titleFontSize: 15 } },
-    { primary: { titleFontSize: 13 } },
+    { primary: { titleFontSize: 18 } },
+    {},
   ]);
 });
 

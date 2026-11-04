@@ -33,11 +33,15 @@ export default function CategorySeriesPresentationFields({ field, chart, onChang
       {field.control === "seriesColorsByIdentity" && Object.keys(chart.presentation?.series?.categoryOverrides ?? {}).length > 0 && <p>Individual bar colors below take priority over the series color. Use Reset bar colors to return the bars to their series color.</p>}
       <ol className="chart-presentation-members__list">
         {rows.map((entry, index) => <li key={entry.key} data-presentation-key={entry.key} data-presentation-unavailable={entry.unavailable ? "true" : undefined}>
+          {field.control === "presentationOrder" ? <div className="chart-presentation-members__order-row">
+            <span>{entry.defaultLabel}{entry.unavailable ? " (unavailable in current data)" : ""}</span>
+            <div className="chart-presentation-members__moves">
+              <button type="button" className="secondary" disabled={index === 0} aria-label={`Move ${entry.defaultLabel} up`} onClick={() => move(index, -1)}>Move up</button>
+              <button type="button" className="secondary" disabled={index === rows.length - 1} aria-label={`Move ${entry.defaultLabel} down`} onClick={() => move(index, 1)}>Move down</button>
+            </div>
+          </div> : <React.Fragment>
           <span>{entry.defaultLabel}{entry.unavailable ? " (unavailable in current data)" : ""}</span>
-          {field.control === "presentationOrder" ? <div className="chart-presentation-members__moves">
-            <button type="button" className="secondary" disabled={index === 0} aria-label={`Move ${entry.defaultLabel} up`} onClick={() => move(index, -1)}>Move up</button>
-            <button type="button" className="secondary" disabled={index === rows.length - 1} aria-label={`Move ${entry.defaultLabel} down`} onClick={() => move(index, 1)}>Move down</button>
-          </div> : field.control === "legendEntries" ? <div className="chart-presentation-members__entry">
+          {field.control === "legendEntries" ? <div className="chart-presentation-members__entry">
             <label>Legend name: {entry.defaultLabel}<input value={field.value?.[entry.key]?.label ?? ""} placeholder={entry.defaultLabel} onChange={event => updateEntry(entry.key, { label: event.target.value || undefined })} /></label>
             <label className="chart-authoring-inline-toggle"><input type="checkbox" checked={field.value?.[entry.key]?.visible !== false} onChange={event => updateEntry(entry.key, { visible: event.target.checked ? undefined : false })} />Show in legend: {entry.defaultLabel}</label>
           </div> : <ColorField
@@ -48,7 +52,7 @@ export default function CategorySeriesPresentationFields({ field, chart, onChang
               spreadCategoryGradient(field.descriptors, stops, { order: chart.presentation?.axes?.x?.categoryOrder, overrides: field.value })) : undefined}
             allowDefault defaultActive={!field.value?.[entry.key]?.color}
             onDefault={() => updateEntry(entry.key, { color: undefined })}
-          />}
+          />}</React.Fragment>}
         </li>)}
       </ol>
       {field.control === "presentationOrder" && <button type="button" className="secondary" onClick={() => onChange(field.path, undefined)}>Reset to source order</button>}

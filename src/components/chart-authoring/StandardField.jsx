@@ -348,7 +348,7 @@ function structuredControls(control, value, onChange, field = {}) {
     ) : null, controls.has("position") ? /* @__PURE__ */ React.createElement("label", null, "Label position", /* @__PURE__ */ React.createElement("select", {
       value: current.position ?? "",
       onChange: (event) => emit(["position"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? labelFormatControl(current.format, (nextValue) => emit(["format"], nextValue)) : null, controls.has("unit") ? textControl("Label unit", current.unit, (nextValue) => emit(["unit"], nextValue)) : null, controls.has("fontSize") ? boundedNumericControl("Label font size", current.fontSize ?? 12, 8, 32, (nextValue) => emit(["fontSize"], nextValue)) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null, controls.has("pointSelection") ? React.createElement(PointLabelSelector, { matrix: field.pointMatrix, value: current.pointSelection, onChange: next => emit(["pointSelection"], next) }) : null);
+    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? labelFormatControl(current.format, (nextValue) => emit(["format"], nextValue)) : null, controls.has("unit") ? textControl("Label unit", current.unit, (nextValue) => emit(["unit"], nextValue), true) : null, controls.has("fontSize") ? boundedNumericControl("Label font size", current.fontSize ?? 12, 8, 32, (nextValue) => emit(["fontSize"], nextValue)) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null, controls.has("pointSelection") ? React.createElement(PointLabelSelector, { matrix: field.pointMatrix, value: current.pointSelection, onChange: next => emit(["pointSelection"], next) }) : null);
   }
   if (control === "axes") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(
@@ -464,7 +464,7 @@ function optionSelectControl(label, value, options, onChange) {
   ));
 }
 function numericControl(label, value, onChange) {
-  return React.createElement("label", null, label, React.createElement("input", {
+  return React.createElement("label", { className: "chart-authoring-inline-field" }, React.createElement("span", null, label), React.createElement("input", {
     type: "number",
     value: numeric(value),
     onChange: (event) => onChange(optionalNumber(event.target.value)),
@@ -478,7 +478,7 @@ function numericPair(className, controls) {
   );
 }
 function boundedNumericControl(label, value, min, max, onChange) {
-  return React.createElement("label", null, label, React.createElement("input", {
+  return React.createElement("label", { className: "chart-authoring-inline-field" }, React.createElement("span", null, label), React.createElement("input", {
     type: "number",
     min: String(min),
     max: String(max),
@@ -488,33 +488,17 @@ function boundedNumericControl(label, value, min, max, onChange) {
   }));
 }
 function fontSizeControl(value, onChange, label = "Title") {
-  const size = Number.isInteger(value) ? Math.min(24, Math.max(10, value)) : 14;
-  return React.createElement("div", { className: "chart-authoring-axis-title-size" },
-    React.createElement("span", null, `${label} font size`),
-    React.createElement("button", {
-      type: "button",
-      "aria-label": `Decrease ${label.toLowerCase()} font size`,
-      disabled: size <= 10,
-      onClick: () => onChange(size - 1),
-    }, "−"),
-    React.createElement("output", null, size),
-    React.createElement("button", {
-      type: "button",
-      "aria-label": `Increase ${label.toLowerCase()} font size`,
-      disabled: size >= 24,
-      onClick: () => onChange(size + 1),
-    }, "+"),
-  );
+  return boundedNumericControl(`${label} font size`, value, 10, 24, onChange);
 }
 function xAxisControls(value, kind, emit) {
   const ranged = kind === "temporal" || kind === "number";
   const bounds = ranged ? numericPair("chart-authoring-axis-bounds", [
-    React.createElement("label", { key: "min" }, "Minimum", React.createElement("input", {
+    React.createElement("label", { key: "min", className: "chart-authoring-inline-field" }, React.createElement("span", null, "Minimum"), React.createElement("input", {
       type: kind === "temporal" ? "datetime-local" : "number",
       value: kind === "number" ? numeric(value.min) : text(value.min),
       onChange: (event) => emit(["x", "min"], kind === "number" ? optionalNumber(event.target.value) : event.target.value),
     })),
-    React.createElement("label", { key: "max" }, "Maximum", React.createElement("input", {
+    React.createElement("label", { key: "max", className: "chart-authoring-inline-field" }, React.createElement("span", null, "Maximum"), React.createElement("input", {
       type: kind === "temporal" ? "datetime-local" : "number",
       value: kind === "number" ? numeric(value.max) : text(value.max),
       onChange: (event) => emit(["x", "max"], kind === "number" ? optionalNumber(event.target.value) : event.target.value),
@@ -569,7 +553,7 @@ function tickControls(axis, value, kind, emit) {
         placeholder: "Auto",
         onChange: (event) => emit([axis, "tickFrequency"], event.target.value === "" ? undefined : { ...(value ?? {}), every: Number(event.target.value), ...(kind === "temporal" ? { unit: value?.unit ?? "day" } : {}) }),
       });
-  const every = React.createElement("label", null, "Tick frequency", everyControl);
+  const every = React.createElement("label", { className: "chart-authoring-inline-field" }, React.createElement("span", null, "Tick frequency"), everyControl);
   if (kind !== "temporal") return every;
   return React.createElement(React.Fragment, null, every, React.createElement("label", null, "Tick unit", React.createElement("select", {
     value: value?.unit ?? "day",
@@ -584,7 +568,7 @@ function tickControls(axis, value, kind, emit) {
   }, ["minute", "hour", "day", "week", "month", "year"].map((unit) => React.createElement("option", { key: unit, value: unit }, sentence(unit))))));
 }
 function labelFormatControl(value, onChange) {
-  return React.createElement("div", { className: "chart-authoring-label-format" },
+  return React.createElement("div", { className: "chart-authoring-label-format chart-authoring-inline-field" },
     React.createElement("span", { className: "chart-authoring-label-format__heading" }, "Label format", React.createElement(LabelFormatHelp)),
     React.createElement("input", {
       "aria-label": "Label format",
@@ -606,8 +590,8 @@ function LabelFormatHelp() {
     React.createElement("span", { id, role: "tooltip" }, "Use {c} for the value, {b} for the category, and {a} for the series. Example: {b}: {c}. The label unit is added directly after the formatted value; add a leading space to the Unit field if you want one."),
   );
 }
-function textControl(label, value, onChange) {
-  return /* @__PURE__ */ React.createElement("label", null, label, /* @__PURE__ */ React.createElement("input", {
+function textControl(label, value, onChange, inline = false) {
+  return /* @__PURE__ */ React.createElement("label", inline ? { className: "chart-authoring-inline-field" } : null, inline ? React.createElement("span", null, label) : label, /* @__PURE__ */ React.createElement("input", {
     value: typeof value === "string" ? value : "",
     onChange: (event) => onChange(event.target.value)
   }));
