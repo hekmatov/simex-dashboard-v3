@@ -32,6 +32,8 @@ function ColorField({
   onChange,
   onSelectGradient,
   swatchColors,
+  pickerBeforeInput = false,
+  rowAction,
   labelHidden = false,
   showPresets = true,
   dataColorField,
@@ -112,6 +114,16 @@ function ColorField({
       setPickerActive(false);
     }
   }
+  const picker = /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId: "editor.pick-color-from-dashboard",
+    className: "secondary settings-pipette-button",
+    iconClassName: "settings-pipette-icon",
+    onClick: startPicking,
+    disabled: pickerActive,
+    "aria-label": `Pick ${String(label).toLowerCase()} from dashboard`,
+    tooltip: "Pick color from screen",
+    title: "Pick color from screen"
+  });
   return /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -121,7 +133,7 @@ function ColorField({
       "data-invalid": error || invalid ? "true" : void 0
     },
     /* @__PURE__ */ React.createElement("label", { htmlFor: controlId, className: labelHidden ? "visually-hidden" : undefined }, label),
-    /* @__PURE__ */ React.createElement("div", { className: `settings-color-row${allowDefault ? " settings-color-row--with-default" : ""}` }, /* @__PURE__ */ React.createElement("button", {
+    /* @__PURE__ */ React.createElement("div", { className: `settings-color-row${allowDefault ? " settings-color-row--with-default" : ""}${pickerBeforeInput ? " settings-color-row--picker-first" : ""}` }, /* @__PURE__ */ React.createElement("button", {
       type: "button",
       className: "settings-color-swatch",
       style: { backgroundColor: normalizedValue, backgroundImage: gradientPreview },
@@ -132,7 +144,7 @@ function ColorField({
         setActivePalette(colorGroupFor(normalizedValue));
         setPaletteOpen((open) => !open);
       }
-    }), /* @__PURE__ */ React.createElement(
+    }), pickerBeforeInput ? picker : null, /* @__PURE__ */ React.createElement(
       "input",
       {
         id: controlId,
@@ -144,21 +156,12 @@ function ColorField({
         onBlur: (event) => setDraft(normalizeHexColor(event.target.value, normalizedValue)),
         spellCheck: "false"
       }
-    ), /* @__PURE__ */ React.createElement(IconControl, {
-      interactionId: "editor.pick-color-from-dashboard",
-      className: "secondary settings-pipette-button",
-      iconClassName: "settings-pipette-icon",
-      onClick: startPicking,
-      disabled: pickerActive,
-      "aria-label": `Pick ${String(label).toLowerCase()} from dashboard`,
-      tooltip: "Pick color from screen",
-      title: "Pick color from screen"
-    }), allowDefault ? /* @__PURE__ */ React.createElement("button", {
+    ), pickerBeforeInput ? null : picker, allowDefault ? /* @__PURE__ */ React.createElement("button", {
       type: "button",
       className: "secondary settings-color-default-button",
       disabled: defaultActive,
       onClick: () => onDefault?.()
-    }, "Default") : null),
+    }, "Default") : null, rowAction),
     paletteOpen ? /* @__PURE__ */ React.createElement(ColorPalettePanel, {
       id: paletteId,
       label,

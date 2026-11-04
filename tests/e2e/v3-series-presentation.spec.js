@@ -94,7 +94,7 @@ test("V3 #20 #28 reported multi-series chart preserves legend choices data and c
   expect(records.filter(entry => entry.label === "Shared alias")).toHaveLength(1);
 });
 
-test("chart ordering and label-axis value entries stay beside their names", async ({ page }) => {
+test("chart ordering and label-axis entries and palette actions stay beside their names", async ({ page }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1806, height: 1244 });
   const editor = await edit(page, support.id);
@@ -102,6 +102,14 @@ test("chart ordering and label-axis value entries stay beside their names", asyn
   const axes = editor.locator('[data-field-id="axes"]');
   const x = axes.getByRole("group", { name: "X axis", exact: true });
   const primary = axes.getByRole("group", { name: "Primary axis", exact: true });
+  const palette = editor.locator('[data-field-id="seriesColors"]');
+  const paletteRows = palette.locator('.chart-authoring-series-color');
+  await expect(paletteRows).toHaveCount(0);
+  await palette.getByRole("button", { name: "Add color", exact: true }).click();
+  await palette.getByRole("button", { name: "Add color", exact: true }).click();
+  await expect(paletteRows).toHaveCount(2);
+  await expect(palette.getByText(/Add color — Append a color to this palette/)).toBeVisible();
+  await expect(palette.getByText(/Use default colors — Restore the standard palette/)).toBeVisible();
   await expect(labels.getByLabel("Label format", { exact: true })).toHaveCount(1);
   await expect(x.getByLabel("X-axis title font size", { exact: true })).toHaveAttribute("type", "number");
   await expect(primary.getByLabel("Title font size", { exact: true })).toHaveAttribute("min", "10");
@@ -120,6 +128,14 @@ test("chart ordering and label-axis value entries stay beside their names", asyn
       expect(Math.abs(geometry.labelY - geometry.inputY)).toBeLessThan(2);
       expect(geometry.overflow).toBe(false);
     }
+    for (const row of await paletteRows.all()) {
+      const controls = [row.locator('.settings-color-swatch'), row.getByRole('button', { name: /^Pick palette color/ }), row.getByRole('textbox'), row.getByRole('button', { name: /^Remove palette color/ })];
+      const bounds = await Promise.all(controls.map(control => control.boundingBox()));
+      for (let i = 1; i < bounds.length; i++) {
+        expect(bounds[i].x).toBeGreaterThanOrEqual(bounds[i - 1].x + bounds[i - 1].width);
+        expect(Math.abs(bounds[i].y + bounds[i].height / 2 - bounds[0].y - bounds[0].height / 2)).toBeLessThan(2);
+      }
+    }
     const row = editor.locator('[data-field-id="categoryOrder"] li').first();
     const name = await row.locator('span').boundingBox();
     for (const button of await row.getByRole('button').all()) {
@@ -128,6 +144,17 @@ test("chart ordering and label-axis value entries stay beside their names", asyn
       expect(Math.abs(bounds.y + bounds.height / 2 - name.y - name.height / 2)).toBeLessThan(2);
     }
   }
+  await palette.getByRole("textbox", { name: "Palette color 1", exact: true }).fill("#123456");
+  await palette.getByRole("button", { name: "Remove palette color 2", exact: true }).click();
+  await expect(paletteRows).toHaveCount(1);
+  await expect(palette.getByRole("textbox", { name: "Palette color 1", exact: true })).toHaveValue("#123456");
+  const override = editor.locator('[data-field-id="seriesColorsByIdentity"]').getByRole('textbox').first();
+  await override.fill("#654321");
+  await palette.getByRole("button", { name: "Use default colors", exact: true }).click();
+  await expect(paletteRows).toHaveCount(0);
+  await expect(palette.getByText("Using the default color sequence.", { exact: true })).toBeVisible();
+  await expect(override).toHaveValue("#654321");
+  await x.getByLabel("X-axis title", { exact: true }).fill("Reporting week");
   await x.getByLabel("X-axis title font size", { exact: true }).fill("17");
   await x.getByLabel("X-axis title font size", { exact: true }).press("ArrowUp");
   await expect(x.getByLabel("X-axis title font size", { exact: true })).toHaveValue("18");
@@ -141,6 +168,9 @@ test("chart ordering and label-axis value entries stay beside their names", asyn
   await page.reload();
   await openDashboardPage(page, "presentation-proof");
   const reopened = await edit(page, support.id);
+  await expect(reopened.getByLabel("X-axis title", { exact: true })).toHaveValue("Reporting week");
+  await expect(reopened.locator('[data-field-id="seriesColors"] .chart-authoring-series-color')).toHaveCount(0);
+  await expect(reopened.locator('[data-field-id="seriesColorsByIdentity"]').getByRole('textbox').first()).toHaveValue("#654321");
   await expect(reopened.getByLabel("X-axis title font size", { exact: true })).toHaveValue("18");
   const savedPrimary = reopened.getByRole("group", { name: "Primary axis", exact: true });
   await expect(savedPrimary.getByLabel("Title font size", { exact: true })).toHaveValue("15");

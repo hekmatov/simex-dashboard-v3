@@ -508,7 +508,7 @@ function xAxisControls(value, kind, emit) {
     "fieldset",
     { className: "chart-authoring-axis-group dashboard-authoring-grid" },
     React.createElement("legend", null, "X axis"),
-    textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue)),
+    textControl("X-axis title", value.title, (nextValue) => emit(["x", "title"], nextValue), true),
     fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit(["x", "titleFontSize"], nextValue), "X-axis title"),
     boundedNumericControl("Tick label font size", value.labelFontSize, 8, 20, (nextValue) => emit(["x", "labelFontSize"], nextValue)),
     kind === "category" ? React.createElement(

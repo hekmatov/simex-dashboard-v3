@@ -293,6 +293,26 @@
   min-inline-size: 0;
 }
 
+.chart-authoring-field.chart-authoring-series-colors .settings-color-row.settings-color-row--picker-first {
+  grid-template-columns: var(--simex-control-utility) var(--simex-control-utility) minmax(0, 1fr) auto;
+}
+
+.chart-authoring-palette-action {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-inline-size: 0;
+}
+
+.chart-authoring-palette-action > button {
+  flex-shrink: 0;
+}
+
+.chart-authoring-palette-action > span {
+  font-size: var(--simex-control-font-size);
+  min-inline-size: 0;
+}
+
 /* Keep compact chart labels beside their value entry without changing toggles. */
 :is(.chart-authoring-labels, .chart-authoring-axis-group) .chart-authoring-inline-field {
   align-items: center;

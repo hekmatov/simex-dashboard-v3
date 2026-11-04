@@ -82,28 +82,39 @@ function SeriesColorsField({
           onSelectGradient: onSelectGradient ? stops => onSelectGradient(stops, index) : undefined,
           dataColorField: `${field.id}-${index}`,
           pickerRevision: value,
-        }),
-        React.createElement(IconControl, {
-          interactionId: "editor.remove-measurement",
-          className: "secondary",
-          onClick: () => remove(index),
-          ariaLabel: `Remove palette color ${index + 1}`,
-          tooltip: `Remove palette color ${index + 1}`,
+          pickerBeforeInput: true,
+          rowAction: React.createElement(IconControl, {
+            interactionId: "editor.remove-measurement",
+            className: "secondary",
+            onClick: () => remove(index),
+            ariaLabel: `Remove palette color ${index + 1}`,
+            tooltip: `Remove palette color ${index + 1}`,
+          }),
         }),
       )),
     ),
-    React.createElement(IconControl, {
-      interactionId: "editor.add-color",
-      className: "secondary chart-authoring-add-series-color",
-      disabled: colors.length >= MAX_SERIES_COLORS,
-      onClick: add,
-    }),
+    React.createElement("div", { className: "chart-authoring-palette-action" },
+      React.createElement(IconControl, {
+        interactionId: "editor.add-color",
+        className: "secondary chart-authoring-add-series-color",
+        disabled: colors.length >= MAX_SERIES_COLORS,
+        onClick: add,
+        "aria-describedby": `${controlId}-add-help`,
+      }),
+      React.createElement("span", { id: `${controlId}-add-help` },
+        React.createElement("strong", null, "Add color"), ` — Append a color to this palette (up to ${MAX_SERIES_COLORS}).`),
+    ),
     colors.length > 0
-      ? React.createElement(IconControl, {
-          interactionId: "editor.use-default-colors",
-          className: "secondary chart-authoring-default-series-colors",
-          onClick: () => onChange(undefined),
-        })
+      ? React.createElement("div", { className: "chart-authoring-palette-action" },
+          React.createElement(IconControl, {
+            interactionId: "editor.use-default-colors",
+            className: "secondary chart-authoring-default-series-colors",
+            onClick: () => onChange(undefined),
+            "aria-describedby": `${controlId}-default-help`,
+          }),
+          React.createElement("span", { id: `${controlId}-default-help` },
+            React.createElement("strong", null, "Use default colors"), " — Restore the standard palette; keep named series and bar overrides."),
+        )
       : null,
     React.createElement(
       "small",

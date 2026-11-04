@@ -1787,9 +1787,13 @@ test("series palette fields reuse ColorField interactions and emit detached arra
   const addButton = buttons.find(
     ({ props }) => props.interactionId === "editor.add-color",
   );
-  const removeButton = buttons.find(
-    ({ props }) => props.interactionId === "editor.remove-measurement",
-  );
+  const removeButton = colorFields[0].props.rowAction;
+  assert.equal(colorFields[0].props.pickerBeforeInput, true);
+  const html = render(React.createElement(SeriesColorsField, element.props));
+  assert.match(html, /Add color/);
+  assert.match(html, /Append a color to this palette/);
+  assert.match(html, /Use default colors/);
+  assert.match(html, /Restore the standard palette/);
   const defaultButton = buttons.find(
     ({ props }) => props.interactionId === "editor.use-default-colors",
   );
