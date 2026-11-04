@@ -136,6 +136,32 @@ async function issueBarFlow(page, csv = "category,value\nA long category about h
   return flow;
 }
 
+test(`${ISSUE_CONTROLS}: repeated series and bar color selection stays beside its control`, async ({ page }) => {
+  test.setTimeout(90_000);
+  const flow = await issueBarFlow(page);
+  await flow.goToConfigure();
+  for (const label of ["Series color: value", "Bar color: A long category about hospital readiness"]) {
+    await flow.wizard.getByRole("button", { name: `Open ${label} color options`, exact: true }).click();
+    const palette = flow.wizard.getByRole("dialog", { name: `${label} color options`, exact: true });
+    await palette.getByRole("button", { name: `Use #F1A1AD for ${label}`, exact: true }).click();
+    await expect(flow.wizard.getByLabel(label, { exact: true })).toHaveValue("#F1A1AD");
+    await flow.wizard.getByRole("button", { name: `Close ${label} color options`, exact: true }).click();
+    await flow.wizard.getByRole("button", { name: `Open ${label} color options`, exact: true }).click();
+    const swatch = flow.wizard.getByRole("button", { name: `Close ${label} color options`, exact: true });
+    const swatchBox = await swatch.boundingBox();
+    const paletteBox = await palette.boundingBox();
+    expect(paletteBox.y - (swatchBox.y + swatchBox.height)).toBeGreaterThanOrEqual(0);
+    expect(paletteBox.y - (swatchBox.y + swatchBox.height)).toBeLessThan(24);
+    await palette.getByRole("button", { name: `Use #36BDEB for ${label}`, exact: true }).click();
+    await expect(flow.wizard.getByLabel(label, { exact: true })).toHaveValue("#36BDEB");
+    await palette.getByRole("button", { name: `Use #043BCB for ${label}`, exact: true }).click();
+    await expect(flow.wizard.getByLabel(label, { exact: true })).toHaveValue("#043BCB");
+    await palette.getByRole("button", { name: `Use #043BCB for ${label}`, exact: true }).press("Escape");
+    await expect(palette).toHaveCount(0);
+    await expect(flow.wizard.getByRole("button", { name: `Open ${label} color options`, exact: true })).toBeFocused();
+  }
+});
+
 async function issueSavedChart(page, title) {
   return page.evaluate(({ key, title }) => JSON.parse(localStorage.getItem(key)).pages.flatMap(p => p.sections).flatMap(s => s.panels).map(p => p.chart ?? p).find(c => c.title === title), { key: ISSUE_STORAGE, title });
 }

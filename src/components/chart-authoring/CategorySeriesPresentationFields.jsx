@@ -29,6 +29,7 @@ export default function CategorySeriesPresentationFields({ field, chart, onChang
       {field.control === "legendEntries" && <p>Hiding a legend entry leaves its plotted data visible. Clear a name to restore the generated label.</p>}
       {field.control === "categoryColors" && <p>Choose individual bar colors, or apply a gradient across the current category order. Colors stay with their categories when reordered.</p>}
       {field.control === "seriesColorsByIdentity" && <p>These colors stay with each series when its order changes. Reset a color to use the palette.</p>}
+      {field.control === "seriesColorsByIdentity" && Object.keys(chart.presentation?.series?.categoryOverrides ?? {}).length > 0 && <p>Individual bar colors below take priority over the series color. Use Reset bar colors to return the bars to their series color.</p>}
       <ol className="chart-presentation-members__list">
         {rows.map((entry, index) => <li key={entry.key} data-presentation-key={entry.key} data-presentation-unavailable={entry.unavailable ? "true" : undefined}>
           <span>{entry.defaultLabel}{entry.unavailable ? " (unavailable in current data)" : ""}</span>

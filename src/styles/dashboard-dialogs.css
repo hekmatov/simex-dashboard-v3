@@ -69,6 +69,12 @@
   max-block-size: min(520px, calc(100dvh - 24px));
 }
 
+/* Palette coordinates must follow the full editor's scrolling field, not its outer dialog. */
+.chart-wizard .settings-color-popover.dashboard-dialog {
+  position: static;
+  max-inline-size: 100%;
+}
+
 .dashboard-dialog__header,
 .dashboard-dialog__progress,
 .dashboard-dialog__footer {
