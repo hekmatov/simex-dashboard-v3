@@ -14,6 +14,26 @@ export function resolveOrderedKeys(availableKeys, configuredOrder = []) {
   return [...new Set([...configuredOrder.filter(key => available.has(key)), ...availableKeys])];
 }
 
+// Capture the current visible order once; later reordering/filtering retains each category's color.
+export function spreadCategoryGradient(descriptors, stops, { order, overrides = {} } = {}) {
+  if (!Array.isArray(stops) || stops.length < 2 || stops.some(color => !/^#[0-9a-f]{6}$/i.test(color))) {
+    throw new Error("A bar gradient requires at least two #RRGGBB colors.");
+  }
+  const keys = resolveOrderedKeys(descriptors.map(entry => entry.key), order);
+  const next = new Map(Object.entries(overrides));
+  const channels = stops.map(color => [1, 3, 5].map(offset => Number.parseInt(color.slice(offset, offset + 2), 16)));
+  keys.forEach((key, index) => {
+    const position = (keys.length === 1 ? 0.5 : index / (keys.length - 1)) * (stops.length - 1);
+    const start = Math.min(Math.floor(position), stops.length - 2);
+    const fraction = position - start;
+    const color = "#" + channels[start].map((value, channel) => (
+      Math.round(value + (channels[start + 1][channel] - value) * fraction).toString(16).padStart(2, "0")
+    )).join("").toUpperCase();
+    next.set(key, { ...next.get(key), color });
+  });
+  return Object.fromEntries(next);
+}
+
 export function resolveLegendEntries(descriptors, settings = {}) {
   const all = descriptors.map(descriptor => ({
     ...descriptor,

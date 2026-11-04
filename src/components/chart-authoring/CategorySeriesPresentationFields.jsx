@@ -1,6 +1,6 @@
 import React from "react";
 import ColorField from "../ColorField.jsx";
-import { captureSeriesColors } from "../../charting/presentation/categorySeriesPresentation.js";
+import { captureSeriesColors, spreadCategoryGradient } from "../../charting/presentation/categorySeriesPresentation.js";
 
 export default function CategorySeriesPresentationFields({ field, chart, onChange }) {
   const configuredKeys = field.control === "presentationOrder" ? field.value ?? [] : Object.keys(field.value ?? {});
@@ -27,7 +27,7 @@ export default function CategorySeriesPresentationFields({ field, chart, onChang
     <fieldset className="chart-authoring-field chart-presentation-members" data-field-id={field.id}>
       <legend>{field.label}</legend>
       {field.control === "legendEntries" && <p>Hiding a legend entry leaves its plotted data visible. Clear a name to restore the generated label.</p>}
-      {field.control === "categoryColors" && <p>This chart has one series. Choose colors for individual bars here.</p>}
+      {field.control === "categoryColors" && <p>Choose individual bar colors, or apply a gradient across the current category order. Colors stay with their categories when reordered.</p>}
       {field.control === "seriesColorsByIdentity" && <p>These colors stay with each series when its order changes. Reset a color to use the palette.</p>}
       <ol className="chart-presentation-members__list">
         {rows.map((entry, index) => <li key={entry.key} data-presentation-key={entry.key} data-presentation-unavailable={entry.unavailable ? "true" : undefined}>
@@ -42,12 +42,15 @@ export default function CategorySeriesPresentationFields({ field, chart, onChang
             id={`${field.id}-${index}`} label={`${field.control === "categoryColors" ? "Bar" : "Series"} color: ${entry.defaultLabel}`}
             value={field.value?.[entry.key]?.color ?? chart.presentation?.series?.colors?.[(field.control === "categoryColors" ? 0 : entry.sourceIndex ?? index) % (chart.presentation?.series?.colors?.length || 1)] ?? "#043BCB"}
             onChange={color => updateEntry(entry.key, { color })}
+            onSelectGradient={field.control === "categoryColors" && !entry.unavailable ? stops => onChange(field.path,
+              spreadCategoryGradient(field.descriptors, stops, { order: chart.presentation?.axes?.x?.categoryOrder, overrides: field.value })) : undefined}
             allowDefault defaultActive={!field.value?.[entry.key]?.color}
             onDefault={() => updateEntry(entry.key, { color: undefined })}
           />}
         </li>)}
       </ol>
       {field.control === "presentationOrder" && <button type="button" className="secondary" onClick={() => onChange(field.path, undefined)}>Reset to source order</button>}
+      {field.control === "categoryColors" && <button type="button" className="secondary" disabled={!configuredKeys.length} onClick={() => onChange(field.path, undefined)}>Reset bar colors</button>}
     </fieldset>
   );
 }

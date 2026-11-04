@@ -1685,6 +1685,44 @@ test("background transparency emits the validator-approved object", () => {
   }));
 });
 
+test("bar gradient selection updates category colors atomically from palette and per-bar controls", () => {
+  const rows = [{ category: "A", value: 90 }, { category: "B", value: 10 }, { category: "C", value: 50 }];
+  const chart = createChartDraft("bar", {
+    id: "gradient", title: "Gradient", sourceId: "gradient-data",
+    roles: { measurements: [{ field: "value" }], observation: { field: "category" } },
+    presentation: { series: { colors: ["#112233"], barWidth: 12, categoryOverrides: { dormant: { color: "#abcdef" } } } },
+  });
+  const profile = profileDataset(rows);
+  const result = prepareChartData({ chart, rows, datasetProfile: profile });
+  const prepared = { ...result, meta: { ...result.meta, formPreparationKey: buildFormPreparationKey({ chart, profile }) } };
+  const fields = buildEditorFormModel({ chart, profile, prepared }).sections.flatMap(section => section.fields);
+  const categoryField = fields.find(field => field.id === "categoryColors");
+  const paletteField = fields.find(field => field.id === "seriesColors");
+  assert.deepEqual(paletteField.gradientCategories, categoryField.descriptors);
+  const changes = [];
+  const component = SchemaField({ field: paletteField, chart, onChange: (...args) => changes.push(args) });
+  const palette = SeriesColorsField(component.props);
+  const colorField = findElementsByType(palette, ColorField)[0];
+  assert.equal(typeof colorField.props.onSelectGradient, "function");
+  colorField.props.onSelectGradient(["#000000", "#FFFFFF"]);
+  assert.deepEqual(changes[0], [["presentation", "series"], {
+    ...chart.presentation.series, colors: ["#000000"], categoryOverrides: {
+      dormant: { color: "#abcdef" },
+      'category:["string","A"]': { color: "#000000" },
+      'category:["string","B"]': { color: "#808080" },
+      'category:["string","C"]': { color: "#FFFFFF" },
+    },
+  }]);
+  assert.deepEqual(chart.presentation.series.colors, ["#112233"]);
+  const members = CategorySeriesPresentationFields({ field: categoryField, chart, onChange: (...args) => changes.push(args) });
+  findElementsByType(members, ColorField).find(node => node.props.label === "Bar color: A").props.onSelectGradient(["#FFFFFF", "#000000"]);
+  assert.deepEqual(changes[1][0], ["presentation", "series", "categoryOverrides"]);
+  assert.equal(changes[1][1]['category:["string","A"]'].color, "#FFFFFF");
+  assert.equal(changes[1][1]['category:["string","C"]'].color, "#000000");
+  findElementsByType(members, "button").find(node => node.props.children === "Reset bar colors").props.onClick();
+  assert.deepEqual(changes[2], [["presentation", "series", "categoryOverrides"], undefined]);
+});
+
 test("series palette fields reuse ColorField interactions and emit detached arrays", () => {
   const authored = ["#043BCB", "#36BDEB"];
   const emissions = [];

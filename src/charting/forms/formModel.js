@@ -420,6 +420,8 @@ function appearanceFields({ chart, schema, prepared }) {
     },
   ];
   const series = chart.presentation?.series ?? {};
+  const memberFields = memberPresentationFields(chart, schema, prepared);
+  const gradientCategories = memberFields.find(field => field.control === "categoryColors")?.descriptors;
   return [
     ...common,
     ...cardAppearanceFields(chart),
@@ -474,8 +476,9 @@ function appearanceFields({ chart, schema, prepared }) {
         series,
         chart.presentation?.referenceLine,
       )
-    )).filter(Boolean),
-    ...memberPresentationFields(chart, schema, prepared),
+    )).filter(Boolean).map(field => field.control === "palette" && gradientCategories?.length
+      ? { ...field, gradientCategories } : field),
+    ...memberFields,
   ];
 }
 

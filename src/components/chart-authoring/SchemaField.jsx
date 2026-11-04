@@ -1,5 +1,6 @@
 import React from "react";
 import ColorField from "../ColorField.jsx";
+import { spreadCategoryGradient } from "../../charting/presentation/categorySeriesPresentation.js";
 import CollectionSettingsField from "./CollectionSettingsField.jsx";
 import CitationField from "./CitationField.jsx";
 import DeltaComparisonField from "./DeltaComparisonField.jsx";
@@ -46,7 +47,20 @@ function SchemaField({
     return /* @__PURE__ */ React.createElement(RoleField, { ...shared, columns });
   }
   if (field.control === "palette") {
-    return /* @__PURE__ */ React.createElement(SeriesColorsField, shared);
+    return /* @__PURE__ */ React.createElement(SeriesColorsField, {
+      ...shared,
+      onSelectGradient: field.gradientCategories?.length ? (stops, index) => {
+        const series = chart.presentation?.series ?? {};
+        const colors = [...(value ?? [])];
+        colors[index] = stops[0];
+        onChange(["presentation", "series"], {
+          ...series, colors,
+          categoryOverrides: spreadCategoryGradient(field.gradientCategories, stops, {
+            order: chart.presentation?.axes?.x?.categoryOrder, overrides: series.categoryOverrides,
+          }),
+        });
+      } : undefined,
+    });
   }
   if (field.control === "quickBackground") {
     return /* @__PURE__ */ React.createElement(QuickBackgroundField, {

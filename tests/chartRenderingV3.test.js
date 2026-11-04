@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { register } from "node:module";
 import { readFileSync } from "node:fs";
-import { categoryPresentationKey, seriesPresentationKey, axisSeriesDescriptors, chartLegendDescriptors, captureSeriesColors } from "../src/charting/presentation/categorySeriesPresentation.js";
+import { categoryPresentationKey, seriesPresentationKey, axisSeriesDescriptors, chartLegendDescriptors, captureSeriesColors, spreadCategoryGradient } from "../src/charting/presentation/categorySeriesPresentation.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 
 import * as echarts from "echarts";
@@ -15,6 +15,23 @@ import { buildCompositionRenderModel } from "../src/charting/rendering/compositi
 import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistry.js";
 import { buildRelationshipRenderModel } from "../src/charting/rendering/relationshipAdapter.js";
 import { resolveDashboardStyleGrammar } from "../src/theme/dashboardStyleGrammar.js";
+
+test("bar gradient colors follow category identities through rendering, filtering and reordering", () => {
+  const marks = [{ x: "A", value: 90, measure: "value" }, { x: "B", value: 10, measure: "value" }, { x: "C", value: 50, measure: "value" }];
+  const keys = marks.map(mark => categoryPresentationKey(mark.x));
+  const categoryOverrides = spreadCategoryGradient(keys.map(key => ({ key })), ["#000000", "#FFFFFF"]);
+  for (const typeId of ["bar", "horizontalBar"]) {
+    const instance = chart(typeId, { presentation: {
+      axes: { x: { categoryOrder: [keys[2], keys[0], keys[1]] } }, series: { categoryOverrides },
+    } });
+    const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
+    assert.deepEqual(model.option.series[0].data.map(point => [point.value, point.itemStyle.color]), [
+      [50, "#FFFFFF"], [90, "#000000"], [10, "#808080"],
+    ]);
+    const filtered = buildRenderModel({ chart: instance, prepared: ready(marks.filter(mark => mark.x !== "B")) });
+    assert.deepEqual(filtered.option.series[0].data.map(point => point.itemStyle.color), ["#FFFFFF", "#000000"]);
+  }
+});
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {

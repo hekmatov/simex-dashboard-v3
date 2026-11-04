@@ -30,6 +30,7 @@ function ColorField({
   value,
   fallback = "#043BCB",
   onChange,
+  onSelectGradient,
   labelHidden = false,
   showPresets = true,
   dataColorField,
@@ -160,7 +161,8 @@ function ColorField({
       activePalette,
       normalizedValue,
       onSelectPalette: setActivePalette,
-      onSelectColor: commitColor
+      onSelectColor: commitColor,
+      onSelectGradient
     }) : null,
     allowTransparency ? /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle settings-color-transparency" }, /* @__PURE__ */ React.createElement("input", {
       type: "checkbox",
@@ -179,11 +181,13 @@ function ColorPalettePanel({
   activePalette,
   normalizedValue,
   onSelectPalette,
-  onSelectColor
+  onSelectColor,
+  onSelectGradient
 }) {
-  const tabs = [...COLOR_GROUPS.map((group) => group.label), "Gradients"];
+  const gradientTab = onSelectGradient ? "Gradients" : "Gradient samples";
+  const tabs = [...COLOR_GROUPS.map((group) => group.label), gradientTab];
   const activeColors = COLOR_GROUPS.find((group) => group.label === activePalette)?.colors ?? [];
-  const paletteContent = activePalette === "Gradients"
+  const paletteContent = activePalette === gradientTab
     ? React.createElement(
       "div",
       { className: "settings-gradient-grid", "aria-label": `${label} gradient maps` },
@@ -192,9 +196,9 @@ function ColorPalettePanel({
         {
           type: "button",
           key: map.label,
-          title: `${map.label}: use middle color`,
+          title: `${map.label}: ${onSelectGradient ? "apply across bars" : "use middle color"}`,
           "aria-label": `${map.label} gradient map`,
-          onClick: () => onSelectColor(map.colors[Math.floor(map.colors.length / 2)]),
+          onClick: () => onSelectGradient ? onSelectGradient([...map.colors]) : onSelectColor(map.colors[Math.floor(map.colors.length / 2)]),
         },
         React.createElement("span", {
           style: { background: `linear-gradient(90deg, ${map.colors.join(", ")})` },

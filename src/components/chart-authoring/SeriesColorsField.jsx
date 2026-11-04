@@ -19,6 +19,7 @@ function SeriesColorsField({
   field,
   value = field?.value,
   onChange = noop,
+  onSelectGradient,
 } = {}) {
   const colors = validColors(value);
   const controlId = fieldControlId(field);
@@ -75,6 +76,7 @@ function SeriesColorsField({
             index % DEFAULT_SERIES_COLORS.length
           ],
           onChange: (nextColor) => replace(index, nextColor),
+          onSelectGradient: onSelectGradient ? stops => onSelectGradient(stops, index) : undefined,
           dataColorField: `${field.id}-${index}`,
           pickerRevision: value,
         }),

@@ -1,10 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import * as presentation from "../src/charting/presentation/categorySeriesPresentation.js";
 import {
   categoryPresentationKey, seriesPresentationKey, resolveOrderedKeys,
   resolveLegendEntries, captureSeriesColors,
   normalizeKeyedPresentation, normalizePresentationOrder,
 } from "../src/charting/presentation/categorySeriesPresentation.js";
+
+test("bar gradients spread evenly in displayed category order without losing dormant colors", () => {
+  const descriptors = ["A", "B", "C", "D", "E"].map(key => ({ key }));
+  const previous = { dormant: { color: "#123456" }, A: { color: "#abcdef" } };
+  assert.equal(typeof presentation.spreadCategoryGradient, "function");
+  const colors = presentation.spreadCategoryGradient(descriptors, ["#000000", "#FFFFFF"], {
+    order: ["E", "D", "C", "B", "A"], overrides: previous,
+  });
+  assert.deepEqual(colors, {
+    dormant: { color: "#123456" }, A: { color: "#FFFFFF" },
+    E: { color: "#000000" }, D: { color: "#404040" }, C: { color: "#808080" }, B: { color: "#BFBFBF" },
+  });
+  assert.deepEqual(previous, { dormant: { color: "#123456" }, A: { color: "#abcdef" } });
+  assert.deepEqual(presentation.spreadCategoryGradient([{ key: "one" }], ["#000000", "#FFFFFF"]), { one: { color: "#808080" } });
+  assert.deepEqual(presentation.spreadCategoryGradient([], ["#000000", "#FFFFFF"], { overrides: previous }), previous);
+  assert.deepEqual(presentation.spreadCategoryGradient(descriptors, ["#000000", "#FFFFFF", "#000000"]), {
+    A: { color: "#000000" }, B: { color: "#808080" }, C: { color: "#FFFFFF" }, D: { color: "#808080" }, E: { color: "#000000" },
+  });
+});
 
 test("V3 #20 #28 new presentation records reject active and malformed data", () => {
   assert.deepEqual(normalizeKeyedPresentation({ a: { label: "  " }, b: { label: " Label " } }, "legend"), { b: { label: "Label" } });

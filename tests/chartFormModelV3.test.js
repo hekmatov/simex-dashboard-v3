@@ -29,6 +29,7 @@ test("V3 #20 #28 presentation controls match prepared families and axis interpre
     assert.equal(fields.some(f => f.id === "categoryOrder"), !["pie", "scatter"].includes(typeId));
     assert.equal(fields.some(f => f.id === "seriesOrder"), !["pie", "scatter"].includes(typeId));
     assert.equal(fields.some(f => f.id === "categoryColors"), ["bar", "horizontalBar"].includes(typeId));
+    assert.equal(Boolean(fields.find(f => f.id === "seriesColors")?.gradientCategories), ["bar", "horizontalBar"].includes(typeId));
   }
   const chart = lineChart();
   const rows = [{ reportedAt: "2027-05-01", value: 10 }, { reportedAt: "2027-05-02", value: 12 }];
@@ -38,6 +39,7 @@ test("V3 #20 #28 presentation controls match prepared families and axis interpre
   const fields = allFields(buildEditorFormModel({ chart, profile, prepared: preparedFor(chart, profile, prepared) }));
   assert.equal(fields.some(f => f.id === "seriesOrder" || f.id === "categoryOrder"), false);
   assert.equal(fields.some(f => f.id === "seriesColorsByIdentity"), true);
+  assert.equal(fields.find(f => f.id === "seriesColors")?.gradientCategories, undefined);
 });
 
 function lineChart(overrides = {}) {

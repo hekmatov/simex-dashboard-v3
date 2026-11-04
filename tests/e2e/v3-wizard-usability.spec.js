@@ -86,7 +86,7 @@ test(`${ISSUE_CONTROLS}: categorical filter source suggestions`, async ({ page }
   expect(await values.evaluateAll(nodes => nodes.map(n => n.value))).toEqual(["West", "Central"]);
 });
 
-test(`${ISSUE_CONTROLS}: palette reachability and keyboard dismissal`, async ({ page }) => {
+test(`${ISSUE_CONTROLS}: palette reachability and gradients across bars`, async ({ page }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1117, height: 766 });
   const flow = await issueBarFlow(page);
@@ -100,11 +100,28 @@ test(`${ISSUE_CONTROLS}: palette reachability and keyboard dismissal`, async ({ 
   await last.scrollIntoViewIfNeeded();
   await expect(last).toBeInViewport();
   await last.click();
-  await expect(flow.wizard.getByLabel("Color 1", { exact: true })).toHaveValue("#36BDEB");
+  await expect(flow.wizard.getByLabel("Color 1", { exact: true })).toHaveValue("#08224A");
   await last.focus();
   await last.press("Escape");
   await expect(palette).toHaveCount(0);
   await expect(toggle).toBeFocused();
+  await flow.createChart("Bar gradient proof");
+  const saved = await issueSavedChart(page, "Bar gradient proof");
+  const colors = Object.values(saved.presentation.series.categoryOverrides).map(entry => entry.color);
+  expect(colors).toHaveLength(6);
+  expect(new Set(colors).size).toBe(6);
+  expect(colors[0]).toBe("#08224A");
+  expect(colors.at(-1)).toBe("#F1A1AD");
+  const panel = page.locator(`[data-canonical-panel-id="${saved.id}"]`);
+  await panel.scrollIntoViewIfNeeded();
+  expect((await issueRenderedAxis(panel)).barColors).toEqual(colors);
+  await page.reload();
+  await openDashboardPage(page, "biomedical");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  const editor = await issueOpenEditor(page, saved.id);
+  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  await expect(editor.getByLabel("Bar color: A long category about hospital readiness", { exact: true })).toHaveValue("#08224A");
+  await expect(editor.getByLabel("Bar color: A long category about coordination", { exact: true })).toHaveValue("#F1A1AD");
 });
 
 async function issueBarFlow(page, csv = "category,value\nA long category about hospital readiness,20\nA long category about infection prevention,50\nA long category about clinical staffing,60\nA long category about medical supplies,70\nA long category about community response,80\nA long category about coordination,90\n") {
@@ -139,7 +156,7 @@ async function issueRenderedAxis(panel) {
     const { getInstanceByDom } = await import(url);
     const instance = getInstanceByDom(node.querySelector(".chart-echarts-host"));
     const option = instance.getOption();
-    return { minimum: option.yAxis[0].min, maximum: option.yAxis[0].max, wrap: option.xAxis[0].axisLabel.overflow, width: option.xAxis[0].axisLabel.width, clip: instance.getModel().getSeriesByIndex(0).get("clip") };
+    return { minimum: option.yAxis[0].min, maximum: option.yAxis[0].max, wrap: option.xAxis[0].axisLabel.overflow, width: option.xAxis[0].axisLabel.width, clip: instance.getModel().getSeriesByIndex(0).get("clip"), barColors: option.series[0].data.map(item => item.itemStyle?.color) };
   });
 }
 
