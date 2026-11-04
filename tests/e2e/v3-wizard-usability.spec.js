@@ -91,16 +91,27 @@ test(`${ISSUE_CONTROLS}: palette reachability and gradients across bars`, async 
   await page.setViewportSize({ width: 1117, height: 766 });
   const flow = await issueBarFlow(page);
   await flow.goToConfigure();
+  for (const fieldId of ["seriesColors", "seriesColorsByIdentity", "categoryColors"]) {
+    const help = flow.wizard.locator(`[data-field-id="${fieldId}"] .chart-color-heading-help`).first();
+    await help.hover();
+    await expect(help.getByRole("tooltip")).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(help.getByRole("tooltip")).toBeHidden();
+  }
+  const paletteHelp = flow.wizard.locator('[data-field-id="seriesColors"] .chart-color-heading-help');
+  await paletteHelp.locator('[tabindex="0"]').focus();
+  await expect(paletteHelp.getByRole("tooltip")).toBeVisible();
+  await flow.wizard.getByRole("heading", { name: "Add new chart", exact: true }).click();
   await flow.wizard.locator('[data-icon-control="editor.add-color"]').click();
-  const toggle = flow.wizard.getByRole("button", { name: "Open Color 1 color options", exact: true });
+  const toggle = flow.wizard.getByRole("button", { name: "Open Palette color 1 color options", exact: true });
   await toggle.click();
-  const palette = flow.wizard.getByRole("dialog", { name: "Color 1 color options", exact: true });
+  const palette = flow.wizard.getByRole("dialog", { name: "Palette color 1 color options", exact: true });
   await palette.getByRole("tab", { name: "Gradients", exact: true }).click();
   const last = palette.getByRole("button").last();
   await last.scrollIntoViewIfNeeded();
   await expect(last).toBeInViewport();
   await last.click();
-  await expect(flow.wizard.getByLabel("Color 1", { exact: true })).toHaveValue("#08224A");
+  await expect(flow.wizard.getByLabel("Palette color 1", { exact: true })).toHaveValue("#08224A");
   await last.focus();
   await last.press("Escape");
   await expect(palette).toHaveCount(0);
@@ -140,7 +151,7 @@ test(`${ISSUE_CONTROLS}: repeated series and bar color selection stays beside it
   test.setTimeout(90_000);
   const flow = await issueBarFlow(page);
   await flow.goToConfigure();
-  for (const label of ["Series color: value", "Bar color: A long category about hospital readiness"]) {
+  for (const label of ["Series override: value", "Bar color: A long category about hospital readiness"]) {
     await flow.wizard.getByRole("button", { name: `Open ${label} color options`, exact: true }).click();
     const palette = flow.wizard.getByRole("dialog", { name: `${label} color options`, exact: true });
     await palette.getByRole("button", { name: `Use #F1A1AD for ${label}`, exact: true }).click();

@@ -176,10 +176,10 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   await expect(wizard.getByLabel("Title alignment")).toBeVisible();
   await expect(wizard.locator('[data-color-field="background"]')).toHaveCount(1);
   await expect(
-    wizard.getByRole("group", { name: "Series colors" }),
+    wizard.getByRole("group", { name: "Default series palette" }),
   ).toBeVisible();
   await wizard.getByRole("button", { name: "Add color" }).click();
-  await wizard.getByLabel("Color 1", { exact: true }).fill("#DC2626");
+  await wizard.getByLabel("Palette color 1", { exact: true }).fill("#DC2626");
   await wizard.getByRole("textbox", { name: "Chart title", exact: true })
     .fill("E2E workforce composition");
   await flow.goToReview();

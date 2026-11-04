@@ -75,6 +75,10 @@
   max-inline-size: 100%;
 }
 
+.chart-color-heading-help { cursor: help; }
+.chart-color-heading-help > .control-tooltip__reason { left: 0; transform: none; }
+.chart-color-heading-help:focus-within > .control-tooltip__reason { opacity: 1; visibility: visible; }
+
 .dashboard-dialog__header,
 .dashboard-dialog__progress,
 .dashboard-dialog__footer {

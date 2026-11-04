@@ -489,7 +489,8 @@ function memberPresentationFields(chart, schema, prepared) {
     id: "legendEntries", label: "Legend entries", control: "legendEntries",
     path: ["presentation", "legend", "entries"], value: chart.presentation?.legend?.entries, descriptors,
   }];
-  if (schema.renderer === "axis") fields.push({ id: "seriesColorsByIdentity", label: "Colors by series", control: "seriesColorsByIdentity",
+  if (schema.renderer === "axis") fields.push({ id: "seriesColorsByIdentity", label: "Named series overrides", control: "seriesColorsByIdentity",
+    helpTooltip: "One solid color for a named series. Overrides the default palette; individual bar colors take priority.",
     path: ["presentation", "series", "overrides"], value: chart.presentation?.series?.overrides, descriptors });
   const categorical = schema.renderer === "axis" && prepared
     && !["temporal", "number"].includes(prepared.meta?.axisInterpretation);
@@ -500,7 +501,8 @@ function memberPresentationFields(chart, schema, prepared) {
   { id: "seriesOrder", label: "Series order", control: "presentationOrder", orderKind: "series",
     path: ["presentation", "series", "order"], value: chart.presentation?.series?.order, descriptors });
   if (descriptors.length === 1 && schema.form.appearance.includes("barWidth")) fields.push({
-    id: "categoryColors", label: "Bar colors by category", control: "categoryColors",
+    id: "categoryColors", label: "Individual bar colors", control: "categoryColors",
+    helpTooltip: "Colors for specific bars override series colors. Gradients spread across the current bar order.",
     path: ["presentation", "series", "categoryOverrides"], value: chart.presentation?.series?.categoryOverrides, descriptors: categories,
   });
   return fields;
@@ -558,7 +560,8 @@ function seriesAppearanceField(fieldId, series, referenceLine) {
   if (fieldId === "seriesColors") {
     return {
       id: fieldId,
-      label: "Series colors",
+      label: "Default series palette",
+      helpTooltip: "Default colors in source-series order. Named series overrides and individual bar colors take priority.",
       control: "palette",
       path: ["presentation", "series", "colors"],
       value: series.colors,

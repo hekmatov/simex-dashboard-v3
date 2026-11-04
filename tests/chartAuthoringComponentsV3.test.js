@@ -2728,7 +2728,7 @@ test("style step hides presentation and interaction controls until the current p
 
   assert.match(ready, /Title alignment/);
   assert.match(ready, /Background/);
-  assert.match(ready, /Series colors/);
+  assert.match(ready, /Default series palette/);
   assert.match(ready, /Line width/);
   assert.doesNotMatch(ready, /Bar width/);
   assert.match(ready, /Zoom/);
@@ -3645,7 +3645,7 @@ test("quick editor renders the compact controlled surface without full-editor ow
   assert.match(html, /Show title/);
   assert.match(html, /Background/);
   assert.match(html, /Show legend/);
-  assert.doesNotMatch(html, /Series colors/);
+  assert.doesNotMatch(html, /Default series palette/);
   assert.doesNotMatch(html, /Reference line color/);
   assert.match(html, /Chart size/);
   assert.match(html, /data-icon-control="shell.open-editable-tab"/);

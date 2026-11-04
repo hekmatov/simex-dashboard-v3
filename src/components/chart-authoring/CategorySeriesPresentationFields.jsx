@@ -1,5 +1,6 @@
 import React from "react";
 import ColorField from "../ColorField.jsx";
+import ControlTooltip from "../common/ControlTooltip.js";
 import { captureSeriesColors, spreadCategoryGradient } from "../../charting/presentation/categorySeriesPresentation.js";
 
 export default function CategorySeriesPresentationFields({ field, chart, onChange }) {
@@ -25,10 +26,10 @@ export default function CategorySeriesPresentationFields({ field, chart, onChang
   };
   return (
     <fieldset className="chart-authoring-field chart-presentation-members" data-field-id={field.id}>
-      <legend>{field.label}</legend>
+      <legend>{field.helpTooltip ? <ControlTooltip explain reason={field.helpTooltip} className="chart-color-heading-help"><span tabIndex={0}>{field.label}<span aria-hidden="true"> ⓘ</span></span></ControlTooltip> : field.label}</legend>
       {field.control === "legendEntries" && <p>Hiding a legend entry leaves its plotted data visible. Clear a name to restore the generated label.</p>}
       {field.control === "categoryColors" && <p>Choose individual bar colors, or apply a gradient across the current category order. Colors stay with their categories when reordered.</p>}
-      {field.control === "seriesColorsByIdentity" && <p>These colors stay with each series when its order changes. Reset a color to use the palette.</p>}
+      {field.control === "seriesColorsByIdentity" && <p>Set a solid-color override for each named series. It stays with that series when reordered. Default removes the override and uses the palette.</p>}
       {field.control === "seriesColorsByIdentity" && Object.keys(chart.presentation?.series?.categoryOverrides ?? {}).length > 0 && <p>Individual bar colors below take priority over the series color. Use Reset bar colors to return the bars to their series color.</p>}
       <ol className="chart-presentation-members__list">
         {rows.map((entry, index) => <li key={entry.key} data-presentation-key={entry.key} data-presentation-unavailable={entry.unavailable ? "true" : undefined}>
@@ -40,7 +41,7 @@ export default function CategorySeriesPresentationFields({ field, chart, onChang
             <label>Legend name: {entry.defaultLabel}<input value={field.value?.[entry.key]?.label ?? ""} placeholder={entry.defaultLabel} onChange={event => updateEntry(entry.key, { label: event.target.value || undefined })} /></label>
             <label className="chart-authoring-inline-toggle"><input type="checkbox" checked={field.value?.[entry.key]?.visible !== false} onChange={event => updateEntry(entry.key, { visible: event.target.checked ? undefined : false })} />Show in legend: {entry.defaultLabel}</label>
           </div> : <ColorField
-            id={`${field.id}-${index}`} label={`${field.control === "categoryColors" ? "Bar" : "Series"} color: ${entry.defaultLabel}`}
+            id={`${field.id}-${index}`} label={`${field.control === "categoryColors" ? "Bar color" : "Series override"}: ${entry.defaultLabel}`}
             value={field.value?.[entry.key]?.color ?? chart.presentation?.series?.colors?.[(field.control === "categoryColors" ? 0 : entry.sourceIndex ?? index) % (chart.presentation?.series?.colors?.length || 1)] ?? "#043BCB"}
             onChange={color => updateEntry(entry.key, { color })}
             onSelectGradient={field.control === "categoryColors" && !entry.unavailable ? stops => onChange(field.path,

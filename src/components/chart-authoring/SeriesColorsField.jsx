@@ -4,6 +4,7 @@ import {
 } from "../../charting/presentation/seriesStyleContract.js";
 import ColorField from "../ColorField.jsx";
 import { IconControl } from "../common/SimExIcon.js";
+import ControlTooltip from "../common/ControlTooltip.js";
 import { fieldControlId } from "./StandardField.jsx";
 
 const MAX_SERIES_COLORS = SERIES_STYLE_LIMITS.colors.max;
@@ -46,11 +47,12 @@ function SeriesColorsField({
       className: "chart-authoring-field chart-authoring-series-colors",
       "data-field-id": field?.id,
     },
-    React.createElement("legend", { className: "visually-hidden" }, field?.label ?? "Series colors"),
+    React.createElement("legend", { className: "visually-hidden" }, field?.label ?? "Default series palette"),
     React.createElement(
       "div",
       { className: "chart-authoring-series-colors-heading" },
-      React.createElement("span", { className: "chart-authoring-field-label" }, field?.label ?? "Series colors"),
+      React.createElement(ControlTooltip, { explain: true, reason: field?.helpTooltip, className: "chart-color-heading-help" },
+        React.createElement("span", { className: "chart-authoring-field-label", tabIndex: 0 }, field?.label ?? "Default series palette", React.createElement("span", { "aria-hidden": true }, " ⓘ"))),
       colors.length === 0
         ? React.createElement(
             "small",
@@ -70,7 +72,7 @@ function SeriesColorsField({
         },
         React.createElement(ColorField, {
           id: `${controlId}-${index}`,
-          label: `Color ${index + 1}`,
+          label: `Palette color ${index + 1}`,
           value: color,
           fallback: DEFAULT_SERIES_COLORS[
             index % DEFAULT_SERIES_COLORS.length
@@ -84,8 +86,8 @@ function SeriesColorsField({
           interactionId: "editor.remove-measurement",
           className: "secondary",
           onClick: () => remove(index),
-          ariaLabel: `Remove color ${index + 1}`,
-          tooltip: `Remove color ${index + 1}`,
+          ariaLabel: `Remove palette color ${index + 1}`,
+          tooltip: `Remove palette color ${index + 1}`,
         }),
       )),
     ),
@@ -105,7 +107,7 @@ function SeriesColorsField({
     React.createElement(
       "small",
       null,
-      `Default colors follow source series order. Colors by series and bar-category overrides take precedence. Add up to ${MAX_SERIES_COLORS}.`,
+      `Default colors follow source-series order. Named series overrides and individual bar colors take priority. Add up to ${MAX_SERIES_COLORS}.`,
     ),
   );
 }
