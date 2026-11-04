@@ -121,17 +121,17 @@ export default function AuthoringStage({
   const [fit, setFit] = React.useState("fit");
   const mode = controlledFit ?? fit;
   const viewport = React.useRef(null);
-  const [bounds, setBounds] = React.useState({ width: null, height: null });
+  const [availableWidth, setAvailableWidth] = React.useState(null);
   React.useLayoutEffect(() => {
-    const measure = () => setBounds({ width: viewport.current?.clientWidth ?? null, height: window.innerHeight * 0.46 });
+    const measure = () => setAvailableWidth(viewport.current?.clientWidth || null);
     measure();
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     if (viewport.current) observer?.observe(viewport.current);
     window.addEventListener("resize", measure);
     return () => { observer?.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
-  const maxHeight = suppliedMaxHeight ?? bounds.height ?? 600;
-  const scale = authoringStageScale(size, { fit: mode, availableWidth: suppliedWidth ?? bounds.width ?? size.width, maxHeight });
+  const maxHeight = suppliedMaxHeight ?? Infinity;
+  const scale = authoringStageScale(size, { fit: mode, availableWidth: suppliedWidth ?? availableWidth ?? size.width, maxHeight, allowUpscale: true });
   const effectiveRenderContext = React.useMemo(() => renderContext?.mapName ? renderContext : ({ ...renderContext, mapName: chart?.presentation?.map?.geoSource ?? chart?.id }), [renderContext, chart?.id, chart?.presentation?.map?.geoSource]);
   const playback = useOptionalPlayback();
   const input = withPlaybackTimeContext({ chart, rows, datasetProfile, geoData, prepared, renderContext: effectiveRenderContext, timeContext }, playback);
@@ -148,14 +148,14 @@ export default function AuthoringStage({
       data-stage-revealing={revealing ? "true" : undefined} aria-label="Chart preview">
       <div className="authoring-stage__toolbar">
         <div role="group" aria-label="Preview size">
-          <button type="button" className="secondary" aria-pressed={mode === "fit"} onClick={() => setFit("fit")}>Fit</button>
-          <button type="button" className="secondary" aria-pressed={mode === "actual"} onClick={() => setFit("actual")}>Actual</button>
+          <button type="button" className="secondary" aria-pressed={mode === "fit"} onClick={() => setFit("fit")}>Fit to preview area</button>
+          <button type="button" className="secondary" aria-pressed={mode === "actual"} onClick={() => setFit("actual")}>Actual size on dashboard</button>
         </div>
         {onShowOnCanvas && <button type="button" className="secondary" {...buttonProps}>Show on canvas</button>}
       </div>
-      <p className="authoring-stage__caption" id={labelId}>{size.width} × {size.height} on the dashboard · {scale === 1 ? "Actual dashboard size" : `Shown at ${Math.round(scale * 100)}% of dashboard size`}</p>
+      <p className="authoring-stage__caption" id={labelId}>{size.width} × {size.height} on the dashboard · {mode === "actual" ? "Actual size on dashboard" : `Fit to preview area · Shown at ${Math.round(scale * 100)}% of dashboard size`}</p>
       {deviceLayout === "phone" && <p className="authoring-stage__advisory">Phone layout stacks charts at automatic height; preview uses the desktop footprint.</p>}
-      <div ref={viewport} className="authoring-stage__viewport" style={{ maxHeight }} tabIndex={mode === "actual" ? 0 : undefined}
+      <div ref={viewport} className="authoring-stage__viewport" style={{ maxHeight: Number.isFinite(maxHeight) ? maxHeight : undefined }} tabIndex={mode === "actual" ? 0 : undefined}
         aria-label={mode === "actual" ? "Actual-size chart; scroll to inspect" : undefined} aria-describedby={labelId}>
         <div className="authoring-stage__space" style={{ width: size.width * scale, height: size.height * scale }}>
           <div className="authoring-stage__canvas canonical-dashboard-frame" style={{ width: size.width, height: size.height, transform: `scale(${scale})` }}>

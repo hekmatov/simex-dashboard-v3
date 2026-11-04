@@ -913,3 +913,5 @@
 @media (max-width: 520px) {
   .chart-type-filters { grid-template-columns: minmax(0, 1fr); }
 }
+
+.authoring-stage__toolbar > [role="group"] { flex-wrap: wrap; min-inline-size: 0; }

@@ -280,6 +280,46 @@ test("destination map chooses section and before-after anchors without changing 
   expect(savedPanels.map(p => p.chart ?? p).find(c => c.id === priorities.id)).toEqual(priorities);
 });
 
+test("chart preview Fit fills available width and Actual returns to dashboard pixels", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1469, height: 1244 });
+  const editor = await edit(page, support.id);
+  const flow = chartAuthoringWorkflow(editor, { mode: 'edit' });
+  const stored = await page.evaluate(key => localStorage.getItem(key), STORAGE);
+  await flow.setFootprint({ columns: 1, rows: 2 });
+  const stage = editor.locator('.authoring-stage');
+  const viewport = stage.locator('.authoring-stage__viewport');
+  const fit = stage.getByRole('button', { name: 'Fit to preview area', exact: true });
+  const actual = stage.getByRole('button', { name: 'Actual size on dashboard', exact: true });
+  await expect(fit).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => stage.evaluate(el => Number(el.dataset.stageScale))).toBeGreaterThan(1);
+  const measure = () => stage.evaluate(el => ({
+    width: Number(el.dataset.stageWidth), height: Number(el.dataset.stageHeight), scale: Number(el.dataset.stageScale),
+    available: el.querySelector('.authoring-stage__viewport').clientWidth,
+    painted: el.querySelector('.authoring-stage__canvas').getBoundingClientRect().width,
+  }));
+  const enlarged = await measure();
+  expect(Math.abs(enlarged.painted - enlarged.available)).toBeLessThan(1);
+  await expect(viewport).toHaveCSS('max-height', 'none');
+  await actual.click();
+  await expect(stage).toHaveAttribute('data-stage-scale', '1');
+  await expect(actual).toHaveAttribute('aria-pressed', 'true');
+  const literal = await measure();
+  expect(literal.width).toBe(enlarged.width);
+  expect(literal.height).toBe(enlarged.height);
+  expect(literal.painted).toBeCloseTo(literal.width, 1);
+  await fit.click();
+  await expect.poll(() => stage.evaluate(el => Number(el.dataset.stageScale))).toBeGreaterThan(1);
+  await flow.setFootprint({ columns: 4, rows: 0.5 });
+  await expect.poll(() => stage.evaluate(el => Number(el.dataset.stageScale))).toBeLessThan(1);
+  const reduced = await measure();
+  expect(Math.abs(reduced.painted - reduced.available)).toBeLessThan(1);
+  await actual.click();
+  await expect(stage).toHaveAttribute('data-stage-scale', '1');
+  expect(await viewport.evaluate(el => el.scrollWidth - el.clientWidth)).toBeGreaterThan(0);
+  expect(await page.evaluate(key => localStorage.getItem(key), STORAGE)).toBe(stored);
+});
+
 test("section start placement and compact source captions retain data and accessible dropdowns", async ({ page }) => {
   test.setTimeout(90_000);
   const panel = page.locator(`[data-canonical-panel-id="${priorities.id}"]`);

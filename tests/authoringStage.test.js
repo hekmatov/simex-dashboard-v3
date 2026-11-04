@@ -52,7 +52,7 @@ test("stage renders one real destination panel at literal pixels with reserved s
 
 test("Actual retains scale one and constrained/tablet footprints use effective grid width", () => {
   assert.match(render({ fit: "actual", availableWidth: 100 }), /data-stage-scale="1"/);
-  assert.match(render({ fit: "actual" }), /Actual dashboard size/);
+  assert.match(render({ fit: "actual" }), /Actual size on dashboard/);
   const constrained = render({ canvasWidth: 810, deviceLayout: "tablet", chart: { ...chart, layout: { width: 3, height: 0.5 } } });
   assert.match(constrained, /data-stage-width="576.5"/);
   assert.match(constrained, /data-stage-height="212"/);
@@ -73,7 +73,7 @@ test("empty, invalid and preparing states retain the same destination frame", ()
   }
 });
 
-test("Fit never enlarges or distorts and Actual permits scrolling without shrinking", () => {
+test("the scale helper supports explicit no-upscale use and Actual remains scale one", () => {
   assert.equal(authoringStageScale({ width: 670, height: 418 }, { availableWidth: 2000, maxHeight: 1000 }), 1);
   assert.equal(authoringStageScale({ width: 670, height: 418 }, { availableWidth: 335, maxHeight: 600 }), 0.5);
   assert.equal(authoringStageScale({ width: 670, height: 418 }, { fit: "actual", availableWidth: 335, maxHeight: 100 }), 1);
@@ -89,4 +89,20 @@ test("static preview Fit can enlarge to available width while Actual stays at da
   }));
   assert.match(html, />Fit to preview area</);
   assert.match(html, />Actual size on dashboard</);
+});
+
+
+test("chart preview Fit fills a wider preview and tall panels have no automatic height cap", () => {
+  const html = render({ availableWidth: 1005 });
+  assert.match(html, /data-stage-scale="1.5"/);
+  assert.match(html, /width:1005px;height:627px/);
+  assert.match(html, />Fit to preview area</);
+  assert.match(html, />Actual size on dashboard</);
+  const tall = render({ availableWidth: 1005, chart: { ...chart, layout: { width: 2, height: 2 } } });
+  assert.match(tall, /data-stage-scale="1.5"/);
+  assert.doesNotMatch(tall, /max-height:/);
+  assert.ok(Number(tall.match(/data-stage-height="([\d.]+)"/)[1]) > 600);
+  const actual = render({ fit: 'actual', availableWidth: 1005 });
+  assert.match(actual, /data-stage-scale="1"/);
+  assert.match(actual, /Actual size on dashboard/);
 });

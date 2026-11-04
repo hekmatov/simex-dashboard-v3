@@ -28,9 +28,9 @@ test("authoring stage preserves destination geometry, rendered output and draft 
   await expect(quick).toBeVisible();
   let stage = quick.locator(".authoring-stage");
   await sameGeometry(stage, destination);
-  await expect(stage.getByRole("button", { name: "Fit", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(stage.getByRole("button", { name: "Fit to preview area", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(Number(await stage.getAttribute("data-stage-scale"))).toBeLessThan(1);
-  await stage.getByRole("button", { name: "Actual", exact: true }).click();
+  await stage.getByRole("button", { name: "Actual size on dashboard", exact: true }).click();
   await expect(stage).toHaveAttribute("data-stage-scale", "1");
   const actualViewport = stage.locator(".authoring-stage__viewport");
   await expect.poll(() => actualViewport.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
@@ -41,7 +41,7 @@ test("authoring stage preserves destination geometry, rendered output and draft 
   await quick.locator("#chart-footprint-row-height").selectOption("0.5");
   await sameGeometry(stage, destination);
   await expect(stage).toHaveAttribute("data-stage-height", "201");
-  await stage.getByRole("button", { name: "Fit", exact: true }).click();
+  await stage.getByRole("button", { name: "Fit to preview area", exact: true }).click();
   await expect(quick).toHaveAttribute("data-chart-edit-dirty", "true");
 
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
@@ -53,7 +53,7 @@ test("authoring stage preserves destination geometry, rendered output and draft 
   await editFlow.goToConfigure();
   await expect(full.getByRole("textbox", { name: "Chart title", exact: true })).toBeVisible();
   await full.getByRole("textbox", { name: "Chart title", exact: true }).fill("Stage fidelity draft");
-  await stage.getByRole("button", { name: "Actual", exact: true }).click();
+  await stage.getByRole("button", { name: "Actual size on dashboard", exact: true }).click();
   await samePaint(stage, destination);
   const show = stage.getByRole("button", { name: "Show on canvas", exact: true });
   await show.focus(); await show.press("Enter");

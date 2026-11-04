@@ -37,14 +37,14 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   await sameGeometry(stage, destination);
   const fitWidth = await scroller.evaluate(el => el.clientWidth);
 
-  await stage.getByRole("button", { name: "Actual", exact: true }).click();
+  await stage.getByRole("button", { name: "Actual size on dashboard", exact: true }).click();
   await expect(stage).toHaveAttribute("data-stage-scale", "1");
   await actualFits(stage);
   expect(await scroller.evaluate(el => el.clientWidth)).toBeGreaterThan(fitWidth);
   await sameGeometry(stage, destination);
   await stableSizing(stage);
 
-  await stage.getByRole("button", { name: "Fit", exact: true }).click();
+  await stage.getByRole("button", { name: "Fit to preview area", exact: true }).click();
   await expect.poll(() => scroller.evaluate(el => el.clientWidth)).toBe(fitWidth);
   await sameGeometry(stage, destination);
   await stableSizing(stage);
@@ -53,7 +53,7 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   await expect(stage).toHaveAttribute("data-stage-height", "201");
   await sameGeometry(stage, destination);
   await stableSizing(stage);
-  await stage.getByRole("button", { name: "Actual", exact: true }).click();
+  await stage.getByRole("button", { name: "Actual size on dashboard", exact: true }).click();
   await actualFits(stage);
   await sameGeometry(stage, destination);
   await stableSizing(stage);
@@ -66,7 +66,7 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   expect(await scroller.evaluate(el => { el.scrollTop = el.scrollHeight; return el.scrollTop; })).toBeGreaterThan(0);
   await quick.locator("#chart-footprint-row-height").scrollIntoViewIfNeeded();
   await expect(quick.locator("#chart-footprint-row-height")).toBeVisible();
-  await stage.getByRole("button", { name: "Fit", exact: true }).click();
+  await stage.getByRole("button", { name: "Fit to preview area", exact: true }).click();
   await expect.poll(() => scroller.evaluate(el => el.clientWidth)).toBe(fitWidth);
   await stableSizing(stage);
   await expect(quick).toHaveAttribute("data-chart-edit-dirty", "true");
@@ -99,7 +99,8 @@ async function stableSizing(stage) {
   // consecutive actual layouts rather than accepting one fortunate sample.
   await expect.poll(() => stage.evaluate(el => {
     const viewport = el.querySelector(".authoring-stage__viewport");
-    return Math.abs(viewport.clientWidth / Number(el.dataset.stageWidth) - Number(el.dataset.stageScale));
+    const expectedScale = el.dataset.stageFit === "actual" ? 1 : viewport.clientWidth / Number(el.dataset.stageWidth);
+    return Math.abs(expectedScale - Number(el.dataset.stageScale));
   })).toBeLessThan(0.002);
   const samples = await stage.evaluate(async el => {
     const scroller = el.closest(".unit-orbit-scroll");
