@@ -10,7 +10,7 @@ import {
   isDeltaCardType,
 } from "../presentation/cardPresentationContract.js";
 import { chartDescriptionVisible } from "../presentation/chartCitation.js";
-import { categoryDescriptors, chartLegendDescriptors } from "../presentation/categorySeriesPresentation.js";
+import { categoryDescriptors, chartLegendDescriptors, resolveOrderedKeys } from "../presentation/categorySeriesPresentation.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
@@ -422,6 +422,12 @@ function appearanceFields({ chart, schema, prepared }) {
   const series = chart.presentation?.series ?? {};
   const memberFields = memberPresentationFields(chart, schema, prepared);
   const gradientCategories = memberFields.find(field => field.control === "categoryColors")?.descriptors;
+  const seriesKey = memberFields.find(field => field.control === "seriesColorsByIdentity")?.descriptors[0]?.key;
+  const fallbackColor = series.overrides?.[seriesKey]?.color ?? series.colors?.[0];
+  const barColors = gradientCategories ? resolveOrderedKeys(gradientCategories.map(entry => entry.key), chart.presentation?.axes?.x?.categoryOrder)
+    .map(key => series.categoryOverrides?.[key]?.color ?? fallbackColor) : [];
+  const gradientColors = new Set(barColors).size > 1 && barColors.every(color => typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color))
+    ? barColors : undefined;
   return [
     ...common,
     ...cardAppearanceFields(chart),
@@ -477,7 +483,7 @@ function appearanceFields({ chart, schema, prepared }) {
         chart.presentation?.referenceLine,
       )
     )).filter(Boolean).map(field => field.control === "palette" && gradientCategories?.length
-      ? { ...field, gradientCategories } : field),
+      ? { ...field, gradientCategories, gradientColors } : field),
     ...memberFields,
   ];
 }

@@ -112,6 +112,7 @@ test(`${ISSUE_CONTROLS}: palette reachability and gradients across bars`, async 
   await expect(last).toBeInViewport();
   await last.click();
   await expect(flow.wizard.getByLabel("Palette color 1", { exact: true })).toHaveValue("#08224A");
+  await expect(flow.wizard.getByRole("button", { name: "Close Palette color 1 color options", exact: true })).toHaveCSS("background-image", /linear-gradient/);
   await last.focus();
   await last.press("Escape");
   await expect(palette).toHaveCount(0);
@@ -139,6 +140,10 @@ test(`${ISSUE_CONTROLS}: palette reachability and gradients across bars`, async 
   await editor.getByRole("button", { name: /^Configure\./ }).click();
   await expect(editor.getByLabel("Bar color: A long category about hospital readiness", { exact: true })).toHaveValue("#08224A");
   await expect(editor.getByLabel("Bar color: A long category about coordination", { exact: true })).toHaveValue("#F1A1AD");
+  const restoredSwatch = editor.getByRole("button", { name: "Open Palette color 1 color options", exact: true });
+  await expect(restoredSwatch).toHaveCSS("background-image", /linear-gradient/);
+  await editor.getByRole("button", { name: "Reset bar colors", exact: true }).click();
+  await expect(restoredSwatch).toHaveCSS("background-image", "none");
 });
 
 async function issueBarFlow(page, csv = "category,value\nA long category about hospital readiness,20\nA long category about infection prevention,50\nA long category about clinical staffing,60\nA long category about medical supplies,70\nA long category about community response,80\nA long category about coordination,90\n") {

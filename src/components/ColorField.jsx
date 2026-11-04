@@ -31,6 +31,7 @@ function ColorField({
   fallback = "#043BCB",
   onChange,
   onSelectGradient,
+  swatchColors,
   labelHidden = false,
   showPresets = true,
   dataColorField,
@@ -48,6 +49,9 @@ function ColorField({
   pickerRevision
 }) {
   const normalizedValue = normalizeHexColor(value, fallback);
+  const gradientPreview = Array.isArray(swatchColors) && swatchColors.length > 1
+    && swatchColors.every(color => typeof color === "string" && HEX_COLOR_PATTERN.test(color))
+    ? `linear-gradient(90deg, ${swatchColors.join(", ")})` : undefined;
   const [draft, setDraft] = React.useState(normalizedValue);
   const [message, setMessage] = React.useState("");
   const [pickerActive, setPickerActive] = React.useState(false);
@@ -120,7 +124,7 @@ function ColorField({
     /* @__PURE__ */ React.createElement("div", { className: `settings-color-row${allowDefault ? " settings-color-row--with-default" : ""}` }, /* @__PURE__ */ React.createElement("button", {
       type: "button",
       className: "settings-color-swatch",
-      style: { backgroundColor: normalizedValue },
+      style: { backgroundColor: normalizedValue, backgroundImage: gradientPreview },
       "aria-label": `${paletteOpen ? "Close" : "Open"} ${label} color options`,
       "aria-expanded": paletteOpen,
       "aria-controls": paletteId,

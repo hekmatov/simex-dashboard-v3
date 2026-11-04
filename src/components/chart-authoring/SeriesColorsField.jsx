@@ -74,6 +74,7 @@ function SeriesColorsField({
           id: `${controlId}-${index}`,
           label: `Palette color ${index + 1}`,
           value: color,
+          swatchColors: index === 0 ? field?.gradientColors : undefined,
           fallback: DEFAULT_SERIES_COLORS[
             index % DEFAULT_SERIES_COLORS.length
           ],

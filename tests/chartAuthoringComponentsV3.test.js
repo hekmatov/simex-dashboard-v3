@@ -1714,6 +1714,23 @@ test("bar gradient selection updates category colors atomically from palette and
     },
   }]);
   assert.deepEqual(chart.presentation.series.colors, ["#112233"]);
+  const swatchColors = candidate => {
+    const field = buildEditorFormModel({ chart: candidate, profile, prepared }).sections.flatMap(section => section.fields).find(field => field.id === "seriesColors");
+    const control = SchemaField({ field, chart: candidate });
+    return findElementsByType(SeriesColorsField(control.props), ColorField)[0].props.swatchColors;
+  };
+  const applied = { ...chart, presentation: { ...chart.presentation, series: changes[0][1] } };
+  assert.deepEqual(swatchColors(applied), ["#000000", "#808080", "#FFFFFF"]);
+  applied.presentation.axes = { x: { categoryOrder: ['category:["string","C"]', 'category:["string","A"]', 'category:["string","B"]'] } };
+  assert.deepEqual(swatchColors(applied), ["#FFFFFF", "#000000", "#808080"]);
+  const namedKey = fields.find(field => field.id === "seriesColorsByIdentity").descriptors[0].key;
+  applied.presentation.series = { ...applied.presentation.series,
+    overrides: { [namedKey]: { color: "#AA5500" } }, categoryOverrides: {
+      'category:["string","A"]': { color: "#000000" }, 'category:["string","C"]': { color: "#FFFFFF" },
+    } };
+  assert.deepEqual(swatchColors(applied), ["#FFFFFF", "#000000", "#AA5500"]);
+  applied.presentation.series = { ...applied.presentation.series, categoryOverrides: undefined };
+  assert.equal(swatchColors(applied), undefined);
   const members = CategorySeriesPresentationFields({ field: categoryField, chart, onChange: (...args) => changes.push(args) });
   findElementsByType(members, ColorField).find(node => node.props.label === "Bar color: A").props.onSelectGradient(["#FFFFFF", "#000000"]);
   assert.deepEqual(changes[1][0], ["presentation", "series", "categoryOverrides"]);
