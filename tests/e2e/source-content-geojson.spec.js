@@ -80,8 +80,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   let flow = await openChartAuthoring(page);
   const wizard = flow.wizard;
   await flow.goToDestination();
-  await wizard.getByLabel("Destination page").selectOption("biomedical");
-  await wizard.getByLabel("Destination section").selectOption("biomedical_section");
+  await flow.setDestination({ pageId: "biomedical", sectionId: "biomedical_section" });
   await flow.selectExistingSource("Journey I map data");
   await flow.chooseChartType("map scatter", /Map scatter/i);
   await flow.goToDataSource();

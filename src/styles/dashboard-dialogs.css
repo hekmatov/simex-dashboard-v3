@@ -891,3 +891,11 @@
 @media (max-width: 900px) {
   .app-frame .chart-wizard-destination-pane { border-inline-start: 0; border-block-start: 1px solid var(--simex-border-subtle); overflow: visible; }
 }
+
+.chart-destination-map { display: grid; gap: 12px; }
+.chart-destination-map__hint { margin: 0; color: var(--simex-text-muted); }
+.chart-destination-map__insertion { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 8px; border: 1px solid var(--simex-border-subtle); }
+.chart-destination-map__insertion label { display: inline-flex; align-items: center; gap: 6px; font-size: var(--simex-control-font-size); }
+.chart-destination-map__tree { min-inline-size: 0; max-block-size: 58dvh; overflow: auto; padding: 8px; border: 1px solid var(--simex-border-subtle); }
+.chart-destination-map__tree .build-tree-item-wrap { cursor: pointer; }
+.chart-destination-map__tree .build-tree-label { white-space: normal; overflow-wrap: anywhere; }

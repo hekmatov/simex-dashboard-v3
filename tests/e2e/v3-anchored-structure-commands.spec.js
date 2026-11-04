@@ -162,11 +162,10 @@ test("V3 #18 full editor destination move retains chart and placement identity",
   const full = page.getByRole("dialog", { name: "Edit chart", exact: true });
   const flow = chartAuthoringWorkflow(full, { mode: "edit" });
   await flow.goToDestination();
-  const pageId = await full.getByLabel("Destination page").locator("option").evaluateAll(options => options.find(o => o.value !== "biomedical" && !o.disabled)?.value);
+  const pageId = await flow.destinationMap.locator('[data-build-node-kind="page"]').evaluateAll(nodes => nodes.find(n => n.dataset.buildNodeId !== "biomedical")?.dataset.buildNodeId);
   expect(pageId).toBeTruthy();
-  await full.getByLabel("Destination page").selectOption(pageId);
-  const sectionId = await full.getByLabel("Destination section").inputValue();
-  await full.getByRole("combobox", { name: "Insertion", exact: true }).selectOption("append");
+  await flow.setDestination({ pageId });
+  const sectionId = await flow.destinationMap.getAttribute('data-destination-section-id');
   await full.locator('[data-icon-control="editor.save-changes"]').click();
   await expect(full).toHaveCount(0);
   const saved = await page.evaluate(({ placementId }) => {

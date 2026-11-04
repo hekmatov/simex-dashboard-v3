@@ -4087,9 +4087,11 @@ test("full chart edit enables destination choices without a separate move contro
   }));
 
   assert.doesNotMatch(html, /Move placement/);
-  assert.match(html, /Destination page<select(?![^>]*disabled)/);
-  assert.match(html, /Destination section<select(?![^>]*disabled)/);
-  assert.match(html, /Insertion<select(?![^>]*disabled)/);
+  assert.match(html, /aria-label="Destination map"/);
+  assert.match(html, /data-build-node-id="section-b"/);
+  assert.doesNotMatch(html, /Destination page<select|Destination section<select|Insertion<select/);
+  assert.doesNotMatch(html, /Destination stays attached/);
+  assert.doesNotMatch(html, /draggable="true"/);
 });
 
 test("edit-mode wizard commit routes only to the placement Save authority", async () => {
@@ -5604,7 +5606,7 @@ test("combined Source and Destination panels share the draft and Configure owns 
   const destinationHtml = render(React.createElement(ChartWizardV3, props));
   assert.match(destinationHtml, /class="chart-wizard-destination-pane dashboard-dialog__body"/);
   assert.match(destinationHtml, /Select data source/);
-  assert.match(destinationHtml, /Destination page/);
+  assert.match(destinationHtml, /No eligible destination sections/);
   assert.ok(destinationHtml.indexOf("Select data source") < destinationHtml.indexOf("Choose destination and placement"));
   assert.match(destinationHtml, /class="chart-creation-proof-deck"[^>]*hidden=""/);
   assert.doesNotMatch(destinationHtml, /chart-wizard-configuration-footprint/);
@@ -5617,4 +5619,53 @@ test("combined Source and Destination panels share the draft and Configure owns 
   assert.match(sourceHtml, /chart-wizard-destination-pane/);
   assert.doesNotMatch(sourceHtml, /id="chart-stage-data-source"/);
   assert.doesNotMatch(sourceHtml, /chart-wizard-configuration-footprint/);
+});
+
+
+test("destination map uses canonical eligible sections and chart anchors without mutating structure", async () => {
+  const { default: ChartDestinationMap, destinationMapDashboard, destinationMapSelection, destinationPatchForNode } = await import('../src/components/chart-authoring/ChartDestinationMap.jsx');
+  const dashboard = { pages: [
+    { id: 'landing', label: 'Landing', pageType: 'landing', sections: [{ id: 'home', panels: [] }] },
+    { id: 'a', label: 'A', sections: [
+      { id: 'unsupported', surfaceType: 'custom', panels: [] },
+      { id: 's', title: 'S', panels: [{ id: 'placement-one', chart: { id: 'one', title: 'One' } }, { id: 'placement-two', chart: { id: 'two', title: 'Two' } }] },
+      { id: 'empty', title: 'Empty', panels: [] },
+    ] },
+  ] };
+  const original = structuredClone(dashboard);
+  const map = destinationMapDashboard(dashboard);
+  assert.deepEqual(map.pages.map(p => p.id), ['a']);
+  assert.deepEqual(map.pages[0].sections.map(s => s.id), ['s', 'empty']);
+  const destination = { pageId: 'a', sectionId: 's', relation: 'before', anchorId: 'two', footprint: { columns: 3, rows: 0.75 } };
+  assert.deepEqual(destinationMapSelection(map, destination), { kind: 'chart', pageId: 'a', sectionId: 's', chartId: 'two', placementId: 'placement-two' });
+  const chartNode = { kind: 'chart', pageId: 'a', sectionId: 's', chartId: 'one', placementId: 'placement-one' };
+  assert.deepEqual(destinationPatchForNode(map, chartNode, destination), { pageId: 'a', sectionId: 's', relation: 'before', position: 'before', anchorId: 'one' });
+  assert.equal(destinationPatchForNode(map, chartNode, { relation: 'append' }).relation, 'after');
+  assert.equal(destinationPatchForNode(map, chartNode, { relation: 'after' }).relation, 'after');
+  assert.deepEqual(destinationPatchForNode(map, { kind: 'section', pageId: 'a', sectionId: 'empty' }, destination), { pageId: 'a', sectionId: 'empty', relation: 'append', position: 'append', anchorId: null });
+  assert.equal(destinationPatchForNode(map, { kind: 'page', pageId: 'a' }, destination).sectionId, 's');
+  assert.equal(destinationPatchForNode(map, { ...chartNode, chartId: 'missing' }, destination), null);
+  assert.equal(destinationPatchForNode(map, { kind: 'section', pageId: 'landing', sectionId: 'home' }, destination), null);
+  assert.equal(destinationMapSelection(map, { ...destination, anchorId: 'missing' }), null);
+  const html = render(React.createElement(ChartDestinationMap, { dashboard, destination }));
+  assert.match(html, /aria-label="Destination map"/);
+  assert.match(html, /aria-label="Two" aria-selected="true"/);
+  assert.match(html, /Before selected chart/);
+  assert.match(html, /After selected chart/);
+  assert.doesNotMatch(html, /draggable="true"|Rename |<select/);
+  assert.deepEqual(dashboard, original);
+});
+
+
+test("destination map selection mode retains normal Build tree editing outside the picker", async () => {
+  const { default: Rail } = await import('../src/components/build/BuildStructureRail.jsx');
+  const props = { dashboard: { pages: [{ id: 'p', label: 'P', sections: [{ id: 's', title: 'S', panels: [] }] }] }, selection: { kind: 'section', pageId: 'p', sectionId: 's' } };
+  const editing = render(React.createElement(Rail, props));
+  const choosing = render(React.createElement(Rail, { ...props, selectionOnly: true, ariaLabel: 'Destination map' }));
+  assert.match(editing, /aria-label="Dashboard structure"/);
+  assert.match(editing, /draggable="true"/);
+  assert.match(choosing, /aria-label="Destination map"/);
+  assert.doesNotMatch(choosing, /draggable="true"/);
+  assert.match(choosing, /aria-expanded="true"/);
+  assert.match(choosing, /aria-selected="true"/);
 });

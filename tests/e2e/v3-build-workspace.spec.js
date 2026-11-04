@@ -187,7 +187,7 @@ test("chart creation combines source and destination and keeps proofs on the oth
     if (await wizard.locator('[data-chart-wizard-stage="destination"]').count()) {
       await expect(deck).toBeHidden();
       await expect(wizard.getByRole('heading', { name: 'Select data source', exact: true })).toBeVisible();
-      await expect(wizard.getByRole('combobox', { name: 'Destination page', exact: true })).toBeVisible();
+      await expect(wizard.getByRole('navigation', { name: 'Destination map', exact: true })).toBeVisible();
       continue;
     }
     await expect(deck.getByRole("article", { name: "Canonical render proof" })).toBeVisible();

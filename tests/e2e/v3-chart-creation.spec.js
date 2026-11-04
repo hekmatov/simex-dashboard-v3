@@ -28,7 +28,7 @@ test("V3 #32 destination upload and failed persistence retry share saved structu
   await section.getByRole("button", { name: "Add chart", exact: true }).click();
   const { chartAuthoringWorkflow } = await import("./support/chart-authoring-workflow.js");
   const flow = chartAuthoringWorkflow(page.getByRole("dialog", { name: "Add new chart" }));
-  await expect(flow.wizard.getByLabel("Destination section")).toHaveValue(sectionId);
+  await expect(flow.destinationMap).toHaveAttribute("data-destination-section-id", sectionId);
   await flow.uploadCsv({ name: "retry.csv", mimeType: "text/csv", buffer: Buffer.from("date,value\n2026-01-01,10\n2026-01-02,20\n") });
   await flow.chooseChartType(null, /^Line\./);
   await flow.goToMapAndPrepare();
@@ -122,8 +122,8 @@ test("five-stage chart creation suspends and commits exactly once", async ({ pag
     .getByRole("button", { name: "Build", exact: true }).click();
   let flow = await openFreshChartAuthoring(page);
   let { wizard } = flow;
-  await expect(wizard.getByLabel("Destination page")).toHaveValue("m0-dashboard");
-  await expect(wizard.getByLabel("Destination section")).toHaveValue("m0-data");
+  await expect(flow.destinationMap).toHaveAttribute("data-destination-page-id", "m0-dashboard");
+  await expect(flow.destinationMap).toHaveAttribute("data-destination-section-id", "m0-data");
   await flow.selectExistingSource("cases WCPH eldoria");
   await expect(wizard.getByRole("region", { name: "Selected source profile" })).toContainText("national_total_cases");
   await flow.chooseChartType(null, /^Line\./);

@@ -35,6 +35,7 @@ import { useModalFocus } from "../common/ModalFocusScope.jsx";
 import ChartTypePicker from "./ChartTypePicker.jsx";
 import DataRolesStep from "./DataRolesStep.jsx";
 import DataSourceStep from "./DataSourceStep.jsx";
+import ChartDestinationMap from "./ChartDestinationMap.jsx";
 import StyleLayoutStep from "./StyleLayoutStep.jsx";
 import AuthoringStage, { useAuthoringDestinationGeometry } from "./AuthoringStage.jsx";
 import { chartFootprintPixelSize } from "../chartStageGeometry.js";
@@ -798,7 +799,6 @@ export default function ChartWizardV3({
     chart: wizard.draft,
     preparedData: runtime.prepared,
   });
-  const destinationChoices = editableDestinationChoices(dashboard, wizard.destination);
   const editPlacementMove = React.useMemo(() => (
     editMode && placementEdited
       ? buildChartEditPlacementMove({
@@ -1546,105 +1546,12 @@ export default function ChartWizardV3({
     "section",
     { className: "chart-wizard-step chart-wizard-destination", "aria-labelledby": "chart-destination-heading" },
     React.createElement("h3", { id: "chart-destination-heading" }, "Choose destination and placement"),
-    React.createElement("p", null, "Destination stays attached to this chart draft even if you inspect another page."),
-    React.createElement(
-      "div",
-      { className: "chart-destination-controls" },
-      React.createElement(
-        "label",
-        null,
-        "Destination page",
-        React.createElement(
-          "select",
-          {
-            value: wizard.destination?.pageId ?? "",
-            disabled: disabled || submitting,
-            onChange: (event) => {
-              const page = destinationChoices.pages.find(({ id }) => id === event.target.value);
-              const section = page?.sections?.[0] ?? null;
-              updateDestination({
-                pageId: page?.id ?? event.target.value,
-                sectionId: section?.id ?? null,
-                relation: "append",
-                position: "append",
-                anchorId: null,
-              });
-            },
-          },
-          destinationChoices.pages.map((page) => React.createElement(
-            "option",
-            { key: page.id, value: page.id },
-            page.label,
-          )),
-        ),
-      ),
-      React.createElement(
-        "label",
-        null,
-        "Destination section",
-        React.createElement(
-          "select",
-          {
-            value: wizard.destination?.sectionId ?? "",
-            disabled: disabled || submitting,
-            onChange: (event) => updateDestination({
-              sectionId: event.target.value,
-              relation: "append",
-              position: "append",
-              anchorId: null,
-            }),
-          },
-          destinationChoices.sections.map((section) => React.createElement(
-            "option",
-            { key: section.id, value: section.id },
-            section.label,
-          )),
-        ),
-      ),
-      React.createElement(
-        "label",
-        null,
-        "Insertion",
-        React.createElement(
-          "select",
-          {
-            value: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
-            disabled: disabled || submitting,
-            onChange: (event) => updateDestination({
-              relation: event.target.value,
-              position: event.target.value,
-              anchorId: event.target.value === "append"
-                ? null
-                : wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? null,
-            }),
-          },
-          React.createElement("option", { value: "append" }, "Append to section"),
-          React.createElement("option", { value: "before" }, "Before a chart"),
-          React.createElement("option", { value: "after" }, "After a chart"),
-        ),
-      ),
-      React.createElement(
-        "label",
-        null,
-        "Placement anchor",
-        React.createElement(
-          "select",
-          {
-            value: wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? "",
-            disabled: disabled || submitting
-              || (wizard.destination?.relation ?? wizard.destination?.position ?? "append") === "append",
-            onChange: (event) => updateDestination({ anchorId: event.target.value }),
-          },
-          destinationChoices.anchors.length === 0
-            ? React.createElement("option", { value: "" }, "No charts in this section")
-            : destinationChoices.anchors.map((anchor) => React.createElement(
-                "option",
-                { key: anchor.id, value: anchor.id },
-                anchor.label,
-              )),
-        ),
-      ),
-    ),
+    React.createElement(ChartDestinationMap, {
+      dashboard,
+      destination: wizard.destination,
+      disabled: disabled || submitting,
+      onChange: updateDestination,
+    }),
     React.createElement("span", { className: "visually-hidden" }, placementProof.orderedText),
   );
 
@@ -2631,47 +2538,6 @@ export function createChartWizardEditState({
 
 function hasDashboardPages(dashboard) {
   return Array.isArray(dashboard?.pages);
-}
-
-function editableDestinationChoices(dashboard, current = {}) {
-  const pages = hasDashboardPages(dashboard)
-    ? dashboard.pages.flatMap((page) => {
-        const sections = (page?.sections ?? []).flatMap((section) => (
-          resolveDestination({ pageId: page.id, sectionId: section.id }, dashboard).status === "valid"
-            ? [{
-                id: section.id,
-                label: section.title ?? section.label ?? section.id,
-                anchors: (section.panels ?? []).flatMap((panel) => {
-                  const chart = panel?.chart ?? panel;
-                  return chart?.id
-                    ? [{ id: chart.id, label: chart.title ?? chart.id }]
-                    : [];
-                }),
-              }]
-            : []
-        ));
-        return sections.length > 0
-          ? [{ id: page.id, label: page.label ?? page.title ?? page.id, sections }]
-          : [];
-      })
-    : [];
-
-  if (!pages.some(({ id }) => id === current?.pageId) && current?.pageId) {
-    pages.push({
-      id: current.pageId,
-      label: current.pageId,
-      sections: current.sectionId
-        ? [{ id: current.sectionId, label: current.sectionId, anchors: [] }]
-        : [],
-    });
-  }
-  const selectedPage = pages.find(({ id }) => id === current?.pageId) ?? pages[0] ?? null;
-  const sections = selectedPage?.sections ?? [];
-  if (!sections.some(({ id }) => id === current?.sectionId) && current?.sectionId) {
-    sections.push({ id: current.sectionId, label: current.sectionId, anchors: [] });
-  }
-  const selectedSection = sections.find(({ id }) => id === current?.sectionId) ?? sections[0] ?? null;
-  return { pages, sections, anchors: selectedSection?.anchors ?? [] };
 }
 
 function legacyPlacementProof(destination, footprint) {

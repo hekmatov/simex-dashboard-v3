@@ -225,6 +225,61 @@ test("chart ordering and label-axis entries and palette actions stay beside thei
   await expect(reopened.getByLabel("Label unit", { exact: true })).toHaveValue("%");
 });
 
+test("destination map chooses section and before-after anchors without changing authored charts", async ({ page }) => {
+  test.setTimeout(90_000);
+  const panel = page.locator(`[data-canonical-panel-id="${support.id}"]`);
+  const placementId = await panel.getAttribute('data-canonical-placement-id');
+  const editor = await edit(page, support.id);
+  const flow = chartAuthoringWorkflow(editor, { mode: 'edit' });
+  await flow.goToDestination();
+  const map = flow.destinationMap;
+  await expect(editor.getByText('Destination stays attached to this chart draft even if you inspect another page.', { exact: true })).toHaveCount(0);
+  await expect(map.getByRole('combobox')).toHaveCount(0);
+  await expect(map.locator('[draggable="true"]')).toHaveCount(0);
+  const rowGeometry = await map.locator('.build-tree-row').evaluateAll(rows => rows.map(row => ({
+    row: row.getBoundingClientRect().width,
+    label: row.querySelector('.build-tree-label').getBoundingClientRect().width,
+  })));
+  expect(rowGeometry.length).toBeGreaterThan(0);
+  for (const row of rowGeometry) expect(row.label / row.row).toBeGreaterThan(0.7);
+  const sourcePage = flow.destinationNode('page', 'presentation-proof');
+  await sourcePage.locator(':scope > .build-tree-row > .build-tree-caret').click();
+  await expect(sourcePage).toHaveAttribute('aria-expanded', 'false');
+  await sourcePage.focus();
+  await sourcePage.press('ArrowRight');
+  await expect(sourcePage).toHaveAttribute('aria-expanded', 'true');
+  const section = flow.destinationNode('section', 'reported');
+  await section.focus();
+  await section.press('Enter');
+  await expect(map.getByRole('radio', { name: 'End of section', exact: true })).toBeChecked();
+  await expect(map.getByRole('radio', { name: 'Before selected chart', exact: true })).toBeDisabled();
+  await flow.setDestination({ pageId: 'presentation-proof', sectionId: 'reported', anchorId: priorities.id, relation: 'before' });
+  const anchor = flow.destinationNode('chart', priorities.id);
+  await expect(anchor).toHaveAttribute('aria-selected', 'true');
+  await anchor.focus();
+  await anchor.press('F2');
+  await anchor.press('Alt+ArrowUp');
+  await anchor.dblclick();
+  await expect(map.locator('.build-tree-row input')).toHaveCount(0);
+  await expect(map.getByRole('radio', { name: 'Before selected chart', exact: true })).toBeChecked();
+  await map.getByRole('radio', { name: 'After selected chart', exact: true }).check();
+  await flow.goToConfigure();
+  await flow.goToDestination();
+  await expect(map.getByRole('radio', { name: 'After selected chart', exact: true })).toBeChecked();
+  await expect(anchor).toHaveAttribute('aria-selected', 'true');
+  await save(editor);
+  await page.reload();
+  await openDashboardPage(page, 'presentation-proof');
+  expect(await panel.getAttribute('data-canonical-placement-id')).toBe(placementId);
+  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), STORAGE);
+  const savedPanels = saved.pages.find(p => p.id === 'presentation-proof').sections.find(s => s.id === 'reported').panels;
+  const expectedIds = reported.charts.map(c => c.id).filter(id => id !== support.id);
+  expectedIds.splice(expectedIds.indexOf(priorities.id) + 1, 0, support.id);
+  expect(savedPanels.map(p => (p.chart ?? p).id)).toEqual(expectedIds);
+  expect(savedPanels.map(p => p.chart ?? p).find(c => c.id === support.id)).toEqual(support);
+  expect(savedPanels.map(p => p.chart ?? p).find(c => c.id === priorities.id)).toEqual(priorities);
+});
+
 test("Source and Destination combines panels and Configure size survives edit save", async ({ page }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1806, height: 1244 });
@@ -240,7 +295,7 @@ test("Source and Destination combines panels and Configure size survives edit sa
   const destination = editor.getByRole('complementary', { name: 'Chart destination', exact: true });
   await expect(source.getByRole('combobox', { name: /^Managed data source/ })).toBeVisible();
   await expect(source.getByLabel('CSV file', { exact: true })).toHaveCount(0);
-  await expect(destination.getByRole('combobox', { name: 'Destination page', exact: true })).toBeVisible();
+  await expect(destination.getByRole('navigation', { name: 'Destination map', exact: true })).toBeVisible();
   const left = await editor.locator('.chart-wizard-body').boundingBox();
   const right = await destination.boundingBox();
   expect(right.x).toBeGreaterThan(left.x);

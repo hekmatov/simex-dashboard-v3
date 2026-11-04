@@ -305,9 +305,8 @@ test("New Chart keeps stable geometry and exposes editable destination placement
     .toBe(initialHeight);
   await flow.goToDestination();
 
-  await expect(wizard.getByLabel("Destination page")).toBeEnabled();
-  await expect(wizard.getByLabel("Destination section")).toBeEnabled();
-  await expect(wizard.getByLabel("Insertion")).toBeEnabled();
+  await expect(flow.destinationMap.getByRole('navigation', { name: 'Destination map', exact: true })).toBeVisible();
+  await expect(flow.destinationMap.locator('[role="treeitem"][aria-selected="true"]')).toHaveCount(1);
   await expect(wizard.getByRole("heading", { name: "Select data source", exact: true })).toBeVisible();
   await expect(wizard.getByRole("region", { name: "Footprint" })).toHaveCount(0);
   await expect(wizard.locator('[data-chart-proof-deck="persistent"]')).toBeHidden();
@@ -315,8 +314,9 @@ test("New Chart keeps stable geometry and exposes editable destination placement
   const destination = await wizard.getByRole('complementary', { name: 'Chart destination', exact: true }).boundingBox();
   expect(destination.x).toBeGreaterThan(body.x);
   expect(Math.abs(destination.width - body.width)).toBeLessThan(2);
-  await wizard.getByLabel("Insertion").selectOption("before");
-  await expect(wizard.getByLabel("Placement anchor")).toBeEnabled();
+  const anchor = flow.destinationMap.locator('[data-build-node-kind="chart"]').first();
+  await anchor.click();
+  await flow.destinationMap.getByRole('radio', { name: 'Before selected chart', exact: true }).check();
   await flow.setFootprint({ columns: 3, rows: 2 });
   const footprint = wizard.getByRole("region", { name: "Footprint" });
   await expect(footprint).toBeVisible();
@@ -326,8 +326,8 @@ test("New Chart keeps stable geometry and exposes editable destination placement
     name: "Chart size: 3 columns by 16 steps",
   })).toBeVisible();
   await flow.goToDestination();
-  await expect(wizard.getByLabel("Insertion")).toHaveValue("before");
-  await expect(wizard.getByLabel("Placement anchor")).toBeEnabled();
+  await expect(flow.destinationMap.getByRole('radio', { name: 'Before selected chart', exact: true })).toBeChecked();
+  await expect(flow.destinationMap.locator('[role="treeitem"][aria-selected="true"]')).toHaveAttribute('data-build-node-kind', 'chart');
   await expect(wizard.getByRole("region", { name: "Footprint" })).toHaveCount(0);
   await flow.goToConfigure();
   await expect(footprint.getByLabel("Width")).toHaveValue("3");

@@ -26,7 +26,7 @@ function allExpanded(dashboard) {
   ]));
 }
 
-export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
+export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, selectionOnly = false, ariaLabel = "Dashboard structure", onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
   const [expandedKeys, setExpandedKeys] = React.useState(() => allExpanded(dashboard));
   const [focusedKey, setFocusedKey] = React.useState(() => selectionKey(selection));
   const [renameKey, setRenameKey] = React.useState("");
@@ -40,6 +40,9 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
   const selectedKey = selectionKey(selection);
 
   React.useEffect(() => () => controller.dispose(), [controller]);
+  React.useEffect(() => {
+    if (selectionOnly) refs.current.get(selectedKey)?.scrollIntoView?.({ block: "nearest" });
+  }, [selectionOnly, selectedKey]);
   const activate = React.useCallback(async (next, options = {}) => {
     if (onActivate) return Boolean(await onActivate(next, options));
     onSelect?.(next);
@@ -77,7 +80,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       : { kind: "chart", pageId: node.pageId, sectionId: node.sectionId, placementId: node.placementId, chartId: node.chartId };
   const beginRename = async (node) => {
     const next = selectionFor(node);
-    if (disabled || !(await activate(next, { intent: "rename" }))) return;
+    if (disabled || selectionOnly || !(await activate(next, { intent: "rename" }))) return;
     setFocusedKey(node.key);
     setRenameKey(node.key);
     setRenameValue(labelFor(node));
@@ -105,7 +108,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     const keyDown = (event) => {
       if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
       if (disabled) return;
-      if (event.altKey && ["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) {
+      if (!selectionOnly && event.altKey && ["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) {
         const direction = ["ArrowUp", "ArrowLeft"].includes(event.key) ? -1 : 1;
         const move = buildSiblingMove(dashboard, moveSourceForNode(node), direction);
         if (move) {
@@ -119,7 +122,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       if (event.key === "ArrowRight" && node.hasChildren) { event.preventDefault(); if (!expanded) toggle(node.key); else if (nodes[index + 1]) focus(nodes[index + 1].key); }
       if (event.key === "ArrowLeft") { event.preventDefault(); if (node.hasChildren && expanded) toggle(node.key); else if (node.parentKey) focus(node.parentKey); }
       if (event.key === "Enter") { event.preventDefault(); void activate(selectionFor(node)); }
-      if (event.key === "F2") { event.preventDefault(); void beginRename(node); }
+      if (!selectionOnly && event.key === "F2") { event.preventDefault(); void beginRename(node); }
       if (event.key === "Escape" && isRenaming) { event.preventDefault(); cancelRename(node); }
     };
     return <React.Fragment key={node.key}><li
@@ -134,13 +137,14 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       data-build-node-role={node.kind === "section" && sectionRole(sectionFor(node)) === "attention" ? "attention" : undefined}
       data-build-node-id={node.placementId ?? node.sectionId ?? node.pageId}
       data-build-placement-id={node.kind === "chart" ? node.placementId : undefined}
+      data-build-chart-id={node.kind === "chart" ? node.chartId : undefined}
       data-build-node-key={node.key}
       aria-label={label}
       aria-expanded={node.hasChildren ? expanded : undefined}
       aria-selected={selected}
       aria-disabled={disabled || undefined}
       tabIndex={isRenaming ? -1 : activeTab ? 0 : -1}
-      draggable={!disabled && !isRenaming}
+      draggable={!disabled && !selectionOnly && !isRenaming}
       onFocus={(event) => {
         if (event.target === event.currentTarget) setFocusedKey(node.key);
       }}
@@ -148,11 +152,12 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       onClick={(event) => {
         if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
         if (disabled || isRenaming || event.defaultPrevented) return;
-        controller.click(() => void activate(selectionFor(node)));
+        if (selectionOnly) void activate(selectionFor(node));
+        else controller.click(() => void activate(selectionFor(node)));
       }}
       onDragStart={(event) => {
         if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
-        if (disabled || isRenaming) return;
+        if (disabled || selectionOnly || isRenaming) return;
         dragSessionRef.current.start(moveSourceForNode(node));
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData(BUILD_LAYOUT_MOVE_MIME, encodeBuildMovePayload(moveSourceForNode(node)));
@@ -164,11 +169,12 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       }}
       onDoubleClick={(event) => {
         if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
-        if (disabled || isRenaming || event.defaultPrevented) return;
+        if (disabled || selectionOnly || isRenaming || event.defaultPrevented) return;
         controller.doubleClick(() => void beginRename(node));
       }}
       data-build-drop-edge={dropIndicator?.key === node.key ? dropIndicator.edge : undefined}
       onDragOver={(event) => {
+        if (disabled || selectionOnly) return;
         const source = dragSessionRef.current.current()
           ?? decodeBuildMovePayload(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
         if (!legalDropForDashboard(dashboard, source, node)) return;
@@ -184,6 +190,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
         event.dataTransfer.dropEffect = "move";
       }}
       onDrop={(event) => {
+        if (disabled || selectionOnly) return;
         const source = dragSessionRef.current.resolve(event.dataTransfer?.getData(BUILD_LAYOUT_MOVE_MIME));
         if (!legalDropForDashboard(dashboard, source, node)) return;
         event.preventDefault();
@@ -245,7 +252,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     </li></React.Fragment>;
   };
   return <>
-    <nav className="build-structure-rail" aria-label="Dashboard structure"><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
+    <nav className="build-structure-rail" aria-label={ariaLabel}><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
   </>;
 }
 

@@ -52,8 +52,29 @@ export function chartAuthoringWorkflow(wizard, { mode = "create" } = {}) {
     return wizard;
   };
 
+  const destinationMap = wizard.locator('.chart-destination-map');
+  const destinationNode = (kind, id) => destinationMap.locator(`[role="treeitem"][data-build-node-kind="${kind}"][${kind === 'chart' ? 'data-build-chart-id' : 'data-build-node-id'}="${id}"]`);
+  const expandNode = async (node) => {
+    if (await node.getAttribute('aria-expanded') === 'false') await node.locator(':scope > .build-tree-row > .build-tree-caret').click();
+  };
   return Object.freeze({
     wizard,
+    destinationMap,
+    destinationNode,
+    async setDestination({ pageId, sectionId, anchorId, relation = 'append' }) {
+      await goToStage('destination');
+      const page = destinationNode('page', pageId);
+      await expandNode(page);
+      if (!sectionId) { await page.locator(":scope > .build-tree-row").click(); return; }
+      const section = destinationNode('section', sectionId);
+      if (anchorId) {
+        await expandNode(section);
+        await destinationNode('chart', anchorId).click();
+        await destinationMap.getByRole('radio', { name: relation === 'before' ? 'Before selected chart' : 'After selected chart', exact: true }).check();
+      } else await section.locator(":scope > .build-tree-row").click();
+      await expect(destinationMap).toHaveAttribute('data-destination-page-id', pageId);
+      await expect(destinationMap).toHaveAttribute('data-destination-section-id', sectionId);
+    },
     stageButtons: navigation.getByRole("button"),
     stageButton,
     goToStage,

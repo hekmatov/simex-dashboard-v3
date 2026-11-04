@@ -601,7 +601,7 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   const storedPanelCount = await storedChartCount(page);
   let flow = await openChartAuthoring(page);
   let wizard = flow.wizard;
-  await expect(wizard.getByLabel("Destination page")).toHaveValue("m0-dashboard");
+  await expect(flow.destinationMap).toHaveAttribute("data-destination-page-id", "m0-dashboard");
   const creationOwner = page.locator('[data-pending-work-kind="chart-create"]');
   await expect(creationOwner).toHaveCount(0);
 
