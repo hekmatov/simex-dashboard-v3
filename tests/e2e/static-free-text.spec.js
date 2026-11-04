@@ -96,7 +96,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("full text editor fits width without a height cap and keeps editor scrolling", async ({ page }) => {
+test("full text editor fits preview area up or down and keeps editor scrolling", async ({ page }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1117, height: 766 });
   await openBiomedicalBuild(page);
@@ -107,6 +107,7 @@ test("full text editor fits width without a height cap and keeps editor scrollin
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill("Preview wheel proof");
   await wizard.getByLabel("Portable QMD Composer editing area").fill("Text wrapping stays tied to the panel's logical width while the complete preview is scaled. ".repeat(5));
+  await wizard.getByRole("combobox", { name: "Height step (12.5% of a row)", exact: true }).selectOption({ value: "2" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -141,9 +142,23 @@ test("full text editor fits width without a height cap and keeps editor scrollin
     expect(space.remaining, "Preview fixture must leave room to scroll the editor").toBeGreaterThan(80);
     return space.top;
   };
-  for (const mode of ["Fit", "Actual"]) {
-    await preview.getByRole("button", { name: mode, exact: true }).click();
-    await expect(preview.locator("[data-stage-scale]")).toHaveAttribute("data-stage-scale", "1");
+  const fitButton = preview.getByRole("button", { name: "Fit to preview area", exact: true });
+  const actualButton = preview.getByRole("button", { name: "Actual size on dashboard", exact: true });
+  await fitButton.scrollIntoViewIfNeeded();
+  const fitBounds = await fitButton.boundingBox(), actualBounds = await actualButton.boundingBox();
+  expect(Math.abs(fitBounds.y - actualBounds.y)).toBeLessThanOrEqual(1);
+  expect(actualBounds.x - fitBounds.x - fitBounds.width).toBeGreaterThanOrEqual(0);
+  expect(actualBounds.x - fitBounds.x - fitBounds.width).toBeLessThanOrEqual(12);
+  for (const [label, mode] of [["Fit to preview area", "fit"], ["Actual size on dashboard", "actual"]]) {
+    await preview.getByRole("button", { name: label, exact: true }).click();
+    const sizing = await preview.evaluate(node => {
+      const stage = node.querySelector("[data-stage-width]");
+      return { width: Number(stage.dataset.stageWidth), available: node.querySelector(".authoring-stage__viewport").clientWidth, scale: Number(stage.dataset.stageScale) };
+    });
+    if (mode === "fit") {
+      expect(sizing.scale).toBeGreaterThan(1);
+      expect(Math.abs(sizing.width * sizing.scale - sizing.available)).toBeLessThanOrEqual(1);
+    } else expect(sizing.scale).toBe(1);
     await viewport.evaluate(node => { node.scrollTop = node.scrollHeight; });
     expect(await viewport.evaluate(node => node.scrollHeight - node.clientHeight - node.scrollTop), "Preview must be at its boundary before testing scroll handoff").toBeLessThanOrEqual(1);
     const before = await positionPreview();
@@ -153,15 +168,15 @@ test("full text editor fits width without a height cap and keeps editor scrollin
   }
   await height.selectOption({ value: "3" });
   await expect(height).toHaveValue("3");
-  await preview.getByRole("button", { name: "Fit", exact: true }).click();
+  await preview.getByRole("button", { name: "Fit to preview area", exact: true }).click();
   const tall = await preview.evaluate(node => {
     const stage = node.querySelector("[data-stage-height]");
     const viewport = node.querySelector(".authoring-stage__viewport");
     return { height: Number(stage.dataset.stageHeight), viewportHeight: viewport.clientHeight, maxHeight: getComputedStyle(viewport).maxHeight, scale: Number(stage.dataset.stageScale) };
   });
-  expect(tall.scale).toBe(1);
+  expect(tall.scale).toBeGreaterThan(1);
   expect(tall.maxHeight).toBe("none");
-  expect(tall.viewportHeight).toBeGreaterThanOrEqual(tall.height - 1);
+  expect(tall.viewportHeight).toBeGreaterThanOrEqual(tall.height * tall.scale - 1);
   const beforeTallScroll = await positionPreview();
   await page.mouse.wheel(0, 120);
   await page.mouse.wheel(0, 120);
@@ -178,7 +193,7 @@ test("full text editor fits width without a height cap and keeps editor scrollin
   });
   expect(wide.width, "Wide-panel fixture must exceed the preview's available width").toBeGreaterThan(wide.available);
   expect(wide.scale).toBeCloseTo(wide.available / wide.width, 2);
-  await preview.getByRole("button", { name: "Actual", exact: true }).click();
+  await preview.getByRole("button", { name: "Actual size on dashboard", exact: true }).click();
   await expect(preview.locator("[data-stage-scale]")).toHaveAttribute("data-stage-scale", "1");
   const actual = await textPreviewGeometry(preview);
   expect(actual.contentWidth).toBe(wide.contentWidth);
@@ -239,16 +254,17 @@ for (const viewport of [{ width: 1401, height: 833 }, { width: 1117, height: 766
       await expect(wizard.getByRole("button", { name: "Bold", exact: true })).toBeInViewport();
       const preview = wizard.getByRole("region", { name: "Rendered preview", exact: true });
       await expect(preview.locator(".free-text-chart-view__content")).toContainText("longer authored paragraph");
-      await preview.getByRole("button", { name: "Actual", exact: true }).click();
+      await preview.getByRole("button", { name: "Actual size on dashboard", exact: true }).click();
       const inline = await textPreviewGeometry(preview);
-      await preview.getByRole("button", { name: "Fit", exact: true }).click();
+      await preview.getByRole("button", { name: "Fit to preview area", exact: true }).click();
       const fit = await textPreviewGeometry(preview);
       expect(fit.contentWidth).toBe(inline.contentWidth);
       expect(fit.lines).toBe(inline.lines);
-      expect(fit.scale).toBeLessThanOrEqual(1);
+      const expectedScale = await preview.evaluate(node => node.querySelector(".authoring-stage__viewport").clientWidth / Number(node.querySelector("[data-stage-width]").dataset.stageWidth));
+      expect(fit.scale).toBeCloseTo(expectedScale, 2);
       await wizard.getByRole("button", { name: "Continue" }).click();
       const final = wizard.getByRole("region", { name: "Text/Image preview", exact: true });
-      await final.getByRole("button", { name: "Actual", exact: true }).click();
+      await final.getByRole("button", { name: "Actual size on dashboard", exact: true }).click();
       const finalGeometry = await textPreviewGeometry(final);
       expect(Math.abs(finalGeometry.contentWidth - inline.contentWidth)).toBeLessThanOrEqual(1);
       expect(finalGeometry.lines).toBe(inline.lines);

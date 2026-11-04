@@ -9,8 +9,8 @@ import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import { withPlaybackTimeContext } from "../charts/ChartView.jsx";
 import { prepareChartPreview, PreviewState, buildPreviewDiagnostics } from "./ChartPreview.jsx";
 
-export function authoringStageScale(size, { fit = "fit", availableWidth = size.width, maxHeight = Infinity } = {}) {
-  return fit === "actual" ? 1 : Math.max(0.001, Math.round(Math.min(1, availableWidth / size.width, maxHeight / size.height) * 1000) / 1000);
+export function authoringStageScale(size, { fit = "fit", availableWidth = size.width, maxHeight = Infinity, allowUpscale = false } = {}) {
+  return fit === "actual" ? 1 : Math.max(0.001, Math.round(Math.min(allowUpscale ? Infinity : 1, availableWidth / size.width, maxHeight / size.height) * 1000) / 1000);
 }
 
 export function useAuthoringDestinationGeometry({ deviceLayout = "desktop", destination, placementId, canvasWidth } = {}) {

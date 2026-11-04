@@ -78,3 +78,15 @@ test("Fit never enlarges or distorts and Actual permits scrolling without shrink
   assert.equal(authoringStageScale({ width: 670, height: 418 }, { availableWidth: 335, maxHeight: 600 }), 0.5);
   assert.equal(authoringStageScale({ width: 670, height: 418 }, { fit: "actual", availableWidth: 335, maxHeight: 100 }), 1);
 });
+
+test("static preview Fit can enlarge to available width while Actual stays at dashboard size", () => {
+  const size = { width: 200, height: 900 };
+  assert.equal(authoringStageScale(size, { availableWidth: 1000, allowUpscale: true }), 5);
+  assert.equal(authoringStageScale(size, { availableWidth: 100, allowUpscale: true }), 0.5);
+  assert.equal(authoringStageScale(size, { fit: "actual", availableWidth: 1000, allowUpscale: true }), 1);
+  const html = renderToStaticMarkup(React.createElement(AuthoringFootprintFrame, {
+    layout: { width: 1, height: 2 }, kind: "preview", canvasWidth: 1000,
+  }));
+  assert.match(html, />Fit to preview area</);
+  assert.match(html, />Actual size on dashboard</);
+});

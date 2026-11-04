@@ -25,13 +25,15 @@ export default function AuthoringFootprintFrame({
     measure();
     return () => { observer?.disconnect(); window.removeEventListener("resize", measure); };
   }, [size.width]);
-  // The editor owns vertical scrolling; Fit only scales an over-wide panel.
-  const scale = authoringStageScale(size, { fit: mode, availableWidth });
+  // The editor owns vertical scrolling; Fit fills the available preview width.
+  const scale = authoringStageScale(size, { fit: mode, availableWidth, allowUpscale: true });
   return (
     <div className={`authoring-stage app-frame ${className}`} data-stage-width={size.width} data-stage-height={size.height} data-stage-scale={scale} data-stage-fit={mode}>
-      <div className="authoring-stage__toolbar" role="group" aria-label="Preview size">
-        <button type="button" className="secondary" aria-pressed={mode === "fit"} onClick={() => setFit("fit")}>Fit</button>
-        <button type="button" className="secondary" aria-pressed={mode === "actual"} onClick={() => setFit("actual")}>Actual</button>
+      <div className="authoring-stage__toolbar">
+        <div role="group" aria-label="Preview size">
+          <button type="button" className="secondary" aria-pressed={mode === "fit"} onClick={() => setFit("fit")}>Fit to preview area</button>
+          <button type="button" className="secondary" aria-pressed={mode === "actual"} onClick={() => setFit("actual")}>Actual size on dashboard</button>
+        </div>
       </div>
       <p className="authoring-stage__caption">{size.width} × {size.height} on the dashboard · {Math.round(scale * 100)}%</p>
       <div ref={viewport} className="authoring-stage__viewport" tabIndex={mode === "actual" ? 0 : undefined} aria-label={mode === "actual" ? "Actual-size panel; scroll to inspect" : undefined}>
