@@ -4,6 +4,7 @@ import { register } from "node:module";
 import { readFileSync } from "node:fs";
 import { categoryPresentationKey, seriesPresentationKey, axisSeriesDescriptors, chartLegendDescriptors, captureSeriesColors, spreadCategoryGradient } from "../src/charting/presentation/categorySeriesPresentation.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
+import { pointLabelKey } from "../src/charting/presentation/pointLabelSelection.js";
 
 import * as echarts from "echarts";
 
@@ -1642,6 +1643,37 @@ test("Audience tier and dashboard theme key changes produce fresh fake-lifecycle
   assert.equal(calls[2].textStyle.color, "#F1F2F3");
   assert.equal(calls[3].graphic[0].children[0].style.fontSize, 16);
   assert.equal(calls[3].graphic[0].$action, "replace");
+});
+
+test("explicit axis labels override automatic density limits", () => {
+  const marks = Array.from({ length: 16 }, (_, index) => ({ x: `Week ${index % 4}`, value: index + 1, measure: `series-${Math.floor(index / 4)}` }));
+  for (const typeId of ["line", "bar", "horizontalBar"]) {
+    const instance = chart(typeId, { presentation: { labels: { visible: true } } });
+    const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
+    assert.equal(model.option.series.every(series => series.label.show), true);
+    instance.presentation.labels.visible = false;
+    assert.equal(buildRenderModel({ chart: instance, prepared: ready(marks) }).option.series.every(series => !series.label.show), true);
+  }
+});
+
+test("selected point labels follow point identity through reordering and respect the master switch", () => {
+  const marks = [{ x: "A", value: 10, measure: "one" }, { x: "B", value: 20, measure: "one" }, { x: "A", value: 30, measure: "two" }];
+  const selected = pointLabelKey(marks[1]);
+  for (const typeId of ["line", "bar", "horizontalBar"]) {
+    const instance = chart(typeId, { presentation: { labels: { visible: true, pointSelection: { mode: "only", keys: [selected] } },
+      axes: { x: { categoryOrder: [categoryPresentationKey("B"), categoryPresentationKey("A")] } } } });
+    const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
+    assert.deepEqual(model.option.series[0].data.map(point => [point.value, point.label.show]), [[20, true], [10, false]]);
+    assert.equal(model.option.series[1].data[0], null);
+    assert.equal(model.option.series[1].data[1].label.show, false);
+    instance.presentation.labels.visible = false;
+    const off = buildRenderModel({ chart: instance, prepared: ready(marks) });
+    assert.equal(off.option.series.flatMap(series => series.data).filter(Boolean).every(point => !point.label.show), true);
+  }
+  const temporal = [{ x: "2027-01-02", value: 2, measure: "one" }, { x: "2027-01-01", value: 1, measure: "one" }];
+  const instance = chart("line", { presentation: { labels: { visible: true, pointSelection: { mode: "only", keys: [pointLabelKey(temporal[0])] } } } });
+  const model = buildRenderModel({ chart: instance, prepared: ready(temporal, { axisInterpretation: "temporal" }) });
+  assert.deepEqual(model.option.series[0].data.map(point => [point.value, point.label.show]), [[["2027-01-01", 1], false], [["2027-01-02", 2], true]]);
 });
 
 test("axis series honor validated label visibility, position, and formatting", () => {

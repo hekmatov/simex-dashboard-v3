@@ -1685,6 +1685,28 @@ test("background transparency emits the validator-approved object", () => {
   }));
 });
 
+test("point-label controls preserve selections through other label edits and expose the complete matrix", () => {
+  const selection = { mode: "only", keys: ["dormant"] };
+  const original = { visible: true, pointSelection: selection };
+  const changed = updateStructuredFieldValue("labels", original, ["fontSize"], 18);
+  assert.deepEqual(changed.pointSelection, selection);
+  assert.notEqual(changed.pointSelection, selection);
+  assert.deepEqual(updateStructuredFieldValue("labels", changed, ["pointSelection"], undefined), { visible: true, fontSize: 18 });
+  assert.deepEqual(updateStructuredFieldValue("labels", changed, ["visible"], false).pointSelection, selection);
+  const rows = [{ wave: "Week 1", a: 10, b: 20 }, { wave: "Week 2", a: 30, b: 40 }];
+  const chart = createChartDraft("line", { id: "label-form", title: "Label form", sourceId: "data", roles: {
+    measurements: [{ field: "a" }, { field: "b" }], observation: { field: "wave" },
+  } });
+  const profile = profileDataset(rows);
+  const ready = prepareChartData({ chart, rows, datasetProfile: profile });
+  const prepared = { ...ready, meta: { ...ready.meta, formPreparationKey: buildFormPreparationKey({ chart, profile }) } };
+  const labels = buildEditorFormModel({ chart, profile, prepared }).sections.flatMap(section => section.fields).find(field => field.id === "labels");
+  assert.ok(labels.controls.includes("pointSelection"));
+  assert.equal(labels.pointMatrix.rows.length, 2);
+  assert.deepEqual(labels.pointMatrix.columns.map(column => column.label), ["Week 1", "Week 2"]);
+  assert.equal(labels.pointMatrix.rows.flatMap(row => row.points).filter(Boolean).length, 4);
+});
+
 test("bar gradient selection updates category colors atomically from palette and per-bar controls", () => {
   const rows = [{ category: "A", value: 90 }, { category: "B", value: 10 }, { category: "C", value: 50 }];
   const chart = createChartDraft("bar", {

@@ -79,6 +79,21 @@
 .chart-color-heading-help > .control-tooltip__reason { left: 0; transform: none; }
 .chart-color-heading-help:focus-within > .control-tooltip__reason { opacity: 1; visibility: visible; }
 
+.point-label-selector { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; grid-column: 1 / -1; }
+.point-label-dialog-backdrop { z-index: 1400; }
+.point-label-dialog { inline-size: min(1120px, 100%); }
+.point-label-dialog .dashboard-dialog__body { min-block-size: 0; overflow: auto; }
+.point-label-actions { display: flex; align-items: center; gap: 8px; margin-block: 12px; }
+.point-label-grid-scroll { max-block-size: 55dvh; overflow: auto; overscroll-behavior: contain; }
+.point-label-grid { border-collapse: separate; border-spacing: 0; min-inline-size: 100%; }
+.point-label-grid th, .point-label-grid td { border: 1px solid var(--simex-border-subtle); padding: 10px; text-align: center; background: var(--simex-surface-panel); color: var(--simex-text-strong); }
+.point-label-grid th { background: var(--simex-surface-panel-alt); }
+.point-label-grid thead th { position: sticky; top: 0; z-index: 2; }
+.point-label-grid th:first-child { position: sticky; left: 0; z-index: 1; text-align: start; min-inline-size: 180px; max-inline-size: 300px; overflow-wrap: anywhere; }
+.point-label-grid thead th:first-child { z-index: 3; }
+.point-label-grid label { display: inline-flex; align-items: center; gap: 8px; }
+.point-label-dialog input[type="checkbox"] { appearance: auto; inline-size: 16px; block-size: 16px; min-inline-size: 16px; min-block-size: 16px; margin: 0; accent-color: var(--simex-accent); }
+
 .dashboard-dialog__header,
 .dashboard-dialog__progress,
 .dashboard-dialog__footer {

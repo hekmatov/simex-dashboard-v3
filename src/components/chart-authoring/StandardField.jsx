@@ -1,4 +1,6 @@
 import React from "react";
+import PointLabelSelector from "./PointLabelSelector.jsx";
+import { normalizePointLabelSelection } from "../../charting/presentation/pointLabelSelection.js";
 import { IconControl, SimExIcon } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
 const AXIS_PROPERTIES = new Set(["title", "name", "unit", "min", "max", "grid", "xTitle", "yTitle", "titlePosition", "titleOrientation", "titleFontSize", "labelFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "tickFrequency"]);
@@ -346,7 +348,7 @@ function structuredControls(control, value, onChange, field = {}) {
     ) : null, controls.has("position") ? /* @__PURE__ */ React.createElement("label", null, "Label position", /* @__PURE__ */ React.createElement("select", {
       value: current.position ?? "",
       onChange: (event) => emit(["position"], event.target.value)
-    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? labelFormatControl(current.format, (nextValue) => emit(["format"], nextValue)) : null, controls.has("unit") ? textControl("Label unit", current.unit, (nextValue) => emit(["unit"], nextValue)) : null, controls.has("fontSize") ? boundedNumericControl("Label font size", current.fontSize ?? 12, 8, 32, (nextValue) => emit(["fontSize"], nextValue)) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null);
+    }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? labelFormatControl(current.format, (nextValue) => emit(["format"], nextValue)) : null, controls.has("unit") ? textControl("Label unit", current.unit, (nextValue) => emit(["unit"], nextValue)) : null, controls.has("fontSize") ? boundedNumericControl("Label font size", current.fontSize ?? 12, 8, 32, (nextValue) => emit(["fontSize"], nextValue)) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null, controls.has("pointSelection") ? React.createElement(PointLabelSelector, { matrix: field.pointMatrix, value: current.pointSelection, onChange: next => emit(["pointSelection"], next) }) : null);
   }
   if (control === "axes") {
     return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-axis-groups" }, xAxisControls(
@@ -666,7 +668,7 @@ function updateStructuredFieldValue(control, current, path, value) {
 function assertStructuredPath(control, path) {
   const [section, property] = path;
   const valid = {
-    labels: path.length === 1 && ["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize"].includes(section),
+    labels: path.length === 1 && ["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize", "pointSelection"].includes(section),
     axes: path.length === 2 && ((["primary", "secondary"].includes(section) && AXIS_PROPERTIES.has(property)) || (section === "x" && X_AXIS_PROPERTIES.has(property))),
     targets: path.length === 1 && ["ranges", "direction", "readoutLabel", "showReadoutLabel", "unit"].includes(section),
     map: path.length === 1 && ["scale", "geoSource", "joinField"].includes(section),
@@ -676,6 +678,7 @@ function assertStructuredPath(control, path) {
 }
 function normalizeStructuredInput(control, path, value) {
   const property = path.at(-1);
+  if (control === "labels" && property === "pointSelection") return normalizePointLabelSelection(value);
   if (
     (control === "labels" && property === "visible")
     || (control === "axes" && ["grid", "labelWrap"].includes(property))
@@ -730,6 +733,7 @@ function sanitizeStructuredValue(control, value) {
   if (control === "labels") {
     return compact({
       visible: typeof current.visible === "boolean" ? current.visible : void 0,
+      pointSelection: normalizePointLabelSelection(current.pointSelection),
       position: nonemptyString(current.position),
       format: nonemptyString(current.format),
       unit: nonemptyString(current.unit),

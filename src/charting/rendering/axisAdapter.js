@@ -1,4 +1,5 @@
 import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+import { pointLabelKey, pointLabelMatcher } from "../presentation/pointLabelSelection.js";
 import {
   buildEChartsDataZoom,
   rangeSelectorVisible,
@@ -40,6 +41,8 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const activeTime = prepared.meta?.activeTime ?? null;
   const seriesStyle = chart.presentation?.series;
   const referenceLine = chart.presentation?.referenceLine;
+  const pointLabels = chart.presentation?.labels?.pointSelection === undefined ? undefined
+    : chart.presentation.labels.visible === true ? pointLabelMatcher(chart.presentation.labels.pointSelection) : () => false;
   const categorical = !["temporal", "number"].includes(prepared.meta?.axisInterpretation);
   const sourceCategories = categoryDescriptors(prepared.marks);
   const categoryByKey = new Map(sourceCategories.map(entry => [entry.key, entry]));
@@ -131,8 +134,9 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
               : [fixedTemporalTicks ? temporalAxisValue(mark.x) : mark.x, mark.value],
             activeTime,
             type,
+            pointLabels,
           ))
-      : categoryValues(group.marks, categoryIndexes, categories.length, activeTime, type);
+      : categoryValues(group.marks, categoryIndexes, categories.length, activeTime, type, pointLabels);
     if (categorical && type === "bar" && grouped.length === 1 && seriesStyle?.categoryOverrides) {
       values = values.map((point, position) => {
         const color = seriesStyle.categoryOverrides[categoryKeys[position]]?.color;
@@ -162,7 +166,6 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
         chart,
         horizontal,
         type,
-        prepared.marks.length,
       ),
       emphasis: { focus: "series" },
       ...(color ? { itemStyle: { color } } : {}),
@@ -254,15 +257,10 @@ function referenceLineOption(referenceLine) {
   };
 }
 
-function axisLabelOption(chart, horizontal, seriesType, totalMarkCount) {
+function axisLabelOption(chart, horizontal, seriesType) {
   const labels = chart.presentation?.labels;
   if (!labels) return undefined;
-  const densityLimit = seriesType === "line"
-    ? 14
-    : horizontal
-      ? 24
-      : 18;
-  const show = labels.visible === true && totalMarkCount <= densityLimit;
+  const show = labels.visible === true;
   const format = labelFormatter(labels);
   return {
     show,
@@ -393,18 +391,27 @@ function ariaOption(chart) {
   };
 }
 
-function categoryValues(marks, indexes, count, activeTime, type) {
+function categoryValues(marks, indexes, count, activeTime, type, pointLabels) {
   const values = Array.from({ length: count }, () => null);
   for (const mark of marks) {
     const index = indexes.get(mark.categoryKey ?? categoryPresentationKey(mark.x));
     if (index !== undefined) {
-      values[index] = axisDataValue(mark, mark.value, activeTime, type);
+      values[index] = axisDataValue(mark, mark.value, activeTime, type, pointLabels);
     }
   }
   return values;
 }
 
-function axisDataValue(mark, value, activeTime, type) {
+function axisDataValue(mark, value, activeTime, type, pointLabels) {
+  const result = activeAxisDataValue(mark, value, activeTime, type);
+  if (!pointLabels || mark.value == null) return result;
+  return {
+    ...(typeof result === "object" && !Array.isArray(result) ? result : { value: result }),
+    label: { ...result?.label, show: pointLabels(pointLabelKey(mark)) },
+  };
+}
+
+function activeAxisDataValue(mark, value, activeTime, type) {
   if (!activeTime || type === "line" || !isActiveObservation(mark)) return value;
   const provenance = provenanceSummary(mark.temporalProvenance);
   return {

@@ -94,6 +94,77 @@ test("V3 #20 #28 reported multi-series chart preserves legend choices data and c
   expect(records.filter(entry => entry.label === "Shared alias")).toHaveLength(1);
 });
 
+test("explicit point labels support matrix bulk selection, cancel and reload", async ({ page }) => {
+  test.setTimeout(120_000);
+  const editor = await edit(page, support.id);
+  await editor.getByLabel("Show labels", { exact: true }).check();
+  const labels = () => renderedPointLabels(page, editor);
+  await expect.poll(async () => (await labels()).length).toBe(16);
+  const trigger = editor.getByRole("button", { name: "Choose labeled points", exact: true });
+  await trigger.click();
+  let popup = page.getByRole("dialog", { name: "Choose labeled points", exact: true });
+  const pointChecks = () => popup.locator("tbody td input[type=checkbox]");
+  await expect(pointChecks()).toHaveCount(16);
+  await expect(popup.locator("tbody td input:checked")).toHaveCount(16);
+  await popup.getByRole("button", { name: "None", exact: true }).click();
+  await expect(popup.locator("tbody td input:checked")).toHaveCount(0);
+  await popup.getByRole("checkbox", { name: "Select series: hospitality_and_culture_closure_support_pct", exact: true }).check();
+  await popup.getByRole("checkbox", { name: "Select column: Week 1", exact: true }).check();
+  await expect(popup.locator("tbody td input:checked")).toHaveCount(7);
+  await expect(popup.getByRole("checkbox", { name: "Select column: Week 3", exact: true })).toHaveAttribute("aria-checked", "mixed");
+  await popup.getByRole("checkbox", { name: "hospitality_and_culture_closure_support_pct, Week 3: 78", exact: true }).uncheck();
+  await expect(popup.locator("tbody td input:checked")).toHaveCount(6);
+  await popup.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(trigger).toBeFocused();
+  expect((await labels()).length).toBe(16);
+  await trigger.click();
+  await popup.getByRole("button", { name: "None", exact: true }).click();
+  await popup.getByRole("checkbox", { name: "Select series: hospitality_and_culture_closure_support_pct", exact: true }).check();
+  await popup.getByRole("checkbox", { name: "Select column: Week 1", exact: true }).check();
+  await popup.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect.poll(async () => (await labels()).length).toBe(7);
+  const before = await labels();
+  await editor.getByLabel("Show labels", { exact: true }).uncheck();
+  await expect.poll(async () => (await labels()).length).toBe(0);
+  await editor.getByLabel("Show labels", { exact: true }).check();
+  await expect.poll(async () => (await labels()).length).toBe(7);
+  await trigger.click();
+  await popup.getByRole("button", { name: "All", exact: true }).click();
+  await expect(popup.locator("tbody td input:checked")).toHaveCount(16);
+  await popup.getByRole("button", { name: "None", exact: true }).click();
+  await popup.getByRole("button", { name: "Cancel", exact: true }).press("Escape");
+  await expect(popup).toHaveCount(0);
+  await expect(editor).toBeVisible();
+  await expect(trigger).toBeFocused();
+  expect((await labels()).length).toBe(7);
+  await editor.getByRole("button", { name: "Move hospitality_and_culture_closure_support_pct up", exact: true }).click();
+  await editor.getByRole("button", { name: "Move Week 3 up", exact: true }).click();
+  expect(await labels()).toEqual(before);
+  await save(editor);
+  const saved = await savedChart(page, support.id);
+  expect(saved.presentation.labels.pointSelection.keys).toHaveLength(7);
+  await page.reload();
+  await openDashboardPage(page, "presentation-proof");
+  const reopened = await edit(page, support.id);
+  expect(await renderedPointLabels(page, reopened)).toEqual(before);
+  await reopened.getByRole("button", { name: "Choose labeled points", exact: true }).click();
+  await expect(popup.locator("tbody td input:checked")).toHaveCount(7);
+  await popup.getByRole("button", { name: "None", exact: true }).click();
+  await popup.getByRole("button", { name: "Apply", exact: true }).click();
+  expect((await renderedPointLabels(page, reopened)).length).toBe(0);
+});
+
+async function renderedPointLabels(page, editor) {
+  return editor.locator(".chart-echarts-host").first().evaluate(async node => {
+    const url = performance.getEntriesByType("resource").find(r => /\/deps\/echarts\.js\?/.test(r.name))?.name;
+    const { getInstanceByDom } = await import(url);
+    const option = getInstanceByDom(node).getOption();
+    const x = option.xAxis[0].data;
+    return option.series.flatMap(series => series.data.flatMap((point, index) => point != null && (point.label?.show ?? series.label?.show)
+      ? [JSON.stringify([series.id, x[index], point.value ?? point])] : [])).sort();
+  });
+}
+
 async function edit(page, id) {
   const modes = page.getByLabel("Dashboard mode");
   await modes.getByRole("button", { name: "Build", exact: true }).click();

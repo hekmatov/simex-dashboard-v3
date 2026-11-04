@@ -12,6 +12,7 @@ import {
 import { validateCardPresentation } from "../presentation/cardPresentationContract.js";
 import { isNormalizedImageCustomColor } from "../presentation/imagePresentation.js";
 import { normalizePresentationOrder, normalizeKeyedPresentation } from "../presentation/categorySeriesPresentation.js";
+import { normalizePointLabelSelection } from "../presentation/pointLabelSelection.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
   CHART_COMPARISON_MATCHING_POLICIES,
@@ -503,7 +504,12 @@ function validateTable(table, schema) {
 }
 
 function validateLabels(labels, schema) {
-  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"]));
+  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format", "unit", "fontSize", "valueMode", "valueFontSize", "labelFontSize", "labelWrap", "pointSelection"]));
+  const pointSelection = labels === undefined ? { present: false } : ownEnumerableDataValue(labels, "pointSelection", "Chart labels");
+  if (pointSelection.present) {
+    if (schema.renderer !== "axis") throw new Error("Point label selection requires an axis chart.");
+    normalizePointLabelSelection(pointSelection.value);
+  }
   if (labels?.visible !== undefined && typeof labels.visible !== "boolean") throw new Error("Chart presentation labels visible must be boolean.");
   for (const field of ["position", "format"]) if (labels?.[field] !== undefined && typeof labels[field] !== "string") throw new Error(`Chart presentation labels ${field} must be a string.`);
   const axis = schema.dataFamily === "axis";
@@ -938,7 +944,18 @@ export function normalizeChartInstance(chart) {
       if (order.present) normalizePresentationOrder(order.value, "Category order");
     }
   }
+  const rawLabels = ownEnumerableDataValue(presentation, "labels", "Chart presentation").value;
+  let pointSelection;
+  if (rawLabels !== undefined) {
+    strictRecordDescriptors(rawLabels, "Chart labels");
+    const selection = ownEnumerableDataValue(rawLabels, "pointSelection", "Chart labels");
+    if (selection.present) pointSelection = normalizePointLabelSelection(selection.value);
+  }
   const normalized = structuredClone(chart);
+  if (rawLabels !== undefined && Object.hasOwn(rawLabels, "pointSelection")) {
+    if (pointSelection === undefined) delete normalized.presentation.labels.pointSelection;
+    else normalized.presentation.labels.pointSelection = pointSelection;
+  }
   normalizeAxisTitles(normalized.presentation?.axes);
   if (collectionProperty.present) {
     normalized.presentation.collection = normalizedCollection;

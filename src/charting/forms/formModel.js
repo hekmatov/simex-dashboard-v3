@@ -10,6 +10,7 @@ import {
   isDeltaCardType,
 } from "../presentation/cardPresentationContract.js";
 import { chartDescriptionVisible } from "../presentation/chartCitation.js";
+import { buildPointLabelMatrix } from "../presentation/pointLabelSelection.js";
 import { categoryDescriptors, chartLegendDescriptors, resolveOrderedKeys } from "../presentation/categorySeriesPresentation.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
@@ -629,7 +630,7 @@ function seriesAppearanceField(fieldId, series, referenceLine) {
   };
 }
 
-function labelsFields({ chart, schema }) {
+function labelsFields({ chart, schema, prepared }) {
   const controls = labelControls(schema);
   if (controls.length === 0) return [];
   return [{
@@ -639,6 +640,7 @@ function labelsFields({ chart, schema }) {
     path: ["presentation", "labels"],
     value: chart.presentation?.labels ?? {},
     controls,
+    ...(schema.renderer === "axis" ? { pointMatrix: buildPointLabelMatrix({ chart, prepared }) } : {}),
     help: schema.dataFamily === "composition"
       ? "Show or hide category names on slices, and optionally add either each value or percentage."
       : schema.dataFamily === "relationship"
@@ -650,7 +652,7 @@ function labelsFields({ chart, schema }) {
 }
 
 function labelControls(schema) {
-  if (schema.dataFamily === "axis") return ["visible", "position", "format", "unit", "fontSize"];
+  if (schema.dataFamily === "axis") return ["visible", "position", "format", "unit", "fontSize", "pointSelection"];
   if (schema.dataFamily === "composition") return ["visible", "valueMode", "valueFontSize", "labelFontSize", "labelWrap"];
   if (schema.dataFamily === "relationship") return ["visible", "position"];
   if (schema.typeId === "heatmap") return ["visible"];

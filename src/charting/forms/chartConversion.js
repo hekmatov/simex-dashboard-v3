@@ -247,6 +247,9 @@ function removedSettings(chart, target, preserved, effectiveRoles = preserved) {
     }
   }
   removed.push(...removedSeriesSettings(presentation.series, target));
+  if (presentation.labels?.pointSelection !== undefined && target.renderer !== "axis") {
+    removed.push(setting("presentation.labels.pointSelection", "Point label selection requires an axis chart."));
+  }
   if (presentation.axes?.x?.categoryOrder !== undefined && !categoricalAxis(target, effectiveRoles)) {
     removed.push(setting("presentation.axes.x.categoryOrder", "Category ordering requires a categorical observation axis."));
   }
@@ -375,6 +378,10 @@ function targetPresentation(sourceValue, target, roles) {
   if (presentation.legend?.entries !== undefined && !["axis", "composition", "relationship"].includes(target.renderer)) {
     delete presentation.legend.entries;
     if (!Object.keys(presentation.legend).length) delete presentation.legend;
+  }
+  if (presentation.labels?.pointSelection !== undefined && target.renderer !== "axis") {
+    delete presentation.labels.pointSelection;
+    if (!Object.keys(presentation.labels).length) delete presentation.labels;
   }
   return presentation;
 }

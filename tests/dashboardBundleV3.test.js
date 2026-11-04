@@ -22,7 +22,28 @@ import {
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { categoryPresentationKey, seriesPresentationKey } from "../src/charting/presentation/categorySeriesPresentation.js";
-import { applyChartConversion } from "../src/charting/forms/chartConversion.js";
+import { applyChartConversion, planChartConversion } from "../src/charting/forms/chartConversion.js";
+import { pointLabelKey } from "../src/charting/presentation/pointLabelSelection.js";
+
+test("point-label selections survive package and axis conversion and warn before incompatible loss", () => {
+  for (const selection of [{ mode: "only", keys: [] }, { mode: "allExcept", keys: [pointLabelKey({ measure: "cases", x: "2027-05-01", axis: "primary" })] }]) {
+    const dashboard = version3Dashboard();
+    const instance = createChartDraft("line", { id: "point-selection", title: "Point labels", sourceId: "uploaded-cases",
+      roles: { measurements: [{ field: "cases", axis: "primary" }], observation: { field: "reportedAt", interpretation: "category" } },
+      presentation: { labels: { visible: true, pointSelection: selection } },
+    });
+    dashboard.pages[0].sections[0].panels.push(instance);
+    const restored = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(dashboard))).pages[0].sections[0].panels.at(-1);
+    assert.deepEqual(restored.presentation.labels.pointSelection, selection);
+    assert.deepEqual(applyChartConversion(instance, "bar").presentation.labels.pointSelection, selection);
+    const plan = planChartConversion(instance, "pie");
+    assert.ok(plan.removedSettings.some(setting => setting.path === "presentation.labels.pointSelection"));
+    const pie = applyChartConversion(instance, "pie", { category: { field: "reportedAt", interpretation: "category" }, value: { field: "cases" } });
+    assert.equal(pie.typeId, "pie");
+    assert.equal(pie.presentation.labels.pointSelection, undefined);
+    assert.deepEqual(instance.presentation.labels.pointSelection, selection);
+  }
+});
 
 test("V3 #20 #28 presentation overrides survive package round-trip", () => {
   const dashboard = version3Dashboard();
