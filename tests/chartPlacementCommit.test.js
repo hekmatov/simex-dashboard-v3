@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { buildCsvContentDraft } from "../src/content-library/sourceEntrySchema.js";
+import { buildGeoJsonContentDraft } from "../src/content-library/contentDraftTransaction.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { validateGeoJson } from "../src/lib/geoJsonValidation.js";
 import { integrateCreatedChart } from "../src/charting/config/dashboardBundleV3.js";
 
 function dashboard() {
@@ -91,4 +95,31 @@ test("created chart append is default and a missing reviewed anchor fails closed
 
 function ids(value) {
   return value.pages[0].sections[0].panels.map((panel) => (panel.chart ?? panel).id);
+}
+
+
+for (const owner of ['existing', 'csv', 'geojson']) {
+  test(`${owner} chart creation commits at section start without changing existing placements or sources`, () => {
+    for (const empty of [false, true]) {
+      const original = dashboard();
+      if (empty) original.pages[0].sections[0].panels = [];
+      const untouched = structuredClone(original);
+      const target = { pageId: 'page-a', sectionId: 'section-a', anchorId: null, placement: { relation: 'start' } };
+      const finalized = { chart: chart('chart-first') };
+      let candidate;
+      if (owner === 'existing') candidate = integrateCreatedChart(original, finalized, target);
+      else {
+        const input = owner === 'csv' ? buildCsvContentDraft({ owner: 'chart', sourceId: 'csv-first', displayName: 'First CSV',
+          source: { kind: 'dataset', type: 'uploadedCsv', fileName: 'first.csv', csvText: 'value\n1\n' }, profile: profileDataset([{ value: 1 }]), finalized, destination: target,
+        }) : buildGeoJsonContentDraft({ owner: 'chart', sourceId: 'geo-first', fileName: 'first.geojson', displayName: 'First GeoJSON',
+          geoJson: { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } }] }, validation: validateGeoJson({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } }] }, { includeDiagnostics: true }), finalized, destination: target,
+        });
+        candidate = input.buildCandidate({ dashboard: original }).dashboard;
+        assert.equal(Object.keys(candidate.dataSources).length, Object.keys(original.dataSources).length + 1);
+      }
+      assert.deepEqual(ids(candidate), ['chart-first', ...ids(original)]);
+      assert.deepEqual(candidate.pages[0].sections[0].panels.slice(1), original.pages[0].sections[0].panels);
+      assert.deepEqual(original, untouched);
+    }
+  });
 }

@@ -49,6 +49,7 @@ export default function DataSourceStep({
           dataSources: dashboard.dataSources ?? dataSources,
         },
         loadedData,
+        hideLabel: true,
         selectedSourceId: selectedSourceKind === "existing" ? selectedSourceId : "",
         allowUpload: allowSourceCreation,
         uploadError,
@@ -59,7 +60,7 @@ export default function DataSourceStep({
         "section",
         { className: "wizard-choice-card" },
         React.createElement("h4", null, "Copy from another chart"),
-        React.createElement("label", null, "Chart to copy", React.createElement("select", {
+        React.createElement("label", null, React.createElement("span", { className: "visually-hidden" }, "Chart to copy"), React.createElement("select", {
           defaultValue: "",
           onChange: (event) => event.target.value && onCopyChart(event.target.value),
         }, React.createElement("option", { value: "" }, "Choose a chart"), existingCharts.map((chart) => React.createElement("option", { key: chart.id, value: chart.id }, `${chart.title || chart.id} (${chart.typeId})`)))),
@@ -158,7 +159,6 @@ export default function DataSourceStep({
             React.createElement(
               "div",
               null,
-              React.createElement("h4", null, "Detected columns"),
               React.createElement(
                 "p",
                 null,

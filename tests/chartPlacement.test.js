@@ -266,3 +266,17 @@ function dashboardFixture() {
     ],
   };
 }
+
+
+test("start-of-section placement projects first without a chart anchor, including empty sections", () => {
+  for (const empty of [false, true]) {
+    const dashboard = dashboardFixture();
+    if (empty) dashboard.pages[0].sections[0].panels = [];
+    const before = structuredClone(dashboard);
+    const proof = planIdentityPlacement({ destination: destinationFor(dashboard), chartId: 'chart-new', position: 'start', presets: presetFixture() }, dashboard);
+    assert.equal(proof.status, 'valid');
+    assert.equal(proof.projectedChartIds[0], 'chart-new');
+    assert.match(proof.orderedText, /Placement: start of section/);
+    assert.deepEqual(dashboard, before);
+  }
+});

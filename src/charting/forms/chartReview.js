@@ -78,7 +78,7 @@ export function revalidateChartCreate(state, currentDashboard) {
   }
   if (!destination.page || !destination.section) {
     errors.push(error("DESTINATION_MISSING", "destination", "The reviewed destination no longer exists."));
-  } else if (!destination.anchor) {
+  } else if (state.destination?.placement?.relation !== "start" && !destination.anchor) {
     errors.push(error("ANCHOR_MISSING", "destination", "The reviewed placement anchor no longer exists."));
   }
   if (currentDashboard?.permissions?.revision !== state.expectedPermissionRevision) {

@@ -52,7 +52,8 @@ function integrateChartCandidate(dashboard, finalized, destination) {
   if (!section) throw new Error("The selected chart destination no longer exists.");
   const relation = destination.placement?.relation ?? destination.relation ?? "append";
   const chart = structuredClone(finalized.chart);
-  if (relation === "append") section.panels.push(chart);
+  if (relation === "start") section.panels.unshift(chart);
+  else if (relation === "append") section.panels.push(chart);
   else if (relation === "before" || relation === "after") {
     const anchorId = destination.placement?.anchorId ?? destination.anchorId;
     const anchorIndex = section.panels.findIndex((panel) => (panel.chart ?? panel).id === anchorId);

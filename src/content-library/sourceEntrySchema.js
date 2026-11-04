@@ -261,7 +261,9 @@ function integrateChartWithoutDuplicateSource(dashboard, finalized, destination)
   if (!section) throw new Error("The selected chart destination no longer exists.");
   const relation = destination.placement?.relation ?? destination.relation ?? "append";
   const chart = structuredClone(finalized.chart);
-  if (relation === "append") {
+  if (relation === "start") {
+    section.panels.unshift(chart);
+  } else if (relation === "append") {
     section.panels.push(chart);
   } else if (relation === "before" || relation === "after") {
     const anchorId = destination.placement?.anchorId ?? destination.anchorId;

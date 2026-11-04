@@ -10,6 +10,7 @@ export default function DataSourcePicker({
   loadedData = {},
   selectedSourceId = "",
   disabled = false,
+  hideLabel = false,
   allowUpload = true,
   uploadError = "",
   onSelect = noop,
@@ -34,6 +35,7 @@ export default function DataSourcePicker({
       React.createElement("h4", null, "Use an existing CSV"),
       React.createElement(AccessibleListboxSelect, {
         label: "Managed data source",
+        hideLabel,
         value: options.some(({ sourceId }) => sourceId === selectedSourceId) ? selectedSourceId : "",
         options,
         getLabel: ({ label }) => label,

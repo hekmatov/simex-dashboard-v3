@@ -4,7 +4,7 @@ import {
   resolveChartFootprint,
 } from "../../components/chartPanelLayout.js";
 
-const POSITIONS = new Set(["append", "before", "after"]);
+const POSITIONS = new Set(["start", "append", "before", "after"]);
 
 export function planIdentityPlacement({
   destination,
@@ -28,7 +28,7 @@ export function planIdentityPlacement({
   if (!POSITIONS.has(requestedPosition)) {
     fatalErrors.push(issue(
       "PLACEMENT_POSITION_INVALID",
-      'Placement must be "append", "before", or "after".',
+      'Placement must be "start", "append", "before", or "after".',
     ));
   }
   if (!validIdentity(chartId)) {
@@ -78,7 +78,9 @@ export function planIdentityPlacement({
       draft: true,
     };
     projectedEntries = [...savedEntries];
-    if (requestedPosition === "append") {
+    if (requestedPosition === "start") {
+      projectedEntries.unshift(draftEntry);
+    } else if (requestedPosition === "append") {
       projectedEntries.push(draftEntry);
     } else {
       const anchorIndex = projectedEntries.findIndex(({ chart }) => chart.id === anchorChartId);
@@ -270,7 +272,9 @@ function placementText({
   savedEntries,
 }) {
   const anchorLabel = anchor?.chart?.title ?? anchorChartId;
-  const relation = position === "append"
+  const relation = position === "start"
+    ? "start of section"
+    : position === "append"
     ? "append"
     : `${position} ${anchorLabel ?? "missing anchor"} (${String(anchorChartId)})`;
   const width = presetResult.width

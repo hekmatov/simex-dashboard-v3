@@ -280,6 +280,38 @@ test("destination map chooses section and before-after anchors without changing 
   expect(savedPanels.map(p => p.chart ?? p).find(c => c.id === priorities.id)).toEqual(priorities);
 });
 
+test("section start placement and compact source captions retain data and accessible dropdowns", async ({ page }) => {
+  test.setTimeout(90_000);
+  const panel = page.locator(`[data-canonical-panel-id="${priorities.id}"]`);
+  const placementId = await panel.getAttribute('data-canonical-placement-id');
+  const editor = await edit(page, priorities.id);
+  const flow = chartAuthoringWorkflow(editor, { mode: 'edit' });
+  await flow.goToDestination();
+  const source = editor.locator('.chart-wizard-data-source');
+  await expect(source.getByRole('combobox', { name: /^Managed data source/ })).toBeVisible();
+  await expect(source.locator('.accessible-listbox-label')).toHaveClass(/visually-hidden/);
+  await expect(source.locator('.accessible-listbox-label')).toHaveCSS('position', 'absolute');
+  const copy = source.getByRole('combobox', { name: 'Chart to copy', exact: true });
+  await expect(copy).toBeVisible();
+  await expect(copy.locator('option')).toHaveCount(reported.charts.length);
+  await expect(source.locator('label > span.visually-hidden').filter({ hasText: 'Chart to copy' })).toHaveText('Chart to copy');
+  await expect(source.getByRole('heading', { name: 'Detected columns', exact: true })).toHaveCount(0);
+  await expect(source.locator('.wizard-source-profile table')).toBeVisible();
+  await expect(flow.destinationMap.getByRole('radio')).toHaveCount(4);
+  await flow.destinationMap.getByRole('radio', { name: 'Start of section', exact: true }).check();
+  await expect(flow.destinationNode('section', 'reported')).toHaveAttribute('aria-selected', 'true');
+  await flow.goToConfigure();
+  await flow.goToDestination();
+  await expect(flow.destinationMap.getByRole('radio', { name: 'Start of section', exact: true })).toBeChecked();
+  await save(editor);
+  await page.reload();
+  await openDashboardPage(page, 'presentation-proof');
+  expect(await panel.getAttribute('data-canonical-placement-id')).toBe(placementId);
+  const savedPanels = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).pages.find(p => p.id === 'presentation-proof').sections.find(s => s.id === 'reported').panels, STORAGE);
+  expect(savedPanels.map(p => (p.chart ?? p).id)).toEqual([priorities.id, ...reported.charts.filter(c => c.id !== priorities.id).map(c => c.id)]);
+  expect(savedPanels.map(p => p.chart ?? p).find(c => c.id === priorities.id)).toEqual(priorities);
+});
+
 test("Source and Destination combines panels and Configure size survives edit save", async ({ page }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1806, height: 1244 });

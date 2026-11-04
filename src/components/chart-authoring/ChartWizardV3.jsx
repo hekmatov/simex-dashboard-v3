@@ -291,7 +291,8 @@ export function buildChartEditPlacementMove({ dashboard, placementId, source, de
   let index = Number.isInteger(destination.targetIndex)
     ? destination.targetIndex
     : panels.length;
-  if (!Number.isInteger(destination.targetIndex) && relation !== "append") {
+  if (!Number.isInteger(destination.targetIndex) && relation === "start") index = 0;
+  else if (!Number.isInteger(destination.targetIndex) && relation !== "append") {
     const anchorIndex = panels.findIndex((panel) => (
       (panel.chart ?? panel).id === destination.anchorId
     ));

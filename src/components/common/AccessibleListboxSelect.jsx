@@ -4,6 +4,7 @@ import ControlTooltip from "./ControlTooltip.jsx";
 export default function AccessibleListboxSelect({
   id = "",
   label = "",
+  hideLabel = false,
   value = "",
   options = [],
   getLabel = defaultOptionLabel,
@@ -115,7 +116,7 @@ export default function AccessibleListboxSelect({
       className="accessible-listbox-select"
       style={{ "--accessible-listbox-width": fixedWidth }}
     >
-      <label id={labelId} htmlFor={triggerId} className="accessible-listbox-label">
+      <label id={labelId} htmlFor={triggerId} className={`accessible-listbox-label${hideLabel ? " visually-hidden" : ""}`}>
         {normalizedText(label)}
       </label>
       <ControlTooltip

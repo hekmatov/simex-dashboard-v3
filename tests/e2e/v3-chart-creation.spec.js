@@ -29,6 +29,7 @@ test("V3 #32 destination upload and failed persistence retry share saved structu
   const { chartAuthoringWorkflow } = await import("./support/chart-authoring-workflow.js");
   const flow = chartAuthoringWorkflow(page.getByRole("dialog", { name: "Add new chart" }));
   await expect(flow.destinationMap).toHaveAttribute("data-destination-section-id", sectionId);
+  await flow.destinationMap.getByRole('radio', { name: 'Start of section', exact: true }).check();
   await flow.uploadCsv({ name: "retry.csv", mimeType: "text/csv", buffer: Buffer.from("date,value\n2026-01-01,10\n2026-01-02,20\n") });
   await flow.chooseChartType(null, /^Line\./);
   await flow.goToMapAndPrepare();
@@ -124,6 +125,7 @@ test("five-stage chart creation suspends and commits exactly once", async ({ pag
   let { wizard } = flow;
   await expect(flow.destinationMap).toHaveAttribute("data-destination-page-id", "m0-dashboard");
   await expect(flow.destinationMap).toHaveAttribute("data-destination-section-id", "m0-data");
+  await flow.destinationMap.getByRole('radio', { name: 'Start of section', exact: true }).check();
   await flow.selectExistingSource("cases WCPH eldoria");
   await expect(wizard.getByRole("region", { name: "Selected source profile" })).toContainText("national_total_cases");
   await flow.chooseChartType(null, /^Line\./);
@@ -144,6 +146,8 @@ test("five-stage chart creation suspends and commits exactly once", async ({ pag
   wizard = flow.wizard;
   await expect(wizard).toHaveAttribute("data-chart-draft-id", firstDraftId);
   await expect(flow.stageButton("map-and-prepare-data")).toHaveAttribute("aria-current", "step");
+  await flow.goToDestination();
+  await expect(flow.destinationMap.getByRole('radio', { name: 'Start of section', exact: true })).toBeChecked();
 
   await flow.goToMapAndPrepare();
   await flow.selectRole("measurements", "national_total_cases");
@@ -165,6 +169,10 @@ test("five-stage chart creation suspends and commits exactly once", async ({ pag
   await page.reload();
   await expect(page.locator('[data-canonical-page-id="m0-dashboard"]')).toBeVisible();
   await expect(page.locator('[data-panel-id]').filter({ hasText: CHART_TITLE })).toHaveCount(1);
+  expect(await page.evaluate(key => {
+    const section = JSON.parse(localStorage.getItem(key)).pages.find(p => p.id === 'm0-dashboard').sections.find(s => s.id === 'm0-data');
+    return (section.panels[0].chart ?? section.panels[0]).title;
+  }, STORAGE_KEY)).toBe(CHART_TITLE);
   await expect.poll(() => page.evaluate(({ key, title }) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
     return dashboard.pages.flatMap(({ sections }) => sections)

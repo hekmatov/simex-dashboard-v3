@@ -109,3 +109,27 @@ test("wizard create adapter fails closed before persistence when a live authorit
   assert.equal(result.errors[0].code, "PERMISSION_REVISION_DRIFT");
   assert.equal(calls, 0);
 });
+
+
+test("section start review needs a destination but no chart anchor and still rejects revision drift", async () => {
+  const snapshot = createChartCreateSnapshot({ transactionId: 'create-at-start',
+    finalized: { chart: { id: 'chart-at-start', typeId: 'line', sourceId: 'cases' } },
+    destination: { pageId: 'biomedical', sectionId: 'outbreak', relation: 'start' },
+    dashboardRevision: 'dashboard-start', renderProof: { status: 'valid', revision: 'render-start' }, placementProof: { status: 'valid', revision: 'placement-start' },
+  });
+  snapshot.currentDashboard.pages[0].sections[0].anchors = [];
+  let calls = 0;
+  const drifted = structuredClone(snapshot);
+  drifted.currentDashboard.revision = 'changed';
+  const rejected = await executeChartCreate(drifted, { persist: async () => { calls++; } });
+  assert.equal(rejected.status, 'validation-failed');
+  assert.ok(rejected.errors.some(e => e.code === 'DASHBOARD_REVISION_DRIFT'));
+  assert.equal(calls, 0);
+  const committed = await executeChartCreate(snapshot, { persist: async (_chart, destination) => {
+    calls++;
+    assert.equal(destination.placement.relation, 'start');
+    return { dashboardRevision: 'saved' };
+  } });
+  assert.equal(committed.status, 'committed');
+  assert.equal(calls, 1);
+});

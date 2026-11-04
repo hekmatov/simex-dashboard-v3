@@ -648,7 +648,9 @@ export function integrateCreatedChart(dashboard, payload, target) {
   }
   const chart = normalizeChartInstance(payload.chart);
   const relation = target.placement?.relation ?? target.relation ?? "append";
-  if (relation === "append") {
+  if (relation === "start") {
+    section.panels.unshift(chart);
+  } else if (relation === "append") {
     section.panels.push(chart);
   } else if (relation === "before" || relation === "after") {
     const anchorIndex = section.panels.findIndex(

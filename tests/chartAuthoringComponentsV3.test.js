@@ -2245,7 +2245,7 @@ test("selected data sources show detected types, examples, and warnings", () => 
     onSelectExisting() {},
   }));
 
-  assert.match(html, /Detected columns/);
+  assert.doesNotMatch(html, /Detected columns/);
   assert.match(html, /capacity/);
   assert.match(html, /Number/);
   assert.match(html, /12/);
@@ -5668,4 +5668,20 @@ test("destination map selection mode retains normal Build tree editing outside t
   assert.doesNotMatch(choosing, /draggable="true"/);
   assert.match(choosing, /aria-expanded="true"/);
   assert.match(choosing, /aria-selected="true"/);
+});
+
+
+test("section start stays selected across destination changes and edits use index zero", async () => {
+  const { destinationMapSelection, destinationPatchForNode } = await import('../src/components/chart-authoring/ChartDestinationMap.jsx');
+  const map = { pages: [{ id: 'p', sections: [{ id: 's', panels: [{ id: 'placement-first', chart: { id: 'first' } }] }, { id: 'empty', panels: [] }] }] };
+  const destination = { pageId: 'p', sectionId: 's', relation: 'start', anchorId: null };
+  assert.deepEqual(destinationMapSelection(map, destination), { kind: 'section', pageId: 'p', sectionId: 's' });
+  const empty = destinationPatchForNode(map, { kind: 'section', pageId: 'p', sectionId: 'empty' }, destination);
+  assert.deepEqual(empty, { pageId: 'p', sectionId: 'empty', relation: 'start', position: 'start', anchorId: null });
+  assert.equal(destinationPatchForNode(map, { kind: 'chart', pageId: 'p', sectionId: 's', chartId: 'first', placementId: 'placement-first' }, destination).relation, 'after');
+  for (const sectionId of ['s', 'empty']) {
+    assert.deepEqual(buildChartEditPlacementMove({ dashboard: map, placementId: 'placement-first', source: { pageId: 'p', sectionId: 's' }, destination: { ...destination, sectionId } }), {
+      kind: 'panel', source: { pageId: 'p', sectionId: 's', placementId: 'placement-first' }, target: { pageId: 'p', sectionId, index: 0 },
+    });
+  }
 });
