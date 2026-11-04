@@ -346,7 +346,7 @@ for (const scenario of [
 
     await flow.goToConfigure();
     await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
-    await expect(wizard.getByRole("heading", { name: "Appearance" }))
+    await expect(wizard.getByRole("heading", { name: "Titles and background" }))
       .toBeVisible();
     if (scenario.labels === false) {
       await expect(wizard.getByRole("heading", { name: "Labels" }))

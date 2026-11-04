@@ -800,3 +800,77 @@
   padding: 0 !important;
   width: var(--simex-control-prominent);
 }
+
+/* Dense chart configuration: short values use short entries and related controls
+   share a heading, while source names and authored content can still wrap. */
+.chart-authoring-section-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.chart-authoring-section-heading > h3 { margin: 0; }
+:is(.chart-wizard-style-controls, .chart-editor-tab-panel) .chart-authoring-section > .chart-authoring-section-heading > h3 {
+  font-size: 16px;
+  font-weight: 750;
+}
+:is(.chart-wizard-style-controls, .chart-editor-tab-panel) .chart-authoring-field > label,
+:is(.chart-wizard-style-controls, .chart-editor-tab-panel) .chart-authoring-inline-field,
+.chart-presentation-members__legend-name {
+  font-size: var(--simex-control-font-size);
+  font-weight: 600;
+}
+.chart-authoring-field.chart-authoring-field--inline {
+  align-items: center;
+  display: grid;
+  gap: 6px 8px;
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+.chart-authoring-field--inline > :is(input, select) { inline-size: 9ch; max-inline-size: 100%; min-inline-size: 0; }
+.chart-authoring-field--inline > select { inline-size: auto; max-inline-size: 150px; }
+.chart-authoring-field--inline > small { grid-column: 1 / -1; }
+.chart-authoring-section .settings-color-field--inline { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.chart-authoring-section .settings-color-field--inline > label { margin: 0; }
+.chart-authoring-section .settings-color-field > :is(small, .settings-color-popover, .settings-color-transparency) { flex-basis: 100%; }
+.chart-authoring-section .settings-color-row.settings-color-row { grid-template-columns: var(--simex-control-utility) 12ch auto; justify-content: start; }
+.chart-authoring-section .settings-color-row.settings-color-row--with-default { grid-template-columns: var(--simex-control-utility) 12ch auto auto; }
+.chart-authoring-section .settings-color-row.settings-color-row--with-default.settings-color-row--default-first { grid-template-columns: auto var(--simex-control-utility) 12ch auto; }
+.chart-authoring-field.chart-authoring-series-colors .settings-color-row.settings-color-row--picker-first { grid-template-columns: var(--simex-control-utility) var(--simex-control-utility) 12ch auto; }
+.chart-authoring-section .settings-color-row > input { box-sizing: border-box; inline-size: 12ch; max-inline-size: 12ch; }
+.settings-color-default-button[aria-pressed="true"] { background: var(--simex-selected); color: var(--simex-text-on-accent, white); opacity: 1; }
+.chart-presentation-members__heading { align-items: center; display: flex; gap: 12px; justify-content: space-between; inline-size: 100%; }
+.chart-presentation-members > legend { inline-size: 100%; font-size: 14px; font-weight: 700; }
+.chart-presentation-members__heading > button { margin-inline-start: auto; }
+.chart-presentation-members__order-row { cursor: grab; gap: 6px; }
+.chart-presentation-members__order-row:active { cursor: grabbing; }
+.chart-presentation-members__order-row > .chart-presentation-members__source-label { flex: 1; }
+.chart-presentation-members__grip { color: var(--simex-text-muted); flex-shrink: 0; user-select: none; }
+.chart-presentation-members__moves > button { font-size: 18px; line-height: 1; min-inline-size: 28px; min-block-size: 28px; padding: 2px 6px; }
+.chart-presentation-members__list:has(> .chart-presentation-members__legend-row) { list-style: none; padding-inline-start: 0; }
+.chart-presentation-members__list > .chart-presentation-members__legend-row { display: grid; gap: 4px 8px; grid-template-columns: 24px minmax(0, 1fr); grid-template-rows: auto auto; }
+.chart-presentation-members__entry-number { grid-column: 1; grid-row: 1; text-align: center; }
+.chart-presentation-members__legend-row > input[type="checkbox"] { grid-column: 1; grid-row: 2; justify-self: center; align-self: center; }
+.chart-presentation-members__legend-name { display: grid; gap: 4px; grid-column: 2; grid-row: 1 / 3; min-inline-size: 0; }
+.chart-presentation-members__source-label { overflow-wrap: anywhere; }
+.chart-presentation-members__legend-name > input { min-inline-size: 0; inline-size: 100%; box-sizing: border-box; }
+.chart-authoring-labels .chart-authoring-inline-field > input[type="number"] { inline-size: 9ch; }
+.chart-authoring-labels .chart-authoring-inline-field > select { inline-size: min(100%, 160px); }
+.chart-authoring-reference-line-grid > .chart-authoring-inline-field { align-items: center; display: grid; gap: 8px; grid-template-columns: max-content minmax(0, 1fr); }
+.chart-authoring-reference-line-grid > .chart-authoring-inline-field > :is(input, select) { inline-size: 100%; min-inline-size: 0; max-inline-size: 150px; }
+.chart-authoring-reference-line-grid > .chart-authoring-inline-field > input[type="number"] { inline-size: 9ch; }
+.chart-authoring-reference-line-grid > .settings-color-field { grid-column: 1 / -1; }
+:is(.chart-wizard-style-controls, .chart-editor-tab-panel) .chart-authoring-axis-group.dashboard-authoring-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.chart-authoring-axis-group > .chart-authoring-inline-field { grid-column: auto; grid-template-columns: minmax(0, 1fr) max-content; }
+.chart-authoring-axis-group .chart-authoring-inline-field > input[type="number"] { inline-size: 8ch; }
+.chart-authoring-axis-group .chart-authoring-inline-field > select { inline-size: auto; max-inline-size: 110px; }
+.chart-authoring-axis-group > .chart-authoring-inline-field:has(> input:not([type="number"])) { grid-column: 1 / -1; grid-template-columns: minmax(0, 110px) minmax(0, 1fr); }
+.chart-authoring-axis-group .chart-authoring-number-pair { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.chart-authoring-axis-group .chart-authoring-number-pair > .chart-authoring-inline-field { grid-template-columns: minmax(0, 1fr) max-content; }
+
+:is(.chart-wizard-style-controls, .chart-editor-tab-panel) .chart-presentation-members__list {
+  font-size: var(--simex-control-font-size);
+}
+
+:is(.chart-wizard-style-controls, .chart-editor-tab-panel) .chart-authoring-section > .chart-authoring-section-fields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}

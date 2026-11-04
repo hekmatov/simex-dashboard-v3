@@ -60,13 +60,41 @@ test("V3 #20 #28 reported multi-series chart preserves legend choices data and c
   const editor = await edit(page, support.id);
   const entries = editor.locator('[data-field-id="legendEntries"]');
   await expect(entries.locator("li")).toHaveCount(4);
-  const originalNames = await entries.locator("li > span").allTextContents();
+  for (const heading of ["Titles and background", "Legend", "Colors", "Chart style", "Reference line", "Ordering"]) await expect(editor.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+  await expect(editor.getByRole("heading", { name: "Appearance", exact: true })).toHaveCount(0);
+  await expect(entries.locator("p")).toHaveCount(0);
+  await expect(entries.locator(".chart-presentation-members__entry-number")).toHaveCount(4);
+  await expect(entries.locator("label").first()).not.toContainText("Legend name");
+  const help = entries.locator('.chart-color-heading-help');
+  await help.hover();
+  await expect(help.getByRole('tooltip')).toContainText('Hiding a legend entry leaves its plotted data visible.');
+  await page.mouse.move(0, 0);
+  const originalNames = await entries.locator(".chart-presentation-members__source-label").allTextContents();
   await entries.locator("li").nth(0).getByRole("textbox").fill("Shared alias");
   await entries.locator("li").nth(1).getByRole("textbox").fill("Shared alias");
   await entries.locator("li").nth(1).getByRole("checkbox").uncheck();
   await editor.locator('[data-field-id="seriesColorsByIdentity"] li').nth(1).getByRole("textbox").fill("#123456");
   await editor.locator('[data-field-id="seriesColorsByIdentity"] li').nth(1).getByRole("textbox").press("Tab");
+  const namedColors = editor.locator('[data-field-id="seriesColorsByIdentity"]');
+  const namedOverride = namedColors.getByRole('textbox', { name: `Series override: ${originalNames[1]}`, exact: true });
+  const defaultButton = namedColors.locator('li').filter({ has: page.getByRole('textbox', { name: `Series override: ${originalNames[1]}`, exact: true }) }).getByRole('button', { name: 'Default', exact: true });
+  expect(await namedOverride.count()).toBe(1);
+  expect(await defaultButton.count()).toBe(1);
+  await expect(defaultButton).toHaveAttribute('aria-pressed', 'false');
+  await defaultButton.click();
+  await expect(defaultButton).toHaveAttribute('aria-pressed', 'true');
+  await namedOverride.fill('#123456');
+  const categories = editor.locator('[data-field-id="categoryOrder"]');
+  await categories.locator('.chart-presentation-members__order-row').last().dragTo(categories.locator('.chart-presentation-members__order-row').first());
+  await expect(categories.locator('li').first()).toContainText('Week 7');
+  await categories.getByRole('button', { name: 'Reset category order', exact: true }).click();
+  await expect(categories.locator('li').first()).toContainText('Week 1');
   const order = editor.locator('[data-field-id="seriesOrder"]');
+  await order.locator('.chart-presentation-members__order-row').nth(2).dragTo(order.locator('.chart-presentation-members__order-row').first());
+  await expect(order.locator('li').first()).toContainText(originalNames[2]);
+  await order.getByRole('button', { name: 'Reset series order', exact: true }).click();
+  await expect(order.locator('li').first()).toContainText(originalNames[0]);
+  await expect(order.getByRole('button', { name: `Move ${originalNames[0]} up`, exact: true })).toBeDisabled();
   await order.getByRole("button", { name: `Move ${originalNames[1]} up`, exact: true }).click();
   await editor.getByLabel("Show legend", { exact: true }).uncheck();
   await save(editor);
@@ -108,6 +136,7 @@ test("chart ordering and label-axis entries and palette actions stay beside thei
   await palette.getByRole("button", { name: "Add color", exact: true }).click();
   await palette.getByRole("button", { name: "Add color", exact: true }).click();
   await expect(paletteRows).toHaveCount(2);
+  await palette.getByRole("textbox", { name: "Palette color 1", exact: true }).fill("#F1A1AD");
   await expect(palette.getByText(/Add color — Append a color to this palette/)).toBeVisible();
   await expect(palette.getByText(/Use default colors — Restore the standard palette/)).toBeVisible();
   await expect(labels.getByLabel("Label format", { exact: true })).toHaveCount(1);
@@ -116,7 +145,7 @@ test("chart ordering and label-axis entries and palette actions stay beside thei
   await expect(primary.getByLabel("Title font size", { exact: true })).toHaveAttribute("max", "24");
   for (const width of [1806, 1265]) {
     await page.setViewportSize({ width, height: 1244 });
-    const fields = editor.locator('.chart-authoring-labels .chart-authoring-inline-field, .chart-authoring-axis-group .chart-authoring-inline-field');
+    const fields = editor.locator('.chart-authoring-labels .chart-authoring-inline-field, .chart-authoring-axis-group .chart-authoring-inline-field, .chart-authoring-reference-line-grid > .chart-authoring-inline-field');
     expect(await fields.count()).toBeGreaterThanOrEqual(12);
     for (const field of await fields.all()) {
       const geometry = await field.evaluate(node => {
@@ -128,8 +157,25 @@ test("chart ordering and label-axis entries and palette actions stay beside thei
       expect(Math.abs(geometry.labelY - geometry.inputY)).toBeLessThan(2);
       expect(geometry.overflow).toBe(false);
     }
+    const headingToggle = editor.locator('.chart-authoring-section-heading').filter({ has: page.getByRole('heading', { name: 'Labels', exact: true }) });
+    await expect(headingToggle.getByLabel('Show labels', { exact: true })).toHaveCount(1);
+    for (const id of ['titleFontSize', 'legendOrientation', 'legendFontSize', 'lineWidth']) {
+      const field = editor.locator(`[data-field-id="${id}"]`);
+      const label = await field.locator('label').boundingBox();
+      const input = await field.locator('input,select').boundingBox();
+      expect(input.x).toBeGreaterThanOrEqual(label.x + label.width);
+      expect(Math.abs(input.y + input.height / 2 - label.y - label.height / 2)).toBeLessThan(2);
+    }
+    for (const input of await editor.locator('.settings-color-row > input').all()) {
+      const dimensions = await input.evaluate(node => ({ client: node.clientWidth, scroll: node.scrollWidth }));
+      expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
+    }
     for (const row of await paletteRows.all()) {
       const controls = [row.locator('.settings-color-swatch'), row.getByRole('button', { name: /^Pick palette color/ }), row.getByRole('textbox'), row.getByRole('button', { name: /^Remove palette color/ })];
+      const caption = await row.locator('.settings-color-field > label').boundingBox();
+      const inputBounds = await row.getByRole('textbox').boundingBox();
+      expect(Math.abs(caption.y + caption.height / 2 - inputBounds.y - inputBounds.height / 2)).toBeLessThan(2);
+      expect(inputBounds.width).toBeLessThanOrEqual(140);
       const bounds = await Promise.all(controls.map(control => control.boundingBox()));
       for (let i = 1; i < bounds.length; i++) {
         expect(bounds[i].x).toBeGreaterThanOrEqual(bounds[i - 1].x + bounds[i - 1].width);
@@ -137,7 +183,7 @@ test("chart ordering and label-axis entries and palette actions stay beside thei
       }
     }
     const row = editor.locator('[data-field-id="categoryOrder"] li').first();
-    const name = await row.locator('span').boundingBox();
+    const name = await row.locator('.chart-presentation-members__source-label').boundingBox();
     for (const button of await row.getByRole('button').all()) {
       const bounds = await button.boundingBox();
       expect(bounds.x).toBeGreaterThanOrEqual(name.x + name.width);

@@ -47,8 +47,8 @@ export default function ReferenceLineField({
           { className: "chart-authoring-reference-line-grid" },
           React.createElement(
             "label",
-            null,
-            "Value",
+            { className: "chart-authoring-inline-field" },
+            React.createElement("span", null, "Value"),
             React.createElement("input", {
               type: "number",
               step: "any",
@@ -61,8 +61,8 @@ export default function ReferenceLineField({
           ),
           React.createElement(
             "label",
-            null,
-            "Label",
+            { className: "chart-authoring-inline-field" },
+            React.createElement("span", null, "Label"),
             React.createElement("input", {
               type: "text",
               value: current.label,
@@ -72,8 +72,8 @@ export default function ReferenceLineField({
           ),
           React.createElement(
             "label",
-            null,
-            "Line style",
+            { className: "chart-authoring-inline-field" },
+            React.createElement("span", null, "Line style"),
             React.createElement(
               "select",
               {
@@ -88,6 +88,7 @@ export default function ReferenceLineField({
           React.createElement(ColorField, {
             id: "chart-reference-line-color",
             label: "Line color",
+            inlineLabel: true,
             value: current.color,
             onChange: (color) => update("color", color),
             dataColorField: "referenceLine",

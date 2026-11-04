@@ -95,6 +95,7 @@ function SchemaField({
       {
         id: fieldControlId(decoratedField),
         label: field.label,
+        inlineLabel: true,
         value,
         fallback: background ? "" : undefined,
         onChange: emit,

@@ -1420,3 +1420,19 @@ test("wizard form keeps source first and complete before a chart draft exists", 
     false,
   );
 });
+
+
+test("appearance groups keep related controls together in base-to-specific priority", () => {
+  const chart = createChartDraft("bar", { id: "grouped", title: "Grouped", sourceId: "data", roles: { measurements: [{ field: "value" }], observation: { field: "category" } } });
+  const rows = [{ category: "A", value: 2 }, { category: "B", value: 4 }];
+  const profile = profileDataset(rows);
+  const prepared = prepareChartData({ chart, rows, datasetProfile: profile });
+  const model = buildEditorFormModel({ chart, profile, prepared: preparedFor(chart, profile, prepared) });
+  const appearance = model.sections.find(s => s.id === "appearance");
+  assert.deepEqual(appearance.groups.find(g => g.id === "appearance-colors").fieldIds, ["seriesColors", "seriesColorsByIdentity", "categoryColors"]);
+  assert.deepEqual(appearance.groups.find(g => g.id === "appearance-legend").fieldIds, ["legendVisible", "legendOrientation", "legendWrap", "legendFontSize", "legendEntries"]);
+  const grouped = appearance.groups.flatMap(g => g.fieldIds);
+  assert.equal(new Set(grouped).size, appearance.fields.length);
+  assert.deepEqual([...grouped].sort(), appearance.fields.map(f => f.id).sort());
+  assert.equal(appearance.fields.find(f => f.id === "titleFontSize").inline, true);
+});

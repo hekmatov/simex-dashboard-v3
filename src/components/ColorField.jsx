@@ -35,6 +35,7 @@ function ColorField({
   pickerBeforeInput = false,
   rowAction,
   labelHidden = false,
+  inlineLabel = false,
   showPresets = true,
   dataColorField,
   help,
@@ -46,6 +47,7 @@ function ColorField({
   onTransparencyChange,
   allowDefault = false,
   defaultActive = false,
+  defaultFirst = false,
   onDefault,
   showContrast = false,
   pickerRevision
@@ -114,6 +116,10 @@ function ColorField({
       setPickerActive(false);
     }
   }
+  const defaultButton = allowDefault ? React.createElement("button", {
+    type: "button", className: "secondary settings-color-default-button",
+    "aria-pressed": defaultActive, disabled: defaultActive, onClick: () => onDefault?.(),
+  }, "Default") : null;
   const picker = /* @__PURE__ */ React.createElement(IconControl, {
     interactionId: "editor.pick-color-from-dashboard",
     className: "secondary settings-pipette-button",
@@ -127,13 +133,13 @@ function ColorField({
   return /* @__PURE__ */ React.createElement(
     "div",
     {
-      className: "settings-color-field",
+      className: `settings-color-field${inlineLabel ? " settings-color-field--inline" : ""}`,
       ref: colorFieldRef,
       "data-color-field": dataColorField,
       "data-invalid": error || invalid ? "true" : void 0
     },
     /* @__PURE__ */ React.createElement("label", { htmlFor: controlId, className: labelHidden ? "visually-hidden" : undefined }, label),
-    /* @__PURE__ */ React.createElement("div", { className: `settings-color-row${allowDefault ? " settings-color-row--with-default" : ""}${pickerBeforeInput ? " settings-color-row--picker-first" : ""}` }, /* @__PURE__ */ React.createElement("button", {
+    /* @__PURE__ */ React.createElement("div", { className: `settings-color-row${allowDefault ? " settings-color-row--with-default" : ""}${pickerBeforeInput ? " settings-color-row--picker-first" : ""}${defaultFirst ? " settings-color-row--default-first" : ""}` }, defaultFirst ? defaultButton : null, /* @__PURE__ */ React.createElement("button", {
       type: "button",
       className: "settings-color-swatch",
       style: { backgroundColor: normalizedValue, backgroundImage: gradientPreview },
@@ -148,6 +154,7 @@ function ColorField({
       "input",
       {
         id: controlId,
+        size: 7,
         "aria-label": label,
         "aria-describedby": ariaDescribedBy || void 0,
         "aria-invalid": error || invalid ? "true" : void 0,
@@ -156,12 +163,7 @@ function ColorField({
         onBlur: (event) => setDraft(normalizeHexColor(event.target.value, normalizedValue)),
         spellCheck: "false"
       }
-    ), pickerBeforeInput ? null : picker, allowDefault ? /* @__PURE__ */ React.createElement("button", {
-      type: "button",
-      className: "secondary settings-color-default-button",
-      disabled: defaultActive,
-      onClick: () => onDefault?.()
-    }, "Default") : null, rowAction),
+    ), pickerBeforeInput ? null : picker, defaultFirst ? null : defaultButton, rowAction),
     paletteOpen ? /* @__PURE__ */ React.createElement(ColorPalettePanel, {
       id: paletteId,
       label,

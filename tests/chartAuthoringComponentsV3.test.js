@@ -5555,3 +5555,47 @@ function columnTypes() {
     ["period", { name: "period", type: "category" }],
   ]);
 }
+
+
+test("compact legend, color and ordering controls preserve semantic edits", () => {
+  const descriptors = [{ key: "a", defaultLabel: "First", sourceIndex: 0 }, { key: "b", defaultLabel: "Second", sourceIndex: 1 }, { key: "c", defaultLabel: "Third", sourceIndex: 2 }];
+  const chart = { presentation: { series: { colors: ["#112233", "#445566", "#778899"] } } };
+  const field = { id: "seriesOrder", label: "Series order", control: "presentationOrder", orderKind: "series", path: ["presentation", "series", "order"], descriptors };
+  const changes = [];
+  const tree = CategorySeriesPresentationFields({ field, chart, onChange: (...args) => changes.push(args) });
+  const rows = findElementsByType(tree, "div").filter(n => n.props.className === "chart-presentation-members__order-row");
+  const transfer = { types: [], setData(type, value) { this.types = [type]; this.value = value; }, getData() { return this.value; } };
+  const event = { dataTransfer: transfer, preventDefault() {}, stopPropagation() {} };
+  rows[2].props.onDragStart(event);
+  rows[0].props.onDrop(event);
+  assert.deepEqual(changes[0][1].order, ["c", "a", "b"]);
+  assert.deepEqual(changes[0][1].overrides, { a: { color: "#112233" }, b: { color: "#445566" }, c: { color: "#778899" } });
+  transfer.value = JSON.stringify({ fieldId: "categoryOrder", key: "b" });
+  rows[0].props.onDrop(event);
+  assert.equal(changes.length, 1);
+  const legendHtml = render(React.createElement(CategorySeriesPresentationFields, { field: { ...field, id: "legendEntries", label: "Legend entries", control: "legendEntries", value: { a: { label: "Alias", visible: false } } }, chart }));
+  assert.match(legendHtml, /Legend Entry/);
+  assert.match(legendHtml, /role="tooltip"/);
+  assert.doesNotMatch(legendHtml, />Legend name:/);
+  assert.match(legendHtml, /class="chart-presentation-members__legend-row"/);
+  const colors = render(React.createElement(CategorySeriesPresentationFields, { field: { ...field, id: "seriesColorsByIdentity", label: "Named series overrides", control: "seriesColorsByIdentity", value: {} }, chart }));
+  assert.match(colors, /aria-pressed="true"/);
+  assert.ok(colors.indexOf(">Default</button>") < colors.indexOf("settings-color-swatch"));
+});
+
+
+test("label heading visibility keeps point selection and grouped fields render exactly once", () => {
+  const changes = [];
+  const value = { visible: false, fontSize: 16, pointSelection: { mode: "only", keys: ["point-a"] } };
+  const section = { id: "labels", label: "Labels", fields: [{ id: "labels", label: "Labels", control: "labels", path: ["presentation", "labels"], controls: ["visible", "position", "fontSize", "pointSelection"], value }] };
+  const tree = GeneratedFormSection({ section, onChange: (...args) => changes.push(args) });
+  const heading = findElementsByType(tree, 'div').find(n => n.props.className === 'chart-authoring-section-heading');
+  findElementsByType(heading, 'input')[0].props.onChange({ target: { checked: true } });
+  assert.deepEqual(changes, [[["presentation", "labels"], { ...value, visible: true }]]);
+  const html = render(React.createElement(GeneratedFormSection, { section }));
+  assert.equal((html.match(/>Show labels</g) ?? []).length, 1);
+  const grouped = render(React.createElement(GeneratedFormSection, { section: { id: "appearance", label: "Appearance", groups: [{ id: "titles", label: "Titles and background", fieldIds: ["title"] }, { id: "colors", label: "Colors", fieldIds: ["lineWidth"] }], fields: [{ id: "title", label: "Chart title", control: "text", value: "Authored" }, { id: "lineWidth", label: "Line width", control: "number", value: 2 }] } }));
+  assert.equal((grouped.match(/value="Authored"/g) ?? []).length, 1);
+  assert.equal((grouped.match(/value="2"/g) ?? []).length, 1);
+  assert.doesNotMatch(grouped, />Appearance</);
+});

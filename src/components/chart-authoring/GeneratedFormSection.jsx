@@ -1,6 +1,7 @@
 import React from "react";
 import { buildPreviewDiagnostics } from "./ChartPreview.jsx";
 import SchemaField from "./SchemaField.jsx";
+import { updateStructuredFieldValue } from "./StandardField.jsx";
 function GeneratedFormSection({
   section,
   onChange = noop,
@@ -12,6 +13,13 @@ function GeneratedFormSection({
     return null;
   }
   const fields = Array.isArray(section.fields) ? section.fields.filter(validField) : [];
+  if (section.groups?.length) {
+    return React.createElement(React.Fragment, null, section.groups.map(group => React.createElement(GeneratedFormSection, {
+      key: group.id, section: { ...group, fields: fields.filter(field => group.fieldIds.includes(field.id)).sort((a, b) => group.fieldIds.indexOf(a.id) - group.fieldIds.indexOf(b.id)) },
+      onChange, diagnostics, diagnosticNamespace, ...context,
+    })));
+  }
+  const labelsField = section.id === "labels" ? fields.find(field => field.control === "labels" && field.controls?.includes("visible")) : null;
   const previewDiagnostics = buildPreviewDiagnostics(diagnostics, {
     namespace: diagnosticNamespace
   });
@@ -20,6 +28,7 @@ function GeneratedFormSection({
       ...field,
       ...(duplicateStructuredTitle(section, field) ? { suppressLegend: true } : {}),
       ...(visibilityField ? { compactLabel: true } : {}),
+      ...(field === labelsField ? { controls: field.controls.filter(control => control !== "visible") } : {}),
     };
     return /* @__PURE__ */ React.createElement(
       "div",
@@ -55,10 +64,15 @@ function GeneratedFormSection({
       className: "chart-authoring-section",
       "aria-labelledby": `chart-form-section-${safeId(section.id)}`
     },
-    /* @__PURE__ */ React.createElement("h3", {
-      id: `chart-form-section-${safeId(section.id)}`,
-      className: section.headingVisible === false ? "visually-hidden" : undefined,
-    }, section.label),
+    React.createElement("div", { className: "chart-authoring-section-heading" },
+      React.createElement("h3", {
+        id: `chart-form-section-${safeId(section.id)}`,
+        className: section.headingVisible === false ? "visually-hidden" : undefined,
+      }, section.label),
+      labelsField ? React.createElement("label", { className: "chart-authoring-inline-toggle dashboard-authoring-boolean-row" },
+        React.createElement("input", { type: "checkbox", checked: labelsField.value?.visible === true,
+          onChange: event => onChange(labelsField.path, updateStructuredFieldValue("labels", labelsField.value, ["visible"], event.target.checked)) }), "Show labels") : null,
+    ),
     content
   );
 }
@@ -85,7 +99,7 @@ function validField(field) {
 }
 const WIDE_CONTROLS = new Set([
   "textarea", "filters", "labels", "axes", "targets", "map", "timeline",
-  "role", "palette", "referenceLine", "citation", "collection", "timeSync",
+  "role", "palette", "color", "referenceLine", "citation", "collection", "timeSync",
   "deltaComparison", "quickBackground",
   "presentationOrder", "legendEntries", "categoryColors", "seriesColorsByIdentity",
 ]);

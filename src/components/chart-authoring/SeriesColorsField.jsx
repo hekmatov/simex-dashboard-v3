@@ -83,6 +83,7 @@ function SeriesColorsField({
           dataColorField: `${field.id}-${index}`,
           pickerRevision: value,
           pickerBeforeInput: true,
+          inlineLabel: true,
           rowAction: React.createElement(IconControl, {
             interactionId: "editor.remove-measurement",
             className: "secondary",

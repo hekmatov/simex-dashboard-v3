@@ -108,7 +108,7 @@ function StandardField({
 function FieldShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
   const id = fieldControlId(field);
-  return /* @__PURE__ */ React.createElement("div", { className: `chart-authoring-field ${field.compactLabel ? "chart-authoring-field--label-hidden " : ""}${className}`.trim(), "data-field-id": field.id, "aria-invalid": fieldHasError(field) ? "true" : void 0 }, /* @__PURE__ */ React.createElement("label", { htmlFor: id }, React.createElement("span", { className: field.compactLabel ? "chart-authoring-field-label visually-hidden" : "chart-authoring-field-label" }, field.label, requiredMarker(field))), field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null, children, field.help ? /* @__PURE__ */ React.createElement("small", { id: `${id}-help` }, field.help) : null, field.error ? /* @__PURE__ */ React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null);
+  return /* @__PURE__ */ React.createElement("div", { className: `chart-authoring-field ${field.compactLabel ? "chart-authoring-field--label-hidden " : ""}${field.inline ? "chart-authoring-field--inline " : ""}${className}`.trim(), "data-field-id": field.id, "aria-invalid": fieldHasError(field) ? "true" : void 0 }, /* @__PURE__ */ React.createElement("label", { htmlFor: id }, React.createElement("span", { className: field.compactLabel ? "chart-authoring-field-label visually-hidden" : "chart-authoring-field-label" }, field.label, requiredMarker(field))), field.detected ? /* @__PURE__ */ React.createElement("small", { className: "chart-authoring-detected" }, "Detected: ", detectedLabel(field)) : null, children, field.help ? /* @__PURE__ */ React.createElement("small", { id: `${id}-help` }, field.help) : null, field.error ? /* @__PURE__ */ React.createElement("small", { id: `${id}-error`, role: "alert" }, field.error) : null);
 }
 function GroupShell({ field, children, className = "" }) {
   if (!validField(field)) return null;
@@ -345,7 +345,7 @@ function structuredControls(control, value, onChange, field = {}) {
       "Show labels",
       current.visible === true,
       (checked) => emit(["visible"], checked)
-    ) : null, controls.has("position") ? /* @__PURE__ */ React.createElement("label", null, "Label position", /* @__PURE__ */ React.createElement("select", {
+    ) : null, controls.has("position") ? /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-field" }, React.createElement("span", null, "Label position"), /* @__PURE__ */ React.createElement("select", {
       value: current.position ?? "",
       onChange: (event) => emit(["position"], event.target.value)
     }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Automatic"), ["top", "bottom", "left", "right", "inside", "center"].map((position) => /* @__PURE__ */ React.createElement("option", { key: position, value: position }, sentence(position))))) : null, controls.has("format") ? labelFormatControl(current.format, (nextValue) => emit(["format"], nextValue)) : null, controls.has("unit") ? textControl("Label unit", current.unit, (nextValue) => emit(["unit"], nextValue), true) : null, controls.has("fontSize") ? boundedNumericControl("Label font size", current.fontSize ?? 12, 8, 32, (nextValue) => emit(["fontSize"], nextValue)) : null, controls.has("valueMode") ? pieValueModeControls(current, emit, field.id) : null, controls.has("valueFontSize") ? boundedNumericControl("Value/percentage font size", current.valueFontSize ?? 14, 8, 32, (nextValue) => emit(["valueFontSize"], nextValue)) : null, controls.has("labelFontSize") ? boundedNumericControl("Label font size", current.labelFontSize ?? 12, 8, 32, (nextValue) => emit(["labelFontSize"], nextValue)) : null, controls.has("labelWrap") ? inlineToggle("Wrap long category labels", current.labelWrap === true, (checked) => emit(["labelWrap"], checked)) : null, controls.has("pointSelection") ? React.createElement(PointLabelSelector, { matrix: field.pointMatrix, value: current.pointSelection, onChange: next => emit(["pointSelection"], next) }) : null);
@@ -387,8 +387,8 @@ function axisControls(label, axis, value, emit) {
     "fieldset",
     { className: "chart-authoring-axis-group dashboard-authoring-grid" },
     React.createElement("legend", null, label),
-    textControl("Title", value.title, (nextValue) => emit([axis, "title"], nextValue)),
-    textControl("Unit", value.unit, (nextValue) => emit([axis, "unit"], nextValue)),
+    textControl("Title", value.title, (nextValue) => emit([axis, "title"], nextValue), true),
+    textControl("Unit", value.unit, (nextValue) => emit([axis, "unit"], nextValue), true),
     selectControl("Title position", value.titlePosition ?? "center", ["top", "center", "bottom"], (nextValue) => emit([axis, "titlePosition"], nextValue)),
     selectControl("Title orientation", value.titleOrientation ?? "vertical", ["vertical", "horizontal"], (nextValue) => emit([axis, "titleOrientation"], nextValue)),
     fontSizeControl(value.titleFontSize ?? 14, (nextValue) => emit([axis, "titleFontSize"], nextValue)),
@@ -447,7 +447,7 @@ function requiredMarker(field) {
     : null;
 }
 function selectControl(label, value, options, onChange) {
-  return React.createElement("label", null, label, React.createElement("select", {
+  return React.createElement("label", { className: "chart-authoring-inline-field" }, React.createElement("span", null, label), React.createElement("select", {
     value,
     onChange: (event) => onChange(event.target.value),
   }, options.map((option) => React.createElement("option", { key: option, value: option }, sentence(option)))));

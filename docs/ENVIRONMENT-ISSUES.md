@@ -13,6 +13,7 @@ Do not record product-test failures, expected build warnings, transient typing m
 | ENV-003 | Git reports a linked checkout is not a worktree during restricted reads | Observed in restricted Codex execution | 1 | ENV-003.001 |
 | ENV-004 | Windows Chromium cannot read a file upload at a long native evidence path | Avoided with the same bytes supplied as a browser File | 1 | ENV-004.001 |
 | ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Scoped fixed-input fixtures disable watching and discovery | 1 | ENV-005.001 |
+| ENV-006 | Windows restricted launcher cannot create the process security environment | Project-access execution remains available | 1 | ENV-006.001 |
 
 The **Entries** value must equal the number of listed entry references. Add a new reference for every confirmed repeat; do not merely increase the count.
 
@@ -25,6 +26,13 @@ The **Entries** value must equal the number of listed entry references. Add a ne
 5. Include the register update in the task's coherent commit when it is changed. Resolve ordinary merge conflicts by preserving every distinct entry and recalculating the affected index row.
 
 ## Entries
+
+### ENV-006.001 — 2026-11-04
+
+- **Commands:** An execution-record write followed by an isolated `git status --short`, from the private main checkout.
+- **Evidence:** Both failed before shell dispatch with `MXC launcher: failed to create the process security environment: CreateProcessSecurityEnvironment failed (HRESULT = 0x80070020)`. The same status command succeeded with project-access execution.
+- **Scope:** Windows restricted command launcher in this session. The underlying lock owner was not identified; no product test failure is attributed to it.
+- **Outcome:** Continued the authorized local recording and commit operations through the available project-access route; no dashboard or operating-system settings changed.
 
 ### ENV-005.001 — 2026-10-30
 

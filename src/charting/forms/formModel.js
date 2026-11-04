@@ -157,7 +157,8 @@ export function buildEditorFormModel({
         label: definition?.label ?? sectionId,
         fields: !previewReady && sectionId === "appearance"
           ? fields.filter(({ id }) => id === "title")
-          : fields,
+          : fields.map(field => sectionId === "appearance" && ["number", "select"].includes(field.control) ? { ...field, inline: true } : field),
+        ...(previewReady && sectionId === "appearance" ? { groups: appearanceGroups(fields) } : {}),
         advanced: definition?.advanced === true,
       };
     })
@@ -361,6 +362,20 @@ function dataFields({
     });
   }
   return fields;
+}
+
+function appearanceGroups(fields) {
+  const available = new Set(fields.map(field => field.id));
+  const definitions = [
+    ["titles", "Titles and background", ["title", "titleVisible", "titleFontSize", "titleAlignment", "description", "descriptionVisible", "background"]],
+    ["legend", "Legend", ["legendVisible", "legendOrientation", "legendWrap", "legendFontSize", "legendEntries"]],
+    ["colors", "Colors", ["seriesColors", "seriesColorsByIdentity", "categoryColors", "cardAccentColors"]],
+    ["reference", "Reference line", ["referenceLine"]],
+    ["ordering", "Ordering", ["categoryOrder", "seriesOrder"]],
+  ];
+  const assigned = new Set(definitions.flatMap(([, , ids]) => ids));
+  definitions.splice(3, 0, ["style", "Chart style", fields.filter(field => !assigned.has(field.id)).map(field => field.id)]);
+  return definitions.map(([id, label, ids]) => ({ id: `appearance-${id}`, label, fieldIds: ids.filter(id => available.has(id)) })).filter(group => group.fieldIds.length);
 }
 
 function appearanceFields({ chart, schema, prepared }) {
