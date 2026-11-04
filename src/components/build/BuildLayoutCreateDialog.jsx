@@ -6,8 +6,9 @@ export function validBuildLayoutCreationName(value) {
   return String(value ?? "").trim().length > 0;
 }
 
-export default function BuildLayoutCreateDialog({ open = false, kind = "page", invoker = null, onSubmit, onCancel }) {
+export default function BuildLayoutCreateDialog({ open = false, kind = "page", invoker = null, splitAtTitle = null, onSubmit, onCancel }) {
   const [name, setName] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [error, setError] = React.useState("");
   const inputRef = React.useRef(null);
   const dialogRef = React.useRef(null);
@@ -16,6 +17,7 @@ export default function BuildLayoutCreateDialog({ open = false, kind = "page", i
   React.useEffect(() => {
     if (!open) return undefined;
     setName("");
+    setDescription("");
     setError("");
     requestAnimationFrame(() => inputRef.current?.focus());
     return () => requestAnimationFrame(() => invoker?.focus?.());
@@ -29,7 +31,8 @@ export default function BuildLayoutCreateDialog({ open = false, kind = "page", i
       setError(`Enter a ${titleKind} name.`);
       return;
     }
-    onSubmit?.(value);
+    if (splitAtTitle !== null) onSubmit?.(value, { description });
+    else onSubmit?.(value);
   };
   return (
     <div className="build-move-dialog-backdrop dashboard-dialog-backdrop" role="presentation">
@@ -50,9 +53,10 @@ export default function BuildLayoutCreateDialog({ open = false, kind = "page", i
       >
         <form className="dashboard-dialog__form" onSubmit={submit} noValidate>
           <header className="dashboard-dialog__header">
-            <h2 id="build-layout-create-title">Create {titleKind}</h2>
+            <h2 id="build-layout-create-title">{splitAtTitle !== null ? "Start section here" : `Create ${titleKind}`}</h2>
           </header>
           <div className="dashboard-dialog__body">
+            {splitAtTitle !== null && <p>Move {splitAtTitle} and the panels after it into a new section.</p>}
             <label>
               {titleKind} name
               <input
@@ -67,11 +71,12 @@ export default function BuildLayoutCreateDialog({ open = false, kind = "page", i
                 }}
               />
             </label>
+            {splitAtTitle !== null && <label>Section subtext<textarea value={description} onChange={(event) => setDescription(event.target.value)} /></label>}
             {error && <p id="build-layout-create-error" role="alert">{error}</p>}
           </div>
           <div className="dialog-actions dashboard-dialog__footer dashboard-dialog__actions">
             <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
-            <button type="submit">Create {kind}</button>
+            <button type="submit">{splitAtTitle !== null ? "Start section" : `Create ${kind}`}</button>
           </div>
         </form>
       </section>

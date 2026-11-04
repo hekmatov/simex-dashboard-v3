@@ -41,6 +41,12 @@
   padding: 0;
 }
 
+.build-move-dialog.dashboard-dialog :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  background: var(--simex-surface-panel-alt);
+  color: var(--simex-text-strong);
+  border-color: var(--simex-border-strong);
+}
+
 .dashboard-dialog__form {
   display: flex;
   flex: 1 1 auto;

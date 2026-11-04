@@ -70,19 +70,40 @@ test("section and panel menus preserve command order, keyboard navigation, and t
   await expect(panelActions).toHaveCount(0);
 });
 
-test("V3 #26 start-section splits the selected canonical placement and survives reload", async ({ page }) => {
+test("V3 #26 start-section works without native prompts and preserves the selected placement", async ({ page }) => {
   test.setTimeout(90_000);
   const section = page.locator('[data-canonical-section-id="biomedical_section"]');
   const panels = section.locator("article[data-canonical-placement-id]");
   const ids = await panels.evaluateAll(nodes => nodes.map(n => n.dataset.canonicalPlacementId));
   expect(ids.length).toBeGreaterThan(1);
-  let prompt = 0;
-  page.on("dialog", dialog => dialog.accept(prompt++ === 0 ? "Split proof" : "Section description"));
+  await page.evaluate(() => {
+    window.__sectionNativePromptCalls = 0;
+    window.prompt = () => { window.__sectionNativePromptCalls += 1; return null; };
+  });
   await panels.nth(1).scrollIntoViewIfNeeded();
   await panels.nth(1).hover();
   await choosePanelAction(page, ids[1], "start-section");
+  const dialog = page.getByRole("dialog", { name: "Start section here", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "Section name", exact: true })).toBeFocused();
+  await dialog.getByRole("textbox", { name: "Section name", exact: true }).fill("Cancelled split");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(panelMenu(page, ids[1])).toBeFocused();
+  expect(await panels.evaluateAll(nodes => nodes.map(n => n.dataset.canonicalPlacementId))).toEqual(ids);
+  await expect(page.getByRole("button", { name: "Save Layout Changes", exact: true })).toHaveCount(0);
+  await choosePanelAction(page, ids[1], "start-section");
+  await expect(dialog.getByRole("textbox", { name: "Section name", exact: true })).toHaveValue("");
+  await dialog.getByRole("button", { name: "Start section", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Enter a Section name");
+  await dialog.getByRole("textbox", { name: "Section name", exact: true }).fill("Split proof");
+  await dialog.getByRole("textbox", { name: "Section subtext", exact: true }).fill("Section description");
+  await dialog.getByRole("button", { name: "Start section", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(() => window.__sectionNativePromptCalls)).toBe(0);
   const split = page.locator("[data-canonical-section-id]", { has: page.getByRole("button", { name: "Edit Section title: Split proof", exact: true }) });
   await expect(split).toBeVisible();
+  await expect(split).toContainText("Section description");
   expect(await split.locator("article[data-canonical-placement-id]").evaluateAll(nodes => nodes.map(n => n.dataset.canonicalPlacementId))).toEqual(ids.slice(1));
   expect(await section.locator("article[data-canonical-placement-id]").evaluateAll(nodes => nodes.map(n => n.dataset.canonicalPlacementId))).toEqual(ids.slice(0, 1));
   await page.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
@@ -91,6 +112,42 @@ test("V3 #26 start-section splits the selected canonical placement and survives 
   await page.getByRole("navigation", { name: "Dashboard pages" }).getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(page.locator(`[data-canonical-placement-id="${ids[1]}"]`)).toBeVisible();
   await expect(page.locator("[data-canonical-section-id]", { has: page.getByRole("button", { name: "Edit Section title: Split proof", exact: true }) })).toBeVisible();
+});
+
+test("V3 #26 section dialog fields remain readable in dark and light themes", async ({ page }) => {
+  test.setTimeout(90_000);
+  for (const appearance of ["dark", "light"]) {
+    await page.evaluate(value => localStorage.setItem("simex-dashboard-appearance-v3", value), appearance);
+    await page.reload();
+    await enterAuthoredDashboard(page);
+    await page.getByRole("button", { name: "Build", exact: true }).click();
+    await page.locator('[data-build-page-navigation="anchored"]').getByRole("button", { name: "Biomedical", exact: true }).click();
+    await expect(page.locator(".app-frame")).toHaveAttribute("data-resolved-appearance", appearance);
+    const panel = page.locator('[data-canonical-section-id="biomedical_section"] article[data-canonical-placement-id]').nth(1);
+    await panel.scrollIntoViewIfNeeded();
+    await panel.hover();
+    await choosePanelAction(page, await panel.getAttribute("data-canonical-placement-id"), "start-section");
+    const dialog = page.getByRole("dialog", { name: "Start section here", exact: true });
+    await dialog.getByRole("textbox", { name: "Section name", exact: true }).fill("Readable section title");
+    await dialog.getByRole("textbox", { name: "Section subtext", exact: true }).fill("Readable section description");
+    const contrasts = await dialog.locator("input, textarea").evaluateAll(fields => {
+      const luminance = text => {
+        const [r, g, b] = text.match(/[\d.]+/g).map(Number).slice(0, 3).map(value => {
+          const channel = value / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      return fields.map(field => {
+        const style = getComputedStyle(field);
+        const foreground = luminance(style.color), background = luminance(style.backgroundColor);
+        return { field: field.tagName, ratio: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05) };
+      });
+    });
+    expect(contrasts).toHaveLength(2);
+    for (const result of contrasts) expect(result.ratio, `${appearance} ${result.field} text contrast`).toBeGreaterThanOrEqual(4.5);
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  }
 });
 
 test("V3 #18 full editor destination move retains chart and placement identity", async ({ page }) => {

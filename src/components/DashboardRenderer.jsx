@@ -132,6 +132,7 @@ const StaticContentQuickEditor = lazySurface(
 const StaticContentWizard = lazySurface(() => import("./static-content/StaticContentWizard.jsx"), "Content wizard", { overlay: true });
 const BuildWorkspace = lazySurface(() => import("./build/BuildWorkspace.jsx"), "Build workspace");
 const BuildMoveDialog = lazySurface(() => import("./build/BuildMoveDialog.jsx"), "Build move dialog", { overlay: true });
+const BuildLayoutCreateDialog = lazySurface(() => import("./build/BuildLayoutCreateDialog.jsx"), "Section dialog", { overlay: true });
 const BuildMoveConfirmationDialog = lazySurface(() => import("./build/BuildMoveConfirmationDialog.jsx"), "Build move confirmation", { overlay: true });
 const DashboardPackageExportDialog = lazySurface(() => import("./build/DashboardPackageExportDialog.jsx"), "Package export review", { overlay: true });
 const DeleteDashboardContentDialog = lazySurface(() => import("./build/DeleteDashboardContentDialog.jsx"), "Dashboard deletion review", { overlay: true });
@@ -236,6 +237,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [buildSelection, setBuildSelection] = React.useState(null);
   const [chartEditorPlacementId, setChartEditorPlacementId] = React.useState(null);
   const [chartEditorVisible, setChartEditorVisible] = React.useState(false);
+  const [sectionSplitTarget, setSectionSplitTarget] = React.useState(null);
   const [chartEditorDirty, setChartEditorDirty] = React.useState(false);
   const [chartEditSession, setChartEditSession] = React.useState(null);
   const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
@@ -2104,17 +2106,32 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function startSectionAtPanel(pageId, sectionId, placementId) {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    const title = window.prompt("Section title", "New section");
-    if (!title) {
-      return;
-    }
-    const description = window.prompt("Section subtext", "");
-    if (description === null) return;
+    if (moderatorOperationGateRef.current.isActive() || buildLayoutDraftRef.current?.status === "saving") return;
+    const working = buildLayoutDraftRef.current?.value ?? dashboardStateRef.current;
+    const section = working.pages.find(page => page.id === pageId)?.sections?.find(item => item.id === sectionId);
+    const panel = section?.panels?.find(item => item.id === placementId);
+    if (!panel) return;
+    const invoker = Array.from(document.querySelectorAll("[data-panel-menu]"))
+      .find(element => element.getAttribute("data-panel-menu") === placementId) ?? null;
+    setSectionSplitTarget({
+      pageId, sectionId, placementId, invoker,
+      newSectionId: `${sectionId}_${Date.now()}`,
+      title: panel.chart?.title || panel.title || "this chart",
+    });
+  }
+
+  function confirmSectionSplit(title, { description = "" } = {}) {
+    if (!sectionSplitTarget || moderatorOperationGateRef.current.isActive() || buildLayoutDraftRef.current?.status === "saving") return;
+    const { pageId, sectionId, placementId, newSectionId } = sectionSplitTarget;
     applyBuildStructureCommand({
       type: "split-section", pageId, sectionId, placementId,
-      section: { id: `${sectionId}_${Date.now()}`, title, description },
+      section: { id: newSectionId, title, description },
     });
+    setSectionSplitTarget(null);
+    const created = buildLayoutDraftRef.current?.value.pages.some(page => page.sections?.some(section => section.id === newSectionId));
+    if (!created) return;
+    setBuildSelection({ kind: "section", pageId, sectionId: newSectionId });
+    requestAnimationFrame(() => focusMovedLayoutTarget(newSectionId));
     reportContentActivity("section.created", {
       subject: title,
       key: `content:section:${pageId}:${title}`,
@@ -3227,6 +3244,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
             throw error;
           }
         }}
+      />}
+      {sectionSplitTarget && <BuildLayoutCreateDialog
+        open
+        kind="section"
+        splitAtTitle={sectionSplitTarget.title}
+        invoker={sectionSplitTarget.invoker}
+        onCancel={() => setSectionSplitTarget(null)}
+        onSubmit={confirmSectionSplit}
       />}
       <input
         ref={importInputRef}
