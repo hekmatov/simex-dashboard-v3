@@ -59,6 +59,60 @@ const {
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 
+test("bar legends show actual gradient colors instead of named series fallback", () => {
+  const marks = [{ x: "A", value: 20, measure: "value" }, { x: "B", value: 50, measure: "value" }, { x: "C", value: 90, measure: "value" }];
+  const key = seriesPresentationKey(marks[0]);
+  const keys = marks.map(mark => categoryPresentationKey(mark.x));
+  for (const typeId of ["bar", "horizontalBar"]) {
+    const instance = chart(typeId, { presentation: {
+      series: { overrides: { [key]: { color: "#0000FF" } }, categoryOverrides: {
+        [keys[0]]: { color: "#FF0000" }, [keys[1]]: { color: "#FFFF00" }, [keys[2]]: { color: "#00FF00" },
+      } },
+      legend: { entries: { [key]: { label: "Readiness" } } },
+    } });
+    const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
+    const presented = applyEChartsPresentation(model, instance);
+    assert.deepEqual(presented.option.legend.data, [{ name: key, itemStyle: { color: {
+      type: "linear", x: 0, y: 0, x2: 1, y2: 0,
+      colorStops: [{ offset: 0, color: "#FF0000" }, { offset: 0.5, color: "#FFFF00" }, { offset: 1, color: "#00FF00" }],
+    } } }]);
+    assert.equal(presented.option.legend.formatter(key), "Readiness");
+    assert.deepEqual(model.option.legend.data, [key]);
+    assert.equal(presented.option.series[0].itemStyle.color, "#0000FF");
+    assert.deepEqual(presented.option.series[0].data, model.option.series[0].data);
+    const svg = renderSvg(presented.option);
+    assert.match(svg, /<linearGradient/);
+    assert.match(svg, /stop-color="#FF0000"/);
+    assert.match(svg, /stop-color="#00FF00"/);
+    instance.presentation.axes = { x: { categoryOrder: [keys[2], keys[0], keys[1]] } };
+    const reordered = applyEChartsPresentation(buildRenderModel({ chart: instance, prepared: ready(marks) }), instance);
+    assert.deepEqual(reordered.option.legend.data[0].itemStyle.color.colorStops.map(stop => stop.color), ["#00FF00", "#FF0000", "#FFFF00"]);
+    instance.presentation.legend.visible = false;
+    const hidden = applyEChartsPresentation(buildRenderModel({ chart: instance, prepared: ready(marks) }), instance);
+    assert.equal(hidden.option.legend.show, false);
+    assert.equal(hidden.option.legend.data[0].itemStyle.color.type, "linear");
+    instance.presentation.legend.entries[key].visible = false;
+    assert.deepEqual(applyEChartsPresentation(buildRenderModel({ chart: instance, prepared: ready(marks) }), instance).option.legend.data, []);
+  }
+});
+
+test("bar legend colors handle filtered, uniform and default-colored bars", () => {
+  const marks = [{ x: "A", value: 20, measure: "value" }, { x: "B", value: 90, measure: "value" }];
+  const instance = chart("bar", { presentation: { series: { categoryOverrides: {
+    [categoryPresentationKey("A")]: { color: "#FF0000" },
+  } } } });
+  const full = applyEChartsPresentation(buildRenderModel({ chart: instance, prepared: ready(marks) }), instance, false, { dataColors: ["#123456"] });
+  assert.deepEqual(full.option.legend.data[0].itemStyle.color.colorStops, [{ offset: 0, color: "#FF0000" }, { offset: 1, color: "#123456" }]);
+  const filtered = applyEChartsPresentation(buildRenderModel({ chart: instance, prepared: ready(marks.slice(0, 1)) }), instance);
+  assert.equal(filtered.option.legend.data[0].itemStyle.color, "#FF0000");
+  instance.presentation.series.categoryOverrides[categoryPresentationKey("B")] = { color: "#FF0000" };
+  const uniform = applyEChartsPresentation(buildRenderModel({ chart: instance, prepared: ready(marks) }), instance);
+  assert.equal(uniform.option.legend.data[0].itemStyle.color, "#FF0000");
+  instance.presentation.series = { colors: ["#112233"] };
+  const reset = applyEChartsPresentation(buildRenderModel({ chart: instance, prepared: ready(marks) }), instance);
+  assert.equal(reset.option.legend.data, undefined);
+});
+
 test("V3 #20 #28 legend presentation and ordering preserve chart semantics", () => {
   const marks = [
     { x: "First", value: 11, measure: "actual", measureLabel: "Original actual", axis: "primary" },

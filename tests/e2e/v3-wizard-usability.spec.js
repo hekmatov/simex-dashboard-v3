@@ -116,6 +116,7 @@ test(`${ISSUE_CONTROLS}: palette reachability and gradients across bars`, async 
   await last.press("Escape");
   await expect(palette).toHaveCount(0);
   await expect(toggle).toBeFocused();
+  await flow.wizard.getByLabel("Series override: value", { exact: true }).fill("#FFFFFF");
   await flow.createChart("Bar gradient proof");
   const saved = await issueSavedChart(page, "Bar gradient proof");
   const colors = Object.values(saved.presentation.series.categoryOverrides).map(entry => entry.color);
@@ -125,10 +126,15 @@ test(`${ISSUE_CONTROLS}: palette reachability and gradients across bars`, async 
   expect(colors.at(-1)).toBe("#F1A1AD");
   const panel = page.locator(`[data-canonical-panel-id="${saved.id}"]`);
   await panel.scrollIntoViewIfNeeded();
-  expect((await issueRenderedAxis(panel)).barColors).toEqual(colors);
+  const rendered = await issueRenderedAxis(panel);
+  expect(rendered.barColors).toEqual(colors);
+  expect(rendered.legendColor.type).toBe("linear");
+  expect(rendered.legendColor.colorStops.map(stop => stop.color)).toEqual(colors);
   await page.reload();
   await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await panel.scrollIntoViewIfNeeded();
+  expect((await issueRenderedAxis(panel)).legendColor.colorStops.map(stop => stop.color)).toEqual(colors);
   const editor = await issueOpenEditor(page, saved.id);
   await editor.getByRole("button", { name: /^Configure\./ }).click();
   await expect(editor.getByLabel("Bar color: A long category about hospital readiness", { exact: true })).toHaveValue("#08224A");
@@ -193,7 +199,7 @@ async function issueRenderedAxis(panel) {
     const { getInstanceByDom } = await import(url);
     const instance = getInstanceByDom(node.querySelector(".chart-echarts-host"));
     const option = instance.getOption();
-    return { minimum: option.yAxis[0].min, maximum: option.yAxis[0].max, wrap: option.xAxis[0].axisLabel.overflow, width: option.xAxis[0].axisLabel.width, clip: instance.getModel().getSeriesByIndex(0).get("clip"), barColors: option.series[0].data.map(item => item.itemStyle?.color) };
+    return { minimum: option.yAxis[0].min, maximum: option.yAxis[0].max, wrap: option.xAxis[0].axisLabel.overflow, width: option.xAxis[0].axisLabel.width, clip: instance.getModel().getSeriesByIndex(0).get("clip"), barColors: option.series[0].data.map(item => item.itemStyle?.color), legendColor: option.legend[0].data?.[0]?.itemStyle?.color };
   });
 }
 

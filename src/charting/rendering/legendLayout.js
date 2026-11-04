@@ -1,3 +1,34 @@
+// Resolve after theme colors so bars without an individual override use their actual fallback.
+export function matchBarLegendColors(option) {
+  const legend = option?.legend;
+  const series = option?.series;
+  const axes = [option?.xAxis, option?.yAxis].flat().filter(Boolean);
+  if (!legend || Array.isArray(legend) || series?.length !== 1 || series[0].type !== "bar"
+    || !axes.some(axis => axis.type === "category")) return option;
+  const bar = series[0];
+  if (typeof bar.name !== "string" || !bar.data?.some(point => point?.itemStyle?.color)) return option;
+  const fallback = bar.itemStyle?.color ?? option.color?.[0];
+  const points = bar.data.filter(point => point != null && (typeof point !== "object" || point.value != null));
+  const colors = points.map(point => point?.itemStyle?.color ?? fallback);
+  if (!colors.length || colors.some(color => typeof color !== "string")) return option;
+  const multipleColors = new Set(colors).size > 1;
+  const color = !multipleColors ? colors[0] : {
+    type: "linear", x: 0, y: 0, x2: 1, y2: 0,
+    colorStops: colors.map((color, index) => ({ offset: index / (colors.length - 1), color })),
+  };
+  return {
+    ...option,
+    legend: {
+      ...legend,
+      ...(multipleColors ? { itemWidth: Math.max(32, legend.itemWidth ?? 0) } : {}),
+      data: (legend.data ?? [bar.name]).map(entry => {
+        const item = typeof entry === "string" ? { name: entry } : entry;
+        return item.name === bar.name ? { ...item, itemStyle: { ...item.itemStyle, color } } : entry;
+      }),
+    },
+  };
+}
+
 // Vertical legends use the available row width and paginate large item lists,
 // leaving at least 60% of the canvas height available for the chart.
 export function fitLegendToViewport(option, width, height) {

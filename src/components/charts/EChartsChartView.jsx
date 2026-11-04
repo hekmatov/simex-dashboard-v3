@@ -1,6 +1,6 @@
 import React from "react";
 import * as echarts from "echarts";
-import { fitLegendToViewport, fitRenderedLegend } from "../../charting/rendering/legendLayout.js";
+import { fitLegendToViewport, fitRenderedLegend, matchBarLegendColors } from "../../charting/rendering/legendLayout.js";
 
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import {
@@ -284,7 +284,7 @@ export function applyEChartsPresentation(
     valueAxisTitleProjection,
     valueAxisTitleTextTheme,
     option: normalizeChartFontTokens(
-      audienceScale ? normalizeAudienceOption(presentedOption, audienceScale) : presentedOption,
+      matchBarLegendColors(audienceScale ? normalizeAudienceOption(presentedOption, audienceScale) : presentedOption),
       bodyFont,
       headingFont,
     ),
