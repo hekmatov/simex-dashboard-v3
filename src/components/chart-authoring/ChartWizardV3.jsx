@@ -1966,7 +1966,6 @@ export function ChartCreationProofDeck({
         "data-proof-status": renderProof.status ?? "awaiting",
         "data-proof-revision": renderProof.revision ?? "awaiting",
       },
-      proofHeading("Canonical render", renderProof.status, renderProof.revision),
       React.createElement(AuthoringStage, {
             chart,
             rows,

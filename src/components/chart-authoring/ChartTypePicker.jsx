@@ -28,25 +28,26 @@ function ChartTypePicker({
     label: groupLabels.get(id) ?? "Unavailable",
     charts: options.filter(({ category: categoryId }) => categoryId === id),
   }));
-  return /* @__PURE__ */ React.createElement("section", { className: "chart-type-picker", "aria-labelledby": "chart-type-picker-heading" }, /* @__PURE__ */ React.createElement("h3", { id: "chart-type-picker-heading" }, "Choose a chart type"), /* @__PURE__ */ React.createElement("label", { htmlFor: "chart-type-search" }, "Search chart types"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      id: "chart-type-search",
-      type: "search",
-      value: safeQuery,
-      onChange: (event) => onQueryChange(event.target.value),
-      placeholder: "Search by name, purpose, or description"
-    }
-  ), /* @__PURE__ */ React.createElement("label", { htmlFor: "chart-type-category" }, "Purpose"), /* @__PURE__ */ React.createElement(
-    "select",
-    {
-      id: "chart-type-category",
-      value: typeof category === "string" ? category : "",
-      onChange: (event) => onCategoryChange(event.target.value),
-    },
-    /* @__PURE__ */ React.createElement("option", { value: "" }, "All purposes"),
-    registry.groups().map((group) => /* @__PURE__ */ React.createElement("option", { key: group.id, value: group.id }, group.label)),
-  ), !compatibilityKnown ? /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("section", { className: "chart-type-picker", "aria-label": "Chart types" },
+    /* @__PURE__ */ React.createElement("div", { className: "chart-type-filters" },
+      /* @__PURE__ */ React.createElement("label", { htmlFor: "chart-type-search", className: "visually-hidden" }, "Search chart types"),
+      /* @__PURE__ */ React.createElement("input", {
+        id: "chart-type-search",
+        type: "search",
+        value: safeQuery,
+        onChange: (event) => onQueryChange(event.target.value),
+        placeholder: "Search chart types",
+      }),
+      /* @__PURE__ */ React.createElement("label", { htmlFor: "chart-type-category", className: "visually-hidden" }, "Purpose"),
+      /* @__PURE__ */ React.createElement("select", {
+        id: "chart-type-category",
+        value: typeof category === "string" ? category : "",
+        onChange: (event) => onCategoryChange(event.target.value),
+      },
+        /* @__PURE__ */ React.createElement("option", { value: "" }, "All purposes"),
+        registry.groups().map((group) => /* @__PURE__ */ React.createElement("option", { key: group.id, value: group.id }, group.label)),
+      ),
+    ), !compatibilityKnown ? /* @__PURE__ */ React.createElement(
     "p",
     { className: "chart-type-compatibility-guidance", role: "status" },
     "Choose or profile a data source to check compatibility.",
@@ -77,7 +78,6 @@ function ChartTypePicker({
         "div",
         { className: "chart-type-card-copy" },
         /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-label" }, chart.label),
-        /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-description" }, chart.description),
         compatibilityKnown && chart.compatibility === "incompatible" ? /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-reason" }, chart.reason) : null
       )
     )))
