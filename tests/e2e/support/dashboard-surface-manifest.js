@@ -343,7 +343,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     family: "chart-authoring",
     owner: "chart-wizard",
     mode: "build",
-    state: "data-source",
+    state: "destination",
     viewport: DESKTOP_STANDARD,
     root: ".chart-wizard",
     setup: setupChartWizardDataSource,

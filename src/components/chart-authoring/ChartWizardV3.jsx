@@ -8,6 +8,7 @@ import {
   createWizardState,
   CHART_CREATION_STAGES,
   CHART_CREATION_STAGE_LABELS,
+  normalizeChartCreationStage,
   finalizeWizardDraft,
   reduceWizardState,
 } from "../../charting/forms/wizardDraft.js";
@@ -231,7 +232,7 @@ const CREATION_STAGE_LABELS = Object.freeze(Object.fromEntries(
 
 const LEGACY_STEP_FOR_STAGE = Object.freeze({
   "chart-type": "type",
-  "data-source": "source",
+  destination: "source",
   "map-and-prepare-data": "roles",
   "configure-chart": "style",
   "review-and-create": "style",
@@ -396,7 +397,7 @@ export default function ChartWizardV3({
   const safeExistingCharts = Array.isArray(existingCharts)
     ? existingCharts
     : [];
-  const [wizard, setWizard] = React.useState(() => initialDraftState ?? (
+  const [wizard, setWizard] = React.useState(() => initialDraftState ? { ...initialDraftState, stage: normalizeChartCreationStage(initialDraftState.stage) ?? "destination" } : (
     editMode
       ? createChartWizardEditState({
           session: editSession,
@@ -896,7 +897,8 @@ export default function ChartWizardV3({
     }, action));
     setSubmissionError("");
   };
-  const navigateCreationStage = (stage) => {
+  const navigateCreationStage = (requestedStage) => {
+    const stage = normalizeChartCreationStage(requestedStage);
     setWizard((current) => {
       let next = reduceWizardState(current, { type: "setStage", stage });
       const legacyStep = LEGACY_STEP_FOR_STAGE[stage];
@@ -1507,6 +1509,145 @@ export default function ChartWizardV3({
     return true;
   }
 
+  const dataSourcePanel = React.createElement(DataSourceStep, {
+    dashboard: dashboard ?? {},
+    dataSources: effectiveDataSources,
+    loadedData: safeLoadedData,
+    selectedSourceId,
+    selectedSource: source,
+    selectedSourceKind: sourceKind || wizard.sourceSelection?.kind || "",
+    profile: sourceProfile,
+    allowSourceCreation: !editMode,
+    manualAllowed: wizard.draft
+      ? manualDataAllowed(getChartSchema(wizard.draft.typeId))
+      : false,
+    manualTable,
+    manualErrors,
+    uploadError,
+    geoUploadError,
+    geographyRequired: wizard.draft
+      ? getChartSchema(wizard.draft.typeId).dataFamily === "geography"
+      : false,
+    geoSources,
+    selectedGeoSourceId:
+      wizard.draft?.presentation?.map?.geoSource ?? "",
+    prerequisites: form.steps.find(({ id }) => id === "source")?.prerequisites ?? [],
+    onSelectExisting: selectExisting,
+    onUploadCsv: uploadCsv,
+    onUploadGeoJson: uploadGeoJson,
+    onSelectManual: selectManual,
+    onManualTableChange: updateManual,
+    onGeoSourceChange: (value) => void selectGeoSource(value),
+    onRequestClear: () => dispatch({ type: "requestClearSource" }),
+    existingCharts: wizard.charts.filter(({ id }) => id !== wizard.draft?.id),
+    onCopyChart: copyExistingChart,
+  });
+  const destinationPanel = React.createElement(
+    "section",
+    { className: "chart-wizard-step chart-wizard-destination", "aria-labelledby": "chart-destination-heading" },
+    React.createElement("h3", { id: "chart-destination-heading" }, "Choose destination and placement"),
+    React.createElement("p", null, "Destination stays attached to this chart draft even if you inspect another page."),
+    React.createElement(
+      "div",
+      { className: "chart-destination-controls" },
+      React.createElement(
+        "label",
+        null,
+        "Destination page",
+        React.createElement(
+          "select",
+          {
+            value: wizard.destination?.pageId ?? "",
+            disabled: disabled || submitting,
+            onChange: (event) => {
+              const page = destinationChoices.pages.find(({ id }) => id === event.target.value);
+              const section = page?.sections?.[0] ?? null;
+              updateDestination({
+                pageId: page?.id ?? event.target.value,
+                sectionId: section?.id ?? null,
+                relation: "append",
+                position: "append",
+                anchorId: null,
+              });
+            },
+          },
+          destinationChoices.pages.map((page) => React.createElement(
+            "option",
+            { key: page.id, value: page.id },
+            page.label,
+          )),
+        ),
+      ),
+      React.createElement(
+        "label",
+        null,
+        "Destination section",
+        React.createElement(
+          "select",
+          {
+            value: wizard.destination?.sectionId ?? "",
+            disabled: disabled || submitting,
+            onChange: (event) => updateDestination({
+              sectionId: event.target.value,
+              relation: "append",
+              position: "append",
+              anchorId: null,
+            }),
+          },
+          destinationChoices.sections.map((section) => React.createElement(
+            "option",
+            { key: section.id, value: section.id },
+            section.label,
+          )),
+        ),
+      ),
+      React.createElement(
+        "label",
+        null,
+        "Insertion",
+        React.createElement(
+          "select",
+          {
+            value: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
+            disabled: disabled || submitting,
+            onChange: (event) => updateDestination({
+              relation: event.target.value,
+              position: event.target.value,
+              anchorId: event.target.value === "append"
+                ? null
+                : wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? null,
+            }),
+          },
+          React.createElement("option", { value: "append" }, "Append to section"),
+          React.createElement("option", { value: "before" }, "Before a chart"),
+          React.createElement("option", { value: "after" }, "After a chart"),
+        ),
+      ),
+      React.createElement(
+        "label",
+        null,
+        "Placement anchor",
+        React.createElement(
+          "select",
+          {
+            value: wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? "",
+            disabled: disabled || submitting
+              || (wizard.destination?.relation ?? wizard.destination?.position ?? "append") === "append",
+            onChange: (event) => updateDestination({ anchorId: event.target.value }),
+          },
+          destinationChoices.anchors.length === 0
+            ? React.createElement("option", { value: "" }, "No charts in this section")
+            : destinationChoices.anchors.map((anchor) => React.createElement(
+                "option",
+                { key: anchor.id, value: anchor.id },
+                anchor.label,
+              )),
+        ),
+      ),
+    ),
+    React.createElement("span", { className: "visually-hidden" }, placementProof.orderedText),
+  );
+
   return React.createElement(
     "div",
     {
@@ -1591,122 +1732,7 @@ export default function ChartWizardV3({
         React.createElement(
           "div",
           { className: "chart-wizard-body dashboard-dialog__body", ref: wizardBodyRef },
-        wizard.stage === "destination"
-          ? React.createElement(
-              "section",
-              { className: "chart-wizard-step chart-wizard-destination", "aria-labelledby": "chart-destination-heading" },
-              React.createElement("h3", { id: "chart-destination-heading" }, "Choose destination and placement"),
-              React.createElement("p", null, "Destination stays attached to this chart draft even if you inspect another page."),
-              React.createElement(
-                "div",
-                { className: "chart-destination-controls" },
-                React.createElement(
-                  "label",
-                  null,
-                  "Destination page",
-                  React.createElement(
-                    "select",
-                    {
-                      value: wizard.destination?.pageId ?? "",
-                      disabled: disabled || submitting,
-                      onChange: (event) => {
-                        const page = destinationChoices.pages.find(({ id }) => id === event.target.value);
-                        const section = page?.sections?.[0] ?? null;
-                        updateDestination({
-                          pageId: page?.id ?? event.target.value,
-                          sectionId: section?.id ?? null,
-                          relation: "append",
-                          position: "append",
-                          anchorId: null,
-                        });
-                      },
-                    },
-                    destinationChoices.pages.map((page) => React.createElement(
-                      "option",
-                      { key: page.id, value: page.id },
-                      page.label,
-                    )),
-                  ),
-                ),
-                React.createElement(
-                  "label",
-                  null,
-                  "Destination section",
-                  React.createElement(
-                    "select",
-                    {
-                      value: wizard.destination?.sectionId ?? "",
-                      disabled: disabled || submitting,
-                      onChange: (event) => updateDestination({
-                        sectionId: event.target.value,
-                        relation: "append",
-                        position: "append",
-                        anchorId: null,
-                      }),
-                    },
-                    destinationChoices.sections.map((section) => React.createElement(
-                      "option",
-                      { key: section.id, value: section.id },
-                      section.label,
-                    )),
-                  ),
-                ),
-                React.createElement(
-                  "label",
-                  null,
-                  "Insertion",
-                  React.createElement(
-                    "select",
-                    {
-                      value: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
-                      disabled: disabled || submitting,
-                      onChange: (event) => updateDestination({
-                        relation: event.target.value,
-                        position: event.target.value,
-                        anchorId: event.target.value === "append"
-                          ? null
-                          : wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? null,
-                      }),
-                    },
-                    React.createElement("option", { value: "append" }, "Append to section"),
-                    React.createElement("option", { value: "before" }, "Before a chart"),
-                    React.createElement("option", { value: "after" }, "After a chart"),
-                  ),
-                ),
-                React.createElement(
-                  "label",
-                  null,
-                  "Placement anchor",
-                  React.createElement(
-                    "select",
-                    {
-                      value: wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? "",
-                      disabled: disabled || submitting
-                        || (wizard.destination?.relation ?? wizard.destination?.position ?? "append") === "append",
-                      onChange: (event) => updateDestination({ anchorId: event.target.value }),
-                    },
-                    destinationChoices.anchors.length === 0
-                      ? React.createElement("option", { value: "" }, "No charts in this section")
-                      : destinationChoices.anchors.map((anchor) => React.createElement(
-                          "option",
-                          { key: anchor.id, value: anchor.id },
-                          anchor.label,
-                        )),
-                  ),
-                ),
-              ),
-              React.createElement(
-                React.Suspense,
-                { fallback: React.createElement("p", { role: "status" }, "Loading chart size options…") },
-                React.createElement(ChartFootprintPicker, {
-                  value: destinationFootprint,
-                  disabled: disabled || submitting,
-                  onChange: (footprint) => updateDestination({ footprint }),
-                }),
-              ),
-              React.createElement("span", { className: "visually-hidden" }, placementProof.orderedText),
-            )
-          : null,
+        wizard.stage === "destination" ? dataSourcePanel : null,
         wizard.stage === "chart-type"
           ? React.createElement(ChartTypePicker, {
               value: wizard.draft?.typeId ?? "",
@@ -1730,41 +1756,7 @@ export default function ChartWizardV3({
               },
             })
           : null,
-        wizard.stage === "data-source"
-          ? React.createElement(DataSourceStep, {
-              dashboard,
-              dataSources: effectiveDataSources,
-              loadedData: safeLoadedData,
-              selectedSourceId,
-              selectedSource: source,
-              selectedSourceKind: sourceKind || wizard.sourceSelection?.kind || "",
-              profile: sourceProfile,
-              allowSourceCreation: !editMode,
-              manualAllowed: wizard.draft
-                ? manualDataAllowed(getChartSchema(wizard.draft.typeId))
-                : false,
-              manualTable,
-              manualErrors,
-              uploadError,
-              geoUploadError,
-              geographyRequired: wizard.draft
-                ? getChartSchema(wizard.draft.typeId).dataFamily === "geography"
-                : false,
-              geoSources,
-              selectedGeoSourceId:
-                wizard.draft?.presentation?.map?.geoSource ?? "",
-              prerequisites: active.prerequisites,
-              onSelectExisting: selectExisting,
-              onUploadCsv: uploadCsv,
-              onUploadGeoJson: uploadGeoJson,
-              onSelectManual: selectManual,
-              onManualTableChange: updateManual,
-              onGeoSourceChange: (value) => void selectGeoSource(value),
-              onRequestClear: () => dispatch({ type: "requestClearSource" }),
-              existingCharts: wizard.charts.filter(({ id }) => id !== wizard.draft?.id),
-              onCopyChart: copyExistingChart,
-            })
-          : null,
+
         wizard.stage === "map-and-prepare-data"
           ? React.createElement(DataRolesStep, {
               section: dataSection,
@@ -1788,7 +1780,17 @@ export default function ChartWizardV3({
             })
           : null,
         wizard.stage === "configure-chart"
-          ? React.createElement(StyleLayoutStep, {
+          ? React.createElement(React.Fragment, null,
+              React.createElement("div", { className: "chart-wizard-configuration-footprint" }, React.createElement(
+                React.Suspense,
+                { fallback: React.createElement("p", { role: "status" }, "Loading chart size options…") },
+                React.createElement(ChartFootprintPicker, {
+                  value: destinationFootprint,
+                  disabled: disabled || submitting,
+                  onChange: (footprint) => updateDestination({ footprint }),
+                }),
+              )),
+              React.createElement(StyleLayoutStep, {
               chart: wizard.draft,
               rows,
               geoData,
@@ -1808,7 +1810,7 @@ export default function ChartWizardV3({
                 value: nextGroups,
               }),
               onValidationError: (error) => setSubmissionError(safeMessage(error)),
-            })
+            }))
           : null,
         wizard.stage === "review-and-create"
           ? React.createElement(ChartCreationReview, {
@@ -1829,7 +1831,11 @@ export default function ChartWizardV3({
             )
           : null,
         ),
+        wizard.stage === "destination"
+          ? React.createElement("aside", { className: "chart-wizard-destination-pane dashboard-dialog__body", "aria-label": "Chart destination" }, destinationPanel)
+          : null,
         React.createElement(ChartCreationProofDeck, {
+          hidden: wizard.stage === "destination",
           dashboard,
           chart: wizard.draft,
           rows,
@@ -2003,6 +2009,7 @@ function ChartTimeMemberships({ chart, groups = [], timeRole, onChange = noop })
 }
 
 export function ChartCreationProofDeck({
+  hidden = false,
   dashboard = {},
   chart = null,
   rows = [],
@@ -2039,6 +2046,7 @@ export function ChartCreationProofDeck({
     "aside",
     {
       className: "chart-creation-proof-deck",
+      hidden,
       "aria-label": "Chart creation proofs",
       "data-chart-proof-deck": "persistent",
     },
@@ -2232,8 +2240,7 @@ function deriveVisibleStageStatuses({
     form.steps.map(({ id, complete }) => [id, Boolean(complete)]),
   );
   const complete = {
-    destination: placementProof.status === "valid",
-    "data-source": legacyComplete.source === true,
+    destination: placementProof.status === "valid" && legacyComplete.source === true,
     "chart-type": Boolean(wizard.draft?.typeId),
     "map-and-prepare-data": legacyComplete.roles === true,
     "configure-chart": legacyComplete.style === true && renderProof.status === "valid",
@@ -2243,8 +2250,7 @@ function deriveVisibleStageStatuses({
   };
   const prerequisites = {
     destination: true,
-    "data-source": complete.destination,
-    "chart-type": complete["data-source"],
+    "chart-type": complete.destination,
     "map-and-prepare-data": complete["chart-type"],
     "configure-chart": complete["map-and-prepare-data"],
     "review-and-create": complete["configure-chart"],
@@ -2255,7 +2261,7 @@ function deriveVisibleStageStatuses({
       ? "Complete"
       : !prerequisites[stage]
         ? "Waiting on prerequisite"
-        : wizard.errors?.some((error) => error.stage === stage)
+        : wizard.errors?.some((error) => normalizeChartCreationStage(error.stage) === stage)
           ? "Needs attention"
           : wizard.stage === stage
             ? "In progress"

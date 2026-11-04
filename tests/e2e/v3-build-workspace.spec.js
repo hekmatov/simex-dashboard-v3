@@ -167,7 +167,7 @@ test("compact command row exposes direct Stage 3 ownership", async ({ page }) =>
   await expect(commands.getByRole("button", { name: /Upload Dashboard Package|Clear dashboard/ })).toHaveCount(0);
 });
 
-test("chart creation gives every stage the Configure-sized render proof while keeping proofs reachable", async ({ page }) => {
+test("chart creation combines source and destination and keeps proofs on the other stages", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
@@ -178,13 +178,18 @@ test("chart creation gives every stage the Configure-sized render proof while ke
 
   for (const goToStage of [
     flow.goToDestination,
-    flow.goToDataSource,
     flow.goToChartType,
     flow.goToMapAndPrepare,
     flow.goToConfigure,
     flow.goToReview,
   ]) {
     await goToStage();
+    if (await wizard.locator('[data-chart-wizard-stage="destination"]').count()) {
+      await expect(deck).toBeHidden();
+      await expect(wizard.getByRole('heading', { name: 'Select data source', exact: true })).toBeVisible();
+      await expect(wizard.getByRole('combobox', { name: 'Destination page', exact: true })).toBeVisible();
+      continue;
+    }
     await expect(deck.getByRole("article", { name: "Canonical render proof" })).toBeVisible();
     await expect(deck.getByRole("article", { name: "Placement proof" })).toBeVisible();
     await expect(deck.locator("[data-proof-revision]")).toHaveCount(2);

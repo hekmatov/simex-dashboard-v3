@@ -874,3 +874,20 @@
 :is(.chart-wizard-style-controls, .chart-editor-tab-panel) .chart-authoring-section > .chart-authoring-section-fields {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
 }
+
+.app-frame .chart-wizard-workbench[data-chart-wizard-stage="destination"] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.app-frame .chart-wizard-destination-pane {
+  border-inline-start: 1px solid var(--simex-border-subtle);
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow: auto;
+  padding: 12px 16px;
+}
+.app-frame .chart-creation-proof-deck[hidden] { display: none; }
+.chart-wizard-configuration-footprint { margin-block-end: 16px; }
+.app-frame .chart-wizard-step-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 900px) {
+  .app-frame .chart-wizard-destination-pane { border-inline-start: 0; border-block-start: 1px solid var(--simex-border-subtle); overflow: visible; }
+}

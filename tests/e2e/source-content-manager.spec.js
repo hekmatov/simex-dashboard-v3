@@ -40,7 +40,7 @@ test("compact Build content commands preserve six/four stage contracts", async (
 
   await commands.getByRole("button", { name: "Add chart" }).click();
   const chartWizard = page.getByRole("dialog", { name: "Add new chart" });
-  await expect(chartWizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button")).toHaveCount(6);
+  await expect(chartWizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button")).toHaveCount(5);
   await chartWizard.getByRole("button", { name: "Close", exact: true }).click();
 
   await commands.getByRole("button", { name: "Add Text/Image" }).click();

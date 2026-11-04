@@ -22,7 +22,6 @@ export const WIZARD_STEPS = Object.freeze([
 
 export const CHART_CREATION_STAGES = Object.freeze([
   "destination",
-  "data-source",
   "chart-type",
   "map-and-prepare-data",
   "configure-chart",
@@ -30,8 +29,7 @@ export const CHART_CREATION_STAGES = Object.freeze([
 ]);
 
 export const CHART_CREATION_STAGE_LABELS = Object.freeze([
-  "Destination",
-  "Data source",
+  "Source and Destination",
   "Chart type",
   "Map and prepare",
   "Configure",
@@ -58,6 +56,10 @@ export function isFinalizedWizardResult(value) {
   return Boolean(value && typeof value === "object" && finalizedWizardResults.has(value));
 }
 
+export function normalizeChartCreationStage(stage) {
+  return stage === "data-source" ? "destination" : CHART_CREATION_STAGES.includes(stage) ? stage : null;
+}
+
 export function createWizardState(options = {}) {
   if (!isRecord(options)) {
     throw new TypeError("Wizard state options must be an object.");
@@ -65,9 +67,7 @@ export function createWizardState(options = {}) {
   const sourceSelection = initialSourceSelection(options);
   const state = {
     draftId: options.draftId ?? options.draft?.id ?? null,
-    stage: CHART_CREATION_STAGES.includes(options.stage)
-      ? options.stage
-      : "destination",
+    stage: normalizeChartCreationStage(options.stage) ?? "destination",
     status: CHART_CREATION_STATUSES.has(options.status)
       ? options.status
       : "editing",
@@ -166,13 +166,15 @@ export function reduceWizardState(state, action) {
       });
     }
     case "resume": {
-      const restoration = state.suspension?.restoration;
+      const restoration = normalizeRestoration(state.suspension?.restoration, state.stage);
+      const savedFocus = state.suspension?.resumeFocusId;
+      const resumeFocusId = ["chart-stage-data-source", "chart-draft-data-source"].includes(savedFocus)
+        ? "chart-stage-destination"
+        : nonEmptyString(savedFocus) ? savedFocus : resolveResumeFocus(state, restoration);
       return chartState(state, {
-        stage: CHART_CREATION_STAGES.includes(restoration?.stage)
-          ? restoration.stage
-          : state.stage,
+        stage: normalizeChartCreationStage(restoration?.stage) ?? normalizeChartCreationStage(state.stage) ?? "destination",
         suspension: state.suspension
-          ? { ...state.suspension, resumed: true }
+          ? { ...state.suspension, restoration, resumeFocusId, resumed: true }
           : null,
       });
     }
@@ -223,9 +225,9 @@ export function reduceWizardState(state, action) {
         status: "failed",
         errors: [{
           code: "PROFILE_DRIFT",
-          stage: "data-source",
+          stage: "destination",
           currentRevision: action.currentRevision,
-          focusId: "chart-draft-data-source",
+          focusId: "chart-stage-destination",
         }],
       });
     case "setMapping":
@@ -264,7 +266,7 @@ export function reduceWizardState(state, action) {
       });
     case "setStage":
       assertChartCreationStage(action.stage);
-      return chartState(state, { stage: action.stage });
+      return chartState(state, { stage: normalizeChartCreationStage(action.stage) });
     case "back": {
       const index = CHART_CREATION_STAGES.indexOf(state.stage);
       return index <= 0
@@ -405,15 +407,10 @@ function hasTemporalXAxisSemantics(xAxis) {
 
 export function deriveChartCreationStageStatuses(state) {
   const errorsByStage = new Set(
-    (state.errors ?? []).map(({ stage }) => stage).filter(Boolean),
+    (state.errors ?? []).map(({ stage }) => normalizeChartCreationStage(stage)).filter(Boolean),
   );
   const result = {};
   const destinationComplete = meaningfulValue(state.destination);
-  result.destination = stageStatus(state, "destination", {
-    complete: destinationComplete,
-    waiting: false,
-    needsAttention: errorsByStage.has("destination"),
-  });
 
   const selectedSourceId = state.sourceSelection?.sourceId ?? state.draft?.sourceId;
   const selectedProfile = state.sourceSelection?.profile
@@ -421,10 +418,10 @@ export function deriveChartCreationStageStatuses(state) {
   const sourceComplete = destinationComplete
     && meaningfulValue(selectedSourceId)
     && meaningfulValue(selectedProfile);
-  result["data-source"] = stageStatus(state, "data-source", {
+  result.destination = stageStatus(state, "destination", {
     complete: sourceComplete,
-    waiting: !destinationComplete,
-    needsAttention: errorsByStage.has("data-source"),
+    waiting: false,
+    needsAttention: errorsByStage.has("destination"),
   });
 
   const chartTypeComplete = sourceComplete && meaningfulValue(state.chartTypeId);
@@ -481,7 +478,7 @@ function selectType(state, action) {
     return withStageStatuses({
       ...state,
       activeStep: sourceId ? "roles" : "source",
-      stage: sourceId ? "map-and-prepare-data" : "data-source",
+      stage: sourceId ? "map-and-prepare-data" : "destination",
     });
   }
   const plan = state.draft ? planChartConversion(state.draft, action.typeId) : null;
@@ -518,7 +515,7 @@ function selectType(state, action) {
   return withStageStatuses({
     ...state,
     activeStep: sourceId ? "roles" : "source",
-    stage: sourceId ? "map-and-prepare-data" : "data-source",
+    stage: sourceId ? "map-and-prepare-data" : "destination",
     chartTypeId: action.typeId,
     chartTypeRevision: action.schemaRevision ?? state.chartTypeRevision ?? null,
     discarded: false,
@@ -1200,7 +1197,8 @@ function withStageStatuses(state) {
     : state;
   return {
     ...next,
-    stageStatuses: deriveChartCreationStageStatuses(next),
+    stage: normalizeChartCreationStage(next.stage) ?? "destination",
+    stageStatuses: deriveChartCreationStageStatuses({ ...next, stage: normalizeChartCreationStage(next.stage) ?? "destination" }),
   };
 }
 
@@ -1212,7 +1210,7 @@ function stageStatus(state, stage, { complete, waiting, needsAttention }) {
 }
 
 function assertChartCreationStage(stage) {
-  if (!CHART_CREATION_STAGES.includes(stage)) {
+  if (!normalizeChartCreationStage(stage)) {
     throw new Error(`Unknown chart creation stage "${stage}".`);
   }
 }
@@ -1220,8 +1218,8 @@ function assertChartCreationStage(stage) {
 function normalizeRestoration(restoration, fallbackStage) {
   const value = isRecord(restoration) ? restoration : {};
   return {
-    stage: CHART_CREATION_STAGES.includes(value.stage) ? value.stage : fallbackStage,
-    focusId: nonEmptyString(value.focusId) ? value.focusId : null,
+    stage: normalizeChartCreationStage(value.stage) ?? normalizeChartCreationStage(fallbackStage) ?? "destination",
+    focusId: ["chart-stage-data-source", "chart-draft-data-source"].includes(value.focusId) ? "chart-stage-destination" : nonEmptyString(value.focusId) ? value.focusId : null,
     invokerId: nonEmptyString(value.invokerId) ? value.invokerId : null,
     scrollTop: Number.isFinite(value.scrollTop) ? value.scrollTop : 0,
     targetId: nonEmptyString(value.targetId) ? value.targetId : null,
@@ -1238,7 +1236,6 @@ function firstMeaningfulControl(stage) {
   return {
     destination: "chart-draft-destination",
     "chart-type": "chart-draft-chart-type",
-    "data-source": "chart-draft-data-source",
     "map-and-prepare-data": "chart-draft-mapping",
     "configure-chart": "chart-draft-configuration",
     "review-and-create": "chart-draft-review",

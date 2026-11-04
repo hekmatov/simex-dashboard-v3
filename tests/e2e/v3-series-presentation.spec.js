@@ -225,6 +225,49 @@ test("chart ordering and label-axis entries and palette actions stay beside thei
   await expect(reopened.getByLabel("Label unit", { exact: true })).toHaveValue("%");
 });
 
+test("Source and Destination combines panels and Configure size survives edit save", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1806, height: 1244 });
+  const panel = page.locator(`[data-canonical-panel-id="${support.id}"]`);
+  const placementId = await panel.getAttribute('data-canonical-placement-id');
+  const editor = await edit(page, support.id);
+  const flow = chartAuthoringWorkflow(editor, { mode: "edit" });
+  await flow.goToDestination();
+  await expect(flow.stageButtons).toHaveCount(5);
+  await expect(flow.stageButton('destination')).toContainText('Source and Destination');
+  await expect(editor.locator('#chart-stage-data-source')).toHaveCount(0);
+  const source = editor.locator('.chart-wizard-body .chart-wizard-data-source');
+  const destination = editor.getByRole('complementary', { name: 'Chart destination', exact: true });
+  await expect(source.getByRole('combobox', { name: /^Managed data source/ })).toBeVisible();
+  await expect(source.getByLabel('CSV file', { exact: true })).toHaveCount(0);
+  await expect(destination.getByRole('combobox', { name: 'Destination page', exact: true })).toBeVisible();
+  const left = await editor.locator('.chart-wizard-body').boundingBox();
+  const right = await destination.boundingBox();
+  expect(right.x).toBeGreaterThan(left.x);
+  expect(Math.abs(right.width - left.width)).toBeLessThan(2);
+  await expect(editor.getByRole('region', { name: 'Footprint', exact: true })).toHaveCount(0);
+  await expect(editor.locator('[data-chart-proof-deck="persistent"]')).toBeHidden();
+  await flow.setFootprint({ columns: 3, rows: 0.75 });
+  await expect(editor.getByRole('region', { name: 'Footprint', exact: true })).toBeVisible();
+  await expect(editor.locator('[data-chart-proof-deck="persistent"]')).toBeVisible();
+  await save(editor);
+  const saved = await savedChart(page, support.id);
+  expect(saved.layout).toMatchObject({ width: 3, height: 0.75 });
+  expect(saved.sourceId).toBe(support.sourceId);
+  expect(saved.roles).toEqual(support.roles);
+  expect(saved.title).toBe(support.title);
+  await page.reload();
+  await openDashboardPage(page, "presentation-proof");
+  expect(await panel.getAttribute('data-canonical-placement-id')).toBe(placementId);
+  const option = await rendered(page, support.id);
+  expect(option.series).toHaveLength(4);
+  expect(option.series.every(series => series.data.length === 4)).toBe(true);
+  const reopened = await edit(page, support.id);
+  const size = reopened.getByRole('region', { name: 'Footprint', exact: true });
+  await expect(size.getByRole('combobox', { name: 'Width', exact: true })).toHaveValue('3');
+  await expect(size.getByRole('combobox', { name: 'Height step (12.5% of a row)', exact: true })).toHaveValue('0.75');
+});
+
 test("explicit point labels support matrix bulk selection, cancel and reload", async ({ page }) => {
   test.setTimeout(120_000);
   const editor = await edit(page, support.id);

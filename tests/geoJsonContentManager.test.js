@@ -15,7 +15,8 @@ const vite = await createServer({
   root: process.cwd(),
   appType: "custom",
   logLevel: "silent",
-  server: { middlewareMode: true },
+  optimizeDeps: { noDiscovery: true },
+  server: { middlewareMode: true, watch: null },
 });
 const [
   { default: GeoJsonDetail },
@@ -121,7 +122,7 @@ test("one shared Build map budget activates deferred work without exceeding the 
   assert.equal(budget.activate("missing"), false);
 });
 
-test("managed tracked, packaged, and uploaded GeoJSON are selectable and upload stays in the same data-source stage", () => {
+test("managed tracked, packaged, and uploaded GeoJSON are selectable and upload stays in the same combined stage", () => {
   const dataSources = {
     tracked: { kind: "geojson", path: "data/tracked.geojson", provenance: { label: "Tracked" } },
     packaged: { kind: "dataset", type: "uploadedGeoJson", fileName: "packaged.geojson", geoJson },
@@ -153,7 +154,7 @@ test("chart GeoJSON explicit replacement and unmount cleanup discard staged auth
     const draftRef = { current: { draftId: `draft:${reason}`, candidate: { sourceId: "staged-boundaries" } } };
     const discarded = [];
     const wizard = {
-      stage: "data-source",
+      stage: "destination",
       draft: {
         id: "chart-draft",
         title: "Preserved title",
@@ -169,7 +170,7 @@ test("chart GeoJSON explicit replacement and unmount cleanup discard staged auth
 
     assert.equal(draftRef.current, null);
     assert.deepEqual(discarded, [[`draft:${reason}`, reason]]);
-    assert.equal(nextWizard.stage, "data-source");
+    assert.equal(nextWizard.stage, "destination");
     assert.equal(nextWizard.draft.title, "Preserved title");
     assert.equal(
       nextWizard.draft.presentation?.map?.geoSource,

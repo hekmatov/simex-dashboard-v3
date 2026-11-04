@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 
 const STAGE_IDS = Object.freeze({
   destination: "destination",
-  dataSource: "data-source",
+  dataSource: "destination",
   chartType: "chart-type",
   mapAndPrepare: "map-and-prepare-data",
   configure: "configure-chart",
@@ -69,6 +69,13 @@ export function chartAuthoringWorkflow(wizard, { mode = "create" } = {}) {
     goToMapAndPrepare: () => goToStage("mapAndPrepare"),
     goToConfigure: () => goToStage("configure"),
     goToReview: () => goToStage("review"),
+    async setFootprint({ columns, rows }) {
+      await goToStage("configure");
+      const size = wizard.getByRole("region", { name: "Footprint", exact: true });
+      await expect(size).toBeVisible();
+      if (columns !== undefined) await size.getByRole("combobox", { name: "Width", exact: true }).selectOption({ value: String(columns) });
+      if (rows !== undefined) await size.getByRole("combobox", { name: "Height step (12.5% of a row)", exact: true }).selectOption({ value: String(rows) });
+    },
     async selectExistingSource(sourceLabel) {
       await goToStage("dataSource");
       const trigger = wizard.getByRole("combobox", {
@@ -110,7 +117,7 @@ export function chartAuthoringWorkflow(wizard, { mode = "create" } = {}) {
 }
 
 function stageId(stage) {
-  const id = STAGE_IDS[stage] ?? (Object.values(STAGE_IDS).includes(stage) ? stage : null);
+  const id = stage === "data-source" ? "destination" : STAGE_IDS[stage] ?? (Object.values(STAGE_IDS).includes(stage) ? stage : null);
   if (!id) throw new TypeError(`Unknown chart-authoring stage "${stage}".`);
   return id;
 }

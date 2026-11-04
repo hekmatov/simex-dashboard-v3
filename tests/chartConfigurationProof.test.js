@@ -150,10 +150,9 @@ test("render and placement proofs remain independent and must both be current", 
   assert.match(stalePlacement.reasons[0], /placement/i);
 });
 
-test("proofs are validations inside exactly six stages", () => {
+test("proofs are validations inside exactly five stages", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
     "destination",
-    "data-source",
     "chart-type",
     "map-and-prepare-data",
     "configure-chart",

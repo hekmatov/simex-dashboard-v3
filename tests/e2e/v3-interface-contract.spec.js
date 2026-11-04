@@ -64,7 +64,7 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
   const stageButtons = wizard.getByRole("navigation", { name: "Chart creation steps" })
     .getByRole("button");
-  await expect(stageButtons).toHaveCount(6);
+  await expect(stageButtons).toHaveCount(5);
   const stages = await stageButtons.evaluateAll((buttons) => buttons.map((button) => ({
       id: button.id,
       label: button.querySelector("span")?.textContent,
@@ -73,8 +73,7 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
       accessibleName: button.getAttribute("aria-label"),
     })));
   expect(stages).toEqual([
-    ["destination", "Destination", "Complete"],
-    ["data-source", "Data source", "Not started"],
+    ["destination", "Source and Destination", "In progress"],
     ["chart-type", "Chart type", "Waiting on prerequisite"],
     ["map-and-prepare-data", "Map and prepare", "Waiting on prerequisite"],
     ["configure-chart", "Configure", "Waiting on prerequisite"],

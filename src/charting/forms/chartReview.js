@@ -3,7 +3,7 @@ const REVIEW_ITEMS = [
     ...state.destination,
   })],
   ["chart-type", "Chart type", "chart-type", (state) => state.chartType],
-  ["source-profile-and-provenance", "Source, profile, and provenance", "data-source", (state) => state.source],
+  ["source-profile-and-provenance", "Source, profile, and provenance", "destination", (state) => state.source],
   ["mapping-and-preparation", "Mapping and preparation", "map-and-prepare-data", (state) => ({
     mapping: state.mapping,
     preparation: state.preparation,
@@ -74,7 +74,7 @@ export function revalidateChartCreate(state, currentDashboard) {
     currentSource.revision !== state.source?.revision ||
     currentSource.profileRevision !== state.source?.profileRevision
   ) {
-    errors.push(error("SOURCE_REVISION_DRIFT", "data-source", "The selected source or its profile changed."));
+    errors.push(error("SOURCE_REVISION_DRIFT", "destination", "The selected source or its profile changed."));
   }
   if (!destination.page || !destination.section) {
     errors.push(error("DESTINATION_MISSING", "destination", "The reviewed destination no longer exists."));

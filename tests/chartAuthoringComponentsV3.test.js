@@ -2005,7 +2005,7 @@ test("chart authoring primary and shell regions stay mounted before readiness", 
   assert.match(primary, /disabled=""/);
 });
 
-test("wizard exposes the exact six directly clickable stages in the approved order", () => {
+test("wizard exposes the exact five directly clickable stages in the approved order", () => {
   const html = render(React.createElement(ChartWizardV3, {
     open: true,
     dataSources: {},
@@ -2015,8 +2015,7 @@ test("wizard exposes the exact six directly clickable stages in the approved ord
     onCreate() {},
   }));
   const stages = [
-    ["chart-stage-destination", "Destination"],
-    ["chart-stage-data-source", "Data source"],
+    ["chart-stage-destination", "Source and Destination"],
     ["chart-stage-chart-type", "Chart type"],
     ["chart-stage-map-and-prepare-data", "Map and prepare"],
     ["chart-stage-configure-chart", "Configure"],
@@ -2030,7 +2029,7 @@ test("wizard exposes the exact six directly clickable stages in the approved ord
     assert.ok(index > lastIndex, `${label} should be in order`);
     lastIndex = index;
   }
-  assert.equal((html.match(/id="chart-stage-/g) ?? []).length, 6);
+  assert.equal((html.match(/id="chart-stage-/g) ?? []).length, 5);
   assert.doesNotMatch(
     html.slice(html.indexOf("Choose a chart type")),
     /Background|Series color|Line width|Bar width/,
@@ -2068,7 +2067,6 @@ test("every wizard stage remains enabled and explains unmet prerequisites", () =
   for (const id of [
     "chart-stage-destination",
     "chart-stage-chart-type",
-    "chart-stage-data-source",
     "chart-stage-map-and-prepare-data",
     "chart-stage-configure-chart",
     "chart-stage-review-and-create",
@@ -5598,4 +5596,25 @@ test("label heading visibility keeps point selection and grouped fields render e
   assert.equal((grouped.match(/value="Authored"/g) ?? []).length, 1);
   assert.equal((grouped.match(/value="2"/g) ?? []).length, 1);
   assert.doesNotMatch(grouped, />Appearance</);
+});
+
+
+test("combined Source and Destination panels share the draft and Configure owns footprint", () => {
+  const props = { open: true, dataSources: {}, loadedData: {}, chronoGroups: [], onClose() {}, onCreate() {} };
+  const destinationHtml = render(React.createElement(ChartWizardV3, props));
+  assert.match(destinationHtml, /class="chart-wizard-destination-pane dashboard-dialog__body"/);
+  assert.match(destinationHtml, /Select data source/);
+  assert.match(destinationHtml, /Destination page/);
+  assert.ok(destinationHtml.indexOf("Select data source") < destinationHtml.indexOf("Choose destination and placement"));
+  assert.match(destinationHtml, /class="chart-creation-proof-deck"[^>]*hidden=""/);
+  assert.doesNotMatch(destinationHtml, /chart-wizard-configuration-footprint/);
+  const configureHtml = render(React.createElement(ChartWizardV3, { ...props, initialDraftState: createWizardState({ stage: "configure-chart" }) }));
+  assert.match(configureHtml, /chart-wizard-configuration-footprint/);
+  assert.doesNotMatch(configureHtml, /chart-wizard-destination-pane/);
+  assert.doesNotMatch(configureHtml, /class="chart-creation-proof-deck"[^>]*hidden=""/);
+  const sourceHtml = render(React.createElement(ChartWizardV3, { ...props, initialDraftState: createWizardState({ stage: "data-source" }) }));
+  assert.equal((sourceHtml.match(/id="chart-wizard-data-source-heading"/g) ?? []).length, 1);
+  assert.match(sourceHtml, /chart-wizard-destination-pane/);
+  assert.doesNotMatch(sourceHtml, /id="chart-stage-data-source"/);
+  assert.doesNotMatch(sourceHtml, /chart-wizard-configuration-footprint/);
 });

@@ -59,7 +59,7 @@ const REQUIRED_EXECUTABLE_STATES = Object.freeze({
   "build-page-command-form": "page-command-form",
   "section-command-dialog": "move-section",
   "chart-wizard-destination": "destination",
-  "chart-wizard-data-source": "data-source",
+  "chart-wizard-data-source": "destination",
   "chart-wizard-source-listbox": "managed-source-options",
   "chart-wizard-chart-type": "chart-type",
   "chart-wizard-map-and-prepare": "map-and-prepare",

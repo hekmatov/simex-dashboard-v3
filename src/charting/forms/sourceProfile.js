@@ -23,7 +23,7 @@ export function profileChartSource({
       message: forbidden
         ? `Data source ${id} cannot be accessed with the current permission.`
         : `Data source ${id} is unavailable. Retry when access is restored.`,
-      stage: "data-source",
+      stage: "destination",
       retryable: !forbidden,
     });
   }
@@ -31,7 +31,7 @@ export function profileChartSource({
     return unavailable(id, provenance, {
       code: "source-invalid",
       message: `Data source ${id} did not provide rows that can be profiled.`,
-      stage: "data-source",
+      stage: "destination",
       retryable: false,
     });
   }
@@ -41,7 +41,7 @@ export function profileChartSource({
       return unavailable(id, provenance, {
         code: "csv-byte-limit",
         message: `CSV ${id} is ${byteLength} bytes; the effective limit is ${effectiveLimits.maxBytes} bytes. Choose a smaller file.`,
-        stage: "data-source",
+        stage: "destination",
         retryable: false,
       });
     }
@@ -49,7 +49,7 @@ export function profileChartSource({
       return unavailable(id, provenance, {
         code: "csv-row-limit",
         message: `CSV ${id} has ${rows.length} rows; the effective limit is ${effectiveLimits.maxRows} rows. Reduce the file and try again.`,
-        stage: "data-source",
+        stage: "destination",
         retryable: false,
       });
     }

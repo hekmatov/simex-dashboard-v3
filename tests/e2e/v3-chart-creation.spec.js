@@ -113,7 +113,7 @@ test("V3 #24 lower favorable gauge keeps an ascending scale after save", async (
   await expect(page.locator(".precision-arc-gauge").filter({ hasText: "ON TRACK" })).toBeVisible();
 });
 
-test("six-stage chart creation suspends and commits exactly once", async ({ page }) => {
+test("five-stage chart creation suspends and commits exactly once", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });
   await resetSourceDashboard(page, { fixture: "fable-m0" });
@@ -133,7 +133,7 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   await expect(flow.stageButton("map-and-prepare-data")).toHaveAttribute("aria-current", "step");
   await flow.selectRole("measurements", "national_total_cases");
   await flow.selectRole("observation", "Date");
-  await flow.goToConfigure();
+  await flow.setFootprint({ columns: 3, rows: 0.75 });
   await wizard.getByRole("textbox", { name: "Chart title", exact: true }).fill(CHART_TITLE);
   await flow.nextStage("review-and-create");
   await expect(wizard.getByText("All current values and both proofs are ready.")).toBeVisible();

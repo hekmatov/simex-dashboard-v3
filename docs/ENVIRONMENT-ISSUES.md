@@ -12,7 +12,7 @@ Do not record product-test failures, expected build warnings, transient typing m
 | ENV-002 | Playwright Chromium is absent from the local browser cache | Recurrent after cache removal or Playwright upgrade | 1 | ENV-002.001 |
 | ENV-003 | Git reports a linked checkout is not a worktree during restricted reads | Observed in restricted Codex execution | 1 | ENV-003.001 |
 | ENV-004 | Windows Chromium cannot read a file upload at a long native evidence path | Avoided with the same bytes supplied as a browser File | 1 | ENV-004.001 |
-| ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Scoped fixed-input fixtures disable watching and discovery | 1 | ENV-005.001 |
+| ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Scoped fixed-input fixtures disable watching and discovery | 2 | ENV-005.001, ENV-005.002 |
 | ENV-006 | Windows restricted launcher cannot create the process security environment | Project-access execution remains available | 1 | ENV-006.001 |
 
 The **Entries** value must equal the number of listed entry references. Add a new reference for every confirmed repeat; do not merely increase the count.
@@ -33,6 +33,13 @@ The **Entries** value must equal the number of listed entry references. Add a ne
 - **Evidence:** Both failed before shell dispatch with `MXC launcher: failed to create the process security environment: CreateProcessSecurityEnvironment failed (HRESULT = 0x80070020)`. The same status command succeeded with project-access execution.
 - **Scope:** Windows restricted command launcher in this session. The underlying lock owner was not identified; no product test failure is attributed to it.
 - **Outcome:** Continued the authorized local recording and commit operations through the available project-access route; no dashboard or operating-system settings changed.
+
+### ENV-005.002 — 2026-11-04
+
+- **Command:** `node --test --test-name-pattern='combined Source and Destination|exact five directly|every wizard stage|chart authoring primary|full chart edit restores|unmount cleanup|every required distinct state' tests/chartAuthoringComponentsV3.test.js tests/geoJsonContentManager.test.js tests/dashboardSurfaceManifest.test.js`.
+- **Evidence:** Six component/manifest cases completed, while the GeoJSON test module remained in its default Vite SSR setup without producing a case result. Stopped that run, then applied the established fixed-input setup (watching and automatic dependency discovery disabled) to the affected GeoJSON fixture and equivalent proof-deck fixture. The scoped GeoJSON case passed in 2.3 seconds; the three proof-deck cases passed in 2.9 seconds.
+- **Scope:** Private checkout Vite SSR fixtures using default watching/discovery. Their separate contributions were not measured, matching the existing ENV-005 boundary.
+- **Outcome:** Required scoped checks completed without changing product assertions or production Vite settings. The interrupted component/manifest selection was completed separately.
 
 ### ENV-005.001 — 2026-10-30
 

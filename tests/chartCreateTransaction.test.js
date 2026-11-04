@@ -99,7 +99,7 @@ function transaction(overrides = {}) {
   return { ...result.transactionCandidate, ...overrides.transaction };
 }
 
-test("Review lists the complete six-stage ledger and stage-owned repair links", () => {
+test("Review lists the complete five-stage ledger and stage-owned repair links", () => {
   const ledger = buildChartReviewLedger(completeState());
 
   assert.deepEqual(
@@ -156,7 +156,7 @@ test("revalidation rejects dashboard, schema, source, destination, anchor, permi
     [
       "SOURCE_REVISION_DRIFT",
       { sources: { "source-weather": { revision: "source-r10", profileRevision: "profile-r4" } } },
-      "data-source",
+      "destination",
     ],
     ["DESTINATION_MISSING", { pages: [] }, "destination"],
     [

@@ -96,18 +96,16 @@ test("V3 #17 detected temporal bindings retain playback without rewriting roles"
   assert.deepEqual(changed.chronoGroups, state.chronoGroups);
 });
 
-test("Add chart retains its exact six-stage contract", () => {
+test("Add chart retains its exact five-stage contract", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
     "destination",
-    "data-source",
     "chart-type",
     "map-and-prepare-data",
     "configure-chart",
     "review-and-create",
   ]);
   assert.deepEqual(CHART_CREATION_STAGE_LABELS, [
-    "Destination",
-    "Data source",
+    "Source and Destination",
     "Chart type",
     "Map and prepare",
     "Configure",
@@ -250,7 +248,7 @@ test("a profiled source exists before chart type and survives initial selection 
   });
 
   assert.equal(sourceSelected.draft, null);
-  assert.equal(sourceSelected.stageStatuses["data-source"], "Complete");
+  assert.equal(sourceSelected.stageStatuses.destination, "Complete");
   assert.equal(
     sourceSelected.stageStatuses["map-and-prepare-data"],
     "Waiting on prerequisite",

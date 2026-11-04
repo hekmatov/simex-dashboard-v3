@@ -83,10 +83,7 @@ test("authoring stage preserves destination geometry, rendered output and draft 
   await createFlow.goToMapAndPrepare();
   await createFlow.selectRole("measurements", "R_value");
   await createFlow.selectRole("observation", "date");
-  await createFlow.goToDestination();
-  await wizard.locator("#chart-footprint-width").selectOption("4");
-  await wizard.locator("#chart-footprint-row-height").selectOption("0.5");
-  await createFlow.goToConfigure();
+  await createFlow.setFootprint({ columns: 4, rows: 0.5 });
   stage = wizard.locator(".authoring-stage");
   await expect(stage).toHaveClass(/chart-authoring-preview-ready/);
   await expect(stage).toHaveAttribute("data-stage-height", "201");

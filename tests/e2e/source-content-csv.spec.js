@@ -180,7 +180,7 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   expect(repaired.presentReview).toBeNull();
 });
 
-test("Journey D — CSV upload through six stages then catalogue management", async ({ page }) => {
+test("Journey D — CSV upload through five stages then catalogue management", async ({ page }) => {
   test.setTimeout(180_000);
   await openBiomedicalBuild(page, { width: 1440, height: 900 });
   const initial = await csvInventory(page);

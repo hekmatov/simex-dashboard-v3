@@ -43,7 +43,7 @@ test("empty, partial, retryable, and terminal source states remain distinct", ()
   }).error, {
     code: "source-unavailable",
     message: "Data source offline is unavailable. Retry when access is restored.",
-    stage: "data-source",
+    stage: "destination",
     retryable: true,
   });
   assert.equal(profileChartSource({

@@ -12,18 +12,16 @@ import {
 import { isMeaningfulChartDraft } from "../src/charting/forms/chartDraftSession.js";
 import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 
-test("chart creation exposes exactly six stable stages and labels with no proof stage", () => {
+test("chart creation exposes exactly five stable stages and labels with no proof stage", () => {
   assert.deepEqual(CHART_CREATION_STAGES, [
     "destination",
-    "data-source",
     "chart-type",
     "map-and-prepare-data",
     "configure-chart",
     "review-and-create",
   ]);
   assert.deepEqual(CHART_CREATION_STAGE_LABELS, [
-    "Destination",
-    "Data source",
+    "Source and Destination",
     "Chart type",
     "Map and prepare",
     "Configure",
@@ -113,7 +111,6 @@ test("stage access is non-linear and dependency-aware without clearing compatibl
   assert.equal(state.stage, "review-and-create");
   assert.equal(state.stageStatuses.destination, "Complete");
   assert.equal(state.stageStatuses["chart-type"], "Complete");
-  assert.equal(state.stageStatuses["data-source"], "Complete");
   assert.equal(state.stageStatuses["map-and-prepare-data"], "Complete");
   assert.equal(state.stageStatuses["configure-chart"], "Complete");
   assert.equal(state.stageStatuses["review-and-create"], "In progress");
@@ -137,9 +134,8 @@ test("live stage status separates current stage, errors, completion, and prerequ
   let state = createWizardState({ draftId: "draft-1", dashboardRevision: "r1" });
   state = reduceWizardState(state, { type: "setStage", stage: "data-source" });
   assert.deepEqual(deriveChartCreationStageStatuses(state), {
-    destination: "Not started",
+    destination: "In progress",
     "chart-type": "Waiting on prerequisite",
-    "data-source": "Waiting on prerequisite",
     "map-and-prepare-data": "Waiting on prerequisite",
     "configure-chart": "Waiting on prerequisite",
     "review-and-create": "Waiting on prerequisite",
@@ -153,7 +149,7 @@ test("live stage status separates current stage, errors, completion, and prerequ
     },
   });
   assert.equal(state.status, "failed");
-  assert.equal(state.stageStatuses["data-source"], "Needs attention");
+  assert.equal(state.stageStatuses.destination, "Needs attention");
   assert.equal(state.stageStatuses["review-and-create"], "Waiting on prerequisite");
 });
 
@@ -264,4 +260,27 @@ test("commit failure, ambiguity, reconciliation, and success retain one transact
   });
   assert.equal(state.status, "committed");
   assert.equal(state.handoff.chartId, "chart-1");
+});
+
+
+test("retired source-stage drafts and repairs normalize to Source and Destination", () => {
+  const draft = createWizardState({ draftId: "retained", stage: "data-source", destination: { pageId: "p", sectionId: "s", footprint: { columns: 3, rows: 0.75 } } });
+  assert.equal(draft.stage, "destination");
+  assert.notEqual(draft.stageStatuses.destination, "Complete");
+  const suspended = reduceWizardState(draft, { type: "suspend", restoration: { stage: "data-source", focusId: "chart-stage-data-source", scrollTop: 52 } });
+  const resumed = reduceWizardState(suspended, { type: "resume" });
+  assert.equal(resumed.stage, "destination");
+  assert.equal(resumed.suspension.restoration.focusId, "chart-stage-destination");
+  assert.deepEqual(resumed.destination, draft.destination);
+  const repaired = reduceWizardState(resumed, { type: "setStage", stage: "data-source" });
+  assert.equal(repaired.stage, "destination");
+  const back = reduceWizardState(reduceWizardState(repaired, { type: "setStage", stage: "chart-type" }), { type: "back" });
+  assert.equal(back.stage, "destination");
+  const restored = reduceWizardState({ ...draft, stage: "data-source", suspension: { restoration: { stage: "data-source", focusId: "chart-stage-data-source", scrollTop: 52 } } }, { type: "resume" });
+  assert.equal(restored.stage, "destination");
+  assert.equal(restored.suspension.restoration.stage, "destination");
+  assert.equal(restored.suspension.resumeFocusId, "chart-stage-destination");
+  assert.equal(restored.suspension.restoration.scrollTop, 52);
+  const custom = reduceWizardState({ ...draft, suspension: { restoration: { stage: "destination", focusId: null }, resumeFocusId: "custom-source-control" } }, { type: "resume" });
+  assert.equal(custom.suspension.resumeFocusId, "custom-source-control");
 });

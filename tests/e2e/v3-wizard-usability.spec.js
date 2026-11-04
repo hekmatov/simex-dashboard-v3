@@ -292,7 +292,7 @@ test("New Chart keeps stable geometry and exposes editable destination placement
   await expect(wizard.locator(".chart-wizard-header .eyebrow")).toHaveCount(0);
 
   const stages = flow.stageButtons;
-  await expect(stages).toHaveCount(6);
+  await expect(stages).toHaveCount(5);
   const rows = await stages.evaluateAll((buttons) => (
     new Set(buttons.map((button) => Math.round(button.getBoundingClientRect().top))).size
   ));
@@ -308,18 +308,29 @@ test("New Chart keeps stable geometry and exposes editable destination placement
   await expect(wizard.getByLabel("Destination page")).toBeEnabled();
   await expect(wizard.getByLabel("Destination section")).toBeEnabled();
   await expect(wizard.getByLabel("Insertion")).toBeEnabled();
+  await expect(wizard.getByRole("heading", { name: "Select data source", exact: true })).toBeVisible();
+  await expect(wizard.getByRole("region", { name: "Footprint" })).toHaveCount(0);
+  await expect(wizard.locator('[data-chart-proof-deck="persistent"]')).toBeHidden();
+  const body = await wizard.locator('.chart-wizard-body').boundingBox();
+  const destination = await wizard.getByRole('complementary', { name: 'Chart destination', exact: true }).boundingBox();
+  expect(destination.x).toBeGreaterThan(body.x);
+  expect(Math.abs(destination.width - body.width)).toBeLessThan(2);
+  await wizard.getByLabel("Insertion").selectOption("before");
+  await expect(wizard.getByLabel("Placement anchor")).toBeEnabled();
+  await flow.setFootprint({ columns: 3, rows: 2 });
   const footprint = wizard.getByRole("region", { name: "Footprint" });
   await expect(footprint).toBeVisible();
-  await footprint.getByLabel("Width").selectOption("3");
-  await footprint.getByLabel("Height step (12.5% of a row)").selectOption({ value: "2" });
   await expect(footprint.getByLabel("Width")).toHaveValue("3");
   await expect(footprint.getByLabel("Height step (12.5% of a row)")).toHaveValue("2");
   await expect(footprint.getByRole("img", {
     name: "Chart size: 3 columns by 16 steps",
   })).toBeVisible();
-  await wizard.getByLabel("Insertion").selectOption("before");
+  await flow.goToDestination();
+  await expect(wizard.getByLabel("Insertion")).toHaveValue("before");
   await expect(wizard.getByLabel("Placement anchor")).toBeEnabled();
-  await expect(wizard.locator(".chart-wizard-destination .chart-proof-state")).toHaveCount(0);
+  await expect(wizard.getByRole("region", { name: "Footprint" })).toHaveCount(0);
+  await flow.goToConfigure();
+  await expect(footprint.getByLabel("Width")).toHaveValue("3");
 });
 
 test("Data source composes source tasks vertically and contains their controls", async ({ page }) => {

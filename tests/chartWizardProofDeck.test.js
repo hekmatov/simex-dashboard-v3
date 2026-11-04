@@ -10,7 +10,8 @@ const vite = await createServer({
   root: process.cwd(),
   appType: "custom",
   logLevel: "silent",
-  server: { middlewareMode: true },
+  optimizeDeps: { noDiscovery: true },
+  server: { middlewareMode: true, watch: null },
 });
 const wizardModule = await vite.ssrLoadModule("/src/components/chart-authoring/ChartWizardV3.jsx")
   .catch(() => null);
@@ -18,14 +19,13 @@ await vite.close();
 
 const STAGES = [
   "destination",
-  "data-source",
   "chart-type",
   "map-and-prepare-data",
   "configure-chart",
   "review-and-create",
 ];
 
-test("the persistent proof deck remains validation inside the six chart stages", () => {
+test("the persistent proof deck remains validation inside the five chart stages", () => {
   assert.deepEqual(CHART_CREATION_STAGES, STAGES);
   assert.equal(STAGES.includes("content"), false);
   assert.equal(STAGES.includes("preview-and-add"), false);
@@ -55,6 +55,7 @@ test("every chart-creation stage retains both independent proof surfaces", () =>
     }));
 
     assert.match(html, /data-chart-proof-deck="persistent"/, stage);
+    assert.equal(/class="chart-creation-proof-deck"[^>]*hidden=""/.test(html), stage === "destination");
     assert.match(html, /aria-label="Canonical render proof"/, stage);
     assert.match(html, /aria-label="Placement proof"/, stage);
     assert.match(html, /data-proof-revision=/, stage);

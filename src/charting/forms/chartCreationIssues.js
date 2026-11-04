@@ -1,14 +1,14 @@
 const STAGES = Object.freeze({
-  destination: "Destination",
+  destination: "Source and Destination",
   "chart-type": "Chart type",
-  "data-source": "Data source",
   "map-and-prepare-data": "Map and prepare data",
   "configure-chart": "Configure chart",
 });
 
 const STEP_STAGE = Object.freeze({
   type: "chart-type",
-  source: "data-source",
+  source: "destination",
+  "data-source": "destination",
   roles: "map-and-prepare-data",
   style: "configure-chart",
 });
@@ -50,7 +50,7 @@ export function deriveChartCreationIssues({
 
   const source = steps.get("source");
   if (source?.complete !== true) {
-    add("data-source", firstMessage(source, "Choose a data source."));
+    add("destination", firstMessage(source, "Choose a data source."));
     return issues;
   }
 

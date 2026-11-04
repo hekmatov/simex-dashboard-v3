@@ -33,7 +33,7 @@ test("Review keeps independent destination and configuration repairs explicit", 
       draft: { typeId: "line", sourceId: "cases", title: "" },
       errors: [{
         code: "PROFILE_DRIFT",
-        stage: "data-source",
+        stage: "destination",
         message: "The selected source profile changed.",
       }],
     },
@@ -59,15 +59,15 @@ test("Review keeps independent destination and configuration repairs explicit", 
   assert.deepEqual(issues, [
     {
       stage: "destination",
-      stageLabel: "Destination",
+      stageLabel: "Source and Destination",
       message: "Choose a valid destination section.",
       focusId: "chart-stage-destination",
     },
     {
-      stage: "data-source",
-      stageLabel: "Data source",
+      stage: "destination",
+      stageLabel: "Source and Destination",
       message: "The selected source profile changed.",
-      focusId: "chart-stage-data-source",
+      focusId: "chart-stage-destination",
     },
     {
       stage: "configure-chart",
