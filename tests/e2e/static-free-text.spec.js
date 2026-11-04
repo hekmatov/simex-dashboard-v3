@@ -96,7 +96,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("full text editor scrolls through rendered preview boundaries", async ({ page }) => {
+test("full text editor fits width without a height cap and keeps editor scrolling", async ({ page }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1117, height: 766 });
   await openBiomedicalBuild(page);
@@ -106,7 +106,7 @@ test("full text editor scrolls through rendered preview boundaries", async ({ pa
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Panel title").fill("Preview wheel proof");
-  await wizard.getByLabel("Portable QMD Composer editing area").fill("Short rendered text.");
+  await wizard.getByLabel("Portable QMD Composer editing area").fill("Text wrapping stays tied to the panel's logical width while the complete preview is scaled. ".repeat(5));
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -143,6 +143,7 @@ test("full text editor scrolls through rendered preview boundaries", async ({ pa
   };
   for (const mode of ["Fit", "Actual"]) {
     await preview.getByRole("button", { name: mode, exact: true }).click();
+    await expect(preview.locator("[data-stage-scale]")).toHaveAttribute("data-stage-scale", "1");
     await viewport.evaluate(node => { node.scrollTop = node.scrollHeight; });
     expect(await viewport.evaluate(node => node.scrollHeight - node.clientHeight - node.scrollTop), "Preview must be at its boundary before testing scroll handoff").toBeLessThanOrEqual(1);
     const before = await positionPreview();
@@ -152,18 +153,42 @@ test("full text editor scrolls through rendered preview boundaries", async ({ pa
   }
   await height.selectOption({ value: "3" });
   await expect(height).toHaveValue("3");
+  await preview.getByRole("button", { name: "Fit", exact: true }).click();
+  const tall = await preview.evaluate(node => {
+    const stage = node.querySelector("[data-stage-height]");
+    const viewport = node.querySelector(".authoring-stage__viewport");
+    return { height: Number(stage.dataset.stageHeight), viewportHeight: viewport.clientHeight, maxHeight: getComputedStyle(viewport).maxHeight, scale: Number(stage.dataset.stageScale) };
+  });
+  expect(tall.scale).toBe(1);
+  expect(tall.maxHeight).toBe("none");
+  expect(tall.viewportHeight).toBeGreaterThanOrEqual(tall.height - 1);
+  const beforeTallScroll = await positionPreview();
+  await page.mouse.wheel(0, 120);
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => body.evaluate(node => node.scrollTop)).toBeGreaterThan(beforeTallScroll + 20);
+  await expect(editor.getByRole("button", { name: "Continue", exact: true })).toBeInViewport();
+
+  await page.setViewportSize({ width: 2400, height: 900 });
+  await editor.getByRole("combobox", { name: "Width", exact: true }).selectOption({ value: "4" });
+  const wide = await preview.evaluate(node => {
+    const stage = node.querySelector("[data-stage-width]");
+    const content = node.querySelector(".free-text-chart-view__content");
+    const paragraph = content.querySelector("p");
+    return { width: Number(stage.dataset.stageWidth), available: node.querySelector(".authoring-stage__viewport").clientWidth, scale: Number(stage.dataset.stageScale), contentWidth: content.clientWidth, lines: paragraph.offsetHeight / parseFloat(getComputedStyle(paragraph).lineHeight) };
+  });
+  expect(wide.width, "Wide-panel fixture must exceed the preview's available width").toBeGreaterThan(wide.available);
+  expect(wide.scale).toBeCloseTo(wide.available / wide.width, 2);
   await preview.getByRole("button", { name: "Actual", exact: true }).click();
-  await viewport.evaluate(node => { node.scrollTop = 0; });
-  expect(await viewport.evaluate(node => node.scrollHeight - node.clientHeight)).toBeGreaterThan(120);
-  const beforeInner = await positionPreview();
-  await page.mouse.wheel(0, 120);
-  await expect.poll(() => viewport.evaluate(node => node.scrollTop)).toBeGreaterThan(20);
-  expect(await body.evaluate(node => node.scrollTop)).toBe(beforeInner);
-  await viewport.evaluate(node => { node.scrollTop = node.scrollHeight; });
-  const beforeBoundary = await positionPreview();
-  await page.mouse.wheel(0, 120);
-  await page.mouse.wheel(0, 120);
-  await expect.poll(() => body.evaluate(node => node.scrollTop)).toBeGreaterThan(beforeBoundary + 20);
+  await expect(preview.locator("[data-stage-scale]")).toHaveAttribute("data-stage-scale", "1");
+  const actual = await textPreviewGeometry(preview);
+  expect(actual.contentWidth).toBe(wide.contentWidth);
+  expect(actual.lines).toBe(wide.lines);
+  expect(await viewport.evaluate(node => node.scrollWidth - node.clientWidth)).toBeGreaterThan(0);
+  await editor.getByRole("button", { name: "Continue", exact: true }).click();
+  const final = editor.getByRole("region", { name: "Text/Image preview", exact: true });
+  const finalGeometry = await textPreviewGeometry(final);
+  expect(finalGeometry.contentWidth).toBe(wide.contentWidth);
+  expect(finalGeometry.lines).toBe(wide.lines);
 });
 
 test("V3 #25 image-to-text creates and reopens valid text", async ({ page }) => {

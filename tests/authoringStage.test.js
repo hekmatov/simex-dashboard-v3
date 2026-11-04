@@ -26,6 +26,16 @@ test("V3 #21 text preview uses destination footprint dimensions", () => {
   }
 });
 
+test("V3 #21 tall static previews fit width without imposing a height limit", () => {
+  for (const mode of ["fit", "actual"]) {
+    const html = renderToStaticMarkup(React.createElement(AuthoringFootprintFrame, {
+      layout: { width: 1, height: 4 }, kind: "preview", canvasWidth: 1000, fit: mode,
+    }, React.createElement("p", null, "Tall panel content")));
+    assert.match(html, /data-stage-scale="1"/);
+    assert.doesNotMatch(html, /max-height:/);
+  }
+});
+
 test("stage renders one real destination panel at literal pixels with reserved scaled space", () => {
   const html = render({ availableWidth: 335, maxHeight: 600 });
   assert.match(html, /data-stage-width="670"/);
