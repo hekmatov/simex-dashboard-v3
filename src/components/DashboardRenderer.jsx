@@ -331,6 +331,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [pendingStaticBuildSelection, setPendingStaticBuildSelection] = React.useState(null);
   const [buildRevealRequest, setBuildRevealRequest] = React.useState(null);
   const [buildTreeResetGeneration, setBuildTreeResetGeneration] = React.useState(0);
+  const [quickEditorPositions, setQuickEditorPositions] = React.useState({});
   const [buildSelectionError, setBuildSelectionError] = React.useState("");
   const [focusInspectorLabelKey, setFocusInspectorLabelKey] = React.useState(0);
   const [draggingPanelId, setDraggingPanelId] = React.useState(null);
@@ -2842,6 +2843,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const buildWorkspace = editMode ? (
     <BuildWorkspace
       canvasActions={dashboardCanvasActions}
+      quickEditorPositions={quickEditorPositions}
+      onQuickEditorPositionsChange={setQuickEditorPositions}
       key={buildTreeResetGeneration}
       themeProjection={themeProjection}
       dashboard={managerDashboard}

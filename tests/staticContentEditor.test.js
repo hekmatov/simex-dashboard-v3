@@ -19,6 +19,7 @@ const vite = await createServer({
 const editorModule = await vite.ssrLoadModule("/src/components/static-content/StaticContentEditor.jsx");
 const freeTextEditorModule = await vite.ssrLoadModule("/src/components/static-content/FreeTextSourceEditor.jsx");
 const wizardModule = await vite.ssrLoadModule("/src/components/static-content/StaticContentWizard.jsx");
+const { QuickEditorMoveContext } = await vite.ssrLoadModule("/src/components/build/QuickEditorMoveControls.jsx");
 await vite.close();
 
 test("Text/Image quick editing offers panel size controls before the full editor", () => {
@@ -57,6 +58,12 @@ test("Text/Image quick editing offers panel size controls before the full editor
   });
   fullEditor.props.leadingAction.onClick();
   assert.equal(openedFullEditor, 1);
+  const html = renderToStaticMarkup(React.createElement(QuickEditorMoveContext.Provider, {
+    value: { handleProps: {}, announcement: "", manual: true, reset() {} },
+  }, React.createElement(editorModule.StaticContentQuickEditor, { draft })));
+  const actionRow = html.slice(html.indexOf('class="chart-editor-actions'), html.indexOf('class="chart-editor-layout'));
+  assert.ok(actionRow.indexOf('aria-label="Move quick editor"') < actionRow.indexOf('aria-label="Open full editor"'));
+  assert.ok(actionRow.indexOf('aria-label="Open full editor"') < actionRow.indexOf('aria-label="Reset editor position"'));
 });
 
 test("StaticContentEditor mounts an existing V5 Image edit with media placement settings", () => {

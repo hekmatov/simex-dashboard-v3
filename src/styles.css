@@ -6751,4 +6751,8 @@ html[data-simex-eyedropper-active="true"] body * {
 
 .object-quick-editor { display: grid; gap: 12px; padding: 12px; }
 .object-quick-editor .build-inspector { display: grid; gap: 10px; }
+.quick-editor-move-handle { touch-action: none; user-select: none; cursor: move; }
+.quick-editor-reset-position { margin: 8px; }
 .placement-quick-context { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px; }
+
+.unit-orbit[data-unit-orbit-side="manual"] { transition: none; }

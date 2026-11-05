@@ -1,5 +1,6 @@
 import React from "react";
 import { PlacementQuickContext } from "../build/ObjectQuickEditor.jsx";
+import QuickEditorMoveControls from "../build/QuickEditorMoveControls.jsx";
 
 import {
   createStaticContentDraft,
@@ -145,6 +146,7 @@ export function StaticContentQuickEditor({
           </h2>
           <EditSessionActions
             className="chart-quick-editor-actions"
+            dragAction={<QuickEditorMoveControls disabled={locked} />}
             leadingAction={{
               interactionId: "shell.open-editable-tab",
               ariaLabel: "Open full editor",

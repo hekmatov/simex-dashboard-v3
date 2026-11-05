@@ -1,5 +1,6 @@
 import React from "react";
 import { PlacementQuickContext } from "../build/ObjectQuickEditor.jsx";
+import QuickEditorMoveControls from "../build/QuickEditorMoveControls.jsx";
 
 import { isChartEditSessionDirty } from "../../charting/forms/chartEditSession.js";
 import { buildQuickEditorFormModel } from "../../charting/forms/formModel.js";
@@ -102,6 +103,7 @@ export default function ChartQuickEditor({
             onClick: invokeWhileUnlocked(onOpenFullEditor),
           },
           valid: model.valid && dirty,
+          dragAction: React.createElement(QuickEditorMoveControls, { disabled: locked }),
           submitting: saving,
           disabled,
           saveDisabled: !saveAvailable,

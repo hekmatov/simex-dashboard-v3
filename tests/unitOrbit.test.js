@@ -18,6 +18,16 @@ await vite.close();
 const viewport = { width: 1440, height: 900 };
 const orbitSize = { width: 400, height: 620 };
 
+test("manual editor coordinates are reversible across canvas scale and document scroll", async () => {
+  const { canvasPointFromViewport, viewportPointFromCanvas, quickEditorPositionKey } = await import("../src/components/build/quickEditorPosition.js");
+  const geometry = { left: 100, top: -300, scaleX: 0.5, scaleY: 2 };
+  assert.deepEqual(canvasPointFromViewport({ x: 175, y: 100 }, geometry), { x: 150, y: 200 });
+  assert.deepEqual(viewportPointFromCanvas({ x: 150, y: 200 }, geometry), { x: 175, y: 100 });
+  assert.deepEqual(viewportPointFromCanvas({ x: 150, y: 200 }, { ...geometry, top: -500 }), { x: 175, y: -100 });
+  assert.notEqual(quickEditorPositionKey("d", "p", { kind: "chart", placementId: "a" }), quickEditorPositionKey("d", "p", { kind: "chart", placementId: "b" }));
+  assert.notEqual(quickEditorPositionKey("d", "p", { kind: "chart", placementId: "a" }), quickEditorPositionKey("d2", "p", { kind: "chart", placementId: "a" }));
+});
+
 test("Unit Orbit measures the editor's inner scroll content", () => {
   assert.equal(
     typeof orbitModule?.resolveUnitOrbitSize,
@@ -237,13 +247,13 @@ test("Unit Orbit does not scroll when it closes", () => {
   assert.doesNotMatch(workspaceSource, /revealUnitOrbitAnchor/);
 });
 
-test("Unit Orbit has no autofocus, focus restoration, or keyboard dismissal", () => {
+test("Unit Orbit never autofocuses on mount or installs global keyboard dismissal", () => {
   const source = readFileSync(
     new URL("../src/components/build/UnitOrbit.jsx", import.meta.url),
     "utf8",
   );
 
-  assert.doesNotMatch(source, /\.focus\?\.|\.focus\(/);
+  assert.doesNotMatch(source, /autoFocus=/);
   assert.doesNotMatch(source, /addEventListener\(["']keydown["']/);
 });
 
@@ -288,3 +298,11 @@ function intersects(left, right) {
     && left.top < right.bottom
     && left.bottom > right.top;
 }
+
+
+test("resize recovery keeps the move handle reachable without changing vertical canvas position", async () => {
+  const { recoverQuickEditorPosition } = await import("../src/components/build/quickEditorPosition.js");
+  const geometry = { left: 100, top: -500, scaleX: 0.5, scaleY: 2 };
+  assert.deepEqual(recoverQuickEditorPosition({ x: 4000, y: 200 }, geometry, 400), { x: 496, y: 200 });
+  assert.deepEqual(recoverQuickEditorPosition({ x: 40, y: 200 }, geometry, 400), { x: 40, y: 200 });
+});

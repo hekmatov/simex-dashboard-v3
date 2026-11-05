@@ -117,3 +117,129 @@ async function stableSizing(stage) {
     expect(Math.max(...values) - Math.min(...values), JSON.stringify(samples)).toBeLessThan(0.01);
   }
 }
+
+
+test("quick editor manual positions survive edits scroll reopen and object switching", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open the dashboard", exact: true }).click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
+  const orbit = page.locator(".unit-orbit");
+  const quick = page.locator(".chart-quick-editor");
+  await expect(quick).toBeVisible();
+  const buttons = quick.locator(".chart-editor-actions button");
+  await expect(buttons.nth(0)).toHaveAccessibleName("Move quick editor");
+  await expect(buttons.nth(1)).toHaveAccessibleName("Open full editor");
+  const handle = quick.getByRole("button", { name: "Move quick editor", exact: true });
+  const saved = await page.evaluate(() => localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
+  await dragHandle(page, handle, -50, 50);
+  await expect(orbit).toHaveAttribute("data-unit-orbit-side", "manual");
+  const moved = await localEditorPosition(orbit);
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Retained manual position");
+  await nearLocal(orbit, moved);
+  const scroll = await page.evaluate(() => window.scrollY);
+  await page.evaluate(() => window.scrollBy(0, 200));
+  await nearLocal(orbit, moved);
+  await page.evaluate((y) => window.scrollTo(0, y), scroll);
+  await nearLocal(orbit, moved);
+  await quick.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
+  await expect(quick.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Retained manual position");
+  await nearLocal(orbit, moved);
+  // Reset authored changes independently from the editor position.
+  await quick.getByRole("button", { name: "Reset", exact: true }).click();
+  await nearLocal(orbit, moved);
+  await quick.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
+  const object = page.locator(".object-quick-editor");
+  const objectHandle = object.getByRole("button", { name: "Move quick editor", exact: true });
+  await expect(object.locator(".chart-editor-actions button").first()).toHaveAccessibleName("Move quick editor");
+  await dragHandle(page, objectHandle, -80, 40);
+  const pageMoved = await localEditorPosition(orbit);
+  await objectHandle.press("ArrowRight");
+  await expect.poll(async () => (await localEditorPosition(orbit)).x - pageMoved.x).toBeCloseTo(10, 0);
+  await objectHandle.press("Escape");
+  await nearLocal(orbit, pageMoved);
+  // Pointer cancellation restores the last retained position.
+  const box = await objectHandle.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 70, box.y + 50, { steps: 6 });
+  await objectHandle.press("Escape");
+  await page.mouse.up();
+  await nearLocal(orbit, pageMoved);
+  await object.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
+  await nearLocal(orbit, moved);
+  expect(await page.evaluate(() => localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"))).toBe(saved);
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(handle).toBeInViewport();
+  await orbit.getByRole("button", { name: "Reset editor position", exact: true }).click();
+  await expect(orbit).not.toHaveAttribute("data-unit-orbit-side", "manual");
+});
+
+async function dragHandle(page, handle, dx, dy) {
+  const box = await handle.boundingBox();
+  expect(box).toBeTruthy();
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y + dy, { steps: 8 });
+  await page.mouse.up();
+}
+
+async function localEditorPosition(orbit) {
+  return orbit.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    const canvas = document.querySelector("[data-canonical-canvas-id]");
+    const rect = canvas.getBoundingClientRect();
+    return { x: (box.left - rect.left) / (rect.width / canvas.offsetWidth), y: (box.top - rect.top) / (rect.height / canvas.offsetHeight) };
+  });
+}
+
+async function nearLocal(orbit, expected) {
+  await expect.poll(async () => {
+    const point = await localEditorPosition(orbit);
+    return Math.max(Math.abs(point.x - expected.x), Math.abs(point.y - expected.y));
+  }).toBeLessThan(2);
+}
+
+
+test("quick editor position survives save Build reset and interrupted full-editor transfer", async ({ page }) => {
+  test.setTimeout(75_000);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open the dashboard", exact: true }).click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
+  const quick = page.locator(".chart-quick-editor");
+  const orbit = page.locator(".unit-orbit");
+  const handle = quick.getByRole("button", { name: "Move quick editor", exact: true });
+  await dragHandle(page, handle, -40, 40);
+  const retained = await localEditorPosition(orbit);
+  await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Position retention chart");
+  await quick.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(quick).toHaveCount(0);
+  await page.getByRole("treeitem", { name: "Position retention chart", exact: true }).click();
+  await nearLocal(orbit, retained);
+  const box = await handle.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 80, box.y + 60, { steps: 5 });
+  const fullButton = quick.getByRole("button", { name: "Open full editor", exact: true });
+  await fullButton.focus();
+  await fullButton.press("Enter");
+  await page.mouse.up();
+  const full = page.getByRole("dialog", { name: "Edit chart", exact: true });
+  await expect(full).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(full).toBeHidden();
+  await page.getByRole("treeitem", { name: "Position retention chart", exact: true }).click();
+  await nearLocal(orbit, retained);
+  await quick.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Discard Build changes", exact: true }).click();
+  await page.getByRole("dialog", { name: "Discard Build changes?", exact: true })
+    .getByRole("button", { name: "Discard Build changes", exact: true }).click();
+  await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
+  await nearLocal(orbit, retained);
+});

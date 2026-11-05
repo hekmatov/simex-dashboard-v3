@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 
 import BuildCommandHeader from "./BuildCommandHeader.jsx";
 import ObjectQuickEditor from "./ObjectQuickEditor.jsx";
+import { quickEditorPositionKey } from "./quickEditorPosition.js";
 import BuildStructureRail from "./BuildStructureRail.jsx";
 import {
   captureBuildCanvasState,
@@ -82,6 +83,8 @@ export default function BuildWorkspace({
   activePage,
   canvasActions,
   selection,
+  quickEditorPositions,
+  onQuickEditorPositionsChange,
   dashboardDraft,
   pageDrafts,
   sectionDrafts,
@@ -202,6 +205,19 @@ export default function BuildWorkspace({
   const selectedChart = selectedChartItem?.chart ?? null;
   const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
   const [objectQuickOpen, setObjectQuickOpen] = React.useState(false);
+  const [localPositions, setLocalPositions] = React.useState({});
+  const quickPositions = quickEditorPositions ?? localPositions;
+  const setQuickPositions = onQuickEditorPositionsChange ?? setLocalPositions;
+  const objectPositionKey = quickEditorPositionKey(dashboard.id, activePage?.id, selection);
+  const chartPositionKey = quickEditorPositionKey(dashboard.id, activePage?.id,
+    { kind: "chart", placementId: chartEditorPlacementId });
+  const canvasElement = React.useCallback(() => document.querySelector(
+    `[data-canonical-canvas-id="${CSS.escape(activePage?.id ?? "")}"]`,
+  ), [activePage?.id]);
+  const orbitPositionProps = (key) => ({
+    positionKey: key, canvasElement, manualPosition: quickPositions[key],
+    onPositionChange: (point) => setQuickPositions((current) => ({ ...current, [key]: point })),
+  });
   const quickInvoker = React.useRef(null);
   const closeObjectQuick = () => {
     setObjectQuickOpen(false);
@@ -899,7 +915,7 @@ export default function BuildWorkspace({
             {railContent("structure", "Structure", structureRail)}
           </aside></div>
           {selection?.kind !== "chart" && objectQuickOpen && !activeAuxiliary && (
-            <UnitOrbit themeProjection={themeProjection}
+            <UnitOrbit key={objectPositionKey} {...orbitPositionProps(objectPositionKey)} themeProjection={themeProjection}
               anchorSelector={selection?.kind === "section"
                 ? `[data-canonical-section-id="${CSS.escape(selection.sectionId)}"]`
                 : selection?.kind === "page" ? `[data-canonical-canvas-id="${CSS.escape(selection.pageId)}"]`
@@ -1004,6 +1020,8 @@ export default function BuildWorkspace({
 
           {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
+              key={chartPositionKey}
+              {...orbitPositionProps(chartPositionKey)}
               themeProjection={themeProjection}
               anchorPlacementId={chartEditorPlacementId}
               chartTitle={selectedChart?.title}

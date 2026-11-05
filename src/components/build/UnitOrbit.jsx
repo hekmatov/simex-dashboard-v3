@@ -1,6 +1,8 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { dashboardThemeRootProps } from "../../theme/dashboardThemeRoot.js";
+import { QuickEditorMoveContext } from "./QuickEditorMoveControls.jsx";
+import { canvasPointFromViewport, viewportPointFromCanvas, quickEditorCanvasGeometry, recoverQuickEditorPosition } from "./quickEditorPosition.js";
 
 const DEFAULT_GAP = 12;
 const DEFAULT_MARGIN = 12;
@@ -58,6 +60,10 @@ export default function UnitOrbit({
   anchorSelector = "",
   chartTitle = "Selected chart",
   accessibleLabel,
+  positionKey,
+  canvasElement,
+  manualPosition,
+  onPositionChange,
   capabilities = [],
   onRequestClose,
   open = true,
@@ -68,6 +74,94 @@ export default function UnitOrbit({
   const frameRef = React.useRef(0);
   const revealFrameRef = React.useRef(0);
   const [placement, setPlacement] = React.useState(null);
+  const [announcement, setAnnouncement] = React.useState("");
+  const gestureRef = React.useRef(null);
+  const keyboardStartRef = React.useRef(null);
+  const manualRef = React.useRef(manualPosition);
+  const changeRef = React.useRef(onPositionChange);
+  manualRef.current = manualPosition;
+  changeRef.current = onPositionChange;
+  const canvas = () => typeof canvasElement === "function" ? canvasElement() : canvasElement;
+  const geometry = () => canvas() ? quickEditorCanvasGeometry(canvas()) : null;
+  const currentPosition = () => {
+    if (manualRef.current) return manualRef.current;
+    const rect = orbitRef.current?.getBoundingClientRect();
+    const origin = geometry();
+    return rect && origin ? canvasPointFromViewport({ x: rect.left, y: rect.top }, origin) : null;
+  };
+  const finishGesture = (cancel = false) => {
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+    gestureRef.current = null;
+    if (gesture.target.hasPointerCapture?.(gesture.pointerId)) gesture.target.releasePointerCapture(gesture.pointerId);
+    if (cancel && gesture.moved) changeRef.current?.(gesture.original);
+    setAnnouncement(cancel ? "Move cancelled." : "Editor position retained on the canvas.");
+  };
+  React.useEffect(() => {
+    if (!open) finishGesture(true);
+  }, [open]);
+  React.useEffect(() => () => {
+    const gesture = gestureRef.current;
+    if (gesture?.moved) changeRef.current?.(gesture.original);
+    if (gesture?.target.hasPointerCapture?.(gesture.pointerId)) gesture.target.releasePointerCapture(gesture.pointerId);
+  }, [positionKey]);
+  const moveControls = positionKey && onPositionChange ? {
+    announcement,
+    manual: Boolean(manualPosition),
+    reset: () => { keyboardStartRef.current = null; changeRef.current?.(undefined); },
+    handleProps: {
+      onPointerDown(event) {
+        if (gestureRef.current || event.button !== 0 || !canvas()) return;
+        event.preventDefault();
+        event.currentTarget.focus();
+        keyboardStartRef.current = null;
+        const rect = orbitRef.current.getBoundingClientRect();
+        gestureRef.current = { pointerId: event.pointerId, target: event.currentTarget,
+          startX: event.clientX, startY: event.clientY, left: rect.left, top: rect.top,
+          original: manualRef.current, moved: false };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      },
+      onPointerMove(event) {
+        const gesture = gestureRef.current;
+        if (!gesture || event.pointerId !== gesture.pointerId) return;
+        const dx = event.clientX - gesture.startX;
+        const dy = event.clientY - gesture.startY;
+        if (!gesture.moved && Math.hypot(dx, dy) < 4) return;
+        const origin = geometry();
+        if (!origin) return finishGesture(true);
+        gesture.moved = true;
+        changeRef.current?.(canvasPointFromViewport({ x: gesture.left + dx, y: gesture.top + dy }, origin));
+        setAnnouncement("Moving quick editor. Escape cancels.");
+      },
+      onPointerUp(event) { if (event.pointerId === gestureRef.current?.pointerId) finishGesture(); },
+      onPointerCancel(event) { if (event.pointerId === gestureRef.current?.pointerId) finishGesture(true); },
+      onLostPointerCapture(event) { if (event.pointerId === gestureRef.current?.pointerId) finishGesture(true); },
+      onClick(event) { event.preventDefault(); event.stopPropagation(); },
+      onKeyDown(event) {
+        if (event.key === "Escape") {
+          event.preventDefault(); event.stopPropagation();
+          if (gestureRef.current) finishGesture(true);
+          else if (keyboardStartRef.current) {
+            changeRef.current?.(keyboardStartRef.current.original);
+            keyboardStartRef.current = null;
+            setAnnouncement("Move cancelled.");
+          }
+          return;
+        }
+        const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+        if (!delta) { if (event.key === "Enter") keyboardStartRef.current = null; return; }
+        event.preventDefault(); event.stopPropagation();
+        const point = currentPosition();
+        if (!point) return;
+        keyboardStartRef.current ??= { original: manualRef.current };
+        const step = event.shiftKey ? 1 : 10;
+        const next = { x: point.x + delta[0] * step, y: point.y + delta[1] * step };
+        changeRef.current?.(next);
+        setAnnouncement(`Editor at ${Math.round(next.x)}, ${Math.round(next.y)} on canvas. Escape cancels.`);
+      },
+      onBlur() { keyboardStartRef.current = null; },
+    },
+  } : null;
 
   React.useLayoutEffect(() => {
     if (!open) return undefined;
@@ -77,12 +171,23 @@ export default function UnitOrbit({
 
     revealedRef.current = false;
 
+    let recover = false;
+    let canvasWidth = canvas()?.getBoundingClientRect().width;
     const update = () => {
       frameRef.current = 0;
       const currentAnchor = findUnitOrbitAnchor(anchorPlacementId, anchorSelector);
       const orbit = orbitRef.current;
       if (!currentAnchor || !orbit) return;
       const orbitSize = resolveUnitOrbitSize(orbit, window.innerWidth);
+      const origin = geometry();
+      if (manualPosition && origin) {
+        const point = recover ? recoverQuickEditorPosition(manualPosition, origin, window.innerWidth) : manualPosition;
+        recover = false;
+        if (point.x !== manualPosition.x || point.y !== manualPosition.y) changeRef.current?.(point);
+        const screen = viewportPointFromCanvas(point, origin);
+        setPlacement({ side: "manual", left: screen.x, top: screen.y, maxHeight: window.innerHeight - DEFAULT_MARGIN * 2 });
+        return;
+      }
       const result = positionUnitOrbit({
         anchorRect: currentAnchor.getBoundingClientRect(),
         orbitSize,
@@ -103,14 +208,21 @@ export default function UnitOrbit({
       if (revealFrameRef.current) window.cancelAnimationFrame(revealFrameRef.current);
       frameRef.current = window.requestAnimationFrame(update);
     };
+    const resize = () => { recover = true; schedule(); };
 
     update();
-    window.addEventListener("resize", schedule);
+    window.addEventListener("resize", resize);
     window.addEventListener("scroll", schedule, true);
     const observer = typeof ResizeObserver === "undefined"
       ? null
-      : new ResizeObserver(schedule);
+      : new ResizeObserver(() => {
+        const width = canvas()?.getBoundingClientRect().width;
+        if (width !== canvasWidth) recover = true;
+        canvasWidth = width;
+        schedule();
+      });
     observer?.observe(anchor);
+    if (canvas()) observer?.observe(canvas());
     if (orbitRef.current) {
       observer?.observe(orbitRef.current);
       const innerScroller = orbitRef.current.querySelector(".unit-orbit-scroll");
@@ -122,15 +234,17 @@ export default function UnitOrbit({
 
     return () => {
       if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
-      window.removeEventListener("resize", schedule);
+      if (revealFrameRef.current) window.cancelAnimationFrame(revealFrameRef.current);
+      window.removeEventListener("resize", resize);
       window.removeEventListener("scroll", schedule, true);
       observer?.disconnect();
     };
-  }, [anchorPlacementId, anchorSelector, open]);
+  }, [anchorPlacementId, anchorSelector, open, manualPosition, canvasElement, positionKey]);
 
   React.useEffect(() => {
     if (!open || typeof document === "undefined") return undefined;
     const handlePointerDown = (event) => {
+      if (gestureRef.current) return;
       if (!isUnitOrbitOutsidePointer(orbitRef.current, event.target)) return;
       if (document.querySelector('[aria-modal="true"]')) return;
       onRequestClose?.();
@@ -149,6 +263,7 @@ export default function UnitOrbit({
       hidden={!open}
       inert={!open || undefined}
       data-unit-orbit-side={placement?.side}
+      data-unit-orbit-position-key={positionKey}
       data-unit-orbit-capabilities={capabilities.map(({ id }) => id).join(" ")}
       {...dashboardThemeRootProps(themeProjection, {
         left: placement ? `${placement.left}px` : `${DEFAULT_MARGIN}px`,
@@ -157,7 +272,9 @@ export default function UnitOrbit({
         "--unit-orbit-max-height": `${placement?.maxHeight ?? DEFAULT_MIN_HEIGHT}px`,
       })}
     >
-      <div className="unit-orbit-scroll">{children}</div>
+      <QuickEditorMoveContext.Provider value={moveControls}>
+        <div className="unit-orbit-scroll">{children}</div>
+      </QuickEditorMoveContext.Provider>
     </aside>,
     document.body,
   );
