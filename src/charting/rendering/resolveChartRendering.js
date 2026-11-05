@@ -2,7 +2,7 @@ import { prepareChartData } from "../data/prepareChartData.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { buildAccessibilityCompanionForFamily } from "./accessibilityRows.js";
 import { buildRenderModel } from "./buildRenderModel.js";
-import { chartPreparationIdentity } from "../runtime/chartPreparationIdentity.js";
+import { chartPreparationIdentity, stableSerialize } from "../runtime/chartPreparationIdentity.js";
 import { compileChartRuntimeArtifact } from "../runtime/chartRuntimeArtifact.js";
 import { chartRuntimeArtifactRegistry } from "../runtime/chartRuntimeArtifactRegistry.js";
 import { projectRuntimeArtifact } from "../runtime/projectRuntimeArtifact.js";
@@ -12,7 +12,7 @@ import {
 } from "../../static-content/staticSourceResolver.js";
 
 const MAX_MESSAGE_LENGTH = 240;
-const STATIC_RENDERING_CACHE = new WeakMap();
+const LAST_RENDERING_CACHE = new WeakMap();
 
 export function resolveChartRendering(input = {}) {
   try {
@@ -20,16 +20,16 @@ export function resolveChartRendering(input = {}) {
     const renderingInput = captureRenderingInput(input);
     const staticResolution = resolveTypedStaticRendering(renderingInput);
     if (staticResolution) return staticResolution;
-    const cached = readStaticRenderingCache(renderingInput);
+    const cached = readRenderingCache(renderingInput);
     if (cached) return cached;
     const artifactResolution = resolveRuntimeArtifactRendering(renderingInput);
     if (artifactResolution) {
-      writeStaticRenderingCache(renderingInput, artifactResolution);
+      writeRenderingCache(renderingInput, artifactResolution);
       return artifactResolution;
     }
     const resolved = resolveCapturedChartRendering(renderingInput);
     publishCompatibilityArtifact(renderingInput, resolved);
-    writeStaticRenderingCache(renderingInput, resolved);
+    writeRenderingCache(renderingInput, resolved);
     return resolved;
   } catch {
     return invalidRenderingResolution();
@@ -264,17 +264,22 @@ function resolveCapturedChartRendering(renderingInput) {
   });
 }
 
-function readStaticRenderingCache(input) {
+function readRenderingCache(input) {
   if (!cacheableRenderingInput(input)) return null;
-  const cached = STATIC_RENDERING_CACHE.get(input.chart);
-  return cached && matchingStaticRenderingInput(cached, input)
+  const timeKey = renderingTimeKey(input.timeContext);
+  if (timeKey === null) return null;
+  const cached = LAST_RENDERING_CACHE.get(input.chart);
+  return cached && matchingRenderingInput(cached, input, timeKey)
     ? cached.resolution
     : null;
 }
 
-function writeStaticRenderingCache(input, resolution) {
+function writeRenderingCache(input, resolution) {
   if (!cacheableRenderingInput(input)) return;
-  STATIC_RENDERING_CACHE.set(input.chart, {
+  const timeKey = renderingTimeKey(input.timeContext);
+  if (timeKey === null) return;
+  LAST_RENDERING_CACHE.set(input.chart, {
+    timeKey,
     rows: input.rows,
     datasetProfile: input.datasetProfile,
     geoData: input.geoData,
@@ -288,12 +293,40 @@ function writeStaticRenderingCache(input, resolution) {
 
 function cacheableRenderingInput(input) {
   return input?.chart !== null
-    && typeof input?.chart === "object"
-    && (input.timeContext === null || input.timeContext === undefined);
+    && typeof input?.chart === "object";
 }
 
-function matchingStaticRenderingInput(cached, input) {
-  return cached.rows === input.rows
+// One last frame per chart avoids repeating expensive temporal preparation for
+// Play, accepted-state echoes, StrictMode and preview rerenders. Keep the same
+// immutable source/profile ownership guards as non-temporal rendering.
+function renderingTimeKey(timeContext) {
+  try {
+    if (!cacheableTimeValue(timeContext ?? null)) return null;
+    return stableSerialize(timeContext ?? null);
+  } catch { return null; }
+}
+
+// Reuse only plain scalar/record contexts: Date scopes, accessors, cycles and
+// non-JSON values keep the uncached path rather than losing their meaning.
+function cacheableTimeValue(value, ancestors = new WeakSet()) {
+  if (value === null || ["string", "boolean"].includes(typeof value)) return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object" || ancestors.has(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  if (Object.getOwnPropertySymbols(value).length > 0) return false;
+  ancestors.add(value);
+  const cacheable = Object.values(Object.getOwnPropertyDescriptors(value)).every((descriptor) => (
+    descriptor.enumerable && Object.hasOwn(descriptor, "value")
+    && cacheableTimeValue(descriptor.value, ancestors)
+  ));
+  ancestors.delete(value);
+  return cacheable;
+}
+
+function matchingRenderingInput(cached, input, timeKey) {
+  return cached.timeKey === timeKey
+    && cached.rows === input.rows
     && cached.datasetProfile === input.datasetProfile
     && cached.geoData === input.geoData
     && cached.sources === input.renderContext?.sources
