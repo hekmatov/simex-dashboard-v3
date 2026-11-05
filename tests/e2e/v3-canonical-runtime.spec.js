@@ -28,7 +28,7 @@ test("canonical runtime ledger preserves tracked semantics across View, Build, P
     panelId: PANEL_ID,
     render: { kind: "echarts", resolution: "available", status: "ready", typeId: "line" },
     series: [expect.objectContaining({
-      id: "national_total_cases",
+      id: 'axis:["national_total_cases","all","","","primary"]',
       name: "national_total_cases",
     })],
   });

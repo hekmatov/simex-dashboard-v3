@@ -5,6 +5,7 @@ import { choosePanelAction } from "./support/buildWorkflow.js";
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 import { resetSourceDashboard } from "./support/dashboardFixture.js";
 import {
+  chartAuthoringWorkflow,
   openChartAuthoring,
   resumeChartAuthoring,
 } from "./support/chart-authoring-workflow.js";
@@ -118,9 +119,7 @@ test("source-first existing CSV pie authoring progressively reveals schema field
   let { wizard } = flow;
 
   await expect(flow.stageButton("destination"))
-    .toHaveAttribute("data-status", "Complete");
-  await expect(flow.stageButton("dataSource"))
-    .toHaveAttribute("data-status", "Not started");
+    .toHaveAttribute("data-status", "In progress");
   await expect(flow.stageButton("chartType"))
     .toHaveAttribute("data-status", "Waiting on prerequisite");
   await expect(flow.stageButton("mapAndPrepare"))
@@ -404,7 +403,7 @@ test("full editor keeps every tab's controls and render panels aligned", async (
 }) => {
   await page.setViewportSize({ width: 1645, height: 1214 });
   await openBiomedicalPage(page);
-  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
+  const panel = page.locator(`.canonical-dashboard-frame[data-canonical-page-id] [data-panel-id="${EDIT_CHART_ID}"]`);
   await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
   await page.locator(".chart-quick-editor")
@@ -414,38 +413,28 @@ test("full editor keeps every tab's controls and render panels aligned", async (
   const full = page.getByRole("dialog", { name: "Edit chart" });
   await expect(full).toBeVisible();
 
-  const dimensions = async () => full.evaluate((dialog) => {
-    const controls = dialog.querySelector(".chart-wizard-body");
-    const render = dialog.querySelector(".chart-creation-proof-deck");
-    if (!controls || !render) {
-      throw new Error("Full editor is missing its controls or render panel.");
-    }
-    return {
-      dialog: dialog.getBoundingClientRect().width,
-      controls: controls.getBoundingClientRect().width,
-      render: render.getBoundingClientRect().width,
-    };
-  });
-
-  const stages = [
-    /^Destination\./,
-    /^Data source\./,
-    /^Chart type\./,
-    /^Map and prepare\./,
-    /^Configure\./,
-    /^Review\./,
-  ];
-  const stageWidths = [];
-  for (const stage of stages) {
-    await full.getByRole("button", { name: stage }).click();
-    stageWidths.push(await dimensions());
+  const flow = chartAuthoringWorkflow(full, { mode: "edit" });
+  const dialogWidth = await full.evaluate(el => el.getBoundingClientRect().width);
+  await flow.goToDestination();
+  await expect(full.locator(".chart-creation-proof-deck")).toBeHidden();
+  const halves = await full.evaluate(el => [
+    el.querySelector(".chart-wizard-body").getBoundingClientRect().width,
+    el.querySelector(".chart-wizard-destination-pane").getBoundingClientRect().width,
+  ]);
+  expect(Math.abs(halves[0] - halves[1])).toBeLessThan(1);
+  const widths = [];
+  for (const stage of ["chartType", "mapAndPrepare", "configure", "review"]) {
+    await flow.goToStage(stage);
+    widths.push(await full.evaluate(el => ({
+      dialog: el.getBoundingClientRect().width,
+      controls: el.querySelector(".chart-wizard-body").getBoundingClientRect().width,
+      render: el.querySelector(".chart-creation-proof-deck").getBoundingClientRect().width,
+    })));
   }
-
-  const expected = stageWidths[0];
-  for (const width of stageWidths) {
-    expect(Math.abs(width.dialog - expected.dialog)).toBeLessThan(1);
-    expect(Math.abs(width.controls - expected.controls)).toBeLessThan(1);
-    expect(Math.abs(width.render - expected.render)).toBeLessThan(1);
+  for (const width of widths) {
+    expect(Math.abs(width.dialog - dialogWidth)).toBeLessThan(1);
+    expect(Math.abs(width.controls - widths[0].controls)).toBeLessThan(1);
+    expect(Math.abs(width.render - widths[0].render)).toBeLessThan(1);
   }
 });
 
@@ -453,7 +442,7 @@ test("full editor continues Quick state, restores suspended Full work, and saves
   page,
 }) => {
   await openBiomedicalPage(page);
-  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
+  const panel = page.locator(`.canonical-dashboard-frame[data-canonical-page-id] [data-panel-id="${EDIT_CHART_ID}"]`);
   const chartCountBefore = await storedChartCount(page);
   await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
@@ -519,7 +508,7 @@ test("quick edit previews immediately while unchanged and suspended click-away s
   page,
 }) => {
   await openBiomedicalPage(page);
-  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
+  const panel = page.locator(`.canonical-dashboard-frame[data-canonical-page-id] [data-panel-id="${EDIT_CHART_ID}"]`);
   const placementId = await panel.getAttribute("data-build-placement-id");
   const storedDashboardBeforeEdit = await page.evaluate(
     (key) => localStorage.getItem(key),
@@ -626,7 +615,7 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   await expect(creationOwner).toHaveAttribute("data-pending-work-activity", "active");
   expect(await storedChartCount(page)).toBe(storedPanelCount);
   expect(await storedChartTitle(page, draftId)).toBe(null);
-  await expect(page.locator('[data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
+  await expect(page.locator('.canonical-dashboard-frame[data-canonical-page-id] [data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
 
   const title = wizard.getByRole("textbox", { name: "Chart title", exact: true });
   await title.focus();
@@ -651,7 +640,7 @@ test("suspended valid chart creation keeps one stable owner while incomplete cre
   await expect(page.locator('[data-canonical-page-id="m0-dashboard"]')).toBeVisible();
   expect(await storedChartCount(page)).toBe(storedPanelCount);
   expect(await storedChartTitle(page, draftId)).toBe(null);
-  await expect(page.locator('[data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
+  await expect(page.locator('.canonical-dashboard-frame[data-canonical-page-id] [data-panel-id]').filter({ hasText: "Retainable owner draft" })).toHaveCount(0);
 });
 
 async function openM0FixtureBuild(page) {
@@ -706,7 +695,7 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
 }) => {
   await installQuickPersistenceChronoFixture(page);
   await openBiomedicalPage(page);
-  const panel = page.locator(`[data-panel-id="${EDIT_CHART_ID}"]`);
+  const panel = page.locator(`.canonical-dashboard-frame[data-canonical-page-id] [data-panel-id="${EDIT_CHART_ID}"]`);
   const before = await storedQuickPersistenceSnapshot(page);
   expect(before.targetTitle).toBe("National Confirmed Cases (cumulative)");
   expect(before.targetSourceId).toBe("upload-cases-wcph-eldoria-3");

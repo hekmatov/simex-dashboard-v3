@@ -29,7 +29,7 @@ window.renderGeometryCase = ({ canvasWidth = 1392, deviceLayout = "auto" } = {})
         ].map(([id, width, height]) => React.createElement(ChartPanel, {
           key: id, panel: { ...sourceChart, id, layout: { width, height } }, suspended: true, showFullscreen: false,
         })))),
-      React.createElement(AuthoringFootprintFrame, { layout: { width: 2, height: 0.5 }, kind: "geometry" }, "Static footprint")
+      React.createElement(AuthoringFootprintFrame, { layout: { width: 2, height: 0.5 }, kind: "geometry", canvasWidth, deviceLayout }, "Static footprint")
     )));
 };
 window.renderGeometryCase();

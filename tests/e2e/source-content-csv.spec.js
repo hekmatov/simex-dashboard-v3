@@ -310,7 +310,7 @@ test("Journey E — incompatible CSV replacement blocks and imports as new", asy
   await page.reload();
   await openBiomedicalBuild(page, { width: 1440, height: 900 });
 
-  const panel = page.locator(`.chart-panel[data-panel-id="${target.chartId}"]`);
+  const panel = page.locator(`.canonical-dashboard-frame[data-canonical-page-id] .chart-panel[data-panel-id="${target.chartId}"]`);
   await panel.scrollIntoViewIfNeeded();
   await expect(panel).toBeVisible();
   await expect(panel.locator("canvas").first()).toBeVisible();
@@ -355,7 +355,7 @@ test("Journey E — incompatible CSV replacement blocks and imports as new", asy
 
   await page.reload();
   await openBiomedicalBuild(page, { width: 1024, height: 768 });
-  const tabletPanel = page.locator(`.chart-panel[data-panel-id="${target.chartId}"]`);
+  const tabletPanel = page.locator(`.canonical-dashboard-frame[data-canonical-page-id] .chart-panel[data-panel-id="${target.chartId}"]`);
   await tabletPanel.scrollIntoViewIfNeeded();
   await expect(tabletPanel.locator("canvas").first()).toBeVisible();
   const tabletBefore = await csvReplacementSnapshot(page, target);

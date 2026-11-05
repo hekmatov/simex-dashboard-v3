@@ -32,13 +32,23 @@ test("shared chart geometry matches canonical, constrained, tablet and real Buil
       expect(Math.abs(box.height - size.height)).toBeLessThan(1);
       if (canvasWidth === 1392 && id === "standard") expect([box.width, box.height]).toEqual([670, 418]);
     }
-    const staticSize = await page.locator(".authoring-footprint-frame").boundingBox();
-    expect(staticSize.height).toBe(201);
+    const staticStage = page.locator(".authoring-stage");
+    const staticSize = chartFootprintPixelSize({ columns: 2, rows: 0.5 }, geometry);
+    await expect(staticStage).toHaveAttribute("data-stage-height", String(staticSize.height));
+    await expect(staticStage).toHaveAttribute("data-stage-width", String(staticSize.width));
+    const staticGeometry = await staticStage.evaluate(stage => ({
+      scale: Number(stage.dataset.stageScale),
+      height: stage.querySelector('[data-authoring-footprint="geometry"]').getBoundingClientRect().height,
+      width: stage.querySelector(".authoring-stage__canvas").getBoundingClientRect().width,
+      available: stage.querySelector(".authoring-stage__viewport").clientWidth,
+    }));
+    expect(Math.abs(staticGeometry.height - staticSize.height * staticGeometry.scale)).toBeLessThan(1);
+    expect(Math.abs(staticGeometry.width - staticGeometry.available)).toBeLessThan(2);
   }
 
   await page.setViewportSize({ width: 640, height: 900 });
   await page.evaluate(() => window.renderGeometryCase({ canvasWidth: 600, deviceLayout: "phone" }));
-  await expect.poll(() => page.locator(".layout-grid").evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length)).toBe(1);
+  await expect.poll(() => page.locator("main.canonical-dashboard-frame > .dashboard-section > .layout-grid").evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length)).toBe(1);
   expect(await compact.evaluate(el => getComputedStyle(el).gridRowStart)).toBe("auto");
 
   // Measure the actual selected package under both Build rails. Use effective

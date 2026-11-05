@@ -26,7 +26,7 @@ test("chart wizard stage labels and statuses use two unclipped lines at desktop 
     };
   }));
 
-  expect(geometry).toHaveLength(6);
+  expect(geometry).toHaveLength(5);
   expect(geometry.every(({ height }) => height === 36)).toBe(true);
   expect(geometry.every(({ labelClipped, statusClipped }) => !labelClipped && !statusClipped)).toBe(true);
   expect(geometry.every(({ statusBelowLabel }) => statusBelowLabel)).toBe(true);

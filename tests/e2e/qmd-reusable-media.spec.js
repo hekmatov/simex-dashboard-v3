@@ -38,9 +38,14 @@ test("Flow Frame Decorative local image inspector keeps responsive geometry and 
     await expect.poll(() => editor.evaluate((node) => (
       node.dataset.sourceRevision === node.dataset.previewRevision
     ))).toBe(true);
-    if (label === "75%") expect(await geometry(page)).toMatchObject({
-      surface: "build", authoredFlow: "wrap-start", computedFloat: "none", widthRatio: 0.75, horizontalOverflow: false,
-    });
+    if (label === "75%") {
+      const previewGeometry = await geometry(page);
+      // Fit scales a dashboard-sized canvas; it retains that canvas's wide-content flow.
+      expect(previewGeometry.contentWidth).toBeGreaterThan(480);
+      expect(previewGeometry).toMatchObject({
+        surface: "build", authoredFlow: "wrap-start", computedFloat: "inline-start", widthRatio: 0.75, horizontalOverflow: false,
+      });
+    }
   }
   await inspector.getByLabel("Custom width percentage").fill("37");
   await inspector.getByLabel("Custom width percentage").blur();
@@ -107,6 +112,8 @@ test("Flow Frame Decorative local image inspector keeps responsive geometry and 
 async function mountJourney(page, surface, contentWidth, options = {}) {
   await page.evaluate(async ({ surface, contentWidth, options }) => {
     await import("/src/styles/tokens.css");
+    await import("/src/styles.css");
+    await import("/src/styles/dashboard-style-grammar.css");
     await import("/src/styles/source-content.css");
     const { default: React } = await import("/@id/react");
     const ReactDOMModule = await import("/@id/react-dom/client");
@@ -177,12 +184,13 @@ async function geometry(page) {
   return page.evaluate(() => {
     const target = document.querySelector("#target");
     const content = target.querySelector(".free-text-chart-view__content") ?? target;
-    const media = target.querySelector(".qmd-media-view");
+    const media = content.querySelector(".qmd-media-view");
     const image = media?.querySelector("img");
     const contentRect = content.getBoundingClientRect();
     const mediaRect = media.getBoundingClientRect();
     return {
       surface: target.dataset.surface,
+      contentWidth: content.clientWidth,
       direction: getComputedStyle(target).direction,
       authoredAlign: media.className.match(/align-(start|center|end)/)?.[1],
       authoredFlow: media.dataset.qmdMediaFlow,

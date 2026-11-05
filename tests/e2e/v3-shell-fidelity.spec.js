@@ -159,7 +159,7 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  const frame = page.locator(".canonical-dashboard-frame");
+  const frame = page.locator(".canonical-dashboard-frame[data-canonical-page-id]");
   const target = page.locator(`article[data-build-placement-id="${CURRENT_CHART_ID}"]`);
   await target.scrollIntoViewIfNeeded();
   await target.hover();
@@ -240,7 +240,7 @@ test("repeated public Add Page requests use current dashboard state and unique I
 
   const addPage = page.locator('[data-build-page-navigation="anchored"]')
     .getByRole("button", { name: "Add page", exact: true });
-  const frame = page.locator(".canonical-dashboard-frame");
+  const frame = page.locator(".canonical-dashboard-frame[data-canonical-page-id]");
   const crownPages = page.locator(".dashboard-command-page-scroller");
   const createNewPage = async () => {
     await addPage.click();
@@ -312,7 +312,7 @@ test("canonical View and Build frames project analytical Page metadata", async (
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await enterAuthoredDashboard(page);
-  const frame = page.locator(".canonical-dashboard-frame");
+  const frame = page.locator(".canonical-dashboard-frame[data-canonical-page-id]");
   const header = frame.locator(".dashboard-header");
 
   await expect(frame).toHaveAttribute("data-page-type", "analytical");
@@ -489,7 +489,7 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await expect(layoutDraft).toBeVisible();
   const crownPages = page.locator(".dashboard-command-page-scroller");
   const renamedCrownPage = crownPages.getByRole("button", { name: layoutDraftValue, exact: true });
-  const canonicalFrame = page.locator(".canonical-dashboard-frame");
+  const canonicalFrame = page.locator(".canonical-dashboard-frame[data-canonical-page-id]");
   await expect(mapPanel).toBeVisible();
   await expect(renamedCrownPage).toBeVisible();
   await expect(canonicalFrame).toHaveAttribute("data-canonical-page-id", "biomedical");

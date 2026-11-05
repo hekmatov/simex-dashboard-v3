@@ -471,15 +471,15 @@ test("clean Full discard publishes neither persistence nor fallback", async ({ p
 test("removal followed by another clean Full discard does not resurrect the chart", async ({ page }) => {
   test.setTimeout(120_000);
   const quick = await openFirstQuickChartEditor(page);
-  const removedPanelId = await page.locator(".chart-panel").first()
+  const removedPanelId = await page.locator(".canonical-dashboard-frame[data-canonical-page-id] .chart-panel").first()
     .getAttribute("data-panel-id");
-  const initialPanelCount = await page.locator(".chart-panel").count();
+  const initialPanelCount = await page.locator(".canonical-dashboard-frame[data-canonical-page-id] .chart-panel").count();
 
   await quick.getByRole("button", { name: "Remove chart" }).click();
   await page.getByRole("dialog", { name: "Remove this chart?" })
     .getByRole("button", { name: "Remove chart" }).click();
   await expect(quick).toBeHidden();
-  await expect(page.locator(".chart-panel")).toHaveCount(initialPanelCount - 1);
+  await expect(page.locator(".canonical-dashboard-frame[data-canonical-page-id] .chart-panel")).toHaveCount(initialPanelCount - 1);
 
   const editor = await openFullChartEditorForPanel(page, page.locator('[data-panel-id="chart-line-mtgz6v76"]'));
   const attemptsBeforeDiscard = await page.evaluate(() => (

@@ -303,7 +303,7 @@ async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
 
 test("cross-page tree selection reveals the canonical target before opening Unit Orbit", async ({ page }) => {
   await openBuildStructure(page);
-  const frame = page.locator(".canonical-dashboard-frame");
+  const frame = page.locator(".canonical-dashboard-frame[data-canonical-page-id]");
   const tree = page.getByRole("tree");
 
   await tree.getByRole("treeitem", { name: SOCIO_SECTION.title, exact: true }).click();
@@ -329,7 +329,7 @@ test("cross-page tree selection reveals the canonical target before opening Unit
 
 test("double-click rename navigates and highlights without opening Unit Orbit", async ({ page }) => {
   await openBuildStructure(page);
-  const frame = page.locator(".canonical-dashboard-frame");
+  const frame = page.locator(".canonical-dashboard-frame[data-canonical-page-id]");
   const tree = page.getByRole("tree");
   const target = tree.getByRole("treeitem", { name: SOCIO_SECTION.title, exact: true });
 
@@ -391,7 +391,7 @@ test("chart activation keeps the canonical target usable while mounting Unit Orb
   await page.getByRole("tree")
     .getByRole("treeitem", { name: SOCIO_CHART.title, exact: true })
     .click();
-  await expect(page.locator(".canonical-dashboard-frame"))
+  await expect(page.locator(".canonical-dashboard-frame[data-canonical-page-id]"))
     .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(page.locator(".unit-orbit")).toBeVisible();
   const target = page.locator(`[data-canonical-placement-id="${SOCIO_CHART.id}"]`);
@@ -404,7 +404,7 @@ test("an untouched chart editor closes transactionally when tree navigation chan
   const tree = page.getByRole("tree");
   const chartItem = tree.getByRole("treeitem", { name: SOCIO_CHART.title, exact: true });
   await chartItem.click();
-  await expect(page.locator(".canonical-dashboard-frame"))
+  await expect(page.locator(".canonical-dashboard-frame[data-canonical-page-id]"))
     .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(page.locator(".unit-orbit")).toBeVisible();
 
@@ -672,7 +672,7 @@ test("cancelling the authored-content import warning preserves inline rename sta
   await expect(rename).toBeVisible();
   await expect(rename).toHaveValue("Pending package-safe rename");
   await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]')).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator(".canonical-dashboard-frame"))
+  await expect(page.locator(".canonical-dashboard-frame[data-canonical-page-id]"))
     .toHaveAttribute("data-canonical-page-id", "socio_economic");
 });
 
@@ -770,7 +770,7 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a c
     name: `Rename section ${SOCIO_SECTION.title}`,
   });
   await expect(rename).toBeFocused();
-  await expect(page.locator(".canonical-dashboard-frame"))
+  await expect(page.locator(".canonical-dashboard-frame[data-canonical-page-id]"))
     .toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]'))
     .toHaveAttribute("aria-selected", "true");
@@ -785,7 +785,7 @@ test("pointer collapse moves descendant roving focus to the collapsing Section a
   await openBuildStructure(page);
   await page.getByRole("navigation", { name: "Dashboard pages" })
     .getByRole("button", { name: "Socio-economic", exact: true }).click();
-  await expect(page.locator(".canonical-dashboard-frame"))
+  await expect(page.locator(".canonical-dashboard-frame[data-canonical-page-id]"))
     .toHaveAttribute("data-canonical-page-id", "socio_economic");
   const tree = page.getByRole("tree");
   const socio = tree.getByRole("treeitem", { name: "Socio-economic", exact: true });
