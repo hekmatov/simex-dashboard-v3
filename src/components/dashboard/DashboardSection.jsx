@@ -60,7 +60,7 @@ function DashboardSection({
     >
       {actions ? (
         <BuildSectionHeader
-          sectionDraft={sectionDraft}
+          sectionDraft={{ ...section, ...sectionDraft }}
           role={sectionRole(sectionDraft)}
           getDashboard={getDashboard}
           movablePageCount={movablePageCount}
@@ -69,6 +69,7 @@ function DashboardSection({
           count={count}
           disabled={disabled}
           onReorder={(targetIndex) => actions.reorderSection(section.id, targetIndex)}
+          onSelect={() => actions.select?.({ kind: "section", pageId, sectionId: section.id })}
           onCommand={actions.structureCommand}
         />
       ) : (
@@ -160,6 +161,7 @@ export function BuildSectionHeader({
   disabled,
   onReorder,
   onCommand,
+  onSelect,
 }) {
   const title = sectionDraft.title || "Untitled section";
   const [renaming, setRenaming] = React.useState(false);
@@ -187,6 +189,7 @@ export function BuildSectionHeader({
           disabled={disabled}
           triggerProps={{ "data-section-menu": sectionDraft.id }}
           items={[
+            { id: "settings", label: "Section settings", onSelect },
             { id: "rename", label: "Rename", onSelect: () => setRenaming(true) },
             { id: "move-earlier", label: "Move earlier", disabled: index === 0, onSelect: () => onReorder(index - 1) },
             { id: "move-later", label: "Move later", disabled: index === count - 1, onSelect: () => onReorder(index + 1) },

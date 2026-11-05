@@ -4499,10 +4499,10 @@
 .canonical-dashboard-frame.build-workspace {
   display: grid;
   grid-template-areas:
-    "header header header"
-    "commands commands commands"
-    "structure canvas properties"
-    "footer footer footer";
+    "header header"
+    "commands commands"
+    "structure canvas"
+    "footer footer";
   grid-template-columns: minmax(0, 1fr);
   column-gap: 0;
 }
@@ -4512,7 +4512,6 @@
 .canonical-dashboard-frame.build-workspace > .canonical-dashboard-content { grid-area: canvas; min-width: 0; }
 .canonical-dashboard-frame.build-workspace > .dashboard-footer { grid-area: footer; }
 .build-rail-slot--structure { grid-area: structure; }
-.build-rail-slot--properties { grid-area: properties; }
 .build-rail-slot { min-width: 0; align-self: stretch; }
 
 .build-rail {
@@ -4569,14 +4568,13 @@
       "structure"
       "commands"
       "canvas"
-      "properties"
       "footer";
   }
 }
 
 @media (min-width: 1024px) {
   .canonical-dashboard-frame.build-workspace {
-    grid-template-columns: 220px minmax(0, 1fr) 280px;
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 
   .build-rail {
@@ -4589,16 +4587,15 @@
   }
 
   .build-rail--structure { border-inline-end: 1px solid var(--simex-border-subtle); }
-  .build-rail--properties { border-inline-start: 1px solid var(--simex-border-subtle); }
 }
 
 @media (min-width: 1200px) {
   .canonical-dashboard-frame.build-workspace {
-    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(280px, 320px);
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
   }
 }
 
-.app-frame .canonical-dashboard-frame.build-workspace { max-width: calc(var(--simex-canonical-canvas-max-width) + 580px); }
+.app-frame .canonical-dashboard-frame.build-workspace { max-width: calc(var(--simex-canonical-canvas-max-width) + 260px); }
 
 /* Lane B: compact structure tree rows. */
 .app-frame .build-rail--structure .build-structure-list,
@@ -4732,7 +4729,7 @@ body .app-frame .build-rail--structure .build-tree-group {
   border-radius: var(--simex-style-surface-radius);
   box-shadow: var(--simex-style-shell-shadow);
 }
-.app-frame[data-dashboard-style] :is([data-build-rail="structure"], [data-build-rail="properties"], .dashboard-attention-strip) {
+.app-frame[data-dashboard-style] :is([data-build-rail="structure"], .dashboard-attention-strip) {
   background-image: var(--simex-style-role-rail), var(--simex-role-panel-background);
   border-color: var(--simex-style-role-border);
   border-block-start-color: var(--simex-style-role-divider);

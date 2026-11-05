@@ -18,6 +18,8 @@ export default function BuildCommandHeader({
   onAddChart,
   onAddStaticContent,
   onOpenAuxiliary,
+  onDashboardSummary,
+  onPageSettings,
 }) {
   const command = (id, label, { primary = false, disabled, reason, explain = false, ...rest } = {}) => (
     <ControlTooltip disabled={disabled} explain={explain} reason={reason}>
@@ -61,6 +63,8 @@ export default function BuildCommandHeader({
         </div>
         <div className="build-command-group" role="group" aria-label="Session" data-build-command-group="session">
           <span className="build-command-group-label" aria-hidden="true">Session</span>
+          {command("dashboard-summary", "Dashboard summary", { disabled: locked, onClick: onDashboardSummary })}
+          {command("page-settings", "Page settings", { disabled: locked, onClick: onPageSettings })}
           {command("discard-build-changes", "Discard Build changes", {
             disabled: locked || !canDiscardBuild,
             explain: !locked && canDiscardBuild,

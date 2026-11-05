@@ -66,6 +66,7 @@ test("Build commands stay available beside persistent structure and properties r
   await expect(map).toBeVisible();
   await expect(commands).toBeVisible();
   await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toBeVisible();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await expect(propertiesPane(page).locator(".build-inspector")).toBeVisible();
   await expect(propertiesPane(page).getByLabel("Page title", { exact: true })).toBeVisible();
 

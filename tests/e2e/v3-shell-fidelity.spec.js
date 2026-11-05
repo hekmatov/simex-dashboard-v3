@@ -74,7 +74,7 @@ test("wide View and Build use the shared canonical canvas maximum", async ({ pag
   expect(view.canonicalMode).toBe("view");
   expect(build.canonicalMode).toBe("build");
   expect(Number.parseFloat(build.frameMaxWidth))
-    .toBe(Number.parseFloat(view.frameMaxWidth) + 580);
+    .toBe(Number.parseFloat(view.frameMaxWidth) + 260);
   expect(view.frame.width).toBeLessThanOrEqual(Number.parseFloat(view.maxWidth));
   expect(build.frame.width).toBeLessThanOrEqual(Number.parseFloat(build.frameMaxWidth));
   expect(build.canvas.width).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
@@ -90,7 +90,7 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
     .click();
   await expect(page.locator(".build-workspace")).toBeVisible();
   await expect(page.locator('[data-build-rail="structure"]')).toBeVisible();
-  await expect(page.locator('[data-build-rail="properties"]')).toBeVisible();
+  await expect(page.locator('[data-build-rail="properties"]')).toHaveCount(0);
 
   const closed = await readCanvasState(page);
   const savedLayout = await page.evaluate(() => (
@@ -107,10 +107,9 @@ test("Dashboard map preserves saved layout, reveals the chart, and restores the 
 
   const clearance = await page.evaluate(() => {
     const chart = document.querySelector('article[data-build-placement-id="chart-line-mtgz6v76"]').getBoundingClientRect();
-    const panel = document.querySelector('[data-build-rail="properties"]').getBoundingClientRect();
     return {
       chartWidth: chart.width,
-      visibleWidth: Math.max(0, Math.min(chart.right, panel.left, window.innerWidth) - Math.max(chart.left, 0)),
+      visibleWidth: Math.max(0, Math.min(chart.right, window.innerWidth) - Math.max(chart.left, 0)),
     };
   });
   expect(clearance.visibleWidth).toBeGreaterThanOrEqual(Math.min(220, clearance.chartWidth * 0.4));

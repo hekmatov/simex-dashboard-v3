@@ -198,11 +198,11 @@ export const DASHBOARD_OWNED_REGION_REGISTRY = Object.freeze([
   region({
     id: "build-properties-pane",
     owner: "BuildPropertiesPane",
-    selector: '[data-build-rail="properties"]',
+    selector: ".object-quick-editor",
     role: "panel",
-    lifecycle: "persistent",
-    parentId: "build-workspace-shell",
-    witnesses: ["build-standard", "build-properties-pane"],
+    lifecycle: "conditional",
+    parentId: "app-frame-shell",
+    witnesses: ["build-properties-pane"],
   }),
   region({
     id: "dashboard-attention-strip",

@@ -140,7 +140,7 @@ export default function DashboardCanvas({
             {attentionSection && (
               <DashboardAttentionStrip
                 section={attentionSection}
-                sectionDraft={buildState?.sectionDrafts?.[attentionSection.id] ?? attentionSection}
+                sectionDraft={{ ...attentionSection, ...buildState?.sectionDrafts?.[attentionSection.id] }}
                 page={activePage}
                 pageId={activePage.id}
                 dashboard={dashboard}
@@ -162,7 +162,7 @@ export default function DashboardCanvas({
                 onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
                 buildHeader={buildActions ? (
                   <BuildSectionHeader
-                    sectionDraft={buildState?.sectionDrafts?.[attentionSection.id] ?? attentionSection}
+                    sectionDraft={{ ...attentionSection, ...buildState?.sectionDrafts?.[attentionSection.id] }}
                     getDashboard={getDashboard}
                     movablePageCount={(dashboard.pages ?? []).filter(({ id, landing }) => id !== activePage.id && !landing).length}
                     pageId={activePage.id}
@@ -171,6 +171,7 @@ export default function DashboardCanvas({
                     disabled={Boolean(buildState?.disabled)}
                     role="attention"
                     onReorder={(targetIndex) => buildActions.reorderSection(attentionSection.id, targetIndex)}
+                    onSelect={() => buildActions.select?.({ kind: "section", pageId: activePage.id, sectionId: attentionSection.id })}
                     onCommand={buildActions.structureCommand}
                   />
                 ) : null}

@@ -42,6 +42,9 @@ export async function chooseSectionAction(page, sectionId, itemId) {
 }
 
 export async function choosePanelAction(page, placementId, itemId) {
+  const panel = page.locator(`article[data-build-placement-id="${placementId}"]`);
+  await panel.scrollIntoViewIfNeeded();
+  await panel.hover();
   const trigger = panelMenu(page, placementId);
   await trigger.click();
   const menu = page.locator(`#panel-menu-${placementId}[role="menu"]`);
@@ -54,7 +57,7 @@ export function structureRail(page) {
 }
 
 export function propertiesPane(page) {
-  return page.locator('[data-build-rail="properties"]');
+  return page.locator(".object-quick-editor");
 }
 
 export async function authorAttentionStrip(page, { pageId = "biomedical", sectionTitle = "At a glance", chartTitle = "Cases today" } = {}) {

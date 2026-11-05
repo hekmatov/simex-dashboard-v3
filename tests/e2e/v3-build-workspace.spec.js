@@ -159,6 +159,8 @@ test("compact command row exposes direct Stage 3 ownership", async ({ page }) =>
     "Source content",
     "Chrono Studio",
     "Scene Studio",
+    "Dashboard summary",
+    "Page settings",
     "Discard Build changes",
     "Finish Build",
   ]);
@@ -242,6 +244,8 @@ test("Home availability draft blocks package upload and Build discard until Scen
   await expect(passport).toContainText("Unsaved Scenario");
   for (const name of [
     "Upload Dashboard Package",
+    "Dashboard summary",
+    "Page settings",
     "Discard Build changes",
   ]) {
     await expect(passport.getByRole("button", { name, exact: true })).toBeDisabled();
@@ -350,3 +354,42 @@ async function canvasIdentity(page) {
       .map((node) => node.getAttribute("data-canonical-panel-id")),
   }));
 }
+
+
+test("object quick editors reclaim the Properties column and retain shared drafts", async ({ page }) => {
+  test.setTimeout(60_000);
+  await openBiomedicalBuild(page);
+  await expect(page.locator('[data-build-rail="properties"]')).toHaveCount(0);
+  const grid = await page.locator(".build-workspace").evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" "));
+  expect(grid).toHaveLength(2);
+  await page.getByRole("button", { name: "Dashboard summary", exact: true }).click();
+  await page.locator(".object-quick-editor").getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
+  const object = page.locator(".object-quick-editor");
+  await object.getByLabel("Page title", { exact: true }).fill("Quick page title");
+  await object.getByRole("button", { name: "Close", exact: true }).click();
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.pages.find(p => p.id === "biomedical")?.title, STORAGE_KEY)).toBe("Quick page title");
+  await expect(object).toBeHidden();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
+  await expect(object.getByLabel("Page title", { exact: true })).toHaveValue("Quick page title");
+  await object.getByRole("button", { name: "Close", exact: true }).click();
+  const sectionId = await page.locator("[data-section-menu]").first().getAttribute("data-section-menu");
+  await chooseSectionAction(page, sectionId, "settings");
+  await object.getByLabel("Description", { exact: true }).fill("Quick section description");
+  await object.getByRole("button", { name: "Close", exact: true }).click();
+  await chooseSectionAction(page, sectionId, "settings");
+  await expect(object).toBeVisible();
+  await expect(object.getByLabel("Description", { exact: true })).toHaveValue("Quick section description");
+  await object.getByRole("button", { name: "Close", exact: true }).click();
+  const placementId = await page.locator("article[data-build-placement-id]").first().getAttribute("data-build-placement-id");
+  await choosePanelAction(page, placementId, "edit");
+  await expect(page.locator(".chart-quick-editor").getByRole("region", { name: "Placement context" })).toContainText("Move…");
+  await page.locator(".chart-quick-editor").getByRole("button", { name: "Close", exact: true }).click();
+  const staticId = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).pages.find(p => p.id === "biomedical").sections.flatMap(s => s.panels).find(p => (p.chart ?? p).typeId === "freeText").id, STORAGE_KEY);
+  await choosePanelAction(page, staticId, "edit");
+  const staticQuick = page.locator(".static-content-quick-editor");
+  await expect(staticQuick.getByRole("region", { name: "Placement context" })).toContainText("freeText");
+  await expect(staticQuick.getByRole("button", { name: "Remove chart", exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 820, height: 900 });
+  await expect(page.locator('[data-build-rail="properties"]')).toHaveCount(0);
+});

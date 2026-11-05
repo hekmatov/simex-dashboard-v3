@@ -42,6 +42,7 @@ test("source-first Step 7 Build controls and fields use the shared dense desktop
 
   const map = structureRail(page);
   await map.locator('[data-build-node-id="m0-dashboard"] > .build-tree-row').click();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   const pageTitle = propertiesPane(page).getByLabel("Page title");
   await expect(pageTitle).toHaveCSS("min-height", "32px");
   await expect(pageTitle).toHaveCSS("color", await semanticColor(page, "--simex-text-strong"));
@@ -110,6 +111,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Operation status baseline");
   await expect(page.getByRole("button", { name: "Finish Build", exact: true })).toBeEnabled();
 

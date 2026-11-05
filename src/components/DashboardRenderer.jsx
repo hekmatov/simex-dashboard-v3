@@ -2298,7 +2298,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setStaticContentDraft(null);
       setStaticContentDirty(false);
     }
-    if (nextSelection.kind === "chronoGroup") {
+    if (["chronoGroup", "dashboard"].includes(nextSelection.kind)) {
       setBuildSelection(nextSelection);
       setChartEditorVisible(false);
       setChartEditorPlacementId(null);
@@ -4033,6 +4033,7 @@ function staticDestinationForPlacement(dashboard, placementId) {
 
 function isValidBuildSelection(dashboard, selection) {
   if (!selection?.kind) return false;
+  if (selection.kind === "dashboard") return true;
   if (selection.kind === "chronoGroup") {
     return (dashboard.chronoGroups ?? []).some(({ id }) => id === selection.chronoGroupId);
   }

@@ -57,6 +57,7 @@ export default function UnitOrbit({
   anchorPlacementId,
   anchorSelector = "",
   chartTitle = "Selected chart",
+  accessibleLabel,
   capabilities = [],
   onRequestClose,
   open = true,
@@ -143,7 +144,7 @@ export default function UnitOrbit({
     <aside
       ref={orbitRef}
       className="unit-orbit"
-      aria-label={`Chart settings for ${chartTitle}`}
+      aria-label={accessibleLabel ?? `Chart settings for ${chartTitle}`}
       aria-hidden={open ? undefined : "true"}
       hidden={!open}
       inert={!open || undefined}

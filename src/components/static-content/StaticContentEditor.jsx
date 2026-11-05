@@ -1,4 +1,5 @@
 import React from "react";
+import { PlacementQuickContext } from "../build/ObjectQuickEditor.jsx";
 
 import {
   createStaticContentDraft,
@@ -94,6 +95,9 @@ export default StaticContentEditor;
 
 /** Compact Text/Image editing is limited to the panel footprint; content stays in the full editor. */
 export function StaticContentQuickEditor({
+  placementContext,
+  onMove,
+  onRemove,
   draft,
   disabled = false,
   onDraftChange = noop,
@@ -156,7 +160,9 @@ export function StaticContentQuickEditor({
             cancelLabel="Close"
             onRequestReset={() => !locked && onReset()}
             onCancel={() => !locked && onClose()}
+            onRemove={onRemove}
           />
+          <PlacementQuickContext context={placementContext} onMove={onMove} disabled={locked} />
           <div className="chart-editor-layout chart-quick-editor-layout">
             <div className="chart-quick-editor-settings">
               <ChartFootprintPicker

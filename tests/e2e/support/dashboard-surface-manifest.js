@@ -155,7 +155,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     mode: "build",
     state: "context-inspector",
     viewport: DESKTOP_STANDARD,
-    root: "[data-build-rail='properties']",
+    root: ".object-quick-editor",
     setup: setupBuildPropertiesPane,
   }),
   executable({

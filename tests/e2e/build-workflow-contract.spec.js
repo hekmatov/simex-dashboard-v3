@@ -15,7 +15,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("the shared Build workflow exposes persistent structure and properties rails", async ({ page }) => {
+test("the shared Build workflow exposes persistent Structure and on-demand quick editors", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", {
     name: "Build",
@@ -25,6 +25,8 @@ test("the shared Build workflow exposes persistent structure and properties rail
   const map = await structureRail(page);
   await expect(map.getByRole("navigation", { name: "Dashboard structure" })).toBeVisible();
 
+  await expect(page.locator('[data-build-rail="properties"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await expect(propertiesPane(page)).toBeVisible();
 });
 

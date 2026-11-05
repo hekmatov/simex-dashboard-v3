@@ -1,6 +1,8 @@
 # V3 Open Issues Implementation Plan
 
-> **Implementation completed locally; pre-merge BLOCKED on 5 November 2026.** All seven slices passed guided acceptance and all 16 active issues have dispositions below; #22 remains explicitly deferred. Full unit/build gates pass, but Audience playback fails a Chromium check. No publication or remote reconciliation was performed.
+> **Original S1–S7 implementation completed locally; pre-merge BLOCKED at the 5 November 2026 gate checkpoint.** All seven original slices passed guided acceptance and all 16 original active issues have dispositions below. Full unit/build gates passed, but Audience playback failed a Chromium check. No publication or remote reconciliation was performed at that checkpoint.
+
+> **Scope update, 5 November 2026:** #22 is now scheduled for investigation in **S14**, after S13. This supersedes earlier blanket deferral instructions for investigation only. A media-list defect and repair scope remain to be established; prior execution records are historical.
 
 ## Execution record
 
@@ -143,7 +145,7 @@
 | #19 | Existing scalar categorical suggestions and source refresh verified. | S6 |
 | #20 | Added entry aliases and individual omission alongside whole-legend visibility; plotted data retained. | S7 |
 | #21 | Repaired destination-width text preview and wrapping. | S3 |
-| #22 | **Explicitly deferred; no media-list changes.** | Deferred |
+| #22 | **Reopened for investigation in S14; no media-list fix established or implemented.** | Investigation planned |
 | #23 | Existing absent-versus-zero target repair verified through save/reload/export contract. | S5 |
 | #24 | Added favorable-direction authoring/assessment and consistent automatic colors on ascending scales. | S5 |
 | #25 | Repaired stale image zoom capabilities surviving conversion to Text. | S1 |
@@ -201,7 +203,7 @@ All 17 issues were read individually; all comments were fetched. Only #32 had a 
 | [#19 Categorical filter choices](https://github.com/hekmatov/simex-dashboard-v3/issues/19) | Scalar operands have a datalist; detected-value test passes. Suggestions are capped at 100, require category typing, and do not cover multi-value operands. | S6: verify reported scalar use, source changes, and discoverability. Do not silently expand to a new filter language. |
 | [#20 Legend column name](https://github.com/hekmatov/simex-dashboard-v3/issues/20) | Whole-legend visibility and measure labels exist. `seriesName` combines measurement, cluster, group, and label. User confirmed all three legend controls. | S7: retain whole-legend visibility; add per-entry rename and omission without suppressing data. |
 | [#21 Text column-size preview](https://github.com/hekmatov/simex-dashboard-v3/issues/21) | Text preview uses `AuthoringFootprintFrame`, based on its local container; chart authoring has a separate destination-measured geometry path. User confirmed Rendered preview does not match specified panel width. | S3: match logical panel width and text wrapping at destination geometry. |
-| [#22 Text available-media list](https://github.com/hekmatov/simex-dashboard-v3/issues/22) | Picker partitions selectable local, external/importable, and unavailable media. No concrete defect established. | **Deferred by user; excluded from implementation and completion gates.** |
+| [#22 Text available-media list](https://github.com/hekmatov/simex-dashboard-v3/issues/22) | Picker partitions selectable local, external/importable, and unavailable media. No concrete defect established. | **S14 investigation requested on 5 November 2026; repair scope pending findings.** |
 | [#23 KPI without target](https://github.com/hekmatov/simex-dashboard-v3/issues/23) | Screenshot shows unwanted “Target 0.” Target is optional in schema and null without a binding in data preparation. Latest manual-role repair omits empty optional fields; its tests pass. | S5: verify blank versus explicit zero through manual entry, rendering, and export. |
 | [#24 Inverted gauge](https://github.com/hekmatov/simex-dashboard-v3/issues/24) | Direction is allowed by the target contract but not exposed for gauges. Gauge segments and status assume higher is favorable; `PrecisionArcGauge` also remaps standard colors by position. | S5: carry direction consistently through controls, both gauge render paths, and status text. |
 | [#25 Text zoom error](https://github.com/hekmatov/simex-dashboard-v3/issues/25) | Fresh text has zoom disabled. In-memory Image-to-Text conversion retains `zoom.enabled: true` through panel spreading; screenshot shows the corresponding unsupported-zoom error. | S1: normalize capabilities on type change; retain the validator. |
@@ -456,3 +458,324 @@ The latter probes are diagnosis evidence, not newly added durable regression tes
 - Confirmed product decisions above are honored; #22 remains explicitly deferred and does not block delivery of the 16 active issues.
 - Changes are delivered to private main as requested, with authored data preserved and no public publishing side effects.
 - User-facing closure identifies which fixes are present locally versus in a published artifact. Public issue closure/publication requires its own authorization and evidence.
+
+## 4 November 2026 follow-up — append S8–S10
+
+**Status:** Requested additions, planned here for the implementing agent. This planning chat has not implemented them. Continue on local private `main`; #22 remains deferred. These additions follow the original S1–S7 inventory rather than replacing its fixes or reopening the media-list issue.
+
+### Current V3 checkpoint
+
+Source: [Implement V3 issue plan](codex://threads/01a18cbf-09af-7cc0-8bd8-e0d882efc8fb), read on 4 November, plus a read-only inspection of the private-main checkout.
+
+- Original S1–S7 implementation was reported complete in commits `c6495e5a`, `c1b79cc1`, `2afb46bb`, `b0061707`, `1417052b`, `98bd76ae`, and `26a25c62`. The recorded focused deterministic checks and representative Chromium journeys passed. This is development evidence, not full pre-merge/release acceptance.
+- Guided user acceptance is still in progress. The user explicitly passed **S1**; **S2** then exposed that “Start section here” silently failed when the browser's native prompt did not appear.
+- The implementation chat replaced that prompt with an in-page dialog and reports the focused browser journey and two dialog checks passing. Its latest message says confirmation in the user's open tab and the local commit are **still pending**, after Escape stopped browser control.
+- Current HEAD is `ad3a7834f22ebe96da7693e1dd75238dda58465b`, the subsequent committed fix for scrolling through Rendered preview. The worktree contains the uncommitted section-dialog correction in `src/components/DashboardRenderer.jsx`, `src/components/build/BuildLayoutCreateDialog.jsx`, and `tests/e2e/v3-anchored-structure-commands.spec.js`. Preserve that work; do not reset or accidentally bundle it into these new UI slices.
+- The implementation chat reports no public push, merge, publication, deployment, or steward notification. This check did not inspect live remote refs. The new work does not change publication authority.
+- The earlier completion record describes the initial implementation outcome. This checkpoint records the later acceptance finding; do not interpret the earlier “no remaining blocker” wording as completion of guided acceptance.
+
+**Execution order:** finish the bounded S2 dialog follow-up in the implementation chat, then S8 → S9 → S10. S10 is technically independent, but belongs at the end as requested. Keep S1–S7 work, checks, and remaining acceptance results intact. Do not rerun all earlier passing journeys merely because the plan has been extended.
+
+### S8 — Replace the right Properties rail with object quick editors
+
+**Outcome:** Remove the right-hand Properties panel and reclaim its reserved canvas space. Every control and useful piece of information it currently exposes remains available in an object's quick editor. Extend existing chart/text/image quick editors; provide quick editors for objects without one, including pages and sections.
+
+**Current ownership:** `BuildWorkspace.jsx` renders `BuildPropertiesPane.jsx` in `build-rail-slot--properties`. The narrow-screen Properties disclosure is the same surface. Existing chart/static quick editing is hosted in `UnitOrbit.jsx`. The rail currently owns page/section fields and attention-strip/drill controls that cannot simply be removed.
+
+| Current Properties content | Destination after removal |
+| --- | --- |
+| Chart title, type, containing section; Edit chart, Move…, Remove… | Existing chart quick editor, including useful read-only context and the existing full-editor action. Add Move… if absent; retain canonical placement identity and existing removal confirmation. Apply equivalent actions/context to text/image placements using their existing quick editor. |
+| Page title, description, Delete page… and the last-page restriction | New page quick editor. Preserve the existing draft/save/discard and deletion authorities; disabled reasons remain visible. |
+| Section title, description, Standard/Attention role, refusal reasons, per-panel drill links | New section quick editor. Preserve all eligibility checks, target choices, and canonical structure commands. |
+| Chrono Group name, member count, instruction to open Chrono Studio | Selection quick panel with the same summary and an actionable existing Chrono Studio entry point. Reuse the current Chrono draft owner; do not make a second group editor. |
+| Dashboard title, page count, Scenario Passport guidance when no object is selected | On-demand dashboard quick summary reachable from the dashboard heading/command area. Keep actual Passport controls in their existing owner. Replace guidance that says to edit “here” in a removed rail. |
+
+**Files:** `src/components/build/BuildWorkspace.jsx`, `src/components/build/BuildPropertiesPane.jsx`, `src/components/build/BuildStructureRail.jsx`, `src/components/build/UnitOrbit.jsx`, `src/components/chart-authoring/ChartQuickEditor.jsx`, `src/components/static-content/StaticContentEditor.jsx`, `src/components/dashboard/DashboardCanvas.jsx`, `src/components/dashboard/DashboardSection.jsx`, `src/components/DashboardRenderer.jsx`, and `src/styles/modes.css` / the affected rules in `src/styles.css`. Extract the existing property fields into a focused `src/components/build/ObjectQuickEditor.jsx` if that avoids duplicating controls; retain `BuildPropertiesPane` only as reusable content if appropriate, never as a second visible rail.
+
+- [x] Implement the control mapping above using existing callbacks and transaction owners. Preserve any additional controls found in the live pane at implementation time; this table is a starting inventory, not permission to drop newer behavior.
+- [x] Give page/section/dashboard objects a discoverable quick-edit button at their heading or action menu, and support opening their quick editor from Structure. Chrono Group selection must keep its summary and studio access. Route existing label-focus requests to the corresponding quick editor instead of a nonexistent inspector.
+- [x] Keep one active object quick editor at a time, with existing dirty-draft retention, save/reset/discard semantics and focus return. Switching objects must not silently lose work. Do not add a second save owner for page/section changes that already belong to Build's draft lifecycle.
+- [x] Remove the desktop Properties rail, narrow-screen Properties disclosure, rail-open state, reserved grid track, and resulting blank gutter. Keep the Structure rail. The canvas should use the recovered width up to the existing canvas sizing limits; preserve its layout/column contract.
+- [x] Keep full editors and non-Properties auxiliaries available. Removing the Properties rail does not remove Source Content, Chrono Studio, Scene Studio, or the Scenario Passport.
+- [x] Update only affected existing tests/drivers that assume a permanent right inspector. In particular, replace the three-column/always-visible-properties expectations in `tests/buildRails.test.js`; preserve its role/drill behavior assertions in the new quick-editor surface.
+
+**Verification:** Extend `tests/buildRails.test.js`, `tests/buildPageRemovalSurface.test.js`, and the affected selection/lifecycle tests with behavior cases for control coverage, correct object identity, guarded deletion, attention/drill settings, and dirty switching. After those pass, use a focused journey in `tests/e2e/v3-build-workspace.spec.js` to open page, section, chart, and static quick editors, edit/save/reopen, and verify no Properties rail or reserved right column at desktop and narrow widths. Assert canvas width increases where the former rail constrained it. Do not demand an increase beyond the existing maximum canvas width.
+
+**Exit:** All former Properties actions and context are reachable through quick editing; the right rail no longer consumes space; no draft or destructive-action protection is lost.
+
+### S9 — Add a leftmost drag button and retain canvas-relative quick-editor position
+
+**Outcome:** Every object quick editor has a dedicated **Move quick editor** button as the **leftmost button in the upper action row**. Dragging that button moves the whole panel. After release, its position stays fixed relative to the canvas instead of returning to automatic object anchoring.
+
+**Current ownership:** `UnitOrbit.jsx` portals to `document.body` and recomputes anchor-relative position on resize/scroll. Chart/static editors render their upper action rows through `EditSessionActions.jsx`, whose current leading action opens the full editor. `BalancedTwinCanvas.jsx` also consumes `UnitOrbit`; changing this shared host requires retaining that consumer's behavior unless it explicitly opts into the new drag contract.
+
+**Files:** `src/components/build/UnitOrbit.jsx`, `src/components/build/BuildWorkspace.jsx`, `src/components/chart-authoring/EditSessionActions.jsx`, `src/components/chart-authoring/ChartQuickEditor.jsx`, `src/components/static-content/StaticContentEditor.jsx`, the S8 object quick-editor component, affected `src/styles.css` rules, and the existing icon registry/source if a new interaction entry is needed. Keep the existing full-editor button immediately after the new drag button rather than replacing it.
+
+**Position contract (engineering defaults):**
+
+- Store editor positions in workspace UI state keyed by dashboard identity, page/canvas identity, object kind, and stable object/placement identity. Store `{ x, y }` in the canvas's logical coordinate system, not raw viewport pixels or an offset from the selected chart.
+- Preserve the manual position across ordinary rerenders, draft edits, tab/field changes, panel content growth, save/reset, quick/full-editor switching, and close/reopen of that object during the current workspace session. A different object keeps its own position. Cross-reload/browser persistence is not required by this request; do not put UI coordinates into dashboard exports or mark authored content dirty when dragging.
+- Before a manual move, retain existing automatic positioning. On the first drag, convert the currently rendered position to canvas coordinates so the panel does not jump. After release, bypass automatic side selection and automatic reveal/recenter for that editor.
+- Resolve screen position from the live canvas origin, scroll, and scale. Ordinary canvas/document scrolling moves the panel with the canvas; it is **not viewport-pinned**. Scrolling down and back up restores the same local position without drift. Internal editor scrolling must not move the panel.
+- On genuine canvas/device-layout resize, keep the saved logical position where possible; minimally constrain it to keep the drag handle recoverable if the canvas narrows. Do not re-clamp it to the viewport on every scroll, which would violate the canvas-relative requirement. Offer an explicit reset-to-automatic-position action for recovery; content Reset remains a separate operation.
+
+- [ ] Extend the shared top-action-row API with an optional drag-button slot before the existing leading/full-editor action. Use it for chart, text/image, page, section, and other S8 quick panels; omit it from full-editor action rows that are not draggable.
+- [ ] Use Pointer Events with pointer capture on the button, a small drag threshold, and cleanup on pointerup/pointercancel/unmount. Limit `touch-action`/text-selection suppression to the handle while appropriate. Dragging inputs, selecting text, operating charts, and using other buttons must retain their normal behavior.
+- [ ] Provide keyboard movement through the same focusable handle (arrow keys, an announced move state, Escape to cancel/restore). Use the existing button styling, tooltip, and an accessible name. Dragging must not submit an editor form or accidentally invoke Close/Save/Remove.
+- [ ] Separate automatic placement from manual position in the host; use one shared canvas-to-viewport conversion. Keep current outside-click/draft handling and modal layering. A captured drag that leaves the panel must not be interpreted as an outside click.
+- [ ] Retain theme propagation and scrolling in the portal. Audit the `BalancedTwinCanvas.jsx` consumer narrowly for regressions; do not change Scene Studio positioning as an unrelated feature.
+
+**Suggested interfaces:** a focused pure position helper can expose `canvasPointFromViewport(point, canvasGeometry)` and `viewportPointFromCanvas(point, canvasGeometry)` using `{ left, top, scaleX, scaleY }` from the chosen canvas coordinate origin; do not subtract scroll a second time if it is already represented in that origin. The host receives `positionKey`, `canvasElement`, optional `manualPosition`, and `onPositionChange`, and exposes handle props through context or an explicit prop rather than DOM button scraping.
+
+**Verification:** Extend `tests/unitOrbit.test.js` with reversible coordinate conversion, automatic/manual separation, scale/scroll invariance, per-object retention, pointer cancellation, and resize recovery. Add targeted cases in `tests/e2e/v3-quick-editor-stability.spec.js`: leftmost handle ordering; drag/release; edit and rerender without a jump; scroll down/back; close/reopen; switch objects; narrow the canvas; keyboard movement; ensure controls still edit/save. Assert local position within a small CSS-pixel tolerance and content preserved, rather than hardcoded screen positions. Include chart and one new object editor plus static-editor action-row coverage.
+
+**Exit:** Manual movement is available from the prescribed button, remains stable relative to the canvas, and does not alter dashboard data or interfere with existing editor controls.
+
+### S10 — Add a viewport-top-right Back to top button
+
+**Outcome:** A compact **Back to top** button appears at the top right of the viewport once the main dashboard has been scrolled down by more than approximately one visible screen. Activating it returns to the very top of the dashboard's scrolling page.
+
+**Files:** integrate once in the shared application/frame layer, using `src/components/app-shell/AppFrame.jsx` or `src/components/dashboard/CanonicalDashboardFrame.jsx` after identifying the actual main scroller. A focused `src/components/common/BackToTopButton.jsx` is appropriate; add only its necessary style and icon interaction. Do not mount separate copies in each chart, section, editor, or repeated canvas.
+
+**Behavior contract (engineering defaults):**
+
+- Use the main scrolling surface's `scrollTop > clientHeight` threshold (document scrolling uses the browser viewport height). Keep it visible while beyond that threshold, even if the user starts scrolling upward; hide it again at or below the threshold. Recalculate on viewport changes, restored scroll, and navigation.
+- Position the button fixed at the viewport's top-right safe inset, clear of persistent header controls. Unlike S9's editor panels, this control **is viewport-pinned**. Respect notches/safe areas and existing modal/fullscreen layering; it must not sit above a blocking dialog or obscure its Close button.
+- Scroll the main surface to `top: 0`, not the selected section, chart, editor, or the start of only the canvas below the page header. Preserve horizontal scroll and all authored/dirty state. Inner preview/editor scroll alone must not trigger this button.
+- Support pointer and keyboard activation, a visible focus state, and the accessible name **Back to top**. Use smooth scrolling normally and immediate scrolling when reduced motion is requested. After activation, place keyboard focus on the existing top landmark/control so hiding the button does not strand focus.
+- Make it available on ordinary scrolling dashboard pages, including Build and View. A non-scrolling/fullscreen presentation has no need to show it. Use passive scroll observation and animation-frame scheduling; avoid a layout/render loop on every raw scroll event.
+
+**Verification:** Add `tests/backToTopButton.test.js` for the threshold, resize, correct scroll target, reduced-motion behavior, and listener cleanup. Add one parameterized browser journey in `tests/e2e/v3-shell-fidelity.spec.js` for Build and View: hidden initially; visible after more than a viewport; top-right positioning remains stable while scrolling; keyboard activation returns to page top without saving/discarding a draft; button hides and focus is retained appropriately. Check nested editor scrolling does not falsely trigger it and modal controls remain unobstructed.
+
+**Exit:** Users can return to page top from a long dashboard with one accessible action, without scrolling the wrong surface or disturbing authoring state.
+
+### Follow-up delivery and verification boundary
+
+- Deliver S8, S9, and S10 as coherent local changes with corresponding behavior tests and one brief execution entry each in this plan. Preserve the pending S2 follow-up and complete its existing acceptance/commit boundary separately.
+- Reuse earlier passing evidence unless these changes invalidate it. S8 changes canvas width and selection surfaces, so check the affected S3 preview-width and S2 move/section controls at their changed boundaries; S9 changes quick-editor geometry, so run the existing relevant stability cases alongside its new journey. S10 does not justify rechecking chart rendering/data pipelines.
+- Use the nearest deterministic checks first, then the specified representative browser journeys. No full-suite, build, publication, or new process-artifact requirement is introduced by this addendum.
+- #22 remains explicitly deferred. No public issue or publication state is changed by appending this plan. Report S8–S10 separately from the original 16 issue dispositions and from guided acceptance of S1–S7.
+
+### S11 — Selectively import a collaborator's dashboard package
+
+**Status and sequence:** User-requested addition after S10. Planning only in this chat; implement on private main under the same proportional workflow policy. #22 remains deferred. Registering imported media in the existing content library is necessary S11 behavior, not authorization to reopen the unclear media-list defect.
+
+**Outcome:** Two authors can work on separate copies of a dashboard and combine selected work. From **Load dashboard package**, choose a package, inspect it in the existing review window, and choose to import reusable content, whole pages, sections, or individual charts/panels into the dashboard currently open. Keep the existing whole-dashboard loading option explicit and separate from the additive choices.
+
+**Scope:** Package-based exchange and additive composition. Real-time collaboration, automatic synchronization, branch/three-way merging, overwriting matching existing charts, and publishing are outside this slice. Copying selected work is the default; an author can subsequently edit, move, or remove the resulting objects through existing controls.
+
+#### Existing path to extend
+
+- `src/lib/dashboardPackageCandidate.js` parses and validates the package and constructs its page → section → panel manifest.
+- `src/components/build/DashboardPackageReviewDialog.jsx` already displays that manifest, but only offers Cancel and Load package.
+- `src/App.jsx` owns inspection and confirmation, calling `commitDashboardPackageImport` from `src/lib/dashboardPackageImportTransaction.js` for whole-dashboard replacement and authored-asset compensation.
+- `src/components/DashboardRenderer.jsx` currently checks dirty state before file selection and has replacement-specific preparation/reset methods. Additive import must not use those methods in a way that retires unrelated drafts, resets the current dashboard, or cleans up its existing sources.
+- Reuse the supported package parser, strict content validators, commit controller, and asset store. Reuse `src/content-library/contentDependencyGraph.js`, `src/charting/config/dashboardSemanticReferences.js`, and `src/static-content/assets/assetReferenceGraph.js` for their supported reference types; extend coverage only where selective import exposes a concrete missing dependency. Do not assume any one graph already covers every serialized reference.
+
+#### Review window and author workflow
+
+1. Click **Load dashboard package** and choose the collaborator's file. Reading and inspecting it must not save, discard, replace, or otherwise mutate the current dashboard or its pending drafts. A malformed/unsupported package produces the existing actionable error and leaves the current dashboard available.
+2. In **Review package contents**, offer the choices below. Default to an additive selection mode with no objects preselected; preserve whole-dashboard loading as an explicit option with its replacement confirmation.
+
+| Choice | Selection | Destination/result |
+| --- | --- | --- |
+| Import content | Multi-select supported reusable CSV/dataset sources, GeoJSON/maps, and media items, grouped by kind with names and relevant metadata. Required attached assets are included automatically. | Add to the current Source Content library; do not create pages or panels. |
+| Import pages | Multi-select authored pages. A selected page includes its sections and panels, retaining their source order and layout. | Insert new pages into the current dashboard; default to after the active authored page, or append if there is no eligible active page. Allow an explicit insertion position. |
+| Import sections | Multi-select sections with their source-page breadcrumbs; each includes its panels. | Choose an existing eligible destination page and insertion position, or explicitly create a new destination page within the import transaction. Default to the current page when eligible. |
+| Import charts/panels | Multi-select individual chart placements, including static text and image panels, with page/section breadcrumbs and type. | Choose an existing eligible page/section and before/after/append position, or explicitly create a new destination page/section within the transaction. Default to the current selected eligible section. |
+| Load entire dashboard | Review the existing whole-package summary. | Existing replacement behavior, with its explicit replacement/pending-work handling. Never treat this as the effect of an additive Import selected action. |
+
+3. Show selection counts, destination, automatically included data/media, collision resolutions, and any unresolved dependencies. A collapsed tree/search filter must not silently change the selection; selecting a parent and its descendant must never duplicate the descendant. Keep original hierarchy/order for whole-page/section imports and source order for a batch of individual panels.
+4. Let the author review names and insertion before confirming **Import selected**. Disable confirmation for empty selection, invalid destination, unresolved references, unsupported semantic combinations, or a busy operation. Do not present raw IDs as the primary user-facing explanation.
+5. Import once, show a concise result such as “2 sections and 5 charts imported,” and reveal/select the first imported object in the current canvas. A content-only import opens or highlights the imported content in the existing library. Do not switch to the source dashboard's active page/mode or replace the current theme/Scenario Passport.
+6. Cancel, Escape before committing, or choosing another file abandons only the inspected import candidate. Existing dashboard content and pending work remain intact. A commit already in progress uses the existing busy/atomic-operation behavior; do not offer a misleading cancel that abandons half a transaction.
+
+Use the existing dialog focus and theme conventions. The manifest will need a workspace-sized dialog with independent scrollable selection/review regions, rather than the current compact confirmation size. Provide labeled keyboard-operable checkboxes, parent mixed states where applicable, a clear destination summary, and a stable footer. No separate importer application is needed.
+
+#### Merge and dependency rules
+
+**Identity and duplicates:** Authors who started from the same dashboard will naturally share IDs, often with different content. Never equate matching ID/title with matching object content.
+
+- Allocate fresh identities for imported authored pages, sections, chart records, placements, and copied semantic objects. Keep chart identity distinct from placement identity; preserve intended internal sharing among selected placements and relationships using one deterministic remapping table per reviewed transaction.
+- Remap imported sources, managed SourceEntry metadata, media items, dataset-profile keys, and their references when their identities collide. A selected chart must continue reading the collaborator's selected source, not the local source that happens to have the same ID. Avoid deduplicating by title, filename, or URL.
+- Reuse an existing immutable asset only when its validated content identity/hash and required manifest metadata match. Content-addressed asset IDs must remain consistent with the bytes/store contract; do not blindly assign random IDs to those assets. Reuse mutable data/media identities only when full semantic equivalence is proven; conservative independent copies are acceptable.
+- Retain display names when unique; show deterministic “(imported)” / numbered disambiguation for collisions, editable before confirmation. Renaming a chart does not rename a data column or change its bindings.
+- Deduplicate overlapping selections within one import. Disable repeated submission and preserve the transaction identity on a retry so it cannot create duplicate copies after an ambiguous success. A later deliberate import is a new operation: show potential duplicates and let the user skip them or import another copy, never silently overwrite.
+
+**Dependency closure:** Include exactly the selected objects plus what is needed to make them valid and usable.
+
+- Include the selected panels' primary dataset/manual/static sources, relevant dataset profiles and managed source entries, map geometry/join sources, reusable media, authored asset manifests/payloads, and any other supported references identified by the validators. Content-only selection includes the chosen library objects and their dependencies without pulling in their consuming charts.
+- Preserve shared dependencies once per imported selection. Do not copy all unselected charts, unrelated pages, data sources, or media just because they are in the source package.
+- Rewrite structured chart/source/placement/page/section references, including static-image media IDs and Portable QMD media nodes, using their parser/serializer contracts. Do not globally replace ID-like strings in prose, CSV values, or URLs. Preserve chart styling, ordering/legend overrides, text/image properties, and layout footprints established by S1–S7.
+- Preserve playback settings and required Chrono Group relationships for selected charts using remapped identities. For a group with unselected members, retain only selected memberships if the resulting group is valid and clearly report that scope. Do not expand the import to every sibling chart without selection.
+- Detect drill links, scenario/scene references, or other semantic references crossing outside the selected subset. Explain them in the review. Offer explicit inclusion of the referenced object, or explicit removal/detachment only where the existing contract supports it; otherwise require expanded selection or block import of that object. Do not create dangling references or silently discard authored behavior. Scenes/scenario identity are not automatically imported merely because they refer to a selected chart.
+- Importing an Attention section into a page that already has one must show the conflict. Offer explicit conversion of the incoming section to Standard where valid, or a different/new destination page; preserve drill links only where valid. Do not silently replace the destination's Attention strip. Keep canonical Home behavior and package eligibility constraints; do not duplicate canonical Home as an ordinary authored page.
+- Resolve package-relative/local resources through the package's portable source/asset model. A source package's relative path must not accidentally read a different file from the receiving dashboard. Surface missing portable payloads and genuine external/network dependencies before confirmation; preserve existing supported external-resource behavior and never claim those resources are offline-ready.
+- Retain the receiving dashboard's global identity, metadata, theme, and current authored defaults. Preserve imported per-object overrides. If source and destination themes differ, explain that imported objects inherit the current dashboard theme except for explicit overrides; do not import global settings implicitly.
+
+#### Transaction and draft ownership
+
+- Build an additive candidate from the current accepted destination revision plus the selected import delta. Do not call replacement reset/cleanup routines for an additive import. All pre-existing objects and assets outside explicit user-selected insertion relationships remain untouched.
+- Keep inspection available with unsaved work. At confirmation, use the existing pending-work coordinator to resolve any save/draft boundary that prevents a safe merge. Offer the existing explicit Save-and-continue or return-to-editing flow where needed; never silently discard drafts to import. Await in-flight saves and then recompute/review against the resulting revision if necessary.
+- Validate the complete merged candidate, selected asset payloads, reference closure, destination eligibility, and **combined** asset budget (existing plus newly needed unique assets), not just the source package total. Importing a small subset of a large package must budget only that subset and its dependencies.
+- Stage new bytes and commit the additive dashboard configuration through a compensatable/atomic boundary. Reuse the current transaction's asset validation and rollback techniques, but give the merge its own prepare/commit/rebase behavior. If storage, validation, or persistence fails, restore the prior committed dashboard and assets; remove only newly staged resources owned by this transaction.
+- Bind the reviewed selection, identity map, package identity, target revision, and insertion anchors to one import transaction. If the destination changes before confirmation, revalidate and require a refreshed review for changed placement/conflicts; do not silently merge into a stale snapshot or lose a concurrent local change.
+- On success, rebase affected state without resetting unrelated editor sessions or pending owners. On a retryable failure, preserve the user's selection and mappings so they can retry. Reconcile ambiguous commits before retry, as in the existing chart creation/import ownership patterns.
+
+#### Implementation boundaries and interfaces
+
+**Modify:** `src/components/build/DashboardPackageReviewDialog.jsx`, `src/lib/dashboardPackageCandidate.js`, `src/App.jsx`, and the package-entry/owner integration in `src/components/DashboardRenderer.jsx`. Extend the existing graph/semantic-reference utilities and import transaction module only at their actual shared responsibilities. Keep whole-dashboard replacement compatibility covered.
+
+**Add focused modules:** `src/lib/dashboardPackageSelection.js` for inventory, canonical selection, and dependency closure; `src/lib/dashboardPackageMerge.js` for identity remapping and immutable merge proposals; `src/lib/dashboardPackageMergeTransaction.js` for additive commit/compensation. Extract shared asset transaction primitives from `dashboardPackageImportTransaction.js` only if that is the smallest reliable way to avoid duplication. Do not turn the importer into a generic collaboration framework.
+
+**Proposed pure interfaces:**
+
+- `buildDashboardPackageImportInventory(candidate)` returns selectable pages/sections/placements and reusable content with stable source identities and breadcrumbs.
+- `resolveDashboardPackageSelection(candidate, selection)` returns the canonical selected object set, required dependencies, and unresolved cross-selection references. Selection is typed by scope; chart selection uses placement identity and source hierarchy to avoid confusing shared charts with placements.
+- `buildDashboardPackageMerge({ current, candidate, selection, destination, resolutions, identityMap })` returns `{ config, assetPayloads, identityMap, summary, issues }` without modifying either input. `resolutions` records explicit cross-reference/conflict choices. Allocate `identityMap` once per transaction so repeated preview/retry is stable. `issues` distinguishes blocking decisions from informational changes.
+- `commitDashboardPackageMerge({ proposal, expectedRevision, transactionId, ...authorities })` commits the reviewed additive proposal through existing dashboard/asset owners and returns imported identities for reveal/library selection. Check revision under the commit boundary, not only in the UI.
+
+These signatures are planning decisions for the future implementer; they do not introduce executable code in this chat. Reuse existing supported schema versions and validation paths. No new migration/version layer is needed solely for this UI feature.
+
+#### Work and verification sequence
+
+- [ ] Add selection/dependency tests and implement the pure inventory/selection module. Cover parent/child deduplication, content-only selection, chart-only dependency closure, static text/image media, map sources, and explicit treatment of references outside the selection.
+- [ ] Add merge tests and implement immutable merge proposals with stable identity remapping, insertion order, source-content registration, conflict explanations, combined-budget checks, and unchanged existing content. Use two independently edited packages derived from the **same baseline IDs** as the primary fixture.
+- [ ] Add transaction tests and implement compensated additive persistence, stale-revision rejection, pending-owner handling, double-submit/ambiguous-retry prevention, and cancellation cleanup. Reuse the existing supported asset store in tests; do not replace actual ownership failures with UI-only mocks.
+- [ ] Extend the review dialog and entry flow with import choices, multi-selection, dependency preview, destination/insertion, conflict resolution, and explicit Import selected versus whole-package Load. Connect successful import to S8's selection/quick-edit surfaces.
+- [ ] Run the final task-specific deterministic selection once, then representative browser journeys for each import scope and a focused regression for the existing whole-dashboard replacement path. Verify save/reload and exporting/reimporting the **combined** dashboard preserves imported content and its dependencies.
+
+**Tests:** Add `tests/dashboardPackageSelection.test.js`, `tests/dashboardPackageMerge.test.js`, and `tests/dashboardPackageMergeTransaction.test.js`; extend `tests/dashboardPackageCandidate.test.js` and affected cases in `tests/dashboardPackageImportTransaction.test.js`. Add `tests/e2e/dashboard-package-selective-import.spec.js`; reuse package-review fixture/drivers from `tests/e2e/v3-build-structure-packages.spec.js` where they fit.
+
+Required product cases:
+
+1. Author A keeps their existing charts and imports only Author B's chosen chart despite identical source/placement IDs; each chart retains the correct author's data.
+2. Import selected sections into an existing page, selected pages as new pages, and individual chart/text/image placements into a chosen section, preserving order and layout.
+3. Import only reusable data/media; the content becomes available in the existing authoring library and no page/panel is added.
+4. Shared sources/media are included once within a selection; selected content survives reload and a combined-package round-trip. Unselected content remains absent.
+5. Missing assets, invalid references, Attention conflicts, stale destinations, and combined storage limits block with a specific explanation; current authored work remains intact.
+6. Cancel/invalid file/save failure changes nothing; a retry or duplicate click creates one result; a deliberate later copy is distinguished from a retry.
+7. Dirty authoring is preserved during inspection and resolved through the existing explicit save flow before commit; unrelated pending work is not retired.
+8. Whole-dashboard loading continues to replace only when that explicit option is chosen. Default selective import never performs replacement.
+
+**Exit:** Authors can assemble a combined dashboard from selected content/pages/sections/charts through Load dashboard package, with correct dependencies, safe identity handling, and durable results. The current dashboard is preserved during additive import. #22 remains deferred; no publishing, live collaboration, or implicit overwrite feature is added.
+
+### S12 — Position legends inside or beside charts, with fine offsets
+
+**Status and sequence:** User-requested addition after S11. Planning only in this chat; implementation belongs on private main. #22 remains deferred. Preserve any concurrent legend-layout work and reconcile this plan with the accepted implementation before editing production files.
+
+**Outcome:** Authors can choose where a chart's legend appears, including within the graph area and outside it, then fine-tune the result with horizontal and vertical offsets. Include direct dragging as the requested enhancement: dropping nearer another preset records that new preset plus the offset needed to preserve the dropped position.
+
+#### Placement and authoring contract
+
+- Expose the same placement and offset fields in the full chart editor and S8 quick edit menu, using the shared form model and draft owner. Show them only for chart types that actually render a supported legend. Keep #20's visibility, entry renaming, entry hiding without hiding data, orientation, font size, and wrapping controls compatible.
+- Provide **Automatic** (the existing default), plus these explicit presets:
+
+| Region | Presets | Reference and layout behavior |
+| --- | --- | --- |
+| Inside graph | Top left, top center, top right; middle left, center, middle right; bottom left, bottom center, bottom right | Anchor to the plotting rectangle, inset by a consistent small padding. Overlay intentionally; do not shrink the plotting rectangle merely to reserve legend space. |
+| Above graph | Left, center, right | Reserve a band above the plot, within the chart panel. |
+| Below graph | Left, center, right | Reserve a band below the plot, within the chart panel. |
+| Left of graph | Top, middle, bottom | Reserve a band left of the plot, within the chart panel. |
+| Right of graph | Top, middle, bottom | Reserve a band right of the plot, within the chart panel. |
+
+- “Outside” means outside the graph area but still within its chart panel; it must not overlap adjacent dashboard panels. For pie/donut and other supported non-axis charts, use the drawable series region as the graph rectangle. Account for axis labels/titles, chart headings, zoom controls, and existing chart chrome when allocating exterior bands.
+- Provide signed numeric **Horizontal offset** and **Vertical offset** in chart-local CSS pixels: positive means right/down; negative means left/up. Zero means the preset's natural position. Offsets are independent of horizontal/vertical legend arrangement. Provide **Reset offsets** and a way to return to Automatic. Selecting a different preset explicitly resets offsets to zero; dragging between presets preserves the dropped location through recomputed offsets.
+- In Automatic, disable offsets until an explicit preset is chosen; beginning a drag resolves Automatic into the nearest explicit preset. Existing charts with no placement fields retain their current default layout.
+- Keep the legend reachable inside the panel. Account for its visible measured size, including padding and pagination, when bounding movement. If a smaller viewport cannot display the requested position, constrain the rendered position and wrap/paginate as necessary without silently changing saved offsets; restoring space restores the authored position. Do not erase author placement during resize, font loading, data updates, playback, or preview rerenders.
+- Placement is saved chart presentation, not viewport state. Full/quick editor previews, Build/View, save/reload, package export/import, and S11 selective import must use the same settings. Compatible chart-type changes retain them; an incompatible conversion follows the existing explicit loss-review contract.
+
+#### Direct dragging and nearest-preset behavior
+
+Implement this as a bounded enhancement within S12 after the preset/offset contract works. If a concrete renderer limitation prevents it, report that remaining scope explicitly; preset support alone must not be described as completing the drag enhancement.
+
+- Make dragging available while authoring the chart through a clearly labeled **Move legend** affordance or explicit placement mode. Do not make ordinary legend-item clicks start dragging or change their existing behavior. View mode renders the saved placement without permitting edits. This moves the legend inside its chart; it is separate from S9's quick-editor-panel handle.
+- Use pointer capture and a movement threshold, preserve the pointer-to-legend grab offset, and convert viewport coordinates into chart-local CSS pixels correctly under canvas scaling/scrolling. Update a transient preview during movement; pointer release produces one draft edit, not a stream of saves. Escape, pointer cancellation, editor dismissal, or unmount restores the pre-drag draft position and cleans up listeners/capture.
+- Compute a candidate legend rectangle for every valid explicit preset using the same measured legend size and chart layout rules as normal rendering. Compare the dropped legend rectangle's center with those zero-offset candidate centers in chart-local coordinates. Choose the nearest by Euclidean distance; retain the current preset on an exact tie, then use a fixed documented order. Exclude Automatic and impossible presets at the current size.
+- Show a candidate-placement hint during dragging, but decide the persisted preset on release. Freeze the comparison geometry for a gesture so changing exterior space does not cause oscillation between presets. If resize/data changes invalidate it mid-gesture, cancel cleanly or rebase explicitly without a jump.
+- When the winning preset changes, settle the layout for that preset, then compute `offsetX = droppedLeft - presetLeft` and `offsetY = droppedTop - presetTop` against its final zero-offset rectangle. Persist **preset plus offsets**, never an unrelated absolute screen position. The resulting legend must remain at the dropped chart-local position within a small CSS-pixel tolerance, except for necessary panel-edge constraints. Avoid rounding that causes visible snapping or drift on repeated drags.
+- Selecting another preset changes its reserved band as appropriate, but layout measurement and offset application must be a bounded, stable calculation. Numeric offset edits retain their selected preset; automatic nearest-preset reassignment is specifically a drag-release behavior.
+- Keep numeric controls as the complete keyboard alternative. Give any drag affordance an accessible name, focus treatment, and concise instruction; provide Escape cancellation and announce the committed preset/offsets. Dragging must not toggle a legend item, pan/zoom the graph, move the dashboard panel, or commit/discard another editor's draft.
+
+#### Existing code and implementation boundaries
+
+- `src/charting/config/chartConfigV3.js` currently accepts `presentation.legend.position` only as `top`, `bottom`, `left`, or `right`, and rejects additional legend keys. Extend its strict contract for the explicit presets and finite signed offsets. Keep legacy positions readable, mapping them to the corresponding exterior center/middle presets; missing fields retain Automatic. Use a single canonical serialized representation, preserve existing schema compatibility, and update any relevant import/conversion allowlists rather than bypassing validation.
+- `src/charting/forms/formModel.js` currently exposes visibility, arrangement, wrap, font size, and entries. Add placement/offset/reset controls through its shared paths and the existing full/quick editor field renderers. Reuse `src/charting/forms/chartConversion.js` for compatibility/loss handling.
+- `src/charting/rendering/axisAdapter.js`, `compositionAdapter.js`, and `relationshipAdapter.js` build legends without applying the currently accepted position field. Route supported legend adapters through shared placement policy. Audit `timelineAdapter.js`'s separately constructed legend at this boundary: wire any actual supported legend into that policy rather than displaying ineffective controls. Do not apply categorical legend placement to unrelated continuous color scales without a supported contract.
+- `src/charting/rendering/legendLayout.js` and `src/components/charts/EChartsChartView.jsx` currently fit measured legends and adjust space above the graph. Replace that top-only assumption for explicit placements with side-aware exterior bands and true interior overlays. Preserve current default sizing, pagination, wrapped labels, legend colors, and minimum usable graph area. Measure visible legend bounds rather than offscreen pagination children; avoid repeated `setOption`/resize feedback loops.
+- Keep pure placement geometry separate from rendering and pointer events. Extend `legendLayout.js` or add a focused `legendPlacement.js` if that keeps it clearer. Suggested operations are `resolveLegendPlacement({ placement, offsets, chartBounds, plotBounds, legendSize })` and `nearestLegendPlacement({ droppedRect, candidates, currentPlacement })`. The renderer owns measurements; the chart draft owner owns persisted changes. Do not directly mutate the accepted chart from an ECharts event.
+- Ensure manual placement metadata survives render-option rebuilds, presentation serialization, compatible chart conversion, and package round-trips. The S11 merge copies these presentation fields without rewriting their values.
+
+#### Work and proportionate verification
+
+- [ ] Extend configuration, shared form fields, serialization, and conversion contracts with placement and offsets. Add regression cases for absent/legacy fields, valid presets, invalid/non-finite offsets, quick/full editing, and loss-review behavior.
+- [ ] Implement and test pure geometry, then integrate the supported renderers. Cover all preset anchors, each exterior side's space reservation, interior overlays, hidden/empty legends, wrapped/paginated legends, and constrained viewports. Preserve the existing Automatic rendering cases.
+- [ ] Add direct manipulation through the existing chart draft session. Test nearest-preset choice/ties, stable final offsets after a region switch, scale/scroll conversion, grab-offset preservation, cancellation, and one draft update per completed drag.
+- [ ] Run the final task-specific deterministic selection once. Extend `tests/chartConfigV3.test.js`, `tests/chartFormModelV3.test.js`, `tests/chartConversionV3.test.js`, and `tests/chartRenderingV3.test.js` as appropriate; add a focused placement geometry test file only where it gives direct contract coverage.
+- [ ] Add one focused browser spec for placement, reusing existing wizard/quick-editor fixtures. Exercise an axis chart and a composition chart; an interior placement and an exterior side placement; numeric offsets; dragging across a preset boundary; quick/full consistency; save/reload; and a narrow/expanded viewport. Assert measured visible geometry and serialized preset/offsets, not only selected labels or screenshots. Verify legend entry clicks and chart zoom still work outside the drag gesture. Use a deterministic package round-trip to cover S11 preservation rather than repeating its entire import journey.
+
+**Exit:** Authors can place legends inside or around the graph and fine-tune them with durable offsets. The drag enhancement records the nearest valid preset plus offsets without an unexpected positional jump. Placement remains consistent across editing, viewing, resizing, and package exchange; existing legend visibility/data behavior is preserved. #22 remains deferred, and this addition authorizes no implementation in the planning chat.
+
+### S13 — Repair the real Presenter/Audience playback failure from the merge gate
+
+**Status and sequence:** Added after S12 at the user's request on 5 November 2026. Diagnose and repair on private main; this chat changes the plan only. The user separately permitted delivery with this known Audience failure if it was the only remaining failed test. That delivery exception does not mark the defect fixed or the gate green; retain it as historical context and track this repair explicitly. #22 remains deferred.
+
+**Confirmed failure:** `tests/e2e/selected-content-preview.spec.js:141`, **selected shipped groups play pause seek and change period in a real Audience display**. After the Presenter clicks Play, the real Audience's `data-frame-index` remains `0` and the controller is reported paused. The assertion expects a frame index greater than zero and times out after 20 seconds. It failed in the initial four-worker source run and again in the single-worker focused continuation. Root cause is **not yet established**; do not assume a timer, focus, visibility, connection, or test-fixture cause from the symptom alone.
+
+#### Evidence and gate disposition
+
+- Primary evidence: `.superpowers/premerge-20261105/e2e-ledger-latest.json`, recorded final commit `22327fc9c161935004500fed1ef328d1470e2bb7`, with both native failure attempts and exact commands. Retain the initial/focused native reports and available traces rather than overwriting failure history.
+- The complete unit gate passed **2,583/2,583** at `56279d5d`; the production build passed. Latest Chromium per-case coverage is **321 passed, 1 failed, 0 unrun**, combining full and focused runs. This is not a passing corrected full aggregate. Static/offline checks passed **4/4**; PDPC checks passed **2/2** against older outputs from `5457fc14`, not newly generated current release outputs.
+- The minimal popup probe in `popup-visibility-probe.json` recorded a visible/focused controller, but did not inspect the failing dashboard lifecycle. It neither proves nor rules out visibility/ownership changes in this journey. Passing isolated playback-ownership and other Audience tests likewise do not disprove the integration failure.
+- Read the existing gate execution entry above and the current implementation before starting. S8–S12 and other local work may have advanced since the recorded gate; preserve it and identify the actual candidate revision for the repair. Do not reset to the gate revision.
+
+#### Required behavior
+
+- With an eligible Chrono Group selected, a connected real Audience, and valid accepted output, explicit Play advances the provider-owned timeline and Audience charts beyond frame zero at the authored cadence. The Presenter, Audience frame index, chart active dates, and rendered temporal data agree.
+- Pause freezes both controller and Audience; seeking updates both; end-of-period disables Next; Previous moves back; changing from municipal to national group uses the new group's period and selected members. Keep the original test's end-to-end assertions, including current render status, no page errors, and End closing the Audience.
+- Preserve safety behavior: unsafe/disconnected/ended or invalid output must not continue advancing; Audience stays passive and retains the appropriate last-valid output. Recovery follows the existing accepted-state and explicit-Play contract. Do not remove playback safety ownership, disable visibility protection, auto-resume after unsafe recovery, or force the Audience to run an independent timer merely to make the test pass.
+
+#### Diagnosis and repair work
+
+- [ ] Preflight the exact journey: served dashboard equals the selected shipped configuration; municipal and national groups have the expected periods and members; no replacement fixture cookie; popup reaches the actual Audience destination and finishes hydration; connection/output are active; starting chart dates and frame zero match. Reuse `tests/e2e/support/present-audience-workflow.js` and the existing readiness assertions. If setup fails twice, isolate that boundary before rerunning the long journey.
+- [ ] Reproduce only the named failing case, retaining a focused trace and bounded diagnostics around the Play transition. Suggested command: `pnpm.cmd exec playwright test tests/e2e/selected-content-preview.spec.js --config=playwright.source-parallel.config.js --project=chromium --workers=1 --grep "selected shipped groups play pause seek and change period in a real Audience display" --trace=retain-on-failure`.
+- [ ] Trace the first divergence across the Play handler, presentation-session reducer, playback provider/lease and safety owner, timer tick, published snapshot, and Audience acceptance/rendering. Capture ordered actions and pause/rejection reasons, selected source/period/frame count, accepted revisions, connection state, and the actual controller/Audience document visibility at that transition. Distinguish Play being rejected, Play being immediately paused by another action, a missing provider tick, and a frame published but not accepted/rendered.
+- [ ] Compare the real shipped-data path with the passing provider-owned playback and safety harnesses. Inspect source/index identity churn, effects and cleanup, asynchronous readiness/connection events, stale snapshots, and ownership changes only as hypotheses until the trace identifies the responsible transition. Use the smallest controlled probe that can distinguish the leading hypothesis; do not repeatedly rerun the full gate to diagnose it.
+- [ ] Add a durable regression at the confirmed boundary that reproduces the causal event sequence, then apply the smallest correction. If the actual defect is in the fixture/setup, correct that boundary with evidence and retain the real playback assertions; if it is in production, fix its owner. Do not increase timeouts, add arbitrary sleeps, mock away the real Audience, skip the failing case, or change the assertion to accept frame zero/paused playback.
+
+**Likely investigation boundaries, not a predetermined patch:** `src/components/presentation/PresentWorkspace.jsx`, `PresentationController.jsx`, `usePresentationRuntime.js`, and `AudienceDisplay.jsx`; `src/lib/presentationSession.js`, `presentationChannel.js`, and the existing playback provider reached from the runtime. Inspect `src/charting/time/playbackReducer.js` and DashboardRenderer's playback integration only if the traced transition reaches them. Avoid unrelated presentation redesign or broad refactoring.
+
+#### Verification and closure
+
+- [ ] Run the nearest causal regression and affected cases in `tests/presentPlaybackOwnership.test.js`, `tests/presentationSession.test.js`, or `tests/presentationController.test.js` as appropriate. Include the existing provider Play and unsafe-command/recovery checks if playback ownership or safety changes. Expand to channel/Audience tests only where the correction changes that boundary.
+- [ ] After deterministic dependencies pass, complete the original real-Audience journey for both authored groups. Verify frame advancement, pause stability, seek/end/previous, source change, correct dates/data, current rendering, and End cleanup. A passing synthetic harness alone is insufficient to close this integration failure.
+- [ ] Record the root cause, coherent repair commit, exact focused results, and remaining limits in the existing execution record/ledger. Preserve the old failed attempts; add the new outcome rather than rewriting history. Run the complete corrected Chromium gate once at the applicable pre-merge boundary after focused failures are green, as required by the repository policy; account for intervening S8–S12 changes. Do not represent combined per-case evidence as that aggregate. Reuse unaffected unit/build/static results unless the correction or intervening changes invalidate them; do not regenerate PDPC outputs solely for this repair.
+
+**Exit:** The original shipped-content Presenter/Audience playback journey passes with its assertions intact, a causal regression covers the confirmed defect, and safety/ownership behavior remains correct. Report defect closure separately from full merge-gate status and from the user's earlier delivery exception. No merge, push, publication, or message to another chat is performed by this planning addition.
+
+### S14 — Investigate #22: text editor available-media list
+
+**Status and sequence:** Added after S13 at the user's request on 5 November 2026. Reopens #22 for investigation on private main, superseding its earlier deferral to that extent. This is an investigation item, not a claim that a defect exists or an instruction to implement a speculative redesign. This chat edits the plan only.
+
+**Question to resolve:** What is wrong with the text editor's available-media list: missing eligible items, incorrectly listed or unavailable items, stale results, or difficulty finding/selecting media? The earlier report did not identify an affected item or expected behavior.
+
+- [ ] Re-read issue #22 and its attachments/comments, then inspect the current text-authoring media picker and its content-library source. Account for any S8 editor changes and S11 imported-media registration already implemented; do not diagnose against obsolete UI or assume those changes resolve the report.
+- [ ] Compare the picker with the current library using a small representative set: usable local media, external/importable media, and missing/unavailable media. Check whether names, thumbnails, eligibility explanations, search/filtering, and selection match the actual asset state. Distinguish intentional availability restrictions from incorrect omissions or unusable selectable entries.
+- [ ] Trace one affected item's identity and availability from library/asset registration through picker filtering and insertion into the text draft. Where relevant, inspect refresh after adding/importing media and after reload; verify that inserted media resolves to the intended asset. Preserve authored content and use disposable test drafts for investigation.
+- [ ] If the original symptom cannot be identified from the issue and current behavior, ask the user for the affected media item, the steps taken, and the expected versus observed result. Present concrete findings first; do not guess which of several possible problems the user intended.
+- [ ] Record a concise disposition here: confirmed defect with reproduction and owning boundary; usability requirement needing clarification; already resolved with evidence; or not reproduced with the remaining missing information. For a confirmed defect, add a bounded repair proposal and acceptance criteria to this plan before treating implementation as scoped. Do not close the issue solely because a representative check passes.
+
+**Verification budget:** Use the cheapest targeted inspection or deterministic probe that distinguishes the reported behavior. A focused browser interaction is appropriate for a listing/selection problem; a full suite or broad media-library audit is not required. If a repair is subsequently scoped, specify a regression at the confirmed filtering, registration, refresh, or insertion boundary and one representative user journey as needed.
+
+**Exit:** #22 has an evidence-based diagnosis and actionable next step, or a precise clarification request identifying what prevents diagnosis. Investigation completion and defect repair are separate statuses; neither changes public issue state or publication approval automatically.
+
+
+### 5 November — approved follow-up execution checkpoint
+
+The user accepted S1–S7 and explicitly requested **S8–S12 before merging**. The known Audience playback test remains the accepted exception; it is not a passing test. Merge/push to public V3 and completion-only steward notification are authorized after this scope is complete and Audience is the sole remaining failure. #22 remains deferred.
+
+**S8 implemented:** removed desktop/narrow Properties rail and its reserved track; Structure remains. Shared page/section fields now open in one object quick editor from Structure or heading/command actions, using existing Build pending edits and destructive confirmations. Dashboard summary and Chrono summary/studio access remain available. Chart and Text/Image quick editors include placement context, canonical Move, full editor and removal. Fixed a reproduced section-header identity loss after text edits by merging text drafts over the canonical section. Consumed focus requests once and retained dashboard summary selection across reconciliation. Move resolves the placement's current location.
+
+**S8 verification:** **77/77** focused deterministic control, deletion, selection, static editing, Orbit and region checks; Chromium Build entry/source/command contract **3 passed**, object quick-editor journey **1 passed** (17.7s), including close-before-autosave, page/section reopen, chart/static context/actions and narrow rail absence. Initial runs exposed the section identity defect, populated textarea labeling and the journey's missing normal panel hover; all corrected. Scoped independent review and bounded correction review: no remaining findings. Full gates deferred to the final integration candidate; prior Audience failure remains recorded above.
+
+**Next:** S9 canvas-relative quick-editor dragging, then S10, S11 and S12 in order. No remote mutation or steward contact has occurred.

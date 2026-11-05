@@ -434,6 +434,7 @@ test("timer-owned pending edit uses the bounded session fallback", async ({ page
   await openDashboardEditMode(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_LONG__ = true; });
   const map = structureRail(page);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Timer-owned failed edit");
 
   const status = page.getByRole("status").filter({
@@ -510,6 +511,7 @@ test("reset completes with session fallback when browser storage is full", async
   const baselineTitle = (await page.locator(".dashboard-brand-block h1").textContent()).trim();
   const editedLabel = "Draft retained after reset failure";
   const map = structureRail(page);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   const pageTitleInput = propertiesPane(page).getByLabel("Page title", { exact: true });
   await pageTitleInput.fill(editedLabel);
   await expect.poll(async () => (await storedDashboard(page))?.pages.find(({ id }) => id === "biomedical")?.title).toBe(editedLabel);
@@ -537,6 +539,7 @@ test("successful reset clears renderer drafts and preserves the chart baseline",
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
   const map = structureRail(page);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   const pageTitleInput = propertiesPane(page).getByLabel("Page title", { exact: true });
   const pageTitle = await pageTitleInput.inputValue();
   await pageTitleInput.fill("Reset-only page draft");
@@ -648,6 +651,7 @@ test("edit-session save and reset use session fallback when storage is full", as
   const sessionTitle = "Unsaved exercise label";
   const map = structureRail(page);
   await map.locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(sessionTitle);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
@@ -691,6 +695,7 @@ test("final Build remains locked until dirty chart edit context resolves", async
   expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))
     .toBe(attemptsBeforeDiscard);
   await structureRail(page).locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Build session after chart discard");
   await expect(finishBuild).toBeEnabled();
 });

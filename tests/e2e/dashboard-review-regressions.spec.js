@@ -311,6 +311,7 @@ async function openDashboard(page) {
 }
 
 async function openSelectedPageInspector(page) {
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   const inspector = propertiesPane(page);
   await expect(inspector.getByLabel("Page title", { exact: true })).toBeVisible();
   return inspector;

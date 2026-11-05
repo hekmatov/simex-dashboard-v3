@@ -169,8 +169,8 @@ test("reveal waits for canonical material clearance instead of any viewport inte
 
 test("Build frame allows persistent rails beside the canonical canvas", async () => {
   const css = await readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8");
-  assert.match(css, /max-width: calc\(var\(--simex-canonical-canvas-max-width\) \+ 580px\)/);
-  assert.match(css, /@media \(min-width: 1200px\)[\s\S]*grid-template-columns: minmax\(220px, 260px\) minmax\(0, 1fr\) minmax\(280px, 320px\)/);
+  assert.match(css, /max-width: calc\(var\(--simex-canonical-canvas-max-width\) \+ 260px\)/);
+  assert.match(css, /@media \(min-width: 1200px\)[\s\S]*grid-template-columns: minmax\(220px, 260px\) minmax\(0, 1fr\)/);
 });
 
 function fixtureLayout() {

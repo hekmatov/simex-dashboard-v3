@@ -7,7 +7,7 @@ import { useMediaQuery } from "../common/useMediaQuery.js";
 import { createPortal } from "react-dom";
 
 import BuildCommandHeader from "./BuildCommandHeader.jsx";
-import BuildPropertiesPane from "./BuildPropertiesPane.jsx";
+import ObjectQuickEditor from "./ObjectQuickEditor.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
 import {
   captureBuildCanvasState,
@@ -201,12 +201,21 @@ export default function BuildWorkspace({
     : null;
   const selectedChart = selectedChartItem?.chart ?? null;
   const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
-  const inspectorFocusKey = focusLabelKey;
-  const narrowRails = useMediaQuery("(max-width: 1023px)");
-  const [railOpen, setRailOpen] = React.useState({ structure: false, properties: false });
+  const [objectQuickOpen, setObjectQuickOpen] = React.useState(false);
+  const quickInvoker = React.useRef(null);
+  const closeObjectQuick = () => {
+    setObjectQuickOpen(false);
+    if (quickInvoker.current?.isConnected) quickInvoker.current.focus();
+  };
+  const consumedFocusKey = React.useRef(focusLabelKey);
   React.useEffect(() => {
-    setRailOpen((current) => ({ ...current, properties: true }));
-  }, [selection?.kind, selection?.pageId, selection?.sectionId, selection?.placementId]);
+    if (focusLabelKey !== consumedFocusKey.current) {
+      consumedFocusKey.current = focusLabelKey;
+      if (selection?.kind !== "chart") setObjectQuickOpen(true);
+    }
+  }, [focusLabelKey, selection]);
+  const narrowRails = useMediaQuery("(max-width: 1023px)");
+  const [railOpen, setRailOpen] = React.useState({ structure: false });
   const railContent = (kind, title, content) => narrowRails ? (
     <details className="build-rail__disclosure" open={railOpen[kind]} onToggle={(event) => {
       const open = event.currentTarget.open;
@@ -242,27 +251,26 @@ export default function BuildWorkspace({
     }));
   }, [dashboard.chronoGroups, dashboard.pages, dashboard.scenes, temporalFindings, temporalSurfaceActive]);
 
-  const chooseSelection = (next, options) => {
-    if (
-      navigationLocked
-      && !buildSelectionAllowedWhileLocked(selection, next, options)
-    ) return Promise.resolve(false);
-    if (next.kind === "chronoGroup" && (dashboard.chronoGroups ?? []).some(({ id }) => id === next.chronoGroupId)) {
-      openAuxiliary("chrono-group");
-      const library = createChronoContentState({
-        chronoGroups: dashboard.chronoGroups ?? [],
-        scenes: dashboard.scenes ?? [],
-        pages: dashboard.pages ?? [],
-        findings: temporalFindings,
-        studio: "chrono",
-      });
-      setChronoContentState(reduceChronoContent(library, {
-        type: "OPEN_CONTENT",
-        itemType: "chronoGroup",
-        itemId: next.chronoGroupId,
-      }));
+  const chooseSelection = async (next, options) => {
+    if (navigationLocked && !buildSelectionAllowedWhileLocked(selection, next, options)) return false;
+    const invoker = typeof document === "undefined" ? null : document.activeElement;
+    const accepted = await onActivate?.(next, options);
+    if (accepted) {
+      quickInvoker.current = invoker;
+      setObjectQuickOpen(next.kind !== "chart");
     }
-    return onActivate?.(next, options) ?? Promise.resolve(false);
+    return accepted ?? false;
+  };
+  const openSelectedChronoStudio = () => {
+    closeObjectQuick();
+    openAuxiliary("chrono-group");
+    const library = createChronoContentState({
+      chronoGroups: dashboard.chronoGroups ?? [], scenes: dashboard.scenes ?? [],
+      pages: dashboard.pages ?? [], findings: temporalFindings, studio: "chrono",
+    });
+    setChronoContentState(reduceChronoContent(library, {
+      type: "OPEN_CONTENT", itemType: "chronoGroup", itemId: selection?.chronoGroupId,
+    }));
   };
   chooseSelection.discardTemporalDrafts = () => {
     setChronoGroupDraft(null);
@@ -825,14 +833,16 @@ export default function BuildWorkspace({
     : work);
 
   const propertiesPane = (
-    <BuildPropertiesPane
+    <ObjectQuickEditor
+      onClose={closeObjectQuick}
+      onOpenChronoStudio={openSelectedChronoStudio}
       dashboard={dashboard}
       selection={selection}
       dashboardDraft={dashboardDraft}
       pageDrafts={pageDrafts}
       sectionDrafts={sectionDrafts}
       disabled={locked}
-      focusLabelKey={inspectorFocusKey}
+      focusLabelKey={focusLabelKey}
       onDashboardChange={onDashboardChange}
       onPageChange={onPageChange}
       onPageRemove={onPageRemove}
@@ -874,6 +884,8 @@ export default function BuildWorkspace({
             disabledReason={mutationDisabledReason}
             auxiliaryLocked={auxiliaryLocked}
             auxiliaryDisabledReason={auxiliaryDisabledReason}
+            onDashboardSummary={() => chooseSelection({ kind: "dashboard" })}
+            onPageSettings={() => activePage && chooseSelection({ kind: "page", pageId: activePage.id })}
             onFinish={onFinish}
             onReset={onReset}
             canDiscardBuild={canDiscardBuild}
@@ -886,9 +898,17 @@ export default function BuildWorkspace({
           <div className="build-rail-slot build-rail-slot--structure"><aside className="build-rail build-rail--structure" data-build-rail="structure" aria-label="Structure">
             {railContent("structure", "Structure", structureRail)}
           </aside></div>
-          <div className="build-rail-slot build-rail-slot--properties"><aside className="build-rail build-rail--properties" data-build-rail="properties" aria-label="Properties">
-            {railContent("properties", "Properties", propertiesPane)}
-          </aside></div>
+          {selection?.kind !== "chart" && objectQuickOpen && !activeAuxiliary && (
+            <UnitOrbit themeProjection={themeProjection}
+              anchorSelector={selection?.kind === "section"
+                ? `[data-canonical-section-id="${CSS.escape(selection.sectionId)}"]`
+                : selection?.kind === "page" ? `[data-canonical-canvas-id="${CSS.escape(selection.pageId)}"]`
+                : '[data-build-command-action="dashboard-summary"]'}
+              accessibleLabel={`${selection?.kind ?? "Dashboard"} quick editor`}
+              onRequestClose={closeObjectQuick}>
+              {propertiesPane}
+            </UnitOrbit>
+          )}
 
           {(activeAuxiliary === "source-content" || sourceContentOwners.length > 0) && typeof document !== "undefined" && createPortal((
             <aside
@@ -991,7 +1011,13 @@ export default function BuildWorkspace({
               open={chartEditorOpen}
               onRequestClose={onCloseChartEditor}
             >
-              {chartEditor}
+              {React.cloneElement(chartEditor, {
+                placementContext: { title: selectedChart?.title, type: selectedChart?.typeId,
+                  sectionTitle: dashboard.pages?.find(({ id }) => id === selectedChartItem?.pageId)?.sections?.find(({ id }) => id === selectedChartItem?.sectionId)?.title },
+                onMove: (event) => canvasActions?.requestPanelMove({ kind: "panel", pageId: selectedChartItem?.pageId,
+                  sectionId: selectedChartItem?.sectionId, placementId: chartEditorPlacementId }, selectedChart?.title, event.currentTarget),
+                onRemove: chartEditor.props.onRemove ?? (() => canvasActions?.removePanel(chartEditorPlacementId)),
+              })}
             </UnitOrbit>
           )}
     </div>

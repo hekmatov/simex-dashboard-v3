@@ -14,7 +14,7 @@ test("attention strip renders above the page body and drills to its target", asy
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   const sectionId = await authorAttentionStrip(page);
-  const pane = page.locator('[data-build-rail="properties"]');
+  const pane = page.locator('.object-quick-editor');
   const drillSelect = pane.getByLabel(/Drill link for/).first();
   const sectionTarget = await drillSelect.locator('option[value^="section:"]').first().getAttribute("value");
   expect(sectionTarget).toBeTruthy();

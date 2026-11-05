@@ -185,7 +185,7 @@ test("Restore online dashboard in Scenario Passport replaces dirty local work wi
   });
   await openBuildStructure(page, "http://127.0.0.1:4175/");
   await page.locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
-  await page.locator('[data-build-rail="properties"]')
+  await page.locator('.object-quick-editor')
     .getByLabel("Page title", { exact: true }).fill("Pending local Page title");
   const passport = await openScenarioPassport(page);
   const discard = passport.getByRole("button", { name: "Discard Build changes", exact: true });

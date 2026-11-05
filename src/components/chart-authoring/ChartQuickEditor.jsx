@@ -1,4 +1,5 @@
 import React from "react";
+import { PlacementQuickContext } from "../build/ObjectQuickEditor.jsx";
 
 import { isChartEditSessionDirty } from "../../charting/forms/chartEditSession.js";
 import { buildQuickEditorFormModel } from "../../charting/forms/formModel.js";
@@ -21,6 +22,8 @@ const REMOVE_UNAVAILABLE_REASON = "Removing is unavailable for this chart sessio
 const FULL_EDITOR_UNAVAILABLE_REASON = "Full editing is unavailable for this chart session.";
 
 export default function ChartQuickEditor({
+  placementContext,
+  onMove,
   session,
   profile,
   rows,
@@ -112,6 +115,7 @@ export default function ChartQuickEditor({
           onCancel: invokeWhileUnlocked(onClose),
           onRemove: invokeWhileUnlocked(onRemove),
         }),
+        React.createElement(PlacementQuickContext, { context: placementContext, onMove, disabled: locked }),
         React.createElement(
           "div",
           { className: "chart-editor-layout chart-quick-editor-layout" },

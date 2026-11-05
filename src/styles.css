@@ -6748,3 +6748,7 @@ html[data-simex-eyedropper-active="true"] body * {
   height: auto;
   max-height: none;
 }
+
+.object-quick-editor { display: grid; gap: 12px; padding: 12px; }
+.object-quick-editor .build-inspector { display: grid; gap: 10px; }
+.placement-quick-context { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px; }

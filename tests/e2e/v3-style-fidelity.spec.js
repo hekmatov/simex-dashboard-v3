@@ -503,13 +503,14 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
   await expect(page.locator(".canonical-dashboard-frame .dashboard-header .eyebrow")).toBeVisible();
   await expect(page.locator('[data-build-command-action="add-chart"]')).toBeVisible();
   await expect(page.locator(".build-rail--structure h2")).toBeVisible();
-  await expect(page.locator(".build-rail--properties .build-inspector input")).toBeVisible();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
+  await expect(page.locator(".object-quick-editor .build-inspector input")).toBeVisible();
   await expect(page.locator(".build-structure-list .build-tree-caret").first()).toBeVisible();
   const buildPaint = await page.evaluate(() => ({
     headerEyebrow: getComputedStyle(document.querySelector(".canonical-dashboard-frame .dashboard-header .eyebrow")).color,
     primaryCommand: getComputedStyle(document.querySelector('[data-build-command-action="add-chart"]')).backgroundColor,
     mapHeading: getComputedStyle(document.querySelector(".build-rail--structure h2")).color,
-    inspectorControl: getComputedStyle(document.querySelector(".build-rail--properties .build-inspector input")).backgroundColor,
+    inspectorControl: getComputedStyle(document.querySelector(".object-quick-editor .build-inspector input")).backgroundColor,
     railButton: getComputedStyle(document.querySelector(".build-structure-list .build-tree-caret")).backgroundColor,
   }));
   expect(buildPaint).toEqual({
@@ -641,9 +642,9 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       color: style.textPaint,
     });
     const inspectorChrome = await readChrome(page, {
-      inspectorInput: ".build-rail--properties .build-inspector input",
+      inspectorInput: ".object-quick-editor .build-inspector input",
     });
-    const inspectorBorderPaint = await page.locator(".build-rail--properties .build-inspector input")
+    const inspectorBorderPaint = await page.locator(".object-quick-editor .build-inspector input")
       .first().evaluate((input) => {
         const probe = document.createElement("span");
         probe.style.color = "color-mix(in srgb, var(--simex-text-strong) 20%, transparent)";

@@ -53,10 +53,7 @@ test("Dashboard Map is the only live Build structure-inspection surface", () => 
     deviceLayout: "desktop",
   }));
 
-  assert.match(
-    html,
-    /<aside(?=[^>]*data-build-rail="properties")(?=[^>]*aria-label="Properties")[^>]*>/,
-  );
+  assert.doesNotMatch(html, /data-build-rail="properties"/);
   assert.match(html, /data-build-rail="structure"/);
   assert.match(html, /aria-label="Dashboard structure"/);
   assert.doesNotMatch(html, /Pages (?:&amp;|and) sections/);

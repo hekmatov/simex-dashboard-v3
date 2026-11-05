@@ -180,3 +180,7 @@ test("a disabled Build canvas still routes the current chart reopen request", ()
     chartId: "chart-alerts",
   });
 });
+
+test("dashboard summary selection survives ordinary content reconciliation", () => {
+  assert.deepEqual(reconcileBuildSelection({ kind: "dashboard" }, dashboard, "biomedical"), { kind: "dashboard" });
+});

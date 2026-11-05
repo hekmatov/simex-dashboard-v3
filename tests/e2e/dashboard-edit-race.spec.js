@@ -42,6 +42,7 @@ test("a pending header edit and immediate chart save commit in order", async ({
     typeId: "line",
   });
   expect(before.chartCount).toBeGreaterThan(1);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true })
     .fill("Race-safe exercise");
   expect((await biomedicalChartState(page)).pageTitle).toBe(before.pageTitle);
@@ -72,6 +73,7 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
   const map = await openBiomedicalPageInspector(page);
   const baselineHeading = (await page.locator(".dashboard-brand-block h1")
     .textContent()).trim();
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true })
     .fill("Must never reappear");
   await page.locator(".build-command-header")
@@ -91,6 +93,7 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
 
 async function openBiomedicalPageInspector(page) {
   const map = structureRail(page);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   const pageTitle = propertiesPane(page).getByLabel("Page title", { exact: true });
   await expect(pageTitle).toBeVisible();
   return map;

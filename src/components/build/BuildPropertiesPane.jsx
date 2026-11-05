@@ -17,6 +17,7 @@ export default function BuildPropertiesPane({
   onMoveChart,
   onRemoveChart,
   onStructureCommand,
+  onOpenChronoStudio,
 }) {
   const labelRef = React.useRef(null);
   const page = (dashboard.pages ?? []).find(({ id }) => id === selection?.pageId);
@@ -47,7 +48,7 @@ export default function BuildPropertiesPane({
     );
   }
   if (selection?.kind === "chronoGroup" && group) {
-    return <ChronoGroupSummary group={group} />;
+    return <ChronoGroupSummary group={group} onOpen={onOpenChronoStudio} />;
   }
   if (selection?.kind === "section" && page && section) {
     const draft = sectionDrafts[section.id] ?? section;
@@ -62,6 +63,7 @@ export default function BuildPropertiesPane({
         <label>
           Description
           <textarea
+            aria-label="Description"
             disabled={disabled}
             value={draft.description ?? ""}
             onChange={(event) => onSectionChange?.(section, { description: event.target.value })}
@@ -148,6 +150,7 @@ export default function BuildPropertiesPane({
         <label>
           Description
           <textarea
+            aria-label="Description"
             disabled={disabled}
             value={draft.description ?? ""}
             onChange={(event) => onPageChange?.(page.id, { description: event.target.value })}
@@ -175,18 +178,19 @@ export default function BuildPropertiesPane({
     <section className="build-inspector build-inspector-empty" aria-labelledby="build-inspector-title">
       <p className="eyebrow">Dashboard</p>
       <h2 id="build-inspector-title">{dashboard.title || "Untitled dashboard"}</h2>
-      <p>{(dashboard.pages ?? []).length} pages. Select a Page, Section, or chart in Structure or on the canvas to edit it here. Scenario identity and package controls live in the Scenario Passport.</p>
+      <p>{(dashboard.pages ?? []).length} pages. Select a Page, Section, or chart in Structure or on the canvas to open its quick editor. Scenario identity and package controls live in the Scenario Passport.</p>
     </section>
   );
 }
 
-function ChronoGroupSummary({ group }) {
+function ChronoGroupSummary({ group, onOpen }) {
   return (
     <section className="build-inspector build-chrono-group-summary" aria-labelledby="build-inspector-title">
       <p className="eyebrow">Chrono Group</p>
       <h2 id="build-inspector-title">{group.name || "Unnamed Chrono Group"}</h2>
       <p>{group.members?.length ?? 0} member charts</p>
       <p>Open this group in Chrono Studio to inspect its content or begin an edit.</p>
+      <button type="button" onClick={onOpen}>Open in Chrono Studio</button>
     </section>
   );
 }
