@@ -220,7 +220,9 @@ export default function BuildWorkspace({
     onPositionChange: (point) => setQuickPositions((current) => ({ ...current, [key]: point })),
   });
   const quickInvoker = React.useRef(null);
+  const quickRequestId = React.useRef(0);
   const closeObjectQuick = () => {
+    quickRequestId.current += 1;
     setObjectQuickOpen(false);
     if (quickInvoker.current?.isConnected) quickInvoker.current.focus();
   };
@@ -270,9 +272,10 @@ export default function BuildWorkspace({
 
   const chooseSelection = async (next, options) => {
     if (navigationLocked && !buildSelectionAllowedWhileLocked(selection, next, options)) return false;
+    const requestId = options?.intent === "restore" ? null : ++quickRequestId.current;
     const invoker = typeof document === "undefined" ? null : document.activeElement;
     const accepted = await onActivate?.(next, options);
-    if (accepted && options?.intent !== 'restore') {
+    if (accepted && requestId !== null && requestId === quickRequestId.current) {
       quickInvoker.current = invoker;
       setObjectQuickOpen(next.kind !== "chart" && options?.intent !== "rename");
     }

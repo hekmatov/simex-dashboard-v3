@@ -413,3 +413,22 @@ async function seedSceneMoveFixture(page) {
     value: JSON.stringify(normalized),
   });
 }
+
+
+test("Close invalidates a quick-editor activation already awaiting canvas reveal", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  const settings = page.getByRole("button", { name: "Page settings", exact: true });
+  const quick = propertiesPane(page);
+  await settings.click();
+  await expect(quick).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  // The second request cannot finish its reveal RAF until the clock advances.
+  await settings.dispatchEvent("click");
+  await quick.getByRole("button", { name: "Close", exact: true }).dispatchEvent("click");
+  await page.clock.runFor(300);
+  await expect(quick).toHaveCount(0);
+  await expect(settings).toBeFocused();
+});
