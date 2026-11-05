@@ -809,6 +809,7 @@ test("quick edit Save rebases pending Page content onto a live layout draft", as
   const pendingPageTitle = "Pending Socio Page title survives quick Save";
   await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(pendingPageTitle);
+  await propertiesPane(page).getByRole("button",{name:"Close",exact:true}).click();
 
   const target = page.locator(`[data-panel-id="${SOCIO_EDIT_CHART_ID}"]`);
   await expect(target).toBeVisible();

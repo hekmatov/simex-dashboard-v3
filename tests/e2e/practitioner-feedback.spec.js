@@ -16,6 +16,8 @@ async function openBuild(page) {
   await expect(commands(page)).toBeVisible();
 }
 async function confirmDiscard(page) {
+  const quick=page.locator('.object-quick-editor');
+  if (await quick.isVisible().catch(()=>false)) await quick.getByRole('button',{name:'Close',exact:true}).click();
   await discard(page).click();
   const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
   await confirmation.getByRole("button", { name: "Discard Build changes", exact: true }).click();
@@ -34,8 +36,10 @@ test("Build discards suspended temporal drafts in place and disables empty sessi
   await expect(parents.locator("option")).toContainText(["Choose Chrono Group", "Municipal outbreak playback", "National outbreak and health-system playback"]);
   await parents.selectOption("national_outbreak");
   await studio(page, "Scene").getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.locator('.object-quick-editor')).toHaveCount(0);
   await commands(page).getByRole("button", { name: "Chrono Studio", exact: true }).click();
   await studio(page, "Chrono").getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.locator('.object-quick-editor')).toHaveCount(0);
   await commands(page).getByRole("button", { name: /Resume Scene Studio/ }).click();
   await expect(studio(page, "Scene").getByLabel("Scene name", { exact: true })).toHaveValue("Retained scene draft");
   await expect(studio(page, "Scene").locator('[data-scene-workflow-id="parent-chrono-group"]')).toHaveValue("national_outbreak");
@@ -46,6 +50,21 @@ test("Build discards suspended temporal drafts in place and disables empty sessi
   await expect(commands(page).getByRole("navigation", { name: "Pending Build work" })).toHaveCount(0);
   await expect(discard(page)).toBeDisabled();
   await expect(finish(page)).toBeDisabled();
+});
+
+test('library return retains an explicitly opened object editor and its focus-return target', async ({page}) => {
+  await openBuild(page);
+  const invoker=commands(page).getByRole('button',{name:'Page settings',exact:true});
+  await invoker.click();
+  const quick=page.locator('.object-quick-editor');
+  const baseline=await quick.getByLabel('Page title',{exact:true}).inputValue();
+  await commands(page).getByRole('button',{name:'Source content',exact:true}).click();
+  const sources=page.getByRole('complementary',{name:'Source content authoring',exact:true});
+  await expect(sources).toBeVisible();
+  await sources.getByRole('button',{name:'Close',exact:true}).click();
+  await expect(quick.getByLabel('Page title',{exact:true})).toHaveValue(baseline);
+  await quick.getByRole('button',{name:'Close',exact:true}).click();
+  await expect(invoker).toBeFocused();
 });
 
 test("open Chrono draft blocks new Scenes and directly reopens through its status banner", async ({ page }) => {
@@ -101,14 +120,17 @@ test("Build rails stop above the footer and saved session changes can be discard
     return saved?.pages.find(({ id }) => id === "biomedical")?.title;
   })).toBe("Build session change");
   await confirmDiscard(page);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await expect(title).toHaveValue(baseline);
   await title.fill("Second Build session change");
   await expect(finish(page)).toBeEnabled();
   await confirmDiscard(page);
+  await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await expect(title).toHaveValue(baseline);
   const footer = page.locator(".dashboard-footer");
   await footer.scrollIntoViewIfNeeded();
-  for (const rail of ["structure", "properties"]) {
+  await expect(page.locator('[data-build-rail="properties"]')).toHaveCount(0);
+  for (const rail of ["structure"]) {
     const railBox = await page.locator(`[data-build-rail="${rail}"]`).boundingBox();
     const footerBox = await footer.boundingBox();
     expect(railBox.y + railBox.height).toBeLessThanOrEqual(footerBox.y + 1);

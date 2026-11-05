@@ -124,7 +124,7 @@ test("Journey A — media create reuse default external import restore dependenc
   await addExternalFixture(page);
   await page.reload();
   await openBiomedicalBuild(page, { width: 1440, height: 900 });
-  await expect(page.getByLabel("Page title")).toHaveValue("Biomedical Information");
+  await expect(page.locator(".dashboard-brand-block h1")).toHaveText("Biomedical Information");
   let manager = await openManager(page);
 
   const initial = await mediaInventory(page);
@@ -197,7 +197,7 @@ test("Journey A — media create reuse default external import restore dependenc
   });
 
   await closeManager(page);
-  await expect(page.getByLabel("Page title")).toHaveValue("Biomedical Information");
+  await expect(page.locator(".dashboard-brand-block h1")).toHaveText("Biomedical Information");
   const beforeQmdDraft = await mediaInventory(page);
   let qmdDraft = await openFreeTextContentStage(page, "Cancelled QMD local upload");
   await qmdDraft.getByRole("button", { name: "Insert image" }).click();

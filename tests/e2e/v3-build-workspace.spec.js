@@ -245,8 +245,6 @@ test("Home availability draft blocks package upload and Build discard until Scen
   await expect(passport).toContainText("Unsaved Scenario");
   for (const name of [
     "Upload Dashboard Package",
-    "Dashboard summary",
-    "Page settings",
     "Discard Build changes",
   ]) {
     await expect(passport.getByRole("button", { name, exact: true })).toBeDisabled();

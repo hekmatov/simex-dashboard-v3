@@ -139,6 +139,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   const inspector = await openSelectedPageInspector(page);
   await inspector.getByLabel("Page title", { exact: true })
     .fill("Imported profile retained");
+  await inspector.getByRole("button",{name:"Close",exact:true}).click();
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
   const expected = importedProfileStateExpectation({
@@ -184,6 +185,7 @@ test("additive imported tracked profiles survive an edit and browser reload", as
   const inspector = await openSelectedPageInspector(page);
   await inspector.getByLabel("Page title", { exact: true })
     .fill("Imported profile retained");
+  await inspector.getByRole("button",{name:"Close",exact:true}).click();
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
   const expected = importedProfileStateExpectation({

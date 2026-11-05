@@ -30,16 +30,18 @@ test("section and panel menus preserve command order, keyboard navigation, and t
   await sectionTrigger.click();
   const sectionActions = page.locator(`[id="section-menu-${sectionId}"][role="menu"]`);
   await expect(sectionActions.getByRole("menuitem")).toHaveText([
-    "Rename", "Move earlier", "Move later", "Move to Page…", "Merge…", "Remove…",
+    "Section settings", "Rename", "Move earlier", "Move later", "Move to Page…", "Merge…", "Remove…",
   ]);
   await expect(sectionActions.locator('[data-action-menu-item="move-earlier"]')).toBeDisabled();
+  await expect(sectionActions.locator('[data-action-menu-item="settings"]')).toBeFocused();
+  await page.keyboard.press("ArrowDown");
   await expect(sectionActions.locator('[data-action-menu-item="rename"]')).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(sectionActions.locator('[data-action-menu-item="move-later"]')).toBeFocused();
   await page.keyboard.press("End");
   await expect(sectionActions.locator('[data-action-menu-item="remove"]')).toBeFocused();
   await page.keyboard.press("Home");
-  await expect(sectionActions.locator('[data-action-menu-item="rename"]')).toBeFocused();
+  await expect(sectionActions.locator('[data-action-menu-item="settings"]')).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(sectionActions).toHaveCount(0);
   await expect(sectionTrigger).toBeFocused();

@@ -27,13 +27,16 @@ test("Build commands stay available beside persistent structure and properties r
   const actions = toolbar.locator("[data-build-command-action]");
   await expect(commands).toBeVisible();
   await expect(toolbar).toBeVisible();
-  await expect(actions).toHaveCount(7);
+  await expect(actions).toHaveCount(10);
   expect(await actions.evaluateAll((items) => items.map((item) => item.dataset.buildCommandAction))).toEqual([
     "add-chart",
     "add-text-image",
     "source-content",
     "chrono-studio",
     "scene-studio",
+    "load-package",
+    "dashboard-summary",
+    "page-settings",
     "discard-build-changes",
     "finish-build",
   ]);

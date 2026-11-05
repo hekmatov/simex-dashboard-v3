@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { authorAttentionStrip } from "./support/buildWorkflow.js";
+import { authorAttentionStrip, closeObjectQuickEditor, structureRail } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -14,11 +14,13 @@ test("attention strip renders above the page body and drills to its target", asy
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
   const sectionId = await authorAttentionStrip(page);
+  await structureRail(page).locator(`[data-build-node-id="${sectionId}"] > .build-tree-row`).click();
   const pane = page.locator('.object-quick-editor');
   const drillSelect = pane.getByLabel(/Drill link for/).first();
   const sectionTarget = await drillSelect.locator('option[value^="section:"]').first().getAttribute("value");
   expect(sectionTarget).toBeTruthy();
   await drillSelect.selectOption(sectionTarget);
+  await closeObjectQuickEditor(page);
   await page.getByRole("button", { name: "Save Layout Changes" }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
 

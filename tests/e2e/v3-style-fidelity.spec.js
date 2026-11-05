@@ -623,9 +623,11 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     await expect(dashboardMap).toBeVisible();
     await expect(page.locator('[data-context-shelf-entry="chrono-group"]'))
       .toHaveCSS("background-color", style.panelAltPaint);
+    await page.getByRole('button',{name:'Page settings',exact:true}).click();
+    await expect(page.locator('.object-quick-editor')).toBeVisible();
     const buildChrome = await readChrome(page, {
       layer: ".build-rail--structure",
-      structure: ".build-rail--properties",
+      structure: ".object-quick-editor",
       look: ".dashboard-command-pinned-actions .dashboard-look-trigger",
       chronoGroups: '[data-context-shelf-entry="chrono-group"]',
     });
@@ -647,7 +649,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     const inspectorBorderPaint = await page.locator(".object-quick-editor .build-inspector input")
       .first().evaluate((input) => {
         const probe = document.createElement("span");
-        probe.style.color = "color-mix(in srgb, var(--simex-text-strong) 20%, transparent)";
+        probe.style.color = "var(--simex-border-strong)";
         input.after(probe);
         const color = getComputedStyle(probe).color;
         probe.remove();
@@ -668,6 +670,8 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       });
     }
 
+    const objectQuick=page.locator('.object-quick-editor');
+    if (await objectQuick.isVisible().catch(()=>false)) await objectQuick.getByRole('button',{name:'Close',exact:true}).click();
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Present", exact: true }).click();
     await expect(page.locator(".present-workspace")).toBeVisible();

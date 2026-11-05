@@ -41,7 +41,13 @@ export async function chooseSectionAction(page, sectionId, itemId) {
   await menu.locator(`[data-action-menu-item="${itemId}"]`).click();
 }
 
+export async function closeObjectQuickEditor(page) {
+  const quick=page.locator('.object-quick-editor');
+  if (await quick.isVisible().catch(()=>false)) await quick.getByRole('button',{name:'Close',exact:true}).click();
+}
+
 export async function choosePanelAction(page, placementId, itemId) {
+  await closeObjectQuickEditor(page);
   const panel = page.locator(`article[data-build-placement-id="${placementId}"]`);
   await panel.scrollIntoViewIfNeeded();
   await panel.hover();
@@ -61,7 +67,11 @@ export function propertiesPane(page) {
 }
 
 export async function chooseWholeDashboardPackage(review) {
-  await review.getByLabel("Import choice", { exact: true }).selectOption("replace", { timeout: 10_000 });
+  await expect(review).toBeVisible();
+  const choice=review.getByLabel("Import choice", { exact: true });
+  await expect(choice).toBeVisible();
+  await expect(choice).toBeEnabled();
+  await choice.selectOption("replace", { timeout: 10_000 });
   await review.getByRole("checkbox", { name: "Replace current dashboard and its pending work", exact: true }).check();
 }
 
@@ -74,6 +84,7 @@ export async function authorAttentionStrip(page, { pageId = "biomedical", sectio
   const section = page.locator("[data-canonical-section-id]", { has: page.getByRole("button", { name: `Edit Section title: ${sectionTitle}`, exact: true }) });
   await expect(section).toBeVisible();
   const sectionId = await section.getAttribute("data-canonical-section-id");
+  await closeObjectQuickEditor(page);
   await page.getByRole("button", { name: "Save Layout Changes" }).click();
 
   await section.getByRole("button", { name: "Add chart" }).click();
@@ -94,6 +105,7 @@ export async function authorAttentionStrip(page, { pageId = "biomedical", sectio
 
   await structureRail(page).locator(`[data-build-node-id="${sectionId}"] > .build-tree-row`).click();
   await propertiesPane(page).getByLabel("Role").selectOption("attention");
+  await closeObjectQuickEditor(page);
   await page.getByRole("button", { name: "Save Layout Changes" }).click();
   await expect(page.locator(`.dashboard-attention-strip[data-canonical-section-id="${sectionId}"]`)).toBeVisible();
   return sectionId;

@@ -114,6 +114,7 @@ test("operation status shows blocking Finish Build work, completion, and footer-
   await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill("Operation status baseline");
   await expect(page.getByRole("button", { name: "Finish Build", exact: true })).toBeEnabled();
+  await propertiesPane(page).getByRole('button',{name:'Close',exact:true}).click();
 
   await page.evaluate(() => {
     window.__stage1OperationHistory = [];

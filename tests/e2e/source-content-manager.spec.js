@@ -15,7 +15,7 @@ test.beforeEach(async ({ page, request }) => {
 test("compact Build content commands preserve six/four stage contracts", async ({ page }) => {
   await openBuild(page, { width: 1440, height: 900 });
   const commands = page.getByRole("toolbar", { name: "Primary Build commands" });
-  await expect(commands.getByRole("button")).toHaveCount(7);
+  await expect(commands.getByRole("button")).toHaveCount(10);
   expect(await commands.getByRole("button").evaluateAll((buttons) => (
     buttons.map((button) => button.getAttribute("data-build-command-action"))
   ))).toEqual([
@@ -24,6 +24,9 @@ test("compact Build content commands preserve six/four stage contracts", async (
     "source-content",
     "chrono-studio",
     "scene-studio",
+    "load-package",
+    "dashboard-summary",
+    "page-settings",
     "discard-build-changes",
     "finish-build",
   ]);
@@ -33,6 +36,9 @@ test("compact Build content commands preserve six/four stage contracts", async (
     "Source content",
     "Chrono Studio",
     "Scene Studio",
+    "Load dashboard package",
+    "Dashboard summary",
+    "Page settings",
     "Discard Build changes",
     "Finish Build",
   ]);

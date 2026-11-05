@@ -272,7 +272,7 @@ export default function BuildWorkspace({
     if (navigationLocked && !buildSelectionAllowedWhileLocked(selection, next, options)) return false;
     const invoker = typeof document === "undefined" ? null : document.activeElement;
     const accepted = await onActivate?.(next, options);
-    if (accepted) {
+    if (accepted && options?.intent !== 'restore') {
       quickInvoker.current = invoker;
       setObjectQuickOpen(next.kind !== "chart" && options?.intent !== "rename");
     }

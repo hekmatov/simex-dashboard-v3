@@ -108,6 +108,7 @@ async function sameGeometry(stage, destination) {
 }
 
 async function samePaint(stage, destination) {
+  await stage.locator(".chart-panel").first().scrollIntoViewIfNeeded();
   await stage.locator("canvas").first().waitFor();
   await destination.locator("canvas").first().waitFor();
   await stage.page().evaluate(() => document.fonts.ready);

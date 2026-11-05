@@ -1128,8 +1128,10 @@ async function setupChartQuickEditor(context) {
 async function setupChartColorPalette(context) {
   const { page } = await setupChartWizardConfigure(context);
   const swatch = page.locator(".chart-wizard .settings-color-swatch").first();
+  await swatch.evaluate(node=>node.scrollIntoView({block:'center'}));
   await swatch.click();
   await page.locator(".settings-color-popover").waitFor();
+  await page.locator(".settings-color-popover").scrollIntoViewIfNeeded();
   return { page };
 }
 

@@ -516,6 +516,7 @@ test("reset completes with session fallback when browser storage is full", async
   await pageTitleInput.fill(editedLabel);
   await expect.poll(async () => (await storedDashboard(page))?.pages.find(({ id }) => id === "biomedical")?.title).toBe(editedLabel);
   const durableBefore = await storedDashboard(page);
+  await propertiesPane(page).getByRole('button',{name:'Close',exact:true}).click();
   await page.locator(".build-command-header")
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard Build changes?" });
@@ -653,6 +654,7 @@ test("edit-session save and reset use session fallback when storage is full", as
   await map.locator('[data-build-node-id="biomedical"] > .build-tree-row').click();
   await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(sessionTitle);
+  await propertiesPane(page).getByRole('button',{name:'Close',exact:true}).click();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
   await page.getByRole("button", { name: "Finish Build", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))

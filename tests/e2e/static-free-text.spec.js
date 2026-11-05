@@ -287,6 +287,7 @@ for (const viewport of [{ width: 1401, height: 833 }, { width: 1117, height: 766
 }
 
 async function textPreviewGeometry(surface) {
+  await expect(surface.locator(".free-text-chart-view__content")).toBeVisible();
   return surface.evaluate(node => {
     const content = node.querySelector(".free-text-chart-view__content");
     const paragraph = content.querySelector("p");

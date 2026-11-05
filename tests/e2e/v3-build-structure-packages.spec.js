@@ -26,6 +26,8 @@ async function openBuildStructure(page, appUrl = "/") {
 }
 
 async function openScenarioPassport(page, { preserveFocus = false } = {}) {
+  const quick=page.locator('.object-quick-editor');
+  if (!preserveFocus && await quick.isVisible().catch(()=>false)) await quick.getByRole('button',{name:'Close',exact:true}).click();
   const passport = page.getByRole("complementary", { name: "Scenario Passport" });
   if (!await passport.isVisible().catch(() => false)) {
     const trigger = page.locator(".dashboard-scenario-trigger");
@@ -611,8 +613,8 @@ test("package export resolves drafts and round-trips a self-contained source", a
   const roundtripChooser = await roundtripChooserPromise;
   await roundtripChooser.setFiles(downloadedPath);
   const roundtripReview = page.getByRole("dialog", { name: "Review package contents" });
-  await expect(roundtripReview).toContainText("Panel: Imported Panel");
   await chooseWholeDashboardPackage(roundtripReview);
+  await expect(roundtripReview).toContainText("Panel: Imported Panel");
   await roundtripReview.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(page.locator(`[data-canonical-placement-id="${fixturePlacement.id}"]`)).toBeVisible();
   const persistedSource = await page.evaluate((sourceId) => {
