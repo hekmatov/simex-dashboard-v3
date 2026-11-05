@@ -2349,6 +2349,7 @@
   .present-context-panel,
   .present-scene-panel,
   .scenario-passport-popover,
+  .object-quick-editor,
   .authoring-stage
 ) {
   background-image: var(--simex-style-role-rail), var(--simex-role-panel-background);

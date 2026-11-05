@@ -139,7 +139,8 @@ test("Build assigns structure inspection to the Structure rail and Scenario to t
 
   assert.match(html, /data-build-auxiliary-contract="context-shelf"/);
   assert.match(html, /data-build-rail="structure"/);
-  assert.match(html, /data-build-rail="properties"/);
+  assert.doesNotMatch(html, /data-build-rail="properties"/);
+  assert.match(html, /data-build-command-action="page-settings"/);
   assert.match(html, /data-build-command-action="chrono-studio"/);
   assert.match(html, /data-build-command-action="scene-studio"/);
   assert.doesNotMatch(html, /dashboard-map-panel|data-build-command-action="more"/);

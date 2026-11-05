@@ -68,7 +68,7 @@ test("View and Build share one central canvas maximum and responsive token", asy
     /margin-left:\s*max\(-[0-9]+px/,
     "opening Build authoring chrome must not shift the canonical canvas off-screen",
   );
-  assert.match(modes, /max-width: calc\(var\(--simex-canonical-canvas-max-width\) \+ 580px\)/);
+  assert.match(modes, /max-width: calc\(var\(--simex-canonical-canvas-max-width\) \+ 260px\)/);
   assert.doesNotMatch(
     modes,
     /\.canonical-dashboard-frame\.build-workspace\s*\{[^{}]*top:\s*-2px/,
@@ -99,13 +99,13 @@ test("Look, Map, More, and Audience share one measured crown-bottom drawer coord
     /prefers-reduced-motion:\s*reduce[\s\S]*?animation:\s*none\s*!important[\s\S]*?transition:\s*none\s*!important/,
   );
   assert.match(operationStatus, /RIGHT_SIDE_DRAWER_SELECTOR/);
-  assert.match(modes, /grid-template-columns: 220px minmax\(0, 1fr\) 280px/);
+  assert.match(modes, /grid-template-columns: 220px minmax\(0, 1fr\)/);
   assert.doesNotMatch(modes, /data-dashboard-map-open/);
 });
 
 test("Build rails stack below the desktop breakpoint", async () => {
   const modes = await source(sources.modes);
-  assert.match(modes, /@media \(max-width: 1023px\)[\s\S]*grid-template-areas:\s*"header"\s*"structure"\s*"commands"\s*"canvas"\s*"properties"\s*"footer"/);
+  assert.match(modes, /@media \(max-width: 1023px\)[\s\S]*grid-template-areas:\s*"header"\s*"structure"\s*"commands"\s*"canvas"\s*"footer"/);
 });
 
 test("Dashboard Map branch guides follow the compact tree indent", async () => {

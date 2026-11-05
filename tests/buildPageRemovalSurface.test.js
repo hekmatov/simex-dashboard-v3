@@ -13,9 +13,11 @@ const vite = await createServer({
 });
 const [
   { default: BuildPropertiesPane },
+  { default: ObjectQuickEditor },
   { default: BuildWorkspace },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/components/build/BuildPropertiesPane.jsx"),
+  vite.ssrLoadModule("/src/components/build/ObjectQuickEditor.jsx"),
   vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
 ]);
 const { pageDraftFromPage, sectionDraftFromSection } = await vite.ssrLoadModule("/src/components/DashboardRenderer.jsx");
@@ -90,3 +92,9 @@ function fixtureDashboard() {
     scenes: [],
   };
 }
+
+test("object quick editing paints its registered panel region", () => {
+  const html=renderToStaticMarkup(React.createElement(ObjectQuickEditor,{dashboard:fixtureDashboard(),selection:{kind:'page',pageId:'biomedical'}}));
+  assert.match(html, /data-dashboard-region="build-properties-pane"/);
+  assert.match(html, /data-dashboard-surface-role="panel"/);
+});

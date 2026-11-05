@@ -24,7 +24,7 @@ DIALOG_SURFACES.push(
   ["src/components/build/BuildMoveConfirmationDialog.jsx", "dashboard-dialog--danger"],
   ["src/components/build/BuildMoveDialog.jsx", "dashboard-dialog--utility"],
   ["src/components/build/DashboardPackageExportDialog.jsx", "dashboard-dialog--utility"],
-  ["src/components/build/DashboardPackageReviewDialog.jsx", "dashboard-dialog--utility"],
+  ["src/components/build/DashboardPackageReviewDialog.jsx", "dashboard-dialog--wide"],
   ["src/components/build/DeleteDashboardContentDialog.jsx", "dashboard-dialog--danger"],
   ["src/components/build/SectionStructureCommandDialog.jsx", "dashboard-dialog--utility"],
   ["src/components/build/BuildWorkspace.jsx", "dashboard-dialog--workspace"],
