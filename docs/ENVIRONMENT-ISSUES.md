@@ -12,7 +12,7 @@ Do not record product-test failures, expected build warnings, transient typing m
 | ENV-002 | Playwright Chromium is absent from the local browser cache | Recurrent after cache removal or Playwright upgrade | 1 | ENV-002.001 |
 | ENV-003 | Git reports a linked checkout is not a worktree during restricted reads | Observed in restricted Codex execution | 1 | ENV-003.001 |
 | ENV-004 | Windows Chromium cannot read a file upload at a long native evidence path | Avoided with the same bytes supplied as a browser File | 1 | ENV-004.001 |
-| ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Scoped fixed-input fixtures disable watching and discovery | 2 | ENV-005.001, ENV-005.002 |
+| ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Fixed-input Node workers and scoped fixtures disable watching and discovery | 3 | ENV-005.001, ENV-005.002, ENV-005.003 |
 | ENV-006 | Windows restricted launcher cannot create the process security environment | Project-access execution remains available | 1 | ENV-006.001 |
 
 The **Entries** value must equal the number of listed entry references. Add a new reference for every confirmed repeat; do not merely increase the count.
@@ -26,6 +26,13 @@ The **Entries** value must equal the number of listed entry references. Add a ne
 5. Include the register update in the task's coherent commit when it is changed. Resolve ordinary merge conflicts by preserving every distinct entry and recalculating the affected index row.
 
 ## Entries
+
+### ENV-005.003 — 2026-11-05
+
+- **Command:** `pnpm.cmd test` at private-main `1801eb5e`, during the explicitly requested full pre-merge gate.
+- **Evidence:** At inspection the native log had stopped after 15 completed cases; the active worker was `tests/applicationRecovery.test.js`, which had not yet emitted a case result. The interrupted run ultimately retained 20 passing case results, including that worker's five cases, without completing the gate. At inspection it had consumed 120.84 CPU seconds and approximately 1.08 GB working set since startup, using the default Vite SSR watcher/discovery configuration. Stopped the owned gate rather than treating the unfinished tests as passed.
+- **Scope:** Default Vite instances inside Node test workers scanning the large checkout. This matches the existing combined watcher/discovery boundary; their individual contributions were not separately measured.
+- **Outcome:** Shared Vite config now disables watching and automatic dependency discovery only when `NODE_TEST_CONTEXT` identifies a Node test worker. Production/dev configuration is unchanged outside that context. The previously stalled `node --test tests/applicationRecovery.test.js` completed **5/5 in 0.81 seconds**. The full gate continues with native logs retained under `.superpowers/premerge-20261105/`.
 
 ### ENV-006.001 — 2026-11-04
 
