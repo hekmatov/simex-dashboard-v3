@@ -1,6 +1,10 @@
+import { LegendAuthoringContext } from "../chart-authoring/LegendAuthoringContext.jsx";
+import LegendMoveControl from "./LegendMoveControl.jsx";
+import { canonicalLegendPlacement } from "../../charting/presentation/legendPlacementContract.js";
+import { LEGEND_PLACEMENTS, resolveLegendPlacement } from "../../charting/rendering/legendPlacement.js";
 import React from "react";
 import * as echarts from "echarts";
-import { fitLegendToViewport, fitRenderedLegend, matchBarLegendColors } from "../../charting/rendering/legendLayout.js";
+import { fitLegendToViewport, fitRenderedLegend, matchBarLegendColors, measuredLegendRect, fitMeasuredLegend } from "../../charting/rendering/legendLayout.js";
 
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import {
@@ -48,6 +52,8 @@ export default function EChartsChartView({
   audienceScale = null,
   onVisualChange,
 }) {
+  const legendOwner = React.useContext(LegendAuthoringContext);
+  const [legendGeometry, setLegendGeometry] = React.useState(null);
   const hostRef = React.useRef(null);
   const lifecycleRef = React.useRef(null);
   const [runtimeError, setRuntimeError] = React.useState(null);
@@ -93,7 +99,11 @@ export default function EChartsChartView({
       onError(error) {
         setRuntimeError(boundedRuntimeError(error));
       },
-      onRender: onVisualChange,
+      onRender: () => {
+        onVisualChange?.();
+        const next = lifecycleRef.current?.getLegendGeometry();
+        setLegendGeometry(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
+      },
     });
     lifecycleRef.current = lifecycle;
     lifecycle.mount(host);
@@ -157,7 +167,9 @@ export default function EChartsChartView({
       }, budgetNotice)
     : null,
   React.createElement(ChartHeading, { chart, titleId, descriptionId }),
-  React.createElement("div", { ref: hostRef, className: "chart-echarts-host", "aria-hidden": true }));
+  React.createElement("div", { ref: hostRef, className: "chart-echarts-host", "aria-hidden": true }),
+  legendOwner ? React.createElement(LegendMoveControl, { hostRef, lifecycleRef, geometry: legendGeometry,
+    revision: presentedModel, onChange: legendOwner.onChange, portalTarget: legendOwner.controlsHost }) : null);
 }
 
 export function applyEChartsPresentation(
@@ -224,7 +236,7 @@ export function applyEChartsPresentation(
   const grid = contentAwareGrid(
     normalizedGrid(option.grid, titleGutters),
     titleGutters,
-    legend,
+    canonicalLegendPlacement(chart.presentation?.legend?.position) === "automatic" ? legend : null,
   );
   const presentedOption = {
       ...optionWithoutBackground,
@@ -280,7 +292,7 @@ export function applyEChartsPresentation(
     };
   return {
     ...model,
-    legendLayout: legend ? { minimumGridTop: Math.max(PLOT_TOP_PADDING, titleGutters.top) } : null,
+    legendLayout: legend ? { baseGrid: contentAwareGrid(normalizedGrid(option.grid, titleGutters), titleGutters, null), placement: canonicalLegendPlacement(chart.presentation?.legend?.position), offsetX: chart.presentation?.legend?.offsetX ?? 0, offsetY: chart.presentation?.legend?.offsetY ?? 0, minimumGridTop: Math.max(PLOT_TOP_PADDING, titleGutters.top) } : null,
     valueAxisTitleProjection,
     valueAxisTitleTextTheme,
     option: normalizeChartFontTokens(
@@ -533,12 +545,74 @@ export function createEChartsLifecycle({
   let valueAxisTitleGraphicIds = [];
   let legendLayout = null;
   let sourceOption = null;
+  let manualGeometry = null;
+  let basePlot = null;
+  let plotGutters = {};
+  let baselineOption = null;
+  function placeLegend(placement = legendLayout?.placement, offsets = legendLayout ?? {}) {
+    if (!instance || !baselineOption || !basePlot) return null;
+    const c = { x: 0, y: 0, width: instance.getWidth(), height: instance.getHeight() };
+    const size = fitMeasuredLegend(instance, sourceOption, placement, basePlot);
+    if (!size) { manualGeometry = null; return null; }
+    const result = resolveLegendPlacement({ placement, offsets, chartBounds: c, plotBounds: basePlot, legendSize: size, plotGutters });
+    const delta = { left: result.plotBounds.x-basePlot.x, top: result.plotBounds.y-basePlot.y,
+      right: basePlot.x+basePlot.width-result.plotBounds.x-result.plotBounds.width,
+      bottom: basePlot.y+basePlot.height-result.plotBounds.y-result.plotBounds.height };
+    const grid = legendLayout?.baseGrid ?? baselineOption.grid;
+    const grids = grid && (Array.isArray(grid) ? grid : [grid]).map(g => ({ ...g, ...Object.fromEntries(Object.entries(delta).map(([key, value]) => [key, (Number.isFinite(g[key]) ? g[key] : 0) + value])) }));
+    const patch = { ...(grid ? { grid: Array.isArray(grid) ? grids : grids[0] } : {}),
+      ...(!grid && baselineOption.series?.some(v => v.type === 'pie') ? { series: baselineOption.series.map(v => v.type === 'pie' ? { ...v, left: result.plotBounds.x, top: result.plotBounds.y, right: c.width-result.plotBounds.x-result.plotBounds.width, bottom: c.height-result.plotBounds.y-result.plotBounds.height } : v) } : {}),
+      legend: { left: result.rect.x, top: result.rect.y, right: null, bottom: null } };
+    instance.setOption(patch, { lazyUpdate: false });
+    const actual = measuredLegendRect(instance) ?? result.rect;
+    // ECharts positions its content box inside padding. Correct from the visible
+    // rectangle once, rather than feeding setOption from a finished callback.
+    if (Math.abs(actual.x-result.rect.x) > .1 || Math.abs(actual.y-result.rect.y) > .1) instance.setOption({ legend: { left: result.rect.x + result.rect.x-actual.x, top: result.rect.y + result.rect.y-actual.y } }, { lazyUpdate: false });
+    manualGeometry = { ...result, rect: measuredLegendRect(instance) ?? result.rect, chartBounds: c };
+    return manualGeometry;
+  }
+  function layoutCurrentLegend() {
+    const p = legendLayout?.placement ?? 'automatic';
+    if (p === 'automatic') {
+      fitRenderedLegend(instance, baselineOption, legendLayout);
+      const r = measuredLegendRect(instance);
+      if (r) {
+        const c = { x: 0, y: 0, width: instance.getWidth(), height: instance.getHeight() };
+        manualGeometry = { rect: r, placement: p, chartBounds: c };
+      } else manualGeometry = null;
+    } else placeLegend();
+  }
+  function prepareLegendLayout() {
+    if (!instance || !sourceOption?.legend || !legendLayout) { manualGeometry = null; return; }
+    const p = legendLayout?.placement ?? 'automatic';
+    baselineOption = fitLegendToViewport(sourceOption, instance.getWidth?.(), instance.getHeight?.(), p);
+    instance.setOption({ ...(baselineOption.grid ? { grid: baselineOption.grid } : {}),
+      ...(baselineOption.legend ? { legend: { right:null, bottom:null, height:null, tooltip:{show:false}, ...baselineOption.legend,
+        textStyle:{width:null,height:null,overflow:null,lineOverflow:null,...baselineOption.legend.textStyle} } } : {}),
+      ...(!baselineOption.grid && baselineOption.series?.some(v => v.type === 'pie') ? { series: baselineOption.series } : {}) }, { lazyUpdate: false });
+    const c = { width: instance.getWidth(), height: instance.getHeight() };
+    basePlot = resolvedGridRect(instance) ?? { x: 10, y: 10, width: Math.max(1,c.width-20), height: Math.max(1,c.height-20) };
+    const displayedGrid = Array.isArray(baselineOption.grid) ? baselineOption.grid[0] : baselineOption.grid;
+    const explicitGrid = legendLayout?.baseGrid ?? baselineOption.grid;
+    const grid = Array.isArray(explicitGrid) ? explicitGrid[0] : explicitGrid;
+    if (grid && displayedGrid) {
+      const dx = (Number(grid.left)||0)-(Number(displayedGrid.left)||0);
+      const dy = (Number(grid.top)||0)-(Number(displayedGrid.top)||0);
+      basePlot = { ...basePlot, x: basePlot.x+dx, y: basePlot.y+dy,
+        width: basePlot.width-dx-(Number(grid.right)||0)+(Number(displayedGrid.right)||0),
+        height: basePlot.height-dy-(Number(grid.bottom)||0)+(Number(displayedGrid.bottom)||0) };
+    }
+    plotGutters = grid ? {
+      left: Math.max(0, basePlot.x - (Number(grid.left)||0)), top: Math.max(0, basePlot.y - (Number(grid.top)||0)),
+      right: Math.max(0, c.width - (Number(grid.right)||0) - basePlot.x-basePlot.width),
+      bottom: Math.max(0, c.height - (Number(grid.bottom)||0) - basePlot.y-basePlot.height),
+    } : {};
+    layoutCurrentLegend();
+  }
 
   function updateLegendLayout(nextInstance = instance) {
     if (!legendLayout || !sourceOption) return;
-    const option = fitLegendToViewport(sourceOption, nextInstance.getWidth?.(), nextInstance.getHeight?.());
-    if (option !== sourceOption) nextInstance.setOption({ legend: option.legend }, { lazyUpdate: false });
-    fitRenderedLegend(nextInstance, option, legendLayout);
+    prepareLegendLayout();
   }
 
   function replaceValueAxisTitleGraphics(nextInstance = instance) {
@@ -637,18 +711,44 @@ export function createEChartsLifecycle({
         valueAxisTitleTextTheme = model?.valueAxisTitleTextTheme ?? {};
         legendLayout = model?.legendLayout ?? null;
         sourceOption = model?.option ?? {};
-        const viewportOption = fitLegendToViewport(sourceOption, instance.getWidth?.(), instance.getHeight?.());
+        const viewportOption = fitLegendToViewport(sourceOption, instance.getWidth?.(), instance.getHeight?.(), legendLayout?.placement);
         instance.setOption(viewportOption, {
           notMerge: true,
           replaceMerge: model?.replaceMerge,
           lazyUpdate: false,
         });
-        fitRenderedLegend(instance, viewportOption, legendLayout);
+        prepareLegendLayout();
         replaceValueAxisTitleGraphics(instance);
       } catch (error) {
         fail(error);
       }
     },
+    getLegendGeometry() { return manualGeometry; },
+    getLegendCandidates() {
+      if (!manualGeometry || !basePlot) return [];
+      const c=manualGeometry.chartBounds, sizes={};
+      // Fit three equivalent constraint families only when a gesture begins.
+      for (const placement of ['inside-top-left','above-left','left-top']) {
+        sizes[placement.split('-')[0]]=fitMeasuredLegend(instance,sourceOption,placement,basePlot);
+      }
+      const candidates=LEGEND_PLACEMENTS.flatMap(placement=>{
+        const family=placement.startsWith('inside-')?'inside':/^(above|below)-/.test(placement)?'above':'left';
+        const size=sizes[family];
+        if (!size) return [];
+        const result=resolveLegendPlacement({placement,chartBounds:c,plotBounds:basePlot,legendSize:size,plotGutters});
+        return result.valid ? [result] : [];
+      });
+      prepareLegendLayout();
+      return candidates;
+    },
+    previewLegendRect(rect) {
+      if (!instance || !manualGeometry) return;
+      instance.setOption({ legend: { left:rect.x, top:rect.y, right:null, bottom:null } }, { lazyUpdate:false });
+      const actual=measuredLegendRect(instance);
+      if (actual && (Math.abs(actual.x-rect.x)>.1 || Math.abs(actual.y-rect.y)>.1)) instance.setOption({legend:{left:rect.x+rect.x-actual.x,top:rect.y+rect.y-actual.y}},{lazyUpdate:false});
+    },
+    settleLegendPlacement(placement) { return placeLegend(placement, {}); },
+    restoreLegend() { prepareLegendLayout(); },
     dispose() {
       cleanup();
     },

@@ -1,3 +1,4 @@
+import { LEGEND_PLACEMENTS, LEGACY_LEGEND_PLACEMENTS, canonicalLegendPlacement } from "../presentation/legendPlacementContract.js";
 import {
   bindingForField,
   canonicalColumnType,
@@ -39,7 +40,7 @@ const VALUE_AXIS_TITLE_KEYS = new Set([
   "titleFontSize", "titleBold", "titleOffsetX", "titleOffsetY", "labelFontSize",
 ]);
 const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neutral"]);
-const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
+const LEGEND_POSITIONS = new Set(["automatic", ...LEGEND_PLACEMENTS, ...Object.keys(LEGACY_LEGEND_PLACEMENTS)]);
 const COMPARISON_MODES = new Set(CHART_COMPARISON_MODES);
 const COMPARISON_MATCHING_POLICIES = new Set(CHART_COMPARISON_MATCHING_POLICIES);
 const PIVOT_MODES = new Set(["measuresToRows"]);
@@ -719,7 +720,7 @@ function validateBackground(background) {
 }
 
 function validateLegend(legend, schema) {
-  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "orientation", "wrap", "fontSize", "entries"]));
+  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position", "orientation", "wrap", "fontSize", "entries", "offsetX", "offsetY"]));
   const entries = legend == null ? { present: false } : ownEnumerableDataValue(legend, "entries", "Chart legend");
   if (entries.present) {
     if (!["axis", "composition", "relationship"].includes(schema.renderer)) throw new Error("Legend entries require a legend-bearing chart type.");
@@ -728,7 +729,8 @@ function validateLegend(legend, schema) {
   if (legend?.orientation !== undefined && !["horizontal", "vertical"].includes(legend.orientation)) throw new Error("Chart presentation legend orientation must be horizontal or vertical.");
   if (legend?.visible !== undefined && typeof legend.visible !== "boolean") throw new Error("Chart presentation legend visible must be boolean.");
   if (legend?.wrap !== undefined && typeof legend.wrap !== "boolean") throw new Error("Chart presentation legend wrap must be boolean.");
-  if (legend?.position !== undefined && !LEGEND_POSITIONS.has(legend.position)) throw new Error("Chart presentation legend position must be top, bottom, left, or right.");
+  if (legend?.position !== undefined && !LEGEND_POSITIONS.has(legend.position)) throw new Error("Chart presentation legend position must be Automatic or a supported placement preset.");
+  for (const key of ["offsetX", "offsetY"]) if (legend?.[key] !== undefined && !Number.isFinite(legend[key])) throw new Error(`Chart legend ${key} must be a finite number.`);
   if (legend?.fontSize !== undefined && (!Number.isInteger(legend.fontSize) || legend.fontSize < 8 || legend.fontSize > 20)) throw new Error("Chart presentation legend fontSize must be an integer from 8 through 20.");
 }
 
@@ -956,6 +958,7 @@ export function normalizeChartInstance(chart) {
     if (pointSelection === undefined) delete normalized.presentation.labels.pointSelection;
     else normalized.presentation.labels.pointSelection = pointSelection;
   }
+  if (legend?.position !== undefined) normalized.presentation.legend.position = canonicalLegendPlacement(legend.position);
   normalizeAxisTitles(normalized.presentation?.axes);
   if (collectionProperty.present) {
     normalized.presentation.collection = normalizedCollection;

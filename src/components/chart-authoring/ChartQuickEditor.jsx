@@ -124,6 +124,7 @@ export default function ChartQuickEditor({
           React.createElement(AuthoringStage, {
             chart, rows, datasetProfile: profile, geoData, renderContext, themeProjection, deviceLayout,
             placementId: session.placementId, onShowOnCanvas,
+            onLegendChange: locked ? undefined : value => changeDraft(["presentation", "legend"], { ...chart.presentation?.legend, ...value }),
           }),
           React.createElement(
             "div",

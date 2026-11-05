@@ -28,7 +28,7 @@ export function buildTimelineRenderModel({ chart, prepared }) {
       xAxis: { type: "time" },
       yAxis: { type: "category", data: lanes },
       ...(groups.length > 1 ? {
-        legend: { show: true, data: groups.map(({ name }) => name) },
+        legend: { show: chart.presentation?.legend?.visible !== false, orient: chart.presentation?.legend?.orientation ?? "horizontal", textStyle: { fontSize: chart.presentation?.legend?.fontSize ?? 11, ...(chart.presentation?.legend?.wrap ? { width: 120, overflow: "break" } : {}) }, data: groups.map(({ name }) => name) },
       } : {}),
       series: groups.map(({ name, marks, color }) => ({
         name,

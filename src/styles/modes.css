@@ -4775,3 +4775,11 @@ body .app-frame .build-rail--structure .build-tree-group {
   .package-import-workspace { grid-template-columns: minmax(0, 1fr); overflow: auto; }
   .package-import-selection, .package-import-review { overflow: visible; }
 }
+
+/* The handle belongs only to an authoring stage; legend entries keep their own clicks. */
+.chart-echarts-view { position: relative; }
+.legend-move-control { position: static; z-index: 4; touch-action: none; cursor: move; font-size: 11px; line-height: 16px; padding: 1px 4px; }
+.legend-move-control:focus-visible { outline: 2px solid var(--color-accent, #2465ab); outline-offset: 2px; }
+.legend-move-hint { position: absolute; z-index: 5; right: 4px; bottom: 4px; background: var(--surface-panel, white); padding: 4px; font-size: 12px; }
+
+.authoring-stage__legend-controls { position: relative; display: inline-flex; align-items: center; }

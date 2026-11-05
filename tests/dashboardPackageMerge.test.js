@@ -5,6 +5,16 @@ import { collaboratorPackage, attentionPackage, mappedPackage, synchronizedPacka
 import { serializeDashboardBundle } from "../src/charting/config/dashboardBundleV3.js";
 import { parseDashboardPackageCandidate } from "../src/lib/dashboardPackageCandidate.js";
 
+test('selective merge and complete bundle round-trip retain legend placement and fractional offsets', async () => {
+  const {buildDashboardPackageMerge}=await import('../src/lib/dashboardPackageMerge.js');
+  const candidate=collaboratorPackage();
+  candidate.config.pages[0].sections[0].panels[0].chart.presentation.legend={position:'left-bottom',offsetX:11.25,offsetY:-6.5};
+  const proposal=buildDashboardPackageMerge({current:collaboratorPackage().config,candidate,selection:{placementIds:['placement-a']},destination:{scope:'placements',pageId:'overview',sectionId:'signals'}});
+  assert.deepEqual(proposal.issues.filter(i=>i.blocking),[]);
+  const parsed=parseDashboardPackageCandidate(JSON.stringify(serializeDashboardBundle(proposal.config)));
+  assert.deepEqual(parsed.config.pages[0].sections[0].panels.at(-1).chart.presentation.legend,candidate.config.pages[0].sections[0].panels[0].chart.presentation.legend);
+});
+
 test("same-baseline authors keep independent charts sources placement identities and styling", async () => {
   const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
   const current = collaboratorPackage({ value: 4 }).config;

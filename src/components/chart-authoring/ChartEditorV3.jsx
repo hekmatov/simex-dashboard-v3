@@ -548,6 +548,7 @@ export default function ChartEditorV3({
     React.createElement(AuthoringStage, {
       key: `${state.draft.id}:${state.previewRevision}`,
       chart: state.draft,
+      onLegendChange: disabled || submitting ? undefined : value => dispatch({ type: "updateChart", path: ["presentation", "legend"], value: { ...state.draft.presentation?.legend, ...value } }),
       rows: safeRows,
       geoData: selectedGeoData,
       datasetProfile: profile,

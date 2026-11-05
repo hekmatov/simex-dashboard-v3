@@ -31,8 +31,14 @@ export function matchBarLegendColors(option) {
 
 // Vertical legends use the available row width and paginate large item lists,
 // leaving at least 60% of the canvas height available for the chart.
-export function fitLegendToViewport(option, width, height) {
+export function fitLegendToViewport(option, width, height, placement = 'automatic') {
   const legend = option?.legend;
+  if (placement !== 'automatic' && legend && !Array.isArray(legend) && Number.isFinite(width) && Number.isFinite(height)) {
+    const side = /^(left|right)-/.test(placement);
+    const maxWidth = Math.max(20, width * (side ? 0.35 : 0.88) - 10);
+    const maxHeight = Math.max(20, height * (/^(above|below)-/.test(placement) ? 0.3 : 0.7) - 10);
+    return { ...option, legend: { ...legend, left: 4, top: 4, right: null, bottom: null, width: maxWidth, height: maxHeight, textStyle: { ...legend.textStyle, height: null, lineOverflow: null, width: Math.max(10, maxWidth - (legend.itemWidth ?? 16) - 35), overflow: 'break' } } };
+  }
   if (!legend || Array.isArray(legend) || legend.orient !== "vertical"
     || !Number.isFinite(width) || !Number.isFinite(height)) return option;
   return {
@@ -49,6 +55,41 @@ export function fitLegendToViewport(option, width, height) {
       },
     },
   };
+}
+
+// The background is built from ECharts' visible mainRect, including pagination
+// and padding. group bounds also include clipped/offscreen scroll children.
+export function measuredLegendRect(instance) {
+  const model = instance.getModel?.()?.getComponent?.('legend', 0);
+  if (!model || model.get('show') === false || !model.getData().length) return null;
+  const view = instance.getViewOfComponentModel?.(model);
+  const element = view?._backgroundEl;
+  const bounds = element?.getBoundingRect?.();
+  if (!bounds) return null;
+  element.getComputedTransform?.();
+  const origin = element.transformCoordToGlobal(bounds.x, bounds.y);
+  return { x: origin[0], y: origin[1], width: bounds.width, height: bounds.height };
+}
+
+export function fitMeasuredLegend(instance, sourceOption, placement, plotBounds) {
+  const width=instance.getWidth(), height=instance.getHeight();
+  const option=fitLegendToViewport(sourceOption,width,height,placement);
+  const legend={...option.legend,textStyle:{...option.legend.textStyle}};
+  // A side band may consume at most 40% of the original drawable region.
+  if (/^(left|right)-/.test(placement)) legend.width=Math.max(1,Math.min(legend.width,plotBounds.width*.4-18));
+  if (/^(above|below)-/.test(placement)) legend.height=Math.max(1,Math.min(legend.height,plotBounds.height*.4-18));
+  legend.textStyle.width=Math.max(1,legend.width-(legend.itemWidth??16)-35);
+  instance.setOption({legend},{lazyUpdate:false});
+  let rect=measuredLegendRect(instance);
+  if (!rect) return null;
+  const maxHeight=Math.min(height-8,legend.height+10);
+  if (rect.height>maxHeight || rect.width>width-8) {
+    // ECharts scrolls whole items. A single multiline item also needs a bound.
+    instance.setOption({legend:{textStyle:{height:null,overflow:'truncate'},
+      tooltip:{show:true,renderMode:'richText',formatter:params=>typeof sourceOption.legend.formatter==='function' ? sourceOption.legend.formatter(params.name) : params.name}}},{lazyUpdate:false});
+    rect=measuredLegendRect(instance);
+  }
+  return rect;
 }
 
 export function fitRenderedLegend(instance, option, layout) {

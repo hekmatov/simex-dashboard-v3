@@ -19,6 +19,7 @@ function StandardField({
   const describedBy = fieldDescribedBy(field);
   const shared = {
     id,
+    disabled: field.disabled === true,
     "aria-describedby": describedBy || void 0,
     "aria-invalid": fieldHasError(field) ? "true" : void 0
   };

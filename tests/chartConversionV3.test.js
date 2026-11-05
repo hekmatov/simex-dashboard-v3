@@ -28,6 +28,15 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 
+test('legend placement retains compatible settings and loss review covers a target without legends', () => {
+  const chart=lineChart();
+  chart.presentation.legend={ position:'inside-bottom-right', offsetX:-12.5,offsetY:18 };
+  assert.deepEqual(applyChartConversion(chart,'bar').presentation.legend,chart.presentation.legend);
+  const plan=planChartConversion(chart,'kpi');
+  assert.ok(plan.removedSettings.some(s=>s.path==='presentation.legend'));
+  assert.equal(applyChartConversion(chart,'kpi',{value:{field:'value'}}).presentation.legend,undefined);
+});
+
 test("V3 #20 #28 conversion retains compatible identities and announces incompatible presentation losses", () => {
   const chart = createChartDraft("bar", { id: "ordered", title: "Ordered", sourceId: "source",
     roles: { measurements: [{ field: "value" }], observation: { field: "category", interpretation: "category" } },

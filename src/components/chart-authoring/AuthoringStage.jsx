@@ -1,3 +1,4 @@
+import { LegendAuthoringContext } from "./LegendAuthoringContext.jsx";
 import React from "react";
 import ChartPanel from "../ChartPanel.jsx";
 import LayoutGrid from "../LayoutGrid.jsx";
@@ -112,7 +113,7 @@ function useCanvasReveal(onShowOnCanvas) {
 export default function AuthoringStage({
   chart, rows = [], datasetProfile, geoData, prepared, renderContext,
   timeContext, themeProjection, deviceLayout = "desktop", canvasWidth,
-  destination, placementId, onShowOnCanvas, readiness,
+  destination, placementId, onShowOnCanvas, readiness, onLegendChange,
   fit: controlledFit, availableWidth: suppliedWidth, maxHeight: suppliedMaxHeight,
 }) {
   const geometry = useAuthoringDestinationGeometry({ deviceLayout, canvasWidth, destination, placementId });
@@ -121,6 +122,8 @@ export default function AuthoringStage({
   const [fit, setFit] = React.useState("fit");
   const mode = controlledFit ?? fit;
   const viewport = React.useRef(null);
+  const [legendControlsHost, setLegendControlsHost] = React.useState(null);
+  const legendOwner = React.useMemo(() => onLegendChange ? { onChange:onLegendChange, controlsHost:legendControlsHost } : null, [onLegendChange,legendControlsHost]);
   const [availableWidth, setAvailableWidth] = React.useState(null);
   React.useLayoutEffect(() => {
     const measure = () => setAvailableWidth(viewport.current?.clientWidth || null);
@@ -151,6 +154,7 @@ export default function AuthoringStage({
           <button type="button" className="secondary" aria-pressed={mode === "fit"} onClick={() => setFit("fit")}>Fit to preview area</button>
           <button type="button" className="secondary" aria-pressed={mode === "actual"} onClick={() => setFit("actual")}>Actual size on dashboard</button>
         </div>
+        {onLegendChange && <span ref={setLegendControlsHost} className="authoring-stage__legend-controls" />}
         {onShowOnCanvas && <button type="button" className="secondary" {...buttonProps}>Show on canvas</button>}
       </div>
       <p className="authoring-stage__caption" id={labelId}>{size.width} × {size.height} on the dashboard · {mode === "actual" ? "Actual size on dashboard" : `Fit to preview area · Shown at ${Math.round(scale * 100)}% of dashboard size`}</p>
@@ -160,10 +164,10 @@ export default function AuthoringStage({
         <div className="authoring-stage__space" style={{ width: size.width * scale, height: size.height * scale }}>
           <div className="authoring-stage__canvas canonical-dashboard-frame" style={{ width: size.width, height: size.height, transform: `scale(${scale})` }}>
             <LayoutGrid geometry={{ ...geometry, columns: footprint.columns }}>
-              {status === "ready" ? <ChartPanel panel={chart} rows={rows} datasetProfile={datasetProfile} geoData={geoData}
+              {status === "ready" ? <LegendAuthoringContext.Provider value={legendOwner}><ChartPanel panel={chart} rows={rows} datasetProfile={datasetProfile} geoData={geoData}
                 prepared={result.prepared} resolvedRendering={result.resolvedRendering} renderContext={effectiveRenderContext}
                 timeContext={input.timeContext} timeContextAuthority="explicit" showFullscreen={false}
-                mapBudgetOwnerId={`authoring:${mapOwnerId}:${chart.id}`} mapBudgetKind="preview" />
+                mapBudgetOwnerId={`authoring:${mapOwnerId}:${chart.id}`} mapBudgetKind="preview" /></LegendAuthoringContext.Provider>
                 : <article className="chart-panel chart-panel-footprint" style={chartPanelFootprintStyle(chart?.layout)}>
                   <PreviewState status={status} diagnostics={buildPreviewDiagnostics(result.diagnostics, { namespace: chart?.id })} />
                 </article>}

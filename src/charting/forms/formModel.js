@@ -1,3 +1,4 @@
+import { LEGEND_PLACEMENTS, canonicalLegendPlacement, legendPlacementLabel } from "../presentation/legendPlacementContract.js";
 import { normalizeCollectionSettings } from "../collection/collectionModel.js";
 import { validateChartInstance } from "../config/chartConfigV3.js";
 import {
@@ -39,6 +40,7 @@ const QUICK_PRESENTATION_FIELD_IDS = new Set([
   "legendVisible",
   "legendOrientation",
   "legendFontSize",
+  "legendWrap", "legendEntries", "legendPosition", "legendOffsetX", "legendOffsetY", "legendResetOffsets",
   "axes",
 ]);
 
@@ -368,7 +370,7 @@ function appearanceGroups(fields) {
   const available = new Set(fields.map(field => field.id));
   const definitions = [
     ["titles", "Titles and background", ["title", "titleVisible", "titleFontSize", "titleAlignment", "description", "descriptionVisible", "background"]],
-    ["legend", "Legend", ["legendVisible", "legendOrientation", "legendWrap", "legendFontSize", "legendEntries"]],
+    ["legend", "Legend", ["legendVisible", "legendOrientation", "legendWrap", "legendFontSize", "legendEntries", "legendPosition", "legendOffsetX", "legendOffsetY", "legendResetOffsets"]],
     ["colors", "Colors", ["seriesColors", "seriesColorsByIdentity", "categoryColors", "cardAccentColors"]],
     ["reference", "Reference line", ["referenceLine"]],
     ["ordering", "Ordering", ["categoryOrder", "seriesOrder"]],
@@ -447,13 +449,26 @@ function appearanceFields({ chart, schema, prepared }) {
   return [
     ...common,
     ...cardAppearanceFields(chart),
-    ...(LEGEND_PRESENTATION_RENDERERS.has(schema.renderer)
+    ...((LEGEND_PRESENTATION_RENDERERS.has(schema.renderer) || schema.renderer === "timeline")
       ? [{
           id: "legendVisible",
           label: "Show legend",
           control: "toggle",
           path: ["presentation", "legend", "visible"],
           value: chart.presentation?.legend?.visible !== false,
+        }, {
+          id: "legendPosition", label: "Legend placement", control: "select",
+          path: ["presentation", "legend", "position"],
+          value: canonicalLegendPlacement(chart.presentation?.legend?.position),
+          options: ['automatic', ...LEGEND_PLACEMENTS].map(value => ({ value, label: legendPlacementLabel(value) })),
+        }, ...['X', 'Y'].map(axis => ({
+          id: `legendOffset${axis}`, label: axis === 'X' ? 'Horizontal offset' : 'Vertical offset', control: 'number',
+          path: ['presentation', 'legend', `offset${axis}`], value: chart.presentation?.legend?.[`offset${axis}`] ?? 0,
+          disabled: canonicalLegendPlacement(chart.presentation?.legend?.position) === 'automatic',
+          help: axis === 'X' ? 'Chart pixels; positive moves right.' : 'Chart pixels; positive moves down.',
+        })), {
+          id: 'legendResetOffsets', label: 'Reset offsets', control: 'legendResetOffsets', path: ['presentation', 'legend'],
+          disabled: canonicalLegendPlacement(chart.presentation?.legend?.position) === 'automatic',
         }, {
           id: "legendOrientation",
           label: "Legend arrangement",
@@ -505,7 +520,7 @@ function appearanceFields({ chart, schema, prepared }) {
 }
 
 function memberPresentationFields(chart, schema, prepared) {
-  if (!LEGEND_PRESENTATION_RENDERERS.has(schema.renderer)) return [];
+  if (!(LEGEND_PRESENTATION_RENDERERS.has(schema.renderer) || schema.renderer === "timeline")) return [];
   const descriptors = chartLegendDescriptors(schema.renderer, prepared?.marks);
   const fields = [{
     id: "legendEntries", label: "Legend entries", control: "legendEntries",

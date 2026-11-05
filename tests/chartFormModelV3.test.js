@@ -13,6 +13,17 @@ import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { getChartSchema, listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
 
+test('full and quick legend placement fields share values and automatic offset disabling', () => {
+  const chart = lineChart();
+  const quick = () => allFields(buildQuickEditorFormModel({ chart }));
+  assert.equal(quick().find(f => f.id === 'legendOffsetX').disabled, true);
+  chart.presentation.legend = { position: 'right-middle', offsetX: -7, offsetY: 2 };
+  assert.equal(quick().find(f => f.id === 'legendPosition').value, 'right-middle');
+  assert.equal(quick().find(f => f.id === 'legendOffsetX').value, -7);
+  assert.equal(quick().find(f => f.id === 'legendOffsetX').disabled, false);
+  assert.equal(quick().find(f => f.id === 'legendPosition').options.length, 22);
+});
+
 test("V3 #20 #28 presentation controls match prepared families and axis interpretation", () => {
   for (const typeId of ["bar", "horizontalBar", "line", "pie", "scatter"]) {
     const roles = ["pie"].includes(typeId) ? { category: { field: "category" }, value: { field: "value" } }
@@ -1076,8 +1087,14 @@ test("quick editor fields expose only supported quick presentation controls", ()
       { id: "titleFontSize", control: "number", path: ["presentation", "title", "fontSize"] },
       { id: "background", control: "quickBackground", path: ["presentation", "background", "color"] },
       { id: "legendVisible", control: "toggle", path: ["presentation", "legend", "visible"] },
+      { id: "legendPosition", control: "select", path: ["presentation", "legend", "position"] },
+      { id: "legendOffsetX", control: "number", path: ["presentation", "legend", "offsetX"] },
+      { id: "legendOffsetY", control: "number", path: ["presentation", "legend", "offsetY"] },
+      { id: "legendResetOffsets", control: "legendResetOffsets", path: ["presentation", "legend"] },
       { id: "legendOrientation", control: "select", path: ["presentation", "legend", "orientation"] },
+      { id: "legendWrap", control: "toggle", path: ["presentation", "legend", "wrap"] },
       { id: "legendFontSize", control: "number", path: ["presentation", "legend", "fontSize"] },
+      { id: "legendEntries", control: "legendEntries", path: ["presentation", "legend", "entries"] },
     ],
   );
   assert.equal(
@@ -1431,7 +1448,7 @@ test("appearance groups keep related controls together in base-to-specific prior
   const model = buildEditorFormModel({ chart, profile, prepared: preparedFor(chart, profile, prepared) });
   const appearance = model.sections.find(s => s.id === "appearance");
   assert.deepEqual(appearance.groups.find(g => g.id === "appearance-colors").fieldIds, ["seriesColors", "seriesColorsByIdentity", "categoryColors"]);
-  assert.deepEqual(appearance.groups.find(g => g.id === "appearance-legend").fieldIds, ["legendVisible", "legendOrientation", "legendWrap", "legendFontSize", "legendEntries"]);
+  assert.deepEqual(appearance.groups.find(g => g.id === "appearance-legend").fieldIds, ["legendVisible", "legendOrientation", "legendWrap", "legendFontSize", "legendEntries", "legendPosition", "legendOffsetX", "legendOffsetY", "legendResetOffsets"]);
   const grouped = appearance.groups.flatMap(g => g.fieldIds);
   assert.equal(new Set(grouped).size, appearance.fields.length);
   assert.deepEqual([...grouped].sort(), appearance.fields.map(f => f.id).sort());

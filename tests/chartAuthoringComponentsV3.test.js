@@ -3878,6 +3878,7 @@ test("saving quick editor keeps hover reason anchors exposed while controls stay
     onOpenFullEditor() {},
   });
   const savingAside = findElement(tree, (element) => element.type === "aside");
+  assert.equal(findElement(tree, element => element.type?.name === 'AuthoringStage').props.onLegendChange, undefined, 'saving retires the transient legend gesture owner');
   const aside = html.match(/<aside\b[^>]*>/)?.[0] ?? "";
   const reasonAnchors = [...html.matchAll(
     /<span class="control-tooltip"[^>]*data-control-tooltip-kind="disabled"[^>]*>/g,

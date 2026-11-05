@@ -38,7 +38,10 @@ function SchemaField({
     ? diagnostics.flatMap((diagnostic) => typeof diagnostic?.id === "string" ? [diagnostic.id] : [])
     : [];
   const decoratedField = diagnosticIds.length > 0 ? { ...field, diagnosticIds } : field;
-  const emit = (nextValue) => onChange(field.path, nextValue);
+  const emit = (nextValue) => field.id === 'legendPosition'
+    ? onChange(['presentation', 'legend'], { ...chart.presentation?.legend, position: nextValue, offsetX: 0, offsetY: 0 })
+    : onChange(field.path, nextValue);
+  if (field.control === 'legendResetOffsets') return <button type="button" className="secondary" disabled={field.disabled} onClick={() => onChange(['presentation', 'legend'], { ...chart.presentation?.legend, offsetX: 0, offsetY: 0 })}>Reset offsets</button>;
   const shared = { field: decoratedField, value, onChange: emit };
   if (["presentationOrder", "legendEntries", "categoryColors", "seriesColorsByIdentity"].includes(field.control)) {
     return <CategorySeriesPresentationFields field={{ ...decoratedField, value }} chart={chart} onChange={onChange} />;

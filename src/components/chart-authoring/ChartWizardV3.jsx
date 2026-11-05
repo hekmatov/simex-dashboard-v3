@@ -1746,6 +1746,7 @@ export default function ChartWizardV3({
           hidden: wizard.stage === "destination",
           dashboard,
           chart: wizard.draft,
+          onLegendChange: disabled || submitting ? undefined : value => updatePath(["presentation", "legend"], { ...wizard.draft.presentation?.legend, ...value }),
           rows,
           geoData,
           profile: runtime.profile,
@@ -1917,6 +1918,7 @@ function ChartTimeMemberships({ chart, groups = [], timeRole, onChange = noop })
 }
 
 export function ChartCreationProofDeck({
+  onLegendChange,
   hidden = false,
   dashboard = {},
   chart = null,
@@ -1967,7 +1969,7 @@ export function ChartCreationProofDeck({
         "data-proof-revision": renderProof.revision ?? "awaiting",
       },
       React.createElement(AuthoringStage, {
-            chart,
+            onLegendChange, chart,
             rows,
             geoData,
             datasetProfile: profile,

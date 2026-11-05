@@ -8,6 +8,24 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { validateChartDataCompatibility } from "../src/charting/data/prepareChartData.js";
+import { LEGEND_PLACEMENTS } from '../src/charting/presentation/legendPlacementContract.js';
+
+test('legend placement accepts finite offsets and canonicalizes legacy exterior anchors', () => {
+  const chart = createChartDraft('bar', { id: 'legend', title: 'Legend', sourceId: 'data', roles: { observation: { field: 'category' }, measurements: [{ field: 'value' }] } });
+  for (const position of ['automatic', ...LEGEND_PLACEMENTS]) {
+    chart.presentation.legend = { position, offsetX: -12.5, offsetY: 30.25 };
+    assert.doesNotThrow(() => validateChartInstance(chart));
+    assert.equal(normalizeChartInstance(chart).presentation.legend.position, position);
+  }
+  chart.presentation.legend = { position: 'top' };
+  assert.equal(normalizeChartInstance(chart).presentation.legend.position, 'above-center');
+  for (const offsetX of [Infinity, NaN, '12', null]) {
+    chart.presentation.legend = { position: 'inside-top-left', offsetX };
+    assert.throws(() => validateChartInstance(chart), /finite/);
+  }
+  chart.presentation.legend = { position: 'floating' };
+  assert.throws(() => validateChartInstance(chart), /position/);
+});
 
 test("V3 #28 order validation rejects active arrays and true temporal axes", () => {
   const chart = createChartDraft("line", { id: "time", title: "Time", sourceId: "data", roles: {

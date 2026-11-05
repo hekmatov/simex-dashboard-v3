@@ -392,6 +392,7 @@ function categoricalAxis(target, roles) {
 
 function presentationAllowed(target, key, section, value) {
   if (key === "description" || key === "citation") return true;
+  if (key === "legend") return ["axis", "composition", "relationship", "timeline"].includes(target.renderer);
   if (key === "referenceLine") return target.semantics?.mark === "line";
   if (key === "table" || key === "image") return target.typeId === key;
   if (key === "collection") return target.capabilities.collection;

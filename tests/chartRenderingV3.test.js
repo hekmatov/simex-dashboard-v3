@@ -1,3 +1,4 @@
+import { measuredLegendRect } from "../src/charting/rendering/legendLayout.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { register } from "node:module";
@@ -16,6 +17,7 @@ import { buildCompositionRenderModel } from "../src/charting/rendering/compositi
 import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistry.js";
 import { buildRelationshipRenderModel } from "../src/charting/rendering/relationshipAdapter.js";
 import { resolveDashboardStyleGrammar } from "../src/theme/dashboardStyleGrammar.js";
+import { LEGEND_PLACEMENTS } from '../src/charting/presentation/legendPlacementContract.js';
 
 test("axis renderers accept single and list measurement bindings consistently", () => {
   const rows = [{ period: "May", value: 4 }];
@@ -75,6 +77,93 @@ const {
 } = await import("../src/charting/rendering/axisTitleGraphics.js");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
+
+test('real ECharts legend placement uses visible bounds and restores explicit offsets without layout drift', () => {
+  for (const typeId of ['line','pie']) {
+    const chartInstance = chart(typeId, { presentation: { legend: { position:'inside-top-left', offsetX:12.5, offsetY:7 } } });
+    const model = buildRenderModel({ chart:chartInstance, prepared:ready(typeId === 'pie' ? [{ category:'A',value:4 },{category:'B',value:8}] : [{x:'A',value:4,measure:'cases'},{x:'B',value:8,measure:'cases'}]) });
+    const errors=[];
+    const lifecycle = createEChartsLifecycle({ echartsApi: { ...echarts, getInstanceByDom:()=>null, init:()=>echarts.init(null,null,{renderer:'svg',ssr:true,width:500,height:350}) }, windowTarget:null, ResizeObserverCtor:null,onError:e=>errors.push(e) });
+    lifecycle.mount({});
+    try { for (const position of LEGEND_PLACEMENTS) {
+      chartInstance.presentation.legend.position=position;
+      lifecycle.update(applyEChartsPresentation(model,chartInstance));
+      assert.deepEqual(errors,[],position);
+      const g=lifecycle.getLegendGeometry();
+      assert.ok(g,position);
+      assert.ok(g.rect.x>=3 && g.rect.y>=3,`${typeId} ${position}: ${JSON.stringify(g)}`);
+      assert.ok(g.rect.x+g.rect.width<=497 && g.rect.y+g.rect.height<=347,`${typeId} ${position}: ${JSON.stringify(g)}`);
+      const before=structuredClone(g.rect);
+      lifecycle.restoreLegend();
+      assert.deepEqual(lifecycle.getLegendGeometry().rect,before,position);
+    } } finally { lifecycle.dispose(); }
+  }
+});
+
+test('dragging from Automatic settles against the final explicit plot without moving the drop', () => {
+  const chartInstance=chart('line');
+  const model=buildRenderModel({chart:chartInstance,prepared:ready([{x:'A',value:4,measure:'Hospital preparedness across all provinces and clinical staffing response measures'},{x:'B',value:8,measure:'Hospital preparedness across all provinces and clinical staffing response measures'}])});
+  let ec;
+  const lifecycle=createEChartsLifecycle({echartsApi:{...echarts,getInstanceByDom:()=>null,init:()=>ec=echarts.init(null,null,{renderer:'svg',ssr:true,width:500,height:350})},windowTarget:null,ResizeObserverCtor:null});
+  lifecycle.mount({});
+  try {
+    lifecycle.update(applyEChartsPresentation(model,chartInstance));
+    const originalAutomatic=structuredClone(lifecycle.getLegendGeometry().rect);
+    lifecycle.getLegendCandidates();
+    assert.deepEqual(lifecycle.getLegendGeometry().rect,originalAutomatic,'measuring candidates leaves Automatic unchanged');
+    const dropped={x:30,y:155};
+    lifecycle.previewLegendRect({...originalAutomatic,...dropped});
+    assert.ok(Math.abs(measuredLegendRect(ec).x-dropped.x)<1,'Automatic string left becomes a numeric preview coordinate');
+    assert.ok(Math.abs(measuredLegendRect(ec).y-dropped.y)<1);
+    const final=lifecycle.settleLegendPlacement('inside-middle-center');
+    chartInstance.presentation.legend={position:'inside-middle-center',offsetX:dropped.x-final.zeroRect.x,offsetY:dropped.y-final.zeroRect.y};
+    lifecycle.update(applyEChartsPresentation(model,chartInstance));
+    assert.ok(Math.abs(lifecycle.getLegendGeometry().rect.x-dropped.x)<1);
+    assert.ok(Math.abs(lifecycle.getLegendGeometry().rect.y-dropped.y)<1);
+  } finally {lifecycle.dispose();}
+});
+
+test('constrained long wrapped paginated legends stay in the panel without losing authored offsets', () => {
+  const chartInstance=chart('line',{presentation:{legend:{position:'left-middle',orientation:'vertical',wrap:true,offsetX:500,offsetY:-500}}});
+  const marks=Array.from({length:20},(_,i)=>({x:'A',value:i+1,measure:`Series ${i} ${'long label '.repeat(35)}`}));
+  const model=buildRenderModel({chart:chartInstance,prepared:ready(marks)});
+  let ec;
+  const lifecycle=createEChartsLifecycle({echartsApi:{...echarts,getInstanceByDom:()=>null,init:()=>ec=echarts.init(null,null,{renderer:'svg',ssr:true,width:280,height:220})},windowTarget:null,ResizeObserverCtor:null});
+  lifecycle.mount({});
+  try {
+    lifecycle.update(applyEChartsPresentation(model,chartInstance));
+    const g=lifecycle.getLegendGeometry();
+    assert.ok(g.rect.x>=3 && g.rect.y>=3);
+    assert.ok(g.rect.x+g.rect.width<=277 && g.rect.y+g.rect.height<=217,JSON.stringify(g.rect));
+    assert.equal(chartInstance.presentation.legend.offsetX,500);
+    chartInstance.presentation.legend.visible=false;
+    lifecycle.update(applyEChartsPresentation(model,chartInstance));
+    // The adapter must consume visibility; rebuild its option when draft changes.
+    const hidden=buildRenderModel({chart:chartInstance,prepared:ready(marks)});
+    lifecycle.update(applyEChartsPresentation(hidden,chartInstance));
+    assert.equal(lifecycle.getLegendGeometry(),null);
+  } finally {lifecycle.dispose();}
+});
+
+test('one large-font long legend item is bounded and frozen candidates match final preset fitting', () => {
+  for (const label of ['A very long descriptive series label '.repeat(40),'Long series name: hospital preparedness across provinces']) {
+    const chartInstance=chart('line',{presentation:{legend:{position:'inside-top-left',fontSize:20,wrap:true}}});
+    const model=buildRenderModel({chart:chartInstance,prepared:ready([{x:'A',value:4,measure:label},{x:'B',value:8,measure:label}])});
+    const lifecycle=createEChartsLifecycle({echartsApi:{...echarts,getInstanceByDom:()=>null,init:()=>echarts.init(null,null,{renderer:'svg',ssr:true,width:300,height:200})},windowTarget:null,ResizeObserverCtor:null});
+    lifecycle.mount({});
+    try {
+      lifecycle.update(applyEChartsPresentation(model,chartInstance));
+      const candidates=lifecycle.getLegendCandidates();
+      for (const p of ['above-center','right-middle','below-left','inside-bottom-right']) {
+        const frozen=candidates.find(c=>c.placement===p);
+        const final=lifecycle.settleLegendPlacement(p);
+        assert.ok(final.rect.x>=3 && final.rect.y>=3,p);
+        assert.ok(final.rect.x+final.rect.width<=297 && final.rect.y+final.rect.height<=197,`${p}: ${JSON.stringify(final.rect)}`);
+        assert.deepEqual(frozen.zeroRect,final.zeroRect,p);
+      }
+    } finally {lifecycle.dispose();}
+  }
+});
 
 test("bar legends show actual gradient colors instead of named series fallback", () => {
   const marks = [{ x: "A", value: 20, measure: "value" }, { x: "B", value: 50, measure: "value" }, { x: "C", value: 90, measure: "value" }];
