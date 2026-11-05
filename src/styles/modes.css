@@ -4,6 +4,14 @@
   z-index: 1;
 }
 
+.dashboard-back-to-top {
+  position: fixed;
+  top: calc(var(--right-side-drawer-top, 12px) + env(safe-area-inset-top, 0px) + 8px);
+  right: max(12px, env(safe-area-inset-right, 0px));
+  z-index: 45;
+  box-shadow: var(--simex-style-panel-shadow);
+}
+
 .app-frame-bar {
   align-items: center;
   background: #ffffff;

@@ -3,6 +3,7 @@ import React from "react";
 import DashboardCommandCrown from "./DashboardCommandCrown.jsx";
 import OperationStatusViewport from "./OperationStatusViewport.jsx";
 import DesktopWidthNotice from "./DesktopWidthNotice.jsx";
+import BackToTopButton from "../common/BackToTopButton.jsx";
 import { rightSideDrawerTopFromCrown } from "../common/RightSideDrawer.jsx";
 
 const useBrowserLayoutEffect = typeof window === "undefined"
@@ -134,6 +135,7 @@ export default function AppFrame({
         <p className="app-persistence-notice" role="status">{persistenceNotice}</p>
       )}
       {children}
+      <BackToTopButton enabled={["view", "build"].includes(mode)} navigationKey={activePage?.id} frameRef={frameRef} />
       <OperationStatusViewport rightDrawer={rightDrawer} theme={theme} />
     </div>
   );

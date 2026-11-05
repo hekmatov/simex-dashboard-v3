@@ -564,3 +564,50 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await chronoGroups.click();
   await expect(page.locator(".present-action-dock")).toBeVisible();
 });
+
+
+for (const mode of ["View", "Build"]) {
+  test(`Back to top follows the main dashboard in ${mode}`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await openDashboardPage(page, "biomedical");
+    if (mode === "Build") {
+      await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+      await choosePanelAction(page, CURRENT_CHART_ID, "edit");
+      const quick = page.locator(".chart-quick-editor");
+      await quick.getByRole("textbox", { name: "Chart title", exact: true }).fill("Back to top preserves this draft");
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+      await page.locator(".unit-orbit-scroll").evaluate(el => { el.scrollTop = el.scrollHeight; });
+    }
+    const button = page.getByRole("button", { name: "Back to top", exact: true });
+    await expect(button).toHaveCount(0);
+    const saved = await page.evaluate(() => localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
+    await page.evaluate(() => window.scrollTo({ top: window.innerHeight + 100, behavior: "instant" }));
+    await expect(button).toBeVisible();
+    const first = await button.boundingBox();
+    expect(first.x + first.width).toBeGreaterThan(1220);
+    const crownBottom = await page.locator(".exercise-disclaimer").evaluate(el => el.getBoundingClientRect().bottom);
+    expect(first.y).toBeGreaterThanOrEqual(crownBottom);
+    await page.evaluate(() => window.scrollBy({ top: 100, behavior: "instant" }));
+    await expect.poll(async () => Math.abs((await button.boundingBox()).y - first.y)).toBeLessThan(2);
+    await button.focus();
+    await button.press("Enter");
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await expect(button).toHaveCount(0);
+    if (mode === "Build") await expect(page.locator('.canonical-dashboard-frame[data-canonical-mode="build"]')).toBeFocused();
+    else await expect(page.getByLabel("Dashboard mode").getByRole("button", { name: mode, exact: true })).toBeFocused();
+    expect(await page.evaluate(() => localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"))).toBe(saved);
+    if (mode === "Build") {
+      const quick = page.locator(".chart-quick-editor");
+      await expect(quick.getByRole("textbox", { name: "Chart title", exact: true })).toHaveValue("Back to top preserves this draft");
+      await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+      const full = page.getByRole("dialog", { name: "Edit chart", exact: true });
+      await expect(full).toBeVisible();
+      await page.evaluate(() => window.scrollTo({ top: window.innerHeight + 100, behavior: "instant" }));
+      await expect(button).toHaveCount(0);
+      await expect(full.locator(".chart-wizard-close")).toBeVisible();
+    }
+  });
+}

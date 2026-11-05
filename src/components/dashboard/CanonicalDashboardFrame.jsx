@@ -26,7 +26,7 @@ export default function CanonicalDashboardFrame({
       data-device-layout={deviceLayout}
       data-page-type={pageType}
       data-build-static-authoring-open={mode === "build" ? String(buildStaticAuthoringOpen) : undefined}
-      tabIndex={landmarkTabIndex ?? (["home", "view"].includes(mode) ? -1 : undefined)}
+      tabIndex={landmarkTabIndex ?? (["home", "view", "build"].includes(mode) ? -1 : undefined)}
       aria-labelledby={landmarkLabelledBy}
     >
       {dashboardHeader != null ? (
