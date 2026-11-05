@@ -33,6 +33,11 @@ const SOURCE_ALLOWLIST = Object.freeze([
     classification: "authored-color-swatch",
   }),
   Object.freeze({
+    file: /(?:^|\/)src\/components\/chart-authoring\/CategorySeriesPresentationFields\.jsx$/,
+    line: /^\s*value=\{field\.value\?\.\[entry\.key\]\?\.color\s*\?\?/,
+    classification: "authored-color-swatch",
+  }),
+  Object.freeze({
     file: /(?:^|\/)src\/components\/DashboardRenderer\.jsx$/,
     line: /(?:<ColorField\b|panelBackgroundColor|panelBorderColor|chartAreaColor|chartAreaBorderColor|editHighlightColor)/,
     classification: "authored-panel-color",

@@ -12,7 +12,7 @@ Do not record product-test failures, expected build warnings, transient typing m
 | ENV-002 | Playwright Chromium is absent from the local browser cache | Recurrent after cache removal or Playwright upgrade | 1 | ENV-002.001 |
 | ENV-003 | Git reports a linked checkout is not a worktree during restricted reads | Observed in restricted Codex execution | 1 | ENV-003.001 |
 | ENV-004 | Windows Chromium cannot read a file upload at a long native evidence path | Avoided with the same bytes supplied as a browser File | 1 | ENV-004.001 |
-| ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Fixed-input Node workers and scoped fixtures disable watching and discovery | 3 | ENV-005.001, ENV-005.002, ENV-005.003 |
+| ENV-005 | Vite fixture watching/discovery stalls in the large private checkout | Fixed-input Node workers and scoped fixtures disable watching and discovery | 4 | ENV-005.001, ENV-005.002, ENV-005.003, ENV-005.004 |
 | ENV-006 | Windows restricted launcher cannot create the process security environment | Project-access execution remains available | 1 | ENV-006.001 |
 
 The **Entries** value must equal the number of listed entry references. Add a new reference for every confirmed repeat; do not merely increase the count.
@@ -26,6 +26,13 @@ The **Entries** value must equal the number of listed entry references. Add a ne
 5. Include the register update in the task's coherent commit when it is changed. Resolve ordinary merge conflicts by preserving every distinct entry and recalculating the affected index row.
 
 ## Entries
+
+### ENV-005.004 — 2026-11-05
+
+- **Command:** Continued `pnpm.cmd test` after the shared Node-worker Vite correction.
+- **Evidence:** The `chronoSceneComposition.test.js` and `modalFocusEscape.test.js` workers again spent minutes in fixture setup before emitting results. Both explicitly use `configFile: false`, bypassing the shared `NODE_TEST_CONTEXT` settings. They eventually advanced naturally; no worker was killed. Six SSR fixtures and one browser fixture had the same bypass.
+- **Scope:** `chronoGroupEditor`, `chronoSceneComposition`, `collectionHeaderControls`, `dashboardStyleSurfaceRoles`, `modalFocusEscape`, `sceneStudio`, and `sceneViewComposition` fixture servers. Their fixed input needs no checkout watching or automatic dependency discovery.
+- **Outcome:** Applied the existing no-watch/no-discovery setup directly to those seven fixture configurations, preserving browser dependency includes and all product assertions. The diagnostic full run completed with 2,543 passes and 24 assertion/journey failures; those failures are tracked separately as pre-merge findings, not environment incidents. Final-candidate verification will include the corrected fixture setup.
 
 ### ENV-005.003 — 2026-11-05
 

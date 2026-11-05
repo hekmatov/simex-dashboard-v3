@@ -231,7 +231,7 @@ test("chart-state harness projects every dashboard style through an accurate sta
     appType: "custom",
     logLevel: "silent",
     optimizeDeps: { noDiscovery: true },
-    server: { middlewareMode: true },
+    server: { middlewareMode: true, watch: null },
   });
   try {
     let harnessModule = null;
@@ -341,7 +341,7 @@ test("fails when the standalone Source Viewer entry omits the shared grammar fro
     appType: "custom",
     logLevel: "silent",
     optimizeDeps: { noDiscovery: true },
-    server: { middlewareMode: true },
+    server: { middlewareMode: true, watch: null },
   });
   try {
     await vite.transformRequest("/src/source-viewer/main.jsx");
@@ -386,7 +386,7 @@ test("desktop width advisory stays compact without hiding or repainting workspac
     appType: "custom",
     logLevel: "silent",
     optimizeDeps: { noDiscovery: true },
-    server: { middlewareMode: true },
+    server: { middlewareMode: true, watch: null },
   });
   try {
     await vite.transformRequest("/src/main.jsx");

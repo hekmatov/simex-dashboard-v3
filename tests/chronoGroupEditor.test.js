@@ -25,10 +25,10 @@ const JAN_4 = JAN_3 + DAY_MS;
 
 const vite = await createServer({
   root: process.cwd(),
-  configFile: false,
+  configFile: false, optimizeDeps: { noDiscovery: true },
   appType: "custom",
   logLevel: "silent",
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, watch: null },
 });
 const ledgerModule = await vite.ssrLoadModule("/src/components/time/AvailabilityLedger.jsx");
 const studioModule = await vite.ssrLoadModule("/src/components/time/ChronoGroupEditor.jsx");

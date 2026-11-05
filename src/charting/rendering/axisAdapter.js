@@ -1,4 +1,5 @@
 import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+import { bindingField, bindingList } from "../data/bindings.js";
 import { pointLabelKey, pointLabelMatcher } from "../presentation/pointLabelSelection.js";
 import {
   buildEChartsDataZoom,
@@ -122,7 +123,8 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       : null,
   ].filter(Boolean);
   const series = grouped.map((group, index) => {
-    const measureIndex = chart.roles?.measurements?.findIndex(binding => binding.field === group.marks[0]?.measure) ?? -1;
+    const measureIndex = bindingList(chart.roles?.measurements)
+      .findIndex(binding => bindingField(binding) === group.marks[0]?.measure);
     const type = seriesType(mark, group, measureIndex >= 0 ? measureIndex : group.sourceIndex);
     let values = temporal
       ? [...group.marks]

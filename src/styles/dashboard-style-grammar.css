@@ -2333,6 +2333,7 @@
   box-shadow: var(--simex-style-shell-shadow);
 }
 
+.authoring-stage[data-dashboard-style],
 .unit-orbit[data-dashboard-style],
 :is(
   .app-frame,
@@ -2347,7 +2348,8 @@
   .chart-panel,
   .present-context-panel,
   .present-scene-panel,
-  .scenario-passport-popover
+  .scenario-passport-popover,
+  .authoring-stage
 ) {
   background-image: var(--simex-style-role-rail), var(--simex-role-panel-background);
   border-color: var(--simex-style-role-border);

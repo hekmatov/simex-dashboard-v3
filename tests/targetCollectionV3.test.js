@@ -493,8 +493,8 @@ test("the target collection view renders detached identity without injecting hid
   assert.deepEqual(
     model.items.map(({ model: itemModel }) => itemModel.semanticSummary.items[0]),
     [
-      { label: "Clinic A", actual: 72, target: 80, time: "2027-05-02" },
-      { label: "Clinic B", actual: 55, target: 70, time: "2027-05-02" },
+      { label: "Clinic A", actual: 72, target: 80, time: "2027-05-02", targetStatus: "BELOW TARGET · 8 POINTS BELOW TARGET", favorability: "unfavorable" },
+      { label: "Clinic B", actual: 55, target: 70, time: "2027-05-02", targetStatus: "BELOW TARGET · 15 POINTS BELOW TARGET", favorability: "unfavorable" },
     ],
   );
   assert.ok(model.items.every((item) => item.model.option.aria.enabled === false));

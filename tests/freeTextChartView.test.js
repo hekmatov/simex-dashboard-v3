@@ -1190,80 +1190,45 @@ test("responsive writer, preview, and Portable Markdown cards remain visible and
   assert.equal(await markdown.isVisible(), true);
 });
 
-test("writer and preview track every selected authoring footprint without expanding the root", async () => {
+test("the independent writer and destination-sized preview stay bounded across footprints", async () => {
   const longToken = "X".repeat(240);
-  const qmd = [
-    "| Heading | Value |",
-    "| --- | --- |",
-    `| ${longToken} | ${longToken} |`,
-  ].join("\n");
-
-  await page.setViewportSize({ width: 1280, height: 900 });
-  for (const columns of [1, 2, 3, 4]) {
-    await page.evaluate(({ source, layout }) => window.mountFreeTextEditor(source, { layout }), {
-      source: qmd,
-      layout: { width: columns, height: 1 },
-    });
-    await page.locator('[data-authoring-footprint="writer"] table').waitFor();
-    await page.locator('[data-authoring-footprint="preview"] table').waitFor();
-    const geometry = await page.evaluate((selectedColumns) => {
-      const read = (kind) => {
-        const frame = document.querySelector(`[data-authoring-footprint="${kind}"]`);
-        const grid = frame?.parentElement;
-        const table = frame?.querySelector("table");
-        const gridStyle = getComputedStyle(grid);
+  const qmd = `| Heading | Value |\n| --- | --- |\n| ${longToken} | ${longToken} |`;
+  for (const viewportWidth of [1280, 320]) {
+    await page.setViewportSize({ width: viewportWidth, height: 900 });
+    for (const columns of [1, 2, 3, 4]) {
+      await page.evaluate(({ source, layout }) => window.mountFreeTextEditor(source, { layout }), {
+        source: qmd, layout: { width: columns, height: 1 },
+      });
+      await page.getByLabel("Portable QMD Composer editing area").locator("table").waitFor();
+      const preview = page.locator('[data-authoring-footprint="preview"]');
+      await preview.locator("table").waitFor();
+      await expect.poll(() => page.evaluate(() => {
+        const frame = document.querySelector('[data-authoring-footprint="preview"]');
+        const stage = frame.closest(".authoring-stage");
+        const canvas = stage.querySelector(".authoring-stage__canvas");
+        const viewport = stage.querySelector(".authoring-stage__viewport");
+        return Math.abs(canvas.getBoundingClientRect().width - viewport.clientWidth);
+      })).toBeLessThanOrEqual(2);
+      const geometry = await preview.evaluate((frame) => {
+        const stage = frame.closest(".authoring-stage");
+        const table = frame.querySelector("table");
+        const writer = document.querySelector('[aria-label="Portable QMD Composer editing area"]');
         return {
-          frameWidth: frame?.clientWidth,
-          gridWidth: grid?.clientWidth,
-          columns: gridStyle.getPropertyValue("--chart-footprint-columns").trim(),
-          columnGap: Number.parseFloat(gridStyle.columnGap),
-          trackWidths: gridStyle.gridTemplateColumns.split(" ").map(Number.parseFloat),
-          tableFits: table?.scrollWidth <= table?.clientWidth,
+          logicalWidth: frame.offsetWidth,
+          expectedWidth: Number(stage.dataset.stageWidth),
+          columns: getComputedStyle(frame).getPropertyValue("--chart-footprint-columns").trim(),
+          tableFits: table.scrollWidth <= table.clientWidth,
+          writerHasOwnFrame: !writer.closest(".authoring-stage"),
+          rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
         };
-      };
-      return {
-        writer: read("writer"),
-        preview: read("preview"),
-        selectedColumns,
-        rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-      };
-    }, columns);
-    const expectedWidth = ({ trackWidths, columnGap }) => (
-      trackWidths.slice(0, columns).reduce((total, width) => total + width, 0) + columnGap * (columns - 1)
-    );
-    for (const surface of [geometry.writer, geometry.preview]) {
-      assert.equal(surface.columns, String(columns));
-      assert.ok(Math.abs(surface.frameWidth - expectedWidth(surface)) <= 1, JSON.stringify({ columns, surface }));
-      assert.equal(surface.tableFits, true, JSON.stringify({ columns, surface }));
+      });
+      assert.equal(geometry.columns, String(columns));
+      assert.ok(Math.abs(geometry.logicalWidth - geometry.expectedWidth) <= 1, JSON.stringify(geometry));
+      assert.equal(geometry.tableFits, true, JSON.stringify(geometry));
+      assert.equal(geometry.writerHasOwnFrame, true);
+      assert.equal(geometry.rootFits, true);
     }
-    assert.equal(geometry.writer.frameWidth, geometry.preview.frameWidth);
-    assert.equal(geometry.rootFits, true);
   }
-
-  await page.setViewportSize({ width: 320, height: 700 });
-  await page.evaluate(({ source }) => window.mountFreeTextEditor(source, { layout: { width: 4, height: 1 } }), { source: qmd });
-  await page.locator('[data-authoring-footprint="preview"] table').waitFor();
-  const narrowGeometry = await page.evaluate(() => {
-    const read = (kind) => {
-      const frame = document.querySelector(`[data-authoring-footprint="${kind}"]`);
-      const grid = frame?.parentElement;
-      return {
-        frameWidth: frame?.clientWidth,
-        gridWidth: grid?.clientWidth,
-        gridTrackCount: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
-      };
-    };
-    return {
-      writer: read("writer"),
-      preview: read("preview"),
-      rootFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-    };
-  });
-  assert.equal(narrowGeometry.writer.gridTrackCount, 1);
-  assert.equal(narrowGeometry.preview.gridTrackCount, 1);
-  assert.equal(narrowGeometry.writer.frameWidth, narrowGeometry.writer.gridWidth);
-  assert.equal(narrowGeometry.preview.frameWidth, narrowGeometry.preview.gridWidth);
-  assert.equal(narrowGeometry.rootFits, true);
 });
 
 test("ordinary tables wrap while code retains bounded internal overflow", async () => {

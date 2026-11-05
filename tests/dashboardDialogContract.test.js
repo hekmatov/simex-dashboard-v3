@@ -7,6 +7,7 @@ const DIALOG_SURFACES = [
   ["src/components/static-content/StaticContentWizard.jsx", "dashboard-dialog--wizard"],
   ["src/components/chart-authoring/ChartWizardV3.jsx", "dashboard-dialog--wizard"],
   ["src/components/chart-authoring/ChartEditorModal.jsx", "dashboard-dialog-backdrop"],
+  ["src/components/chart-authoring/PointLabelSelector.jsx", "dashboard-dialog--wide"],
 ];
 
 DIALOG_SURFACES.push(

@@ -1019,6 +1019,7 @@ test("legend controls are exposed only by renderers that consume them", () => {
         id: "legendFontSize",
         label: "Legend font size",
         control: "number",
+        inline: true,
         min: 8,
         max: 20,
         step: 1,

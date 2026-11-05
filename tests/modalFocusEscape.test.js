@@ -7,9 +7,10 @@ import { createServer } from "vite";
 const vite = await createServer({
   root: process.cwd(),
   configFile: false,
+  optimizeDeps: { noDiscovery: true, include: ["react", "react-dom", "react-dom/client"] },
   appType: "custom",
   logLevel: "silent",
-  server: { host: "127.0.0.1", port: 0 },
+  server: { host: "127.0.0.1", port: 0, watch: null },
   plugins: [{
     name: "modal-focus-test-page",
     configureServer(server) {

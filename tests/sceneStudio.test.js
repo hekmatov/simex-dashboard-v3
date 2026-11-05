@@ -21,9 +21,9 @@ const { default: SceneContent } = await import("../src/components/time/SceneCont
 const { createSceneDraft, reduceSceneDraft } = await import("../src/components/time/sceneDraft.js");
 const vite = await createServer({
   root: process.cwd(),
-  configFile: false,
+  configFile: false, optimizeDeps: { noDiscovery: true },
   plugins: [reactPlugin()],
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, watch: null },
   appType: "custom",
   logLevel: "silent",
 });

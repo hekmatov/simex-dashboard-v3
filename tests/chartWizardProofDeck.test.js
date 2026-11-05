@@ -93,7 +93,10 @@ test("proof deck presents placement order separately from canonical rendering", 
   assert.match(html, /Confirmed cases/);
   assert.match(html, /Respiratory pressure/);
   assert.match(html, /Draft chart/);
-  assert.equal((html.match(/class="chart-proof-eyebrow"/g) ?? []).length, 2);
+  // Render status/revision remain available through the proof attributes;
+  // only the placement projection keeps a visible diagnostic header.
+  assert.equal((html.match(/class="chart-proof-eyebrow"/g) ?? []).length, 1);
+  assert.match(html, /aria-label="Canonical render proof"/);
   assert.doesNotMatch(html, /class="eyebrow"/);
 });
 

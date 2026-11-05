@@ -12,7 +12,7 @@ import {
 } from "../src/components/chartPanelLayout.js";
 import { collectionConsumerFixture } from "./fixtures/collectionConsumerV3.js";
 
-const vite = await createServer({ root: process.cwd(), configFile: false, appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
+const vite = await createServer({ root: process.cwd(), configFile: false, optimizeDeps: { noDiscovery: true }, appType: "custom", logLevel: "silent", server: { middlewareMode: true, watch: null } });
 const carousel = await vite.ssrLoadModule("/src/components/collection/CollectionCarousel.jsx");
 await vite.close();
 

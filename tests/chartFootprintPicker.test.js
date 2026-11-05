@@ -24,10 +24,13 @@ test("the authoring footprint frame projects a selected panel width across the d
   const html = renderToStaticMarkup(React.createElement(authoringFrameModule.default, {
     layout: { width: 3, height: 1 },
     kind: "writer",
+    canvasWidth: 1200,
   }, React.createElement("p", null, "Writer")));
 
-  assert.match(html, /class="authoring-footprint-grid"/);
-  assert.match(html, /--layout-grid-columns:4/);
+  assert.match(html, /class="authoring-stage app-frame /);
+  assert.match(html, /data-stage-width="869"/);
+  assert.match(html, /data-stage-height="418"/);
+  assert.match(html, /--layout-grid-columns:3/);
   assert.match(html, /--layout-grid-gap:16px/);
   assert.match(html, /--layout-grid-row-height:38.25px/);
   assert.match(html, /--chart-footprint-columns:3/);

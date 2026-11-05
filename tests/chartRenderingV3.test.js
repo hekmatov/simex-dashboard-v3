@@ -17,6 +17,22 @@ import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistr
 import { buildRelationshipRenderModel } from "../src/charting/rendering/relationshipAdapter.js";
 import { resolveDashboardStyleGrammar } from "../src/theme/dashboardStyleGrammar.js";
 
+test("axis renderers accept single and list measurement bindings consistently", () => {
+  const rows = [{ period: "May", value: 4 }];
+  for (const typeId of ["bar", "line", "mixed"]) {
+    for (const measurements of [{ field: "value" }, "value", [{ field: "value" }]]) {
+      const instance = { typeId, roles: { observation: { field: "period" }, measurements } };
+      const prepared = prepareChartData({ chart: instance, rows, datasetProfile: profileDataset(rows) });
+      assert.equal(prepared.status, "ready");
+      const model = buildRenderModel({ chart: instance, prepared });
+      assert.equal(model.kind, "echarts");
+      assert.equal(model.option.series.length, 1);
+      assert.deepEqual(model.option.series[0].data, [4]);
+      assert.equal(model.option.series[0].type, typeId === "line" ? "line" : "bar");
+    }
+  }
+});
+
 test("bar gradient colors follow category identities through rendering, filtering and reordering", () => {
   const marks = [{ x: "A", value: 90, measure: "value" }, { x: "B", value: 10, measure: "value" }, { x: "C", value: 50, measure: "value" }];
   const keys = marks.map(mark => categoryPresentationKey(mark.x));

@@ -9,9 +9,9 @@ import { profileDataset } from "../src/charting/data/profileDataset.js";
 
 const vite = await createServer({
   root: process.cwd(),
-  configFile: false,
+  configFile: false, optimizeDeps: { noDiscovery: true },
   plugins: [reactPlugin()],
-  server: { middlewareMode: true },
+  server: { middlewareMode: true, watch: null },
   appType: "custom",
   logLevel: "silent",
 });
