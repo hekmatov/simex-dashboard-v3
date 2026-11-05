@@ -20,6 +20,8 @@ export default function BuildCommandHeader({
   onOpenAuxiliary,
   onDashboardSummary,
   onPageSettings,
+  onImportPackage,
+  importDisabled = false,
 }) {
   const command = (id, label, { primary = false, disabled, reason, explain = false, ...rest } = {}) => (
     <ControlTooltip disabled={disabled} explain={explain} reason={reason}>
@@ -60,6 +62,8 @@ export default function BuildCommandHeader({
           {library("source-content", "Source content", "source-content")}
           {library("chrono-studio", "Chrono Studio", "chrono-group")}
           {library("scene-studio", "Scene Studio", "scene")}
+          {command("load-package", "Load dashboard package", { disabled: importDisabled, onClick: onImportPackage,
+            "data-unit-orbit-preserve-open": true, "data-preserve-build-draft": true })}
         </div>
         <div className="build-command-group" role="group" aria-label="Session" data-build-command-group="session">
           <span className="build-command-group-label" aria-hidden="true">Session</span>

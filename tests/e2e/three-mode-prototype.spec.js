@@ -1,3 +1,4 @@
+import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -288,6 +289,7 @@ test("Home-off package import changes mode and preference only after commit", as
     };
   }, STORAGE_KEY);
 
+  await chooseWholeDashboardPackage(review);
   await review.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(review).toContainText("Browser storage is full.");
   await expect(page.getByRole("button", { name: "Home", exact: true }))
@@ -299,6 +301,7 @@ test("Home-off package import changes mode and preference only after commit", as
     Storage.prototype.setItem = window.__simexNativeStorageSetItem;
     delete window.__simexNativeStorageSetItem;
   });
+  await chooseWholeDashboardPackage(review);
   await review.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(review).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Home", exact: true })).toHaveCount(0);

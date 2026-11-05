@@ -18,7 +18,13 @@ const [
   vite.ssrLoadModule("/src/components/build/BuildPropertiesPane.jsx"),
   vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
 ]);
+const { pageDraftFromPage, sectionDraftFromSection } = await vite.ssrLoadModule("/src/components/DashboardRenderer.jsx");
 await vite.close();
+
+test("editing optional page or section text does not invent invalid empty authored fields", () => {
+  assert.deepEqual(pageDraftFromPage({ id: "p", title: "Page title" }), { title: "Page title" });
+  assert.deepEqual(sectionDraftFromSection({ id: "s", description: "Description" }), { description: "Description" });
+});
 
 test("selected Page inspector exposes deletion while the final Page remains guarded", () => {
   const dashboard = fixtureDashboard();

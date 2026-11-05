@@ -1,3 +1,4 @@
+import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { parseDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
@@ -95,6 +96,7 @@ test("manual KPI creation downloads a package that imports and reloads with its 
       name: "manual-data-roundtrip.json", mimeType: "application/json", buffer: bytes,
     });
     const review = target.getByRole("dialog", { name: "Review package contents" });
+  await chooseWholeDashboardPackage(review);
     await review.getByRole("button", { name: "Load package", exact: true }).click();
     await expect(review).toHaveCount(0);
     await expect.poll(() => snapshot(target)).toEqual(authored);

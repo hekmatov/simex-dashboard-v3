@@ -5,6 +5,7 @@ import {
   collectDashboardPackageExportIssues,
   prepareDashboardPackageExport,
 } from "../src/lib/dashboardPackageExport.js";
+import * as exportModel from "../src/lib/dashboardPackageExport.js";
 import {
   parseDashboardBundle,
   serializeDashboardBundle,
@@ -15,6 +16,12 @@ import {
   sha256HexSync,
 } from "../src/static-content/assets/assetPayloadEnvelope.js";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
+
+test("snapshot metadata preserves omitted optional fields instead of exporting empty editor defaults", () => {
+  assert.equal(typeof exportModel.dashboardMetadataForSnapshot, "function");
+  assert.deepEqual(exportModel.dashboardMetadataForSnapshot({}, { programLabel: "", scenarioLabel: "", lastUpdated: "" }), {});
+  assert.deepEqual(exportModel.dashboardMetadataForSnapshot({ programLabel: "Original" }, { programLabel: "", scenarioLabel: "New scenario", lastUpdated: "" }), { programLabel: "", scenarioLabel: "New scenario" });
+});
 
 test("package preparation embeds tracked, generated, geographic, and image source material", async () => {
   const dashboard = packageDashboard();

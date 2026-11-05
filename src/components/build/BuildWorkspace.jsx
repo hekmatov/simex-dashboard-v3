@@ -93,6 +93,7 @@ export default function BuildWorkspace({
   chartEditorOpen = true,
   onCloseChartEditor,
   onResumeChartEditor,
+  onImportPackage,
   chartDraftOpen = false,
   mutationsDisabled = false,
   accessibilityEnabled = false,
@@ -273,7 +274,7 @@ export default function BuildWorkspace({
     const accepted = await onActivate?.(next, options);
     if (accepted) {
       quickInvoker.current = invoker;
-      setObjectQuickOpen(next.kind !== "chart");
+      setObjectQuickOpen(next.kind !== "chart" && options?.intent !== "rename");
     }
     return accepted ?? false;
   };
@@ -874,6 +875,8 @@ export default function BuildWorkspace({
       onStructureCommand={(command) => canvasActions?.structureCommand(command)}
     />
   );
+  chooseSelection.pendingWork = pendingWork;
+  chooseSelection.openImportedContent = () => openAuxiliary("source-content");
   const structureRail = (
     <BuildStructureRail
       key={treeResetGeneration}
@@ -902,6 +905,8 @@ export default function BuildWorkspace({
             auxiliaryDisabledReason={auxiliaryDisabledReason}
             onDashboardSummary={() => chooseSelection({ kind: "dashboard" })}
             onPageSettings={() => activePage && chooseSelection({ kind: "page", pageId: activePage.id })}
+            onImportPackage={onImportPackage}
+            importDisabled={mutationsDisabled}
             onFinish={onFinish}
             onReset={onReset}
             canDiscardBuild={canDiscardBuild}

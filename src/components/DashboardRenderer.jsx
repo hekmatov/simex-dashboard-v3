@@ -74,7 +74,7 @@ import {
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { createDashboardReplacementRendererState } from "../lib/dashboardPackageImportTransaction.js";
 import { buildPresentableItemIndex } from "../static-content/staticPanelCapabilities.js";
-import { collectDashboardPackageExportIssues } from "../lib/dashboardPackageExport.js";
+import { collectDashboardPackageExportIssues, dashboardMetadataForSnapshot } from "../lib/dashboardPackageExport.js";
 import { summarizeDashboardContent } from "../lib/dashboardContentReset.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
 import {
@@ -594,6 +594,40 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   React.useImperativeHandle(ref, () => ({
     setAuthoredDirtyFlag,
+    getPackageMergeReadiness() {
+      return {
+        needsSave: pendingEdits.hasPending() || Boolean(buildLayoutDraftRef.current && buildLayoutDraftRef.current.status !== "clean"),
+        canSave: !moderatorOperationGateRef.current.isActive() && buildLayoutDraftRef.current?.status !== "saving",
+        retainedDrafts: (buildWorkspaceSelectionRef.current?.pendingWork ?? []).filter(work => work.kind !== "layout" && work.kind !== "configuration").map(work => work.label),
+      };
+    },
+    getPackageMergeDestination() {
+      return { pageId: activePage?.id, sectionId: buildSelection?.sectionId ?? activePage?.sections?.[0]?.id };
+    },
+    async prepareForPackageMerge({ savePending = false } = {}) {
+      if (moderatorOperationGateRef.current.isActive()) throw new Error("Wait for the current dashboard operation before importing.");
+      const needsSave = pendingEdits.hasPending() || Boolean(buildLayoutDraftRef.current && buildLayoutDraftRef.current.status !== "clean");
+      if (needsSave && !savePending) throw new Error("Save pending page or layout changes and refresh this import review, or return to editing.");
+      if (savePending) {
+        await pendingEdits.flush();
+        await saveBuildLayoutChanges({ throwOnError: true });
+      }
+    },
+    revealPackageMerge(summary) {
+      if (!summary.firstImported) {
+        buildWorkspaceSelectionRef.current?.openImportedContent?.();
+        return;
+      }
+      const first = summary.firstImported;
+      if (selectedEditorDirty || localAuthoringEditing) {
+        const attribute = first.placementId ? "data-canonical-placement-id" : first.sectionId ? "data-canonical-section-id" : "data-canonical-canvas-id";
+        const id = first.placementId ?? first.sectionId ?? first.pageId;
+        document.querySelector(`[${attribute}="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest", behavior: "auto" });
+        return;
+      }
+      const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
+      void activate?.(first, { intent: "activate" });
+    },
     async prepareForPackageImport() {
       if (externalDirtyRef.current.scenario) throw new Error(SCENARIO_DIRTY_BLOCK_REASON);
       await pendingEdits.flush();
@@ -909,15 +943,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function requestDashboardPackageImport() {
     if (moderatorOperationGateRef.current.isActive()) return;
     setBuildSelectionError("");
-    if (externalDirty.scenario) {
-      setBuildSelectionError(SCENARIO_DIRTY_BLOCK_REASON);
-      onResolveScenarioDraft?.();
-      return;
-    }
-    if (authoredDirty) {
-      setPackageImportConfirmation(true);
-      return;
-    }
     importInputRef.current?.click();
   }
 
@@ -2628,7 +2653,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function dashboardWithCurrentDrafts(panelOverride = null) {
     const { loadedData: _runtimeData, ...portableDashboard } = dashboard;
     const nextDashboard = structuredClone(portableDashboard);
-    Object.assign(nextDashboard, dashboardDraft);
+    Object.assign(nextDashboard, dashboardMetadataForSnapshot(nextDashboard, dashboardDraft));
 
     nextDashboard.pages = (nextDashboard.pages ?? []).map((page) => {
       const pageDraft = pageDrafts[page.id];
@@ -2873,6 +2898,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setChartEditorVisible(Boolean(chartEditorPlacementId));
         }
       }}
+      onImportPackage={requestDashboardPackageImport}
       chartDraftOpen={chartAuthoringActive}
       chartDraftDirty={selectedEditorDirty}
       mutationsDisabled={layoutMutationLocked}
@@ -3887,19 +3913,12 @@ function dashboardTextDraftFromDashboard(dashboard) {
   };
 }
 
-function pageDraftFromPage(page) {
-  return {
-    label: page?.label ?? "",
-    title: page?.title ?? "",
-    description: page?.description ?? "",
-  };
+export function pageDraftFromPage(page) {
+  return Object.fromEntries(["label", "title", "description"].filter(key => page?.[key] !== undefined).map(key => [key, page[key]]));
 }
 
-function sectionDraftFromSection(section) {
-  return {
-    title: section?.title ?? "",
-    description: section?.description ?? "",
-  };
+export function sectionDraftFromSection(section) {
+  return Object.fromEntries(["title", "description"].filter(key => section?.[key] !== undefined).map(key => [key, section[key]]));
 }
 
 function GlobalIconAccentControl({ value, onChange, disabled = false }) {

@@ -66,6 +66,7 @@ import {
 import { validateConfigurationForPersistence } from "./lib/dashboardPersistenceValidation.js";
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
+import { commitDashboardPackageMerge } from "./lib/dashboardPackageMergeTransaction.js";
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
 import { createBlankDashboardContent, discardBuildSessionDrafts } from "./lib/dashboardContentReset.js";
 import { prepareDashboardAuthoredPersistenceCandidate } from "./lib/dashboardAuthoredRevision.js";
@@ -1490,6 +1491,40 @@ function AppContent({ releaseProfile = null }) {
     }
   }
 
+  async function confirmSelectedPackageImport({ proposal, transactionId }) {
+    if (!packageImportCandidate || packageImportBusy) return null;
+    const status = beginOperation({ key: "package-merge", label: "Importing selected package content", blocking: true, priority: true });
+    setPackageImportBusy(true); setPackageImportError("");
+    try {
+      await status.beforeWork();
+      const result = await commitDashboardPackageMerge({
+        proposal, transactionId, controller: ensureDashboardCommitController(), store: browserAuthoredAssetStore,
+        prepare: () => dashboardRendererRef.current?.prepareForPackageMerge?.(),
+        persist: config => persistConfiguration(config, { requireDurableStorage: true, preserveAuthoredRevision: true }),
+        readCommitted: async () => (await readDashboardStorageWithAssets(browserStorage, DASHBOARD_STORAGE_KEY, {
+          profiles: trackedDatasetProfilesRef.current, assets: dashboardAssetPersistence,
+        })) ?? configurationForPortableUse(dashboardRef.current),
+        validateAsset: async ({ bytes, manifest }) => {
+          const validation = await validateImageAsset({ bytes, declaredMediaType: manifest.mediaType, decode: decodeBrowserImageAsset });
+          if (!validation.ok || validation.asset.width !== manifest.width || validation.asset.height !== manifest.height) throw new Error(validation.errors?.[0]?.message ?? "Imported Image metadata does not match its bytes.");
+        },
+      });
+      setPackageImportCandidate(null); setOperationError("");
+      status.succeed(`${result.summary.pages.length} pages, ${result.summary.sections.length} sections and ${result.summary.placements.length} panels imported; ${result.summary.sources.length} sources and ${result.summary.media.length} media copied.`);
+      window.requestAnimationFrame(() => dashboardRendererRef.current?.revealPackageMerge?.(result.summary));
+      return result;
+    } catch (failure) {
+      setPackageImportError(failure.message || "Selected content could not be imported.");
+      status.fail(failure);
+      return null;
+    } finally { setPackageImportBusy(false); }
+  }
+
+  async function savePackageMergePending() {
+    await dashboardRendererRef.current?.prepareForPackageMerge?.({ savePending: true });
+    return ensureDashboardCommitController().whenIdle();
+  }
+
   async function restoreOnlineDashboard() {
     if (onlineRestoreBusy) return null;
     const status = beginOperation({
@@ -1958,6 +1993,17 @@ function AppContent({ releaseProfile = null }) {
     />}
     {packageImportCandidate && <DashboardPackageReviewDialog
       candidate={packageImportCandidate}
+      current={dashboard}
+      activePageId={activePageId}
+      initialDestination={dashboardRendererRef.current?.getPackageMergeDestination?.()}
+      getPendingState={() => dashboardRendererRef.current?.getPackageMergeReadiness?.() ?? {}}
+      onSavePending={savePackageMergePending}
+      onImportSelected={confirmSelectedPackageImport}
+      onChooseAnother={() => {
+        if (packageImportBusy) return;
+        setPackageImportCandidate(null); setPackageImportError("");
+        dashboardRendererRef.current?.requestDashboardPackageImport?.();
+      }}
       busy={packageImportBusy}
       error={packageImportError}
       onConfirm={confirmImportPackage}

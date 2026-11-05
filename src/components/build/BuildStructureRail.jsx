@@ -240,7 +240,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
               if (event.key === "Escape") { event.preventDefault(); cancelRename(node); }
             }}
             onBlur={(event) => {
-              if (event.relatedTarget?.closest?.('[role="dialog"]')) return;
+              if (event.relatedTarget?.closest?.('[role="dialog"], [data-preserve-build-draft]')) return;
               if (renameValue.trim() && renameValue.trim() !== label) void commitRename(node);
               else cancelRename(node);
             }}

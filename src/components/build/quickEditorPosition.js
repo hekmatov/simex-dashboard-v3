@@ -7,6 +7,7 @@ export function viewportPointFromCanvas(point, geometry) {
 }
 
 export function quickEditorPositionKey(dashboardId, pageId, selection = {}) {
+  selection ??= {};
   return JSON.stringify([dashboardId, pageId, selection.kind,
     selection.placementId ?? selection.sectionId ?? selection.chronoGroupId ?? selection.pageId ?? dashboardId]);
 }

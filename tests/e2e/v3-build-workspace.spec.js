@@ -159,6 +159,7 @@ test("compact command row exposes direct Stage 3 ownership", async ({ page }) =>
     "Source content",
     "Chrono Studio",
     "Scene Studio",
+    "Load dashboard package",
     "Dashboard summary",
     "Page settings",
     "Discard Build changes",

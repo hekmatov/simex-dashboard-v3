@@ -260,6 +260,20 @@ test("removing a replaced asset defers byte deletion and URL revocation until it
   assert.deepEqual(revoked, ["blob:old-revision"]);
 });
 
+test("a new import claim cancels retirement of identical bytes held by an old preview lease", async () => {
+  const store = createBrowserAuthoredAssetStore({ adapter: createMemoryAdapter(), urlApi: { createObjectURL: () => "blob:old", revokeObjectURL() {} } });
+  const input = { bytes: PNG_BYTES, mediaType: "image/png", width: 2, height: 3 };
+  const first = await store.stage({ ...input, transactionId: "old" });
+  await store.commit(first.assetId, { transactionId: "old" });
+  const lease = await store.createObjectUrlLease(first.assetId);
+  await store.remove(first.assetId);
+  await store.stage({ ...input, transactionId: "import" });
+  lease.release();
+  await store.waitForRetirements();
+  assert.equal((await store.read(first.assetId)).sha256, PNG_SHA);
+  assert.deepEqual((await store.list())[0].transactionIds, ["import"]);
+});
+
 test("transaction snapshots restore exact prior byte records for dashboard compensation", async () => {
   const adapter = createMemoryAdapter();
   const store = createBrowserAuthoredAssetStore({ adapter, now: () => 1_000 });

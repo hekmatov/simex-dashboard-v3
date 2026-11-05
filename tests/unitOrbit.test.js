@@ -26,6 +26,7 @@ test("manual editor coordinates are reversible across canvas scale and document 
   assert.deepEqual(viewportPointFromCanvas({ x: 150, y: 200 }, { ...geometry, top: -500 }), { x: 175, y: -100 });
   assert.notEqual(quickEditorPositionKey("d", "p", { kind: "chart", placementId: "a" }), quickEditorPositionKey("d", "p", { kind: "chart", placementId: "b" }));
   assert.notEqual(quickEditorPositionKey("d", "p", { kind: "chart", placementId: "a" }), quickEditorPositionKey("d2", "p", { kind: "chart", placementId: "a" }));
+  assert.doesNotThrow(() => quickEditorPositionKey("d", "p", null), "replacement temporarily clears selection");
 });
 
 test("Unit Orbit measures the editor's inner scroll content", () => {

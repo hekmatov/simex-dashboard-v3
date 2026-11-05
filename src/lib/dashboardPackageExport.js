@@ -16,6 +16,12 @@ const EXPORT_ISSUES = Object.freeze([
   ["operation", "operation", "Dashboard operation in progress", "Wait for operation"],
 ]);
 
+export function dashboardMetadataForSnapshot(dashboard, draft) {
+  return Object.fromEntries(Object.entries(draft).filter(([key, value]) => (
+    Object.hasOwn(dashboard, key) || (value !== "" && value !== undefined)
+  )));
+}
+
 export function collectDashboardPackageExportIssues(state = {}) {
   const normalized = {
     ...state,

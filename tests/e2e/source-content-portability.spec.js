@@ -1,3 +1,4 @@
+import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -150,6 +151,7 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
     await openBuild(importedPage, { width: 1440, height: 900, navigate: false });
     await packageInput(importedPage).setInputFiles(bundlePath);
     const review = importedPage.getByRole("dialog", { name: "Review package contents" });
+  await chooseWholeDashboardPackage(review);
     await review.getByRole("button", { name: "Load package", exact: true }).click();
     await expect(review).toHaveCount(0, { timeout: 60_000 });
     await openBiomedical(importedPage);
@@ -317,6 +319,7 @@ async function importPackage(page, { name, value }) {
   });
   const review = page.getByRole("dialog", { name: "Review package contents" });
   await expect(review).toBeVisible();
+  await chooseWholeDashboardPackage(review);
   await review.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(review).toHaveCount(0);
 }

@@ -1,3 +1,4 @@
+import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { choosePanelAction } from "./support/buildWorkflow.js";
@@ -127,6 +128,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
       buffer: Buffer.from(JSON.stringify(bundle)),
     });
   const review = page.getByRole("dialog", { name: "Review package contents" });
+  await chooseWholeDashboardPackage(review);
   await review.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(review).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Replacement", exact: true })).toBeVisible();

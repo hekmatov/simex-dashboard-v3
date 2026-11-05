@@ -1,3 +1,4 @@
+import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 
@@ -126,6 +127,7 @@ test("bundle v6 restores local Image and Free-text in a fresh offline browser co
     const review = importedPage.getByRole("dialog", { name: "Review package contents" });
     await expect(review).toContainText(TEXT_TITLE);
     await expect(review).toContainText(IMAGE_TITLE);
+  await chooseWholeDashboardPackage(review);
     await review.getByRole("button", { name: "Load package" }).click();
     await expect(review).toHaveCount(0);
 
@@ -228,6 +230,7 @@ test("package import quota failure preserves the prior dashboard and authored st
 
     await packageInput(importedPage).setInputFiles(bundlePath);
     const review = importedPage.getByRole("dialog", { name: "Review package contents" });
+  await chooseWholeDashboardPackage(review);
     await review.getByRole("button", { name: "Load package" }).click();
 
     await expect(review).toBeVisible();
@@ -377,6 +380,7 @@ test("asset commit failure restores the prior dashboard and authored store atomi
       buffer: await readFile(bundlePath),
     });
     const review = importedPage.getByRole("dialog", { name: "Review package contents" });
+  await chooseWholeDashboardPackage(review);
     await review.getByRole("button", { name: "Load package" }).click();
     await expect(review).toBeVisible();
     await expect(review).toContainText(/storage is unavailable|could not be loaded/i, {

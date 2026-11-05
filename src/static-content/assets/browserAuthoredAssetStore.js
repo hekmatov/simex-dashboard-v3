@@ -39,6 +39,11 @@ export function createBrowserAuthoredAssetStore({
       ]));
       await Promise.all([...records.keys()].map((assetId) => retirements.get(assetId)).filter(Boolean));
       for (const assetId of records.keys()) retired.delete(assetId);
+      const revokeIds = [];
+      for (const [assetId, restored] of records) {
+        const present = await durableAdapter.get(assetId);
+        if (!sameAssetResource(present, restored)) revokeIds.push(assetId);
+      }
       if (typeof durableAdapter.restore === "function") {
         await durableAdapter.restore(records);
       } else {
@@ -52,7 +57,7 @@ export function createBrowserAuthoredAssetStore({
           if (record === null) await durableAdapter.remove(assetId);
         }
       }
-      for (const assetId of records.keys()) releaseAllLeases(leases, assetId, urlApi);
+      for (const assetId of revokeIds) releaseAllLeases(leases, assetId, urlApi);
       return true;
     },
     async rollback(assetId, { transactionId } = {}) {
@@ -82,7 +87,36 @@ export function createBrowserAuthoredAssetStore({
     retired,
     retirements,
   };
-  return Object.freeze(store);
+  // A merge must keep its snapshot, stages and compensation together. Other
+  // draft owners retain their claims before/after that boundary, never midway.
+  let mutationQueue = Promise.resolve();
+  const enqueue = operation => {
+    const result = mutationQueue.then(operation);
+    mutationQueue = result.catch(() => undefined);
+    return result;
+  };
+  const serialized = { ...store,
+    async stage(input) {
+      const captured = { ...input, bytes: copyBytes(input.bytes) };
+      return enqueue(() => store.stage(captured));
+    },
+    runTransaction(operation) { return enqueue(() => operation(store)); },
+  };
+  for (const method of ["commit", "commitMany", "snapshot", "restore", "rollback", "remove"]) {
+    serialized[method] = async (...args) => {
+      const captured = structuredClone(args);
+      return enqueue(() => store[method](...captured));
+    };
+  }
+  return Object.freeze(serialized);
+}
+
+function sameAssetResource(left, right) {
+  if (!left || !right || ["sha256", "mediaType", "byteLength", "width", "height"].some(key => left[key] !== right[key])) return false;
+  try {
+    const before = copyBytes(left.bytes), after = copyBytes(right.bytes);
+    return before.byteLength === after.byteLength && before.every((byte, index) => byte === after[index]);
+  } catch { return false; }
 }
 
 export async function stageAuthoredAsset(store, input = {}) {
@@ -108,6 +142,8 @@ export async function stageAuthoredAsset(store, input = {}) {
         transactionId,
       ])].sort();
       const updated = { ...existing, transactionIds };
+      store.retired.delete(assetId);
+      await store.retirements.get(assetId);
       await store.adapter.put(updated);
       return stageResult(updated);
     }
@@ -126,6 +162,8 @@ export async function stageAuthoredAsset(store, input = {}) {
       sha256,
       bytes,
     };
+    store.retired.delete(assetId);
+    await store.retirements.get(assetId);
     await store.adapter.put(record);
     return stageResult(record);
   } catch (error) {

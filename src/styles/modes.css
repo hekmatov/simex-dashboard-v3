@@ -4748,3 +4748,30 @@ body .app-frame .build-rail--structure .build-tree-group {
   width: 100%;
   justify-self: center;
 }
+
+
+.dashboard-package-review--selective {
+  width: min(1100px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+.package-import-workspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  height: min(70dvh, 720px);
+  min-height: 0;
+  overflow: hidden;
+}
+.package-import-selection, .package-import-review { overflow: auto; min-width: 0; padding: 8px; }
+.package-import-workspace label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.package-import-workspace label:has(input[type="checkbox"]) { flex-direction: row; align-items: baseline; }
+.package-import-workspace input[type="checkbox"] { flex: 0 0 auto; width: auto; }
+.package-import-workspace small { display: block; color: var(--simex-text-muted); }
+.package-import-workspace fieldset { margin: 8px 0; padding: 8px; }
+.package-import-workspace li[data-blocking="true"] { color: var(--simex-error); }
+@media (max-width: 720px) {
+  .package-import-workspace { grid-template-columns: minmax(0, 1fr); overflow: auto; }
+  .package-import-selection, .package-import-review { overflow: visible; }
+}

@@ -60,6 +60,11 @@ export function propertiesPane(page) {
   return page.locator(".object-quick-editor");
 }
 
+export async function chooseWholeDashboardPackage(review) {
+  await review.getByLabel("Import choice", { exact: true }).selectOption("replace", { timeout: 10_000 });
+  await review.getByRole("checkbox", { name: "Replace current dashboard and its pending work", exact: true }).check();
+}
+
 export async function authorAttentionStrip(page, { pageId = "biomedical", sectionTitle = "At a glance", chartTitle = "Cases today" } = {}) {
   await enterBuildMode(page);
   await structureRail(page).locator(`[data-build-node-id="${pageId}"] > .build-tree-row`).click();

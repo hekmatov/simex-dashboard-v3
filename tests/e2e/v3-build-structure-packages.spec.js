@@ -1,3 +1,4 @@
+import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -416,7 +417,8 @@ test("an untouched chart editor closes transactionally when tree navigation chan
   await expect(sectionItem).toBeFocused();
   await sectionItem.press("Enter");
   await expect(page.locator(`[data-canonical-section-id="${SOCIO_SECTION.id}"]`)).toBeInViewport();
-  await expect(page.locator(".unit-orbit")).toHaveCount(0);
+  await expect(page.locator(".chart-quick-editor")).toHaveCount(0);
+  await expect(page.locator(".object-quick-editor")).toBeVisible();
   await expect(page.getByText(
     "Finish or cancel the open chart editor before changing Page.", { exact: true },
   )).toHaveCount(0);
@@ -506,6 +508,7 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
     "datetime",
     "2026-08-21T09:10:11.000Z",
   );
+  await review.getByLabel("Import choice", { exact: true }).selectOption("replace");
   await expect(review.getByText("Page: Imported Package Page", { exact: true })).toBeVisible();
   await expect(review.getByText("Section: Imported Section", { exact: true })).toBeVisible();
   await expect(review.getByText("Panel: Imported Panel", { exact: true })).toBeVisible();
@@ -527,6 +530,7 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   const secondReview = page.getByRole("dialog", { name: "Review package contents" });
   await expect(secondReview).toBeVisible();
   await expect(importedTab).toHaveCount(0);
+  await chooseWholeDashboardPackage(secondReview);
   await secondReview.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(secondReview).toHaveCount(0);
   await expect(importedTab).toBeVisible();
@@ -567,6 +571,7 @@ test("package export resolves drafts and round-trips a self-contained source", a
     buffer: Buffer.from(JSON.stringify(compactFixture)),
   });
   const importReview = page.getByRole("dialog", { name: "Review package contents" });
+  await chooseWholeDashboardPackage(importReview);
   await importReview.getByRole("button", { name: "Load package", exact: true }).click();
 
   const passport = await openScenarioPassport(page);
@@ -607,6 +612,7 @@ test("package export resolves drafts and round-trips a self-contained source", a
   await roundtripChooser.setFiles(downloadedPath);
   const roundtripReview = page.getByRole("dialog", { name: "Review package contents" });
   await expect(roundtripReview).toContainText("Panel: Imported Panel");
+  await chooseWholeDashboardPackage(roundtripReview);
   await roundtripReview.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(page.locator(`[data-canonical-placement-id="${fixturePlacement.id}"]`)).toBeVisible();
   const persistedSource = await page.evaluate((sourceId) => {
@@ -710,6 +716,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
     name: SOCIO_CHART.title,
     exact: true,
   }).evaluate((element) => element.click());
+  await chooseWholeDashboardPackage(review);
   await review.getByRole("button", { name: "Load package", exact: true }).click();
 
   await expect(review).toHaveCount(0);
