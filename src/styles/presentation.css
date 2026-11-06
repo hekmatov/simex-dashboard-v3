@@ -63,7 +63,9 @@
   text-align: center;
 }
 
-.audience-output-blank {
+.audience-output-blank,
+.audience-theme-root .audience-display.audience-output-blank {
+  background: #000;
   grid-template-rows: minmax(0, 1fr);
 }
 
@@ -511,37 +513,40 @@
   overflow: hidden;
 }
 
-.audience-snapshot-frame img {
+.audience-snapshot-frame > img {
   display: block;
   height: 100%;
   object-fit: contain;
   width: 100%;
 }
 
-.audience-snapshot-frame p {
+.audience-snapshot-frame > p {
   color: var(--simex-text-muted);
   font-size: 12px;
   margin: 0;
 }
 
-.audience-snapshot-source {
-  height: 720px;
-  left: -10000px;
+.audience-local-viewport {
+  height: 100%;
+  width: 100%;
   overflow: hidden;
   pointer-events: none;
-  position: fixed;
-  top: 0;
-  width: 1280px;
-  z-index: -1;
+  position: relative;
 }
 
-.audience-snapshot-source > .audience-theme-root,
-.audience-snapshot-source > .audience-theme-root > .audience-display {
-  height: 720px;
-  max-height: 720px;
-  min-height: 720px;
-  width: 1280px;
+.audience-local-preview { position: absolute; left: 0; top: 0; }
+.audience-local-preview > .audience-display,
+.audience-stage__presentation > .audience-display {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
+.audience-snapshot-caption, .audience-snapshot-resolution { color: var(--simex-text-muted); font-size: 12px; margin: 0; }
+.audience-stage { position: fixed; inset: 0; overflow: hidden; background: #000; }
+.audience-stage__presentation { position: absolute; }
+.presentation-resolution-fields { display: grid; gap: 8px; margin: 12px 0; }
+.presentation-resolution-fields label { display: grid; gap: 4px; }
+.presentation-resolution-fields p { margin: 0; }
 
 .present-scene-panel {
   min-width: 0;
@@ -1145,4 +1150,68 @@
   :where(.present-workspace, .audience-display) * {
     transition-duration: 0.01ms;
   }
+}
+
+/* Practitioner controls stay in two rows; chart ordering stays beside the monitor. */
+.present-workspace .present-action-dock { padding: 6px 8px; min-height: 0; }
+.present-workspace .presentation-controller {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto 32px;
+  grid-template-rows: auto auto; gap: 6px 10px;
+}
+.present-workspace .presentation-controller__source { grid-column: 1; grid-row: 1; }
+.present-workspace .presentation-controller__output { grid-column: 2; grid-row: 1; }
+.present-workspace .presentation-controller__timeline { grid-column: 1 / -1; grid-row: 2; }
+.present-workspace .presentation-controller__source,
+.present-workspace .presentation-controller__timeline,
+.present-workspace .presentation-controller__output {
+  align-items: center; display: flex; flex-wrap: nowrap; gap: 6px; padding: 0; min-width: 0;
+}
+.present-workspace .present-controls-close {
+  grid-column: 3; grid-row: 1; align-self: center; padding: 0; width: 32px; font-size: 20px;
+}
+.present-workspace .presentation-controller :is(button, select, input:not([type="range"])) {
+  min-height: 30px; font-size: 13px; line-height: 1.2;
+}
+.present-workspace .presentation-controller button { white-space: nowrap; padding: 5px 9px; }
+.present-workspace .presentation-controller .present-controls-close { padding: 0; }
+.present-workspace .present-source-picker { flex: 1; min-width: 0; }
+.present-workspace .present-source-picker select { min-width: 0; width: 100%; }
+.present-workspace .present-time-slider { flex: 1; min-width: 80px; }
+.present-workspace .present-time-slider > span {
+  position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden;
+}
+.present-workspace .present-cadence-field {
+  display: flex; align-items: center; flex: 0 0 auto; gap: 5px; max-width: none; inline-size: auto;
+}
+.present-workspace .present-cadence-field > span { font-size: 12px; white-space: nowrap; }
+.present-workspace .present-cadence-field input { width: 60px; }
+.present-workspace .presentation-controller > .present-connection-error { grid-row: 3; margin: 0; }
+.present-workspace .audience-snapshot-controls { pointer-events: auto; min-width: 0; }
+.present-workspace .audience-snapshot-controls .present-displayed-panel { gap: 6px; overflow: visible; }
+.present-workspace .audience-snapshot-controls .present-panel-heading {
+  display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 8px;
+}
+.present-workspace .audience-snapshot-controls .present-panel-heading h1 { font-size: 15px; margin: 0; }
+.present-workspace .audience-snapshot-controls .present-layout-field { display: flex; align-items: center; gap: 5px; }
+.present-workspace .audience-snapshot-controls .present-layout-field > span { font-size: 12px; white-space: nowrap; }
+.present-workspace .audience-snapshot-controls .present-selected-charts { gap: 4px; margin: 0; }
+.present-workspace .audience-snapshot-controls .present-selected-chart {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 5px; min-height: 30px; padding: 2px 5px;
+}
+.present-workspace .audience-snapshot-controls .present-chart-order { width: 22px; height: 22px; font-size: 12px; }
+.present-workspace .audience-snapshot-controls .present-selected-chart > strong {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px;
+}
+.present-workspace .audience-snapshot-controls .present-chart-actions { display: flex; flex-wrap: nowrap; gap: 4px; grid-column: auto; }
+.present-workspace .audience-snapshot-controls .present-chart-actions button { padding: 3px 7px; min-height: 28px; font-size: 12px; }
+@media (min-width: 900px) {
+  .present-workspace .present-context-panel { overflow: hidden; grid-template-rows: minmax(0, 1fr); }
+  .present-workspace .audience-snapshot-monitor { min-height: 0; grid-template-rows: auto minmax(100px, 1fr) auto; }
+  .present-workspace .audience-snapshot-frame { height: 100%; width: 100%; min-height: 0; }
+}
+@media (max-width: 899px) {
+  .present-workspace .present-context-panel { grid-template-columns: minmax(0, 1fr); }
+  .present-workspace .presentation-controller__timeline { overflow-x: auto; }
+  .present-workspace .presentation-controller__timeline > * { flex-shrink: 0; }
+  .present-workspace .presentation-controller__timeline .present-time-slider { flex: 1 0 120px; }
 }

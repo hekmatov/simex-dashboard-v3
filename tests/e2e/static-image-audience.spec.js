@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
-import { openAudienceSession } from "./support/present-audience-workflow.js";
+import { openAudienceSession, createSavedPresentationScene } from "./support/present-audience-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -53,6 +53,8 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await createFreeText(page);
   const imagePanelId = await createImage(page);
   const authored = await presentationFixtureIdentity(page, imagePanelId);
+  const timedScene = await createSavedPresentationScene(page, { entry: "build-biomedical",
+    chronoGroupId: authored.chronoGroupId, sceneName: "Image and chart playback" });
 
   await installAudienceStateObserver(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
@@ -97,7 +99,16 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   const beforeTime = await audienceImageSnapshot(audience, imagePanelId);
   await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
   await page.locator('[data-presentation-control-id="source"]')
-    .selectOption(`group:${authored.chronoGroupId}`);
+    .selectOption(`scene:${timedScene.id}`);
+  await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", timedScene.id);
+  const selectedIds = await page.locator(".present-chart-choice:has(input:checked)")
+    .evaluateAll((choices) => choices.map((choice) => choice.dataset.presentableItemId));
+  for (const itemId of selectedIds) {
+    await presentChoice(page, itemId).getByRole("checkbox").uncheck();
+  }
+  await presentChoice(page, authored.temporalChartId).getByRole("checkbox").check();
+  await presentChoice(page, imagePanelId).getByRole("checkbox").check();
+  await expectAudienceCount(audience, 2);
   await expect.poll(() => observedControllerStateSequence(page))
     .toBeGreaterThan(rejectedSequence);
   await expect(audience.locator(".audience-output"))

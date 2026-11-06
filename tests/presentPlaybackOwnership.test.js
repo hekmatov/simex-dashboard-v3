@@ -101,10 +101,10 @@ test("unsafe presenter commands freeze the provider timer until accepted recover
 
     await page.locator('[data-presentation-control-id="output-active"]').click();
     await play(page);
-    await page.locator('[data-presentation-control-id="blackout"]').click();
+    await page.locator('[data-presentation-control-id="output-black"]').click();
     await assertFrozen(page, initialIndex);
 
-    await page.locator('[data-presentation-control-id="restore"]').click();
+    await page.locator('[data-presentation-control-id="output-active"]').click();
     await play(page);
     await page.evaluate(() => window.__presentPlaybackRuntime.compositionChange());
     await assertFrozen(page, initialIndex);
@@ -122,8 +122,11 @@ test("unsafe presenter commands freeze the provider timer until accepted recover
     assert.equal(await readSafety(page, "playing"), false);
     await play(page);
 
-    await page.locator('[data-presentation-control-id="end"]').click();
-    await assertFrozen(page, initialIndex);
+    await page.evaluate(() => { window.__presentAudienceWindow.closed = true; });
+    await page.waitForFunction(() => window.__presentPlaybackSafety?.hasSession === false);
+    // Manual closure is observed asynchronously; the terminal boundary must
+    // freeze all subsequent ticks, independent of the polling phase.
+    await assertFrozen(page, await readSafety(page, "activeIndex"));
     assert.equal(await readSafety(page, "hasSession"), false);
     assert.equal(await page.evaluate(() => window.__presentReentrantPublishResult), null);
   } finally {

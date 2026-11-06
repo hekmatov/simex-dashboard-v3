@@ -42,8 +42,11 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const activeTime = prepared.meta?.activeTime ?? null;
   const seriesStyle = chart.presentation?.series;
   const referenceLine = chart.presentation?.referenceLine;
-  const pointLabels = chart.presentation?.labels?.pointSelection === undefined ? undefined
-    : chart.presentation.labels.visible === true ? pointLabelMatcher(chart.presentation.labels.pointSelection) : () => false;
+  const labels = chart.presentation?.labels;
+  const pointSelection = labels?.pointSelection;
+  const explicitPointLabels = labels?.visible === true && pointSelection !== undefined;
+  const pointLabels = pointSelection === undefined ? undefined
+    : explicitPointLabels ? pointLabelMatcher(pointSelection) : () => false;
   const categorical = !["temporal", "number"].includes(prepared.meta?.axisInterpretation);
   const sourceCategories = categoryDescriptors(prepared.marks);
   const categoryByKey = new Map(sourceCategories.map(entry => [entry.key, entry]));
@@ -153,6 +156,12 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
     const marker = type === "line"
       ? playbackMarker(group.marks, activeTime, fixedTemporalTicks)
       : undefined;
+    const explicitLineLabels = type === "line" && explicitPointLabels;
+    const sparseLineSymbols = explicitLineLabels && group.marks.length > 48;
+    // ECharts draws line point labels on symbols. Keep symbols sparse on long lines.
+    if (sparseLineSymbols) {
+      values = values.map(point => point?.label?.show ? { ...point, symbol: "emptyCircle" } : point);
+    }
     return {
       id: group.key,
       name: customLegend ? group.key : group.defaultLabel,
@@ -162,13 +171,11 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       yAxisIndex: horizontal ? undefined : group.axis === "secondary" ? 1 : 0,
       stack: STACKED_MARKS.has(mark) ? "total" : undefined,
       areaStyle: mark === "area" ? { opacity: 0.24 } : undefined,
-      showSymbol: type === "line" && group.marks.length <= 48,
+      showSymbol: type === "line" && (group.marks.length <= 48 || sparseLineSymbols),
+      ...(explicitLineLabels && categorical ? { showAllSymbol: true } : {}),
+      ...(sparseLineSymbols ? { symbol: "none" } : {}),
       symbolSize: type === "line" ? 5 : undefined,
-      label: axisLabelOption(
-        chart,
-        horizontal,
-        type,
-      ),
+      label: axisLabelOption(labels, horizontal, type, prepared.marks.length),
       emphasis: { focus: "series" },
       ...(color ? { itemStyle: { color } } : {}),
       ...(type === "line" && Number.isFinite(seriesStyle?.lineWidth)
@@ -259,10 +266,10 @@ function referenceLineOption(referenceLine) {
   };
 }
 
-function axisLabelOption(chart, horizontal, seriesType) {
-  const labels = chart.presentation?.labels;
+function axisLabelOption(labels, horizontal, seriesType, totalMarkCount) {
   if (!labels) return undefined;
-  const show = labels.visible === true;
+  const densityLimit = seriesType === "line" ? 14 : horizontal ? 24 : 18;
+  const show = labels.visible === true && (labels.pointSelection !== undefined || totalMarkCount <= densityLimit);
   const format = labelFormatter(labels);
   return {
     show,

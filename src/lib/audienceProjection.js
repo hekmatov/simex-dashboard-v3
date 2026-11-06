@@ -58,6 +58,7 @@ export function projectPresentationState(state) {
     mode: snapshot.output_mode,
     blackout: snapshot.blackout,
     dashboardRevision: snapshot.dashboard_revision,
+    targetResolution: snapshot.target_resolution,
     theme: snapshot.theme,
     source: snapshot.source,
     composition: snapshot.composition,
@@ -73,7 +74,8 @@ export function sanitizeAudienceSnapshotCloneColors(
   _clonedReferenceElement,
   readComputedStyle,
 ) {
-  const source = clonedDocument?.querySelector?.(".audience-snapshot-source");
+  const source = _clonedReferenceElement
+    ?? clonedDocument?.querySelector?.(".audience-snapshot-source");
   if (!source) return 0;
   const styleReader = readComputedStyle
     ?? clonedDocument.defaultView?.getComputedStyle?.bind(clonedDocument.defaultView);

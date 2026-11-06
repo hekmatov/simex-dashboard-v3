@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
+import { openAudienceSession } from "./support/present-audience-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -291,20 +292,28 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await expect(page.getByRole("dialog", { name: "Chart comparison" })).toHaveCount(0);
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  const presentSource = page.getByRole("combobox", { name: "Presentation source" });
+  await expect(presentSource).toHaveValue("");
+  await presentSource.selectOption({ label: sceneName });
   await expect(page.locator(".present-workspace")).not.toHaveAttribute("data-active-scene-id", "");
   await expect(page.locator(".present-selected-chart")).toHaveCount(2);
   const presentIds = await page.locator(".present-selected-chart").evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-displayed-chart-id")));
   expect(presentIds).toEqual(authoringPresentIds);
   await expect(page.getByLabel("Scene layout")).toHaveValue("overUnder");
   await page.getByLabel("Scene layout").selectOption("sideBySide");
+  const { popup } = await openAudienceSession(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
   await expect(page.getByLabel("Scene layout")).toHaveValue("sideBySide");
 
+  await popup.close();
+  await expect(page.getByRole("button", { name: "Open audience display", exact: true })).toBeVisible();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  await chrono.getByLabel("Chrono source").selectOption({ label: "Biomedical page group" });
-  await chrono.getByLabel("Chrono source").selectOption({ label: sceneName });
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  await expect(presentSource).toHaveValue("");
+  await presentSource.selectOption({ label: sceneName });
   await expect(page.getByLabel("Scene layout")).toHaveValue("overUnder");
   await expect(page.locator(".scene-chart-authoring-overlay")).toHaveCount(0);
 });

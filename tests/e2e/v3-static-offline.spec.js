@@ -75,15 +75,17 @@ test("installed production package opens its first Present and Audience from the
 
   await context.setOffline(true);
   await enterPresentWithScene(page, scene);
-  await expect(page.locator('.audience-snapshot-monitor img[alt="Current audience scene"]')).toHaveAttribute(
-    "src",
-    /^data:image\/jpeg/,
-  );
+  const monitor = page.getByRole("region", { name: "Audience scene monitor" });
+  await expect(monitor).toHaveAttribute("data-monitor-source", "local");
+  const chartSelector = `[data-displayed-chart-id="${scene.present.chartIds[0]}"]`;
+  await expect(monitor.locator(".audience-local-preview").locator(chartSelector)).toBeVisible();
+
   const offlineAudience = await openAudienceSession(page);
   await expectServiceWorkerControl(offlineAudience.popup);
-  await expect(offlineAudience.popup.locator(".audience-display")).toBeVisible();
-  const chart = offlineAudience.popup.locator(`[data-displayed-chart-id="${scene.present.chartIds[0]}"]`);
-  await expect(chart).toBeVisible();
+  const output = offlineAudience.popup.locator(".audience-display");
+  await expect(output.locator(chartSelector)).toBeVisible();
+  await expect(monitor).toHaveAttribute("data-monitor-source", "audience");
+  await expect(monitor.getByRole("img", { name: "Captured Audience stage" })).toHaveAttribute("src", /^data:image\/jpeg/);
   await offlineAudience.popup.close();
 });
 

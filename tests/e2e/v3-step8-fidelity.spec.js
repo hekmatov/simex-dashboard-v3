@@ -71,19 +71,19 @@ test("1920 Audience progresses passively through output, liveness, blackout, and
   await expect(audience.getByText("Waiting for the next scene.", { exact: true })).toBeVisible();
   await expect(audience.locator("[data-displayed-chart-id]")).toHaveCount(0);
 
-  await page.locator('[data-presentation-control-id="output-blank"]').click();
+  await page.locator('[data-presentation-control-id="output-black"]').click();
   await expect(audience).toHaveAttribute("data-output-mode", "blank");
   await expect(audience.locator("[data-displayed-chart-id], .audience-holding-message")).toHaveCount(0);
 
   await page.locator('[data-presentation-control-id="output-active"]').click();
   await expect(audience).toHaveAttribute("data-output-mode", "active");
-  await page.locator('[data-presentation-control-id="blackout"]').click();
-  await expect(audience.locator(".audience-blackout")).toBeVisible();
+  await page.locator('[data-presentation-control-id="output-black"]').click();
+  await expect(audience).toHaveAttribute("data-output-mode", "blank");
   for (const chartId of scene.present.chartIds) {
-    await expect(audience.locator(`[data-displayed-chart-id="${cssEscape(chartId)}"]`)).toHaveCount(1);
+    await expect(audience.locator(`[data-displayed-chart-id="${cssEscape(chartId)}"]`)).toHaveCount(0);
   }
-  await page.locator('[data-presentation-control-id="restore"]').click();
-  await expect(audience.locator(".audience-blackout")).toHaveCount(0);
+  await page.locator('[data-presentation-control-id="output-active"]').click();
+  await expect(audience).toHaveAttribute("data-output-mode", "active");
 
   const controllerSession = await context.newCDPSession(page);
   try {
@@ -116,7 +116,7 @@ test("1920 Audience progresses passively through output, liveness, blackout, and
   await expect(audience.locator("[data-connection-indicator]")).toHaveCount(0);
   await assertAudiencePassiveAndBounded(popup, scene);
 
-  await page.locator('[data-presentation-control-id="end"]').click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Home", exact: true }).click();
   await expect(audience).toHaveAttribute("data-connection-status", "ended");
   await expect(audience.locator(".audience-ended-content h1")).toHaveText("Presentation ended");
   await expect(audience.locator(".audience-ended-content p")).toHaveText("This display is no longer active.");
@@ -125,13 +125,13 @@ test("1920 Audience progresses passively through output, liveness, blackout, and
   await popup.close({ runBeforeUnload: false });
 });
 
-test("Audience closes successfully after END", async ({ page }) => {
+test("manual Audience closure cleans up the presenter session", async ({ page }) => {
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
   const { popup } = await openAudienceSession(page);
   const closed = popup.waitForEvent("close");
-  await page.locator('[data-presentation-control-id="end"]').click();
+  await popup.close();
   await closed;
   await expect(page.locator('[data-presentation-control-id="open-new-session"]')).toBeVisible();
 });
@@ -232,18 +232,30 @@ async function assertAudiencePassiveAndBounded(popup, scene, viewport = null) {
   for (const chartId of scene.present.chartIds) {
     await expect(audience.locator(`[data-displayed-chart-id="${cssEscape(chartId)}"]`)).toHaveCount(1);
   }
-  expect(await popup.evaluate(() => ({
-    rootWidth: document.querySelector(".audience-display")?.getBoundingClientRect().width,
-    rootHeight: document.querySelector(".audience-display")?.getBoundingClientRect().height,
-    viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
-    horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
-    verticalOverflow: document.documentElement.scrollHeight > window.innerHeight,
-  }))).toEqual({
-    rootWidth: viewport?.width ?? 1920,
-    rootHeight: viewport?.height ?? 1080,
-    viewportWidth: viewport?.width ?? 1920,
-    viewportHeight: viewport?.height ?? 1080,
+  const { width: viewportWidth, height: viewportHeight } = viewport ?? { width: 1920, height: 1080 };
+  const scale = Math.min(viewportWidth / 1920, viewportHeight / 1080);
+  const width = 1920 * scale;
+  const height = 1080 * scale;
+  await expect.poll(() => popup.evaluate(() => {
+    const root = document.querySelector(".audience-display").getBoundingClientRect();
+    const stage = document.querySelector(".audience-stage").getBoundingClientRect();
+    return {
+      width: root.width,
+      height: root.height,
+      left: root.left,
+      top: root.top,
+      stageWidth: stage.width,
+      stageHeight: stage.height,
+      horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
+      verticalOverflow: document.documentElement.scrollHeight > window.innerHeight,
+    };
+  })).toEqual({
+    width: expect.closeTo(width, 0),
+    height: expect.closeTo(height, 0),
+    left: expect.closeTo((viewportWidth - width) / 2, 0),
+    top: expect.closeTo((viewportHeight - height) / 2, 0),
+    stageWidth: viewportWidth,
+    stageHeight: viewportHeight,
     horizontalOverflow: false,
     verticalOverflow: false,
   });

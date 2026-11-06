@@ -7,7 +7,7 @@ import {
   isPresentationPlaybackSafe,
   reducePresentationSession,
 } from "../../lib/presentationSession.js";
-import { openAudienceWindow, requestAudienceWindowClose } from "../../lib/presentationWindow.js";
+import { openAudienceWindow, requestAudienceWindowClose, observeAudienceWindowClosure } from "../../lib/presentationWindow.js";
 import { executePresentationEndEffects } from "./PresentationController.jsx";
 
 export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
@@ -18,6 +18,27 @@ export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
   scene_date: false,
 });
 const AUDIENCE_FACT_KEYS = new Set(Object.keys(DEFAULT_AUDIENCE_FACTS));
+
+export function createPresentationSelectionMemory() {
+  const selections = new Map();
+  let selectedKey = "none";
+  return {
+    isSceneSelected: (id) => id === undefined ? selectedKey.startsWith("scene:") : selectedKey === `scene:${id}`,
+    select(source, current, validItemIds, eligibleItemIds) {
+      const nextKey = ["group", "scene"].includes(source.kind) ? `${source.kind}:${source.id}` : "none";
+      if (nextKey === selectedKey) return null;
+      selections.set(selectedKey, current);
+      selectedKey = nextKey;
+      // Saved Scenes continue to be applied by their existing composition owner.
+      if (source.kind === "scene") return null;
+      const valid = new Set(validItemIds);
+      const eligible = eligibleItemIds === undefined ? valid : new Set(eligibleItemIds);
+      const remembered = selections.get(nextKey) ?? initialDisplayState();
+      return { type: "source_applied", layout: remembered.layout,
+        chart_ids: remembered.displayed_chart_ids.filter(id => valid.has(id) && eligible.has(id)) };
+    },
+  };
+}
 
 export function persistAudienceDatePositionForSource(source, datePosition, persist) {
   if (source?.kind !== "scene" || typeof persist !== "function") return null;
@@ -47,12 +68,15 @@ export default function usePresentationRuntime(presentableItemIndex, {
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
   const displayStateRef = React.useRef(displayState);
   displayStateRef.current = displayState;
+  const selectionMemoryRef = React.useRef(null);
+  selectionMemoryRef.current ??= createPresentationSelectionMemory();
   const [sessionState, setSessionState] = React.useState(createInitialPresentationSession);
   const sessionStateRef = React.useRef(sessionState);
   sessionStateRef.current = sessionState;
   const [connectionError, setConnectionError] = React.useState("");
   const [audienceFacts, setAudienceFacts] = React.useState(() => ({ ...DEFAULT_AUDIENCE_FACTS }));
   const [acceptedPresentationState, setAcceptedPresentationState] = React.useState(null);
+  const [audienceStream, setAudienceStream] = React.useState(null);
 
   const reduceSession = React.useCallback((current, action) => reducePresentationSession(
     current,
@@ -76,6 +100,7 @@ export default function usePresentationRuntime(presentableItemIndex, {
   }, [reduceSession, synchronizePlayback]);
 
   const onDisplayAction = React.useCallback((action) => {
+    if (action.type === "scene_applied" && !selectionMemoryRef.current.isSceneSelected()) return;
     const next = reduceDisplayState(
       displayStateRef.current,
       action,
@@ -91,6 +116,14 @@ export default function usePresentationRuntime(presentableItemIndex, {
       },
     });
   }, [dispatch]);
+  const selectPresentationSource = React.useCallback((source, eligibleItemIds) => {
+    const action = selectionMemoryRef.current.select(source, displayStateRef.current,
+      presentableItemIndexRef.current.keys(), eligibleItemIds);
+    if (action) onDisplayAction(action);
+  }, [onDisplayAction]);
+  const isPresentationSceneSelected = React.useCallback((sceneId) => (
+    selectionMemoryRef.current.isSceneSelected(sceneId)
+  ), []);
   React.useEffect(() => {
     setDisplayState((current) => reduceDisplayState(current, {
       type: "companion_reconcile",
@@ -189,6 +222,10 @@ export default function usePresentationRuntime(presentableItemIndex, {
         onConnectionChange: (status) => connectionAction(status, guard),
         onAudienceDatePositionChange,
         onAcceptedStateChange,
+        onAudienceStreamChange: stream => {
+          const current = sessionStateRef.current;
+          if (current.sessionId === guard.sessionId && current.channelGeneration === guard.channelGeneration && current.lifecycle !== "ended") setAudienceStream(stream);
+        },
       });
       controller.start();
       controllerRef.current = controller;
@@ -201,7 +238,8 @@ export default function usePresentationRuntime(presentableItemIndex, {
     }
     let result;
     try {
-      result = openAudienceWindow({ channelId: sessionId, windowName: requestedWindowName });
+      result = openAudienceWindow({ channelId: sessionId, windowName: requestedWindowName,
+        resolution: context.rehearse ? presentationState.target_resolution : undefined });
     } catch {
       finishFailedStartup(sessionStateRef.current, controller);
       setConnectionError("Audience display is unavailable in this browser.");
@@ -225,10 +263,15 @@ export default function usePresentationRuntime(presentableItemIndex, {
     reduceSession,
   ]);
 
-  const reopenAudience = React.useCallback(() => {
+  const reopenAudience = React.useCallback(({ resolution } = {}) => {
     const session = sessionStateRef.current;
     if (session.lifecycle === "ended") return null;
-    const result = openAudienceWindow({ channelId: session.sessionId, windowName: session.requestedWindowName });
+    const result = openAudienceWindow({
+      channelId: session.sessionId,
+      windowName: session.requestedWindowName,
+      existingWindow: audienceWindowRef.current,
+      resolution,
+    });
     if (result.status !== "opened") {
       setConnectionError("The audience display window was blocked.");
       return result;
@@ -259,8 +302,14 @@ export default function usePresentationRuntime(presentableItemIndex, {
     sessionStateRef.current = next;
     setSessionState(next);
     setAcceptedPresentationState(null);
+    setAudienceStream(null);
     setConnectionError("");
   }, [reduceSession, synchronizePlayback]);
+
+  React.useEffect(() => {
+    if (sessionState.lifecycle === "ended") return undefined;
+    return observeAudienceWindowClosure({ getWindow: () => audienceWindowRef.current, onClosed: end });
+  }, [end, sessionState.lifecycle]);
 
   React.useEffect(() => () => {
     const controller = controllerRef.current;
@@ -296,11 +345,12 @@ export default function usePresentationRuntime(presentableItemIndex, {
   }, [reduceSession]);
 
   return {
-    displayState, onDisplayAction, sessionState,
+    displayState, onDisplayAction, selectPresentationSource, isPresentationSceneSelected, sessionState,
     connectionStatus: sessionState.connection, connectionError,
     hasSession: sessionState.lifecycle !== "ended",
     audienceFacts, setAudienceFactVisible,
     acceptedPresentationState,
+    audienceStream,
     blackout: sessionState.blackout,
     setBlackout: (active) => dispatch({ type: "SET_BLACKOUT", active }),
     dispatch, publish, open: openNewSession, openNewSession, reopenAudience, end,

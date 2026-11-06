@@ -18,14 +18,16 @@ export default function PointLabelSelector({ matrix = { rows: [], columns: [] },
     return () => cancelAnimationFrame(frame);
   }, [open, dialog]);
   const points = matrix.rows.flatMap(row => row.points.filter(Boolean));
-  const selected = pointLabelMatcher(open ? draft : value);
+  const selection = open ? draft : value;
+  const selected = pointLabelMatcher(selection);
   const count = points.filter(point => selected(point.key)).length;
+  const status = selection === undefined ? "Automatic label density" : `${count} of ${points.length} points selected`;
   const update = (keys, checked) => setDraft(current => setPointLabels(current, keys, checked));
   const titleId = `point-label-title-${React.useId().replaceAll(":", "")}`;
   return <div className="point-label-selector">
     <button type="button" ref={trigger} disabled={!points.length} aria-haspopup="dialog" aria-expanded={open}
       onClick={() => { setDraft(normalizePointLabelSelection(value)); setOpen(true); }}>Choose labeled points</button>
-    <span>{count} of {points.length} points selected</span>
+    <span>{status}</span>
     {open && <div className="point-label-dialog-backdrop dashboard-dialog-backdrop" role="presentation">
       <section ref={dialog} className="point-label-dialog dashboard-dialog dashboard-dialog--wide" role="dialog" aria-modal="true" aria-labelledby={titleId}
         onKeyDown={event => {
@@ -34,11 +36,12 @@ export default function PointLabelSelector({ matrix = { rows: [], columns: [] },
         }}>
         <header className="dashboard-dialog__header"><h2 id={titleId}>Choose labeled points</h2></header>
         <div className="dashboard-dialog__body">
-          <p>Choose points to label when Show labels is enabled. Selections stay attached when the chart is reordered or filtered.</p>
+          <p>Automatic limits labels on crowded charts. Choose points or select All to override the limit when Show labels is enabled. Selections stay attached when the chart is reordered or filtered.</p>
           <div className="point-label-actions">
-            <button type="button" onClick={() => setDraft(undefined)}>All</button>
+            <button type="button" onClick={() => setDraft(undefined)}>Automatic</button>
+            <button type="button" onClick={() => setDraft({ mode: "allExcept", keys: [] })}>All</button>
             <button type="button" onClick={() => setDraft({ mode: "only", keys: [] })}>None</button>
-            <span role="status">{count} of {points.length} points selected</span>
+            <span role="status">{status}</span>
           </div>
           <div className="point-label-grid-scroll">
             <table className="point-label-grid" aria-label="Point label selection">

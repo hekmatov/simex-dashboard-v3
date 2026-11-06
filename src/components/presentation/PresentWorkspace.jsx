@@ -8,6 +8,7 @@ import AudienceDisplayOptionsDrawer from "./AudienceDisplayOptionsDrawer.jsx";
 import PresentationController, {
   buildPresentationState,
   presentationSourceEligibility,
+  resolvePresentPlayback,
 } from "./PresentationController.jsx";
 
 export default function PresentWorkspace({
@@ -22,16 +23,44 @@ export default function PresentWorkspace({
   themeProjection,
   contentRenderContext,
 }) {
-  const playback = usePlayback();
+  const playback = resolvePresentPlayback(usePlayback());
+  const [sourceInitialized, setSourceInitialized] = React.useState(false);
   const [audienceOptionsOpen, setAudienceOptionsOpen] = React.useState(false);
   const [chronoControlsOpen, setChronoControlsOpen] = React.useState(false);
   const playbackDispatchRef = React.useRef(playback.dispatch);
   playbackDispatchRef.current = playback.dispatch;
   const playbackViewOwner = `present:${React.useId()}`;
-  React.useEffect(() => {
-    playbackDispatchRef.current({ type: "openView", owner: playbackViewOwner });
-    return () => playbackDispatchRef.current({ type: "closeView", owner: playbackViewOwner });
-  }, [playbackViewOwner]);
+  const [entrySnapshot] = React.useState(() => (
+    runtime.hasSession ? runtime.sessionState?.lastValidSnapshot ?? null : null
+  ));
+  const lastPublishedInput = React.useRef(null);
+  const retainOnEntry = React.useRef(entrySnapshot !== null);
+  const selectSource = runtime.selectPresentationSource;
+  const dispatchSession = runtime.dispatch;
+  React.useLayoutEffect(() => {
+    const dispatchPlayback = playbackDispatchRef.current;
+    dispatchPlayback({ type: "openView", owner: playbackViewOwner });
+    const source = entrySnapshot?.source;
+    if (source?.kind === "scene") {
+      selectSource?.({ kind: "scene", id: source.scene_id });
+      dispatchPlayback({ type: "setScene", sceneId: source.scene_id });
+    } else {
+      const groupId = source?.kind === "Chrono Group" ? source.chrono_group_id : null;
+      selectSource?.(groupId === null ? { kind: "manual" } : { kind: "group", id: groupId });
+      dispatchPlayback({ type: "setGroup", groupId });
+    }
+    if (entrySnapshot?.timeline) {
+      const { frame_index, frame_epochs, seconds_per_frame, trace_mode } = entrySnapshot.timeline;
+      dispatchPlayback({ type: "setSpeed", speed: seconds_per_frame });
+      dispatchPlayback({ type: "setTraceMode", mode: trace_mode });
+      dispatchPlayback({ type: "seek", index: frame_index, clockLength: frame_epochs.length });
+    }
+    setSourceInitialized(true);
+    return () => {
+      dispatchSession?.({ type: "MODE_EXIT" });
+      playbackDispatchRef.current({ type: "closeView", owner: playbackViewOwner });
+    };
+  }, [dispatchSession, entrySnapshot, playbackViewOwner, selectSource]);
   const {
     displayState,
     onDisplayAction,
@@ -55,14 +84,17 @@ export default function PresentWorkspace({
     () => suppliedPresentableItemIndex ?? buildPresentableItemIndex(dashboard),
     [dashboard, suppliedPresentableItemIndex],
   );
-  const chartGroups = React.useMemo(
+  const allChartGroups = React.useMemo(
     () => configuredChartGroups(dashboard, presentableItemIndex),
     [dashboard, presentableItemIndex],
   );
   const chartsById = React.useMemo(
-    () => new Map(chartGroups.flatMap(({ charts }) => charts.map((chart) => [chart.id, chart]))),
-    [chartGroups],
+    () => new Map(allChartGroups.flatMap(({ charts }) => charts.map((chart) => [chart.id, chart]))),
+    [allChartGroups],
   );
+  const chartGroups = React.useMemo(() => filterPresentChartGroups(allChartGroups,
+    playback.source?.kind === "group" ? playback.activeGroup : null),
+    [allChartGroups, playback.source?.kind, playback.activeGroup]);
   const activePage = (dashboard?.pages ?? []).find(({ id }) => id === activePageId)
     ?? dashboard?.pages?.[0]
     ?? null;
@@ -118,8 +150,18 @@ export default function PresentWorkspace({
   ]);
 
   React.useEffect(() => {
+    if (!sourceInitialized || (retainOnEntry.current && sourceEligibility.status !== "valid")) return;
+    // Stream receipts and manual playback projections can rerender with the same output.
+    // A duplicate publication changes the accepted sequence and restarts frame capture.
+    const key = JSON.stringify([presentationState, sourceEligibility]);
+    if (key === lastPublishedInput.current) return;
+    lastPublishedInput.current = key;
+    if (retainOnEntry.current) {
+      retainOnEntry.current = false;
+      return;
+    }
     publish(presentationState, { sourceSelection: sourceEligibility });
-  }, [presentationState, publish, sourceEligibility.status]);
+  }, [presentationState, publish, sourceEligibility, sourceInitialized]);
 
   function toggleChart(chartId) {
     if (displayedChartIds.includes(chartId)) {
@@ -171,6 +213,11 @@ export default function PresentWorkspace({
           >
             Audience display options
           </button>
+          <button type="button" className="secondary" data-presentation-control-id="rehearse"
+            onClick={() => hasSession ? runtime.reopenAudience({ resolution: presentationState.target_resolution })
+              : runtime.openNewSession(presentationState, { sourceSelection: sourceEligibility, rehearse: true })}>
+            Rehearse at {presentationState.target_resolution.width} × {presentationState.target_resolution.height}
+          </button>
           <button
             type="button"
             className="secondary present-chrono-groups-trigger"
@@ -203,6 +250,9 @@ export default function PresentWorkspace({
           <AudienceSnapshotMonitor
             dashboard={dashboard}
             connectionLabel={connectionStatusLabel(connectionStatus)}
+            connectionStatus={connectionStatus}
+            stream={runtime.audienceStream}
+            targetResolution={presentationState.target_resolution}
             presentationState={resolveAudienceMonitorPresentationState({
               acceptedPresentationState: runtime.acceptedPresentationState,
               localPresentationState: presentationState,
@@ -210,83 +260,83 @@ export default function PresentWorkspace({
             playing={playback.playing}
             themeProjection={themeProjection}
             contentRenderContext={contentRenderContext}
-          />
-          <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">
-            <div className="present-panel-heading">
-              <div>
-                <p className="eyebrow">Audience scene</p>
-                <h1 id="displayed-charts-heading">Displayed charts</h1>
+          >
+            <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">
+              <div className="present-panel-heading">
+                <div>
+                  <h1 id="displayed-charts-heading">Displayed charts</h1>
+                </div>
+                <label className="present-field present-layout-field">
+                  <span>Scene layout</span>
+                  <select
+                    aria-label="Scene layout"
+                    data-presentation-control-id="composition-layout"
+                    value={layout}
+                    onChange={(event) => onDisplayAction?.({
+                      type: "layout_changed",
+                      layout: event.target.value,
+                    })}
+                  >
+                    {layoutOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
-              <label className="present-field present-layout-field">
-                <span>Scene layout</span>
-                <select
-                  aria-label="Scene layout"
-                  data-presentation-control-id="composition-layout"
-                  value={layout}
-                  onChange={(event) => onDisplayAction?.({
-                    type: "layout_changed",
-                    layout: event.target.value,
-                  })}
-                >
-                  {layoutOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
 
-            <div className="present-selected-charts" aria-label="Displayed chart order">
-              {selectedCharts.length === 0 ? (
-                <p className="present-holding-scene">Holding scene — no charts selected.</p>
-              ) : selectedCharts.map((chart, index) => (
-                <article
-                  className="present-selected-chart"
-                  data-displayed-chart-id={chart.id}
-                  key={chart.id}
-                >
-                  <span className="present-chart-order">{index + 1}</span>
-                  <strong>{presentChartLabel(chart)}</strong>
-                  <div className="present-chart-actions">
-                    <button
-                      type="button"
-                      className="secondary"
-                      aria-label={`Move ${presentChartLabel(chart)} up`}
-                      data-presentation-item-action="move-up"
-                      data-presentation-item-id={chart.id}
-                      disabled={index === 0}
-                      onClick={() => reorderChart(index, -1)}
-                    >
-                      Move up
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      aria-label={`Move ${presentChartLabel(chart)} down`}
-                      data-presentation-item-action="move-down"
-                      data-presentation-item-id={chart.id}
-                      disabled={index === selectedCharts.length - 1}
-                      onClick={() => reorderChart(index, 1)}
-                    >
-                      Move down
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      data-presentation-item-action="remove"
-                      data-presentation-item-id={chart.id}
-                      onClick={() => toggleChart(chart.id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+              <div className="present-selected-charts" aria-label="Displayed chart order">
+                {selectedCharts.length === 0 ? (
+                  <p className="present-holding-scene">Holding scene — no charts selected.</p>
+                ) : selectedCharts.map((chart, index) => (
+                  <article
+                    className="present-selected-chart"
+                    data-displayed-chart-id={chart.id}
+                    key={chart.id}
+                  >
+                    <span className="present-chart-order">{index + 1}</span>
+                    <strong>{presentChartLabel(chart)}</strong>
+                    <div className="present-chart-actions">
+                      <button
+                        type="button"
+                        className="secondary"
+                        aria-label={`Move ${presentChartLabel(chart)} up`}
+                        data-presentation-item-action="move-up"
+                        data-presentation-item-id={chart.id}
+                        disabled={index === 0}
+                        onClick={() => reorderChart(index, -1)}
+                      >
+                        Move up
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        aria-label={`Move ${presentChartLabel(chart)} down`}
+                        data-presentation-item-action="move-down"
+                        data-presentation-item-id={chart.id}
+                        disabled={index === selectedCharts.length - 1}
+                        onClick={() => reorderChart(index, 1)}
+                      >
+                        Move down
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        data-presentation-item-action="remove"
+                        data-presentation-item-id={chart.id}
+                        onClick={() => toggleChart(chart.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </AudienceSnapshotMonitor>
         </aside>
 
         <section className="present-scene-panel" aria-label="Choose charts for the audience scene">
-          {chartGroups.length === 0 ? (
+          {allChartGroups.length === 0 ? (
             <section className="present-catalogue-recovery" aria-labelledby="present-catalogue-recovery-title">
               <p className="eyebrow">Presentation catalogue</p>
               <h2 id="present-catalogue-recovery-title">No charts are available to present from this dashboard.</h2>
@@ -301,6 +351,7 @@ export default function PresentWorkspace({
                   ? `${MAX_DISPLAYED_CHARTS} of ${MAX_DISPLAYED_CHARTS} charts selected. Remove a displayed chart before selecting another.`
                   : `Choose up to ${MAX_DISPLAYED_CHARTS} charts. ${displayedChartIds.length} of ${MAX_DISPLAYED_CHARTS} selected.`}
               </p>
+              {chartGroups.length === 0 && <p>No presentable charts belong to this group.</p>}
               <div className="present-chart-groups">
                 {chartGroups.map((group) => (
                   <fieldset className="present-chart-group" key={group.id}>
@@ -345,6 +396,7 @@ export default function PresentWorkspace({
           playback={playback}
           presentationState={presentationState}
           sourceEligibility={sourceEligibility}
+          onClose={() => setChronoControlsOpen(false)}
         />
       </section>
       <AudienceDisplayOptionsDrawer
@@ -416,6 +468,13 @@ function configuredChartGroups(dashboard, presentableItemIndex) {
       };
     }).filter((group) => group.charts.length > 0)
   ));
+}
+
+export function filterPresentChartGroups(groups, activeGroup) {
+  if (!activeGroup) return groups;
+  const members = new Set((activeGroup.members ?? []).map(member => member.chartId));
+  return groups.map(group => ({ ...group, charts: group.charts.filter(chart => members.has(chart.id)) }))
+    .filter(group => group.charts.length > 0);
 }
 
 export function presentChartLabel(chart = {}) {

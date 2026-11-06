@@ -26,7 +26,7 @@ import { applyChartConversion, planChartConversion } from "../src/charting/forms
 import { pointLabelKey } from "../src/charting/presentation/pointLabelSelection.js";
 
 test("point-label selections survive package and axis conversion and warn before incompatible loss", () => {
-  for (const selection of [{ mode: "only", keys: [] }, { mode: "allExcept", keys: [pointLabelKey({ measure: "cases", x: "2027-05-01", axis: "primary" })] }]) {
+  for (const selection of [undefined, { mode: "allExcept", keys: [] }, { mode: "only", keys: [] }, { mode: "allExcept", keys: [pointLabelKey({ measure: "cases", x: "2027-05-01", axis: "primary" })] }]) {
     const dashboard = version3Dashboard();
     const instance = createChartDraft("line", { id: "point-selection", title: "Point labels", sourceId: "uploaded-cases",
       roles: { measurements: [{ field: "cases", axis: "primary" }], observation: { field: "reportedAt", interpretation: "category" } },
@@ -37,7 +37,7 @@ test("point-label selections survive package and axis conversion and warn before
     assert.deepEqual(restored.presentation.labels.pointSelection, selection);
     assert.deepEqual(applyChartConversion(instance, "bar").presentation.labels.pointSelection, selection);
     const plan = planChartConversion(instance, "pie");
-    assert.ok(plan.removedSettings.some(setting => setting.path === "presentation.labels.pointSelection"));
+    assert.equal(plan.removedSettings.some(setting => setting.path === "presentation.labels.pointSelection"), selection !== undefined);
     const pie = applyChartConversion(instance, "pie", { category: { field: "reportedAt", interpretation: "category" }, value: { field: "cases" } });
     assert.equal(pie.typeId, "pie");
     assert.equal(pie.presentation.labels.pointSelection, undefined);

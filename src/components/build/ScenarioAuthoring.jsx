@@ -1,4 +1,5 @@
 import React from "react";
+import { resolvePresentationResolution } from "../../lib/presentationResolution.js";
 
 const EDITABLE_FIELDS = new Set(["scenarioLabel", "programLabel", "lastUpdated"]);
 
@@ -15,6 +16,8 @@ export function createScenarioDraft(dashboard = {}) {
 }
 
 export function validateScenarioDraft(value) {
+  try { resolvePresentationResolution(value?.presentationResolution); }
+  catch (error) { return issue("PRESENTATION_RESOLUTION_INVALID", error.message); }
   if (!String(value?.scenarioLabel ?? "").trim()) {
     return issue("SCENARIO_NAME_REQUIRED", "Enter a Scenario name.");
   }
@@ -29,6 +32,8 @@ export function validateScenarioDraft(value) {
 
 export function reduceScenarioDraft(state, action) {
   switch (action?.type) {
+    case "SET_PRESENTATION_RESOLUTION":
+      return { ...state, value: { ...state.value, presentationResolution: { ...state.value.presentationResolution, ...action.resolution } }, status: "dirty", error: null };
     case "EDIT_FIELD": {
       if (!EDITABLE_FIELDS.has(action.field)) {
         return withError(state, issue("READ_ONLY_FIELD", "This Scenario field is not editable."));
@@ -102,6 +107,7 @@ export default function ScenarioAuthoring({ draft, disabled = false, onAction })
         </span>
       </header>
       {draft?.error && <p className="build-operation-error" role="alert">{draft.error.message}</p>}
+      <PresentationResolutionFields value={value.presentationResolution} disabled={busy} onChange={resolution => onAction?.({ type: "SET_PRESENTATION_RESOLUTION", resolution })} />
       <label>
         Scenario name
         <input disabled={busy} value={value.scenarioLabel ?? ""} onChange={(event) => onAction?.({ type: "EDIT_FIELD", field: "scenarioLabel", value: event.target.value })} />
@@ -128,7 +134,21 @@ function scenarioValue(dashboard) {
     programLabel: dashboard?.programLabel ?? "",
     lastUpdated: dashboard?.lastUpdated ?? "",
     home: { enabled: dashboard?.home?.enabled !== false },
+    presentationResolution: resolvePresentationResolution(dashboard?.presentationResolution),
   };
+}
+
+export function PresentationResolutionFields({ value, disabled, onChange }) {
+  return <fieldset className="presentation-resolution-fields">
+    <legend>Audience target resolution</legend>
+    <p>Charts use this stage size. The Audience window letterboxes it to fit.</p>
+    {["width", "height"].map(dimension => <label key={dimension}>
+      {dimension === "width" ? "Width (CSS pixels)" : "Height (CSS pixels)"}
+      <input type="number" min={dimension === "width" ? 320 : 180} max="7680" step="1"
+        aria-label={`Presentation ${dimension}`} disabled={disabled} value={value?.[dimension] ?? ""}
+        onChange={event => onChange({ [dimension]: event.target.value === "" ? "" : Number(event.target.value) })} />
+    </label>)}
+  </fieldset>;
 }
 
 function clone(value) {

@@ -104,6 +104,9 @@ export async function chooseDashboardPackageDestinations(page, choices) {
 export async function authorAttentionStrip(page, { pageId = "biomedical", sectionTitle = "At a glance", chartTitle = "Cases today" } = {}) {
   await enterBuildMode(page);
   await structureRail(page).locator(`[data-build-node-id="${pageId}"] > .build-tree-row`).click();
+  // The section form temporarily hides the page editor. Close it before opening the form.
+  await expect(page.getByRole("complementary", { name: "page quick editor" })).toBeVisible();
+  await closeObjectQuickEditor(page);
   await page.getByRole("button", { name: "Add section" }).click();
   await page.getByLabel("Section name").fill(sectionTitle);
   await page.getByRole("button", { name: "Create section" }).click();

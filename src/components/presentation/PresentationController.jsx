@@ -1,5 +1,5 @@
 import { adaptSceneAudienceToPresentation } from "../../lib/presentationProtocol.js";
-import ConnectionIndicator from "./ConnectionIndicator.jsx";
+import { resolvePresentationResolution } from "../../lib/presentationResolution.js";
 import PresentationSourcePicker from "./PresentationSourcePicker.jsx";
 import { createPresentationThemeSnapshot } from "../../theme/dashboardTheme.js";
 
@@ -43,6 +43,12 @@ export function presentationSourceEligibility(scene, { compositionReady = true }
       sourceId: scene.id,
     },
   };
+}
+
+export function resolvePresentPlayback(playback) {
+  if (playback.source?.kind !== "default") return playback;
+  return { ...playback, source: { kind: "manual", id: null }, activeGroup: null, activeGroupId: null,
+    activeScene: null, activeSceneId: null, clock: [], activeIndex: 0, activeEpochMs: null, playing: false };
 }
 
 export function buildPresentationState({
@@ -104,6 +110,7 @@ export function buildPresentationState({
 
   return {
     dashboard_revision: revisionParts.join(":") || "dashboard",
+    target_resolution: resolvePresentationResolution(dashboard?.presentationResolution),
     theme: createPresentationThemeSnapshot(themeProjection),
     source,
     composition: {
@@ -186,6 +193,7 @@ export default function PresentationController({
   playback,
   presentationState,
   sourceEligibility = { status: "valid", reason: null },
+  onClose,
 }) {
   const session = runtime.sessionState;
   const hasClock = playback.clock.length > 0;
@@ -193,11 +201,15 @@ export default function PresentationController({
   const atLast = !hasClock || playback.activeIndex >= playback.clock.length - 1;
 
   const selectScene = (sceneId) => {
+    runtime.selectPresentationSource?.({ kind: "scene", id: sceneId });
     runtime.dispatch({ type: "SELECT_SCENE", sceneId });
     playback.dispatch({ type: "setScene", sceneId });
   };
   const selectGroup = (groupId) => {
-    runtime.dispatch({ type: "SELECT_CHRONO_GROUP", groupId });
+    const group = playback.groups.find(group => group.id === groupId);
+    runtime.selectPresentationSource?.(groupId === null ? { kind: "manual" } : { kind: "group", id: groupId },
+      groupId === null ? undefined : (group?.members ?? []).map(member => member.chartId));
+    runtime.dispatch(groupId === null ? { type: "PAUSE" } : { type: "SELECT_CHRONO_GROUP", groupId });
     playback.dispatch({ type: "setGroup", groupId });
   };
   const playbackAction = (sessionAction, playbackActionValue) => {
@@ -209,11 +221,11 @@ export default function PresentationController({
     playback.dispatch(playbackActionValue);
   };
   const output = (mode) => runtime.dispatch({ type: "SET_OUTPUT_MODE", mode });
-  const blackout = (active) => runtime.dispatch({ type: "SET_BLACKOUT", active });
 
   return (
     <section className="presentation-controller" aria-label="Presenter controller">
-      <ConnectionIndicator connection={session.connection} />
+      <button type="button" className="secondary present-controls-close" aria-label="Close Chrono Groups"
+        data-presentation-control-id="close-chrono-groups" onClick={onClose}>×</button>
       <div
         className="presentation-controller__source"
         data-dashboard-painted-boundary="true"
@@ -255,12 +267,9 @@ export default function PresentationController({
         className="presentation-controller__output"
         data-dashboard-painted-boundary="true"
       >
-        <button type="button" className="secondary" data-presentation-control-id="output-active" aria-pressed={session.output === "active"} onClick={() => output("active")}>Active</button>
-        <button type="button" className="secondary" data-presentation-control-id="output-holding" aria-pressed={session.output === "holding"} onClick={() => output("holding")}>Holding</button>
-        <button type="button" className="secondary" data-presentation-control-id="output-blank" aria-pressed={session.output === "blank"} onClick={() => output("blank")}>Blank</button>
-        <button type="button" className="secondary" data-presentation-control-id="blackout" disabled={session.blackout} onClick={() => blackout(true)}>Blackout</button>
-        <button type="button" className="secondary" data-presentation-control-id="restore" disabled={!session.blackout} onClick={() => blackout(false)}>Restore</button>
-        <button type="button" className="secondary" data-presentation-control-id="end" disabled={session.lifecycle === "ended"} onClick={runtime.end}>End presentation</button>
+        <button type="button" className="secondary" data-presentation-control-id="output-active" aria-pressed={session.output === "active" && !session.blackout} onClick={() => output("active")}>Active</button>
+        <button type="button" className="secondary" data-presentation-control-id="output-holding" aria-pressed={session.output === "holding" && !session.blackout} onClick={() => output("holding")}>Holding</button>
+        <button type="button" className="secondary" data-presentation-control-id="output-black" aria-pressed={session.output === "blank" || session.blackout} onClick={() => output("blank")}>Black</button>
       </div>
       {session.rejectionReason && (
         <p className="present-connection-error" role="status">

@@ -166,6 +166,7 @@ export function reducePresentationSession(state, action, context = {}) {
       }
       return pause(state, {
         output: action.mode,
+        blackout: false,
         preBlackoutOutput: action.mode,
         pendingRequest: { type: action.type, mode: action.mode },
       });

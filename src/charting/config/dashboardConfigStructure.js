@@ -1,4 +1,5 @@
 import { ATTENTION_STRIP_CHART_TYPES, SECTION_ROLES } from "./sectionRoles.js";
+import { resolvePresentationResolution } from "../../lib/presentationResolution.js";
 
 export { ATTENTION_STRIP_CHART_TYPES, SECTION_ROLES };
 
@@ -39,6 +40,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
         "lastUpdated",
         "layout",
         "programLabel",
+        "presentationResolution",
         "scenarioLabel",
         "scenes",
         "chronoGroups",
@@ -145,6 +147,7 @@ export function validateDashboardStructure(
     validateDashboardTimezone(config.timezone);
   }
   optionalString(config.description, "Dashboard description");
+  if (Object.hasOwn(config, "presentationResolution")) resolvePresentationResolution(config.presentationResolution);
   for (const [key, label] of [
     ["lastUpdated", "Dashboard lastUpdated"],
     ["layout", "Dashboard layout"],

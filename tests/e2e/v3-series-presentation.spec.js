@@ -400,13 +400,20 @@ test("explicit point labels support matrix bulk selection, cancel and reload", a
   const editor = await edit(page, support.id);
   await editor.getByLabel("Show labels", { exact: true }).check();
   const labels = () => renderedPointLabels(page, editor);
-  await expect.poll(async () => (await labels()).length).toBe(16);
+  await expect.poll(async () => (await labels()).length).toBe(0);
   const trigger = editor.getByRole("button", { name: "Choose labeled points", exact: true });
   await trigger.click();
   let popup = page.getByRole("dialog", { name: "Choose labeled points", exact: true });
   const pointChecks = () => popup.locator("tbody td input[type=checkbox]");
   await expect(pointChecks()).toHaveCount(16);
   await expect(popup.locator("tbody td input:checked")).toHaveCount(16);
+  await popup.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect.poll(async () => (await labels()).length).toBe(0);
+  await trigger.click();
+  await popup.getByRole("button", { name: "All", exact: true }).click();
+  await popup.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect.poll(async () => (await labels()).length).toBe(16);
+  await trigger.click();
   await popup.getByRole("button", { name: "None", exact: true }).click();
   await expect(popup.locator("tbody td input:checked")).toHaveCount(0);
   await popup.getByRole("checkbox", { name: "Select series: hospitality_and_culture_closure_support_pct", exact: true }).check();
@@ -453,6 +460,12 @@ test("explicit point labels support matrix bulk selection, cancel and reload", a
   await popup.getByRole("button", { name: "None", exact: true }).click();
   await popup.getByRole("button", { name: "Apply", exact: true }).click();
   expect((await renderedPointLabels(page, reopened)).length).toBe(0);
+  await reopened.getByRole("button", { name: "Choose labeled points", exact: true }).click();
+  await popup.getByRole("button", { name: "Automatic", exact: true }).click();
+  await popup.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(reopened.getByText("Automatic label density", { exact: true })).toBeVisible();
+  await save(reopened);
+  expect((await savedChart(page, support.id)).presentation.labels.pointSelection).toBeUndefined();
 });
 
 async function renderedPointLabels(page, editor) {

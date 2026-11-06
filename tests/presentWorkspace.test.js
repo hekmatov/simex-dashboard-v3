@@ -73,6 +73,15 @@ test("Present labels intentionally untitled Text/Image panels nonvisually", () =
   );
 });
 
+test("group chart choices contain only members without mutating the catalogue", () => {
+  const groups = [{ id: "one", charts: [{ id: "chart-a" }, { id: "chart-b" }] }, { id: "two", charts: [{ id: "chart-c" }] }];
+  assert.deepEqual(presentModule.filterPresentChartGroups(groups, { members: [{ chartId: "chart-b" }] }),
+    [{ id: "one", charts: [{ id: "chart-b" }] }]);
+  assert.deepEqual(presentModule.filterPresentChartGroups(groups, { members: [] }), []);
+  assert.deepEqual(presentModule.filterPresentChartGroups(groups, null), groups);
+  assert.deepEqual(groups[0].charts.map(chart => chart.id), ["chart-a", "chart-b"]);
+});
+
 function renderPresent(Component, overrides = {}) {
   const {
     displayState: requestedDisplayState = displayState,
@@ -197,9 +206,10 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /Response overview/);
   assert.match(html, /Biomedical/);
   assert.doesNotMatch(html, /Show scene title/);
-  assert.match(html, />Blackout<\/button>/);
-  assert.match(html, />Restore<\/button>/);
-  assert.match(html, />End presentation<\/button>/);
+  assert.match(html, />Black<\/button>/);
+  assert.match(html, /aria-label="Close Chrono Groups"/);
+  assert.doesNotMatch(html, />Blackout<|>Restore<|>End presentation<|>Presentation source<|audience-snapshot-caption|audience-snapshot-resolution/);
+  assert.match(html, /audience-snapshot-controls[\s\S]*aria-label="Move Capacity up"/);
   assert.equal((html.match(/data-dashboard-painted-boundary="true"/g) ?? []).length, 3);
   assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /permission|role|authoriz|access control/i);
 });
@@ -265,6 +275,7 @@ test("Present starts Chrono Groups collapsed and keeps the requested status-acti
   assert.deepEqual(labels, [
     "Open audience display",
     "Audience display options",
+    "Rehearse at 1920 × 1080",
     "Chrono Groups",
     "Theme",
   ]);

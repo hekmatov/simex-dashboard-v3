@@ -46,6 +46,18 @@ test("Scenario draft excludes dashboard-level provenance and validates direct ed
   assert.equal(draft.error.code, "SCENARIO_NAME_REQUIRED");
 });
 
+test("Scenario Passport keeps target resolution draft-owned, validates it and restores it on discard", () => {
+  const source = { scenarioLabel: "Exercise", programLabel: "Program", lastUpdated: "2026-10-26" };
+  let draft = createScenarioDraft(source);
+  assert.deepEqual(draft.value.presentationResolution, { width: 1920, height: 1080 });
+  draft = reduceScenarioDraft(draft, { type: "SET_PRESENTATION_RESOLUTION", resolution: { width: 1280, height: 720 } });
+  assert.equal(draft.status, "dirty"); assert.equal(source.presentationResolution, undefined);
+  assert.equal(reduceScenarioDraft(draft, { type: "SAVE_REQUEST" }).status, "saving");
+  draft = reduceScenarioDraft(draft, { type: "SET_PRESENTATION_RESOLUTION", resolution: { width: "" } });
+  assert.equal(reduceScenarioDraft(draft, { type: "SAVE_REQUEST" }).error.code, "PRESENTATION_RESOLUTION_INVALID");
+  assert.deepEqual(reduceScenarioDraft(draft, { type: "DISCARD" }).value.presentationResolution, { width: 1920, height: 1080 });
+});
+
 test("Scenario Save/Discard/Stay and failed-save retry are scope-specific", () => {
   let draft = createScenarioDraft({
     scenarioLabel: "Day 2",

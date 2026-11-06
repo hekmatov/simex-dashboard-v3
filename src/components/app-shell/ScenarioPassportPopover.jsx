@@ -4,6 +4,7 @@ import ControlTooltip from "../common/ControlTooltip.jsx";
 import {
   createScenarioDraft,
   reduceScenarioDraft,
+  PresentationResolutionFields,
 } from "../build/ScenarioAuthoring.jsx";
 import { ONLINE_DASHBOARD_RESTORE_DESCRIPTION } from "../../lib/onlineDashboardRestore.js";
 
@@ -38,6 +39,8 @@ export default function ScenarioPassportPopover({
     dashboard?.programLabel,
     dashboard?.lastUpdated,
     dashboard?.home?.enabled,
+    dashboard?.presentationResolution?.width,
+    dashboard?.presentationResolution?.height,
   ].join("\u0000");
 
   React.useEffect(() => {
@@ -132,6 +135,8 @@ export default function ScenarioPassportPopover({
         ))}
       </div>
 
+      <PresentationResolutionFields value={draft.value.presentationResolution} disabled={busy}
+        onChange={resolution => dispatch({ type: "SET_PRESENTATION_RESOLUTION", resolution })} />
       <fieldset className="scenario-passport-home">
         <legend>Canonical Home</legend>
         <label>

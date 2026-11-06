@@ -155,9 +155,9 @@ test("selected shipped groups play pause seek and change period in a real Audien
   }
   await expect(output).toHaveAttribute("data-render-status", "current");
   expect(errors).toEqual([]);
-  const closed = audience.waitForEvent("close");
-  await controller.getByRole("button", { name: "End presentation", exact: true }).click();
-  await closed;
+  await audience.close();
+  await expect(page.getByRole("button", { name: "Open audience display", exact: true })).toBeVisible();
+  await expect(controller.getByRole("button", { name: "Pause", exact: true })).toBeDisabled();
 });
 
 async function openShipped(page) {

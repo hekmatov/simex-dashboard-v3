@@ -109,6 +109,8 @@ import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 import { projectAudienceSnapshot } from "./lib/audienceProjection.js";
 import { createPresentationAudienceChannel } from "./lib/presentationChannel.js";
+import useAudienceFrameCapture from "./components/presentation/useAudienceFrameCapture.js";
+import { resolvePresentationResolution } from "./lib/presentationResolution.js";
 import {
   createDashboardThemeProjection,
   persistAppearancePreference,
@@ -267,6 +269,7 @@ function AppContent({ releaseProfile = null }) {
   const displayStateRef = React.useRef(displayState);
   const audienceLastValidProjectionRef = React.useRef(null);
   const audienceChannelRef = React.useRef(null);
+  const audienceCaptureRootRef = React.useRef(null);
   const dashboardRef = React.useRef(null);
   const trackedDatasetProfilesRef = React.useRef({});
   const dashboardCommitControllerRef = React.useRef(null);
@@ -529,8 +532,13 @@ function AppContent({ releaseProfile = null }) {
             audienceLastValidProjectionRef.current,
           );
           if (!result.accepted) return;
-          audienceLastValidProjectionRef.current = result.lastValid;
-          setAudienceProjection(result.projection);
+          const committed = result.projection?.kind === "output"
+            ? Object.freeze({ ...result.projection, acceptedSequence: message.sequence })
+            : result.projection?.kind === "ended"
+              ? { ...result.projection, targetResolution: result.lastValid?.targetResolution }
+              : result.projection;
+          audienceLastValidProjectionRef.current = committed?.kind === "output" ? committed : result.lastValid;
+          setAudienceProjection(committed);
         },
         onThemeChange: (theme) => {
           const applyTheme = (projection) => projection?.kind === "output"
@@ -558,6 +566,10 @@ function AppContent({ releaseProfile = null }) {
   const publishAudienceDatePosition = React.useCallback((datePosition, pointerDownSource) => (
     audienceChannelRef.current?.publishDatePosition(datePosition, pointerDownSource) ?? null
   ), []);
+  const audienceVisualChange = useAudienceFrameCapture({
+    enabled: dashboardEntry.surface === "audience", rootRef: audienceCaptureRootRef,
+    channelRef: audienceChannelRef, connectionStatus: audienceConnectionStatus, projection: audienceProjection,
+  });
 
   React.useEffect(() => () => {
     dashboardCommitControllerRef.current?.dispose();
@@ -1681,6 +1693,7 @@ function AppContent({ releaseProfile = null }) {
       <AudienceThemeBoundary theme={audienceDashboardTheme}>
         <div
           className="audience-theme-root"
+          ref={audienceCaptureRootRef}
           data-dashboard-style={audienceDashboardTheme.dashboardStyle}
           data-dashboard-color-profile={audienceDashboardTheme.dashboardColorProfile}
           data-chart-color-mode={audienceDashboardTheme.chartColorMode}
@@ -1688,6 +1701,7 @@ function AppContent({ releaseProfile = null }) {
           style={{ ...audienceDashboardTheme.cssVariables, ...audienceDashboardTheme.styleVariables }}
         >
           <AudienceDisplay
+            letterbox
             dashboard={dashboard}
             contentRenderContext={{
               mediaItems: dashboard.contentLibrary?.mediaItems ?? {},
@@ -1698,6 +1712,7 @@ function AppContent({ releaseProfile = null }) {
             connectionStatus={audienceConnectionStatus}
             projection={audienceProjection}
             onDatePositionChange={publishAudienceDatePosition}
+            onVisualChange={audienceVisualChange}
           />
         </div>
       </AudienceThemeBoundary>
@@ -2094,6 +2109,7 @@ export function applyScenarioPassportValue(next, value) {
   next.programLabel = value.programLabel;
   next.lastUpdated = value.lastUpdated;
   next.home = { enabled: value.home.enabled };
+  if (value.presentationResolution !== undefined) next.presentationResolution = resolvePresentationResolution(value.presentationResolution);
   return next;
 }
 

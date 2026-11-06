@@ -18,6 +18,19 @@ test("display controller is available", () => {
   );
 });
 
+test("source selection restores composition atomically and permits an empty source", () => {
+  const state = displayModule.reduceDisplayState(displayModule.initialDisplayState(), {
+    type: "source_applied", chart_ids: ["b", "a"], layout: "overUnder",
+  });
+  assert.deepEqual(state.displayed_chart_ids, ["b", "a"]);
+  assert.equal(state.layout, "overUnder");
+  const empty = displayModule.reduceDisplayState(state, { type: "source_applied", chart_ids: [], layout: "overUnder" });
+  assert.deepEqual(empty.displayed_chart_ids, []);
+  assert.equal(empty.layout, "solo");
+  assert.equal(empty.display_revision, state.display_revision + 1);
+  assert.throws(() => displayModule.reduceDisplayState(empty, { type: "scene_applied", chart_ids: [], layout: "solo" }));
+});
+
 test("manual and companion actions use one revisioned display state", () => {
   assert.ok(displayModule, "display controller must be implemented");
   let state = displayModule.initialDisplayState();

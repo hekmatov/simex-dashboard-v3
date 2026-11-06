@@ -394,7 +394,7 @@ test("named V3 surfaces inherit shared style and component variables", async () 
   assert.match(presentation, /--simex-component-control-radius/);
 });
 
-test("standalone Audience and its snapshot portal project active theme metadata and variables", async () => {
+test("standalone Audience and the passive local preview project active theme metadata and variables", async () => {
   const [app, recovery, renderer, present, snapshot] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/app-shell/ApplicationRecovery.jsx", import.meta.url), "utf8"),
@@ -415,11 +415,8 @@ test("standalone Audience and its snapshot portal project active theme metadata 
   assert.match(app, /data-dashboard-color-profile=\{audienceDashboardTheme\.dashboardColorProfile\}/);
   assert.match(app, /data-resolved-appearance=\{audienceDashboardTheme\.resolvedAppearance\}/);
   assert.match(app, /style=\{\{ \.\.\.audienceDashboardTheme\.cssVariables, \.\.\.audienceDashboardTheme\.styleVariables \}\}/);
-  assert.match(snapshot, /\{typeof document !== "undefined" && createPortal\(/);
-  assert.match(snapshot, /data-dashboard-style=\{themeProjection\.dashboardStyle\}/);
-  assert.match(snapshot, /data-dashboard-color-profile=\{themeProjection\.dashboardColorProfile\}/);
-  assert.match(snapshot, /data-resolved-appearance=\{themeProjection\.resolvedAppearance\}/);
-  assert.match(snapshot, /style=\{themeProjection\.cssVariables\}/);
-  assert.match(snapshot, /themeProjection\.key/);
+  assert.match(snapshot, /className="audience-local-viewport" aria-hidden="true" inert/);
+  assert.match(snapshot, /className="audience-local-preview audience-theme-root" \{\.\.\.dashboardThemeRootProps\(themeProjection\)\}/);
+  assert.match(snapshot, /style=\{\{ \.\.\.dashboardThemeRootProps\(themeProjection\)\.style,/);
   assert.doesNotMatch(snapshot, /getComputedStyle|querySelector\("\.app-frame"\)/);
 });

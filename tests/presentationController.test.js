@@ -112,6 +112,16 @@ test("strict state projection uses authored matching and explicit Scene Audience
   });
 });
 
+test("None presents without an implicit Chrono Group or playback clock", () => {
+  const manual = controllerModule.resolvePresentPlayback({ ...playback, activeScene: null, activeSceneId: null,
+    source: { kind: "default", id: null } });
+  assert.equal(manual.activeGroup, null);
+  assert.equal(manual.activeGroupId, null);
+  assert.deepEqual(manual.clock, []);
+  assert.equal(manual.source.kind, "manual");
+  assert.equal(controllerModule.resolvePresentPlayback(playback), playback);
+});
+
 test("source eligibility distinguishes valid authored sources from Needs-attention", () => {
   assert.deepEqual(controllerModule.presentationSourceEligibility(scene), {
     status: "valid",
@@ -334,7 +344,7 @@ test("END effects guard each adapter and always consume effects after disposal",
   ]);
 });
 
-test("lower controller exposes source, playback, output, and terminal controls without the Audience lifecycle action", () => {
+test("lower controller exposes source, playback, three output choices and close without terminal controls", () => {
   assert.equal(typeof controllerModule?.default, "function");
   const html = renderToStaticMarkup(React.createElement(controllerModule.default, {
     runtime: {
@@ -360,10 +370,11 @@ test("lower controller exposes source, playback, output, and terminal controls w
   for (const controlId of [
     "source", "previous", "seek", "next",
     "trace-reveal", "trace-full", "cadence", "play", "pause",
-    "output-active", "output-holding", "output-blank", "blackout", "restore", "end",
+    "output-active", "output-holding", "output-black", "close-chrono-groups",
   ]) {
     assert.match(html, new RegExp(`data-presentation-control-id="${controlId}"`), controlId);
   }
+  assert.match(html, /<option value="">None<\/option>/);
   assert.doesNotMatch(html, /open-new-session|reopen-audience|Open audience display|Reopen audience display/);
-  assert.doesNotMatch(html, /matching override|session_override|SET_MATCHING_OVERRIDE/i);
+  assert.doesNotMatch(html, /matching override|session_override|SET_MATCHING_OVERRIDE|>Presentation source<|>Restore<|>Blackout<|>End presentation</i);
 });

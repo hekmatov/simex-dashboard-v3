@@ -4,6 +4,7 @@ import DisplayedChartGrid from "../display/DisplayedChartGrid.jsx";
 import { buildMemberTimeContexts } from "../playback/PlaybackProvider.jsx";
 import ConnectionIndicator from "./ConnectionIndicator.jsx";
 import useAudienceStaticAssetReadiness from "./useAudienceStaticAssetReadiness.js";
+import AudienceStage from "./AudienceStage.jsx";
 
 export function moveAudienceDatePositionByPointer(position, movement, bounds) {
   const surfaceWidth = Math.max(1, Number(bounds?.width) || 0);
@@ -126,13 +127,14 @@ export class AudienceRenderBoundary extends React.Component {
     const projection = this.state.renderFailed
       ? this.lastCommittedProjection
       : this.props.projection;
-    return (
+    const surface = (
       <AudienceProjectionSurface
         {...this.props}
         projection={projection}
         renderStatus={this.state.renderFailed ? "retained" : "current"}
       />
     );
+    return this.props.letterbox ? <AudienceStage resolution={projection?.targetResolution}>{surface}</AudienceStage> : surface;
   }
 }
 
@@ -195,6 +197,8 @@ export function AudienceProjectionSurface({
       data-connection-status={connectionStatus ?? "waiting"}
       data-output-mode={projection.mode}
       data-render-status={renderStatus}
+      data-audience-accepted-sequence={projection.acceptedSequence}
+      data-audience-dashboard-revision={JSON.stringify(projection.dashboardRevision)}
       data-frame-index={projection.timeline?.frame_index}
       data-trace-mode={projection.timeline?.trace_mode}
       data-shared-header-visible={sharedHeaderVisible ? "true" : "false"}
@@ -220,6 +224,7 @@ export function AudienceProjectionSurface({
             assets: dashboard.assets ?? {},
           }}
           timeContextForChart={(chartId) => memberTimeContexts[chartId] ?? null}
+          timeContextAuthority="explicit"
           surface="audience"
           onVisualChange={onVisualChange}
         />

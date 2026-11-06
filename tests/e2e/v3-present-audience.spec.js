@@ -29,14 +29,14 @@ test.beforeEach(async ({ page }, testInfo) => {
   }, fixture);
 });
 
-test("END closes Audience and terminates the old channel", async ({ page }) => {
+test("manual Audience closure terminates the old channel", async ({ page }) => {
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
   const first = await openAudienceSession(page);
 
   const closed = first.popup.waitForEvent("close");
-  await page.locator('[data-presentation-control-id="end"]').click();
+  await first.popup.close();
   await closed;
   await expect(page.locator('[data-presentation-control-id="open-new-session"]')).toBeVisible();
   await sendLateOldGenerationMessage(page, first.channelId);
@@ -104,7 +104,7 @@ test("Audience remains passive and last-valid through invalid output and reconne
   await session.popup.close();
 });
 
-test("Audience surface remaining after denied close shows neutral Ended projection and rejects old events", async ({ context, page }) => {
+test("Audience surface remaining after presenter teardown with denied close shows neutral Ended projection and rejects old events", async ({ context, page }) => {
   test.setTimeout(120_000);
   await installAudienceFaultInstrumentation(context);
   await context.addInitScript(() => {
@@ -119,7 +119,7 @@ test("Audience surface remaining after denied close shows neutral Ended projecti
     && window.close.toString().replace(/\s/g, "") === "()=>{}"
   ))).toBe(true);
 
-  await page.locator('[data-presentation-control-id="end"]').click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Home", exact: true }).click();
   await expect(first.popup.locator(".audience-display")).toHaveAttribute("data-connection-status", "ended");
   await expect(first.popup.locator(".audience-ended-content h1")).toHaveText("Presentation ended");
   await expect(first.popup.locator(".audience-ended-content p")).toHaveText("This display is no longer active.");
@@ -131,6 +131,7 @@ test("Audience surface remaining after denied close shows neutral Ended projecti
   await expect(first.popup.locator(".audience-ended-content h1")).toHaveText("Presentation ended");
   await expect(first.popup.getByText("Waiting for the next scene.", { exact: true })).toHaveCount(0);
 
+  await enterPresentWithScene(page, scene);
   const second = await openAudienceSession(page);
   expect(second.channelId).not.toBe(first.channelId);
   await first.popup.close({ runBeforeUnload: false });

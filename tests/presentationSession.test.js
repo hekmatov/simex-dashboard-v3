@@ -504,6 +504,16 @@ test("rejected timer tick restores accepted frame and leaves cursor memory uncha
   assert.equal(rejected.pendingRequest, null);
 });
 
+test("direct output choices clear legacy blackout without a separate restore", () => {
+  for (const mode of ["active", "holding", "blank"]) {
+    const blacked = reducePresentationSession(liveSession(), { type: "SET_BLACKOUT", active: true });
+    const chosen = reducePresentationSession(blacked, { type: "SET_OUTPUT_MODE", mode });
+    assert.equal(chosen.output, mode);
+    assert.equal(chosen.blackout, false);
+    assert.equal(chosen.playback, "paused");
+  }
+});
+
 test("blackout restores the prior deliberate output and never autoplays", () => {
   const holding = reducePresentationSession(liveSession(), {
     type: "SET_OUTPUT_MODE",

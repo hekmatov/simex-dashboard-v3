@@ -41,14 +41,14 @@ test("point-label matrix follows series and category identities rather than alia
   assert.notEqual(pointLabelKey({ ...marks[0], x: 1 }), pointLabelKey({ ...marks[0], x: "1" }));
 });
 
-test("point-label row and column updates retain dormant choices and distinguish All from None", () => {
+test("point-label row and column updates retain dormant choices and distinguish Automatic, All and None", () => {
   assert.equal(pointLabelSelected(undefined, "a"), true);
   const hidden = setPointLabels(undefined, ["a", "b"], false);
   assert.deepEqual(hidden, { mode: "allExcept", keys: ["a", "b"] });
   assert.equal(pointLabelSelected(hidden, "a"), false);
   assert.equal(pointLabelSelected(hidden, "new"), true);
   assert.deepEqual(setPointLabels(hidden, ["a"], true), { mode: "allExcept", keys: ["b"] });
-  assert.equal(setPointLabels(hidden, ["a", "b"], true), undefined);
+  assert.deepEqual(setPointLabels(hidden, ["a", "b"], true), { mode: "allExcept", keys: [] });
   const none = { mode: "only", keys: [] };
   assert.equal(pointLabelSelected(none, "new"), false);
   const selected = setPointLabels(none, ["a", "dormant"], true);
@@ -57,7 +57,8 @@ test("point-label row and column updates retain dormant choices and distinguish 
 });
 
 test("point-label selection rejects malformed and active records without evaluating accessors", () => {
-  assert.equal(normalizePointLabelSelection({ mode: "allExcept", keys: [] }), undefined);
+  assert.equal(normalizePointLabelSelection(undefined), undefined);
+  assert.deepEqual(normalizePointLabelSelection({ mode: "allExcept", keys: [] }), { mode: "allExcept", keys: [] });
   assert.deepEqual(normalizePointLabelSelection({ mode: "only", keys: [] }), { mode: "only", keys: [] });
   for (const value of [{ mode: "bad", keys: [] }, { mode: "only", keys: [1] }, { mode: "only", keys: ["a", "a"] }, { mode: "only", keys: [], extra: 1 }, []]) assert.throws(() => normalizePointLabelSelection(value));
   let evaluated = false;

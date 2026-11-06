@@ -4,6 +4,8 @@ import {
   DASHBOARD_COLOR_PROFILES,
   DASHBOARD_STYLES,
 } from "../theme/dashboardTheme.js";
+import { AUDIENCE_FRAME_TYPES, validateAudienceFramePayload } from "./audienceFrameProtocol.js";
+import { resolvePresentationResolution } from "./presentationResolution.js";
 
 export const PRESENTATION_PROTOCOL_VERSION = 3;
 export const PRESENTATION_THEME_PROTOCOL_VERSION = 1;
@@ -15,6 +17,7 @@ const MESSAGE_TYPES = new Set([
   "heartbeat",
   "ended",
   "audience-date-position",
+  ...AUDIENCE_FRAME_TYPES,
 ]);
 const OUTPUT_MODES = new Set(["holding", "blank", "active"]);
 const TRACE_MODES = new Set(["reveal", "full"]);
@@ -127,6 +130,7 @@ export function parsePresentationMessage(
   value,
   { sessionId, lastSequence, presentableItemIndex } = {},
 ) {
+  if (AUDIENCE_FRAME_TYPES.includes(value?.type)) validateAudienceFramePayload(value.type, value.payload);
   const message = clone(value);
   validateMessage(message, { sessionId, lastSequence, presentableItemIndex });
   return message;
@@ -146,11 +150,12 @@ export function validatePresentationState(state, { presentableItemIndex } = {}) 
   const hasTheme = Object.hasOwn(state, "theme");
   assertExactFields(
     state,
-    hasTheme ? STATE_FIELDS : LEGACY_STATE_FIELDS,
+    [...(hasTheme ? STATE_FIELDS : LEGACY_STATE_FIELDS), ...(Object.hasOwn(state, "target_resolution") ? ["target_resolution"] : [])],
     "presentation state",
     "payload",
   );
   assertRevision(state.dashboard_revision);
+  if (Object.hasOwn(state, "target_resolution")) resolvePresentationResolution(state.target_resolution);
   if (hasTheme) validateTheme(state.theme);
   validateSource(state.source);
   validatePayload(state.payload, { presentableItemIndex });
@@ -312,6 +317,8 @@ function validateMessage(message, { sessionId, lastSequence, presentableItemInde
     validatePresentationState(message.payload, { presentableItemIndex });
   } else if (message.type === "audience-date-position") {
     validateAudienceDatePositionMessage(message.payload);
+  } else if (AUDIENCE_FRAME_TYPES.includes(message.type)) {
+    validateAudienceFramePayload(message.type, message.payload);
   } else if (message.payload !== null) {
     reject("invalid_message_payload", `${message.type} presentation payload must be null`, "message.payload");
   }

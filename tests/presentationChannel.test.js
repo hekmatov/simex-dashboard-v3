@@ -120,6 +120,7 @@ function setup({
   validateSourceSelection = () => ({ accepted: true }),
   onAudienceDatePositionChange = () => {},
   onAcceptedStateChange = () => {},
+  onAudienceStreamChange = () => {},
 } = {}) {
   FakeBroadcastChannel.reset();
   const scheduler = new FakeScheduler();
@@ -139,6 +140,7 @@ function setup({
     onConnectionChange: (status) => statuses.push(status),
     onAudienceDatePositionChange,
     onAcceptedStateChange,
+    onAudienceStreamChange,
     onMessageRejected: (reason, lastValidSnapshot) => {
       controllerRejections.push({ reason, lastValidSnapshot });
     },
@@ -1134,7 +1136,7 @@ test("heartbeat, disconnect, ended, and cleanup retain the v3 lifecycle", () => 
   observer.close();
 });
 
-test("a post-timeout controller heartbeat cannot reconnect without a ready-triggered baseline", () => {
+test("a post-timeout controller heartbeat requests resync but cannot reconnect before accepted baseline or ready", () => {
   FakeBroadcastChannel.reset();
   const scheduler = new FakeScheduler();
   const statuses = [];
@@ -1163,13 +1165,13 @@ test("a post-timeout controller heartbeat cannot reconnect without a ready-trigg
     protocol_version: 3, session_id: "session-001", sequence: 2, type: "heartbeat", payload: null,
   });
   assert.deepEqual(statuses.slice(-2), ["disconnected", "reconnecting"]);
-  assert.equal(sent.filter(({ type }) => type === "state").length, 2);
+  assert.equal(sent.filter(({ type }) => type === "state").length, 3);
 
   audience.postMessage({
     protocol_version: 3, session_id: "session-001", sequence: 3, type: "ready", payload: null,
   });
   assert.equal(statuses.at(-1), "connected");
-  assert.equal(sent.filter(({ type }) => type === "state").length, 3);
+  assert.equal(sent.filter(({ type }) => type === "state").length, 4);
   const legacyWireState = presentationState();
   delete legacyWireState.theme;
   assert.deepEqual(sent.at(-1).payload, legacyWireState);
@@ -1255,6 +1257,8 @@ test("controller sends liveness heartbeats to Audience without changing the acce
   audience.start();
   const first = presentationState();
   controller.publish(first);
+  assert.equal(statuses.filter(status => !status.startsWith("audience:")).at(-1), "connected",
+    "a ready received before the first published baseline completes connection when that baseline is sent");
 
   scheduler.advance(3_000);
 
@@ -1264,7 +1268,7 @@ test("controller sends liveness heartbeats to Audience without changing the acce
     "controller and Audience each emit two liveness heartbeats",
   );
   assert.deepEqual(states, [first]);
-  assert.equal(statuses.at(-1), "audience:connected");
+  assert.equal(statuses.filter(status => status.startsWith("audience:")).at(-1), "audience:connected");
   observer.close();
   audience.dispose();
   controller.dispose();
@@ -1323,4 +1327,129 @@ test("a malformed state arriving first after controller silence remains reconnec
   assert.deepEqual(audience.getLastValidSnapshot(), first);
   restoredController.close();
   audience.dispose();
+});
+
+function capturedFrameFor(message, revision = 1) {
+  return {
+    stream_id: "audience-instance", accepted_sequence: message.sequence,
+    dashboard_revision: message.payload.dashboard_revision, revision,
+    viewport: { width: 1600, height: 900, dpr: 1 },
+    stage: { width: 1920, height: 1080, scale: 1600 / 1920 },
+    image: "data:image/jpeg;base64,/9j/2Q==", capturedAt: 0, reason: "state-accepted",
+  };
+}
+
+test("resumed control heartbeat and accepted resync receipt clear a stuck reconnecting label", () => {
+  const { audience, controller, scheduler, statuses } = setup();
+  controller.start(); controller.publish(presentationState()); audience.start();
+  audience.dispose();
+  const sender = createChannel("simex-presentation-session-001");
+  scheduler.advance(5500);
+  assert.equal(statuses.at(-1), "disconnected");
+  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 20, type: "heartbeat", payload: null });
+  assert.equal(statuses.at(-1), "reconnecting");
+  const sent = [];
+  const observer = createChannel("simex-presentation-session-001");
+  observer.onmessage = ({ data }) => { if (data.type === "state") sent.push(data); };
+  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 21, type: "heartbeat", payload: null });
+  assert(sent.length > 0, "a reconnecting heartbeat requests a fresh baseline");
+  const { stream_id, accepted_sequence, dashboard_revision, viewport, stage } = capturedFrameFor(sent.at(-1));
+  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 22, type: "audience_viewport",
+    payload: { stream_id, accepted_sequence, dashboard_revision, viewport, stage } });
+  assert.equal(statuses.at(-1), "connected");
+  observer.close(); sender.close(); controller.dispose();
+});
+
+test("frame stream identifies the Audience-accepted state separately from a newer requested update", () => {
+  const updates = [];
+  const { audience, controller, acceptedMessages } = setup({ onAudienceStreamChange: next => updates.push(next) });
+  controller.start(); controller.publish(presentationState()); audience.start();
+  const accepted = acceptedMessages.at(-1);
+  const frame = capturedFrameFor(accepted);
+  audience.publishFrameEvent("audience_frame", frame);
+  assert.equal(updates.at(-1).frame.accepted_sequence, accepted.sequence);
+  controller.publish({ ...presentationState(), blackout: true });
+  assert(updates.at(-1).requestedSequence > updates.at(-1).frame.accepted_sequence);
+  assert.equal(updates.at(-1).frame.revision, 1);
+  audience.dispose(); controller.dispose();
+});
+
+test("delayed playback samples advance image order without rolling back newer accepted metadata", () => {
+  const updates = [];
+  const { audience, controller, acceptedMessages, controllerRejections } = setup({ onAudienceStreamChange: next => updates.push(next) });
+  const state = presentationState();
+  const publishViewport = ({ stream_id, accepted_sequence, dashboard_revision, viewport, stage }) =>
+    audience.publishFrameEvent("audience_viewport", { stream_id, accepted_sequence, dashboard_revision, viewport, stage });
+  controller.start(); controller.publish(state); audience.start();
+  const first = capturedFrameFor(acceptedMessages.at(-1));
+  controller.publish({ ...state, timeline: { ...state.timeline, frame_index: 1 } });
+  const second = capturedFrameFor(acceptedMessages.at(-1), 2);
+  publishViewport(second);
+  audience.publishFrameEvent("audience_frame", first);
+  assert.equal(updates.at(-1).frame?.accepted_sequence, first.accepted_sequence);
+  assert.equal(updates.at(-1).acceptedSequence, second.accepted_sequence);
+
+  audience.publishFrameEvent("audience_frame", second);
+  audience.publishFrameEvent("audience_frame", { ...first, revision: 3 });
+  assert.equal(controllerRejections.at(-1).reason.code, "stale_audience_frame");
+  assert.equal(updates.at(-1).frame.revision, 2);
+
+  controller.publish({ ...state, blackout: true });
+  publishViewport(capturedFrameFor(acceptedMessages.at(-1), 4));
+  audience.publishFrameEvent("audience_frame", { ...second, revision: 3 });
+  assert.equal(controllerRejections.length, 2);
+  assert.equal(controllerRejections.at(-1).reason.code, "stale_audience_frame");
+  assert.equal(updates.at(-1).frame.revision, 2);
+  audience.dispose(); controller.dispose();
+});
+
+test("a delayed frame cannot cross a Theme change on the separate presentation channel", () => {
+  const updates = [];
+  const { audience, controller, acceptedMessages, controllerRejections } = setup({ onAudienceStreamChange: next => updates.push(next) });
+  const state = presentationState();
+  controller.start(); controller.publish(state); audience.start();
+  const lightFrame = capturedFrameFor(acceptedMessages.at(-1));
+  controller.publish({ ...state, theme: { ...state.theme, appearance_preference: "dark", resolved_appearance: "dark" },
+    timeline: { ...state.timeline, frame_index: 1 } });
+  const { stream_id, accepted_sequence, dashboard_revision, viewport, stage } = capturedFrameFor(acceptedMessages.at(-1), 2);
+  audience.publishFrameEvent("audience_viewport", { stream_id, accepted_sequence, dashboard_revision, viewport, stage });
+  audience.publishFrameEvent("audience_frame", lightFrame);
+  assert.equal(updates.at(-1).frame, null);
+  assert.equal(controllerRejections.at(-1).reason.code, "stale_audience_frame");
+  audience.dispose(); controller.dispose();
+});
+
+test("frame order, state identity and reconnect floors reject obsolete images without discarding the last valid frame", () => {
+  const updates = [];
+  const { audience, controller, acceptedMessages, controllerRejections } = setup({ onAudienceStreamChange: next => updates.push(next) });
+  controller.start(); controller.publish(presentationState()); audience.start();
+  const first = capturedFrameFor(acceptedMessages.at(-1));
+  audience.publishFrameEvent("audience_frame", first);
+  audience.publishFrameEvent("audience_frame", first);
+  assert.equal(controllerRejections.at(-1).reason.code, "stale_audience_frame");
+  audience.publishFrameEvent("audience_frame", { ...first, revision: 2, dashboard_revision: "wrong" });
+  assert.equal(controllerRejections.at(-1).reason.code, "unaccepted_audience_frame");
+  assert.equal(updates.at(-1).frame.revision, 1);
+  audience.dispose();
+  const replacement = createPresentationAudienceChannel({ sessionId: "session-001", createChannel, presentableItemIndex });
+  replacement.start();
+  replacement.publishFrameEvent("audience_frame", { ...first, revision: 3 });
+  assert.equal(controllerRejections.at(-1).reason.code, "unaccepted_audience_frame");
+  assert.equal(updates.at(-1).status, "waiting");
+  replacement.dispose(); controller.dispose();
+});
+
+test("frame stream heartbeats cannot substitute for the existing controller safety heartbeat", () => {
+  const { audience, controller, acceptedMessages, scheduler, statuses } = setup();
+  controller.start(); controller.publish(presentationState()); audience.start();
+  const { stream_id, accepted_sequence, dashboard_revision } = capturedFrameFor(acceptedMessages.at(-1));
+  const transport = audienceTransport();
+  audience.dispose();
+  for (let i = 0; i < 6; i++) {
+    scheduler.advance(1000);
+    transport.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 10 + i,
+      type: "audience_heartbeat", payload: { stream_id, accepted_sequence, dashboard_revision, status: "static", since: 0 } });
+  }
+  assert.equal(statuses.at(-1), "disconnected");
+  controller.dispose();
 });

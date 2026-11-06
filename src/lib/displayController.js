@@ -88,25 +88,28 @@ export function reduceDisplayState(state, action, validChartIds = null) {
       });
       return withDisplayedCharts(state, chartIds);
     }
+    case "source_applied":
     case "scene_applied": {
       const chartIds = validatedChartIds(action.chart_ids, {
-        minimum: 1,
+        minimum: action.type === "source_applied" ? 0 : 1,
         validIds,
       });
       const allowedLayouts = LAYOUTS_BY_COUNT[chartIds.length];
-      if (!allowedLayouts.includes(action.layout)) {
+      const layout = action.type === "source_applied" && !allowedLayouts.includes(action.layout)
+        ? defaultLayout(chartIds.length) : action.layout;
+      if (!allowedLayouts.includes(layout)) {
         throw new DisplayStateError("invalid_layout");
       }
       if (
         sameItems(chartIds, state.displayed_chart_ids)
-        && state.layout === action.layout
+        && state.layout === layout
       ) {
         return state;
       }
       return freezeState({
         display_revision: state.display_revision + 1,
         displayed_chart_ids: chartIds,
-        layout: action.layout,
+        layout,
       });
     }
     case "layout_changed": {

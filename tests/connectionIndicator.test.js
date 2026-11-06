@@ -27,14 +27,16 @@ test("ConnectionIndicator keeps status words accessible but not visibly duplicat
   );
 });
 
-test("PresentationController binds the indicator to the S8-2 session connection state", async () => {
-  const source = await readFile(new URL(
-    "../src/components/presentation/PresentationController.jsx",
-    import.meta.url,
-  ), "utf8");
+test("PresentWorkspace shows the runtime session connection state as status text", async () => {
+  const [runtime, workspace] = await Promise.all([
+    readFile(new URL("../src/components/presentation/usePresentationRuntime.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/presentation/PresentWorkspace.jsx", import.meta.url), "utf8"),
+  ]);
 
-  assert.match(source, /<ConnectionIndicator connection=\{session\.connection\} \/>/);
-  assert.doesNotMatch(source, /ConnectionIndicator[^\n]*(?:onClick|button|control)/);
+  assert.match(runtime, /connectionStatus: sessionState\.connection/);
+  assert.match(workspace, /<strong>\{connectionStatusLabel\(connectionStatus\)\}<\/strong>/);
+  assert.match(workspace, /status === "reconnecting"\) return "Audience display reconnecting"/);
+  assert.match(workspace, /status === "disconnected"\) return "Audience display disconnected"/);
 });
 
 test("standalone connection comparison is complete, local, and explicitly non-production", async () => {

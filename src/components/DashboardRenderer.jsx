@@ -453,6 +453,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     { enabled: mode === "present" },
   );
   React.useEffect(() => {
+    if (mode === "present" && playback.activeScene
+      && !presentationRuntime.isPresentationSceneSelected(playback.activeScene.id)) return;
     applyScenePresentTransition(
       appliedScenePresentSignature,
       playback.activeScene,
@@ -466,6 +468,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     appliedScenePresentSignature,
     mode,
     playback.activeScene,
+    presentationRuntime.isPresentationSceneSelected,
     presentationRuntime.onDisplayAction,
   ]);
   const landingActive = hasLandingPresentation(activePage);

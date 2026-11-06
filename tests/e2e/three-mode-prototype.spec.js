@@ -130,14 +130,18 @@ test("Present reserves a reachable desktop dock without covering its work contro
   expect(geometry.dock.bottom).toBeLessThanOrEqual(geometry.viewportHeight);
   expect(geometry.workspace.bottom).toBeLessThanOrEqual(geometry.viewportHeight);
 
-  const contextPanel = page.locator(".present-context-panel");
+  const choices = page.locator(".present-chart-choice input:enabled");
+  for (let index = 0; index < 4; index += 1) await choices.nth(index).check();
+  const displayed = page.getByRole("region", { name: "Displayed charts" });
+  await expect(displayed.locator(".present-selected-chart")).toHaveCount(4);
   const compositionLayout = page.locator('[data-presentation-control-id="composition-layout"]');
-  await contextPanel.hover();
-  await page.mouse.wheel(0, 1_000);
-  await expect.poll(() => contextPanel.evaluate((element) => element.scrollTop))
-    .toBeGreaterThan(0);
+  const lastRemove = displayed.locator('[data-presentation-item-action="remove"]').last();
+  await expect(compositionLayout).toBeInViewport({ ratio: 1 });
+  await expect(lastRemove).toBeInViewport({ ratio: 1 });
+  await compositionLayout.click({ trial: true });
+  await lastRemove.click({ trial: true });
 
-  const scrolledGeometry = await page.evaluate(() => {
+  const filledGeometry = await page.evaluate(() => {
     const bounds = (selector) => {
       const element = document.querySelector(selector);
       if (!element) throw new Error(`Missing geometry target: ${selector}`);
@@ -157,12 +161,12 @@ test("Present reserves a reachable desktop dock without covering its work contro
     };
   });
 
-  expect(scrolledGeometry.compositionLayout.top)
-    .toBeGreaterThanOrEqual(scrolledGeometry.workRegion.top);
-  expect(scrolledGeometry.compositionLayout.bottom)
-    .toBeLessThanOrEqual(scrolledGeometry.workRegion.bottom);
-  expect(scrolledGeometry.compositionLayout.bottom)
-    .toBeLessThanOrEqual(scrolledGeometry.dock.top);
+  expect(filledGeometry.compositionLayout.top)
+    .toBeGreaterThanOrEqual(filledGeometry.workRegion.top);
+  expect(filledGeometry.compositionLayout.bottom)
+    .toBeLessThanOrEqual(filledGeometry.workRegion.bottom);
+  expect(filledGeometry.compositionLayout.bottom)
+    .toBeLessThanOrEqual(filledGeometry.dock.top);
 });
 
 test("Build metadata persists on save and stays editable after storage fallback", async ({ page }) => {
@@ -349,7 +353,7 @@ test("Present opens an audience window and sends a two-chart layout", async ({ p
   await expect(grid.locator("[data-displayed-chart-id]")).toHaveCount(2);
 });
 
-test("Present retains synchronized time through blackout, reload, disconnect, and reopen", async ({ page }) => {
+test("Present retains synchronized time through Black, reload, manual close, and a new window", async ({ page }) => {
   await installPageRemovalGroups(page);
   await page.reload();
   await enterPresent(page);
@@ -364,6 +368,7 @@ test("Present retains synchronized time through blackout, reload, disconnect, an
   expect(groupSources.length).toBeGreaterThan(0);
   const currentSource = await source.inputValue();
   await source.selectOption(groupSources.find((value) => value !== currentSource) ?? groupSources[0]);
+  await selectTwoAudienceCharts(page);
   await expect.poll(async () => Number.isFinite(
     await observedAudienceEpoch(page),
   )).toBe(true);
@@ -381,19 +386,19 @@ test("Present retains synchronized time through blackout, reload, disconnect, an
   const activeEpochMs = await observedAudienceEpoch(page);
   expect(Number.isFinite(activeEpochMs)).toBe(true);
 
-  await page.getByRole("button", { name: "Blackout" }).click();
-  await expect(audience.locator(".audience-blackout")).toBeVisible();
+  await page.getByRole("button", { name: "Black", exact: true }).click();
+  await expect(audience.locator(".audience-display")).toHaveAttribute("data-output-mode", "blank");
 
   await audience.reload();
-  await expect(audience.locator(".audience-blackout")).toBeVisible();
-  await expect(audience.locator("[data-displayed-chart-id]")).toHaveCount(2);
+  await expect(audience.locator(".audience-display")).toHaveAttribute("data-output-mode", "blank");
+  await expect(audience.locator("[data-displayed-chart-id]")).toHaveCount(0);
   await expect.poll(() => observedAudienceEpoch(page)).toBe(activeEpochMs);
 
-  await page.getByRole("button", { name: "Restore" }).click();
-  await expect(audience.locator(".audience-blackout")).toHaveCount(0);
+  await page.getByRole("button", { name: "Active", exact: true }).click();
+  await expect(audience.locator(".audience-display")).toHaveAttribute("data-output-mode", "active");
   await audience.close();
   await expect(page.getByRole("region", { name: "Audience display connection" })
-    .getByText("Audience display disconnected", { exact: true }))
+    .getByText("Audience display not open", { exact: true }))
     .toBeVisible({ timeout: 7_000 });
 
   const reopened = await reopenAudience(page);
@@ -477,7 +482,7 @@ async function openAudience(page) {
 
 async function reopenAudience(page) {
   const audiencePromise = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Reopen audience display" }).click();
+  await page.locator('[data-presentation-control-id="open-new-session"], [data-presentation-control-id="reopen-audience"]').click();
   const audience = await audiencePromise;
   await audience.waitForLoadState("domcontentloaded");
   await expect(audience.locator(".audience-display")).toBeVisible();

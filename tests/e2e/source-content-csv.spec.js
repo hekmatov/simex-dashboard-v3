@@ -128,10 +128,11 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   const chrono = page.getByRole("region", { name: "Chrono playback controls" });
   await chrono.getByLabel("Chrono source").selectOption(`scene:${target.sceneId}`);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  await page.getByLabel("Presentation source").selectOption(`scene:${target.sceneId}`);
   await expect(page.getByRole("status").filter({ hasText: "Scene presentation needs review" })).toBeVisible();
   await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", target.sceneId);
   await expect(page.locator(".present-selected-chart")).toHaveCount(target.presentChartCount);
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
   await page.getByLabel("Presentation source").selectOption(`group:${target.groupId}`);
   const { popup } = await openAudienceSession(page);
   await expect.poll(() => page.evaluate((groupId) => (

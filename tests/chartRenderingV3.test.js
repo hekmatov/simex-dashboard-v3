@@ -1750,14 +1750,36 @@ test("Audience tier and dashboard theme key changes produce fresh fake-lifecycle
   assert.equal(calls[3].graphic[0].$action, "replace");
 });
 
-test("explicit axis labels override automatic density limits", () => {
-  const marks = Array.from({ length: 16 }, (_, index) => ({ x: `Week ${index % 4}`, value: index + 1, measure: `series-${Math.floor(index / 4)}` }));
-  for (const typeId of ["line", "bar", "horizontalBar"]) {
+test("automatic axis labels honor legacy density limits and explicit All overrides them", () => {
+  for (const [typeId, limit] of [["line", 14], ["bar", 18], ["horizontalBar", 24]]) {
+    const marks = Array.from({ length: limit + 1 }, (_, index) => ({ x: `Week ${index}`, value: index + 1, measure: "one" }));
     const instance = chart(typeId, { presentation: { labels: { visible: true } } });
-    const model = buildRenderModel({ chart: instance, prepared: ready(marks) });
-    assert.equal(model.option.series.every(series => series.label.show), true);
+    const render = (points) => buildRenderModel({ chart: instance, prepared: ready(points) }).option.series[0];
+    assert.equal(render(marks.slice(0, limit)).label.show, true, typeId);
+    assert.equal(render(marks).label.show, false, typeId);
+    instance.presentation.labels.pointSelection = { mode: "allExcept", keys: [] };
+    assert.equal(render(marks).data.filter(point => point.label.show).length, marks.length, typeId);
     instance.presentation.labels.visible = false;
-    assert.equal(buildRenderModel({ chart: instance, prepared: ready(marks) }).option.series.every(series => !series.label.show), true);
+    assert.equal(render(marks).data.filter(point => point.label.show).length, 0, typeId);
+  }
+});
+
+test("selected point labels draw on a long line with symbols limited to selected points", () => {
+  const marks = Array.from({ length: 60 }, (_, index) => ({ x: `Week ${index + 1}`, value: index + 1, measure: "one" }));
+  const instance = chart("line", { presentation: { labels: {
+    visible: true, format: "Point {c}", pointSelection: { mode: "only", keys: [pointLabelKey(marks[19])] },
+  } } });
+  const { option } = buildRenderModel({ chart: instance, prepared: ready(marks) });
+  const series = option.series[0];
+  assert.equal(series.showSymbol, true);
+  assert.equal(series.symbol, "none");
+  assert.deepEqual(series.data.filter(point => point.symbol).map(point => point.value), [20]);
+  const rendered = echarts.init(null, null, { renderer: "svg", ssr: true, width: 600, height: 400 });
+  try {
+    rendered.setOption({ ...option, animation: false });
+    assert.deepEqual(rendered.renderToSVGString().match(/Point \d+/g), ["Point 20"]);
+  } finally {
+    rendered.dispose();
   }
 });
 

@@ -5,6 +5,7 @@ import { createChartDraft } from "../../src/charting/config/chartConfigV3.js";
 import { collectionConsumerFixture } from "../fixtures/collectionConsumerV3.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
+import { openAudienceSession } from "./support/present-audience-workflow.js";
 
 const NATIVE_STYLES = Object.freeze([
   Object.freeze({
@@ -523,11 +524,12 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Present", exact: true }).click();
-  await expect(page.locator(".present-displayed-panel .eyebrow"))
-    .toHaveCSS("color", "rgb(85, 90, 85)");
+  await expect(page.getByRole("heading", { name: "Displayed charts", exact: true }))
+    .toHaveCSS("color", NATIVE_STYLES[0].textPaint);
 });
 
 test("Present orders monitor, displayed charts, then options and captures a sharp preview", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
@@ -537,7 +539,7 @@ test("Present orders monitor, displayed charts, then options and captures a shar
   await expect(page.locator(".present-displayed-panel")).toBeVisible();
   await expect(page.locator(".present-audience-information")).toHaveCount(1);
   const order = await page.evaluate(() => {
-    const monitor = document.querySelector(".audience-snapshot-monitor");
+    const monitor = document.querySelector(".audience-snapshot-frame");
     const displayed = document.querySelector(".present-displayed-panel");
     const options = document.querySelector(".present-audience-information");
     return {
@@ -547,33 +549,41 @@ test("Present orders monitor, displayed charts, then options and captures a shar
   });
   expect(order).toEqual({ monitorBeforeDisplayed: true, displayedBeforeOptions: true });
 
-  const preview = page.locator('.audience-snapshot-frame img[alt="Current audience scene"]');
-  await expect(preview).toBeVisible();
-  await expect.poll(() => preview.evaluate((image) => [image.naturalWidth, image.naturalHeight]))
-    .toEqual([960, 540]);
+  const monitor = page.getByRole("region", { name: "Audience scene monitor" });
+  await expect(monitor).toHaveAttribute("data-monitor-source", "local");
+  await expect(monitor.locator(".audience-local-preview .audience-display")).toBeVisible();
+  const { popup } = await openAudienceSession(page);
+  try {
+    await expect(monitor).toHaveAttribute("data-monitor-source", "audience");
+    const preview = monitor.getByRole("img", { name: "Captured Audience stage" });
+    await expect(preview).toBeVisible();
+    await expect.poll(() => preview.evaluate(image => [image.naturalWidth, image.naturalHeight]))
+      .toEqual([960, 540]);
+    await expect(monitor).toHaveAttribute("data-monitor-status", "static");
+  } finally {
+    await popup.close();
+  }
 });
 
-test("Present keeps a live themed audience mirror for monitor captures", async ({ page }) => {
+test("Present keeps a live themed local preview until Audience connects", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Present", exact: true }).click();
-  const preview = page.locator('.audience-snapshot-frame img[alt="Current audience scene"]');
-  await expect(preview).toBeVisible();
-  const holdingPreviewSrc = await preview.getAttribute("src");
+  const monitor = page.getByRole("region", { name: "Audience scene monitor" });
+  await expect(monitor).toHaveAttribute("data-monitor-source", "local");
+  const mirror = monitor.locator(".audience-local-preview .audience-display");
+  await expect(mirror).toBeVisible();
+  await expect(mirror.locator(".displayed-chart-cell")).toHaveCount(0);
   const choices = page.locator(".present-chart-choice");
   await expect(choices.nth(1)).toBeVisible();
   await choices.nth(0).getByRole("checkbox").check();
   await choices.nth(1).getByRole("checkbox").check();
-  await expect.poll(() => preview.getAttribute("src")).not.toBe(holdingPreviewSrc);
-
-  const mirror = page.locator(".audience-snapshot-source .audience-theme-root .audience-display");
-  await expect(mirror).toBeAttached();
   await expect(mirror.locator(".displayed-chart-grid")).toHaveClass(/displayed-count-2/);
-  await expect.poll(() => mirror.evaluate((scene) => ({
-    width: scene.getBoundingClientRect().width,
-    height: scene.getBoundingClientRect().height,
-  }))).toEqual({ width: 1280, height: 720 });
+  const theme = page.locator(".app-frame[data-dashboard-style]").first();
+  await expect(monitor.locator(".audience-local-preview")).toHaveAttribute("data-dashboard-style", await theme.getAttribute("data-dashboard-style"));
+  expect(await mirror.evaluate(scene => ({ width: scene.offsetWidth, height: scene.offsetHeight })))
+    .toEqual({ width: 1920, height: 1080 });
 });
 
 test("selected dashboard style reaches crown, Build authoring, and Present chrome", async ({ page }) => {

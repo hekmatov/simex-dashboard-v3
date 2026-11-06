@@ -21,7 +21,7 @@ export function normalizePointLabelSelection(value) {
   const mode = descriptors.mode.value;
   if (!["only", "allExcept"].includes(mode)) throw new Error("Point label selection mode must be only or allExcept.");
   const keys = normalizePresentationOrder(descriptors.keys.value, "Point label selection");
-  return mode === "allExcept" && !keys.length ? undefined : { mode, keys };
+  return { mode, keys };
 }
 
 export function pointLabelMatcher(selection) {
@@ -40,7 +40,7 @@ export function setPointLabels(selection, pointKeys, checked) {
     if (checked === (mode === "only")) keys.add(key);
     else keys.delete(key);
   }
-  return mode === "allExcept" && !keys.size ? undefined : { mode, keys: [...keys] };
+  return { mode, keys: [...keys] };
 }
 
 export function buildPointLabelMatrix({ chart, prepared }) {

@@ -8,6 +8,8 @@ import {
   presentationThemeChannelName,
   validatePresentationState,
 } from "./presentationProtocol.js";
+import { AUDIENCE_FRAME_TYPES } from "./audienceFrameProtocol.js";
+import { createAudienceFrameReceiver } from "./audienceFrameReceiver.js";
 
 const HEARTBEAT_INTERVAL_MS = 1_500;
 const DISCONNECT_AFTER_MS = 5_000;
@@ -24,6 +26,7 @@ export function createPresentationControllerChannel({
   onConnectionChange = () => {},
   onAudienceDatePositionChange = () => {},
   onAcceptedStateChange = () => {},
+  onAudienceStreamChange = () => {},
   onMessageRejected = () => {},
 } = {}) {
   let active = false;
@@ -37,8 +40,11 @@ export function createPresentationControllerChannel({
   let sequence = 0;
   let themeSequence = 0;
   let status = "disconnected";
+  let reconnectBaselineSequence = null;
+  let readyBaselinePending = false;
   const audienceDatePositionOverrides = new Map();
   let audienceDatePositionQueue = null;
+  const frameReceiver = createAudienceFrameReceiver({ now: scheduler.now, onChange: onAudienceStreamChange });
 
   function setStatus(nextStatus) {
     if (status === nextStatus) return;
@@ -54,6 +60,9 @@ export function createPresentationControllerChannel({
       payload,
       presentableItemIndex: getPresentableItemIndex(),
     });
+    // Use the validated controller state so the monitor compares the Theme
+    // sent on the separate Theme channel as part of the frame structure.
+    if (type === "state") frameReceiver.recordRequest(message.sequence, payload);
     channel?.postMessage(message);
     return message;
   }
@@ -206,17 +215,40 @@ export function createPresentationControllerChannel({
       onMessageRejected(presentationRejectionReason(error), snapshot(lastValidSnapshot));
       return;
     }
+    if (AUDIENCE_FRAME_TYPES.includes(message.type)) {
+      if (message.sequence <= lastAudienceSequence) {
+        onMessageRejected(reason("duplicate_or_out_of_order", "Audience stream sequence must increase"), snapshot(lastValidSnapshot));
+        return;
+      }
+      try {
+        frameReceiver.accept(message.type, message.payload);
+        lastAudienceSequence = message.sequence;
+        if (status === "reconnecting" && reconnectBaselineSequence !== null
+          && message.payload.accepted_sequence >= reconnectBaselineSequence
+          && lastHeartbeatAt !== null && scheduler.now() - lastHeartbeatAt < DISCONNECT_AFTER_MS) {
+          reconnectBaselineSequence = null;
+          setStatus("connected");
+        }
+      } catch (error) {
+        onMessageRejected(presentationRejectionReason(error), snapshot(lastValidSnapshot));
+      }
+      // Stream traffic must not refresh the1.5s heartbeat/5s safety clock.
+      return;
+    }
     if (
       message.type !== "ready"
       && message.type !== "heartbeat"
       && message.type !== "audience-date-position"
     ) return;
     if (message.type === "ready" && message.sequence === 1) {
+      reconnectBaselineSequence = null;
+      frameReceiver.restart(sequence + 1);
       lastAudienceSequence = 1;
       lastHeartbeatAt = scheduler.now();
       const reconnecting = status === "disconnected";
       if (reconnecting) setStatus("reconnecting");
       const baseline = sendLatestState();
+      readyBaselinePending = !baseline;
       setStatus(baseline ? "connected" : reconnecting ? "reconnecting" : "connecting");
       return;
     }
@@ -230,9 +262,11 @@ export function createPresentationControllerChannel({
     lastAudienceSequence = message.sequence;
     lastHeartbeatAt = scheduler.now();
     if (message.type === "ready") {
+      reconnectBaselineSequence = null;
       const reconnecting = status === "disconnected" || status === "reconnecting";
       if (status === "disconnected") setStatus("reconnecting");
       const baseline = sendLatestState();
+      readyBaselinePending = !baseline;
       setStatus(baseline ? "connected" : reconnecting ? "reconnecting" : "connecting");
       return;
     }
@@ -240,8 +274,11 @@ export function createPresentationControllerChannel({
       enqueueAudienceDatePosition(message);
       return;
     }
-    if (status === "disconnected") {
+    if (status === "disconnected" || status === "reconnecting") {
       setStatus("reconnecting");
+      // A still-running Audience may never send ready after one-way silence.
+      // Require a live control heartbeat plus an accepted fresh DOM baseline.
+      reconnectBaselineSequence = sendLatestState()?.sequence ?? null;
     }
   }
 
@@ -256,6 +293,8 @@ export function createPresentationControllerChannel({
         lastHeartbeatAt !== null
         && scheduler.now() - lastHeartbeatAt >= DISCONNECT_AFTER_MS
       ) {
+        reconnectBaselineSequence = null;
+        readyBaselinePending = false;
         setStatus("disconnected");
         lastHeartbeatAt = null;
       }
@@ -294,6 +333,10 @@ export function createPresentationControllerChannel({
     lastValidSnapshot = candidate;
     reportAcceptedState();
     const message = active ? sendLatestState() : null;
+    if (message && readyBaselinePending) {
+      readyBaselinePending = false;
+      setStatus("connected");
+    }
     return {
       accepted: true,
       lastValidSnapshot: snapshot(lastValidSnapshot),
@@ -309,8 +352,11 @@ export function createPresentationControllerChannel({
     connectionTimer = null;
     heartbeatTimer = null;
     lastHeartbeatAt = null;
+    reconnectBaselineSequence = null;
+    readyBaselinePending = false;
     audienceDatePositionOverrides.clear();
     audienceDatePositionQueue = null;
+    frameReceiver.clear();
     if (channel) {
       channel.onmessage = null;
       channel.close();
@@ -673,12 +719,20 @@ export function createPresentationAudienceChannel({
     });
   }
 
+  function publishFrameEvent(type, payload) {
+    const disconnectedReceipt = type === "audience_heartbeat" && payload?.status === "disconnected" && status === "disconnected";
+    if (!active || (!disconnectedReceipt && (status !== "connected" || awaitingBaseline)) || !AUDIENCE_FRAME_TYPES.includes(type)) return null;
+    if (payload?.accepted_sequence > lastControllerSequence) return null;
+    return post(type, payload);
+  }
+
   return {
     start,
     dispose,
     getLastValidSnapshot,
     isResyncRequired,
     publishDatePosition,
+    publishFrameEvent,
   };
 }
 

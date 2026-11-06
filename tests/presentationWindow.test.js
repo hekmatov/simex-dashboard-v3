@@ -39,6 +39,71 @@ test("audience popup preserves the current app URL and creates a collision-safe 
   assert.equal(features.noreferrer, undefined);
 });
 
+test("Rehearse requests the declared CSS resolution on the real Audience route", () => {
+  const calls = [];
+  const result = windowModule.openAudienceWindow({ channelId: "rehearsal-1", location: "https://simex.test/",
+    resolution: { width: 1600, height: 900 }, openWindow: (...args) => { calls.push(args); return {}; } });
+  assert.equal(new URL(result.url).searchParams.get("surface"), "audience");
+  assert.match(calls[0][2], /width=1600,height=900/);
+  assert.throws(() => windowModule.openAudienceWindow({ channelId: "rehearsal-1", location: "https://simex.test/", resolution: { width: -1, height: 900 } }), /resolution/i);
+});
+
+test("Rehearse resizes the existing named Audience viewport in place", () => {
+  const audience = {
+    innerWidth: 700,
+    innerHeight: 479,
+    outerWidth: 716,
+    outerHeight: 553,
+    resizeTo(width, height) {
+      this.innerWidth = width - 16;
+      this.innerHeight = height - 74;
+      this.outerWidth = width;
+      this.outerHeight = height;
+    },
+  };
+  const openOptions = {
+    channelId: "rehearsal-1",
+    windowName: "audience-generation-7",
+    location: "https://simex.test/",
+    existingWindow: audience,
+    openWindow: (url, name) => {
+      assert.equal(new URL(url).searchParams.get("channel"), "rehearsal-1");
+      assert.equal(name, "audience-generation-7");
+      return audience;
+    },
+  };
+
+  const ordinary = windowModule.openAudienceWindow(openOptions);
+  assert.equal(ordinary.windowRef, audience);
+  assert.deepEqual([audience.innerWidth, audience.innerHeight], [700, 479]);
+
+  const rehearsal = windowModule.openAudienceWindow({
+    ...openOptions,
+    resolution: { width: 400, height: 320 },
+  });
+  assert.equal(rehearsal.status, "opened");
+  assert.equal(rehearsal.windowRef, audience);
+  assert.deepEqual([audience.innerWidth, audience.innerHeight], [400, 320]);
+});
+
+test("browser denial of Audience resizing preserves the reopened window", () => {
+  const audience = {
+    resizeTo() {},
+    get outerWidth() {
+      throw new Error("browser denied access to popup geometry");
+    },
+  };
+  const result = windowModule.openAudienceWindow({
+    channelId: "rehearsal-1",
+    location: "https://simex.test/",
+    existingWindow: audience,
+    resolution: { width: 400, height: 320 },
+    openWindow: () => audience,
+  });
+  assert.equal(result.status, "opened");
+  assert.equal(result.windowRef, audience);
+});
+
 test("audience popup uses the runtime-supplied session-unique window name", () => {
   const calls = [];
   windowModule.openAudienceWindow({
@@ -95,6 +160,17 @@ test("already-closed audience remains a successful close outcome", () => {
     outcome: "succeeded",
   });
   assert.equal(calls, 1);
+});
+
+test("manual Audience closure notifies once and releases its observer", () => {
+  let tick, clears = 0, closes = 0;
+  const audience = { closed: false };
+  const stop = windowModule.observeAudienceWindowClosure({ getWindow: () => audience,
+    onClosed: () => closes++, scheduler: { setInterval: callback => { tick = callback; return 1; }, clearInterval: () => clears++ } });
+  tick(); assert.equal(closes, 0);
+  audience.closed = true; tick(); tick();
+  assert.equal(closes, 1); assert.equal(clears, 1);
+  stop(); assert.equal(clears, 1);
 });
 
 test("no-op, throwing, and missing close adapters deny closure without throwing", () => {

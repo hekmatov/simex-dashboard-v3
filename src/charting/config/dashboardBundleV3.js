@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { resolvePresentationResolution } from "../../lib/presentationResolution.js";
 
 import { profileDataset } from "../data/profileDataset.js";
 import { parseTemporalValue } from "../data/temporal.js";
@@ -457,8 +458,11 @@ export function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
   const chartNormalized = normalizeDashboardChartInstances(v6);
   const presentationNormalized = stripLegacyVantaBackground(chartNormalized);
   const lookNormalized = normalizeRetiredDashboardLook(presentationNormalized);
-  return normalizeDashboardTemporalConfig(lookNormalized, {
-    profiles: temporalMigrationProfiles(lookNormalized, profiles),
+  const resolutionNormalized = Object.hasOwn(lookNormalized, "presentationResolution")
+    ? { ...lookNormalized, presentationResolution: resolvePresentationResolution(lookNormalized.presentationResolution) }
+    : lookNormalized;
+  return normalizeDashboardTemporalConfig(resolutionNormalized, {
+    profiles: temporalMigrationProfiles(resolutionNormalized, profiles),
   });
 }
 

@@ -16,19 +16,19 @@ export default function PresentationSourcePicker({
       : "";
   return (
     <label className="present-field present-source-picker">
-      <span>Presentation source</span>
       <select
         aria-label="Presentation source"
         data-presentation-control-id="source"
         value={value}
-        disabled={disabled || (scenes.length === 0 && groups.length === 0)}
+        disabled={disabled}
         onChange={(event) => {
           const [kind, id] = event.target.value.split(":", 2);
+          if (event.target.value === "") onSelectGroup(null);
           if (kind === "scene") onSelectScene(id);
           if (kind === "group") onSelectGroup(id);
         }}
       >
-        {value === "" && <option value="">No authored source available</option>}
+        <option value="">None</option>
         {scenes.length > 0 && (
           <optgroup label="Scenes">
             {scenes.map((scene) => (

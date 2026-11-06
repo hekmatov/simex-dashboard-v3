@@ -63,7 +63,7 @@ test("keeps registered region selectors and shared role CSS in bidirectional clo
     ));
     const selectorText = roleRules.map(({ selector }) => selector).join("\n");
     const ownedSelectors = DASHBOARD_OWNED_REGION_REGISTRY
-      .filter((region) => region.role === role)
+      .filter((region) => region.role === role && !region.exclusion)
       .flatMap((region) => [region.selector, ...(region.liveSelectors ?? [])]);
 
     for (const ownedSelector of ownedSelectors) {
