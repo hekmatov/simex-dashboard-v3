@@ -1994,8 +1994,6 @@ function AppContent({ releaseProfile = null }) {
     {packageImportCandidate && <DashboardPackageReviewDialog
       candidate={packageImportCandidate}
       current={dashboard}
-      activePageId={activePageId}
-      initialDestination={dashboardRendererRef.current?.getPackageMergeDestination?.()}
       getPendingState={() => dashboardRendererRef.current?.getPackageMergeReadiness?.() ?? {}}
       onSavePending={savePackageMergePending}
       onImportSelected={confirmSelectedPackageImport}

@@ -67,3 +67,32 @@ test("equal section IDs on different source pages remain separate selectable obj
   assert.equal(merged.config.pages[0].sections.at(-1).panels.length, 1);
   assert.equal(merged.config.pages[0].sections.at(-1).panels[0].chart.title, "Separate work");
 });
+
+test("three-mode import retains manual content independently of chart dependency selection", async () => {
+  const { dashboardPackageSelectionState } = await import("../src/lib/dashboardPackageSelection.js");
+  assert.equal(typeof dashboardPackageSelectionState, "function");
+  const candidate = collaboratorPackage({ staticPanels: true });
+  const manual = { mediaIds: ["photo"], sourceIds: ["cases"], placementIds: ["placement-text"] };
+  const selected = dashboardPackageSelectionState(candidate, manual);
+  assert.deepEqual(selected.automaticMediaIds, ["photo"]);
+  assert.equal(selected.resolved.mediaIds.includes("photo"), true);
+  assert.equal(selected.automaticSourceIds.includes("cases"), false);
+  const unselectedChart = dashboardPackageSelectionState(candidate, { ...manual, placementIds: [] });
+  assert.deepEqual(unselectedChart.resolved.mediaIds, ["photo"]);
+  assert.deepEqual(unselectedChart.resolved.sourceIds, ["cases"]);
+  assert.deepEqual(manual, { mediaIds: ["photo"], sourceIds: ["cases"], placementIds: ["placement-text"] });
+  assert.deepEqual(dashboardPackageSelectionState(candidate, { placementIds: [] }).resolved.mediaIds, []);
+});
+
+test("Full Append includes all importable hierarchy and unused reusable content without consuming partial choices", async () => {
+  const { dashboardPackageSelectionState } = await import("../src/lib/dashboardPackageSelection.js");
+  assert.equal(typeof dashboardPackageSelectionState, "function");
+  const candidate = collaboratorPackage({ staticPanels: true });
+  const partial = { mediaIds: ["photo"] };
+  const full = dashboardPackageSelectionState(candidate, partial, "append");
+  assert.deepEqual(full.resolved.pageIds, ["overview", "details"]);
+  assert.equal(full.resolved.placementIds.length, 4);
+  assert.deepEqual(full.resolved.mediaIds, ["photo"]);
+  assert.deepEqual(dashboardPackageSelectionState(candidate, partial).resolved.pageIds, []);
+  assert.deepEqual(partial, { mediaIds: ["photo"] });
+});

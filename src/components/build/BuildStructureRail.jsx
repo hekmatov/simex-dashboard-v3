@@ -26,7 +26,7 @@ function allExpanded(dashboard) {
   ]));
 }
 
-export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, selectionOnly = false, ariaLabel = "Dashboard structure", onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
+export default function BuildStructureRail({ dashboard = {}, selection, disabled = false, selectionOnly = false, ariaLabel = "Dashboard structure", renderNodeControl, onSelect, onActivate, onRename, onRenameDirtyChange, onMove }) {
   const [expandedKeys, setExpandedKeys] = React.useState(() => allExpanded(dashboard));
   const [focusedKey, setFocusedKey] = React.useState(() => selectionKey(selection));
   const [renameKey, setRenameKey] = React.useState("");
@@ -141,7 +141,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       data-build-node-key={node.key}
       aria-label={label}
       aria-expanded={node.hasChildren ? expanded : undefined}
-      aria-selected={selected}
+      aria-selected={renderNodeControl ? undefined : selected}
       aria-disabled={disabled || undefined}
       tabIndex={isRenaming ? -1 : activeTab ? 0 : -1}
       draggable={!disabled && !selectionOnly && !isRenaming}
@@ -223,6 +223,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
           ><span aria-hidden="true" /></button>
         )}
         {!node.hasChildren && <span className="build-tree-caret-spacer" aria-hidden="true" />}
+        {renderNodeControl && <span className="build-tree-node-control" onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key !== "Escape") event.stopPropagation(); }}>{renderNodeControl(selectionFor(node))}</span>}
         {isRenaming ? (
           <input
             autoFocus
@@ -252,7 +253,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     </li></React.Fragment>;
   };
   return <>
-    <nav className="build-structure-rail" aria-label={ariaLabel}><ul role="tree" className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
+    <nav className="build-structure-rail" aria-label={ariaLabel}><ul role="tree" aria-multiselectable={renderNodeControl ? true : undefined} className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
   </>;
 }
 

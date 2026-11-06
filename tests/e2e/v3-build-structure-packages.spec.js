@@ -510,10 +510,10 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
     "datetime",
     "2026-08-21T09:10:11.000Z",
   );
-  await review.getByLabel("Import choice", { exact: true }).selectOption("replace");
-  await expect(review.getByText("Page: Imported Package Page", { exact: true })).toBeVisible();
-  await expect(review.getByText("Section: Imported Section", { exact: true })).toBeVisible();
-  await expect(review.getByText("Panel: Imported Panel", { exact: true })).toBeVisible();
+  await review.getByRole("radio", { name: "Replace", exact: true }).check();
+  await expect(review.getByRole("treeitem", { name: "Imported Package Page", exact: true })).toBeVisible();
+  await expect(review.getByRole("treeitem", { name: "Imported Section", exact: true })).toBeVisible();
+  await expect(review.getByRole("treeitem", { name: "Imported Panel", exact: true })).toBeVisible();
   await expect(importedTab).toHaveCount(0);
 
   await review.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -614,7 +614,7 @@ test("package export resolves drafts and round-trips a self-contained source", a
   await roundtripChooser.setFiles(downloadedPath);
   const roundtripReview = page.getByRole("dialog", { name: "Review package contents" });
   await chooseWholeDashboardPackage(roundtripReview);
-  await expect(roundtripReview).toContainText("Panel: Imported Panel");
+  await expect(roundtripReview.getByRole("treeitem", { name: "Imported Panel", exact: true })).toBeVisible();
   await roundtripReview.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(page.locator(`[data-canonical-placement-id="${fixturePlacement.id}"]`)).toBeVisible();
   const persistedSource = await page.evaluate((sourceId) => {

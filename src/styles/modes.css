@@ -4757,14 +4757,36 @@ body .app-frame .build-rail--structure .build-tree-group {
   flex-direction: column;
 }
 .package-import-workspace {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 16px;
   height: min(70dvh, 720px);
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
-.package-import-selection, .package-import-review { overflow: auto; min-width: 0; padding: 8px; }
+.package-import-selection-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-height: 320px; flex: 1 0 360px; min-width: 0; }
+.package-import-selection-panel:disabled { opacity: .55; }
+.package-import-selection, .package-import-content { overflow: auto; min-width: 0; padding: 8px; }
+.package-import-review { min-width: 0; padding: 8px; }
+.package-import-search { grid-column: 1 / -1; }
+.package-import-modes { display: flex; flex-wrap: wrap; gap: 8px 24px; flex-shrink: 0; }
+.package-import-workspace .package-import-modes label { flex-direction: row; align-items: center; }
+.package-import-workspace input[type="radio"], .package-import-map input[type="checkbox"] { width: auto; }
+.package-import-map .build-tree-node-control { display: inline-flex; flex: 0 0 auto; }
+.app-frame .build-rail--structure.package-import-map .build-tree-item-wrap > .build-tree-row {
+  grid-template-columns: var(--simex-control-utility, 24px) var(--simex-control-utility, 24px) minmax(0, 1fr);
+  align-items: center;
+}
+.app-frame .build-rail--structure.package-import-map .build-tree-row > .build-tree-node-control { grid-column: 2; grid-row: 1; }
+.app-frame .build-rail--structure.package-import-map .build-tree-item-wrap > .build-tree-row > .build-tree-label { grid-column: 3; grid-row: 1; }
+
+.package-import-content .control-tooltip { display: block; }
+.package-import-content label[data-automatic] input { pointer-events: none; }
+.package-import-content label[data-automatic] { color: var(--simex-text-muted); }
+.package-import-targets { overflow: auto; display: grid; gap: 12px; }
+.package-import-targets fieldset { display: grid; gap: 8px; }
+.package-import-targets label { display: grid; gap: 4px; }
+.dashboard-package-destinations { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; }
 .package-import-workspace label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .package-import-workspace label:has(input[type="checkbox"]) { flex-direction: row; align-items: baseline; }
 .package-import-workspace input[type="checkbox"] { flex: 0 0 auto; width: auto; }
@@ -4772,8 +4794,8 @@ body .app-frame .build-rail--structure .build-tree-group {
 .package-import-workspace fieldset { margin: 8px 0; padding: 8px; }
 .package-import-workspace li[data-blocking="true"] { color: var(--simex-error); }
 @media (max-width: 720px) {
-  .package-import-workspace { grid-template-columns: minmax(0, 1fr); overflow: auto; }
-  .package-import-selection, .package-import-review { overflow: visible; }
+  .package-import-selection-panel { grid-template-columns: minmax(0, 1fr); flex-basis: auto; }
+  .package-import-selection, .package-import-content { overflow: visible; }
 }
 
 /* The handle belongs only to an authoring stage; legend entries keep their own clicks. */

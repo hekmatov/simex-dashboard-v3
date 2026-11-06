@@ -241,8 +241,10 @@ test("package import quota failure preserves the prior dashboard and authored st
     expect(await importedPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY))
       .toBe(priorStorage);
     expect(await authoredStoreRecords(importedPage)).toEqual(priorAssets);
-    await expect(importedPage.getByText(TEXT_TITLE, { exact: true })).toHaveCount(0);
-    await expect(importedPage.getByText(IMAGE_TITLE, { exact: true })).toHaveCount(0);
+    // The failed package stays open for review. Check that it never appeared on the dashboard.
+    const dashboard = importedPage.locator("main");
+    await expect(dashboard.getByText(TEXT_TITLE, { exact: true })).toHaveCount(0);
+    await expect(dashboard.getByText(IMAGE_TITLE, { exact: true })).toHaveCount(0);
   } finally {
     await freshContext.close();
   }

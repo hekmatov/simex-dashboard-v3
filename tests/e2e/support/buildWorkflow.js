@@ -68,11 +68,37 @@ export function propertiesPane(page) {
 
 export async function chooseWholeDashboardPackage(review) {
   await expect(review).toBeVisible();
-  const choice=review.getByLabel("Import choice", { exact: true });
+  const choice=review.getByRole("radio", { name: "Replace", exact: true });
   await expect(choice).toBeVisible();
   await expect(choice).toBeEnabled();
-  await choice.selectOption("replace", { timeout: 10_000 });
+  await choice.check();
   await review.getByRole("checkbox", { name: "Replace current dashboard and its pending work", exact: true }).check();
+}
+
+export async function chooseDashboardPackageDestinations(page, choices) {
+  const dialog = page.getByRole("dialog", { name: "Choose import destinations", exact: true });
+  await expect(dialog).toBeVisible();
+  const groups = dialog.locator("fieldset");
+  await expect(groups).toHaveCount(choices.length);
+  for (let index = 0; index < choices.length; index += 1) {
+    const group = groups.nth(index), choice = choices[index];
+    const pageSelect = group.getByRole("combobox", { name: /^Destination page:/ });
+    if (await pageSelect.count()) {
+      await pageSelect.selectOption(choice.newPageTitle ? "__new" : choice.pageId);
+      if (choice.newPageTitle) await group.getByLabel("New page title", { exact: true }).fill(choice.newPageTitle);
+    }
+    const sectionSelect = group.getByRole("combobox", { name: /^Destination section:/ });
+    if (await sectionSelect.count()) {
+      await sectionSelect.selectOption(choice.newSectionTitle || choice.newPageTitle ? "__new" : choice.sectionId);
+      if (choice.newSectionTitle) await group.getByLabel("New section title", { exact: true }).fill(choice.newSectionTitle);
+    }
+    const matchingPage = group.getByRole("combobox", { name: /^Matching page:/ });
+    if (await matchingPage.count()) await matchingPage.selectOption(choice.pageId);
+    const matchingSection = group.getByRole("combobox", { name: /^Matching section:/ });
+    if (await matchingSection.count()) await matchingSection.selectOption(choice.sectionId);
+  }
+  await dialog.getByRole("button", { name: "Import selected", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 export async function authorAttentionStrip(page, { pageId = "biomedical", sectionTitle = "At a glance", chartTitle = "Cases today" } = {}) {

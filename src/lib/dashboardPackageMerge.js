@@ -2,6 +2,7 @@ import { validateDashboardSessionCandidate } from "../charting/config/dashboardB
 import { IMAGE_ASSET_LIMITS } from "../static-content/image/imageAssetValidation.js";
 import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../static-content/qmd/portableQmdMedia.js";
 import { buildDashboardPackageImportInventory, resolveDashboardPackageSelection, dashboardPackageSectionKey } from "./dashboardPackageSelection.js";
+import { planMixedPackageTargets } from "./dashboardPackageMixedTargets.js";
 
 const runtimeKeys = ["loadedData", "loadedRows", "runtimeRows", "chartDataStates", "dataSourceStates", "runtimeContentHealth"];
 export function dashboardPackageMergeRevision(config) {
@@ -17,7 +18,8 @@ export function createDashboardPackageIdentityMap(candidate, allocate = kind => 
     placements: make(inventory.placements, "placement"), charts: Object.fromEntries(inventory.placements.map(item => [item.chartId, allocate("chart")])),
     sources: make(Object.keys(candidate.config.dataSources ?? {}).map(id => ({ id })), "source"),
     media: make(inventory.media, "media"), groups: make(candidate.config.chronoGroups ?? [], "group"),
-    destinationPage: allocate("page"), destinationSection: allocate("section") };
+    destinationPage: allocate("page"), destinationSection: allocate("section"),
+    targetPages: make(inventory.sections, "page"), targetSections: make(inventory.sections, "section") };
 }
 
 export function buildDashboardPackageMerge({ current, candidate, selection = {}, destination = {}, resolutions = {}, identityMap } = {}) {
@@ -28,11 +30,12 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
   const issues = [...selected.issues];
   const addIssue = (code, message, blocking = true) => issues.push({ code, message, blocking });
   const summary = { pages: [], sections: [], placements: [], sources: [], media: [], firstImported: null };
+  let requirements = [];
   const assetPayloads = {}, reusedAssetIds = [];
   const scope = destination.scope ?? (selected.pageIds.length ? "pages" : (selection.sectionIds?.length ? "sections" : selected.placementIds.length ? "placements" : "content"));
-  const convertedPlacements = new Set(["pages", "sections"].includes(scope) && resolutions.standardAttention
+  const convertedPlacements = new Set(["pages", "sections", "mixed"].includes(scope) && resolutions.standardAttention
     ? source.pages.flatMap(page => page.sections.filter(section => section.role === "attention" && selected.sectionIds.includes(dashboardPackageSectionKey(page.id, section.id))).flatMap(section => section.panels.map(panel => panel.id))) : []);
-  const result = () => ({ config, assetPayloads, reusedAssetIds, identityMap: map, summary, issues, selection: selected,
+  const result = () => ({ config, assetPayloads, reusedAssetIds, identityMap: map, summary, issues, selection: selected, requirements,
     expectedRevision: dashboardPackageMergeRevision(current) });
   if (![selected.pageIds.length, selected.sectionIds.length, selected.placementIds.length, selected.sourceIds.length, selected.mediaIds.length].some(Boolean)) addIssue("empty", "Choose at least one object to import.");
   for (const reference of selected.externalReferences) {
@@ -44,7 +47,8 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
     ["placements", selected.placementIds, currentInventory.placements], ["charts", selected.chartIds, currentInventory.placements.map(p => ({ id: p.chartId }))],
     ["sources", selected.sourceIds, Object.keys(config.dataSources ?? {}).map(id => ({ id }))], ["media", selected.mediaIds, currentInventory.media],
     ["groups", selected.groupIds, config.chronoGroups ?? []]]) {
-    for (const id of ids) if (!map[kind]?.[id] || existing.some(item => item.id === map[kind][id])) addIssue("identity", "The reviewed copy identities are no longer available. Start a new import review.");
+    const coalescing = scope === "mixed" && ["pages", "sections"].includes(kind);
+    for (const id of ids) if (!map[kind]?.[id] || (!coalescing && existing.some(item => item.id === map[kind][id]))) addIssue("identity", "The reviewed copy identities are no longer available. Start a new import review.");
   }
   if (issues.some(issue => issue.code === "identity")) return result();
   const names = {
@@ -114,12 +118,12 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
     return copied;
   };
   const selectedPlacements = new Set(selected.placementIds);
-  const copySection = (section, pageId) => {
+  const copySection = (section, pageId, scopedTitle) => {
     const sectionKey = dashboardPackageSectionKey(pageId, section.id);
     const converting = section.role === "attention" && resolutions.standardAttention;
     if (converting && section.panels.some(panel => panel.drill)) addIssue("converted-drill",
       `Converting “${section.title}” to Standard requires removing its drill links. Accept that removal or choose another destination.`, !resolutions.detachConvertedDrills);
-    const copied = { ...structuredClone(section), id: map.sections[sectionKey], title: name("sections", sectionKey, section.title),
+    const copied = { ...structuredClone(section), id: map.sections[sectionKey], title: scopedTitle ?? name("sections", sectionKey, section.title),
       panels: section.panels.filter(p => selectedPlacements.has(p.id)).map(panel => copyPlacement(panel, converting && resolutions.detachConvertedDrills)) };
     if (copied.role === "attention" && resolutions.standardAttention) {
       copied.role = "standard";
@@ -136,7 +140,67 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
     if (index < 0) { addIssue("destination", "The reviewed insertion anchor is no longer available. Choose a current destination."); return; }
     items.splice(index + (position === "after" ? 1 : 0), 0, ...additions);
   };
-  if (scope === "pages") {
+  if (scope === "mixed") {
+    const plan = planMixedPackageTargets({ current: config, source, selected, destination, resolutions, map });
+    requirements = plan.requirements;
+    const newPageIds = [...plan.pages.filter(row => !row.existing).map(row => row.target.id), ...plan.destinationPages.map(page => page.id)];
+    const newSectionIds = [...plan.sections.filter(row => !row.existing).map(row => row.sectionId), ...plan.placements.filter(row => row.createSection).map(row => row.section.id)];
+    if (newPageIds.some(id => currentInventory.pages.some(page => page.id === id))
+      || newSectionIds.some(id => currentInventory.sections.some(section => section.sectionId === id))) {
+      addIssue("identity", "A new destination identity is no longer available. Start a new import review.");
+      return result();
+    }
+    for (const request of requirements.filter(request => !request.resolved)) addIssue("destination-required",
+      `Choose a destination for “${request.breadcrumb ? `${request.breadcrumb} / ` : ""}${request.name}”.`);
+    for (const row of plan.pages) {
+      if (!row.existing) {
+        const title = name("pages", row.incoming.id, row.target.title);
+        config.pages.push({ ...structuredClone(row.target), title, label: title });
+      }
+      summary.pages.push({ id: row.target.id, name: row.target.title, merged: row.existing });
+      if (!row.existing) summary.firstImported ??= { kind: "page", pageId: row.target.id };
+    }
+    for (const page of plan.destinationPages) {
+      config.pages.push(structuredClone(page));
+      summary.pages.push({ id: page.id, name: page.title });
+    }
+    for (const row of plan.sections) {
+      const page = config.pages.find(page => page.id === row.pageId);
+      let section;
+      if (row.existing) {
+        section = page.sections.find(section => section.id === row.sectionId);
+        const incomingAttention = row.incoming.role === "attention";
+        if (incomingAttention && section.role !== "attention" && !resolutions.standardAttention) addIssue("attention",
+          `“${row.title}” is an Attention section. Convert it to Standard before adding its panels to this section.`);
+        if (incomingAttention && resolutions.standardAttention && row.incoming.panels.some(panel => panel.drill)) addIssue("converted-drill",
+          "Converting an Attention section requires explicit removal of its drill links.", !resolutions.detachConvertedDrills);
+        const additions = row.incoming.panels.filter(panel => selectedPlacements.has(panel.id))
+          .map(panel => copyPlacement(panel, incomingAttention && resolutions.standardAttention && resolutions.detachConvertedDrills));
+        section.panels.push(...additions);
+        if (additions[0]) summary.firstImported ??= { kind: "chart", pageId: page.id, sectionId: section.id,
+          placementId: additions[0].id, chartId: additions[0].chart.id };
+        summary.sections.push({ id: section.id, name: section.title, merged: true });
+      } else {
+        section = copySection(row.incoming, row.incomingPageId, row.title);
+        if (section.role === "attention" && page.sections.some(existing => existing.role === "attention")) addIssue("attention",
+          "The destination can have one Attention strip. Convert incoming Attention sections to Standard or choose another page.");
+        page.sections.push(section);
+      }
+      summary.firstImported ??= section.panels[0] && { kind: "section", pageId: page.id, sectionId: section.id };
+    }
+    for (const row of plan.placements) {
+      const page = config.pages.find(page => page.id === row.pageId);
+      if (row.createSection) {
+        page.sections.push(structuredClone(row.section));
+        summary.sections.push({ id: row.section.id, name: row.section.title });
+      }
+      const section = page.sections.find(section => section.id === row.section.id);
+      const incoming = row.panels.map(panel => copyPlacement(panel));
+      section.panels.push(...incoming);
+      summary.firstImported ??= { kind: "chart", pageId: page.id, sectionId: section.id,
+        placementId: incoming[0].id, chartId: incoming[0].chart.id };
+    }
+  } else if (scope === "pages") {
     insert(config.pages, source.pages.filter(page => selected.pageIds.includes(page.id)).map(page => {
       const pageName = name("pages", page.id, page.label || page.title);
       const copied = { ...structuredClone(page), id: map.pages[page.id], title: pageName, label: pageName, sections: page.sections.map(section => copySection(section, page.id)) };
@@ -181,7 +245,8 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
   }
   const bytes = Object.values(config.assets ?? {}).reduce((sum, asset) => sum + (asset.byteLength ?? 0), 0);
   if (scope === "content" && (selected.pageIds.length || selected.sectionIds.length || selected.placementIds.length)) addIssue("scope", "Choose reusable content in content mode, or switch to the matching object import mode.");
-  if (scope !== "content" && (!summary[scope]?.length || summary.placements.length !== selected.placementIds.length)) addIssue("scope", "The selected objects do not all belong to this import mode. Review the selection and destination.");
+  if (scope !== "content" && scope !== "mixed" && (!summary[scope]?.length || summary.placements.length !== selected.placementIds.length)) addIssue("scope", "The selected objects do not all belong to this import mode. Review the selection and destination.");
+  if (scope === "mixed" && !requirements.some(request => !request.resolved) && summary.placements.length !== selected.placementIds.length) addIssue("scope", "Some selected panels have no reviewed destination.");
   if (JSON.stringify(source.globalStyles) !== JSON.stringify(current.globalStyles)) addIssue("theme", "Imported objects inherit the current dashboard theme, while keeping their explicit chart overrides.", false);
   if (bytes > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) addIssue("budget", "The combined dashboard exceeds the 200 MiB authored-image budget. Choose fewer images.");
   if (!issues.some(issue => issue.blocking)) {

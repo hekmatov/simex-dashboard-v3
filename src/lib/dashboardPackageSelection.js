@@ -3,6 +3,21 @@ import { parsePortableQmdWithMedia } from "../static-content/qmd/portableQmdMedi
 
 export const dashboardPackageSectionKey = (pageId, sectionId) => JSON.stringify([pageId, sectionId]);
 
+// Explicit content choices never receive dependency IDs. Recomputing the view
+// can therefore release an automatic check without erasing a manual choice.
+export function dashboardPackageSelectionState(candidate, manual = {}, mode = "partial") {
+  const inventory = buildDashboardPackageImportInventory(candidate);
+  const selection = mode === "partial" ? manual : {
+    pageIds: inventory.pages.filter(page => page.eligible || mode === "replace").map(page => page.id),
+    sourceIds: inventory.sources.map(item => item.id), mediaIds: inventory.media.map(item => item.id),
+  };
+  const automatic = resolveDashboardPackageSelection(candidate, {
+    pageIds: selection.pageIds, sectionIds: selection.sectionIds, placementIds: selection.placementIds,
+  });
+  return { selection, resolved: resolveDashboardPackageSelection(candidate, selection),
+    automaticSourceIds: automatic.sourceIds, automaticMediaIds: automatic.mediaIds };
+}
+
 export function buildDashboardPackageImportInventory(candidate) {
   const config = candidate.config;
   const pages = [], sections = [], placements = [];
@@ -19,7 +34,7 @@ export function buildDashboardPackageImportInventory(candidate) {
       }
     }
   }
-  const sources = Object.entries(config.dataSources ?? {}).filter(([, source]) => ["csv", "geojson", "dataset"].includes(source.kind))
+  const sources = Object.entries(config.dataSources ?? {}).filter(([, source]) => ["csv", "geojson", "dataset", "inline"].includes(source.kind))
     .map(([id, source]) => ({ id, kind: source.kind === "geojson" || source.type === "uploadedGeoJson" ? "geojson" : "csv",
       name: config.contentLibrary?.sourceEntries?.[id]?.displayName || source.fileName || id,
       rowCount: config.datasetProfiles?.[id]?.rowCount }));

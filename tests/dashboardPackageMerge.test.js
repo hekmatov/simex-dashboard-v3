@@ -160,3 +160,142 @@ test("copying an Attention page preserves every included internal drill without 
     { kind: "chart", chartId: result.identityMap.charts["chart-b"] },
   ]);
 });
+
+test("mixed append coalesces same-named pages and sections while keeping existing data and metadata", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const current = collaboratorPackage({ value: 4 }).config, candidate = collaboratorPackage({ value: 99 });
+  const before = structuredClone(current);
+  const result = buildDashboardPackageMerge({ current, candidate, selection: { pageIds: ["overview"] }, destination: { scope: "mixed" } });
+  assert.deepEqual(result.issues.filter(i => i.blocking), []);
+  assert.equal(result.config.pages.length, 2);
+  assert.equal(result.config.pages[0].id, "overview");
+  assert.equal(result.config.pages[0].sections.length, 1);
+  assert.deepEqual(result.config.pages[0].sections[0].panels.slice(0, 2), before.pages[0].sections[0].panels);
+  const imported = result.config.pages[0].sections[0].panels.slice(2);
+  assert.equal(imported.length, 2);
+  assert.notEqual(imported[0].chart.sourceId, "cases");
+  assert.equal(result.config.dataSources[imported[0].chart.sourceId].csvText, "date,value\n2026-08-21,99\n");
+  assert.equal(result.identityMap.pages.overview, "overview");
+  assert.equal(result.identityMap.sections[dashboardPackageSectionKey("overview", "signals")], "signals");
+  assert.deepEqual(current, before);
+});
+
+test("mixed page section panel and independent content selection imports every placement once", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const candidate = collaboratorPackage({ staticPanels: true });
+  candidate.config.pages[0].title = "Collaborator page";
+  const sectionKey = dashboardPackageSectionKey("details", "details-section");
+  const result = buildDashboardPackageMerge({ current: collaboratorPackage().config, candidate,
+    selection: { pageIds: ["overview"], sectionIds: [sectionKey], placementIds: ["placement-a"], mediaIds: ["photo"] },
+    destination: { scope: "mixed", sectionTargets: { [sectionKey]: { pageId: "details" } } } });
+  assert.deepEqual(result.issues.filter(i => i.blocking), []);
+  assert.equal(result.summary.placements.length, 4);
+  assert.equal(result.config.pages.length, 3);
+  assert.equal(result.config.pages.at(-1).sections[0].panels.length, 4);
+  assert.equal(result.config.pages[1].sections.length, 1);
+  assert.equal(result.summary.media.length, 1);
+  const roundtrip = parseDashboardPackageCandidate(JSON.stringify(serializeDashboardBundle(result.config, { assetPayloads: result.assetPayloads })));
+  assert.deepEqual(roundtrip.config.pages, result.config.pages);
+});
+
+test("orphan sections and panel batches require explicit current destinations", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const candidate = collaboratorPackage();
+  const key = dashboardPackageSectionKey("overview", "signals");
+  const section = buildDashboardPackageMerge({ current: collaboratorPackage().config, candidate,
+    selection: { sectionIds: [key] }, destination: { scope: "mixed" } });
+  assert.ok(section.issues.some(i => i.code === "destination-required" && i.blocking));
+  assert.equal(section.requirements[0].kind, "section");
+  const panel = buildDashboardPackageMerge({ current: collaboratorPackage().config, candidate,
+    selection: { placementIds: ["placement-a", "placement-b"] }, destination: { scope: "mixed" } });
+  assert.equal(panel.requirements.length, 1, "one current section choice applies to the source-section batch");
+  assert.equal(panel.requirements[0].kind, "placements");
+  const result = buildDashboardPackageMerge({ current: collaboratorPackage().config, candidate,
+    selection: { placementIds: ["placement-a", "placement-b"] },
+    destination: { scope: "mixed", placementTargets: { [key]: { pageId: "details", sectionId: "details-section" } } }, identityMap: panel.identityMap });
+  assert.deepEqual(result.issues.filter(i => i.blocking), []);
+  assert.equal(result.config.pages[1].sections[0].panels.length, 2);
+  assert.equal(result.config.pages[0].sections[0].panels.length, 2);
+});
+
+test("ambiguous synonymous pages require a target and never silently pick the first", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const current = collaboratorPackage().config;
+  current.pages[1].title = current.pages[1].label = "Overview";
+  const candidate = collaboratorPackage();
+  const blocked = buildDashboardPackageMerge({ current, candidate, selection: { pageIds: ["overview"] }, destination: { scope: "mixed" } });
+  assert.ok(blocked.issues.some(i => i.code === "destination-required" && i.blocking));
+  assert.notEqual(blocked.requirements[0].pageOptions[0].label, blocked.requirements[0].pageOptions[1].label);
+  const result = buildDashboardPackageMerge({ current, candidate, selection: { pageIds: ["overview"] },
+    destination: { scope: "mixed", pageTargets: { overview: "details" } } });
+  assert.deepEqual(result.issues.filter(i => i.blocking), []);
+  assert.equal(result.config.pages[0].sections[0].panels.length, 2);
+  assert.equal(result.config.pages[1].sections.at(-1).panels.length, 2);
+});
+
+test("mixed merge remaps internal drill sections to coalesced containers", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const result = buildDashboardPackageMerge({ current: collaboratorPackage().config, candidate: attentionPackage(),
+    selection: { pageIds: ["overview"] }, destination: { scope: "mixed" } });
+  assert.deepEqual(result.issues.filter(i => i.blocking), []);
+  assert.equal(result.config.pages[0].sections.at(-1).panels[0].drill.sectionId, "signals");
+  assert.equal(result.config.pages[0].sections[0].panels.length, 4);
+});
+
+test("review retry accepts coalesced container identities but never a colliding new container", async () => {
+  const { buildDashboardPackageMerge, createDashboardPackageIdentityMap } = await import("../src/lib/dashboardPackageMerge.js");
+  const current = collaboratorPackage().config, candidate = collaboratorPackage({ value: 55 });
+  const args = { current, candidate, selection: { pageIds: ["overview"] }, destination: { scope: "mixed" } };
+  const first = buildDashboardPackageMerge(args);
+  const retry = buildDashboardPackageMerge({ ...args, identityMap: first.identityMap });
+  assert.deepEqual(retry.issues.filter(i => i.blocking), []);
+  assert.deepEqual(retry.config, first.config);
+  candidate.config.pages[0].title = "Independent page";
+  const map = createDashboardPackageIdentityMap(candidate);
+  map.pages.overview = "overview";
+  const collision = buildDashboardPackageMerge({ ...args, candidate, identityMap: map });
+  assert.ok(collision.issues.some(i => i.blocking && i.code === "identity"));
+});
+
+test("ambiguous same-name sections use only the explicitly chosen section in its target page", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const current = collaboratorPackage().config, candidate = collaboratorPackage();
+  current.pages[0].sections.push({ id: "other-signals", title: "Signals", panels: [] });
+  const key = dashboardPackageSectionKey("overview", "signals");
+  const args = { current, candidate, selection: { pageIds: ["overview"] }, destination: { scope: "mixed" } };
+  assert.ok(buildDashboardPackageMerge(args).requirements.some(r => r.kind === "section" && !r.resolved));
+  const result = buildDashboardPackageMerge({ ...args, destination: { scope: "mixed", sectionTargets: { [key]: { sectionId: "other-signals" } } } });
+  assert.deepEqual(result.issues.filter(i => i.blocking), []);
+  assert.equal(result.config.pages[0].sections[0].panels.length, 2);
+  assert.equal(result.config.pages[0].sections[1].panels.length, 2);
+});
+
+test("orphan panels can still create explicit new destinations with stable transaction identities", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const key = dashboardPackageSectionKey("overview", "signals");
+  const args = { current: collaboratorPackage().config, candidate: collaboratorPackage(), selection: { placementIds: ["placement-a"] },
+    destination: { scope: "mixed", placementTargets: { [key]: { newPageTitle: "Collaborator notes" } } } };
+  const first = buildDashboardPackageMerge(args);
+  assert.deepEqual(first.issues.filter(i => i.blocking), []);
+  assert.equal(first.config.pages.at(-1).title, "Collaborator notes");
+  assert.equal(first.config.pages.at(-1).sections[0].title, "Imported charts");
+  assert.equal(first.config.pages.at(-1).sections[0].panels.length, 1);
+  const retry = buildDashboardPackageMerge({ ...args, identityMap: first.identityMap });
+  assert.deepEqual(first.config, retry.config);
+  const removed = buildDashboardPackageMerge({ ...args, destination: { scope: "mixed", placementTargets: { [key]: { pageId: "gone", sectionId: "gone" } } } });
+  assert.ok(removed.issues.some(i => i.blocking && i.code === "destination-required"));
+});
+
+test("section names are scoped to their target page and subsequent imports append into that exact section", async () => {
+  const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
+  const candidate = collaboratorPackage();
+  const args = { candidate, selection: { sectionIds: [dashboardPackageSectionKey("overview", "signals")] },
+    destination: { scope: "mixed", sectionTargets: { [dashboardPackageSectionKey("overview", "signals")]: { pageId: "details" } } } };
+  const first = buildDashboardPackageMerge({ ...args, current: collaboratorPackage().config });
+  assert.deepEqual(first.issues.filter(i => i.blocking), []);
+  assert.equal(first.config.pages[1].sections.at(-1).title, "Signals");
+  const second = buildDashboardPackageMerge({ ...args, current: first.config });
+  assert.deepEqual(second.issues.filter(i => i.blocking), []);
+  assert.equal(second.config.pages[1].sections.length, 2);
+  assert.equal(second.config.pages[1].sections.at(-1).panels.length, 4);
+});

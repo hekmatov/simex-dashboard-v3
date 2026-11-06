@@ -63,6 +63,30 @@ test("failure restores newly owned assets and preserves another draft's staged c
   assert.deepEqual(await empty.store.list(), []);
 });
 
+test("mixed full append commits synonymous containers once with independent content and real image admission", async () => {
+  const { commitDashboardPackageMerge } = await import("../src/lib/dashboardPackageMergeTransaction.js");
+  const env = environment({ ambiguous: true });
+  const reviewed = buildDashboardPackageMerge({ current: env.current, candidate: collaboratorPackage({ value: 77, staticPanels: true }),
+    selection: { pageIds: ["overview", "details"] }, destination: { scope: "mixed" } });
+  const input = { ...env, proposal: reviewed, transactionId: "mixed-reviewed-copy" };
+  const [one, two] = await Promise.all([commitDashboardPackageMerge(input), commitDashboardPackageMerge(input)]);
+  assert.equal(env.commits(), 1);
+  assert.deepEqual(one.config, two.config);
+  assert.equal(one.config.pages.length, 2);
+  assert.equal(one.config.pages[0].sections[0].panels.length, 6);
+  assert.equal((await env.store.list()).length, 1);
+});
+
+test("mixed append failure leaves synonymous containers and existing assets unchanged", async () => {
+  const { commitDashboardPackageMerge } = await import("../src/lib/dashboardPackageMergeTransaction.js");
+  const env = environment({ fail: true });
+  const reviewed = buildDashboardPackageMerge({ current: env.current, candidate: collaboratorPackage({ staticPanels: true }),
+    selection: { pageIds: ["overview"] }, destination: { scope: "mixed" } });
+  await assert.rejects(commitDashboardPackageMerge({ ...env, proposal: reviewed, transactionId: "mixed-failed-copy" }), /storage failure/);
+  assert.deepEqual(env.controller.getCurrent(), env.current);
+  assert.deepEqual(await env.store.list(), []);
+});
+
 function proposal(current, withImage = false) {
   return buildDashboardPackageMerge({ current, candidate: collaboratorPackage({ value: 99, staticPanels: withImage }),
     selection: { placementIds: [withImage ? "placement-picture" : "placement-a"] },
