@@ -219,6 +219,7 @@ test("edits imported Free Text and keeps both identities after reload", async ({
   await page.reload();
   await openDashboardPage(page, before.pages[0].id);
   const panel = page.locator(`[data-canonical-placement-id="${imported.id}"]`);
+  await panel.scrollIntoViewIfNeeded();
   await expect(panel.getByText(updatedText, { exact: true })).toBeVisible();
   const saved = await stored(page);
   const savedPlacement = saved.pages[0].sections[0].panels.find(({ id }) => id === imported.id);
