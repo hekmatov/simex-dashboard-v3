@@ -36,7 +36,7 @@ test("existing edit preserves media identity and expected current revision", () 
   assert.equal(prepared.candidateDashboard.contentLibrary.mediaItems["media-image-source"].revision, 3);
 });
 
-test("Free-text transaction increments revision only when saved content changes", () => {
+test("Free-text edits preserve imported placement identity and only revise changed content", () => {
   const panel = {
     ...makeDashboardV6().pages[0].sections[0].panels[0].chart,
     id: "text-panel",
@@ -52,20 +52,27 @@ test("Free-text transaction increments revision only when saved content changes"
     placement: { kind: "staticText", qmd: "Initial brief" },
   });
   assert.equal(created.candidateDashboard.dataSources["text-source"].revision, 1);
+  const imported = structuredClone(created.candidateDashboard);
+  imported.pages[0].sections[0].panels[0].id = "imported-placement";
 
   const updated = prepareStaticPanelTransaction({
-    dashboard: created.candidateDashboard,
+    dashboard: imported,
     operation: "update",
-    panelId: "text-panel",
+    panelId: "imported-placement",
     panel,
     placement: { kind: "staticText", qmd: "Updated brief" },
   });
+  assert.deepEqual(updated.candidateDashboard.pages[0].sections[0].panels[0], {
+    id: "imported-placement",
+    chart: panel,
+  });
+  assert.equal(updated.candidateDashboard.dataSources["text-source"].qmd, "Updated brief");
   assert.equal(updated.candidateDashboard.dataSources["text-source"].revision, 2);
 
   const unchanged = prepareStaticPanelTransaction({
     dashboard: updated.candidateDashboard,
     operation: "update",
-    panelId: "text-panel",
+    panelId: "imported-placement",
     panel,
     placement: { kind: "staticText", qmd: "Updated brief" },
   });

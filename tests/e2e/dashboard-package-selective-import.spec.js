@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { collaboratorPackage } from "../helpers/dashboardPackageFixtures.js";
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
-import { enterBuildMode, chooseWholeDashboardPackage, chooseDashboardPackageDestinations } from "./support/buildWorkflow.js";
+import { enterBuildMode, chooseWholeDashboardPackage, chooseDashboardPackageDestinations, choosePanelAction } from "./support/buildWorkflow.js";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
@@ -194,6 +195,36 @@ test("Text Image import explicitly saves pending metadata and round-trips into a
   } finally { await context.close(); }
 });
 
+
+test("edits imported Free Text and keeps both identities after reload", async ({ page }) => {
+  await openBuild(page);
+  await loadWhole(page, collaboratorPackage({ staticPanels: true }));
+  const before = await stored(page);
+  const imported = before.pages[0].sections[0].panels.find(({ chart }) => chart.typeId === "freeText");
+  expect(imported.id).not.toBe(imported.chart.id);
+
+  await choosePanelAction(page, imported.id, "edit");
+  await page.locator(".chart-quick-editor").getByRole("button", { name: "Open full editor", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "Text/Image editor" });
+  const source = editor.getByLabel("Portable QMD raw source");
+  if (!(await source.isVisible())) {
+    await editor.getByRole("button", { name: "Raw text", exact: true }).click();
+  }
+  const updatedText = "Updated situation briefing.";
+  await source.fill(updatedText);
+  await editor.getByRole("button", { name: "Continue", exact: true }).click();
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+
+  await page.reload();
+  await openDashboardPage(page, before.pages[0].id);
+  const panel = page.locator(`[data-canonical-placement-id="${imported.id}"]`);
+  await expect(panel.getByText(updatedText, { exact: true })).toBeVisible();
+  const saved = await stored(page);
+  const savedPlacement = saved.pages[0].sections[0].panels.find(({ id }) => id === imported.id);
+  expect(savedPlacement.chart.id).toBe(imported.chart.id);
+  expect(saved.dataSources[savedPlacement.chart.sourceId].qmd).toBe(updatedText);
+});
 
 test("opening and cancelling inspection retains an unfinished Structure rename", async ({ page }) => {
   test.setTimeout(40_000);

@@ -64,6 +64,7 @@ export function StaticContentWizard({
   dashboard = {},
   deviceLayout = "desktop",
   destination,
+  placementId,
   initialDraft,
   restoration = null,
   editor = false,
@@ -226,7 +227,7 @@ export function StaticContentWizard({
                 dashboard: currentDashboard,
                 draft: coordinatorDraft,
                 operation: editor ? "update" : "create",
-                panelId: editor ? result.panel.id : undefined,
+                panelId: editor ? placementId : undefined,
                 pendingMediaItems,
                 pendingAssets,
               })

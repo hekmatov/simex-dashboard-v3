@@ -2799,6 +2799,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onContentDraftCommit={onContentDraftCommit}
       onContentDraftDiscard={onContentDraftDiscard}
       destination={staticDestinationForPlacement(workingDashboard, selectedPlacement.panelId)}
+      placementId={selectedPlacement.panelId}
       panel={selectedPanel}
       placement={workingDashboard.dataSources?.[selectedPanel.sourceId]}
       mediaItem={workingDashboard.contentLibrary?.mediaItems?.[

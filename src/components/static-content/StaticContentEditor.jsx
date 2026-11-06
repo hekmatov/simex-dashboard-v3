@@ -21,6 +21,7 @@ export function StaticContentEditor({
   dashboard,
   deviceLayout,
   destination,
+  placementId,
   panel,
   placement,
   mediaItem,
@@ -56,6 +57,7 @@ export function StaticContentEditor({
       editor
       dashboard={dashboard}
       deviceLayout={deviceLayout}
+      placementId={placementId}
       {...staticContentEditorWizardProps({
         contentDraftCoordinator,
         contentRenderContext,

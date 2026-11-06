@@ -3,6 +3,7 @@ import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV
 import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
 import { migrateDashboardV5ToV6 } from "../charting/config/migrateDashboardV5ToV6.js";
 import { validateDashboardChartReferences } from "../charting/config/dashboardSemanticReferences.js";
+import { findConfiguredChart } from "../lib/dashboardSelectors.js";
 import { validateStaticDestination } from "./staticPanelCapabilities.js";
 import {
   normalizeStaticSource,
@@ -52,14 +53,18 @@ export function prepareStaticPanelTransaction({
   validateChartInstance(panel);
 
   const candidateDashboard = structuredClone(previousDashboard);
+  const placementId = panelId ?? panel.id;
   const previousPlacement = operation === "update"
-    ? findPanel(candidateDashboard, panelId ?? panel.id)
+    ? findPlacement(candidateDashboard, placementId)
     : null;
   if (operation !== "create" && operation !== "update") {
     throw new Error(`Unknown static panel transaction operation "${String(operation)}".`);
   }
   if (operation === "update" && !previousPlacement) {
-    throw new Error(`Static panel "${String(panelId ?? panel.id)}" does not exist.`);
+    throw new Error(`Static panel "${String(placementId)}" does not exist.`);
+  }
+  if (previousPlacement && previousPlacement.panel.id !== panel.id) {
+    throw new Error(`Static panel "${placementId}" no longer contains chart "${panel.id}".`);
   }
 
   const existingPlacement = previousPlacement
@@ -117,13 +122,15 @@ export function prepareStaticPanelTransaction({
     const section = candidateDashboard.pages
       .find(({ id }) => id === target.pageId)
       .sections.find(({ id }) => id === target.sectionId);
-    if (findPanel(candidateDashboard, panel.id)) {
+    if (findPlacement(candidateDashboard, panel.id) || findConfiguredChart(candidateDashboard, panel.id)) {
       throw new Error(`Static panel "${panel.id}" already exists.`);
     }
     section.panels = [...(section.panels ?? []), { id: panel.id, chart: structuredClone(panel) }];
   } else {
-    previousPlacement.wrapper.id = panel.id;
-    previousPlacement.wrapper.chart = structuredClone(panel);
+    const { section, index, wrapper } = previousPlacement;
+    section.panels[index] = Object.hasOwn(wrapper, "chart")
+      ? { ...wrapper, chart: structuredClone(panel) }
+      : structuredClone(panel);
     pruneStaticOwnership(candidateDashboard, {
       sourceIds: [previousSourceId],
     });
@@ -156,7 +163,7 @@ export function prepareStaticPanelTransaction({
   return deepFreeze({
     kind: "static-panel-transaction",
     operation,
-    panelId: panel.id,
+    panelId: previousPlacement?.wrapper.id ?? panel.id,
     mediaId: isImage ? mediaItem.mediaId : null,
     mediaItem: isImage ? structuredClone(mediaItem) : null,
     stagedAssetIds: validatedStagedAssetIds,
@@ -301,13 +308,13 @@ function canonicalize(value) {
   );
 }
 
-function findPanel(dashboard, panelId) {
+function findPlacement(dashboard, placementId) {
   for (const page of dashboard.pages ?? []) {
     for (const section of page.sections ?? []) {
-      for (const wrapper of section.panels ?? []) {
-        const panel = wrapper.chart ?? wrapper;
-        if (panel.id === panelId) return { page, section, wrapper, panel };
-      }
+      const index = (section.panels ?? []).findIndex(({ id }) => id === placementId);
+      if (index === -1) continue;
+      const wrapper = section.panels[index];
+      return { section, index, wrapper, panel: wrapper.chart ?? wrapper };
     }
   }
   return null;
