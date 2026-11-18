@@ -313,8 +313,8 @@ test("temporal CSV replacement exposes an explicit warning confirmation without 
   assert.doesNotMatch(html, /Import as new source/u);
   assert.match(html, />Confirm replacement and mark affected temporal content<\/button>/u);
   assert.match(html, /Chrono Group: cases-playback/u);
-  assert.match(html, /Scene: cases-scene/u);
-  assert.match(html, /Scene presentation: cases-scene/u);
+  assert.match(html, /Storyline: cases-scene/u);
+  assert.match(html, /Storyline presentation: cases-scene/u);
   assert.doesNotMatch(html, /<button type="button" disabled="">Confirm replacement/u);
 });
 

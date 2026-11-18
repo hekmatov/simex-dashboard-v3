@@ -1,10 +1,9 @@
 import React from "react";
 
-import { buildChronoCanvasProjection } from "../../charting/time/chronoCanvasProjection.js";
+import StorylineBand from "../time/StorylineBand.jsx";
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
-import { sceneNavigationPageId } from "../view/ViewShell.jsx";
 import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "./CanonicalDashboardFrame.jsx";
 import DashboardCanvas from "./DashboardCanvas.jsx";
 import DashboardHeader from "./DashboardHeader.jsx";
@@ -40,16 +39,11 @@ export default function DashboardModeWorkspace({
   onStartMultiFullscreenSelection,
   onOpenMultiFullscreen,
   onCancelMultiSelection,
+  onSaveComparisonAsStoryline,
+  comparisonSaveDisabledReason,
 }) {
   const playback = usePlayback();
   const buildMode = mode === "build";
-  const scenePageId = buildMode ? null : sceneNavigationPageId(playback.activeScene, activePage);
-
-  React.useEffect(() => {
-    if (scenePageId && typeof onActivePageChange === "function") {
-      onActivePageChange(scenePageId);
-    }
-  }, [onActivePageChange, scenePageId]);
   React.useEffect(() => {
     if (!buildMode) playback.dispatch({ type: "navigate" });
   }, [activePage?.id, buildMode]);
@@ -58,26 +52,7 @@ export default function DashboardModeWorkspace({
     return () => playback.dispatch({ type: "modeExit" });
   }, [buildMode]);
 
-  const chronoSource = buildMode ? null : playback.activeScene ?? playback.activeGroup;
-  const chronoSuspended = !buildMode && playback.playbackView === true
-    && (displayState?.displayed_chart_ids?.length ?? 0) > 0;
-  const chronoProjection = !buildMode && playback.playbackView === true && chronoSource
-    ? buildChronoCanvasProjection({
-        activePage,
-        activeGroup: playback.activeGroup,
-        activeScene: playback.activeScene,
-        scope: playback.scope,
-      })
-    : null;
-  const chronoSection = !buildMode && playback.playbackView === true && chronoSource
-    ? {
-        id: chronoSource.id,
-        title: chronoSource.name,
-        chartIds: chronoProjection.focusedChartIds,
-        scene: playback.activeScene,
-        timeContextForChart: playback.timeContextForChart,
-      }
-    : null;
+  const chronoSuspended = !buildMode && (multiSelectMode || (displayState?.displayed_chart_ids?.length ?? 0) > 0);
 
   const viewOverlay = buildMode ? null : (
     <>
@@ -106,6 +81,8 @@ export default function DashboardModeWorkspace({
         displayState={displayState}
         onDisplayAction={onDisplayAction}
         timeContextForChart={playback.timeContextForChart}
+        onSaveAsStoryline={onSaveComparisonAsStoryline}
+        saveStorylineDisabledReason={comparisonSaveDisabledReason}
         accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
       />
     </>
@@ -120,7 +97,7 @@ export default function DashboardModeWorkspace({
         buildStaticAuthoringOpen={buildStaticAuthoringOpen}
         pageId={activePage?.id}
         dashboardHeader={dashboardHeader ?? (
-          <DashboardHeader activePage={activePage} dashboard={dashboard} mode={mode} />
+          <DashboardHeader activePage={activePage} dashboard={dashboard} mode={mode} storylineActive={Boolean(playback.activeScene)} />
         )}
         workspaceControls={buildMode ? buildWorkspace : null}
         pageContent={(
@@ -132,6 +109,7 @@ export default function DashboardModeWorkspace({
               suspended={chronoSuspended}
             >
               <DashboardCanvas
+                storylineBand={!buildMode && <StorylineBand dashboard={dashboard} playback={playback} activePageId={activePage?.id} />}
                 activePage={activePage}
                 dashboard={dashboard}
                 contentRenderContext={contentRenderContext}
@@ -141,10 +119,6 @@ export default function DashboardModeWorkspace({
                 showFullscreen={showChartFullscreen}
                 multiSelectMode={!buildMode && multiSelectMode}
                 multiPanelIds={buildMode ? [] : multiPanelIds}
-                excludedChartIds={chronoProjection?.hiddenChartIds}
-                chronoSection={chronoSection}
-                groupOnly={Boolean(chronoProjection && playback.scope === "group-only")}
-                onViewAllCharts={() => playback.dispatch({ type: "setScope", scope: "all-page" })}
                 geoDataSources={geoDataSources}
                 onNavigate={onActivePageChange}
                 onAddPanelToSection={undefined}

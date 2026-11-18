@@ -1,4 +1,5 @@
 import React from "react";
+import ExerciseContextStamp from "../common/ExerciseContextStamp.jsx";
 
 const useBrowserLayoutEffect = typeof window === "undefined"
   ? React.useEffect
@@ -31,7 +32,7 @@ export default function ExerciseDisclaimer() {
       className="exercise-disclaimer"
       aria-label="Exercise disclaimer"
     >
-      Fictional scenario · Exercise use only
+      <ExerciseContextStamp />
     </aside>
   );
 }

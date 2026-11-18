@@ -6,8 +6,9 @@ import {
 } from "../theme/dashboardTheme.js";
 import { AUDIENCE_FRAME_TYPES, validateAudienceFramePayload } from "./audienceFrameProtocol.js";
 import { resolvePresentationResolution } from "./presentationResolution.js";
+import { validatePresentationTime } from "../charting/time/acceptedTimeProjection.js";
 
-export const PRESENTATION_PROTOCOL_VERSION = 3;
+export const PRESENTATION_PROTOCOL_VERSION = 4;
 export const PRESENTATION_THEME_PROTOCOL_VERSION = 1;
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
@@ -31,21 +32,16 @@ const LAYOUTS_BY_COUNT = Object.freeze({
 
 const ENVELOPE_FIELDS = ["protocol_version", "session_id", "sequence", "type", "payload"];
 const LEGACY_STATE_FIELDS = [
-  "dashboard_revision", "source", "composition", "timeline", "matching",
+  "dashboard_revision", "source", "composition", "time",
   "output_mode", "blackout", "audience", "payload",
 ];
 const STATE_FIELDS = ["dashboard_revision", "theme", ...LEGACY_STATE_FIELDS.slice(1)];
-const SOURCE_FIELDS = ["kind", "scene_id", "chrono_group_id"];
+const SOURCE_FIELDS = ["kind", "scene_id"];
 const COMPOSITION_FIELDS = ["active_page_id", "displayed_chart_ids", "layout"];
 const PAYLOAD_FIELDS = ["items", "audience_facts"];
 const AUDIENCE_FACT_FIELDS = [
   "dashboard_name", "page", "parent_chrono_group", "scene_name", "scene_date",
 ];
-const TIMELINE_FIELDS = [
-  "frame_epochs", "frame_index", "period", "trace_mode", "seconds_per_frame",
-];
-const PERIOD_FIELDS = ["start", "end"];
-const MATCHING_FIELDS = ["use_authored_settings"];
 const AUDIENCE_FIELDS = ["date_position"];
 const DATE_POSITION_FIELDS = ["x_permille", "y_permille", "width_permille"];
 const DATE_MOVEMENT_FIELDS = ["x_permille", "y_permille"];
@@ -60,7 +56,7 @@ const DASHBOARD_STYLE_IDS = new Set(DASHBOARD_STYLES.map(({ id }) => id));
 const DASHBOARD_COLOR_PROFILE_IDS = new Set(DASHBOARD_COLOR_PROFILES.map(({ id }) => id));
 
 const VALUELESS_ACTIONS = new Set(["PREVIOUS", "NEXT", "PLAY", "PAUSE", "END"]);
-const IDENTIFIER_ACTIONS = new Set(["SELECT_SCENE", "SELECT_CHRONO_GROUP"]);
+const IDENTIFIER_ACTIONS = new Set(["SELECT_SCENE"]);
 
 export class PresentationProtocolError extends Error {
   constructor(code, message, path = null) {
@@ -163,8 +159,8 @@ export function validatePresentationState(state, { presentableItemIndex } = {}) 
     presentableItemIndex,
     payloadItems: state.payload.items,
   });
-  validateTimeline(state.timeline);
-  validateMatching(state.matching);
+  try { validatePresentationTime(state.time); }
+  catch (error) { reject("invalid_time_cursor", error.message, "payload.time"); }
   if (!OUTPUT_MODES.has(state.output_mode)) {
     reject("invalid_output_mode", "presentation output mode is not supported", "payload.output_mode");
   }
@@ -356,15 +352,9 @@ function validateSource(source) {
   const valid = (
     source.kind === "scene"
       && isIdentifier(source.scene_id)
-      && isIdentifier(source.chrono_group_id)
-  ) || (
-    source.kind === "Chrono Group"
-      && source.scene_id === null
-      && isIdentifier(source.chrono_group_id)
   ) || (
     source.kind === "manual"
       && source.scene_id === null
-      && source.chrono_group_id === null
   );
   if (!valid) {
     reject("invalid_source_identity", "presentation source identity does not match its kind", "payload.source");
@@ -444,60 +434,6 @@ function validatePayload(payload, { presentableItemIndex }) {
       "invalid_audience_facts",
       "Audience fact flags must be booleans",
       "payload.payload.audience_facts",
-    );
-  }
-}
-
-function validateTimeline(timeline) {
-  if (timeline === null) return;
-  assertPlainObject(timeline, "presentation timeline", "payload.timeline");
-  assertExactFields(timeline, TIMELINE_FIELDS, "presentation timeline", "payload.timeline");
-  if (!Array.isArray(timeline.frame_epochs) || timeline.frame_epochs.length === 0) {
-    reject("invalid_frame_ledger", "presentation frame ledger must not be empty", "payload.timeline.frame_epochs");
-  }
-  let previous = -Infinity;
-  for (const epoch of timeline.frame_epochs) {
-    if (!Number.isSafeInteger(epoch) || epoch <= previous) {
-      reject(
-        "invalid_frame_ledger",
-        "presentation frame epochs must be ordered unique integers",
-        "payload.timeline.frame_epochs",
-      );
-    }
-    previous = epoch;
-  }
-  if (
-    !Number.isSafeInteger(timeline.frame_index)
-    || timeline.frame_index < 0
-    || timeline.frame_index >= timeline.frame_epochs.length
-  ) {
-    reject("invalid_frame_index", "presentation frame index is outside the frame ledger", "payload.timeline.frame_index");
-  }
-  assertPlainObject(timeline.period, "presentation period", "payload.timeline.period");
-  assertExactFields(timeline.period, PERIOD_FIELDS, "presentation period", "payload.timeline.period");
-  const { start, end } = timeline.period;
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end) {
-    reject("invalid_period", "presentation period must be an ordered integer epoch range", "payload.timeline.period");
-  }
-  if (timeline.frame_epochs[0] < start || timeline.frame_epochs.at(-1) > end) {
-    reject("invalid_period", "presentation frames must remain inside the period", "payload.timeline.period");
-  }
-  if (!TRACE_MODES.has(timeline.trace_mode)) {
-    reject("invalid_trace_mode", "presentation trace mode is not supported", "payload.timeline.trace_mode");
-  }
-  if (!Number.isFinite(timeline.seconds_per_frame) || timeline.seconds_per_frame <= 0) {
-    reject("invalid_seconds_per_frame", "presentation seconds per frame must be positive", "payload.timeline.seconds_per_frame");
-  }
-}
-
-function validateMatching(matching) {
-  assertPlainObject(matching, "presentation matching", "payload.matching");
-  assertExactFields(matching, MATCHING_FIELDS, "presentation matching", "payload.matching");
-  if (matching.use_authored_settings !== true) {
-    reject(
-      "authored_matching_required",
-      "Present must use authored matching settings",
-      "payload.matching.use_authored_settings",
     );
   }
 }

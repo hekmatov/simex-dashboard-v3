@@ -25,9 +25,10 @@ const IMAGE_PANEL_ID = "journey-g-image-panel";
 const QMD_PANEL_ID = "journey-g-qmd-panel";
 const MAP_PANEL_ID = "journey-g-map-panel";
 const PNG = imageFixtureBytes("image/png");
+// Both joined marks must be available at the fixture's Live time after import.
 const MAP_ROWS = [
-  { Datum: "2026-01-01", MunicipalityCode: "A", infectionsPer10000: 10 },
-  { Datum: "2026-01-01", MunicipalityCode: "B", infectionsPer10000: 20 },
+  { Datum: "2027-02-21", MunicipalityCode: "A", infectionsPer10000: 10 },
+  { Datum: "2027-02-21", MunicipalityCode: "B", infectionsPer10000: 20 },
 ];
 const MAP_CSV = [
   "Datum,MunicipalityCode,infectionsPer10000",
@@ -53,7 +54,7 @@ test.beforeEach(async ({ page, request }) => {
   await page.reload();
 });
 
-test("Journey G — V6 offline round trip and V4 migration retain library", async ({ browser, page }, testInfo) => {
+test("Journey G — V7 offline round trip and V4 migration retain library", async ({ browser, page }, testInfo) => {
   test.setTimeout(180_000);
   await openBuild(page, { width: 1440, height: 900 });
 
@@ -93,7 +94,7 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
     value: v4,
   });
   const migrated = await storedSnapshot(page);
-  expect(migrated.configVersion).toBe(6);
+  expect(migrated.configVersion).toBe(7);
   expect(migrated.chartVersions).toEqual([3]);
   expect(migrated.sourceEntryIds.length).toBeGreaterThan(0);
   expect(migrated.migratedImage).toEqual({ sourceVersion: 2, currentKind: "package", revision: 1 });
@@ -101,12 +102,12 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
 
   const fixture = await buildJourneyBundle(page);
   await importPackage(page, {
-    name: "journey-g-v6.json",
+    name: "journey-g-v7.json",
     value: fixture,
   });
   const importedFixture = await journeySnapshot(page);
   expect(importedFixture).toMatchObject({
-    configVersion: 6,
+    configVersion: 7,
     mediaIds: [MEDIA_UNUSED, MEDIA_USED],
     sourceIds: [CSV_ID, GEOJSON_ID],
     usedMediaId: MEDIA_USED,
@@ -126,8 +127,8 @@ test("Journey G — V6 offline round trip and V4 migration retain library", asyn
   const bundlePath = testInfo.outputPath("journey-g-roundtrip.json");
   await download.saveAs(bundlePath);
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
-  expect(exported.version).toBe(6);
-  expect(exported.config.configVersion).toBe(6);
+  expect(exported.version).toBe(7);
+  expect(exported.config.configVersion).toBe(7);
   expect(exported.config.contentLibrary.mediaItems[MEDIA_USED].revision).toBe(7);
   expect(exported.config.contentLibrary.mediaItems[MEDIA_UNUSED].revision).toBe(2);
   expect(exported.config.contentLibrary.mediaItems[MEDIA_USED].current.assetId)

@@ -1,4 +1,6 @@
 import React from "react";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
+import ChartSourceCaption from "./ChartSourceCaption.jsx";
 
 import { StaticContentStateBoundary } from "../static-content/StaticContentStateBoundary.jsx";
 import { titleContainerProps } from "./chartViewPresentation.js";
@@ -26,6 +28,7 @@ export default function ImageChartView({
   onEdit,
   contentRenderContext,
 }) {
+  const typography = useChartTypography();
   const src = safeImageSource(model?.src ?? model?.url, model?.containedPackagePath === true);
   const active = interactionMode === "active" && zoomEnabled === true;
   const [loadState, setLoadState] = React.useState(src ? "loading" : "error");
@@ -48,26 +51,26 @@ export default function ImageChartView({
   }, [model?.mediaId, surface, active]);
 
   if (model?.status === "loading") {
-    return <div className="chart-image-pending" role="status" aria-live="polite">Loading saved image…</div>;
+    return <div className="chart-image-pending" role="status" aria-live="polite">Loading saved image…<ChartSourceCaption /></div>;
   }
 
   if (!src && model?.staticSource !== true && model?.status !== "error") {
-    return <div className="chart-status-error" role="status" aria-live="polite">This chart image cannot be displayed.</div>;
+    return <div className="chart-status-error" role="status" aria-live="polite">This chart image cannot be displayed.<ChartSourceCaption /></div>;
   }
   if (model?.status === "error") {
-    return <StaticContentStateBoundary
+    return <><StaticContentStateBoundary
       state={model}
       surface={surface}
       onRetry={onRetry}
       onReplace={onReplace}
       onEdit={onEdit}
-    />;
+    /><ChartSourceCaption /></>;
   }
 
   const title = String(chart.title ?? "").trim();
   const titleStyle = audienceScale
     ? { ...imageTitleStyle(chart), fontSize: `${audienceScale.title}px` }
-    : imageTitleStyle(chart);
+    : { ...imageTitleStyle(chart), ...(typography && !Number.isInteger(chart.presentation?.title?.fontSize) ? { fontSize: `${typography.title}px` } : {}) };
   const accessibleName = title || String(model?.alt ?? "").trim() || "Image";
   const crop = safeCrop(model?.crop);
   const rotation = safeRotation(model?.rotation);
@@ -129,7 +132,7 @@ export default function ImageChartView({
       }
     : { status: "ready" };
 
-  return <StaticContentStateBoundary
+  return <><StaticContentStateBoundary
     state={state}
     surface={surface}
     onRetry={() => {
@@ -178,7 +181,8 @@ export default function ImageChartView({
         : undefined}
       {...titleContainerProps(chart)}
     >
-      {title ? <ChartHeading chart={chart} titleStyle={titleStyle} /> : null}
+      {title ? <ChartHeading chart={chart} titleStyle={titleStyle} showSourceCaption={false} /> : null}
+      <ChartSourceCaption />
       <div
         className="chart-image-viewport"
         style={{ backgroundColor: resolveImageViewportBackground(chart) }}
@@ -234,7 +238,7 @@ export default function ImageChartView({
         <button type="button" className="secondary" onClick={resetView} disabled={scale === MIN_IMAGE_SCALE && pan.x === 0 && pan.y === 0}>Reset view</button>
       </div>}
     </figure>
-  </StaticContentStateBoundary>;
+  </StaticContentStateBoundary>{state.status === "error" ? <ChartSourceCaption /> : null}</>;
 }
 
 export function nextImageZoomScale(currentScale, event) {

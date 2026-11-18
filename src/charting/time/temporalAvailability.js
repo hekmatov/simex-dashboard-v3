@@ -1,5 +1,6 @@
 import {
   bindingField,
+  bindingForField,
   bindingList,
   isMissing,
   profileColumn,
@@ -12,6 +13,19 @@ const CANONICAL_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const EMPTY_AVAILABILITY = Object.freeze([]);
 const AVAILABILITY_BY_ROWS = new WeakMap();
 const MAX_IDENTITIES_PER_SOURCE = 128;
+
+/** Visual observation runs; this never changes clock cadence or matching. */
+export function temporalCoverageRuns(epochs) {
+  if (!epochs.length) return [];
+  const gaps = epochs.slice(1).map((epoch, index) => epoch - epochs[index]).sort((a, b) => a - b);
+  const typicalGap = gaps[Math.floor((gaps.length - 1) / 2)] ?? 0;
+  const runs = [[epochs[0], epochs[0]]];
+  for (let index = 1; index < epochs.length; index++) {
+    if (epochs[index] - epochs[index - 1] > typicalGap * 1.5) runs.push([epochs[index], epochs[index]]);
+    else runs.at(-1)[1] = epochs[index];
+  }
+  return runs;
+}
 
 export function collectTemporalAvailability({
   chart,
@@ -54,6 +68,11 @@ export function collectTemporalAvailability({
   if (plottedBindings.length === 0) return EMPTY_AVAILABILITY;
 
   const cache = availabilityCache(rows);
+  const filters = chart.transformations?.filters;
+  const filterFields = Array.isArray(filters)
+    ? filters.map(filter => filter?.field).filter(field => typeof field === "string")
+    : [];
+  const fields = new Set([timeField, ...plottedBindings.map(bindingField), ...filterFields]);
   const cacheIdentity = stableStringify({
     sourceId: chart.sourceId,
     typeId: chart.typeId,
@@ -61,11 +80,18 @@ export function collectTemporalAvailability({
     timeBinding,
     plottedRoleBindings,
     transformations: chart.transformations ?? null,
+    filterBindings: filterFields.map(field => bindingForField(chart, field)),
     period,
     timezone: canonicalTimezone,
-    columns: [timeField, ...plottedBindings.map(bindingField)]
-      .filter((field, index, fields) => fields.indexOf(field) === index)
-      .map((field) => [field, profileColumn(profile, field) ?? null]),
+    // Parsed observations depend on types and parsing rules, while profile
+    // diagnostics and the precomputed temporal values can be large.
+    columns: [...fields].map(field => {
+      const column = profileColumn(profile, field);
+      return [field, column ? {
+        type: column.type,
+        parsingMetadata: column.parsingMetadata ?? column.temporal?.parsingMetadata,
+      } : null];
+    }),
   });
   const cached = cache.get(cacheIdentity);
   if (cached) return cached;

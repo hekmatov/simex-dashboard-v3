@@ -1,5 +1,7 @@
 import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
+import { PRESENTATION_PROTOCOL_VERSION } from "../../src/lib/presentationProtocol.js";
 import { readFile } from "node:fs/promises";
 
 import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
@@ -8,7 +10,7 @@ import {
   openDashboardFromLanding,
 } from "./support/landingWorkflow.js";
 import { openAudienceSession } from "./support/present-audience-workflow.js";
-import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
+import { installPageRemovalGroups, REMOVED_PAGE_GROUP_ID } from "./support/layoutReviewFixture.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -92,11 +94,12 @@ test("Present reserves a reachable desktop dock without covering its work contro
   await page.setViewportSize({ width: 1280, height: 720 });
   await openDashboardFromLanding(page);
   await enterPresent(page);
+  await timeCursor(page).settings();
   await page.evaluate(() => window.scrollTo(0, 0));
 
   const geometry = await page.evaluate(() => {
     const rect = (selector) => {
-      const element = document.querySelector(selector);
+      const element = typeof selector === "string" ? document.querySelector(selector) : selector;
       if (!element) throw new Error(`Missing geometry target: ${selector}`);
       const bounds = element.getBoundingClientRect();
       return {
@@ -114,9 +117,9 @@ test("Present reserves a reachable desktop dock without covering its work contro
       workspace: rect(".present-workspace"),
       workRegion: rect(".present-workspace-body"),
       dock: rect(".present-action-dock"),
-      cadenceLabel: rect(".present-cadence-field"),
-      cadenceInput: rect('[data-presentation-control-id="cadence"]'),
-      play: rect('[data-presentation-control-id="play"]'),
+      cadenceLabel: rect(document.querySelector('.time-settings__controls input[type="number"]').closest("label")),
+      cadenceInput: rect('.time-settings__controls input[type="number"]'),
+      play: rect('.time-bar__play'),
     };
   });
 
@@ -136,10 +139,12 @@ test("Present reserves a reachable desktop dock without covering its work contro
   await expect(displayed.locator(".present-selected-chart")).toHaveCount(4);
   const compositionLayout = page.locator('[data-presentation-control-id="composition-layout"]');
   const lastRemove = displayed.locator('[data-presentation-item-action="remove"]').last();
+  await lastRemove.evaluate(node => node.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" }));
   await expect(compositionLayout).toBeInViewport({ ratio: 1 });
   await expect(lastRemove).toBeInViewport({ ratio: 1 });
   await compositionLayout.click({ trial: true });
   await lastRemove.click({ trial: true });
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
   const filledGeometry = await page.evaluate(() => {
     const bounds = (selector) => {
@@ -343,7 +348,7 @@ test("Present opens an audience window and sends a two-chart layout", async ({ p
   await enterPresent(page);
   const audience = await openAudience(page);
   await selectTwoAudienceCharts(page);
-  await page.getByLabel("Scene layout").selectOption("overUnder");
+  await page.getByRole("combobox", { name: "Storyline layout", exact: true }).selectOption("overUnder");
 
   const grid = audience.locator(
     '.displayed-chart-grid[data-display-surface="audience"]',
@@ -356,24 +361,27 @@ test("Present opens an audience window and sends a two-chart layout", async ({ p
 test("Present retains synchronized time through Black, reload, manual close, and a new window", async ({ page }) => {
   await installPageRemovalGroups(page);
   await page.reload();
+  const saved = await page.evaluate(({ key, id }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    return dashboard.scenes.find(scene => scene.id === id);
+  }, { key: STORAGE_KEY, id: REMOVED_PAGE_GROUP_ID });
+  expect(saved.present.chartIds).toHaveLength(2);
   await enterPresent(page);
   await installAudienceStateObserver(page);
   const audience = await openAudience(page);
-  await selectTwoAudienceCharts(page);
 
-  const source = page.getByLabel("Presentation source");
-  const groupSources = await source.locator('option[value^="group:"]').evaluateAll(
-    (options) => options.map((option) => option.value),
+  const cursor = timeCursor(page);
+  await cursor.selectScope({ id: saved.id, kind: "storyline" });
+  const displayedIds = popup => popup.locator("[data-displayed-chart-id]").evaluateAll(
+    items => items.map(item => item.getAttribute("data-displayed-chart-id")),
   );
-  expect(groupSources.length).toBeGreaterThan(0);
-  const currentSource = await source.inputValue();
-  await source.selectOption(groupSources.find((value) => value !== currentSource) ?? groupSources[0]);
-  await selectTwoAudienceCharts(page);
+  await expect.poll(() => displayedIds(audience)).toEqual(saved.present.chartIds);
   await expect.poll(async () => Number.isFinite(
     await observedAudienceEpoch(page),
   )).toBe(true);
   const previousEpoch = await observedAudienceEpoch(page);
-  const presentationTime = page.getByLabel("Presentation time");
+  await cursor.open();
+  const presentationTime = cursor.frame;
   await expect(presentationTime).toBeEnabled();
   const previousTime = await presentationTime.inputValue();
   const maximumTime = Number(await presentationTime.getAttribute("max"));
@@ -402,7 +410,7 @@ test("Present retains synchronized time through Black, reload, manual close, and
     .toBeVisible({ timeout: 7_000 });
 
   const reopened = await reopenAudience(page);
-  await expect(reopened.locator("[data-displayed-chart-id]")).toHaveCount(2);
+  await expect.poll(() => displayedIds(reopened)).toEqual(saved.present.chartIds);
   await expect.poll(() => observedAudienceEpoch(page)).toBe(activeEpochMs);
 });
 
@@ -463,7 +471,7 @@ async function homeOffPackageFixture() {
 async function enterPresent(page) {
   await page.getByRole("button", { name: "Present" }).click();
   await expect(page.locator(".present-workspace")).toBeVisible();
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  await page.getByRole("button", { name: "Output controls", exact: true }).click();
 }
 
 async function selectTwoAudienceCharts(page) {
@@ -503,21 +511,20 @@ function rectanglesOverlap(first, second) {
 }
 
 async function installAudienceStateObserver(page) {
-  await page.evaluate(() => {
+  await page.evaluate(version => {
     const originalPostMessage = BroadcastChannel.prototype.postMessage;
     globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = { latestState: null };
     BroadcastChannel.prototype.postMessage = function observePresentationState(data) {
-      if (data?.protocol_version === 3 && data.type === "state") {
+      if (data?.protocol_version === version && data.type === "state") {
         globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState = structuredClone(data.payload);
       }
       return originalPostMessage.call(this, data);
     };
-  });
+  }, PRESENTATION_PROTOCOL_VERSION);
 }
 
 async function observedAudienceEpoch(page) {
   return page.evaluate(() => {
-    const timeline = globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestState?.timeline;
-    return timeline?.frame_epochs?.[timeline.frame_index] ?? null;
+    return globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestState?.time?.epoch_ms ?? null;
   });
 }

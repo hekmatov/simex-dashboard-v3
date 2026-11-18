@@ -121,7 +121,7 @@ test("default Page playback keeps the discovered temporal role for live availabi
 
 test("live composition uses numeric cadence, real evidence, accessible overlay controls, and focus/comparison suspension", async () => {
   const [chrono, provider, surface, overlay, workspace, panel, styles] = await Promise.all([
-    readFile(new URL("../src/components/playback/ChronoController.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/playback/TimeSettings.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/playback/PlaybackProvider.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/playback/PlaybackSurface.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/playback/ChronoDateOverlay.jsx", import.meta.url), "utf8"),
@@ -129,7 +129,7 @@ test("live composition uses numeric cadence, real evidence, accessible overlay c
     readFile(new URL("../src/components/ChartPanel.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/styles.css", import.meta.url), "utf8"),
   ]);
-  assert.match(chrono, /type:\s*"number"[\s\S]*min:\s*"0\.001"/);
+  assert.match(chrono, /type="number" min="0\.001" step="0\.001"/);
   assert.doesNotMatch(chrono, /\[1, 2\.5, 5\]/);
   assert.match(chrono, /frameAvailability\.map/);
   assert.match(provider, /buildFrameAvailabilityEvidence/);

@@ -28,6 +28,8 @@
   z-index: 1;
 }
 
+.pdpc-time-context { position: sticky; top: var(--simex-view-only-sticky-offset); z-index: 41; min-width: 0; background: var(--simex-surface-panel-alt); border-bottom: 1px solid var(--simex-border-subtle); padding: 4px 12px; }
+
 .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-header {
   align-items: center;
   background: var(--simex-surface-panel);

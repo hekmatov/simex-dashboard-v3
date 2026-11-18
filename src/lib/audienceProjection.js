@@ -1,3 +1,5 @@
+import { PRESENTATION_PROTOCOL_VERSION } from "./presentationProtocol.js";
+
 const ENDED_PROJECTION = Object.freeze({
   kind: "ended",
   heading: "Presentation ended",
@@ -6,7 +8,7 @@ const ENDED_PROJECTION = Object.freeze({
 
 const UNACCEPTED_REASON = Object.freeze({
   code: "unaccepted_audience_message",
-  message: "Audience projection requires a validated V3 state or ended message.",
+  message: "Audience projection requires a validated current-protocol state or ended message.",
 });
 
 const SRGB_COMPONENT = String.raw`[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?`;
@@ -62,8 +64,7 @@ export function projectPresentationState(state) {
     theme: snapshot.theme,
     source: snapshot.source,
     composition: snapshot.composition,
-    timeline: snapshot.timeline,
-    matching: snapshot.matching,
+    time: snapshot.time,
     audience: snapshot.audience,
     payload: snapshot.payload,
   });
@@ -96,7 +97,7 @@ export function sanitizeAudienceSnapshotCloneColors(
 }
 
 function isAcceptedEnvelope(message) {
-  return message?.protocol_version === 3
+  return message?.protocol_version === PRESENTATION_PROTOCOL_VERSION
     && typeof message.session_id === "string"
     && Number.isSafeInteger(message.sequence)
     && message.sequence > 0

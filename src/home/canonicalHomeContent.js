@@ -57,7 +57,7 @@ export const CANONICAL_HOME_CONTENT = deepFreeze({
       },
       {
         question: "How do I show change over time?",
-        answer: "Use Chrono Studio to connect compatible chart data to a shared timeline. Scene Studio lets you compose and review time-based scenes before presenting them.",
+        answer: "Use the Time bar to follow eligible observations on a page or across the dashboard. Storyline Studio saves cross-page comparisons with their own members, cadence, matching overrides and layouts for View and Present.",
       },
       {
         question: "How do I prepare a presentation?",

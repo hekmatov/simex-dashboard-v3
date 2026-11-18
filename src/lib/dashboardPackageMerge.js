@@ -17,7 +17,7 @@ export function createDashboardPackageIdentityMap(candidate, allocate = kind => 
   return { pages: make(inventory.pages, "page"), sections: make(inventory.sections, "section"),
     placements: make(inventory.placements, "placement"), charts: Object.fromEntries(inventory.placements.map(item => [item.chartId, allocate("chart")])),
     sources: make(Object.keys(candidate.config.dataSources ?? {}).map(id => ({ id })), "source"),
-    media: make(inventory.media, "media"), groups: make(candidate.config.chronoGroups ?? [], "group"),
+    media: make(inventory.media, "media"),
     destinationPage: allocate("page"), destinationSection: allocate("section"),
     targetPages: make(inventory.sections, "page"), targetSections: make(inventory.sections, "section") };
 }
@@ -40,13 +40,12 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
   if (![selected.pageIds.length, selected.sectionIds.length, selected.placementIds.length, selected.sourceIds.length, selected.mediaIds.length].some(Boolean)) addIssue("empty", "Choose at least one object to import.");
   for (const reference of selected.externalReferences) {
     if (!(reference.kind === "drill" ? (resolutions.detachDrills || (convertedPlacements.has(reference.placementId) && resolutions.detachConvertedDrills)) : resolutions.detachScenes)) addIssue(reference.kind, reference.message);
-    else addIssue(`detached-${reference.kind}`, reference.kind === "drill" ? "Unselected drill links will be explicitly removed." : "Imported charts will remain independent of source Scenes.", false);
+    else addIssue(`detached-${reference.kind}`, reference.kind === "drill" ? "Unselected drill links will be explicitly removed." : "Imported charts will remain independent of source Storylines.", false);
   }
   const currentInventory = buildDashboardPackageImportInventory({ config });
   for (const [kind, ids, existing] of [["pages", selected.pageIds, currentInventory.pages], ["sections", selected.sectionIds, currentInventory.sections.map(section => ({ id: section.sectionId }))],
     ["placements", selected.placementIds, currentInventory.placements], ["charts", selected.chartIds, currentInventory.placements.map(p => ({ id: p.chartId }))],
-    ["sources", selected.sourceIds, Object.keys(config.dataSources ?? {}).map(id => ({ id }))], ["media", selected.mediaIds, currentInventory.media],
-    ["groups", selected.groupIds, config.chronoGroups ?? []]]) {
+    ["sources", selected.sourceIds, Object.keys(config.dataSources ?? {}).map(id => ({ id }))], ["media", selected.mediaIds, currentInventory.media]]) {
     const coalescing = scope === "mixed" && ["pages", "sections"].includes(kind);
     for (const id of ids) if (!map[kind]?.[id] || (!coalescing && existing.some(item => item.id === map[kind][id]))) addIssue("identity", "The reviewed copy identities are no longer available. Start a new import review.");
   }
@@ -54,7 +53,7 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
   const names = {
     pages: new Set(currentInventory.pages.map(item => item.name)), sections: new Set(currentInventory.sections.map(item => item.name)),
     charts: new Set(currentInventory.placements.map(item => item.name)), sources: new Set(currentInventory.sources.map(item => item.name)),
-    media: new Set(currentInventory.media.map(item => item.name)), groups: new Set((config.chronoGroups ?? []).map(item => item.name)),
+    media: new Set(currentInventory.media.map(item => item.name)),
   };
   const name = (kind, id, original) => {
     const desired = resolutions.names?.[kind]?.[id]?.trim() || original || "Untitled";
@@ -110,7 +109,7 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
     chart.id = map.charts[original.id]; chart.sourceId = map.sources[original.sourceId];
     chart.title = name("charts", original.id, original.title);
     if (chart.presentation?.map?.geoSource) chart.presentation.map.geoSource = map.sources[chart.presentation.map.geoSource];
-    if (chart.interaction?.timeSync) chart.interaction.timeSync.groupId = map.groups[chart.interaction.timeSync.groupId];
+    if (chart.interaction?.timeSync?.groupId !== undefined) chart.interaction.timeSync.groupId = map.groups[chart.interaction.timeSync.groupId];
     const copied = { id: map.placements[placement.id], chart };
     if (placement.drill && !removeDrills && !externalDrills.has(placement.id)) copied.drill = placement.drill.kind === "section"
       ? { kind: "section", sectionId: map.sections[dashboardPackageSectionKey(placementContexts.get(placement.id).pageId, placement.drill.sectionId)] } : { kind: "chart", chartId: map.charts[placement.drill.chartId] };
@@ -234,15 +233,6 @@ export function buildDashboardPackageMerge({ current, candidate, selection = {},
       }
     }
   } else if (scope !== "content") addIssue("destination", "Choose a supported import destination.");
-  for (const group of source.chronoGroups ?? []) if (selected.groupIds.includes(group.id)) {
-    const copied = { ...structuredClone(group), id: map.groups[group.id], name: name("groups", group.id, group.name),
-      members: group.members.filter(member => selected.chartIds.includes(member.chartId)).map(member => ({ ...structuredClone(member), chartId: map.charts[member.chartId] })) };
-    if (copied.temporalReview) {
-      copied.temporalReview.sourceIds = copied.temporalReview.sourceIds.filter(id => selected.sourceIds.includes(id)).map(id => map.sources[id]).sort();
-      if (!copied.temporalReview.sourceIds.length) delete copied.temporalReview;
-    }
-    config.chronoGroups ??= []; config.chronoGroups.push(copied);
-  }
   const bytes = Object.values(config.assets ?? {}).reduce((sum, asset) => sum + (asset.byteLength ?? 0), 0);
   if (scope === "content" && (selected.pageIds.length || selected.sectionIds.length || selected.placementIds.length)) addIssue("scope", "Choose reusable content in content mode, or switch to the matching object import mode.");
   if (scope !== "content" && scope !== "mixed" && (!summary[scope]?.length || summary.placements.length !== selected.placementIds.length)) addIssue("scope", "The selected objects do not all belong to this import mode. Review the selection and destination.");

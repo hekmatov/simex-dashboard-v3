@@ -1,4 +1,5 @@
 import {
+  PRESENTATION_PROTOCOL_VERSION,
   makePresentationMessage,
   makePresentationThemeMessage,
   parsePresentationMessage,
@@ -738,10 +739,10 @@ export function createPresentationAudienceChannel({
 
 function validateSourceEligibility(state, context, validateSourceSelection) {
   if (state.source.kind === "manual") return;
-  if (state.timeline === null) {
+  if (!state.time?.frame_epochs.length) {
     throw sourceRejection(reason(
-      "source_timeline_required",
-      "Scene and Chrono Group sources require a valid timeline",
+      "source_time_required",
+      "Storyline sources require available accepted time frames",
     ));
   }
 
@@ -784,14 +785,14 @@ function envelopeSequence(value) {
 }
 
 function isControllerEnvelope(value, sessionId) {
-  return value?.protocol_version === 3
+  return value?.protocol_version === PRESENTATION_PROTOCOL_VERSION
     && value?.session_id === sessionId
     && (value?.type === "state" || value?.type === "ended");
 }
 
 function presentationSourceKey(source) {
   if (!source || typeof source !== "object") return null;
-  return `${source.kind}:${source.scene_id ?? ""}:${source.chrono_group_id ?? ""}`;
+  return `${source.kind}:${source.scene_id ?? ""}`;
 }
 
 function samePresentationSource(left, right) {

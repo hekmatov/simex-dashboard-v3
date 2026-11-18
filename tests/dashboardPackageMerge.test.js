@@ -91,16 +91,18 @@ test("Attention conversion requires an explicit drill-loss decision even for inc
   assert.deepEqual(accepted.config.pages[0].sections[0], current.pages[0].sections[0]);
 });
 
-test("selected Chrono members retain an independent valid group without pulling in siblings", async () => {
+test("selected Storyline members require explicit independent import and preserve chart matching without pulling siblings", async () => {
   const { buildDashboardPackageMerge } = await import("../src/lib/dashboardPackageMerge.js");
   const current = collaboratorPackage().config;
-  const result = buildDashboardPackageMerge({ current, candidate: synchronizedPackage(), selection: { placementIds: ["placement-a"] }, destination: { scope: "placements", pageId: "overview", sectionId: "signals" } });
+  const request = { current, candidate: synchronizedPackage(), selection: { placementIds: ["placement-a"] }, destination: { scope: "placements", pageId: "overview", sectionId: "signals" } };
+  assert.ok(buildDashboardPackageMerge(request).issues.some(issue => issue.blocking && issue.code === "scene"));
+  const result = buildDashboardPackageMerge({ ...request, resolutions: { detachScenes: true } });
   assert.deepEqual(result.issues.filter(issue => issue.blocking), []);
-  const group = result.config.chronoGroups[0];
-  assert.notEqual(group.id, "clock");
-  assert.deepEqual(group.members, [{ chartId: result.identityMap.charts["chart-a"], timeRole: "observation" }]);
-  assert.equal(result.config.pages[0].sections[0].panels.at(-1).chart.interaction.timeSync, null, "canonical group membership is dashboard-owned; chart backlinks stay scrubbed");
-  assert.ok(result.issues.some(issue => issue.code === "group-subset"));
+  assert.equal(Object.hasOwn(result.config, "chronoGroups"), false);
+  assert.deepEqual(result.config.scenes, []);
+  assert.deepEqual(result.config.pages[0].sections[0].panels.at(-1).chart.interaction.timeSync, { matching: { policy: "exact" } });
+  assert.equal(result.config.pages[0].sections[0].panels.length, current.pages[0].sections[0].panels.length + 1);
+  assert.ok(result.issues.some(issue => issue.code === "detached-scene" && !issue.blocking));
 });
 
 test("sections and individual panels can create destinations atomically and retain source order", async () => {

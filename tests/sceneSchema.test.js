@@ -106,10 +106,10 @@ test("requires a source member and valid explicit frame selection", () => {
   }), context()), /inside the Scene period/);
 });
 
-test("enforces page and group subsets, unique members, and supported widths", () => {
+test("accepts cross-page group members and enforces unique members and supported widths", () => {
   const wrongPage = context();
   wrongPage.charts[1].pageId = "page-2";
-  assert.throws(() => validateScene(scene(), wrongPage), /owning page/);
+  assert.doesNotThrow(() => validateScene(scene(), wrongPage));
   assert.throws(() => validateScene(scene({
     members: [{ chartId: "chart-a", width: 2 }, { chartId: "chart-a", width: 3 }],
   }), context()), /duplicate chart/);

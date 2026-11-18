@@ -1,4 +1,6 @@
 import { validateChartRuntimeArtifact } from "./chartRuntimeArtifact.js";
+import { closestConcurrentFallback } from "../time/temporalMatch.js";
+import { isTraceTimeChart } from "../time/applyTimeContext.js";
 
 export function projectRuntimeArtifact({ artifact, chart, timeContext } = {}) {
   validateChartRuntimeArtifact(artifact);
@@ -15,15 +17,18 @@ export function projectRuntimeArtifact({ artifact, chart, timeContext } = {}) {
     group.push(entry);
     groups.set(seriesKey, group);
   }
+  const fallbackEpochMs = closestConcurrentFallback(timeContext, entries);
   const activeMarks = [];
   for (const seriesEntries of groups.values()) {
-    const match = matchEntry(seriesEntries, timeContext.activeEpochMs, timeContext.matching);
+    const match = matchEntry(seriesEntries, fallbackEpochMs ?? timeContext.activeEpochMs, timeContext.matching);
     if (!match) continue;
+    if (fallbackEpochMs !== null) match.kind = "nearest";
     activeMarks.push(materializeMatch(match, artifact.prepared.marks, timeContext.activeEpochMs));
   }
-  const marks = timeContext.traceMode === "reveal"
+  const traceMode = fallbackEpochMs !== null && !isTraceTimeChart(chart) ? null : timeContext.traceMode;
+  const marks = traceMode === "reveal"
     ? traceMarks(artifact, activeMarks, ({ epochMs }) => epochMs <= timeContext.activeEpochMs)
-    : timeContext.traceMode === "full"
+    : traceMode === "full"
       ? traceMarks(artifact, activeMarks)
       : activeMarks;
   const status = activeMarks.length === 0 ? "missing" : "available";
@@ -36,7 +41,8 @@ export function projectRuntimeArtifact({ artifact, chart, timeContext } = {}) {
         status,
         canonical: new Date(timeContext.activeEpochMs).toISOString(),
         epochMs: timeContext.activeEpochMs,
-        mode: timeContext.traceMode ? "trace" : "frame",
+        mode: traceMode ? "trace" : "frame",
+        ...(fallbackEpochMs === null ? {} : { fallbackEpochMs }),
       },
     },
   });

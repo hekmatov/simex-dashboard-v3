@@ -68,7 +68,6 @@ test("Needs attention derives structural, data, frame, interpolation, and schema
     "member-no-observations",
     "unsupported-interpolation",
     "missing-chart",
-    "cross-page-chart",
     "missing-chart",
     "selected-frame-missing",
     "zero-frame-ledger",

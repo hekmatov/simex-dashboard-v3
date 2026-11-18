@@ -1,5 +1,6 @@
 import { chooseSectionAction, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
+import { normalizeDashboardBoundary } from "../../src/charting/config/dashboardBundleV3.js";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
@@ -23,8 +24,8 @@ const CONVERSION_SOURCE_ID = "upload-eldoria-misinformation-2021-2027-fictional"
 const EXPOSURE_COLUMN = "Reported regular exposure to mis- and disinformation (%)";
 const CONCERN_COLUMN = "Concern about online mis- and disinformation (%)";
 const SOCIO_EDIT_CHART_ID = "chart-horizontalBar-6a8c3efb-2059-410c-988b-254b948824ad";
-const TARGET_CHRONO_GROUP_ID = "editor-target-group";
-const UNRELATED_CHRONO_GROUP_ID = "editor-unrelated-group";
+const TARGET_STORYLINE_ID = "editor-target-group";
+const UNRELATED_STORYLINE_ID = "editor-unrelated-group";
 const TIMELINE_FIXTURE = {
   name: "timeline-events.csv",
   mimeType: "text/csv",
@@ -649,40 +650,34 @@ async function openM0FixtureBuild(page) {
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 }
 
-async function installQuickPersistenceChronoFixture(page) {
-  await page.evaluate(async ({ key, targetId, otherLineId, unrelatedId, targetGroupId, unrelatedGroupId }) => {
-    const dashboard = JSON.parse(localStorage.getItem(key)
-      ?? await fetch("/config/dashboard.json").then((response) => response.text()));
-    dashboard.chronoGroups = [
-      {
-        id: targetGroupId,
-        name: "Editor target group",
-        period: { start: "2027-02-14", end: "2027-02-21" },
-        matching: { policy: "exact" },
-        secondsPerFrame: 1,
-        members: [
-          { chartId: targetId, timeRole: "observation" },
-          { chartId: otherLineId, timeRole: "observation" },
-        ],
-      },
-      {
-        id: unrelatedGroupId,
-        name: "Editor unrelated group",
-        period: { start: "2021-01-01", end: "2027-12-31" },
-        matching: { policy: "exact" },
-        secondsPerFrame: 1,
-        members: [{ chartId: unrelatedId, timeRole: "observation" }],
-      },
-    ];
-    localStorage.setItem(key, JSON.stringify(dashboard));
-  }, {
-    key: STORAGE_KEY,
-    targetId: EDIT_CHART_ID,
-    otherLineId: OTHER_LINE_CHART_ID,
-    unrelatedId: UNRELATED_GROUP_CHART_ID,
-    targetGroupId: TARGET_CHRONO_GROUP_ID,
-    unrelatedGroupId: UNRELATED_CHRONO_GROUP_ID,
+function quickPersistenceStorylineFixture(input) {
+  const dashboard = normalizeDashboardBoundary(input);
+  // Native parentless Storylines retain the old fixture's union clock and
+  // effective member policies without adding chart-owned synchronization.
+  const storyline = (id, name, start, end, chartIds) => ({
+    id, name, period: { start, end }, frames: { mode: "union" }, secondsPerFrame: 1,
+    members: chartIds.map((chartId) => ({
+      chartId, width: 2, timeRole: "observation", matching: { policy: "exact" },
+    })),
+    present: { chartIds, layout: chartIds.length === 2 ? "vertical-divider" : "single" },
+    audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
   });
+  dashboard.scenes = [
+    storyline(TARGET_STORYLINE_ID, "Editor target Storyline", "2027-02-14", "2027-02-21",
+      [EDIT_CHART_ID, OTHER_LINE_CHART_ID]),
+    storyline(UNRELATED_STORYLINE_ID, "Editor unrelated Storyline", "2021-01-01", "2027-12-31",
+      [UNRELATED_GROUP_CHART_ID]),
+  ];
+  return dashboard;
+}
+
+async function installQuickPersistenceStorylineFixture(page) {
+  const input = await page.evaluate(async (key) => JSON.parse(localStorage.getItem(key)
+    ?? await fetch("/config/dashboard.json").then((response) => response.text())), STORAGE_KEY);
+  const fixture = quickPersistenceStorylineFixture(input);
+  await page.evaluate(({ key, dashboard }) => {
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY, dashboard: fixture });
   await page.reload();
   await enterAuthoredDashboard(page);
   const build = page.getByLabel("Dashboard mode")
@@ -693,18 +688,24 @@ async function installQuickPersistenceChronoFixture(page) {
 test("quick edit saving failure keeps one retry owner and confirmed Remove clears it", async ({
   page,
 }) => {
-  await installQuickPersistenceChronoFixture(page);
+  await installQuickPersistenceStorylineFixture(page);
   await openBiomedicalPage(page);
   const panel = page.locator(`.canonical-dashboard-frame[data-canonical-page-id] [data-panel-id="${EDIT_CHART_ID}"]`);
   const before = await storedQuickPersistenceSnapshot(page);
+  expect(typeof before.rawStorage).toBe("string");
   expect(before.targetTitle).toBe("National Confirmed Cases (cumulative)");
   expect(before.targetSourceId).toBe("upload-cases-wcph-eldoria-3");
   expect(before.panelIds).toContain(EDIT_CHART_ID);
   expect(before.unrelatedChart?.id).toBe(OTHER_LINE_CHART_ID);
-  expect(before.targetGroup?.members.map(({ chartId }) => chartId))
+  expect(before.targetStoryline?.members.map(({ chartId }) => chartId))
     .toEqual([EDIT_CHART_ID, OTHER_LINE_CHART_ID]);
-  expect(before.unrelatedGroup?.members.map(({ chartId }) => chartId))
+  expect(before.unrelatedStoryline?.members.map(({ chartId }) => chartId))
     .toEqual([UNRELATED_GROUP_CHART_ID]);
+  for (const storyline of [before.targetStoryline, before.unrelatedStoryline]) {
+    expect(storyline.frames).toEqual({ mode: "union" });
+    expect(storyline.secondsPerFrame).toBe(1);
+    expect(storyline.members.every(({ matching }) => matching.policy === "exact")).toBe(true);
+  }
   const today = await page.evaluate(() => {
     const now = new Date();
     return [
@@ -754,7 +755,7 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   expect(afterSave.lastUpdated).toBe(today);
   expect(afterSave.layout).toEqual(before.layout);
   expect(afterSave.unrelatedChart).toEqual(before.unrelatedChart);
-  expect(afterSave.chronoGroups).toEqual(before.chronoGroups);
+  expect(afterSave.storylines).toEqual(before.storylines);
 
   await panel.hover();
   await choosePanelAction(page, await panel.getAttribute("data-build-placement-id"), "edit");
@@ -786,12 +787,18 @@ test("quick edit saving failure keeps one retry owner and confirmed Remove clear
   expect(afterRemove.panelIds).toEqual(
     before.panelIds.filter((panelId) => panelId !== EDIT_CHART_ID),
   );
+  expect(afterRemove.layout).toEqual(before.layout.map((pageEntry) => ({
+    ...pageEntry, sections: pageEntry.sections.map((section) => ({
+      ...section, panels: section.panels.filter(({ id }) => id !== EDIT_CHART_ID),
+    })),
+  })));
   expect(afterRemove.unrelatedChart).toEqual(before.unrelatedChart);
-  expect(afterRemove.targetGroup).toEqual({
-    ...before.targetGroup,
-    members: before.targetGroup.members.filter(({ chartId }) => chartId !== EDIT_CHART_ID),
+  expect(afterRemove.targetStoryline).toEqual({
+    ...before.targetStoryline,
+    members: before.targetStoryline.members.filter(({ chartId }) => chartId !== EDIT_CHART_ID),
+    present: { ...before.targetStoryline.present, chartIds: [OTHER_LINE_CHART_ID], layout: "single" },
   });
-  expect(afterRemove.unrelatedGroup).toEqual(before.unrelatedGroup);
+  expect(afterRemove.unrelatedStoryline).toEqual(before.unrelatedStoryline);
 });
 
 test("quick edit Save rebases pending Page content onto a live layout draft", async ({
@@ -1046,7 +1053,7 @@ async function expectChartTypeCardsAligned(surface, surfaceName) {
 }
 
 async function storedQuickPersistenceSnapshot(page) {
-  return page.evaluate(async ({ storageKey, targetId, otherId, targetGroupId, unrelatedGroupId }) => {
+  return page.evaluate(async ({ storageKey, targetId, otherId, targetStorylineId, unrelatedStorylineId }) => {
     const storedDashboard = localStorage.getItem(storageKey);
     const dashboard = storedDashboard
       ? JSON.parse(storedDashboard)
@@ -1063,8 +1070,9 @@ async function storedQuickPersistenceSnapshot(page) {
     ));
     const target = placements.find(({ chart }) => chart.id === targetId);
     const unrelated = placements.find(({ chart }) => chart.id === otherId);
-    const chronoGroups = structuredClone(dashboard.chronoGroups ?? []);
+    const storylines = structuredClone(dashboard.scenes ?? []);
     return {
+      rawStorage: storedDashboard,
       lastUpdated: dashboard.lastUpdated,
       targetTitle: target?.chart?.title ?? null,
       targetSourceId: target?.chart?.sourceId ?? null,
@@ -1083,20 +1091,20 @@ async function storedQuickPersistenceSnapshot(page) {
         })),
       })),
       unrelatedChart: structuredClone(unrelated?.chart ?? null),
-      chronoGroups,
-      targetGroup: structuredClone(
-        chronoGroups.find(({ id }) => id === targetGroupId) ?? null,
+      storylines,
+      targetStoryline: structuredClone(
+        storylines.find(({ id }) => id === targetStorylineId) ?? null,
       ),
-      unrelatedGroup: structuredClone(
-        chronoGroups.find(({ id }) => id === unrelatedGroupId) ?? null,
+      unrelatedStoryline: structuredClone(
+        storylines.find(({ id }) => id === unrelatedStorylineId) ?? null,
       ),
     };
   }, {
     storageKey: STORAGE_KEY,
     targetId: EDIT_CHART_ID,
     otherId: OTHER_LINE_CHART_ID,
-    targetGroupId: TARGET_CHRONO_GROUP_ID,
-    unrelatedGroupId: UNRELATED_CHRONO_GROUP_ID,
+    targetStorylineId: TARGET_STORYLINE_ID,
+    unrelatedStorylineId: UNRELATED_STORYLINE_ID,
   });
 }
 

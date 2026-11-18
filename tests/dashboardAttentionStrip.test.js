@@ -37,9 +37,11 @@ test("attention strip renders first with drill links and its own layout", () => 
   assert.doesNotMatch(html, /layout-grid[^"]*"[^>]*data-canonical-section-id="top"/);
 });
 
-test("attention strip hides excluded charts and disappears when empty", () => {
-  const html = renderToStaticMarkup(React.createElement(DashboardCanvas, { activePage: page, dashboard, surface: "view", buildState: null, excludedChartIds: ["k1", "k2"] }));
-  assert.doesNotMatch(html, /data-section-role="attention"/);
+test("Storyline View retains the ordinary attention strip beside its band", () => {
+  const html = renderToStaticMarkup(React.createElement(DashboardCanvas, { activePage: page, dashboard, surface: "view", buildState: null, storylineBand: React.createElement("section", { "data-native-storyline": "selected" }, "Selected Storyline") }));
+  assert.match(html, /data-native-storyline="selected"/);
+  assert.match(html, /data-section-role="attention"/);
+  assert.equal((html.match(/data-attention-item/g) ?? []).length, 2);
 });
 
 test("Build canvas keeps the strip on top with the section header and role tag", () => {

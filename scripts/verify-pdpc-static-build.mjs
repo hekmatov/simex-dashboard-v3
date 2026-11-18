@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { writeStaticSecurityHeaders } from "./lib/content-security-policy.mjs";
 
 import {
   PDPC_RELEASE_FACTORY,
@@ -9,6 +10,7 @@ import {
 } from "./lib/pdpc-release.mjs";
 
 const RUNTIME_PRECACHE_MANIFEST = "runtime-precache-manifest.js";
+const HOSTING_CONFIG_FILES = new Set(["_headers", "_redirects"]);
 const REQUIRED_FILES = Object.freeze([
   "index.html",
   "release-manifest.json",
@@ -21,8 +23,10 @@ const REQUIRED_FILES = Object.freeze([
 ]);
 
 export async function finalizePdpcRuntimeManifest({ outputDir, variant }) {
+  await writeStaticSecurityHeaders({ outputDir, entrypoints: ["index.html"] });
   const files = await readFileInventory(outputDir);
   files.delete(RUNTIME_PRECACHE_MANIFEST);
+  for (const file of HOSTING_CONFIG_FILES) files.delete(file);
   const assets = Object.freeze([
     "./",
     ...[...files].toSorted().map((file) => `./${file}`),
@@ -169,7 +173,7 @@ async function expectedPrecacheManifest({ outputDir, files, variant }) {
   const assets = [
     "./",
     ...[...files]
-      .filter((file) => file !== RUNTIME_PRECACHE_MANIFEST)
+        .filter((file) => file !== RUNTIME_PRECACHE_MANIFEST && !HOSTING_CONFIG_FILES.has(file))
       .toSorted()
       .map((file) => `./${file}`),
     `./${RUNTIME_PRECACHE_MANIFEST}`,

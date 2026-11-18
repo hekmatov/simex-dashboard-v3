@@ -1,7 +1,6 @@
-import { openChartAuthoring } from "./chart-authoring-workflow.js";
+import { openChartAuthoring, chartAuthoringWorkflow } from "./chart-authoring-workflow.js";
 import { choosePanelAction, chooseSectionAction, enterBuildMode, openSourceContent, panelMenu, propertiesPane, sectionMenu, structureRail } from "./buildWorkflow.js";
-import { openDashboardPage } from "./landingWorkflow.js";
-import { installPageRemovalGroups } from "./layoutReviewFixture.js";
+import { enterAuthoredDashboard, openDashboardPage } from "./landingWorkflow.js";
 import { dashboardJourneyGroupingRoleFor } from "../../../src/theme/dashboardSurfaceRoles.js";
 
 const DESKTOP_STANDARD = Object.freeze({ width: 1440, height: 900 });
@@ -109,14 +108,24 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     setup: setupView,
   }),
   executable({
-    id: "view-chrono-controls",
+    id: "view-time-bar",
     family: "temporal",
-    owner: "chrono-playback",
+    owner: "time-bar",
     mode: "view",
-    state: "playback-controls",
+    state: "live",
     viewport: DESKTOP_STANDARD,
-    root: "[aria-label='Chrono playback controls']",
-    setup: setupViewChrono,
+    root: ".time-bar",
+    setup: setupView,
+  }),
+  executable({
+    id: "view-timeline-scrubber",
+    family: "temporal",
+    owner: "timeline-scrubber",
+    mode: "view",
+    state: "timeline-disclosed",
+    viewport: DESKTOP_STANDARD,
+    root: ".timeline-scrubber",
+    setup: setupViewTimeline,
   }),
   executable({
     id: "build-compact",
@@ -257,26 +266,6 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     viewport: DESKTOP_STANDARD,
     root: "[aria-label='Source content authoring']",
     setup: setupSourceContentDetail,
-  }),
-  executable({
-    id: "chrono-studio-library",
-    family: "temporal",
-    owner: "chrono-studio",
-    mode: "build",
-    state: "library",
-    viewport: DESKTOP_STANDARD,
-    root: "[role='dialog']",
-    setup: setupChronoStudio,
-  }),
-  executable({
-    id: "chrono-group-editor",
-    family: "temporal",
-    owner: "chrono-group-editor",
-    mode: "build",
-    state: "name-and-period",
-    viewport: DESKTOP_STANDARD,
-    root: ".chrono-group-studio",
-    setup: setupChronoGroupEditor,
   }),
   executable({
     id: "scene-studio-details",
@@ -623,10 +612,10 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     family: "present",
     owner: "present-workspace",
     mode: "present",
-    state: "composition-chrono-controls",
+    state: "composition-output-controls",
     viewport: DESKTOP_STANDARD,
     root: ".present-workspace",
-    setup: setupPresentChronoControls,
+    setup: setupPresentOutputControls,
   }),
   executable({
     id: "present-audience-options",
@@ -705,7 +694,7 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     expectations: Object.freeze({
       notice: '[data-desktop-width-notice="present"]',
       workspace: ".present-workspace",
-      enabledControl: '[data-presentation-control-id="chrono-groups"]:not(:disabled)',
+      enabledControl: '[data-presentation-control-id="output-controls"]:not(:disabled)',
     }),
   }),
   coverageAlias({
@@ -786,15 +775,16 @@ export const DASHBOARD_JOURNEY_MANIFEST = Object.freeze([
     ]),
     reason: "Theme is the stable production journey for the registered right-side drawer dialog modality.",
   }),
-  outOfScope({
-    id: "mobile-view-custom-design",
+  executable({
+    id: "view-phone",
     family: "view",
-    owner: "future-mobile-view",
+    owner: "view-workspace",
     mode: "view",
-    state: "mobile-custom-layout",
+    state: "biomedical-phone",
     viewport: Object.freeze({ width: 390, height: 844 }),
-    appearance: "light",
-    reason: "Mobile View requires a separate purpose-built product contract and is not graded by this desktop redesign.",
+    root: "[data-canonical-mode='view']",
+    densityProfile: "phone",
+    setup: setupPhoneView,
   }),
 ]);
 
@@ -859,6 +849,14 @@ async function openBiomedical({ page }) {
   return page;
 }
 
+async function setupPhoneView({ page }) {
+  await page.goto("/");
+  await enterAuthoredDashboard(page);
+  await page.locator('.crown-compact-pages [data-dashboard-page-id="biomedical"]').click();
+  await page.locator("[data-canonical-mode='view']").waitFor();
+  return { page };
+}
+
 async function setupView(context) {
   const page = await openBiomedical(context);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
@@ -866,11 +864,10 @@ async function setupView(context) {
   return { page };
 }
 
-async function setupViewChrono(context) {
-  await installPageRemovalGroups(context.page);
+async function setupViewTimeline(context) {
   const { page } = await setupView(context);
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  await page.getByRole("region", { name: "Chrono playback controls" }).waitFor();
+  await page.locator(".time-bar__instant").click();
+  await page.getByRole("region", { name: "Timeline scrubber", exact: true }).waitFor();
   return { page };
 }
 
@@ -979,46 +976,31 @@ async function setupSourceContentDetail(context) {
   return { page };
 }
 
-async function setupChronoStudio(context) {
-  const { page } = await setupBuild(context);
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  await page.getByRole("dialog", { name: "Chrono Studio authoring" }).waitFor();
-  return { page };
-}
-
-async function setupChronoGroupEditor(context) {
-  const { page } = await setupChronoStudio(context);
-  const studio = page.getByRole("dialog", { name: "Chrono Studio authoring" });
-  await studio.getByRole("button", { name: "Create Chrono Group", exact: true }).click();
-  await studio.getByRole("navigation", { name: "Chrono Group stages" }).waitFor();
-  return { page };
-}
-
 async function setupSceneStudio(context) {
   const { page } = await setupBuild(context);
   await page.locator('[data-build-command-action="scene-studio"]').click();
-  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  const studio = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await studio.waitFor();
-  await studio.getByRole("button", { name: "Create Scene", exact: true }).click();
+  await studio.getByRole("button", { name: "Create Storyline", exact: true }).click();
   await studio.locator(".scene-details-stage").waitFor();
   return { page };
 }
 
 async function setupSceneStudioSelect(context) {
   const { page } = await setupSceneStudio(context);
-  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  const studio = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await studio.getByRole("button", { name: /Select charts and frames/ }).click();
   await studio.locator(".scene-stage-body[data-stage='select']").waitFor();
   return { page };
 }
 
 async function setupSceneObservationDialog(context) {
-  await installPageRemovalGroups(context.page);
+  // These native Storyline surfaces need eligible current charts, not the
+  // archived Group-removal seed (which adds invalid chart-owned time sync).
+  await context.page.context().clearCookies({ name: "simex-e2e-fixture" });
   const { page } = await setupSceneStudio(context);
-  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  const studio = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await studio.getByLabel("Owning page").selectOption("biomedical");
-  await studio.getByLabel("Parent Chrono Group")
-    .selectOption({ label: "Biomedical page group" });
   await studio.getByRole("button", { name: /Select charts and frames/ }).click();
   await studio.getByRole("button", { name: "Inspect observations" }).first().click();
   await page.locator(".scene-observation-dialog").waitFor();
@@ -1027,7 +1009,7 @@ async function setupSceneObservationDialog(context) {
 
 async function setupSceneStudioArrange(context) {
   const { page } = await setupSceneStudio(context);
-  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  const studio = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await studio.getByRole("button", { name: /Arrange and configure/ }).click();
   await studio.locator(".scene-stage-body[data-stage='arrange']").waitFor();
   await studio.locator(".scene-arrangement-board").first().waitFor();
@@ -1035,9 +1017,11 @@ async function setupSceneStudioArrange(context) {
 }
 
 async function setupSceneUnitOrbit(context) {
-  await installPageRemovalGroups(context.page);
+  // These native Storyline surfaces need eligible current charts, not the
+  // archived Group-removal seed (which adds invalid chart-owned time sync).
+  await context.page.context().clearCookies({ name: "simex-e2e-fixture" });
   const { page } = await setupSceneStudioArrange(context);
-  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  const studio = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await studio.locator(".scene-arrangement-board[data-board='scene'] .scene-chart-title").first().click();
   await page.locator(".unit-orbit:has(.scene-unit-orbit)").waitFor();
   return { page };
@@ -1112,7 +1096,8 @@ async function setupFullChartEditor(context) {
   await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit chart" });
   await editor.waitFor();
-  await editor.getByRole("button", { name: /^Configure\./ }).click();
+  await chartAuthoringWorkflow(editor, { mode: "edit" }).goToConfigure();
+  await editor.locator(".authoring-stage").waitFor();
   return { page };
 }
 
@@ -1389,9 +1374,9 @@ async function setupPresent(context) {
   return { page };
 }
 
-async function setupPresentChronoControls(context) {
+async function setupPresentOutputControls(context) {
   const { page } = await setupPresent(context);
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  await page.getByRole("button", { name: "Output controls", exact: true }).click();
   await page.locator(".present-action-dock").waitFor();
   return { page };
 }

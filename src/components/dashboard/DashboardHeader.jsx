@@ -3,8 +3,9 @@ import React from "react";
 import { MOBILE_VIEW_QUERY, useMediaQuery } from "../common/useMediaQuery.js";
 import { hasLandingPresentation } from "../LandingPage.jsx";
 
-export default function DashboardHeader({ activePage, dashboard, mode = "view" }) {
+export default function DashboardHeader({ activePage, dashboard, mode = "view", storylineActive = false }) {
   const compact = useMediaQuery(MOBILE_VIEW_QUERY) && mode === "view";
+  if (compact && storylineActive) return null;
   const landingActive = hasLandingPresentation(activePage);
   const title = activePage?.title ?? dashboard.title;
   const description = activePage?.description ?? dashboard.description;

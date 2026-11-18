@@ -74,7 +74,7 @@ function createAsyncAttempt(assetId) {
   return promise;
 }
 
-function renderImage({ suffix, alt, storageState, mediaStorageState = storageState, resolveStaticAsset, supplied = false }) {
+function renderImage({ suffix, alt, title = alt, storageState, mediaStorageState = storageState, resolveStaticAsset, supplied = false }) {
   const assetId = `asset-${suffix.repeat(64).slice(0, 64)}`;
   const mediaId = `media-${suffix}`;
   const staticSource = placement(mediaId, alt);
@@ -83,7 +83,7 @@ function renderImage({ suffix, alt, storageState, mediaStorageState = storageSta
       configVersion: 3,
       id: `image-${suffix}`,
       typeId: "image",
-      title: alt,
+      title,
       sourceId: `source-${suffix}`,
       roles: {},
       transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
@@ -127,9 +127,10 @@ window.releaseSuppliedAsyncImage = async () => {
   settled?.model?.release?.();
 };
 
-window.mountSynchronousImage = (suffix, alt) => renderImage({
+window.mountSynchronousImage = (suffix, alt, title = alt) => renderImage({
   suffix,
   alt,
+  title,
   storageState: "staged",
   mediaStorageState: "durable",
   resolveStaticAsset: () => ({ url: `data:image/png;base64,${PNG_BASE64}` }),

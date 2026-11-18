@@ -60,7 +60,7 @@ function integrateChartCandidate(dashboard, finalized, destination) {
     if (anchorIndex < 0) throw new Error("The reviewed chart placement anchor no longer exists.");
     section.panels.splice(relation === "before" ? anchorIndex : anchorIndex + 1, 0, chart);
   } else throw new Error(`Unsupported chart placement relation "${String(relation)}".`);
-  if (finalized.chronoGroups !== undefined) dashboard.chronoGroups = structuredClone(finalized.chronoGroups);
+  if (dashboard.configVersion !== 7 && finalized.chronoGroups !== undefined) dashboard.chronoGroups = structuredClone(finalized.chronoGroups);
   return dashboard;
 }
 

@@ -8,10 +8,8 @@ import {
   DASHBOARD_CONFIG_STRUCTURE,
   validateDashboardStructure,
 } from "../charting/config/dashboardConfigStructure.js";
-import { assertStructuralData } from "../charting/config/dashboardBundleV3.js";
-import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
-import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
-import { migrateDashboardV5ToV6 } from "../charting/config/migrateDashboardV5ToV6.js";
+import { assertStructuralData, normalizeDashboardBoundary, dashboardSourceProfile } from "../charting/config/dashboardBundleV3.js";
+import { bindingField, bindingList, profileColumn, resolveEffectiveBinding } from "../charting/data/bindings.js";
 import {
   validateDashboardChartReferences,
 } from "../charting/config/dashboardSemanticReferences.js";
@@ -35,30 +33,24 @@ import {
 } from "../charting/time/chronoGroupModel.js";
 import {
   validateDataSourceDescriptor,
+  validateDatasetProfiles,
 } from "./loadDashboard.js";
 import { validateStaticSource } from "../static-content/staticSourceSchema.js";
 
-const CONTRACT_VERSION = "2";
+const CONTRACT_VERSION = "3";
 const CATALOGUE_ID = "simex-dashboard";
 const DISPLAY_MODES = Object.freeze(["fullscreen", "multi_fullscreen"]);
 const PLAYBACK_DISPLAY_MODE = "playback";
-const CHRONO_GROUP_KEYS = new Set([
-  "id",
-  "name",
-  "period",
-  "matching",
-  "secondsPerFrame",
-  "members",
-]);
-const TIME_PERIOD_KEYS = new Set(["start", "end"]);
-const TIME_MEMBER_KEYS = new Set(["chartId", "timeRole", "matching"]);
 const ALIAS_KEYS = new Set(["aliases", "keywords"]);
-const CANONICAL_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 export function buildChartCatalogue(dashboard, aliasConfig) {
-  const context = buildDashboardContext(dashboard);
+  return buildChartCatalogueFromContext(buildDashboardContext(dashboard), aliasConfig);
+}
+
+function buildChartCatalogueFromContext(context, aliasConfig) {
   const aliases = validateAliasConfig(context, aliasConfig);
   const chartTypes = semanticChartTypes(listChartSchemas());
+  const profiles = new Map();
   const charts = context.charts.map((entry) => {
     const metadata = requiredRecord(
       aliases[entry.chart.id],
@@ -69,7 +61,12 @@ export function buildChartCatalogue(dashboard, aliasConfig) {
       ALIAS_KEYS,
       `alias metadata for chart ${entry.chart.id}`,
     );
-    const chronoGroupId = context.membershipByChartId.get(entry.chart.id) ?? null;
+    const storylineIds = context.storylines.filter(scene => scene.members.some(member => member.chartId === entry.chart.id))
+      .map(scene => scene.id).sort(compareText);
+    if (!profiles.has(entry.chart.sourceId)) profiles.set(entry.chart.sourceId, dashboardSourceProfile(context.dashboard, entry.chart.sourceId));
+    const profile = profiles.get(entry.chart.sourceId);
+    const temporal = entry.schema.capabilities.timeSync === true && entry.schema.roles.some(role => role.accepts.includes("temporal")
+      && bindingList(entry.chart.roles[role.id]).some(binding => resolveEffectiveBinding(binding, profileColumn(profile, bindingField(binding))).type === "temporal"));
     return {
       chart_id: entry.chart.id,
       type_id: entry.chart.typeId,
@@ -86,11 +83,9 @@ export function buildChartCatalogue(dashboard, aliasConfig) {
         `keywords for chart ${entry.chart.id}`,
       ),
       role_ids: Object.keys(entry.chart.roles).sort(compareText),
-      chrono_group_id: chronoGroupId,
+      storyline_ids: storylineIds,
       collection_capability: entry.schema.capabilities.collection,
-      supported_display_modes: chronoGroupId === null
-        ? [...DISPLAY_MODES]
-        : [...DISPLAY_MODES, PLAYBACK_DISPLAY_MODE],
+      supported_display_modes: temporal ? [...DISPLAY_MODES, PLAYBACK_DISPLAY_MODE] : [...DISPLAY_MODES],
     };
   });
 
@@ -118,7 +113,10 @@ export function canonicalCatalogueBytes(catalogue) {
 }
 
 export function canonicalDashboardSemanticsBytes(dashboard, aliasConfig) {
-  const context = buildDashboardContext(dashboard);
+  return canonicalDashboardSemanticsFromContext(buildDashboardContext(dashboard), aliasConfig);
+}
+
+function canonicalDashboardSemanticsFromContext(context, aliasConfig) {
   const runtimeFields = new Set(DASHBOARD_CONFIG_STRUCTURE.runtimeNonSemanticFields);
   const semantics = {
     dashboard: cloneJson(Object.fromEntries(
@@ -137,9 +135,10 @@ export async function buildChartCatalogueSnapshot(
   aliasConfig,
   digestBytes = sha256Hex,
 ) {
-  const catalogue = buildChartCatalogue(dashboard, aliasConfig);
+  const context = buildDashboardContext(dashboard);
+  const catalogue = buildChartCatalogueFromContext(context, aliasConfig);
   const dashboardSemanticDigest = await digestBytes(
-    canonicalDashboardSemanticsBytes(dashboard, aliasConfig),
+    canonicalDashboardSemanticsFromContext(context, aliasConfig),
   );
   const body = {
     ...catalogue,
@@ -320,9 +319,7 @@ function buildDashboardContext(dashboard) {
     skipRuntimeConfigurationKeys: false,
   });
   const input = requiredRecord(dashboard, "dashboard");
-  const v4 = input.configVersion === 3 ? migrateDashboardV3ToV4(input) : input;
-  const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
-  const root = migrateDashboardV5ToV6(v5);
+  const root = normalizeDashboardBoundary(input);
   const structure = validateDashboardStructure(root, { allowRuntimeState: true });
   if (root.configVersion !== DASHBOARD_CONFIG_STRUCTURE.version) {
     throw new Error(`dashboard configuration version ${DASHBOARD_CONFIG_STRUCTURE.version} is required`);
@@ -352,7 +349,13 @@ function buildDashboardContext(dashboard) {
       schema,
       section,
       sectionId,
-    } of validateDashboardChartReferences(structure, dataSources, { assets: root.assets })
+    } of validateDashboardChartReferences(structure, dataSources, { assets: root.assets,
+      columnTypesForSource: (sourceId, source) => {
+        const profile = root.datasetProfiles?.[sourceId];
+        if (profile && source.kind === "csv") validateDatasetProfiles({ [sourceId]: source }, { [sourceId]: profile });
+        return Array.isArray(profile?.columns) ? new Map(profile.columns.map(column => [column.name, column])) : undefined;
+      },
+    })
   ) {
     const entry = {
       chart,
@@ -375,22 +378,25 @@ function buildDashboardContext(dashboard) {
     })),
   }));
   const chartsById = new Map(charts.map((entry) => [entry.chart.id, entry]));
-  const chronoGroups = root.chronoGroups === undefined
-    ? []
-    : requiredArray(root.chronoGroups, "dashboard chronoGroups");
-  const membershipByChartId = validateTimeMembership(
-    chronoGroups,
-    chartsById,
-  );
+  const storylines = requiredArray(root.scenes ?? [], "dashboard Storylines");
+  const storylineIds = new Set();
+  for (const scene of storylines) {
+    if (Object.hasOwn(scene, "chronoGroupId") || Object.hasOwn(scene, "groupId")) throw new Error("Native Storylines cannot retain a parent reference.");
+    const id = requiredText(scene.id, "Storyline id");
+    if (storylineIds.has(id)) throw new Error(`Duplicate Storyline id ${id}.`);
+    storylineIds.add(id);
+    for (const member of requiredArray(scene.members, "Storyline members")) if (!chartsById.has(member.chartId)) {
+      throw new Error(`Storyline chart ${member.chartId} is missing.`);
+    }
+  }
 
   return {
     dashboard: root,
     catalogueRevision,
     dataSources,
-    chronoGroups,
+    storylines,
     pages,
     charts,
-    membershipByChartId,
   };
 }
 
@@ -417,127 +423,6 @@ function validateAliasConfig(context, aliasConfig) {
     throw new Error(`orphan alias record: ${orphanIds.join(", ")}`);
   }
   return aliases;
-}
-
-function validateTimeMembership(groups, chartsById) {
-  const groupIds = new Set();
-  const membershipByChartId = new Map();
-
-  for (const rawGroup of groups) {
-    const group = requiredRecord(rawGroup, "Chrono Group");
-    rejectUnknownKeys(group, CHRONO_GROUP_KEYS, "Chrono Group");
-    const groupId = requiredText(group.id, "Chrono Group ID");
-    if (groupIds.has(groupId)) {
-      throw new Error(`duplicate Chrono Group ID: ${groupId}`);
-    }
-    groupIds.add(groupId);
-    requiredText(group.name, `name for Chrono Group ${groupId}`);
-    validateTimePeriod(group.period, groupId);
-    if (!Number.isFinite(group.secondsPerFrame) || group.secondsPerFrame <= 0) {
-      throw new Error(
-        `Chrono Group ${groupId} secondsPerFrame must be positive and finite`,
-      );
-    }
-    validateEffectiveTimeSyncMatching(
-      group.matching,
-      `Chrono Group ${groupId}`,
-    );
-
-    const memberIds = new Set();
-    for (const rawMember of requiredArray(
-      group.members,
-      `members for Chrono Group ${groupId}`,
-    )) {
-      const member = requiredRecord(
-        rawMember,
-        `member for Chrono Group ${groupId}`,
-      );
-      rejectUnknownKeys(
-        member,
-        TIME_MEMBER_KEYS,
-        `member for Chrono Group ${groupId}`,
-      );
-      const chartId = requiredText(
-        member.chartId,
-        `member chart ID for Chrono Group ${groupId}`,
-      );
-      const timeRole = requiredText(
-        member.timeRole,
-        `member time role for chart ${chartId}`,
-      );
-      if (memberIds.has(chartId)) {
-        throw new Error(
-          `duplicate member chart ${chartId} in Chrono Group ${groupId}`,
-        );
-      }
-      if (membershipByChartId.has(chartId)) {
-        throw new Error(
-          `Quorum catalogue v2 cannot represent multiple Chrono Group memberships for chart ${chartId}`,
-        );
-      }
-      memberIds.add(chartId);
-      membershipByChartId.set(chartId, groupId);
-
-      const chartEntry = chartsById.get(chartId);
-      if (!chartEntry) {
-        throw new Error(
-          `time synchronization member chart ${chartId} does not exist`,
-        );
-      }
-      if (!chartEntry.schema.capabilities.timeSync) {
-        throw new Error(`chart ${chartId} does not support time synchronization`);
-      }
-      const role = chartEntry.schema.roles.find(({ id }) => id === timeRole);
-      if (!role || !role.accepts.includes("temporal")) {
-        throw new Error(
-          `chart ${chartId} time role ${timeRole} is not a temporal role`,
-        );
-      }
-      if (!Object.hasOwn(chartEntry.chart.roles, timeRole)) {
-        throw new Error(
-          `chart ${chartId} has no configured binding for time role ${timeRole}`,
-        );
-      }
-      if (member.matching !== undefined) {
-        validateEffectiveTimeSyncMatching(
-          member.matching,
-          `time synchronization member ${chartId}`,
-        );
-      }
-    }
-  }
-
-  return membershipByChartId;
-}
-
-function validateTimePeriod(value, groupId) {
-  const period = requiredRecord(
-    value,
-    `period for Chrono Group ${groupId}`,
-  );
-  rejectUnknownKeys(
-    period,
-    TIME_PERIOD_KEYS,
-    `period for Chrono Group ${groupId}`,
-  );
-  const start = requiredText(
-    period.start,
-    `period start for Chrono Group ${groupId}`,
-  );
-  const end = requiredText(
-    period.end,
-    `period end for Chrono Group ${groupId}`,
-  );
-  if (!CANONICAL_DATE_ONLY.test(start) || !CANONICAL_DATE_ONLY.test(end)) {
-    throw new Error(
-      `Chrono Group ${groupId} period must use canonical YYYY-MM-DD dates`,
-    );
-  }
-  if (end < start) {
-    throw new Error(
-      `Chrono Group ${groupId} period end must be on or after start`,
-    );
-  }
 }
 
 function chartDescription({ chart, section, page }) {

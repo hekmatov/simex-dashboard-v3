@@ -463,7 +463,7 @@ function withPlaybackPresentation(model, prepared, timeContext, chart) {
   const activeCanonical = prepared.meta.activeTime.canonical;
   const overlayMarks = activeMarks.map((mark) => ({
     ...mark,
-    ...(model.accessibility.family === "axis"
+    ...(model.accessibility.family === "axis" && prepared.meta.activeTime.fallbackEpochMs === undefined
       ? { x: activeCanonical }
       : {}),
   }));

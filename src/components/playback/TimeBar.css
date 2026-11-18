@@ -1,0 +1,205 @@
+.mode-context-strip:has(.time-bar) { height: auto; align-items: stretch; position: sticky; top: calc(var(--time-location-height, 0px) + var(--time-notice-height, 0px)); z-index: 41; }
+.dashboard-command-crown:has(.time-bar) .exercise-disclaimer { top: var(--time-location-height, var(--simex-command-crown-row)); }
+.mode-context-strip:has(.time-bar) > .mode-context-label { align-self: center; }
+.mode-context-content:has(.time-bar) { flex: 1; min-width: 0; }
+.time-bar { width: 100%; min-width: 0; }
+.time-bar__row { display: flex; align-items: center; gap: 6px; min-height: 36px; flex-wrap: wrap; }
+.time-bar__row button, .time-bar select { min-height: 30px; padding: 4px 8px; }
+.time-bar__live[aria-pressed="true"] { background: var(--simex-accent); color: var(--simex-on-accent, white); }
+.time-bar__live[aria-pressed="false"] { background: transparent; color: inherit; }
+.time-bar__instant { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.time-bar__scope { display: flex; align-items: center; gap: 6px; min-width: 0; margin-left: auto; }
+.time-bar__scope select { max-width: min(30vw, 280px); }
+.time-bar button:focus-visible, .time-bar input:focus-visible, .time-bar select:focus-visible { outline: 3px solid var(--simex-focus, #f2b541); outline-offset: 2px; }
+.time-bar__disclosure[hidden], .time-bar [hidden] { display: none; }
+.time-bar__empty { color: var(--simex-text-muted); font-size: 12px; }
+.time-settings { border-top: 1px solid var(--simex-border-subtle); padding-block: 8px; }
+.time-settings__controls, .time-settings__window fieldset, .time-bar__phone-options { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.time-settings__controls label, .time-settings__window label { display: flex; align-items: center; gap: 6px; }
+.time-settings input, .time-settings select { min-width: 0; max-width: 100%; }
+.time-settings__window fieldset { margin: 8px 0 0; }
+.timeline-scrubber { position: relative; min-height: 44px; display: flex; align-items: center; margin-inline: 10px; }
+.timeline-scrubber__track { position: absolute; inset: 15px 0; background: var(--simex-surface-panel-alt); border: 1px solid var(--simex-border-subtle); }
+.timeline-scrubber__track > i { position: absolute; top: 0; bottom: 0; width: 1px; background: currentColor; opacity: 0.3; }
+.timeline-scrubber__coverage { position: absolute; top: 2px; bottom: 2px; background: var(--simex-accent, #176c66); opacity: 0.25; min-width: 2px; }
+.timeline-scrubber__now { position: absolute; bottom: 8px; border-left: 2px dotted currentColor; padding-left: 3px; font-size: 11px; white-space: nowrap; }
+.timeline-scrubber input { position: relative; width: 100%; height: 44px; background: transparent; margin: 0; cursor: pointer; accent-color: var(--simex-accent, #176c66); }
+@media (min-width: 768px) and (max-width: 820px) {
+  .dashboard-command-crown:has(.time-bar) .dashboard-identity-row { block-size: auto; height: auto; }
+}
+@media (max-width: 767px) {
+  .mode-context-strip:has(.time-bar) > .mode-context-label { display: none; }
+  .time-bar__row { flex-wrap: nowrap; gap: 4px; min-height: 44px; }
+  .time-bar__row button { min-height: 44px; min-width: 44px; }
+  .time-bar__instant { flex: 1; min-width: 0; font-size: 12px; }
+  .timeline-scrubber, .timeline-scrubber input { min-height: 56px; height: 56px; }
+  .time-bar__phone-options { padding-block: 6px; }
+  .time-bar__scope { margin-left: 0; }
+  .time-bar__scope select { max-width: 65vw; }
+  .time-bar__phone-options button, .time-bar select, .time-settings input { min-height: 44px; }
+
+  .mode-context-strip:has(.time-bar--phone-view):not(:has(.mode-context-status)),
+  .mode-context-content:has(.time-bar--phone-view),
+  .pdpc-time-context:has(.time-bar--phone-view) { display: contents; }
+  .time-bar--phone-view {
+    position: fixed;
+    inset-inline-end: max(12px, env(safe-area-inset-right));
+    inset-block-end: max(12px, env(safe-area-inset-bottom));
+    z-index: 44;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 4px;
+    inline-size: max-content;
+    max-inline-size: calc(100vw - 24px);
+  }
+  .time-bar--phone-view .time-bar__instant,
+  .time-bar__phone-view-controls button { min-block-size: 44px; min-inline-size: 44px; }
+  .time-bar--phone-view .time-bar__instant {
+    background: var(--simex-surface-panel);
+    border: 1px solid var(--simex-border-strong);
+    color: var(--simex-text-strong);
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+  }
+  .time-bar__phone-view-controls {
+    box-sizing: border-box;
+    inline-size: min(460px, calc(100vw - 24px));
+    max-block-size: min(45dvh, 340px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 4px 6px;
+    background: var(--simex-surface-panel);
+    border: 1px solid var(--simex-border-strong);
+    border-radius: 8px;
+    box-shadow: var(--simex-style-panel-shadow);
+  }
+  .time-bar--phone-view .time-bar__instant[aria-expanded="true"] {
+    position: absolute;
+    inset-block-start: 5px;
+    inset-inline-end: 7px;
+    z-index: 1;
+  }
+  .time-bar--phone-view:has([data-has-clock="true"]) .time-bar__instant[aria-expanded="true"] {
+    inset-block-start: 49px;
+    inline-size: 32px;
+    min-inline-size: 32px;
+    block-size: 34px;
+    min-block-size: 34px;
+  }
+  .time-bar__phone-view-controls:has(.time-settings) { max-block-size: min(68dvh, 464px); }
+  .time-bar__phone-view-controls .time-bar__scope { margin-block-end: 4px; }
+  .time-bar__phone-view-controls > .time-bar__scope { padding-inline-end: 48px; margin-block-end: 0; }
+  .time-bar__phone-view-controls .time-bar__scope select { flex: 1; min-inline-size: 0; max-inline-size: none; }
+  .app-frame .time-bar__phone-view-controls :is(select, input[type="date"], input[type="number"]) {
+    background: var(--simex-surface-panel-alt);
+    border-color: var(--simex-border-strong);
+    color: var(--simex-text-strong);
+  }
+  .app-frame[data-resolved-appearance="dark"] .time-bar__phone-view-controls { color-scheme: dark; }
+  .time-bar__phone-view-controls .time-bar__transport {
+    align-items: start;
+    display: grid;
+    gap: 3px;
+    grid-template-columns: 32px 32px minmax(0, 1.15fr) minmax(0, 1fr) 32px;
+    min-block-size: 34px;
+    padding-inline-end: 35px;
+  }
+  .time-bar__transport > button {
+    display: grid;
+    place-items: center;
+    inline-size: 32px;
+    min-inline-size: 32px;
+    min-width: 32px;
+    min-block-size: 34px;
+    min-height: 34px;
+    padding: 0;
+  }
+  .time-bar__transport > .time-bar__settings-trigger { grid-column: 5; grid-row: 1; }
+  .time-bar__transport > :is(.time-bar__scope, .time-settings__matching) {
+    display: block;
+    position: relative;
+    margin: 0;
+    min-inline-size: 0;
+  }
+  .time-bar__transport > :is(.time-bar__scope, .time-settings__matching) > span {
+    position: absolute;
+    inset-block-end: 100%;
+    inset-inline-start: 2px;
+    pointer-events: none;
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .time-bar__transport > label > select {
+    inline-size: 100%;
+    min-width: 0;
+    min-block-size: 34px;
+    min-height: 34px;
+    box-sizing: border-box;
+    padding: 2px 4px;
+    font-size: 11px;
+  }
+  .time-bar__transport .time-settings__nearest { margin-inline-end: -35px; }
+  .time-bar__timeline { position: relative; }
+  .time-bar__phone-view-controls .timeline-scrubber { margin-inline: 0; }
+  .time-bar__phone-view-controls .timeline-scrubber,
+  .time-bar__phone-view-controls .timeline-scrubber input { height: 44px; min-height: 44px; }
+  .time-bar__phone-date {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 2px;
+    pointer-events: none;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .time-bar__phone-view-controls .time-bar__empty { margin-block: 4px 0; }
+
+  .time-bar__phone-view-controls .time-settings { padding-block: 4px 0; font-size: 13px; line-height: 1.2; }
+  .time-bar__phone-view-controls :is(.time-settings__controls, .time-settings__window fieldset) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: 4px 8px;
+  }
+  .time-bar__phone-view-controls .time-settings label:not(.choice-control-row) {
+    display: grid;
+    gap: 2px;
+    min-inline-size: 0;
+  }
+  .time-bar__phone-view-controls .time-settings :is(input:not([type="checkbox"]), select) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-block-size: 44px;
+    max-inline-size: none;
+    padding: 4px 8px;
+  }
+  .time-bar__phone-view-controls .time-settings .choice-control-row {
+    margin-block-start: 4px;
+    min-block-size: 44px;
+  }
+  .time-bar__phone-view-controls .time-settings__trace { grid-column: 1 / -1; }
+  .time-bar__phone-view-controls .time-settings input[type="checkbox"] { min-height: 0; }
+  .time-bar__phone-view-controls .time-settings__window fieldset {
+    border: 0;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .time-bar__phone-view-controls .time-settings__window legend { padding: 0 0 4px; font-weight: 700; }
+  .time-bar__phone-view-controls .time-settings__nearest {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 4px 8px;
+  }
+  .time-bar__phone-view-controls .time-settings__nearest p { grid-column: 1 / -1; }
+  .time-bar__phone-view-controls :is(.time-settings, .time-settings__nearest) :is(p, ul) { margin-block: 4px; }
+  .app-frame[data-dashboard-mode="view"]:has(.time-bar--phone-view) { padding-block-end: calc(56px + env(safe-area-inset-bottom)); }
+}

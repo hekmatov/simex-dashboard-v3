@@ -57,13 +57,12 @@ import {
 } from "./buildDraftCoordinator.js";
 import { selectBuildPendingWork } from "./buildPendingWork.js";
 import { createSourceContentViewState } from "../source-content/sourceContentViewState.js";
+import { buildStorylineCoverage, storylineDraftAdmission } from "../time/storylineAuthoring.js";
 
-const SceneEditor = lazySurface(() => import("../time/SceneEditor.jsx"), "Scene editor");
-const ChronoStudio = lazySurface(() => import("../time/ChronoStudio.jsx"), "Chrono Group studio");
+const SceneEditor = lazySurface(() => import("../time/SceneEditor.jsx"), "Storyline editor");
 const ChronoGroupContent = lazySurface(() => import("../time/ChronoGroupContent.jsx"), "Chrono Group content");
-const SceneLibrary = lazySurface(() => import("../time/SceneLibrary.jsx"), "Scene library");
-const SceneContent = lazySurface(() => import("../time/SceneContent.jsx"), "Scene content");
-const ChronoGroupEditor = lazySurface(() => import("../time/ChronoGroupEditor.jsx"), "Chrono Group editor");
+const SceneLibrary = lazySurface(() => import("../time/SceneLibrary.jsx"), "Storyline library");
+const SceneContent = lazySurface(() => import("../time/SceneContent.jsx"), "Storyline content");
 const SourceContentWorkspace = lazySurface(() => import("../source-content/SourceContentWorkspace.jsx"), "Source content workspace");
 
 export default function BuildWorkspace({
@@ -133,6 +132,8 @@ export default function BuildWorkspace({
   onDisplayAction,
   selectionControllerRef,
   exportResolutionControllerRef,
+  comparisonStorylineRequest = null,
+  onComparisonStorylineResolved,
 }) {
   const [draftCoordinator, dispatchDraftCoordinator] = React.useReducer(
     reduceBuildDraftCoordinator,
@@ -584,7 +585,6 @@ export default function BuildWorkspace({
 
   const commitTemporalContent = (updates) => onStructureCommit?.({
     pages: dashboard.pages,
-    chronoGroups: updates.chronoGroups ?? dashboard.chronoGroups ?? [],
     scenes: updates.scenes ?? dashboard.scenes ?? [],
   });
 
@@ -653,7 +653,7 @@ export default function BuildWorkspace({
       const savedScene = clearSceneReviewForSave(saving.value);
       const status = onBeginContentOperation("scene.saved", {
         subject: savedScene.name,
-        workingLabel: `Saving Scene “${savedScene.name}”`,
+        workingLabel: `Saving Storyline “${savedScene.name}”`,
         key: `content:scene:${savedScene.id}:save`,
       });
       void (async () => {
@@ -698,8 +698,8 @@ export default function BuildWorkspace({
       const itemId = action.itemId ?? chronoContentState.selectedItemId;
       const groupScenes = itemType === "chronoGroup" ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId === itemId) : [];
       const message = itemType === "chronoGroup"
-        ? `Remove this Chrono Group and ${groupScenes.length} child ${groupScenes.length === 1 ? "Scene" : "Scenes"}?`
-        : "Remove this Scene?";
+        ? `Remove this Chrono Group and ${groupScenes.length} child ${groupScenes.length === 1 ? "Storyline" : "Storylines"}?`
+        : "Remove this Storyline?";
       if (!window.confirm(message)) return;
       const subject = itemType === "chronoGroup"
         ? dashboard.chronoGroups?.find(({ id }) => id === itemId)?.name ?? itemId
@@ -708,7 +708,7 @@ export default function BuildWorkspace({
         itemType === "chronoGroup" ? "chrono.deleted" : "scene.deleted",
         {
           subject,
-          workingLabel: `Deleting ${itemType === "chronoGroup" ? "Chrono Group" : "Scene"} “${subject}”`,
+          workingLabel: `Deleting ${itemType === "chronoGroup" ? "Chrono Group" : "Storyline"} “${subject}”`,
           key: `content:${itemType}:${itemId}:delete`,
         },
       );
@@ -789,6 +789,31 @@ export default function BuildWorkspace({
     }
   };
 
+  const consumedComparisonRequest = React.useRef(null);
+  React.useEffect(() => {
+    const request = comparisonStorylineRequest;
+    if (!request || consumedComparisonRequest.current === request.id) return;
+    consumedComparisonRequest.current = request.id;
+    const reason = storylineDraftAdmission({ mutationsDisabled, chartDraftOpen, sceneDraft,
+      chronoGroupDraft, layoutDraft, sourceContentOwners });
+    if (reason) { onComparisonStorylineResolved?.({ ok: false, reason }); return; }
+    const content = reduceChronoContent(createChronoContentState({
+      chronoGroups: dashboard.chronoGroups, scenes: dashboard.scenes, pages: dashboard.pages, studio: "scene",
+    }), { type: "START_CREATE_SCENE" });
+    const restoration = captureRestoration();
+    const nextDraft = withTemporalOwnerScope({
+      ...createSceneDraft(request.scene, sceneValidationContext(dashboard)), status: "dirty",
+      contentOperation: content.operation, contentReturnContext: content.returnContext,
+    }, "scene", "auxiliary-scene", { intent: "create" });
+    dispatchDraftCoordinator({ type: "OPEN_AUXILIARY", session: {
+      surface: "scene", draftId: "auxiliary-scene", dirty: true, mutationCapable: true, restoration,
+    } });
+    setChronoContentState(content);
+    setSceneDraft(nextDraft);
+    onComparisonStorylineResolved?.({ ok: true });
+  }, [comparisonStorylineRequest, mutationsDisabled, chartDraftOpen, sceneDraft, chronoGroupDraft,
+    layoutDraft, sourceContentOwners, dashboard, captureRestoration, onComparisonStorylineResolved]);
+
   const temporalOwnerActions = Object.fromEntries(temporalOwners.map((owner) => {
     const surface = owner.kind === "chrono" ? "chrono-group" : "scene";
     const dispatch = owner.kind === "chrono" ? dispatchChronoGroup : dispatchScene;
@@ -849,7 +874,7 @@ export default function BuildWorkspace({
       discardLayout: discardPendingLayout,
     },
   }).map((work) => ["chrono", "scene"].includes(work.kind) && work.state === "paused"
-    ? { ...work, label: work.kind === "chrono" ? "Chrono Studio draft" : "Scene Studio draft" }
+    ? { ...work, label: work.kind === "chrono" ? "Chrono Studio draft" : "Storyline Studio draft" }
     : work);
 
   const propertiesPane = (
@@ -995,15 +1020,6 @@ export default function BuildWorkspace({
               }}
             >
               <button type="button" className="secondary build-auxiliary-close" onClick={closeAuxiliary}>Close</button>
-              {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "library" && (
-                <ChronoStudio state={chronoContentState} cards={selectChronoStudioCards(chronoContentState)} onAction={dispatchChronoContent} />
-              )}
-              {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "content" && (
-                <ChronoGroupContent content={selectChronoGroupContent(chronoContentState, chronoContentState.selectedItemId)} sceneCreationDisabledReason={sceneCreationDisabledReason} onOpenBlockingDraft={() => resumeAuxiliary("chrono-group")} onAction={dispatchChronoContent} />
-              )}
-              {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "editor" && chronoGroupDraft && (
-                <ChronoGroupEditor draft={chronoGroupDraft} disabled={locked} onAction={dispatchChronoGroup} />
-              )}
               {renderedAuxiliary === "scene" && chronoContentState?.view === "library" && (
                 <SceneLibrary state={chronoContentState} sections={selectSceneStudioSections(chronoContentState)} sceneCreationDisabledReason={sceneCreationDisabledReason} onOpenBlockingDraft={() => resumeAuxiliary("chrono-group")} onAction={dispatchChronoContent} />
               )}
@@ -1077,7 +1093,7 @@ function storageFacingError(error, fallbackCode) {
 function auxiliaryLabel(surface) {
   return ({
     "chrono-group": "Chrono Studio",
-    scene: "Scene Studio",
+    scene: "Storyline Studio",
     "source-content": "Source content",
   })[surface] ?? "Build work";
 }
@@ -1120,32 +1136,13 @@ function chronoGroupDraftInput(dashboard, charts, groupOverride = undefined) {
 
 
 function initialScene(dashboard, preferredPageId) {
-  const group = dashboard.chronoGroups?.[0];
-  const placements = collectChartPlacements(dashboard)
-    .filter(({ chart }) => isTemporalAuthoringChart(chart));
-  const memberIds = new Set(group?.chartIds ?? (group?.members ?? []).map(({ chartId }) => chartId));
-  const eligible = placements.filter(({ chart, pageId }) => (
-    memberIds.has(chart.id) && (!preferredPageId || pageId === preferredPageId)
-  ));
-  const fallback = eligible.length > 0
-    ? eligible
-    : placements.filter(({ chart }) => memberIds.has(chart.id));
-  const selected = fallback.slice(0, Math.max(1, Math.min(4, fallback.length)));
-  const pageId = selected[0]?.pageId ?? preferredPageId ?? dashboard.pages?.[0]?.id ?? "page";
-  const chartIds = selected.map(({ chart }) => chart.id);
-  const firstChartId = chartIds[0] ?? "select-chart";
-  const startDate = group?.period?.start ?? new Date().toISOString().slice(0, 10);
-  const endDate = group?.period?.end ?? startDate;
+  const eligible = buildStorylineCoverage(dashboard).filter(candidate => candidate.eligible);
+  const selected = eligible.find(candidate => candidate.pageId === preferredPageId) ?? eligible[0];
+  const chartIds = selected ? [selected.id] : [];
   return {
     id: stableDraftId("scene"),
     name: "",
-    pageId,
-    chronoGroupId: group?.id ?? "select-chrono-group",
-    period: {
-      start: `${startDate}T00:00:00.000Z`,
-      end: `${endDate}T00:00:00.000Z`,
-    },
-    frames: { mode: "source", chartId: firstChartId, selection: "all" },
+    frames: { mode: "source", chartId: selected?.id ?? null, selection: "all" },
     members: chartIds.map((chartId) => ({ chartId, width: 2 })),
     present: {
       chartIds,
@@ -1157,10 +1154,12 @@ function initialScene(dashboard, preferredPageId) {
 
 function sceneValidationContext(dashboard) {
   return {
+    nativeVersion: dashboard.configVersion,
     chronoGroups: dashboard.chronoGroups ?? [],
     pages: dashboard.pages ?? [],
     charts: collectChartPlacements(dashboard).map(({ chart, pageId }) => ({ ...chart, pageId })),
     scenes: dashboard.scenes ?? [],
+    profiles: dashboard.datasetProfiles ?? {},
   };
 }
 
@@ -1169,8 +1168,8 @@ export function sceneEligibleCharts(dashboard, charts, scene) {
   const memberIds = new Set(group?.chartIds ?? (group?.members ?? []).map(({ chartId }) => chartId));
   return charts.filter((chart) => (
     isTemporalAuthoringChart(chart.sourceChart ?? chart)
-    && memberIds.has(chart.id)
-    && chart.pageId === scene?.pageId
+    && (!group || memberIds.has(chart.id))
+    && (group || chart.chronoGroupEligibility?.eligible === true)
   ));
 }
 

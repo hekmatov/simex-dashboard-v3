@@ -600,12 +600,12 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     await expect(page.locator(".dashboard-command-pinned-actions .dashboard-look-trigger"))
       .toHaveCSS("background-color", style.panelAltPaint);
     await page.mouse.move(0, 0);
-    await expect(page.locator(".dashboard-command-pinned-actions .chrono-view-button"))
-      .toHaveCSS("background-color", style.panelPaint);
+    await expect(page.locator(".time-bar__settings-trigger"))
+      .toHaveCSS("background-color", style.panelAltPaint);
 
     const viewChrome = await readChrome(page, {
       dashboardLook: ".dashboard-command-pinned-actions .dashboard-look-trigger",
-      chrono: ".dashboard-command-pinned-actions .chrono-view-button",
+      timeSettings: ".time-bar__settings-trigger",
       compare: ".dashboard-command-pinned-actions .view-comparison-button",
     });
     expect(viewChrome.dashboardLook).toMatchObject({
@@ -614,8 +614,8 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       borderTopColor: style.borderPaint,
       color: style.textPaint,
     });
-    expect(viewChrome.chrono).toMatchObject({
-      backgroundColor: style.panelPaint,
+    expect(viewChrome.timeSettings).toMatchObject({
+      backgroundColor: style.panelAltPaint,
       borderRadius: style.controlRadius,
       borderTopColor: style.borderPaint,
       color: style.textPaint,
@@ -631,7 +631,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       .getByRole("button", { name: "Build", exact: true }).click();
     const dashboardMap = structureRail(page);
     await expect(dashboardMap).toBeVisible();
-    await expect(page.locator('[data-context-shelf-entry="chrono-group"]'))
+    await expect(page.locator('[data-build-command-action="scene-studio"]'))
       .toHaveCSS("background-color", style.panelAltPaint);
     await page.getByRole('button',{name:'Page settings',exact:true}).click();
     await expect(page.locator('.object-quick-editor')).toBeVisible();
@@ -639,7 +639,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       layer: ".build-rail--structure",
       structure: ".object-quick-editor",
       look: ".dashboard-command-pinned-actions .dashboard-look-trigger",
-      chronoGroups: '[data-context-shelf-entry="chrono-group"]',
+      storylines: '[data-build-command-action="scene-studio"]',
     });
     expect(buildChrome.layer).toMatchObject({
       backgroundColor: style.panelPaint,
@@ -671,7 +671,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       borderTopColor: inspectorBorderPaint,
       color: style.textPaint,
     });
-    for (const control of [buildChrome.look, buildChrome.chronoGroups]) {
+    for (const control of [buildChrome.look, buildChrome.storylines]) {
       expect(control).toMatchObject({
         backgroundColor: style.panelAltPaint,
         borderRadius: style.controlRadius,

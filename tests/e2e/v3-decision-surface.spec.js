@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { authorAttentionStrip, closeObjectQuickEditor, structureRail } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -39,22 +40,23 @@ test("attention strip renders above the page body and drills to its target", asy
   await expect(target).toBeFocused();
 });
 
-test("Set page time opens whole-page playback and the readout follows the scrub", async ({ page }) => {
+test("shared page time readout follows the scrub and returns Live", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
-  const readout = page.locator(".page-time-context__value");
-  await expect(readout).toHaveText("Latest available");
-  await page.getByRole("button", { name: "Set page time" }).click();
-  await expect(page.getByRole("region", { name: "Chrono playback controls" }).getByLabel("Chrono source")).toHaveValue("page:");
-  await expect(readout).toContainText("Whole page");
-  const controls = page.getByRole("region", { name: "Chrono playback controls" });
-  const frame = controls.getByRole("slider", { name: "Playback frame" });
+  const cursor = timeCursor(page);
+  await expect(cursor.bar).toHaveAttribute("data-time-mode", "live");
+  await cursor.open();
+  await expect(cursor.scope).toHaveValue("page");
+  const readout = cursor.instant;
+  const controls = cursor.bar;
+  const frame = cursor.frame;
   await expect(frame).toHaveValue(await frame.getAttribute("max"));
-  await expect(controls.getByRole("button", { name: "Next frame", exact: true })).toBeDisabled();
+  await expect(controls.getByRole("button", { name: "Next time", exact: true })).toBeDisabled();
   const before = await readout.textContent();
-  await controls.getByRole("button", { name: "Previous frame", exact: true }).click();
+  await controls.getByRole("button", { name: "Previous time", exact: true }).click();
   await expect(readout).not.toHaveText(before);
-  await page.getByRole("button", { name: "Exit page time" }).click();
-  await expect(readout).toHaveText("Latest available");
+  await controls.getByRole("button", { name: "Return to Live", exact: true }).click();
+  await expect(controls).toHaveAttribute("data-time-mode", "live");
+  await expect(frame).toHaveValue(await frame.getAttribute("max"));
 });

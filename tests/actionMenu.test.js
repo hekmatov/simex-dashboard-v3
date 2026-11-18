@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
 const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
-const { default: ActionMenu, actionMenuKeyTarget } = await vite.ssrLoadModule("/src/components/common/ActionMenu.jsx");
+const { default: ActionMenu, actionMenuKeyTarget, actionMenuPlacement } = await vite.ssrLoadModule("/src/components/common/ActionMenu.jsx");
 await vite.close();
 
 test("closed ActionMenu renders only its trigger with menu semantics", () => {
@@ -25,4 +25,15 @@ test("keyboard targets wrap and skip nothing", () => {
   assert.equal(actionMenuKeyTarget("Home", 2, 3), 0);
   assert.equal(actionMenuKeyTarget("End", 0, 3), 2);
   assert.equal(actionMenuKeyTarget("Tab", 1, 3), null);
+});
+
+test("Build menu clears the command inset and a taller sticky navigation row", () => {
+  const input = { rect: { left: 640, bottom: 52.56 }, viewportWidth: 768, viewportHeight: 900 };
+  assert.deepEqual(actionMenuPlacement({ ...input, commandInset: 78, stickyNavigationBottom: 64 }), {
+    left: 500, top: 78, maxHeight: 814,
+  });
+  assert.deepEqual(actionMenuPlacement({ ...input, commandInset: 78, stickyNavigationBottom: 104 }), {
+    left: 500, top: 108, maxHeight: 784,
+  });
+  assert.equal(actionMenuPlacement(input).top, input.rect.bottom + 4);
 });

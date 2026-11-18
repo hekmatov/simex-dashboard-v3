@@ -1,7 +1,8 @@
 import React from "react";
 import { resolvePresentationResolution } from "../../lib/presentationResolution.js";
+import { validateExerciseTime } from "../../charting/time/cursorModel.js";
 
-const EDITABLE_FIELDS = new Set(["scenarioLabel", "programLabel", "lastUpdated"]);
+const EDITABLE_FIELDS = new Set(["scenarioLabel", "programLabel", "lastUpdated", "exerciseTime"]);
 
 export function createScenarioDraft(dashboard = {}) {
   const baseline = scenarioValue(dashboard);
@@ -18,6 +19,10 @@ export function createScenarioDraft(dashboard = {}) {
 export function validateScenarioDraft(value) {
   try { resolvePresentationResolution(value?.presentationResolution); }
   catch (error) { return issue("PRESENTATION_RESOLUTION_INVALID", error.message); }
+  if (value?.exerciseTime) {
+    try { validateExerciseTime(value.exerciseTime); }
+    catch (error) { return issue("EXERCISE_TIME_INVALID", error.message); }
+  }
   if (!String(value?.scenarioLabel ?? "").trim()) {
     return issue("SCENARIO_NAME_REQUIRED", "Enter a Scenario name.");
   }
@@ -113,6 +118,11 @@ export default function ScenarioAuthoring({ draft, disabled = false, onAction })
         <input disabled={busy} value={value.scenarioLabel ?? ""} onChange={(event) => onAction?.({ type: "EDIT_FIELD", field: "scenarioLabel", value: event.target.value })} />
       </label>
       <label>
+        Exercise time (UTC)
+        <input disabled={busy} value={value.exerciseTime ?? ""} placeholder="2027-03-31T23:59:59.999Z"
+          onChange={event => onAction?.({ type: "EDIT_FIELD", field: "exerciseTime", value: event.target.value })} />
+      </label>
+      <label>
         Program
         <input disabled={busy} value={value.programLabel ?? ""} onChange={(event) => onAction?.({ type: "EDIT_FIELD", field: "programLabel", value: event.target.value })} />
       </label>
@@ -131,6 +141,7 @@ export default function ScenarioAuthoring({ draft, disabled = false, onAction })
 function scenarioValue(dashboard) {
   return {
     scenarioLabel: dashboard?.scenarioLabel ?? "",
+    exerciseTime: dashboard?.scenario?.exerciseTime ?? dashboard?.exerciseTime ?? "",
     programLabel: dashboard?.programLabel ?? "",
     lastUpdated: dashboard?.lastUpdated ?? "",
     home: { enabled: dashboard?.home?.enabled !== false },

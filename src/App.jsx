@@ -1,5 +1,4 @@
-import PageTimeContext from "./components/playback/PageTimeContext.jsx";
-import { temporalAuthoringCharts } from "./components/time/temporalAuthoringCharts.js";
+import TimeBar from "./components/playback/TimeBar.jsx";
 import React from "react";
 import { buildSessionContentSignature } from "./components/build/buildDirtyState.js";
 import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
@@ -17,14 +16,16 @@ import ExerciseDisclaimer from "./components/app-shell/ExerciseDisclaimer.jsx";
 import { useOperationStatusActions } from "./components/app-shell/OperationStatusProvider.jsx";
 import CanonicalHomeWorkspace from "./components/home/CanonicalHomeWorkspace.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
+import { createScenarioDraft } from "./components/build/ScenarioAuthoring.jsx";
 import RestoreOnlineDashboardDialog from "./components/app-shell/RestoreOnlineDashboardDialog.jsx";
-import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
 import {
   reorderPage,
   reorderSection,
 } from "./components/build/buildStructureModel.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
 import { createPlaybackChartCollectionSelector } from "./charting/time/playbackPageScope.js";
+import { removeTemporalChartReferences, reanchorScenesAfterPageRemoval } from "./charting/time/storylineReferences.js";
+import { validateExerciseTime } from "./charting/time/cursorModel.js";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
   integrateCreatedChart,
@@ -197,7 +198,7 @@ async function reconcileSavedAuthoredAssets(dashboard, activeRetainers = null) {
   }
 }
 
-function AppContent({ releaseProfile = null }) {
+function AppContent({ releaseProfile = null, verifyCompanionCatalogue, loadConfiguredCsv }) {
   const { beginOperation } = useOperationStatusActions();
   const [dashboardEntry] = React.useState(() => {
     const entry = parseDashboardEntry(
@@ -305,9 +306,9 @@ function AppContent({ releaseProfile = null }) {
     () => buildPresentableItemIndex(dashboard),
     [dashboard],
   );
-  const playbackGroups = React.useMemo(
-    () => readyChronoGroups(dashboard),
-    [dashboard?.dataSourceStates, dashboard?.pages, dashboard?.chronoGroups],
+  const playbackScenes = React.useMemo(
+    () => readyStorylines(dashboard),
+    [dashboard?.dataSourceStates, dashboard?.pages, dashboard?.scenes],
   );
   const savedDashboardTheme = React.useMemo(() => resolveDashboardTheme({
     globalStyles: dashboard?.globalStyles,
@@ -392,12 +393,6 @@ function AppContent({ releaseProfile = null }) {
     mode,
   ]);
 
-  const viewPageTimeEligible = React.useMemo(() => {
-    if (mode !== "view" || !dashboard?.pages) return false;
-    const page = dashboard.pages.find(({ id }) => id === activePageId);
-    if (!page || page.landing) return false;
-    return temporalAuthoringCharts({ ...dashboard, pages: [page] }).length > 0;
-  }, [activePageId, dashboard, mode]);
   const commandCrownPageActions = mode === "home" ? (
     <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
       Theme
@@ -407,7 +402,6 @@ function AppContent({ releaseProfile = null }) {
       <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
         Theme
       </button>
-      <PlaybackPageActions />
       <button
         type="button"
         className="secondary view-comparison-button"
@@ -447,10 +441,6 @@ function AppContent({ releaseProfile = null }) {
       .then(async (definition) => {
         loadStage = "saved";
         const trackedProfiles = definition.datasetProfiles ?? {};
-        const tracked = {
-          ...definition.dashboard,
-          datasetProfiles: trackedProfiles,
-        };
         trackedDatasetProfilesRef.current = trackedProfiles;
         const stored = releaseProfile?.viewOnly
           ? null
@@ -462,10 +452,7 @@ function AppContent({ releaseProfile = null }) {
               assets: dashboardAssetPersistence,
             },
           );
-        const selected = stored ?? configurationForStorage(
-          tracked,
-          trackedProfiles,
-        );
+        const selected = stored ?? configurationForSemanticUse(definition.dashboard);
         const profiles = selected.datasetProfiles ?? trackedProfiles;
         loadStage = stored ? "saved" : "source";
         const portableSources = stored ? null : definition.portableSources;
@@ -492,12 +479,18 @@ function AppContent({ releaseProfile = null }) {
           }
           return;
         }
+        // Definition normalization and hydration validate different boundaries.
+        // Give the browser an event-loop turn between the two.
+        await new Promise(resolve => setTimeout(resolve, 0));
+        if (disposed) return;
         const loaded = await loadDashboardConfigProgressively(
           selected,
           profiles,
           portableSources,
           {
             onUpdate: publish,
+            beforeSourceLoads: waitForInitialPaintOpportunity,
+            loadConfiguredCsv,
             readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId),
           },
         );
@@ -511,7 +504,7 @@ function AppContent({ releaseProfile = null }) {
     return () => {
       disposed = true;
     };
-  }, [dashboardEntry.surface, releaseProfile]);
+  }, [dashboardEntry.surface, loadConfiguredCsv, releaseProfile]);
 
   React.useEffect(() => {
     if (
@@ -614,21 +607,33 @@ function AppContent({ releaseProfile = null }) {
     return next;
   }, []);
 
+  const [companionDashboard, setCompanionDashboard] = React.useState(null);
+  const companionEnabled = dashboardEntry.surface !== "audience" && !releaseProfile?.disableCompanion;
   React.useEffect(() => {
-    if (dashboardEntry.surface === "audience" || releaseProfile?.disableCompanion) return undefined;
-    if (!dashboard) return undefined;
+    if (!dashboard || !companionEnabled) return;
+    const next = configurationForSemanticUse(dashboard);
+    setCompanionDashboard(current => {
+      const keys = Object.keys(next);
+      return current && Object.keys(current).length === keys.length
+        && keys.every(key => Object.hasOwn(current, key) && Object.is(current[key], next[key]))
+        ? current : next;
+    });
+  }, [companionEnabled, dashboard]);
+
+  React.useEffect(() => {
+    if (!companionEnabled || !companionDashboard) return undefined;
     let disposed = false;
     let client = null;
+    const verification = new AbortController();
     Promise.all([
       fetchJson(`${import.meta.env.BASE_URL}integration/quorum-chart-catalogue.json`),
       fetchJson(`${import.meta.env.BASE_URL}config/chart-aliases.json`),
     ])
       .then(async ([catalogue, aliases]) => {
-        const matches = await catalogueMatchesDashboardSnapshot(
-          configurationForSemanticUse(dashboard),
-          aliases,
-          catalogue,
-        );
+        if (disposed) return;
+        const matches = verifyCompanionCatalogue
+          ? await verifyCompanionCatalogue(companionDashboard, aliases, catalogue, verification.signal)
+          : await catalogueMatchesDashboardSnapshot(companionDashboard, aliases, catalogue);
         if (disposed) return;
         if (!matches) {
           setCompanionStatus("incompatible");
@@ -650,12 +655,13 @@ function AppContent({ releaseProfile = null }) {
       });
     return () => {
       disposed = true;
+      verification.abort();
       if (companionClientRef.current === client) {
         companionClientRef.current = null;
       }
       client?.stop();
     };
-  }, [dashboard, dashboardEntry.surface, dispatchDisplayAction, releaseProfile]);
+  }, [companionDashboard, companionEnabled, dispatchDisplayAction, verifyCompanionCatalogue]);
 
   React.useEffect(() => {
     if (!dashboard) return;
@@ -1447,7 +1453,22 @@ function AppContent({ releaseProfile = null }) {
         prepare: async () => {
           await dashboardRendererRef.current?.prepareForPackageImport?.();
         },
-        replace: commitImportedConfiguration,
+        ...createPackageImportDashboardBoundary({
+          controller: ensureDashboardCommitController(),
+          storage: browserStorage,
+          storageKey: DASHBOARD_STORAGE_KEY,
+          replace: commitImportedConfiguration,
+          snapshotRuntime: () => ({ dashboard: dashboardRef.current, persisted: lastDashboardPersistenceRef.current }),
+          restoreRuntime: (snapshot) => {
+            dashboardRef.current = snapshot.dashboard;
+            lastDashboardPersistenceRef.current = snapshot.persisted;
+            reportPersistence("dashboard", snapshot.persisted, SESSION_ONLY_MESSAGES.dashboard);
+            recordBuildSessionChanges(snapshot.dashboard);
+            setDashboard(snapshot.dashboard);
+            setError(null);
+            setOperationError("");
+          },
+        }),
         validateAsset: async ({ bytes, manifest }) => {
           const validation = await validateImageAsset({
             bytes,
@@ -1471,8 +1492,6 @@ function AppContent({ releaseProfile = null }) {
         commitAssets: (assetIds, options) => browserAuthoredAssetStore.commitMany(assetIds, options),
         snapshotAssets: (assetIds) => browserAuthoredAssetStore.snapshot(assetIds),
         restoreAssets: (snapshot) => browserAuthoredAssetStore.restore(snapshot),
-        snapshotDashboard: () => ensureDashboardCommitController().getCurrent(),
-        restoreDashboard: commitImportedConfiguration,
         rebase: (importedDashboard) => {
           dashboardRendererRef.current?.resetAfterDashboardReplacement?.(importedDashboard);
         },
@@ -1762,6 +1781,7 @@ function AppContent({ releaseProfile = null }) {
       pages={commandCrownProjection.pages}
       activePage={commandCrownProjection.activePage}
       onPageRequest={requestPage}
+      timeContextNode={releaseProfile?.suppressCommandCrown && mode === "view" ? <TimeBar compactView /> : null}
     />
   ) : null;
   const ReleaseDashboardFooter = releaseProfile?.DashboardFooterComponent ?? null;
@@ -1787,7 +1807,16 @@ function AppContent({ releaseProfile = null }) {
       activePage={commandCrownProjection.activePage}
       pages={commandCrownProjection.pages}
       pageActions={commandCrownPageActions}
-      contextNode={viewPageTimeEligible ? <PageTimeContext /> : undefined}
+      contextNode={["view", "present"].includes(mode) ? <TimeBar
+        compactView={mode === "view"}
+        onAdvanceExerciseTime={mode === "present" ? epochMs => {
+          if (buildDraftLocked || scenarioPassportDirty || modeDisabled) return Promise.reject(new Error("Finish the open draft or operation before advancing exercise time."));
+          return advanceExerciseTimeDurably({ controller: ensureDashboardCommitController(), persist: persistConfiguration,
+            epochMs, readOnly: releaseProfile?.viewOnly === true });
+        } : undefined}
+        advanceDisabledReason={mode === "present" ? releaseProfile?.viewOnly ? "This dashboard is read-only."
+          : buildDraftLocked || scenarioPassportDirty || modeDisabled ? "Finish the open draft or operation before advancing exercise time." : "" : ""}
+      /> : undefined}
       pageNavigationNode={mode === "build" ? <BuildPageNavigation
         dashboard={buildStructureProjection ?? dashboard}
         pages={commandCrownProjection.pages}
@@ -1906,12 +1935,8 @@ function AppContent({ releaseProfile = null }) {
             .map((panel) => (panel.chart ?? panel).id),
         );
         next.pages = next.pages.filter(({ id }) => id !== pageId);
-        next.chronoGroups = (next.chronoGroups ?? []).flatMap((group) => {
-          const members = group.members.filter(
-            ({ chartId }) => !removedChartIds.has(chartId),
-          );
-          return members.length > 0 ? [{ ...group, members }] : [];
-        });
+        const cleaned = reanchorScenesAfterPageRemoval(removeTemporalChartReferences(next, removedChartIds), new Set([pageId]));
+        next.scenes = cleaned.scenes;
         const remainingPageIds = new Set(next.pages.map(({ id }) => id));
         for (const page of next.pages) {
           if (!page.landing) continue;
@@ -1944,7 +1969,6 @@ function AppContent({ releaseProfile = null }) {
       })}
       onStructureChange={(structure) => mutateDashboard((next) => {
         next.pages = structure.pages;
-        if (Array.isArray(structure.chronoGroups)) next.chronoGroups = structure.chronoGroups;
         if (Array.isArray(structure.scenes)) next.scenes = structure.scenes;
       })}
       onSaveSceneDatePosition={(sceneId, datePosition) => {
@@ -2045,15 +2069,15 @@ function AppContent({ releaseProfile = null }) {
     <DashboardChartThemeProvider projection={dashboardThemeProjection}>
       {mode === "home" ? appFrame : (
         <PlaybackProvider
-          groups={playbackGroups}
-          scenes={dashboard.scenes ?? []}
+          scenes={playbackScenes}
           charts={playbackChartCollections.charts}
           pageCharts={playbackChartCollections.pageCharts}
           loadedData={dashboard.loadedData ?? {}}
           profiles={dashboard.datasetProfiles ?? {}}
-          preferredGroupId={dashboard.chronoGroups?.[0]?.id ?? null}
           timezone={dashboard.timezone}
           initialPosition="latest"
+          activePageId={activePageId}
+          exerciseTime={dashboard.scenario?.exerciseTime}
         >
           {appFrame}
         </PlaybackProvider>
@@ -2062,8 +2086,43 @@ function AppContent({ releaseProfile = null }) {
   );
 }
 
-export default function App({ releaseProfile = null }) {
-  return <AppContent releaseProfile={releaseProfile} />;
+export default function App({ releaseProfile = null, verifyCompanionCatalogue, loadConfiguredCsv }) {
+  return <AppContent releaseProfile={releaseProfile} verifyCompanionCatalogue={verifyCompanionCatalogue} loadConfiguredCsv={loadConfiguredCsv} />;
+}
+
+function waitForInitialPaintOpportunity() {
+  return new Promise(resolve => {
+    const fallback = setTimeout(resolve, 100);
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        clearTimeout(fallback);
+        resolve();
+      }));
+    }
+  });
+}
+
+export function createPackageImportDashboardBoundary({ controller, storage, storageKey, replace, snapshotRuntime, restoreRuntime }) {
+  return {
+    replace,
+    snapshotDashboard: () => ({
+      config: controller.getCurrent(),
+      runtime: snapshotRuntime(),
+      storedText: storage.getItem(storageKey),
+    }),
+    restoreDashboard: (snapshot) => controller.replaceWith(snapshot.config, async (config) => {
+      // Compensation restores the original bytes (or absence), not a newly
+      // serialized/migrated version of the last-good loaded dashboard.
+      if (storage.getItem(storageKey) !== snapshot.storedText) {
+        const restored = snapshot.storedText === null
+          ? storage.removeItem(storageKey)
+          : storage.setItem(storageKey, snapshot.storedText);
+        if (!restored) throw new Error("Could not restore the prior browser dashboard storage entry.");
+      }
+      restoreRuntime(snapshot.runtime);
+      return config;
+    }),
+  };
 }
 
 export function saveScenarioPassportDurably({ controller, persist, value }) {
@@ -2074,6 +2133,16 @@ export function saveScenarioPassportDurably({ controller, persist, value }) {
     (next) => applyScenarioPassportValue(next, value),
     createDurableContentDraftCommit(persist),
   );
+}
+
+export async function advanceExerciseTimeDurably({ controller, persist, epochMs, readOnly = false }) {
+  if (readOnly) throw new Error("This dashboard is read-only.");
+  if (!Number.isSafeInteger(epochMs) || !Number.isFinite(new Date(epochMs).valueOf())) throw new Error("Choose an available exercise time.");
+  if (typeof controller?.mutateWithCommit !== "function") throw new TypeError("A dashboard commit controller is required.");
+  return controller.mutateWithCommit(next => {
+    if (next.scenario?.exerciseTime && epochMs <= Date.parse(next.scenario.exerciseTime)) throw new Error("Choose a later exercise time.");
+    return applyScenarioPassportValue(next, { ...createScenarioDraft(next).value, exerciseTime: new Date(epochMs).toISOString() });
+  }, createDurableContentDraftCommit(persist));
 }
 
 export async function clearDashboardContentDurably({
@@ -2108,6 +2177,14 @@ export function applyScenarioPassportValue(next, value) {
   next.scenarioLabel = value.scenarioLabel;
   next.programLabel = value.programLabel;
   next.lastUpdated = value.lastUpdated;
+  if (value.exerciseTime !== undefined) {
+    if (value.exerciseTime === "") {
+      if (next.scenario) {
+        delete next.scenario.exerciseTime;
+        if (Object.keys(next.scenario).length === 0) delete next.scenario;
+      }
+    } else next.scenario = { ...(next.scenario ?? {}), exerciseTime: validateExerciseTime(value.exerciseTime) };
+  }
   next.home = { enabled: value.home.enabled };
   if (value.presentationResolution !== undefined) next.presentationResolution = resolvePresentationResolution(value.presentationResolution);
   return next;
@@ -2173,7 +2250,7 @@ function configurationForSemanticUse(dashboard) {
     datasetProfiles: _runtimeProfiles,
     ...semanticDashboard
   } = dashboard;
-  return structuredClone(semanticDashboard);
+  return semanticDashboard;
 }
 
 function configurationForPortableUse(dashboard) {
@@ -2201,15 +2278,15 @@ function requireChartAuthoringPayload(payload) {
   }
 }
 
-export function readyChronoGroups(dashboard) {
-  const groups = dashboard?.chronoGroups ?? [];
+export function readyStorylines(dashboard) {
+  const scenes = dashboard?.scenes ?? [];
   const sourceStates = dashboard?.dataSourceStates;
-  if (!sourceStates) return groups;
+  if (!sourceStates) return scenes;
   const sourceByChartId = new Map(
     configuredCharts(dashboard).map((chart) => [chart.id, chart.sourceId]),
   );
-  return groups.filter((group) => (
-    (group.members ?? []).every(({ chartId }) => {
+  return scenes.filter((scene) => (
+    (scene.members ?? []).every(({ chartId }) => {
       const sourceId = sourceByChartId.get(chartId);
       return sourceId && sourceStates[sourceId]?.status === "ready";
     })

@@ -1,4 +1,5 @@
 import { attentionRoleIssues, resolveDrillTarget, sectionRole } from "../../charting/config/sectionRoles.js";
+import { removeTemporalChartReferences, reanchorScenesAfterPageRemoval } from "../../charting/time/storylineReferences.js";
 import {
   movePageByIndex,
   movePlacementBefore,
@@ -145,8 +146,7 @@ export function moveBuildLayoutSection(draft, pageId, sectionId, targetPageId, p
     if (page.id === target.id) return { ...page, sections: targetSections };
     return page;
   });
-  let value = { ...draft.value, pages };
-  value = removePageScopedSceneChartReferences(value, pageId, chartIdsForSections([section]));
+  const value = { ...draft.value, pages };
   return markDirty(draft, sectionId, value);
 }
 
@@ -196,7 +196,7 @@ export function removeBuildLayoutSection(draft, pageId, sectionId, { disposition
     };
   }
   let value = updatePage(draft.value, pageId, (current) => ({ ...current, sections }));
-  if (disposition === "delete-charts") value = removeChartReferences(value, chartIdsForSections([removed]));
+  if (disposition === "delete-charts") value = removeTemporalChartReferences(value, chartIdsForSections([removed]));
   return markDirty(draft, sectionId, value);
 }
 
@@ -237,12 +237,12 @@ export function removeBuildLayoutPage(draft, pageId, { disposition, targetPageId
     }));
     value = reassignPageScopedScenes(value, pageId, targetPageId);
   } else if (disposition === "delete-charts") {
-    value = removeChartReferences(value, chartIdsForSections(source.sections));
+    value = removeTemporalChartReferences(value, chartIdsForSections(source.sections));
   } else {
     return failCommand(draft, "PAGE_DISPOSITION_REQUIRED", "Choose what happens to the Page content.");
   }
   value = { ...value, pages: value.pages.filter(({ id }) => id !== pageId) };
-  value = pruneScenesWithRemovedParents(value, { pageIds: new Set([pageId]) });
+  value = reanchorScenesAfterPageRemoval(value, new Set([pageId]));
   value = repairLandingRoutes(value);
   return markDirty(draft, pageId, value);
 }
@@ -258,14 +258,13 @@ export function previewBuildStructureConsequences(dashboard, operation) {
     .filter((group) => (group.members ?? []).some(({ chartId }) => ids.includes(chartId)))
     .map(({ name, id }) => name || id);
   const scenes = (dashboard?.scenes ?? [])
-    .filter((scene) => scene.pageId === operation.pageId && sceneChartIds(scene).some((id) => ids.includes(id)))
+    .filter((scene) => sceneChartIds(scene).some((id) => ids.includes(id)))
     .map(({ name, id }) => name || id);
   const deletesCharts = (operation.kind === "remove-page" || operation.kind === "remove-section")
     && operation.disposition === "delete-charts";
   const movesPageScope = operation.kind === "merge-page"
     || (operation.kind === "remove-page" && operation.disposition === "move-sections");
-  const invalidatesPageScopedSceneCharts = operation.kind === "move-section" || deletesCharts;
-  const groupText = chronoGroups.length
+  const groupText = dashboard.configVersion === 7 ? "" : chronoGroups.length
     ? deletesCharts
       ? `${chronoGroups.join(", ")} loses membership for ${charts.join(" and ")}.`
       : `${chronoGroups.join(", ")} remains attached.`
@@ -273,11 +272,11 @@ export function previewBuildStructureConsequences(dashboard, operation) {
   const sceneText = scenes.length
     ? movesPageScope
       ? `${scenes.join(", ")} moves to the destination Page without losing chart membership.`
-      : invalidatesPageScopedSceneCharts
+      : deletesCharts
         ? `${scenes.join(", ")} loses ${charts.join(" and ")}.`
-        : "No Scene references change."
-    : "No Scene references change.";
-  return { charts, chronoGroups, scenes, summary: `${groupText} ${sceneText}` };
+        : "No Storyline references change."
+    : "No Storyline references change.";
+  return { charts, chronoGroups, scenes, summary: `${groupText} ${sceneText}`.trim() };
 }
 
 export function beginBuildLayoutSave(draft) {
@@ -403,74 +402,6 @@ function chartIdsForSections(sections = []) {
 
 function sceneChartIds(scene) {
   return scene.chartIds ?? scene.members?.map(({ chartId }) => chartId) ?? [];
-}
-
-function removePageScopedSceneChartReferences(dashboard, pageId, chartIds) {
-  const scenes = (dashboard?.scenes ?? []).map((scene) => (
-    scene.pageId === pageId ? removeSceneChartReferences(scene, chartIds) : scene
-  ));
-  return scenes.some((scene, index) => scene !== dashboard.scenes[index])
-    ? { ...dashboard, scenes }
-    : dashboard;
-}
-
-function removeChartReferences(dashboard, chartIds) {
-  const removed = new Set(chartIds);
-  const removedChronoGroupIds = new Set();
-  const chronoGroups = (dashboard?.chronoGroups ?? []).flatMap((group) => {
-    const members = (group.members ?? []).filter(({ chartId }) => !removed.has(chartId));
-    const chartIdsValue = Array.isArray(group.chartIds)
-      ? group.chartIds.filter((id) => !removed.has(id))
-      : group.chartIds;
-    if (members.length > 0) {
-      if (members.length === (group.members ?? []).length && chartIdsValue?.length === group.chartIds?.length) return [group];
-      return [{ ...group, members, ...(Array.isArray(group.chartIds) ? { chartIds: chartIdsValue } : {}) }];
-    }
-    removedChronoGroupIds.add(group.id);
-    return [];
-  });
-  const scenes = (dashboard?.scenes ?? [])
-    .filter((scene) => !removedChronoGroupIds.has(scene?.chronoGroupId))
-    .map((scene) => removeSceneChartReferences(scene, chartIds));
-  return { ...dashboard, chronoGroups, scenes };
-}
-
-function pruneScenesWithRemovedParents(dashboard, { pageIds = new Set(), chronoGroupIds = new Set() } = {}) {
-  const scenes = (dashboard?.scenes ?? []).filter((scene) => (
-    !pageIds.has(scene?.pageId)
-    && !chronoGroupIds.has(scene?.chronoGroupId)
-  ));
-  return scenes.length === (dashboard.scenes ?? []).length ? dashboard : { ...dashboard, scenes };
-}
-
-function removeSceneChartReferences(scene, chartIds) {
-  const removed = new Set(chartIds);
-  const chartIdsValue = Array.isArray(scene.chartIds)
-    ? scene.chartIds.filter((id) => !removed.has(id))
-    : scene.chartIds;
-  const members = Array.isArray(scene.members)
-    ? scene.members.filter(({ chartId }) => !removed.has(chartId))
-    : scene.members;
-  const presentChartIds = Array.isArray(scene.present?.chartIds)
-    ? scene.present.chartIds.filter((id) => !removed.has(id))
-    : scene.present?.chartIds;
-  const frameRule = scene.frameRule?.chartId && removed.has(scene.frameRule.chartId)
-    ? { type: "calendar" }
-    : scene.frameRule;
-  const changed = chartIdsValue?.length !== scene.chartIds?.length
-    || members?.length !== scene.members?.length
-    || presentChartIds?.length !== scene.present?.chartIds?.length
-    || frameRule !== scene.frameRule;
-  if (!changed) return scene;
-  return {
-    ...scene,
-    ...(Array.isArray(scene.chartIds) ? { chartIds: chartIdsValue } : {}),
-    ...(Array.isArray(scene.members) ? { members } : {}),
-    ...(Array.isArray(scene.present?.chartIds) ? {
-      present: { ...scene.present, chartIds: presentChartIds },
-    } : {}),
-    ...(scene.frameRule !== undefined || frameRule !== undefined ? { frameRule } : {}),
-  };
 }
 
 function reassignPageScopedScenes(dashboard, sourcePageId, targetPageId) {

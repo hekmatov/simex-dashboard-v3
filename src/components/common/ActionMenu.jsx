@@ -11,6 +11,23 @@ export function actionMenuKeyTarget(key, index, count) {
   return null;
 }
 
+export function actionMenuPlacement({
+  rect, viewportWidth, viewportHeight, commandInset = 0, stickyNavigationBottom = 0,
+}) {
+  const width = 260;
+  const gap = 4;
+  const edge = 8;
+  const top = Math.min(
+    Math.max(rect.bottom + gap, commandInset, stickyNavigationBottom + gap),
+    viewportHeight - edge,
+  );
+  return {
+    left: Math.max(edge, Math.min(rect.left, viewportWidth - width - edge)),
+    top,
+    maxHeight: Math.max(0, viewportHeight - top - edge),
+  };
+}
+
 export default function ActionMenu({
   id,
   label,
@@ -54,14 +71,25 @@ export default function ActionMenu({
   const toggle = () => {
     if (disabled) return;
     if (open) { close(); return; }
-    const rect = triggerRef.current.getBoundingClientRect();
-    const width = 260;
-    const top = Math.min(rect.bottom + 4, window.innerHeight - 8);
-    setPlacement({
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
-      top,
-      maxHeight: Math.max(0, window.innerHeight - top - 8),
-    });
+    const trigger = triggerRef.current;
+    const buildFrame = trigger.closest('.app-frame[data-dashboard-mode="build"]');
+    const commandInset = buildFrame
+      ? Number.parseFloat(getComputedStyle(buildFrame).getPropertyValue("--right-side-drawer-top")) || 0
+      : 0;
+    const navigationRow = buildFrame?.querySelector(
+      '.dashboard-command-crown[data-sticky-location="true"] .dashboard-identity-row',
+    );
+    // At tablet widths the pinned actions wrap below the sticky row's box.
+    const stickyNavigationBottom = navigationRow
+      ? Math.max(...[navigationRow, ...navigationRow.children].map(node => node.getBoundingClientRect().bottom))
+      : 0;
+    setPlacement(actionMenuPlacement({
+      rect: trigger.getBoundingClientRect(),
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      commandInset,
+      stickyNavigationBottom,
+    }));
     setOpen(true);
   };
 

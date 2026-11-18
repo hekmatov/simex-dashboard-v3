@@ -154,7 +154,7 @@ function renderPresent(Component, overrides = {}) {
   }
 }
 
-test("active degraded Scene warns the moderator while Present keeps rendering", () => {
+test("active degraded Storyline warns the moderator while Present keeps rendering", () => {
   const degradedScene = {
     id: "scene-review",
     chronoGroupId: "group-review",
@@ -171,7 +171,7 @@ test("active degraded Scene warns the moderator while Present keeps rendering", 
     },
   });
   assert.match(html, /data-active-scene-id="scene-review"/);
-  assert.match(html, /Scene presentation needs review/);
+  assert.match(html, /Storyline presentation needs review/);
   assert.match(html, /Displayed charts/);
   assert.doesNotMatch(html, /temporalReview|sourceIds/);
 });
@@ -197,9 +197,9 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, />Capacity</);
   assert.match(html, /aria-label="Move Capacity up"/);
   assert.match(html, /aria-label="Move Cases down"/);
-  assert.match(html, /aria-label="Scene layout"/);
-  assert.match(html, /aria-label="Presentation source"/);
-  assert.match(html, /aria-label="Presentation time"/);
+  assert.match(html, /aria-label="Storyline layout"/);
+  assert.doesNotMatch(html, /aria-label="Presentation source"/);
+  assert.doesNotMatch(html, /aria-label="Presentation time"/);
   assert.match(html, />Audience display options<\/button>/);
   assert.doesNotMatch(html, /aria-label="Current page"/);
   assert.doesNotMatch(html, /aria-label="Display Page"/);
@@ -207,10 +207,11 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /Biomedical/);
   assert.doesNotMatch(html, /Show scene title/);
   assert.match(html, />Black<\/button>/);
-  assert.match(html, /aria-label="Close Chrono Groups"/);
+  assert.match(html, /aria-label="Close output controls"/);
   assert.doesNotMatch(html, />Blackout<|>Restore<|>End presentation<|>Presentation source<|audience-snapshot-caption|audience-snapshot-resolution/);
   assert.match(html, /audience-snapshot-controls[\s\S]*aria-label="Move Capacity up"/);
-  assert.equal((html.match(/data-dashboard-painted-boundary="true"/g) ?? []).length, 3);
+  assert.equal((html.match(/data-dashboard-painted-boundary="true"/g) ?? []).length, 1,
+    "the output-only controller owns one painted control region; shared time lives in the crown");
   assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /permission|role|authoriz|access control/i);
 });
 
@@ -244,7 +245,7 @@ test("Audience monitor uses the accepted session snapshot and falls back locally
   const resolveMonitorState = presentModule?.resolveAudienceMonitorPresentationState;
   assert.equal(typeof resolveMonitorState, "function");
   const localPresentationState = {
-    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "epidemic-time" },
+    source: { kind: "scene", scene_id: "epidemic-time" },
     audience: {
       date_position: { x_permille: 680, y_permille: 40, width_permille: 280 },
     },
@@ -266,7 +267,7 @@ test("Audience monitor uses the accepted session snapshot and falls back locally
   }), localPresentationState);
 });
 
-test("Present starts Chrono Groups collapsed and keeps the requested status-action order", () => {
+test("Present starts Output controls collapsed and keeps the requested status-action order", () => {
   const html = renderPresent(presentModule.default);
   const actions = html.match(/<div class="present-status-actions">([\s\S]*?)<\/div>/)?.[1] ?? "";
   const labels = [...actions.matchAll(/<button[^>]*>([^<]+)<\/button>/g)]
@@ -276,16 +277,16 @@ test("Present starts Chrono Groups collapsed and keeps the requested status-acti
     "Open audience display",
     "Audience display options",
     "Rehearse at 1920 × 1080",
-    "Chrono Groups",
+    "Output controls",
     "Theme",
   ]);
   assert.match(
     actions,
-    /data-presentation-control-id="chrono-groups"[^>]*aria-controls="present-chrono-groups"[^>]*aria-expanded="false"[^>]*aria-pressed="false"/,
+    /data-presentation-control-id="output-controls"[^>]*aria-controls="present-output-controls"[^>]*aria-expanded="false"[^>]*aria-pressed="false"/,
   );
   assert.match(
     html,
-    /<section class="present-action-dock"[^>]*id="present-chrono-groups"[^>]*hidden=""/,
+    /<section class="present-action-dock"[^>]*id="present-output-controls"[^>]*hidden=""/,
   );
 });
 
@@ -331,7 +332,7 @@ test("Audience display options drawer preserves the live audience-fact values", 
   assert.equal(typeof audienceDrawerModule?.default, "function");
   const information = [
     { key: "dashboard_name", label: "Dashboard name", value: "Test dashboard", unavailableReason: "" },
-    { key: "scene_name", label: "Scene name", value: null, unavailableReason: "No Scene is loaded." },
+    { key: "scene_name", label: "Storyline name", value: null, unavailableReason: "No Storyline is loaded." },
   ];
   const html = renderToStaticMarkup(React.createElement(audienceDrawerModule.default, {
     open: true,
@@ -345,8 +346,8 @@ test("Audience display options drawer preserves the live audience-fact values", 
   assert.match(html, /role="dialog"/);
   assert.match(html, /aria-modal="true"/);
   assert.match(html, /aria-label="Display Dashboard name"[^>]*checked/);
-  assert.match(html, /aria-label="Display Scene name"[^>]*disabled/);
-  assert.match(html, /No Scene is loaded\./);
+  assert.match(html, /aria-label="Display Storyline name"[^>]*disabled/);
+  assert.match(html, /No Storyline is loaded\./);
 });
 
 test("Present exposes connecting and reconnecting moderator status copy", () => {
@@ -384,7 +385,7 @@ test("Present synchronously normalizes invalid layout while preserving capacity"
   const sceneLayout = elementMarkupByAriaLabel(
     mismatchedLayoutHtml,
     "select",
-    "Scene layout",
+    "Storyline layout",
   );
   assert.match(
     sceneLayout,

@@ -1,4 +1,5 @@
 import React from "react";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
 
 import { useDashboardChartTheme } from "../../theme/DashboardChartThemeContext.jsx";
 import {
@@ -7,6 +8,7 @@ import {
   DEFAULT_CHART_TEXT_THEME,
   readChartTextTheme,
   sameChartTextTheme,
+  waitForChartFonts,
 } from "./EChartsChartView.jsx";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
@@ -25,6 +27,7 @@ export default function EmbeddedEChartsItem({
   const [runtimeError, setRuntimeError] = React.useState(null);
   const [textTheme, setTextTheme] = React.useState(DEFAULT_CHART_TEXT_THEME);
   const dashboardChartTheme = useDashboardChartTheme();
+  const typography = useChartTypography();
   const typographyKey = dashboardChartTheme?.key ?? "";
   const audienceTier = audienceScale?.tier ?? "";
   const modelError = invalidModelError(model);
@@ -53,7 +56,11 @@ export default function EmbeddedEChartsItem({
       typographyKey,
       audienceTier,
     );
-    setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
+    let cancelled = false;
+    void waitForChartFonts(typeof document === "undefined" ? null : document.fonts, next).then(() => {
+      if (!cancelled) setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
+    });
+    return () => { cancelled = true; };
   }, [audienceTier, typographyKey]);
 
   React.useEffect(() => {
@@ -89,8 +96,9 @@ export default function EmbeddedEChartsItem({
       model,
       textTheme,
       audienceScale,
+      typography,
     );
-  }, [activeError, audienceScale, createLifecycle, model, textTheme]);
+  }, [activeError, audienceScale, createLifecycle, model, textTheme, typography]);
 
   React.useEffect(() => () => {
     disposeCurrentLifecycle(lifecycleRef, lifecycleFactoryRef);
@@ -117,6 +125,7 @@ export function updateEmbeddedEChartsLifecycle(
   model,
   textTheme = DEFAULT_CHART_TEXT_THEME,
   audienceScale = null,
+  typography = null,
 ) {
   const presented = applyEChartsPresentation(
     model,
@@ -124,6 +133,7 @@ export function updateEmbeddedEChartsLifecycle(
     false,
     textTheme,
     audienceScale,
+    typography,
   );
   lifecycle?.update?.(presented);
   return presented;

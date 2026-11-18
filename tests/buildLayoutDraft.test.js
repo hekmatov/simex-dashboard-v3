@@ -198,7 +198,7 @@ test("structure commands retain unaffected pages, sections, scenes, and Chrono G
     assert.strictEqual(moved.value.pages[2], untouchedPage);
     assert.strictEqual(moved.value.chronoGroups[0], chronoGroup);
     assert.strictEqual(moved.value.scenes[1], unrelatedScene);
-    assert.notStrictEqual(moved.value.scenes[0], before.scenes[0]);
+    assert.strictEqual(moved.value.scenes[0], before.scenes[0]);
   }
 
   {

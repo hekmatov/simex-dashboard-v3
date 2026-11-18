@@ -47,7 +47,11 @@ export function CanonicalDashboardFooter({ dashboard }) {
   const contactUrl = dashboard.contactEmail ? `mailto:${dashboard.contactEmail}` : null;
   return (
     <footer className="dashboard-footer" aria-label="Dashboard information and feedback">
-      <div><strong>{dashboard.footerTitle ?? "SimEx Dashboard V3"}</strong><span>{dashboard.footerCredit ?? "Developed by Hekmat Alrouh"}</span><span>App version {APP_VERSION}</span></div>
+      <div>
+        <strong>{dashboard.footerTitle ?? "SimEx Dashboard V3"}</strong>
+        <span>{dashboard.footerCredit ?? "Developed by Hekmat Alrouh"}</span>
+        <span className="dashboard-footer__version"><span className="dashboard-footer__version-label">App version </span>{APP_VERSION}</span>
+      </div>
       <nav aria-label="Project links">
         <a href={feedbackUrl} target="_blank" rel="noreferrer">Report a bug / request a feature</a>
         {contactUrl && <a href={contactUrl}>Contact maintainer</a>}

@@ -34,7 +34,8 @@ export function createBlankDashboardContent(dashboard = {}) {
   blank.datasetProfiles = {};
   blank.contentLibrary = { mediaItems: {}, sourceEntries: {} };
   blank.assets = {};
-  blank.chronoGroups = [];
+  if (blank.configVersion === 7) delete blank.chronoGroups;
+  else blank.chronoGroups = [];
   blank.scenes = [];
   for (const key of RUNTIME_CONTENT_KEYS) delete blank[key];
   return blank;

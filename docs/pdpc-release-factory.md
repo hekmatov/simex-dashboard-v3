@@ -9,21 +9,23 @@ The PDPC release factory turns one validated SimEx dashboard package into two in
 
 Both sites are generated together from the same package bytes and Git revision. The Scenario page is selected from one parsed configuration and serialized identically into both outputs.
 
-## Generate the example release
+Each participant configuration is projected before source or asset materialization. Sources, profiles, media and files outside the selected page pair are omitted. A cross-page Storyline is retained only when the variant supports all of its members; the manifest lists omitted compositions. Keep the full workspace and original package separately with the operator.
+
+## Select the reviewed input
 
 Run this command from the repository root on a clean tracked worktree:
 
 ```powershell
-pnpm.cmd release:pdpc --bundle "C:\Users\hekma\Downloads\SimEx-dashboard-bundle-20260905 (4).json"
+pnpm.cmd release:pdpc --bundle "release/inputs/accepted-dashboard-bundle.json"
 ```
 
 The default output root is `release/pdpc`. To use another location:
 
 ```powershell
-pnpm.cmd release:pdpc --bundle "C:\Users\hekma\Downloads\SimEx-dashboard-bundle-20260905 (4).json" --out-dir "C:\Users\hekma\Documents\SimEx PDPC Release"
+pnpm.cmd release:pdpc --bundle "release/inputs/accepted-dashboard-bundle.json" --out-dir "release/reviewed-pdpc"
 ```
 
-The command reads the external bundle in place. It does not copy it into the repository, modify it, or promote it over `public/config/dashboard.json`.
+Use the exact accepted exercise package and record its SHA256. The selected HeV-A26 baseline supersedes the historical September 5 example; its RC input includes the approved minimal Scenario page. The command reads the bundle in place without modifying it or promoting it over `public/config/dashboard.json`.
 
 ## Cloudflare ZIP and single-file offline deliverables
 

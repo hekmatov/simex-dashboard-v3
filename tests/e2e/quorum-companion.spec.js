@@ -1,10 +1,16 @@
 import { test, expect } from "@playwright/test";
+import { catalogueMatchesDashboardSnapshot } from "../../src/lib/quorumCatalogue.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const FIRST_CHART = "chart-line-mtgz6v76";
-const SECOND_CHART = "chart-line-mtgytrwj";
+const FIRST_CHART = "bio_confirmed_cases";
+const SECOND_CHART = "bio_daily_cases_bar";
 const browserErrors = new WeakMap();
+const fixtureCharts = new WeakMap();
+
+// Companion integration uses the current native contract. The archived V2
+// catalogue remains available only to its explicitly historical consumers.
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.beforeEach(async ({ page, request }) => {
   const errors = [];
@@ -14,6 +20,20 @@ test.beforeEach(async ({ page, request }) => {
     if (message.type() === "error") errors.push(message.text());
   });
   await request.post(`${CONTROL_URL}/__test__/reset`);
+  const [config, catalogue, aliases] = await Promise.all([
+    request.get("/config/dashboard.json").then(response => response.json()),
+    request.get("/integration/quorum-chart-catalogue.json").then(response => response.json()),
+    request.get("/config/chart-aliases.json").then(response => response.json()),
+  ]);
+  expect(config.configVersion).toBe(7);
+  expect(catalogue.contract_version).toBe("3");
+  expect(await catalogueMatchesDashboardSnapshot(config, aliases, catalogue)).toBe(true);
+  const charts = config.pages.flatMap(page => page.sections.flatMap(section => section.panels.map(panel => panel.chart ?? panel)));
+  for (const id of [FIRST_CHART, SECOND_CHART]) {
+    expect(charts.filter(chart => chart.id === id)).toHaveLength(1);
+    expect(catalogue.charts.some(chart => chart.chart_id === id)).toBe(true);
+  }
+  fixtureCharts.set(page, new Map(charts.map(chart => [chart.id, chart])));
 });
 
 test("Quorum chart display remains available when the dashboard starts on showcase Home", async ({
@@ -117,7 +137,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
     .toHaveCount(0);
 
   await page
-    .getByRole("button", { name: "Move International Confirmed Cases (Cumulative) previous" })
+    .getByRole("button", { name: `Move ${fixtureCharts.get(page).get(SECOND_CHART).title} previous` })
     .click();
   await expect
     .poll(async () => stateEvents(request).then((events) => events.at(-1)))

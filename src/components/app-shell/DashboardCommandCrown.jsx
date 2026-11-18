@@ -5,6 +5,7 @@ import CompactCrownDisclosure from "./CompactCrownDisclosure.jsx";
 import DashboardIdentityRow from "./DashboardIdentityRow.jsx";
 import ModeContextStrip from "./ModeContextStrip.jsx";
 import ModeSwitcher from "./ModeSwitcher.jsx";
+import { SimExIcon } from "../common/SimExIcon.js";
 
 export default function DashboardCommandCrown({
   mode,
@@ -37,32 +38,42 @@ export default function DashboardCommandCrown({
   }, []);
   React.useEffect(() => { if (!compact) setDisclosureOpen(false); }, [compact]);
   if (compact) {
-    const pageLabel = activePage?.label || activePage?.title || activePage?.id || "Pages";
+    const menuIcon = <svg className="simex-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>;
     return (
       <div className="dashboard-command-crown" data-crown-compact="true" data-sticky-location={noticeNode ? "true" : undefined} style={{ "--dashboard-mode-context-block-size": "var(--simex-command-crown-row)" }}>
         <section className="dashboard-identity-row crown-compact-row" data-command-crown-layer="location" aria-label="Dashboard location and Page tools">
-          <span className="app-frame-identity">SimEx</span>
-          <ModeSwitcher mode={mode} availableModes={availableModes} onModeRequest={onModeRequest} disabled={disabled} disabledReason={disabledReason} />
           <button
             ref={disclosureTriggerRef}
             type="button"
             className="secondary crown-disclosure-trigger"
+            aria-label="Dashboard menu"
+            title="Dashboard menu"
             aria-expanded={disclosureOpen}
             aria-controls="crown-disclosure"
-            onClick={() => setDisclosureOpen((open) => !open)}
+            onClick={() => disclosureOpen ? closeDisclosure() : setDisclosureOpen(true)}
           >
-            {pageLabel}
+            {disclosureOpen ? <SimExIcon iconId="close" size={20} /> : menuIcon}
           </button>
+          {showPageNavigation && <nav className="crown-compact-pages" aria-label="Dashboard pages">
+            {(pages ?? []).map((page) => {
+              const current = page.id === activePage?.id;
+              return <button key={page.id} type="button" className={current ? "active" : "secondary"}
+                data-dashboard-page-id={page.id} aria-current={current ? "page" : undefined}
+                onClick={() => { onPageRequest?.(page.id); if (disclosureOpen) closeDisclosure(); }}>
+                {page.label || page.title || page.id}
+              </button>;
+            })}
+          </nav>}
         </section>
         <CompactCrownDisclosure
           open={disclosureOpen}
           onClose={closeDisclosure}
-          dashboardIdentity={dashboardIdentity}
-          activePage={activePage}
-          pages={pages}
-          onPageRequest={onPageRequest}
           pageActions={pageActions}
-        />
+        >
+          <ModeSwitcher mode={mode} availableModes={availableModes}
+            onModeRequest={(next) => { onModeRequest?.(next); closeDisclosure(); }}
+            disabled={disabled} disabledReason={disabledReason} />
+        </CompactCrownDisclosure>
         {noticeNode}
         <ModeContextStrip mode={mode} contextNode={contextNode} statusNode={statusNode} disabledReason={contextDisabledReason} />
       </div>

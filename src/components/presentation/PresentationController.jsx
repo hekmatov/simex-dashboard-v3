@@ -1,7 +1,7 @@
 import { adaptSceneAudienceToPresentation } from "../../lib/presentationProtocol.js";
 import { resolvePresentationResolution } from "../../lib/presentationResolution.js";
-import PresentationSourcePicker from "./PresentationSourcePicker.jsx";
 import { createPresentationThemeSnapshot } from "../../theme/dashboardTheme.js";
+import { makePresentationTime } from "../../charting/time/acceptedTimeProjection.js";
 
 const DEFAULT_AUDIENCE = Object.freeze({
   date_position: Object.freeze({
@@ -46,9 +46,7 @@ export function presentationSourceEligibility(scene, { compositionReady = true }
 }
 
 export function resolvePresentPlayback(playback) {
-  if (playback.source?.kind !== "default") return playback;
-  return { ...playback, source: { kind: "manual", id: null }, activeGroup: null, activeGroupId: null,
-    activeScene: null, activeSceneId: null, clock: [], activeIndex: 0, activeEpochMs: null, playing: false };
+  return playback;
 }
 
 export function buildPresentationState({
@@ -64,43 +62,12 @@ export function buildPresentationState({
   themeProjection,
 }) {
   const scene = playback.activeScene ?? null;
-  const implicitDefaultPage = playback.source?.kind === "default" && !scene;
-  const implicitEmptyDefaultGroup = (
-    implicitDefaultPage
-    && (playback.clock?.length ?? 0) === 0
-  );
-  const group = implicitEmptyDefaultGroup ? null : playback.activeGroup ?? null;
   const source = scene
     ? {
         kind: "scene",
         scene_id: scene.id,
-        chrono_group_id: scene.chronoGroupId,
       }
-    : group
-      ? {
-          kind: "Chrono Group",
-          scene_id: null,
-          chrono_group_id: group.id,
-        }
-      : { kind: "manual", scene_id: null, chrono_group_id: null };
-  const clock = [...(playback.clock ?? [])];
-  const timeline = source.kind === "manual"
-    ? null
-    : {
-        frame_epochs: clock,
-        frame_index: Math.min(
-          Math.max(0, playback.activeIndex ?? 0),
-          Math.max(0, clock.length - 1),
-        ),
-        period: implicitDefaultPage
-          ? { start: clock[0], end: clock.at(-1) }
-          : authoredInclusivePeriod(scene?.period ?? group?.period),
-        trace_mode: playback.traceMode === "full" ? "full" : "reveal",
-        seconds_per_frame: scene?.secondsPerFrame
-          ?? playback.speed
-          ?? group?.secondsPerFrame
-          ?? 1,
-      };
+    : { kind: "manual", scene_id: null };
   const items = displayedChartIds.map((itemId) => (
     structuredClone(presentableItemIndex.get(itemId).descriptor)
   ));
@@ -118,8 +85,7 @@ export function buildPresentationState({
       displayed_chart_ids: [...displayedChartIds],
       layout,
     },
-    timeline,
-    matching: { use_authored_settings: true },
+    time: makePresentationTime(playback),
     output_mode: outputMode,
     blackout: blackout === true,
     audience: scene?.audience?.datePosition
@@ -130,23 +96,6 @@ export function buildPresentationState({
       audience_facts: { ...audienceFacts },
     },
   };
-}
-
-function authoredInclusivePeriod(period) {
-  return {
-    start: authoredPeriodBoundary(period?.startEpochMs ?? period?.start, "start"),
-    end: authoredPeriodBoundary(period?.endEpochMs ?? period?.end, "end"),
-  };
-}
-
-function authoredPeriodBoundary(value, edge) {
-  if (Number.isSafeInteger(value)) return value;
-  if (typeof value !== "string" || value.trim() === "") return undefined;
-  const canonical = /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? `${value}T${edge === "end" ? "23:59:59.999" : "00:00:00.000"}Z`
-    : value;
-  const epochMs = Date.parse(canonical);
-  return Number.isSafeInteger(epochMs) ? epochMs : undefined;
 }
 
 export function executePresentationEndEffects(session, adapters) {
@@ -188,96 +137,19 @@ export function executePresentationEndEffects(session, adapters) {
   return actions;
 }
 
-export default function PresentationController({
-  runtime,
-  playback,
-  presentationState,
-  sourceEligibility = { status: "valid", reason: null },
-  onClose,
-}) {
+export default function PresentationController({ runtime, onClose }) {
   const session = runtime.sessionState;
-  const hasClock = playback.clock.length > 0;
-  const atFirst = !hasClock || playback.activeIndex <= 0;
-  const atLast = !hasClock || playback.activeIndex >= playback.clock.length - 1;
-
-  const selectScene = (sceneId) => {
-    runtime.selectPresentationSource?.({ kind: "scene", id: sceneId });
-    runtime.dispatch({ type: "SELECT_SCENE", sceneId });
-    playback.dispatch({ type: "setScene", sceneId });
-  };
-  const selectGroup = (groupId) => {
-    const group = playback.groups.find(group => group.id === groupId);
-    runtime.selectPresentationSource?.(groupId === null ? { kind: "manual" } : { kind: "group", id: groupId },
-      groupId === null ? undefined : (group?.members ?? []).map(member => member.chartId));
-    runtime.dispatch(groupId === null ? { type: "PAUSE" } : { type: "SELECT_CHRONO_GROUP", groupId });
-    playback.dispatch({ type: "setGroup", groupId });
-  };
-  const playbackAction = (sessionAction, playbackActionValue) => {
-    const nextSession = runtime.dispatch(sessionAction);
-    if (sessionAction.type === "PLAY" && nextSession?.playback !== "playing") {
-      playback.dispatch({ type: "pause" });
-      return;
-    }
-    playback.dispatch(playbackActionValue);
-  };
-  const output = (mode) => runtime.dispatch({ type: "SET_OUTPUT_MODE", mode });
-
-  return (
-    <section className="presentation-controller" aria-label="Presenter controller">
-      <button type="button" className="secondary present-controls-close" aria-label="Close Chrono Groups"
-        data-presentation-control-id="close-chrono-groups" onClick={onClose}>×</button>
-      <div
-        className="presentation-controller__source"
-        data-dashboard-painted-boundary="true"
-      >
-        <PresentationSourcePicker
-          scenes={playback.scenes}
-          groups={playback.groups}
-          activeSceneId={playback.activeSceneId}
-          activeGroupId={playback.activeGroupId}
-          onSelectScene={selectScene}
-          onSelectGroup={selectGroup}
-        />
-      </div>
-
-      <div
-        className="presentation-controller__timeline"
-        data-dashboard-painted-boundary="true"
-      >
-        <button type="button" className="secondary" data-presentation-control-id="previous" disabled={atFirst} onClick={() => playbackAction({ type: "PREVIOUS" }, { type: "previous", clockLength: playback.clock.length })}>Previous</button>
-        <label className="present-field present-time-slider">
-          <span>Presentation time</span>
-          <input type="range" aria-label="Presentation time" data-presentation-control-id="seek" min="0" max={Math.max(0, playback.clock.length - 1)} step="1" value={playback.activeIndex} disabled={!hasClock} onChange={(event) => {
-            const frameIndex = Number(event.target.value);
-            playbackAction({ type: "SEEK", frameIndex }, { type: "seek", index: frameIndex, clockLength: playback.clock.length });
-          }} />
-        </label>
-        <button type="button" className="secondary" data-presentation-control-id="next" disabled={atLast} onClick={() => playbackAction({ type: "NEXT" }, { type: "next", clockLength: playback.clock.length })}>Next</button>
-        <button type="button" className="secondary" aria-pressed={playback.traceMode !== "full"} data-presentation-control-id="trace-reveal" onClick={() => playbackAction({ type: "SET_TRACE_MODE", mode: "reveal" }, { type: "setTraceMode", mode: "reveal" })}>Reveal to frame</button>
-        <button type="button" className="secondary" aria-pressed={playback.traceMode === "full"} data-presentation-control-id="trace-full" onClick={() => playbackAction({ type: "SET_TRACE_MODE", mode: "full" }, { type: "setTraceMode", mode: "full" })}>Full timeline</button>
-        <label className="present-field present-cadence-field">
-          <span>Seconds per frame</span>
-          <input type="number" min="0.1" step="0.1" value={playback.speed} data-presentation-control-id="cadence" onChange={(event) => playback.dispatch({ type: "setSpeed", speed: Number(event.target.value) })} />
-        </label>
-        <button type="button" data-presentation-control-id="play" disabled={!hasClock || playback.playing} onClick={() => playbackAction({ type: "PLAY" }, { type: "play", clockLength: playback.clock.length })}>Play</button>
-        <button type="button" className="secondary" data-presentation-control-id="pause" disabled={!playback.playing} onClick={() => playbackAction({ type: "PAUSE" }, { type: "pause" })}>Pause</button>
-      </div>
-
-      <div
-        className="presentation-controller__output"
-        data-dashboard-painted-boundary="true"
-      >
-        <button type="button" className="secondary" data-presentation-control-id="output-active" aria-pressed={session.output === "active" && !session.blackout} onClick={() => output("active")}>Active</button>
-        <button type="button" className="secondary" data-presentation-control-id="output-holding" aria-pressed={session.output === "holding" && !session.blackout} onClick={() => output("holding")}>Holding</button>
-        <button type="button" className="secondary" data-presentation-control-id="output-black" aria-pressed={session.output === "blank" || session.blackout} onClick={() => output("blank")}>Black</button>
-      </div>
-      {session.rejectionReason && (
-        <p className="present-connection-error" role="status">
-          {session.rejectionReason.message}
-        </p>
-      )}
-    </section>
-  );
+  const output = mode => runtime.dispatch({ type: "SET_OUTPUT_MODE", mode });
+  return <section className="presentation-controller" aria-label="Presenter output controls">
+    <button type="button" className="secondary present-controls-close" aria-label="Close output controls"
+      data-presentation-control-id="close-output-controls" onClick={onClose}>×</button>
+    <div className="presentation-controller__output" data-dashboard-painted-boundary="true">
+      <button type="button" className="secondary" data-presentation-control-id="output-active" aria-pressed={session.output === "active" && !session.blackout} onClick={() => output("active")}>Active</button>
+      <button type="button" className="secondary" data-presentation-control-id="output-holding" aria-pressed={session.output === "holding" && !session.blackout} onClick={() => output("holding")}>Holding</button>
+      <button type="button" className="secondary" data-presentation-control-id="output-black" aria-pressed={session.output === "blank" || session.blackout} onClick={() => output("blank")}>Black</button>
+    </div>
+    {session.rejectionReason && <p className="present-connection-error" role="status">{session.rejectionReason.message}</p>}
+  </section>;
 }
 
 function guarded(session, action) {

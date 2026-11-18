@@ -5,10 +5,18 @@
 }
 
 .fullscreen-backdrop--immersive .multi-fullscreen-panel {
-  display: block;
+  display: flex;
+  flex-direction: column;
   position: relative;
   inline-size: 100%;
 }
+
+.fullscreen-context-header { align-items: center; display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; justify-content: space-between; min-width: 0; padding: 6px; }
+.fullscreen-context-header__identity { align-items: center; display: flex; flex: 1 1 300px; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.fullscreen-backdrop--immersive .fullscreen-context-header .multi-fullscreen-controls { position: static; transform: none; left: auto; top: auto; width: auto; max-width: 100%; flex-wrap: wrap; border: 0; background: none; box-shadow: none; padding: 0; }
+.fullscreen-backdrop--immersive .fullscreen-context-header .fullscreen-toolbar-close { position: relative; inset: auto; flex: 0 0 auto; }
+.fullscreen-chart-content { flex: 1 1 0; min-block-size: 0; min-inline-size: 0; }
+.cursor-time-readout { font-size: var(--audience-text-size, 13px); font-variant-numeric: tabular-nums; }
 
 .multi-fullscreen-panel.dashboard-dialog {
   inline-size: 100%;

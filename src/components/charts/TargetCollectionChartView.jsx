@@ -1,4 +1,6 @@
 import React from "react";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
+import ChartSourceCaption from "./ChartSourceCaption.jsx";
 
 import CollectionDisplay from "../collection/CollectionDisplay.jsx";
 import EmbeddedEChartsItem from "./EmbeddedEChartsItem.jsx";
@@ -18,6 +20,7 @@ export default function TargetCollectionChartView({
   interactionMode = "active",
   audienceScale = null,
 }) {
+  const typography = useChartTypography();
   const accessibilityEnabled = false;
   const titleId = React.useId();
   const descriptionId = React.useId();
@@ -37,7 +40,7 @@ export default function TargetCollectionChartView({
     ...titleContainerProps(chart),
   },
   React.createElement("header", { className: "collection-display-header" },
-    React.createElement("h3", { id: titleId, className: chartTitleClassName(chart), style: chartTitleStyle(chart) }, title),
+    React.createElement("h3", { id: titleId, className: chartTitleClassName(chart), style: chartTitleStyle(chart, typography) }, title),
     React.createElement("div", { id: controlsPortalId, className: "collection-header-transport-host" })),
   chartDescriptionVisible(chart)
     ? React.createElement("p", {
@@ -50,6 +53,7 @@ export default function TargetCollectionChartView({
           className: "chart-view-title--visually-hidden",
         }, description)
     : null,
+  React.createElement(ChartSourceCaption),
   React.createElement("div", {
     className: "chart-target-collection",
   }, React.createElement(CollectionDisplay, {

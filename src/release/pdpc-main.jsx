@@ -22,6 +22,7 @@ import "../styles/operation-status.css";
 import "../styles/right-side-drawer.css";
 import "../styles/desktop-mode-gate.css";
 import "./pdpc-release.css";
+import "../styles/phone-view.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {

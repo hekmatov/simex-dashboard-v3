@@ -106,7 +106,7 @@ test("Scene unit move actions form two stable single-line rows", async ({ browse
   }
 });
 
-test("Scene details keeps the simple frame source control at standard height", async ({ browser }) => {
+test("Storyline details keeps the simple frame source control at standard height", async ({ browser }) => {
   const surface = await openSurface(browser, "scene-studio-details");
   try {
     const frameSource = surface.page.locator("#scene-frame-source");

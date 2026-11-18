@@ -15,6 +15,7 @@ import { buildPointLabelMatrix } from "../presentation/pointLabelSelection.js";
 import { categoryDescriptors, chartLegendDescriptors, resolveOrderedKeys } from "../presentation/categorySeriesPresentation.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import { unambiguousLegacyChartMatching } from "../time/playbackPageScope.js";
 import {
   getChartFormSectionDefinition,
 } from "../schemas/schemaTypes.js";
@@ -259,6 +260,7 @@ function dataFields({
   geoSources,
   geoJoinFields,
   includeCitation,
+  chronoGroups,
 }) {
   const fields = schema.roles.map((role) => {
     const supportsAxisAssignment = schema.dataFamily === "axis"
@@ -345,6 +347,10 @@ function dataFields({
   }
 
   fields.push(...transformationFields(schema, chart));
+  if (schema.capabilities.timeSync && chart.presentation?.collection == null) fields.push({
+    id: "chartTimeMatching", label: "Time matching", control: "chartTimeMatching", path: ["interaction", "timeSync"],
+    value: chart.interaction?.timeSync ?? null, inheritedMatching: unambiguousLegacyChartMatching(chart.id, chronoGroups ?? []),
+  });
 
   if (
     schema.transforms.includes("duplicates")
@@ -786,32 +792,6 @@ function interactionFields({
         helpTooltip: "Show a draggable overview slider below the plot.",
       });
     }
-  }
-  const selectedGroupIds = chronoGroups
-    .filter(({ members }) => (
-      Array.isArray(members)
-      && members.some(({ chartId }) => chartId === chart.id)
-    ))
-    .map(({ id }) => id);
-  const collectionIneligible = chart.presentation?.collection != null;
-  if (
-    schema.capabilities.timeSync
-    && (!collectionIneligible || selectedGroupIds.length > 0)
-  ) {
-    fields.push({
-      id: "timeSync",
-      label: "Chrono Group memberships",
-      control: "timeSync",
-      groups: chronoGroups,
-      selectedGroupIds,
-      ineligible: collectionIneligible,
-      ...(collectionIneligible
-        ? {
-            help: "Collection displays cannot join Chrono Groups. Remove existing memberships before saving Collection display settings.",
-          }
-        : {}),
-      timeRoles: temporalRoleOptions(schema, chart, profile),
-    });
   }
   return fields;
 }

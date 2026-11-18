@@ -23,11 +23,15 @@ test("optional target resolution roundtrips through current configuration and pa
     home: { enabled: false }, contentLibrary: { mediaItems: {}, sourceEntries: {} },
     dataSources: {}, chronoGroups: [], pages: [{ id: "page", sections: [{ id: "section", panels: [] }] }] };
   assert.equal(Object.hasOwn(normalizeDashboardBoundary(base), "presentationResolution"), false);
-  const candidate = { ...base, presentationResolution: { width: 1280, height: 720 } };
+  const before = structuredClone(base);
+  const candidate = normalizeDashboardBoundary({ ...base, presentationResolution: { width: 1280, height: 720 } });
+  assert.deepEqual(base, before, "normalization preserves the actual legacy input");
   assert.doesNotThrow(() => validateDashboardStructure(candidate));
   const restored = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(candidate)));
   assert.deepEqual(restored.presentationResolution, candidate.presentationResolution);
   assert.deepEqual(restored.pages, base.pages);
-  assert.deepEqual(restored.chronoGroups, base.chronoGroups);
+  assert.equal(restored.configVersion, 7);
+  assert.equal(Object.hasOwn(restored, "chronoGroups"), false);
+  assert.deepEqual(restored.scenes, []);
   assert.throws(() => validateDashboardStructure({ ...candidate, presentationResolution: { width: -1, height: 720 } }), /resolution/i);
 });

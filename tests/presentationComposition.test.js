@@ -126,6 +126,8 @@ test("saved Scene date position maps from dashboard camelCase to Audience wire f
   const dashboard = dashboardFixture();
   const scene = dashboard.scenes[0];
   const playback = {
+    cursor: { mode: "at", scope: { kind: "storyline", id: scene.id }, window: null },
+    activeEpochMs: Date.parse(scene.period.start), exerciseTime: null, matchingOverride: "authored", nearestToleranceMs: null,
     activeScene: scene,
     activeSceneId: scene.id,
     activeGroup: dashboard.chronoGroups[0],

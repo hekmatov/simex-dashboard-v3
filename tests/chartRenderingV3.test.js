@@ -18,6 +18,7 @@ import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistr
 import { buildRelationshipRenderModel } from "../src/charting/rendering/relationshipAdapter.js";
 import { resolveDashboardStyleGrammar } from "../src/theme/dashboardStyleGrammar.js";
 import { LEGEND_PLACEMENTS } from '../src/charting/presentation/legendPlacementContract.js';
+import { resolveChartTypography } from "../src/charting/rendering/chartTypography.js";
 
 test("axis renderers accept single and list measurement bindings consistently", () => {
   const rows = [{ period: "May", value: 4 }];
@@ -77,6 +78,55 @@ const {
 } = await import("../src/charting/rendering/axisTitleGraphics.js");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
+
+test("phone projection reaches real ECharts labels and bottom legends while desktop authored placement survives", () => {
+  const instance = { typeId: "line", layout: { width: 4, height: 2 }, presentation: { legend: { position: "right", offsetX: 9, offsetY: 7, fontSize: 9 } } };
+  const model = { kind: "echarts", option: { animation: false, xAxis: { type: "value", interval: 1, axisLabel: { fontSize: 9 } }, yAxis: { type: "value" }, legend: { data: ["Series"], orient: "vertical" }, series: [{ name: "Series", type: "line", data: Array.from({ length: 30 }, (_, index) => [index, index]) }] } };
+  const policy = resolveChartTypography(instance, { typographyProfile: "phone" });
+  const phone = applyEChartsPresentation(model, instance, false, undefined, null, policy);
+  assert.equal(phone.option.xAxis.axisLabel.fontSize, 12);
+  assert.equal(phone.legendLayout.placement, "below-center");
+  assert.equal(phone.legendLayout.offsetX, 0);
+  assert.equal(phone.option.legend.orient, "horizontal");
+  let engine;
+  const errors = [];
+  const lifecycle = createEChartsLifecycle({ echartsApi: { ...echarts, getInstanceByDom: () => null, init: () => engine = echarts.init(null, null, { renderer: "svg", ssr: true, width: 390, height: 350 }) }, windowTarget: null, ResizeObserverCtor: null, onError: error => errors.push(error) });
+  lifecycle.mount({});
+  try {
+    lifecycle.update(phone);
+    assert.deepEqual(errors, []);
+    const axis = engine.getModel().getComponent("xAxis");
+    assert.ok(axis.axis.getViewLabels().length <= 6);
+    assert.equal(axis.get("interval"), 1);
+    const geometry = lifecycle.getLegendGeometry();
+    assert.ok(geometry.rect.y >= geometry.plotBounds.y + geometry.plotBounds.height - 1);
+    lifecycle.update(applyEChartsPresentation(model, instance, false, undefined, null, resolveChartTypography(instance)));
+    assert.deepEqual(errors, []);
+    assert.equal(engine.getModel().getComponent("xAxis").get("axisLabel.customValues"), undefined);
+    assert.equal(engine.getModel().getComponent("xAxis").get("axisLabel.fontSize"), 9);
+    assert.equal(lifecycle.getLegendGeometry().placement, "right-middle");
+  } finally { lifecycle.dispose(); }
+});
+
+test("shared footprint typography reaches final ECharts options without losing theme or Audience sizing", () => {
+  const instance = { typeId: "line", layout: { width: 1, height: 0.5 }, presentation: { legend: { wrap: true } } };
+  const model = { kind: "echarts", option: { xAxis: { type: "category", data: Array(20).fill("Long label") }, yAxis: { type: "value" }, legend: { data: ["Long series name"] }, series: [{ type: "line", data: Array(20).fill(4) }] } };
+  const typography = resolveChartTypography(instance);
+  const theme = { textStrong: "#123456", textMuted: "#345678", bodyFont: "TestBody", headingFont: "TestHeading", dataFont: "TestData" };
+  const final = applyEChartsPresentation(model, instance, false, theme, null, typography);
+  assert.equal(final.option.xAxis.axisLabel.fontSize, 12);
+  assert.equal(final.option.xAxis.axisLabel.interval, 6);
+  // Final token projection assigns data labels the heading font, as the
+  // existing dashboard heading/body-font contract requires.
+  assert.equal(final.option.xAxis.axisLabel.fontFamily, "TestHeading");
+  assert.equal(final.option.legend.textStyle.fontSize, 12);
+  assert.equal(final.option.legend.textStyle.color, "#345678");
+  for (const scale of [{ tier: "distance-large", title: 28, text: 18, value: 40 }, { tier: "distance-grid", title: 24, text: 16, value: 34 }]) {
+    const audience = applyEChartsPresentation(model, instance, false, theme, scale, resolveChartTypography(instance, { audienceScale: scale }));
+    assert.equal(audience.option.xAxis.axisLabel.fontSize, scale.text);
+    assert.equal(audience.option.legend.textStyle.fontSize, scale.text);
+  }
+});
 
 test('real ECharts legend placement uses visible bounds and restores explicit offsets without layout drift', () => {
   for (const typeId of ['line','pie']) {

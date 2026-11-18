@@ -84,11 +84,10 @@ function ChartPanel({
   }), [suppliedRenderContext, accessibilityEnabled, assets, chart.id, chart.presentation?.map?.geoSource, contentRenderContext, dataSources]);
   const holdTimer = React.useRef(null);
   const suppressFullscreenClickUntil = React.useRef(0);
-  const panelRef = React.useRef(null);
-  const [chartVisible, setChartVisible] = React.useState(
-    () => typeof IntersectionObserver === "undefined",
-  );
-  const shouldRenderChart = !suspended && (chartVisible || isSelected);
+  // View owns once-mounted deferral outside this component. Editors, capture
+  // and export consumers render eagerly; only an explicit suspension pauses it.
+  const chartVisible = true;
+  const shouldRenderChart = !suspended;
   const requestEdit = () => {
     if (editControlDisabled) return;
     if (onEdit) onEdit();
@@ -133,25 +132,9 @@ function ChartPanel({
     });
   };
   React.useEffect(() => clearHold, []);
-  React.useEffect(() => {
-    if (chartVisible || isSelected) return undefined;
-    const panelElement = panelRef.current;
-    if (!panelElement || typeof IntersectionObserver === "undefined") {
-      setChartVisible(true);
-      return undefined;
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry?.isIntersecting) return;
-      setChartVisible(true);
-      observer.disconnect();
-    }, { rootMargin: "520px 0px" });
-    observer.observe(panelElement);
-    return () => observer.disconnect();
-  }, [chartVisible, isSelected]);
 
   return (
     <article
-      ref={panelRef}
       className={[
         "chart-panel",
         chartPanelLayoutClass(chart.layout?.size),

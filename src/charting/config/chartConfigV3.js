@@ -15,6 +15,7 @@ import { isNormalizedImageCustomColor } from "../presentation/imagePresentation.
 import { normalizePresentationOrder, normalizeKeyedPresentation } from "../presentation/categorySeriesPresentation.js";
 import { normalizePointLabelSelection } from "../presentation/pointLabelSelection.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import { isTimeSyncInterpolationEligible, validateEffectiveTimeSyncMatching } from "../time/chronoGroupModel.js";
 import {
   CHART_COMPARISON_MATCHING_POLICIES,
   CHART_COMPARISON_MODES,
@@ -807,8 +808,16 @@ function validateInteraction(chart, schema, temporalRoles) {
   if (timeSync === null) return;
   if (!schema.capabilities.timeSync || temporalRoles.size === 0) throw new Error(`Chart type "${schema.typeId}" needs an effective temporal role before time synchronization can be enabled.`);
   ensureObject(timeSync, "Chart time synchronization");
-  checkKnownKeys(timeSync, new Set(["groupId"]), "chart time synchronization");
-  requiredString(timeSync.groupId, "Chart Chrono Group ID");
+  checkKnownKeys(timeSync, new Set(["groupId", "matching"]), "chart time synchronization");
+  if (timeSync.groupId !== undefined) requiredString(timeSync.groupId, "Chart Chrono Group ID");
+  if (timeSync.matching !== undefined) {
+    const matching = validateEffectiveTimeSyncMatching(timeSync.matching, "Chart time synchronization");
+    if (matching.policy === "interpolate" && !isTimeSyncInterpolationEligible(schema)) {
+      throw new Error(`Chart type "${schema.typeId}" does not permit time synchronization interpolation.`);
+    }
+  } else if (timeSync.groupId === undefined) {
+    throw new Error("Chart time synchronization matching is required.");
+  }
 }
 
 function validateLayout(chart) {

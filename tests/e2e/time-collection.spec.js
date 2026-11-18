@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 
 import { openChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
@@ -99,68 +100,66 @@ test("default synchronized playback keeps line history, bar and map snapshots, a
   page,
   request,
 }) => {
-  await installScenarioDashboard(page, request, addAnalyticalPlaybackScenario);
+  const fixture = await installScenarioDashboard(page, request, addAnalyticalPlaybackScenario);
   await openDashboard(page);
-  const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
-  await chronoButton.click();
-  const controls = page.getByRole("region", { name: "Chrono playback controls" });
-  await controls.getByLabel("Chrono source").selectOption("group:municipal_outbreak");
-  const frame = controls.getByLabel("Playback frame");
-  const frameValues = await controls.locator("datalist option")
-    .evaluateAll((options) => options.map((option) => option.value));
-  await frame.fill(frameValues[0]);
-  const firstEpochMs = Number(frameValues[0]);
-  const firstTime = (await controls.locator(".playback-current-time time").textContent()).trim();
+  const cursor = timeCursor(page);
+  const controls = await cursor.open();
+  await cursor.selectScope({ name: fixture.chronoGroups.find(group => group.id === "municipal_outbreak").name });
+  const frame = cursor.frame;
+  await frame.fill(await frame.getAttribute("min"));
+  const firstEpochMs = Number(await frame.inputValue());
+  const firstTime = await cursor.instant.textContent();
   await expect(page.locator(".dashboard-workspace")).toBeVisible();
 
-  let view = page.locator('[data-chrono-section="municipal_outbreak"]');
+  let view = page.getByRole("region", { name: "Storyline", exact: true });
   const map = view.locator(
-    '[data-panel-id="bio_municipality_choropleth_animation"]',
+    '[data-scene-chart-id="bio_municipality_choropleth_animation"]',
   );
   const line = view.locator(
-    '[data-panel-id="bio_municipality_aggregate"]',
+    '[data-scene-chart-id="bio_municipality_aggregate"]',
   );
   await expectRuntimeTime(map, firstEpochMs);
   await expectRuntimeTime(line, firstEpochMs);
 
-  await controls.getByRole("button", { name: "Next frame" }).click();
+  await controls.getByRole("button", { name: "Next time", exact: true }).click();
   const secondEpochMs = Number(await frame.inputValue());
-  const secondTime = (await controls.locator(".playback-current-time time").textContent()).trim();
+  const secondTime = await cursor.instant.textContent();
   expect(secondTime).not.toBe(firstTime);
   await expectRuntimeTime(map, secondEpochMs);
   await expectRuntimeTime(line, secondEpochMs);
 
-  await chronoButton.click();
-  await expect(controls).toHaveCount(0);
+  await cursor.instant.click();
+  await expect(frame).toHaveCount(0);
+  await expect(controls).toBeVisible();
   await expect(page.locator(".dashboard-workspace")).toBeVisible();
-  await expect(chronoButton).toBeFocused();
-  await chronoButton.click();
-  view = page.locator('[data-chrono-section="municipal_outbreak"]');
+  await expect(cursor.instant).toBeFocused();
+  await cursor.open();
+  view = page.getByRole("region", { name: "Storyline", exact: true });
   await expect(view).toBeVisible();
-  await expect(controls.locator(".playback-current-time time")).toHaveText(secondTime);
+  await expect(cursor.instant).toHaveText(secondTime);
+  await expect(frame).toHaveValue(String(secondEpochMs));
 
-  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
-  const nationalFrameValues = await controls.locator("datalist option")
-    .evaluateAll((options) => options.map((option) => option.value));
-  await frame.fill(nationalFrameValues[0]);
-  const nationalEpochMs = Number(nationalFrameValues[0]);
-  const nationalTime = (await controls.locator(".playback-current-time time").textContent()).trim();
-  const national = page.locator('[data-chrono-section="national_outbreak"]');
+  await cursor.selectScope({ name: fixture.chronoGroups.find(group => group.id === "national_outbreak").name });
+  await frame.fill(await frame.getAttribute("min"));
+  const nationalEpochMs = Number(await frame.inputValue());
+  const nationalTime = await cursor.instant.textContent();
+  const national = page.getByRole("region", { name: "Storyline", exact: true });
   await expectRuntimeTime(
-    national.locator('[data-panel-id="bio_confirmed_cases"]'),
+    national.locator('[data-scene-chart-id="bio_confirmed_cases"]'),
     nationalEpochMs,
   );
   await expectRuntimeTime(
-    national.locator('[data-panel-id="bio_daily_cases_bar"]'),
+    national.locator('[data-scene-chart-id="bio_daily_cases_bar"]'),
     nationalEpochMs,
   );
-  await expect(controls.locator(".playback-current-time time")).toHaveText(nationalTime);
+  await expect(cursor.instant).toHaveText(nationalTime);
 });
 
 test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
   page,
 }) => {
   await openDashboard(page);
+  await page.locator('[data-deferred-panel="chart-line-mtgz6v76"]').scrollIntoViewIfNeeded();
   const panel = page.locator('[data-panel-id="chart-line-mtgz6v76"]');
   await panel.scrollIntoViewIfNeeded();
   let guard = panel.locator(".chart-zoom-guard");
@@ -206,6 +205,7 @@ test("legacy accessibility preferences cannot restore removed chart summaries or
 }) => {
   await installAccessibilityEnabledDashboard(page, request);
   await openDashboard(page);
+  await page.locator('[data-deferred-panel="chart-line-mtgz6v76"]').scrollIntoViewIfNeeded();
   const chart = page.locator('[data-panel-id="chart-line-mtgz6v76"]');
   await chart.scrollIntoViewIfNeeded();
   await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
@@ -222,22 +222,22 @@ test("matching policies produce policy-specific live values", async ({
   page,
   request,
 }) => {
-  await installScenarioDashboard(page, request, addTemporalMatchingScenarios);
+  const fixture = await installScenarioDashboard(page, request, addTemporalMatchingScenarios);
   await openDashboard(page);
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const controls = page.getByRole("region", { name: "Chrono playback controls" });
-  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
+  const cursor = timeCursor(page);
+  await cursor.open();
+  await cursor.selectScope({ name: fixture.chronoGroups.find(group => group.id === "national_outbreak").name });
   const activeEpochMs = Date.parse("2027-02-21T00:00:00.000Z");
-  await controls.getByLabel("Playback frame").fill(String(activeEpochMs));
-  await expect(controls.locator(".playback-current-time time")).toHaveText("2027-02-21");
-  const view = page.locator('[data-chrono-section="national_outbreak"]');
+  await cursor.frame.fill(String(activeEpochMs));
+  await expect(cursor.frame).toHaveValue(String(activeEpochMs));
+  const view = page.getByRole("region", { name: "Storyline", exact: true });
 
   for (const [chartId, expectedValue] of [
     ["e2e_last_known", 1],
     ["e2e_nearest", 7],
     ["e2e_interpolate", 5],
   ]) {
-    const panel = view.locator(`[data-panel-id="${chartId}"]`);
+    const panel = view.locator(`[data-scene-chart-id="${chartId}"]`);
     await expectRuntimeSeriesValue(panel, activeEpochMs, expectedValue);
   }
 });
@@ -256,15 +256,14 @@ test("priority collections remain independent while Chrono advances", async ({
   await expect(firstCollectionItem(locked))
     .toHaveAttribute("data-collection-entity-id", "A");
 
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const controls = page.getByRole("region", { name: "Chrono playback controls" });
-  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
-  await controls.getByLabel("Chrono chart scope").selectOption("all-page");
-  await controls.getByLabel("Playback frame")
+  const cursor = timeCursor(page);
+  await cursor.selectScope({ kind: "page" });
+  await cursor.open();
+  await cursor.frame
     .fill(String(Date.parse("2027-02-21T00:00:00.000Z")));
-  await expect(page.locator(
-    '[data-chrono-section="national_outbreak"] [data-panel-id="e2e_priority_rerank"]',
-  )).toHaveCount(0);
+  await expect.poll(() => readRuntimeLedger(reranked)).toMatchObject({
+    panelId: "e2e_priority_rerank", render: { status: "ready" }, time: { activeEpochMs: null },
+  });
   await expect(firstCollectionItem(reranked))
     .toHaveAttribute("data-collection-entity-id", "A");
   await expect(firstCollectionItem(locked))
@@ -392,7 +391,8 @@ test("collection carousels remain independent while Chrono plays", async ({
   const independentPanel = page.locator('[data-panel-id="e2e_carousel_independent"]');
   const pauses = pausesPanel.getByRole("region", { name: "Collection carousel" });
   const independent = independentPanel.getByRole("region", { name: "Collection carousel" });
-  const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
+  const cursor = timeCursor(page);
+  const chronoButton = cursor.instant;
   await pausesPanel.scrollIntoViewIfNeeded();
   await chronoButton.hover();
 
@@ -403,14 +403,12 @@ test("collection carousels remain independent while Chrono plays", async ({
   await chronoButton.hover();
   await expect(independent).toHaveAttribute("data-collection-rotation-paused", "false");
 
-  await chronoButton.click();
-  const controls = page.getByRole("region", { name: "Chrono playback controls" });
-  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
-  await controls.getByLabel("Chrono chart scope").selectOption("all-page");
-  const frame = controls.getByLabel("Playback frame");
+  const controls = await cursor.open();
+  await cursor.selectScope({ kind: "page" });
+  const frame = cursor.frame;
   await frame.fill(await frame.getAttribute("min"));
-  await controls.getByRole("button", { name: "Play Chrono" }).click();
-  await expect(controls.getByRole("button", { name: "Pause Chrono" })).toBeVisible();
+  await controls.getByRole("button", { name: "Play time", exact: true }).click();
+  await expect(controls.getByRole("button", { name: "Pause time", exact: true })).toBeVisible();
   await pausesPanel.scrollIntoViewIfNeeded();
   await chronoButton.hover();
   await expect(pauses).toHaveAttribute(
@@ -425,7 +423,7 @@ test("collection carousels remain independent while Chrono plays", async ({
     "false",
     { timeout: 500 },
   );
-  await controls.getByRole("button", { name: "Pause Chrono" }).click();
+  await controls.getByRole("button", { name: "Pause time", exact: true }).click();
 });
 
 async function openDashboard(page) {
@@ -484,6 +482,7 @@ async function installScenarioDashboard(page, request, configure) {
     key: STORAGE_KEY,
     value: dashboard,
   });
+  return dashboard;
 }
 
 function addTemporalMatchingScenarios(dashboard) {

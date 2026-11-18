@@ -366,7 +366,11 @@ for (const viewport of VIEWPORTS) {
     await expect(panel.getByRole("button", { name: "Retry" })).toBeVisible();
     await expect(panel.getByRole("button", { name: "Replace" })).toBeVisible();
     await expect(panel.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
-    await expect(panel).not.toContainText(/example\.test|static-|asset-/);
+    await expect(panel.locator('[data-static-failure="image-load-failed"]'))
+      .not.toContainText(/example\.test|static-|asset-/);
+    await expect(panel).not.toContainText(/example\.test|asset-/);
+    await expect(panel.locator("[data-chart-source-citation]"))
+      .toHaveText(`Source: ${viewComposition.sourceId}`);
     await expect(page.locator(
       `[data-panel-id]:not([data-panel-id="${panelId}"])[data-canonical-panel-id]`,
     ).first()).toBeAttached();
@@ -860,7 +864,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
       mediaItems: Object.keys(dashboard.contentLibrary.mediaItems).length,
     };
   }, STORAGE_KEY);
-  expect(durableShape).toEqual({ configVersion: 6, hasAssets: true, ...mediaShapeBefore });
+  expect(durableShape).toEqual({ configVersion: 7, hasAssets: true, ...mediaShapeBefore });
 }
 
 async function findPersistedChartId(page, title) {
@@ -982,7 +986,7 @@ async function openPanelEditAction(page, panel, preparedTrigger = null) {
   await trigger.press("Enter");
   const menu = page.locator(`#panel-menu-${placementId}[role="menu"]`);
   await expect(menu).toBeVisible();
-  await menu.locator('[data-action-menu-item="edit"]').click();
+  await menu.locator('[data-action-menu-item="edit"]').click({ timeout: 8_000 });
 }
 
 async function openFullTextImageEditor(page) {

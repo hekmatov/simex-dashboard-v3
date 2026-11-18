@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import path from "node:path";
 
 import sourceConfig from "./playwright.config.js";
 
@@ -6,6 +7,10 @@ import sourceConfig from "./playwright.config.js";
 // connected-client state. Run them first with one worker and a fresh server.
 export default defineConfig({
   ...sourceConfig,
+  ...(process.env.SIMEX_NATIVE_REPORT_DIR ? {
+    reporter: [["list"], ["json", { outputFile: path.resolve(process.env.SIMEX_NATIVE_REPORT_DIR, "source.json") }]],
+    outputDir: path.resolve(process.env.SIMEX_NATIVE_REPORT_DIR, "source-artifacts"),
+  } : {}),
   testIgnore: [
     ...sourceConfig.testIgnore,
     "quorum-companion.spec.js",
@@ -18,5 +23,7 @@ export default defineConfig({
     },
     ...sourceConfig.webServer.slice(1),
   ],
-  workers: 4,
+  // Laptop gates start with one worker; an explicit CLI override can use
+  // measured headroom without changing the selected test inventory.
+  workers: 1,
 });

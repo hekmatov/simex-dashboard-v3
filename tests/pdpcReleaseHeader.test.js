@@ -21,11 +21,15 @@ const [
   { createPdpcReleaseProfile },
   { default: AppFrame },
   { default: OperationStatusProvider },
+  { default: TimeBar },
+  { PlaybackProvider },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/release/PdpcReleaseHeader.jsx"),
   vite.ssrLoadModule("/src/release/pdpcReleaseProfile.js"),
   vite.ssrLoadModule("/src/components/app-shell/AppFrame.jsx"),
   vite.ssrLoadModule("/src/components/app-shell/OperationStatusProvider.jsx"),
+  vite.ssrLoadModule("/src/components/playback/TimeBar.jsx"),
+  vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx"),
 ]);
 await vite.close();
 
@@ -35,6 +39,15 @@ const pages = [
   { id: "biomedical", title: "Biomedical Information", label: "Biomedical" },
 ];
 
+test("PDPC keeps one shared View Time bar below its measured identity and page header", () => {
+  const html = renderToStaticMarkup(React.createElement(PlaybackProvider, { groups: [], charts: [], profiles: {}, loadedData: {} },
+    React.createElement(PdpcDashboardHeader, { profile, pages, activePage: pages[0], timeContextNode: React.createElement(TimeBar) })));
+  assert.equal((html.match(/aria-label="Dashboard time"/g) ?? []).length, 1);
+  assert.ok(html.indexOf("</header>") < html.indexOf('class="pdpc-time-context"'));
+  assert.match(html, /data-command-crown-layer="context"/);
+  assert.doesNotMatch(html, /Build mode|Advance exercise time/);
+});
+
 test("the release keeps only the exercise disclaimer above the dashboard", () => {
   const html = renderToStaticMarkup(React.createElement(PdpcReleaseDisclaimer, {
     profile,
@@ -42,6 +55,9 @@ test("the release keeps only the exercise disclaimer above the dashboard", () =>
 
   assert.equal((html.match(/Fictional scenario · Exercise use only/g) ?? []).length, 1);
   assert.equal((html.match(/Fictional/g) ?? []).length, 1);
+  assert.match(html, /<span[^>]*data-exercise-notice="true"[^>]*>Fictional scenario · Exercise use only<\/span>/);
+  assert.ok(html.includes(`data-app-version="${packageVersion}"`));
+  assert.ok(html.includes(`>App version ${packageVersion}</span>`));
   assert.match(html, /<aside[^>]*aria-label="Exercise disclaimer"/);
   assert.doesNotMatch(html, /pdpc-release-disclaimer__texture/);
   assert.doesNotMatch(html, /pdpc-release-header|Dashboard pages|Simulation exercise/);

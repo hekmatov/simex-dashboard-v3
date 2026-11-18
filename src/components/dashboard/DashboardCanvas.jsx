@@ -1,18 +1,15 @@
 import React from "react";
 
-import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
-import ChartPanel from "../ChartPanel.jsx";
 import LandingPage, { hasLandingPresentation } from "../LandingPage.jsx";
-import LayoutGrid from "../LayoutGrid.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
 import BuildLayoutCreateDialog from "../build/BuildLayoutCreateDialog.jsx";
-import SceneViewCompositionGrid from "../time/SceneViewCompositionGrid.jsx";
 import DashboardSection, { BuildSectionHeader } from "./DashboardSection.jsx";
 import DashboardAttentionStrip from "./DashboardAttentionStrip.jsx";
 import { partitionPageSections } from "../../charting/config/sectionRoles.js";
 
 const EMPTY_ARRAY = Object.freeze([]);
 const EMPTY_OBJECT = Object.freeze({});
+const EMPTY_IDS = new Set();
 
 export default function DashboardCanvas({
   activePage,
@@ -24,10 +21,7 @@ export default function DashboardCanvas({
   showFullscreen = true,
   multiSelectMode = false,
   multiPanelIds = [],
-  excludedChartIds = [],
-  chronoSection = null,
-  groupOnly = false,
-  onViewAllCharts,
+  storylineBand = null,
   geoDataSources = EMPTY_OBJECT,
   onNavigate,
   onAddPanelToSection,
@@ -83,21 +77,6 @@ export default function DashboardCanvas({
       else buildActions?.addPage(name);
     }}
   />;
-  const excludedIdKey = [...excludedChartIds, ...(chronoSection?.chartIds ?? [])].join("\u0000");
-  const excludedIds = React.useMemo(
-    () => new Set(excludedIdKey ? excludedIdKey.split("\u0000") : []),
-    [excludedIdKey],
-  );
-  const chronoPlacements = chronoSection
-    ? (activePage?.sections ?? []).flatMap((section) => (
-        (section.panels ?? [])
-          .filter((placement) => chronoSection.chartIds.includes((placement.chart ?? placement).id))
-          .map((placement) => ({ placement, section }))
-      ))
-    : [];
-  const chronoMemberCount = chronoSection?.scene
-    ? (chronoSection.scene.members ?? []).length
-    : chronoPlacements.length;
 
   if (!activePage) {
     if (!buildState) return null;
@@ -134,17 +113,17 @@ export default function DashboardCanvas({
     >
       <div className="page-stack" data-canonical-grid-id={activePage.id}>
         {landingActive ? (
-          <LandingPage page={activePage} pages={dashboard.pages} onNavigate={onNavigate} />
+          <>{storylineBand}<LandingPage page={activePage} pages={dashboard.pages} onNavigate={onNavigate} /></>
         ) : (
           <>
             {attentionSection && (
-              <DashboardAttentionStrip
+              <DashboardAttentionStrip surface={surface}
                 section={attentionSection}
                 sectionDraft={{ ...attentionSection, ...buildState?.sectionDrafts?.[attentionSection.id] }}
                 page={activePage}
                 pageId={activePage.id}
                 dashboard={dashboard}
-                excludedIds={excludedIds}
+                excludedIds={EMPTY_IDS}
                 geoDataSources={geoDataSources}
                 contentRenderContext={contentRenderContext}
                 accessibilityEnabled={accessibilityEnabled}
@@ -177,57 +156,7 @@ export default function DashboardCanvas({
                 ) : null}
               />
             )}
-            {chronoMemberCount > 0 && (
-              <section
-                className="dashboard-section chrono-dashboard-section"
-                data-chrono-section={chronoSection.id}
-              >
-                <div className="section-header">
-                  <div className="section-title-block">
-                    <h2>{chronoSection.title}</h2>
-                    <p>{chronoMemberCount} participating chart{chronoMemberCount === 1 ? "" : "s"}</p>
-                  </div>
-                </div>
-                {chronoSection.scene ? (
-                  <SceneViewCompositionGrid
-                    dashboard={dashboard}
-                    scene={chronoSection.scene}
-                    timeContextForChart={chronoSection.timeContextForChart}
-                    surface="view-scene"
-                  />
-                ) : (
-                  <LayoutGrid>
-                    {chronoPlacements.map(({ placement }) => {
-                      const chart = placement.chart ?? placement;
-                      return (
-                        <ChartPanel
-                          key={placement.id}
-                          panel={chart}
-                          canonicalPanelId={chart.id}
-                          canonicalPlacementId={placement.id ?? chart.id}
-                          canonicalPlotId={chart.id}
-                          rows={dashboard.loadedData?.[chart.sourceId]}
-                          sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
-                          datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
-                          geoData={geoDataSources[chart.presentation?.map?.geoSource]}
-                          dataSources={dashboard.dataSources}
-                          assets={dashboard.assets ?? {}}
-                          contentRenderContext={contentRenderContext}
-                          accessibilityEnabled={accessibilityEnabled}
-                          showFullscreen={showFullscreen}
-                          onDisplayAction={onDisplayAction}
-                          multiSelectMode={multiSelectMode}
-                          isMultiSelected={multiPanelIds.includes(chart.id)}
-                          multiSelectionIndex={multiPanelIds.indexOf(chart.id) + 1}
-                          onToggleMultiPanel={onToggleMultiPanel}
-                          onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
-                        />
-                      );
-                    })}
-                  </LayoutGrid>
-                )}
-              </section>
-            )}
+            {storylineBand}
             {bodySections.map((section) => {
               const sectionPlacementIds = new Set((section.panels ?? []).map(({ id }) => id));
               const selectedPlacementId = buildState?.selection?.kind === "chart"
@@ -235,7 +164,7 @@ export default function DashboardCanvas({
                 ? buildState.selection.placementId
                 : null;
               return (
-                <DashboardSection
+                <DashboardSection surface={surface}
                   key={section.id}
                   section={section}
                   sectionDraft={buildState?.sectionDrafts?.[section.id] ?? section}
@@ -244,7 +173,7 @@ export default function DashboardCanvas({
                   count={activePage.sections?.length ?? 0}
                   movablePageCount={(dashboard.pages ?? []).filter(({ id, landing }) => id !== activePage.id && !landing).length}
                   getDashboard={getDashboard}
-                  excludedIds={excludedIds}
+                  excludedIds={EMPTY_IDS}
                   rowsBySource={dashboard.loadedData}
                   chartDataStates={dashboard.chartDataStates}
                   dataSourceStates={dashboard.dataSourceStates}
@@ -270,12 +199,6 @@ export default function DashboardCanvas({
                 />
               );
             })}
-            {groupOnly && excludedChartIds.length > 0 && (
-              <div className="chrono-hidden-charts-notice" role="status">
-                <p>Other charts are hidden in Group Only view.</p>
-                <button type="button" className="secondary" onClick={onViewAllCharts}>View all charts</button>
-              </div>
-            )}
             {buildState && (
               <div className="build-add-section-row">
                 <button

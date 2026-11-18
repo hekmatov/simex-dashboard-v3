@@ -30,6 +30,24 @@ const { default: ChartHeading } = await vite.ssrLoadModule("/src/components/char
 const { default: ChartPanel } = await vite.ssrLoadModule("/src/components/ChartPanel.jsx");
 await vite.close();
 
+test("only active phone fullscreen heatmaps receive the zoom guard and interactive dataZoom model", () => {
+  const chart = { id: "phone-heatmap", typeId: "heatmap", title: "Phone heatmap", roles: { row: { field: "row" }, column: { field: "column" }, value: { field: "value" } }, presentation: {}, interaction: { zoom: { enabled: false } } };
+  const rows = [{ row: "A", column: "One", value: 1 }, { row: "B", column: "Two", value: 2 }];
+  const base = { chart, rows, datasetProfile: profileDataset(rows), surface: "fullscreen", typographyProfile: "phone" };
+  const phone = renderChartContent(base, "active").props.children;
+  assert.equal(phone.type.name, "ZoomGuard");
+  const view = phone.props.children.props.children;
+  assert.equal(view.props.zoomEnabled, true);
+  assert.equal(view.props.model.option.dataZoom.length, 2);
+  for (const overrides of [{ surface: "view" }, { surface: "build" }, { typographyProfile: "desktop" }]) {
+    const ordinary = renderChartContent({ ...base, ...overrides }, "active").props.children;
+    assert.notEqual(ordinary.type.name, "ZoomGuard");
+    assert.equal(ordinary.props.children.props.zoomEnabled, false);
+    assert.equal(ordinary.props.children.props.model.option.dataZoom, undefined);
+  }
+  assert.notEqual(renderChartContent(base, "passive").props.children.type.name, "ZoomGuard");
+});
+
 test("V3 #24 precision gauge preserves resolved colors and favorable direction", () => {
   for (const direction of ["decrease-is-good", "neutral"]) {
     const model = buildRenderModel({ chart: { id: "inverted", typeId: "gauge", title: "Waiting time", presentation: { targets: { direction, ranges: [50, 80, 100] } } }, prepared: { status: "ready", marks: [{ value: 20, target: 50 }], meta: {} } });
@@ -88,6 +106,15 @@ test("an authored chart title font size styles non-image chart headings", () => 
   }));
 
   assert.match(html, /font-size:22px/);
+});
+
+test("shared footprint typography reaches native headings and preserves authored title sizes", () => {
+  const rows = [{ value: 8 }];
+  const base = { id: "footprint-capacity", typeId: "kpi", title: "A long capacity heading", roles: { value: { field: "value" } }, layout: { width: 4, height: 2 } };
+  const html = chart => renderToStaticMarkup(React.createElement(ChartView, { chart, rows, datasetProfile: profileDataset(rows) }));
+  assert.match(html(base), /font-size:18px/);
+  assert.match(html({ ...base, layout: { width: 4, height: 0.5 } }), /font-size:14px/);
+  assert.match(html({ ...base, presentation: { title: { fontSize: 22 } } }), /font-size:22px/);
 });
 
 const deltaCard = {
@@ -265,13 +292,17 @@ test("invalid prepared data renders a bounded chart error", () => {
   assert.match(html, /role/i);
   assert.match(html, /role="status"/);
   assert.match(html, /aria-live="polite"/);
-  assert.ok(html.length < 240);
+  const status = html.replace(/<p class="chart-source-caption"[^>]*>[\s\S]*?<\/p>/g, "");
+  assert.ok(status && status.length < 240);
+  assert.equal((html.match(/class="chart-source-caption"/g) ?? []).length, 1);
 
   const fallback = renderToStaticMarkup(
     React.createElement(ChartView, { chart: { typeId: "unknown-chart-type", title: "Ignored", roles: {} }, rows: [] }),
   );
-  assert.equal(fallback, '<div class="chart-status-error" role="status" aria-live="polite">This chart cannot be displayed.</div>');
-  assert.ok(fallback.length <= 240);
+  const fallbackStatus = fallback.replace(/<p class="chart-source-caption"[^>]*>[\s\S]*?<\/p>/g, "");
+  assert.equal(fallbackStatus, '<div class="chart-status-error" role="status" aria-live="polite">This chart cannot be displayed.</div>');
+  assert.ok(fallbackStatus.length <= 240);
+  assert.equal((fallback.match(/class="chart-source-caption"/g) ?? []).length, 1);
 });
 
 test("short chart panels keep data-state details reachable by keyboard", () => {
@@ -290,7 +321,7 @@ test("short chart panels keep data-state details reachable by keyboard", () => {
   assert.match(html, /aria-label="Current capacity status\. Scroll to view details\."/);
 });
 
-test("table render models retain headers, values, and observation time while citation stays hidden", () => {
+test("table render models retain headers values observation time and visible source context", () => {
   const rows = [{ facility: "Clinic A", score: 7, observed: "2027-05-02" }];
   const html = renderToStaticMarkup(React.createElement(ChartView, {
     chart: {
@@ -309,10 +340,11 @@ test("table render models retain headers, values, and observation time while cit
   assert.match(html, /scope="col">facility/);
   assert.match(html, /Clinic A/);
   assert.match(html, /aria-label="Observed 2027-05-02"/);
-  assert.doesNotMatch(html, /Source: Readiness register|Captured: 2027-05-02/);
+  assert.match(html, /Source: Readiness register/);
+  assert.doesNotMatch(html, /Captured: 2027-05-02/);
 });
 
-test("chart sourceId provenance fallback is not rendered inline by default", () => {
+test("chart sourceId provenance fallback is visible without invented source metadata", () => {
   const rows = [{ value: 0 }];
   const html = renderToStaticMarkup(React.createElement(ChartView, {
     chart: { typeId: "kpi", title: "Zero capacity", sourceId: "capacity-feed", roles: { value: { field: "value" } } },
@@ -320,8 +352,43 @@ test("chart sourceId provenance fallback is not rendered inline by default", () 
     datasetProfile: profileDataset(rows),
   }));
 
-  assert.doesNotMatch(html, /Source: capacity-feed/);
+  assert.match(html, /Source: capacity-feed/);
+  assert.match(html, /Uncertainty: Not specified/);
   assert.doesNotMatch(html, /Configured data|\[object Object\]/);
+});
+
+test("source evidence is identical in panel native and ECharts outputs across shared surfaces", () => {
+  const rows = [{ period: "First", value: 8 }, { period: "Second", value: 10 }];
+  const datasetProfile = profileDataset(rows);
+  datasetProfile.provenance = { label: "Profile evidence" };
+  const sources = { feed: { provenance: { label: "Source evidence" } } };
+  const variants = [
+    { typeId: "kpi", roles: { value: { field: "value" } } },
+    { typeId: "table", roles: { columns: [{ field: "period" }, { field: "value" }] } },
+    { typeId: "line", roles: { observation: { field: "period" }, measurements: [{ field: "value" }] } },
+  ];
+  let expectedCaption;
+  for (const variant of variants) {
+    const chart = { ...variant, id: `source-${variant.typeId}`, title: "Evidence", sourceId: "feed", presentation: { citation: { label: "Authored evidence" } } };
+    for (const surface of ["view", "fullscreen", "audience"]) {
+      for (const Component of [ChartView, ChartPanel]) {
+        const html = renderToStaticMarkup(React.createElement(Component, { chart, panel: chart, rows, datasetProfile, renderContext: { sources }, surface, interactionMode: surface === "audience" ? "passive" : "active" }));
+        const caption = html.match(/<p class="chart-source-caption"[^>]*>[\s\S]*?<\/p>/)?.[0];
+        assert.ok(caption, `${variant.typeId}/${surface}/${Component.name} source caption`);
+        assert.match(caption, /Source: Authored evidence/);
+        assert.match(caption, /Uncertainty: Not specified/);
+        assert.equal((html.match(/data-chart-source-citation=/g) ?? []).length, 1);
+        expectedCaption ??= caption;
+        assert.equal(caption, expectedCaption);
+      }
+    }
+  }
+});
+
+test("source evidence remains visible when chart data is unavailable", () => {
+  const html = renderToStaticMarkup(React.createElement(ChartView, { chart: { id: "missing", typeId: "kpi", title: "Missing feed", sourceId: "feed", roles: { value: { field: "value" } } }, rows: [], renderContext: { sources: { feed: { provenance: { label: "Unavailable feed evidence" } } } } }));
+  assert.match(html, /Source: Unavailable feed evidence/);
+  assert.equal((html.match(/data-chart-source-citation=/g) ?? []).length, 1);
 });
 
 test("card values render non-finite values as unavailable while retaining zero and negative delta signs", () => {
@@ -581,7 +648,7 @@ test("ChartView passes the same Audience scale object to ECharts, target collect
         renderContext,
       },
     };
-    return renderChartContent(props, "passive").props.children;
+    return renderChartContent(props, "passive").props.children.props.children;
   };
 
   for (const [typeId, model] of [
@@ -952,7 +1019,7 @@ test("repeated Gauge and Bullet charts keep shared title visibility independent 
     );
     assert.match(html, /data-collection-layout="fixed"/);
     assert.equal((html.match(new RegExp(`>${title}<`, "g")) ?? []).length, 1);
-    assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 0);
+    assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 1);
     assert.equal((html.match(/class="chart-target-collection-item(?: |")/g) ?? []).length, 2);
     assert.equal((html.match(/class="chart-target-collection-label"/g) ?? []).length, 2);
     assert.match(html, />Clinic A<\/h4>/);
@@ -1001,15 +1068,44 @@ test("ECharts lifecycle initializes once, updates in place, registers maps befor
     onRender() { calls.push("finished"); },
   });
 
-  lifecycle.mount({});
+  const host = { clientWidth: 400, clientHeight: 300 };
+  lifecycle.mount(host);
   lifecycle.update({ mapRegistration: { name: "regions", geoJson: { features: [{}] } }, option: { id: "first" } });
   lifecycle.update({ mapRegistration: { name: "empty-regions", geoJson: { type: "FeatureCollection", features: [] } }, option: { id: "second" } });
   finishedListener();
+  observer.callback();
+  host.clientWidth = 430;
   resizeListener();
   observer.callback();
   lifecycle.dispose();
 
-  assert.deepEqual(calls, ["init", "observe", "map:regions", "option:first", "map:empty-regions", "option:second", "finished", "resize", "resize", "disconnect", "remove-resize", "remove-finished", "dispose"]);
+  assert.deepEqual(calls, ["init", "observe", "map:regions", "option:first", "map:empty-regions", "option:second", "finished", "resize", "disconnect", "remove-resize", "remove-finished", "dispose"]);
+});
+
+test("ECharts lifecycle applies the legend baseline in its first full option", () => {
+  const calls = [];
+  const instance = {
+    setOption(option, settings) { calls.push({ option, settings }); },
+    getWidth: () => 400,
+    getHeight: () => 300,
+  };
+  const lifecycle = createEChartsLifecycle({
+    echartsApi: { getInstanceByDom: () => instance },
+    windowTarget: null,
+    ResizeObserverCtor: null,
+  });
+  lifecycle.mount({});
+  lifecycle.update({
+    option: { grid: { top: 24 }, legend: { textStyle: { color: "#102030" } } },
+    legendLayout: { placement: "automatic", minimumGridTop: 24 },
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].settings.notMerge, true);
+  assert.deepEqual(calls[0].option.legend, {
+    right: null, bottom: null, height: null, tooltip: { show: false },
+    textStyle: { width: null, height: null, overflow: null, lineOverflow: null, color: "#102030" },
+  });
+  lifecycle.dispose();
 });
 
 test("ECharts lifecycle disposes a partially initialized instance when setup fails", () => {

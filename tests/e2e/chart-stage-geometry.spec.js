@@ -11,7 +11,7 @@ test("shared chart geometry matches canonical, constrained, tablet and real Buil
   const response = await request.get("/config/dashboard.json");
   expect(response.ok()).toBe(true);
   const bytes = await response.body();
-  expect(createHash("sha256").update(bytes).digest("hex")).toBe("a6092faf3463389fea17934c005f74802c9c843abcecfb31272221a2fea11f2f");
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
   const dashboard = JSON.parse(bytes);
   expect(dashboard.pages.find(p => p.id === "biomedical")?.sections.flatMap(s => s.panels)
     .find(c => c.id === "bio_current_cases_kpi")?.typeId).toBe("kpi");

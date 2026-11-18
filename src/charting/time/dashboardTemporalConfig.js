@@ -228,6 +228,10 @@ function validatePeriod(period, groupId) {
   }
 }
 
+export function stripTimeSyncGroupBacklink(sync) {
+  return isRecord(sync) && Object.hasOwn(sync, "matching") ? { matching: structuredClone(sync.matching) } : null;
+}
+
 function scrubChartTimeSyncBacklinks(config) {
   for (const page of config.pages ?? []) {
     for (const section of page?.sections ?? []) {
@@ -236,7 +240,10 @@ function scrubChartTimeSyncBacklinks(config) {
           ? panel.chart
           : panel;
         if (isRecord(chart?.interaction)) {
-          chart.interaction.timeSync = null;
+          const sync = chart.interaction.timeSync;
+          // Group membership is dashboard-owned. Chart-owned matching survives
+          // normalization, package export and import independently of backlinks.
+          chart.interaction.timeSync = stripTimeSyncGroupBacklink(sync);
         }
       }
     }

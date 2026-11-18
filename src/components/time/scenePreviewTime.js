@@ -1,53 +1,26 @@
-import { buildChronoGroupClock } from "../../charting/time/chronoGroupModel.js";
 import { configuredCharts } from "../../lib/dashboardSelectors.js";
-import {
-  buildMemberTimeContexts,
-  buildScenePlaybackClock,
-} from "../playback/PlaybackProvider.jsx";
+import { deriveCursorPlayback } from "../../charting/time/cursorProviderModel.js";
+import { INITIAL_TIME_CURSOR } from "../../charting/time/cursorModel.js";
+import { initialPlaybackState } from "../../charting/time/playbackReducer.js";
 import { canonicalPlaybackTime } from "../playback/playbackTimeLabel.js";
 
 const EMPTY_CONTEXTS = Object.freeze(Object.create(null));
 
 export function buildScenePreviewProjection({ dashboard, scene }) {
-  const group = (dashboard?.chronoGroups ?? []).find(
-    ({ id }) => id === scene?.chronoGroupId,
-  );
-  if (!group) {
+  if (scene?.chronoGroupId && !(dashboard?.chronoGroups ?? []).some(group => group.id === scene.chronoGroupId)) {
     return unavailableProjection("The parent Chrono Group is unavailable.");
   }
-
-  const temporalContext = {
-    charts: configuredCharts(dashboard),
-    loadedData: dashboard?.loadedData ?? {},
-    profiles: dashboard?.datasetProfiles ?? {},
-    timezone: dashboard?.timezone ?? "UTC",
-  };
-
   try {
-    const groupClock = buildChronoGroupClock(group, temporalContext);
-    const sceneClock = buildScenePlaybackClock(scene, groupClock, {
-      group,
-      temporalContext,
-    });
-    const activeEpochMs = sceneClock.at(-1) ?? null;
-    if (activeEpochMs === null) {
-      return unavailableProjection("This Scene has no valid preview frame.");
-    }
-    const sceneMemberIds = new Set(
-      (scene?.members ?? []).map(({ chartId }) => chartId),
-    );
-    const previewGroup = {
-      ...group,
-      members: (group.members ?? []).filter(
-        ({ chartId }) => sceneMemberIds.has(chartId),
-      ),
-    };
-    return Object.freeze({
-      activeEpochMs,
-      label: canonicalPlaybackTime(activeEpochMs),
-      timeContexts: buildMemberTimeContexts(previewGroup, activeEpochMs, { scene }),
-      error: null,
-    });
+    const charts = configuredCharts(dashboard);
+    const state = { ...initialPlaybackState, cursor: { ...INITIAL_TIME_CURSOR, scope: { kind: "storyline", id: scene.id } } };
+    const options = { state, charts, scenes: [scene], groups: dashboard.chronoGroups ?? [],
+      loadedData: dashboard.loadedData ?? {}, profiles: dashboard.datasetProfiles ?? {}, timezone: dashboard.timezone ?? "UTC" };
+    const clock = deriveCursorPlayback(options).clock;
+    const activeEpochMs = clock.at(-1) ?? null;
+    if (activeEpochMs === null) return unavailableProjection("This Scene has no valid preview frame.");
+    const projection = deriveCursorPlayback({ ...options, state: { ...state, cursor: { ...state.cursor, mode: "at", epochMs: activeEpochMs } } });
+    return Object.freeze({ activeEpochMs, label: canonicalPlaybackTime(activeEpochMs),
+      timeContexts: projection.contexts, error: null });
   } catch (error) {
     return unavailableProjection(
       `Scene preview unavailable: ${boundedMessage(error)}`,

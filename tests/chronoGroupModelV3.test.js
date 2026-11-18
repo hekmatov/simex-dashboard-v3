@@ -679,6 +679,7 @@ test("group lookup returns the original group and reports deterministic diagnost
 
 test("the initial playback state is immutable and matches the v3 contract", () => {
   assert.deepEqual(initialPlaybackState, {
+    cursor: { mode: "live", epochMs: null, scope: { kind: "page", id: null }, window: null },
     source: { kind: "default", id: null },
     scope: "all-page",
     frameIndex: 0,
@@ -690,6 +691,7 @@ test("the initial playback state is immutable and matches the v3 contract", () =
     speed: 1,
     secondsPerFrame: 1,
     matchingOverride: "authored",
+    nearestToleranceMs: null,
     traceMode: "reveal",
     availabilityVisible: false,
     placement: "deck",

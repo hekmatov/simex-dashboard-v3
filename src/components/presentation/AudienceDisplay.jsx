@@ -1,7 +1,9 @@
 import React from "react";
 
 import DisplayedChartGrid from "../display/DisplayedChartGrid.jsx";
-import { buildMemberTimeContexts } from "../playback/PlaybackProvider.jsx";
+import { audienceTimeContexts } from "../../charting/time/acceptedTimeProjection.js";
+import ExerciseContextStamp from "../common/ExerciseContextStamp.jsx";
+import CursorTimeReadout from "../playback/CursorTimeReadout.jsx";
 import ConnectionIndicator from "./ConnectionIndicator.jsx";
 import useAudienceStaticAssetReadiness from "./useAudienceStaticAssetReadiness.js";
 import AudienceStage from "./AudienceStage.jsx";
@@ -161,27 +163,14 @@ export function AudienceProjectionSurface({
     return <AudienceWaiting />;
   }
 
-  const chronoGroup = (dashboard.chronoGroups ?? []).find(
-    ({ id }) => id === projection.source.chrono_group_id,
-  ) ?? null;
   const scene = projection.source.scene_id
     ? (dashboard.scenes ?? []).find(({ id }) => id === projection.source.scene_id) ?? null
     : null;
-  const activeEpochMs = projection.timeline?.frame_epochs[
-    projection.timeline.frame_index
-  ] ?? null;
-  const memberTimeContexts = buildMemberTimeContexts(
-    chronoGroup,
-    activeEpochMs,
-    {
-      scene,
-      frameIndex: projection.timeline?.frame_index,
-      traceMode: projection.timeline?.trace_mode,
-    },
-  );
+  const activeEpochMs = projection.time.epoch_ms;
+  const memberTimeContexts = audienceTimeContexts(projection.time, projection.source);
   const facts = projection.payload.audience_facts;
   const dashboardName = facts.dashboard_name ? dashboard.title : null;
-  const parentName = facts.parent_chrono_group ? chronoGroup?.name ?? null : null;
+  const parentName = facts.parent_chrono_group ? scene?.audience?.collectionLabel ?? null : null;
   const sceneName = facts.scene_name ? scene?.name ?? scene?.title ?? null : null;
   const sharedHeaderVisible = projection.mode !== "blank" && Boolean(
     dashboardName || parentName || sceneName,
@@ -199,17 +188,22 @@ export function AudienceProjectionSurface({
       data-render-status={renderStatus}
       data-audience-accepted-sequence={projection.acceptedSequence}
       data-audience-dashboard-revision={JSON.stringify(projection.dashboardRevision)}
-      data-frame-index={projection.timeline?.frame_index}
-      data-trace-mode={projection.timeline?.trace_mode}
+      data-frame-index={projection.time.frame_index}
+      data-trace-mode={projection.time.trace_mode}
       data-shared-header-visible={sharedHeaderVisible ? "true" : "false"}
+      data-time-context-visible={projection.mode !== "blank" ? "true" : "false"}
     >
-      {sharedHeaderVisible && (
+      {projection.mode !== "blank" && <div className="audience-context-header">
+        <div className="audience-time-context"><ExerciseContextStamp variant="audience" />
+          <CursorTimeReadout mode={projection.time.mode} epochMs={activeEpochMs} /></div>
+        {sharedHeaderVisible && (
         <AudienceHeader
           dashboardName={dashboardName}
           context={context}
           sceneName={sceneName}
         />
-      )}
+        )}
+      </div>}
       {projection.mode === "holding" && (
         <p className="audience-holding-message">Waiting for the next scene.</p>
       )}
@@ -225,6 +219,8 @@ export function AudienceProjectionSurface({
           }}
           timeContextForChart={(chartId) => memberTimeContexts[chartId] ?? null}
           timeContextAuthority="explicit"
+          cursorMode={projection.time.mode}
+          timeScopeKind={projection.time.scope.kind}
           surface="audience"
           onVisualChange={onVisualChange}
         />
@@ -443,7 +439,7 @@ function datePositionSignature(position) {
 }
 
 function presentationSourceSignature(source) {
-  return `${source?.kind ?? ""}:${source?.scene_id ?? ""}:${source?.chrono_group_id ?? ""}`;
+  return `${source?.kind ?? ""}:${source?.scene_id ?? ""}`;
 }
 
 function clampInteger(value, minimum, maximum) {

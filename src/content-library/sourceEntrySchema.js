@@ -273,7 +273,7 @@ function integrateChartWithoutDuplicateSource(dashboard, finalized, destination)
   } else {
     throw new Error(`Unsupported chart placement relation "${String(relation)}".`);
   }
-  if (finalized.chronoGroups !== undefined) next.chronoGroups = structuredClone(finalized.chronoGroups);
+  if (next.configVersion !== 7 && finalized.chronoGroups !== undefined) next.chronoGroups = structuredClone(finalized.chronoGroups);
   return next;
 }
 

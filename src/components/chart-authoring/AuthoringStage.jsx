@@ -7,7 +7,8 @@ import { chartFootprintPixelSize, resolveCanvasGeometry } from "../chartStageGeo
 import { dashboardThemeRootProps } from "../../theme/dashboardThemeRoot.js";
 import { dashboardOwnedRegionProps } from "../../theme/dashboardRegionRegistry.js";
 import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
-import { withPlaybackTimeContext } from "../charts/ChartView.jsx";
+import { authoringTimeContext } from "../../charting/time/authoringTimePreview.js";
+import { canonicalPlaybackTime } from "../playback/playbackTimeLabel.js";
 import { prepareChartPreview, PreviewState, buildPreviewDiagnostics } from "./ChartPreview.jsx";
 
 export function authoringStageScale(size, { fit = "fit", availableWidth = size.width, maxHeight = Infinity, allowUpscale = false } = {}) {
@@ -137,7 +138,10 @@ export default function AuthoringStage({
   const scale = authoringStageScale(size, { fit: mode, availableWidth: suppliedWidth ?? availableWidth ?? size.width, maxHeight, allowUpscale: true });
   const effectiveRenderContext = React.useMemo(() => renderContext?.mapName ? renderContext : ({ ...renderContext, mapName: chart?.presentation?.map?.geoSource ?? chart?.id }), [renderContext, chart?.id, chart?.presentation?.map?.geoSource]);
   const playback = useOptionalPlayback();
-  const input = withPlaybackTimeContext({ chart, rows, datasetProfile, geoData, prepared, renderContext: effectiveRenderContext, timeContext }, playback);
+  const [previewTimeMode, setPreviewTimeMode] = React.useState(() => playback?.cursor?.mode ?? timeContext?.mode ?? (timeContext ? "at" : "live"));
+  const previewTime = React.useMemo(() => authoringTimeContext({ chart, profile: datasetProfile, playback, mode: previewTimeMode, suppliedContext: timeContext }),
+    [chart, datasetProfile, playback, previewTimeMode, timeContext]);
+  const input = { chart, rows, datasetProfile, geoData, prepared: previewTime === timeContext ? prepared : undefined, renderContext: effectiveRenderContext, timeContext: previewTime };
   const result = React.useMemo(() => readiness && readiness.status !== "ready"
     ? readiness
     : prepareChartPreview(input), [chart, rows, datasetProfile, geoData, prepared, effectiveRenderContext, input.timeContext, input.prepared, readiness]);
@@ -154,6 +158,11 @@ export default function AuthoringStage({
           <button type="button" className="secondary" aria-pressed={mode === "fit"} onClick={() => setFit("fit")}>Fit to preview area</button>
           <button type="button" className="secondary" aria-pressed={mode === "actual"} onClick={() => setFit("actual")}>Actual size on dashboard</button>
         </div>
+        {playback && previewTime && <div role="group" aria-label="Preview time">
+          <button type="button" className="secondary" aria-pressed={previewTimeMode === "live"} onClick={() => setPreviewTimeMode("live")}>Live preview</button>
+          <button type="button" className="secondary" aria-pressed={previewTimeMode === "at"} onClick={() => setPreviewTimeMode("at")}>At preview</button>
+          <span>{canonicalPlaybackTime(previewTime.activeEpochMs)} UTC</span>
+        </div>}
         {onLegendChange && <span ref={setLegendControlsHost} className="authoring-stage__legend-controls" />}
         {onShowOnCanvas && <button type="button" className="secondary" {...buttonProps}>Show on canvas</button>}
       </div>
@@ -166,7 +175,7 @@ export default function AuthoringStage({
             <LayoutGrid geometry={{ ...geometry, columns: footprint.columns }}>
               {status === "ready" ? <LegendAuthoringContext.Provider value={legendOwner}><ChartPanel panel={chart} rows={rows} datasetProfile={datasetProfile} geoData={geoData}
                 prepared={result.prepared} resolvedRendering={result.resolvedRendering} renderContext={effectiveRenderContext}
-                timeContext={input.timeContext} timeContextAuthority="explicit" showFullscreen={false}
+                timeContext={input.timeContext} cursorMode={previewTimeMode} timeContextAuthority="explicit" showFullscreen={false}
                 mapBudgetOwnerId={`authoring:${mapOwnerId}:${chart.id}`} mapBudgetKind="preview" /></LegendAuthoringContext.Provider>
                 : <article className="chart-panel chart-panel-footprint" style={chartPanelFootprintStyle(chart?.layout)}>
                   <PreviewState status={status} diagnostics={buildPreviewDiagnostics(result.diagnostics, { namespace: chart?.id })} />

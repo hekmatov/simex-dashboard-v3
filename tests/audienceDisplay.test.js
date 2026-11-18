@@ -1,9 +1,15 @@
+import { presentationTimeFixture } from "./helpers/presentationTimeFixture.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { readFile } from "node:fs/promises";
+import { makePresentationTime } from "../src/charting/time/acceptedTimeProjection.js";
+import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { deriveCursorPlayback } from "../src/charting/time/cursorProviderModel.js";
+import { initialPlaybackState } from "../src/charting/time/playbackReducer.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -110,11 +116,10 @@ const dashboard = {
       ],
     }],
   }],
-  chronoGroups: [{
+  scenes: [{
     id: "epidemic-time",
-    name: "Winter response 2027",
-    matching: { policy: "exact" },
-    members: [{ chartId: "chart-a", timeRole: "observation" }],
+    name: "Operational picture",
+    audience: { collectionLabel: "Winter response 2027" },
   }],
 };
 
@@ -130,6 +135,55 @@ const defaultFacts = {
     scene_date: true,
 };
 const twoChartScene = audienceProjection();
+
+test("Audience renders accepted At carry, static chip and photographable context for parentless Storylines", () => {
+  const july = Date.parse("2027-07-01"), august = Date.parse("2027-08-01");
+  const rows = [{ date: "2027-07-01", value: 9 }, { date: "2027-08-01", value: "" }];
+  const chart = createChartDraft("line", { id: "temporal", title: "Staff", sourceId: "staff", roles: {
+    observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" }, measurements: [{ field: "value" }],
+  } });
+  const runtime = { ...dashboard, loadedData: { ...dashboard.loadedData, staff: rows },
+    datasetProfiles: { ...dashboard.datasetProfiles, staff: profileDataset(rows) },
+    pages: [{ ...dashboard.pages[0], sections: [{ id: "combined", panels: [chart, dashboard.pages[0].sections[0].panels[0]] }] }],
+    scenes: [{ id: "story", name: "Pressure and staffing", members: [{ chartId: chart.id, matching: { policy: "lastKnown" } }] }] };
+  const projection = { ...twoChartScene, source: { kind: "scene", scene_id: "story" },
+    time: makePresentationTime({ cursor: { mode: "at", scope: { kind: "storyline", id: "story" }, window: null },
+      activeEpochMs: august, clock: [july], exerciseTime: null, speed: 1, traceMode: "reveal", matchingOverride: "authored", nearestToleranceMs: null,
+      members: [{ chartId: chart.id, timeRole: "observation" }], contexts: { [chart.id]: { matching: { policy: "lastKnown" } } } }),
+    composition: { active_page_id: "biomedical", displayed_chart_ids: ["temporal", "chart-a"], layout: "sideBySide" },
+    payload: { ...twoChartScene.payload, items: [{ kind: "chart", chart_id: "temporal" }, { kind: "chart", chart_id: "chart-a" }] } };
+  const html = renderToStaticMarkup(React.createElement(audienceModule.default, { dashboard: runtime, projection, connectionStatus: "connected" }));
+  assert.match(html, /As of 2027-07-01 · last known/);
+  assert.match(html, new RegExp(`data-chart-observation-epochs="${july}"`));
+  assert.match(html, /Static snapshot/);
+  assert.match(html, /data-cursor-stamp="at"/);
+  assert.match(html, /2027-08-01/);
+  assert.match(html, /data-exercise-context-stamp="audience"/);
+  assert.match(html, /Fictional scenario · Exercise use only/);
+  assert.match(html, /data-app-version=/);
+  assert.doesNotMatch(html, /aria-live="polite"|Play time|Time settings/);
+});
+
+test("retained Audience renders the newly accepted chart default after a Build policy edit", () => {
+  const january1 = Date.parse("2027-01-01"), january2 = Date.parse("2027-01-02");
+  const rows = [{ date: "2027-01-01", value: 9 }, { date: "2027-01-03", value: 11 }];
+  const original = createChartDraft("line", { id: "cases", sourceId: "source", roles: {
+    observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" }, measurements: [{ field: "value" }],
+  } });
+  original.interaction.timeSync = { matching: { policy: "exact" } };
+  const edited = structuredClone(original); edited.interaction.timeSync.matching = { policy: "lastKnown" };
+  const receiver = { ...dashboard, pages: [{ id: "bio", sections: [{ id: "series", panels: [original] }] }],
+    loadedData: { source: rows }, datasetProfiles: { source: profileDataset(rows) } };
+  const state = { ...initialPlaybackState, cursor: { mode: "at", epochMs: january2, scope: { kind: "page", id: "bio" }, window: null } };
+  const producer = deriveCursorPlayback({ state, charts: [edited], pageCharts: [edited], loadedData: receiver.loadedData, profiles: receiver.datasetProfiles, activePageId: "bio" });
+  const time = makePresentationTime({ ...producer, speed: 1, traceMode: "reveal", matchingOverride: "authored", nearestToleranceMs: null, exerciseTime: null });
+  const projection = { ...twoChartScene, time, source: { kind: "manual", scene_id: null },
+    composition: { active_page_id: "bio", displayed_chart_ids: ["cases"], layout: "solo" }, payload: { ...twoChartScene.payload, items: [{ kind: "chart", chart_id: "cases" }] } };
+  const html = renderToStaticMarkup(React.createElement(audienceModule.default, { dashboard: receiver, projection, connectionStatus: "connected" }));
+  assert.match(html, /As of 2027-01-01 · last known/);
+  assert.match(html, new RegExp(`data-chart-observation-epochs="${january1}"`));
+  assert.deepEqual(original.interaction.timeSync.matching, { policy: "exact" });
+});
 
 test("audience display shows the neutral waiting state before a scene arrives", () => {
   assert.equal(typeof audienceModule?.default, "function", "AudienceDisplay must be implemented");
@@ -286,6 +340,24 @@ test("Audience facts hide independently, collapse the shared header, and never r
   assert.doesNotMatch(dateOnly, /audience-shared-header/);
   assert.match(dateOnly, /2027-03-15/);
   assert.match(dateOnly, /data-displayed-chart-id="chart-a"/);
+});
+
+test("native Storyline keeps Original collection and distinct Storyline facts independently without a parent object", () => {
+  const native = { ...dashboard, chronoGroups: [], scenes: [{ id: "native-child", name: "Staff pressure review",
+    audience: { collectionLabel: "Original health-system collection" } }] };
+  const render = (parent, child) => {
+    const projection = audienceProjection({ facts: { dashboard_name: false, page: false,
+      parent_chrono_group: parent, scene_name: child, scene_date: false } });
+    projection.source = { kind: "scene", scene_id: "native-child" };
+    return renderToStaticMarkup(React.createElement(audienceModule.default, { dashboard: native, projection, connectionStatus: "connected" }));
+  };
+  assert.match(render(true, true), /Original health-system collection/);
+  assert.match(render(true, true), /Staff pressure review/);
+  assert.match(render(true, false), /Original health-system collection/);
+  assert.doesNotMatch(render(true, false), /Staff pressure review/);
+  assert.doesNotMatch(render(false, true), /Original health-system collection/);
+  assert.match(render(false, true), /Staff pressure review/);
+  assert.doesNotMatch(render(false, false), /audience-shared-header/);
 });
 
 test("audience display never renders the page name from legacy audience facts", () => {
@@ -521,12 +593,10 @@ test("Audience date drag commits the source captured at pointer-down when the so
   const sourceAtPointerDown = {
     kind: "scene",
     scene_id: "scene-a",
-    chrono_group_id: "epidemic-time",
   };
   const sourceAtPointerUp = {
     kind: "scene",
     scene_id: "scene-b",
-    chrono_group_id: "epidemic-time",
   };
   const drag = begin({
     pointer: { pointerId: 11, isPrimary: true, button: 0, x: 100, y: 100 },
@@ -562,7 +632,7 @@ test("Audience date drag accepts only the primary left pointer and retains one p
   assert.equal(typeof move, "function");
   assert.equal(typeof complete, "function");
   const input = {
-    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "epidemic-time" },
+    source: { kind: "scene", scene_id: "epidemic-time" },
     position: { x_permille: 125, y_permille: 250, width_permille: 375 },
     bounds: { width: 800, height: 600, labelHeight: 60 },
   };
@@ -591,7 +661,7 @@ test("Audience date drag accepts only the primary left pointer and retains one p
 test("Audience rolls an optimistic date drag back when transport rejects it or the connection stops being live", () => {
   const resolve = audienceModule?.resolveAudienceDateOptimisticPosition;
   assert.equal(typeof resolve, "function");
-  const source = { kind: "scene", scene_id: "scene-a", chrono_group_id: "epidemic-time" };
+  const source = { kind: "scene", scene_id: "scene-a" };
   const authoritativePosition = {
     x_permille: 125,
     y_permille: 250,
@@ -624,7 +694,7 @@ test("Audience rolls an optimistic date drag back when transport rejects it or t
 test("Audience retains an optimistic date position after the controller echoes that exact commit", () => {
   const resolve = audienceModule?.resolveAudienceDateOptimisticPosition;
   assert.equal(typeof resolve, "function");
-  const source = { kind: "scene", scene_id: "scene-a", chrono_group_id: "epidemic-time" };
+  const source = { kind: "scene", scene_id: "scene-a" };
   const authoritativePosition = {
     x_permille: 125,
     y_permille: 250,
@@ -649,7 +719,7 @@ test("Audience retains an optimistic date position after the controller echoes t
 test("Audience retains an optimistic date position while an accepted outbound move awaits its echo", () => {
   const resolve = audienceModule?.resolveAudienceDateOptimisticPosition;
   assert.equal(typeof resolve, "function");
-  const source = { kind: "scene", scene_id: "scene-a", chrono_group_id: "epidemic-time" };
+  const source = { kind: "scene", scene_id: "scene-a" };
   const authoritativePosition = {
     x_permille: 125,
     y_permille: 250,
@@ -948,20 +1018,17 @@ function audienceProjection({
     mode: outputMode,
     blackout,
     dashboardRevision: "dashboard-r1",
-    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "epidemic-time" },
+    source: { kind: "scene", scene_id: "epidemic-time" },
     composition: {
       active_page_id: "biomedical",
       displayed_chart_ids: itemIds,
       layout,
     },
-    timeline: {
-      frame_epochs: [epoch, epoch],
-      frame_index: frameIndex,
-      period: { start: epoch, end: epoch },
-      trace_mode: traceMode,
+    time: presentationTimeFixture({
+      frame_epochs: [epoch - frameIndex, epoch + 1 - frameIndex],
+      frame_index: frameIndex,      trace_mode: traceMode,
       seconds_per_frame: 1,
-    },
-    matching: { use_authored_settings: true },
+    }),
     audience: {
       date_position: datePosition,
     },

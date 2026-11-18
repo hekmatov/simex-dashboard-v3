@@ -109,7 +109,9 @@ test("creation ownership and return navigation preserve read context", () => {
 test("selectors derive saved content without duplicating it into navigation state", () => {
   const state = createChronoContentState({ chronoGroups, scenes, pages, studio: "chrono" });
   assert.equal(selectChronoStudioCards(state)[0].name, "Municipal outbreak playback");
-  assert.equal(selectSceneContent(state, "scene-a").chronoGroupName, "Municipal outbreak playback");
+  assert.equal(selectSceneContent(state, "scene-a").chronoGroupName, "Across pages");
+  const labelled = createChronoContentState({ pages, scenes: [{ ...scenes[0], audience: { collectionLabel: "Original municipal collection" } }] });
+  assert.equal(selectSceneContent(labelled, "scene-a").chronoGroupName, "Original municipal collection");
   assert.notStrictEqual(state.chronoGroups, chronoGroups);
 });
 

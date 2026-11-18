@@ -485,11 +485,11 @@ test("a multi-asset import refuses a non-atomic commit boundary before replaceme
   assert.deepEqual(events, ["prepare"]);
 });
 
-test("V6 cross-layer package validation runs before import preparation or mutation", async () => {
+test("V7 cross-layer package validation runs before import preparation or mutation", async () => {
   const events = [];
   const candidate = {
     config: {
-      configVersion: 6,
+      configVersion: 7,
       home: { enabled: true },
       contentLibrary: {
         mediaItems: {

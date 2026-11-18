@@ -1,3 +1,4 @@
+import { presentationTimeFixture } from "./helpers/presentationTimeFixture.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -44,9 +45,9 @@ test("projects local presenter state through the same immutable Audience mapping
 
   assert.deepEqual(direct, enveloped);
   state.composition.displayed_chart_ids.reverse();
-  state.timeline.frame_index = 0;
+  state.time.frame_index = 0;
   assert.deepEqual(direct.composition.displayed_chart_ids, ["chart-b", "chart-a"]);
-  assert.equal(direct.timeline.frame_index, 1);
+  assert.equal(direct.time.frame_index, 1);
 });
 
 test("projects an accepted state envelope without changing authored order, timeline, trace, or date position", () => {
@@ -66,14 +67,14 @@ test("projects an accepted state envelope without changing authored order, timel
   assert.equal(result.projection.kind, "output");
   assert.equal(result.projection.mode, "active");
   assert.deepEqual(result.projection.composition.displayed_chart_ids, ["chart-b", "chart-a"]);
-  assert.equal(result.projection.timeline.frame_index, 1);
-  assert.equal(result.projection.timeline.trace_mode, "full");
+  assert.equal(result.projection.time.frame_index, 1);
+  assert.equal(result.projection.time.trace_mode, "full");
   assert.deepEqual(result.projection.audience.date_position, {
     x_permille: 123,
     y_permille: 456,
     width_permille: 321,
   });
-  assert.deepEqual(result.projection.matching, { use_authored_settings: true });
+  assert.equal(result.projection.time.matching_override, "authored");
   assert.deepEqual(result.projection.theme, {
     dashboard_style: "signal-instrument",
     dashboard_color_profile: "signal-instrument/calibrated-steel",
@@ -84,9 +85,9 @@ test("projects an accepted state envelope without changing authored order, timel
   assert.deepEqual(result.lastValid, result.projection);
 
   message.payload.composition.displayed_chart_ids.reverse();
-  message.payload.timeline.frame_index = 0;
+  message.payload.time.frame_index = 0;
   assert.deepEqual(result.projection.composition.displayed_chart_ids, ["chart-b", "chart-a"]);
-  assert.equal(result.projection.timeline.frame_index, 1);
+  assert.equal(result.projection.time.frame_index, 1);
 });
 
 test("keeps holding, deliberate blank, and blackout as distinct immutable output states", () => {
@@ -147,7 +148,7 @@ test("rejects non-state inputs without attempting protocol sequencing or replaci
 test("projects accepted ended as exact neutral terminal copy while retaining diagnostics only", () => {
   const lastValid = projectAudienceSnapshot(stateMessage(), null).lastValid;
   const endedMessage = {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-a",
     sequence: 9,
     type: "ended",
@@ -169,7 +170,7 @@ test("projects accepted ended as exact neutral terminal copy while retaining dia
 
 function stateMessage({ sequence = 1, state = presentationState() } = {}) {
   return {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-a",
     sequence,
     type: "state",
@@ -193,20 +194,17 @@ function presentationState({
       appearance_preference: "light",
       resolved_appearance: "light",
     },
-    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-a" },
     composition: {
       active_page_id: "biomedical",
       displayed_chart_ids: ["chart-b", "chart-a"],
       layout: "sideBySide",
     },
-    timeline: {
+    time: presentationTimeFixture({
       frame_epochs: [100, 200, 300],
-      frame_index: frameIndex,
-      period: { start: 100, end: 300 },
-      trace_mode: traceMode,
+      frame_index: frameIndex,      trace_mode: traceMode,
       seconds_per_frame: 1,
-    },
-    matching: { use_authored_settings: true },
+    }),
     output_mode: outputMode,
     blackout,
     audience: { date_position: datePosition },

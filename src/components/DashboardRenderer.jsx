@@ -56,6 +56,7 @@ import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import { useDashboardCanvasActions } from "./dashboard/dashboardCanvasActions.js";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
+import { createComparisonStoryline } from "./time/storylineAuthoring.js";
 import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
@@ -341,6 +342,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [moveDialogRequest, setMoveDialogRequest] = React.useState(null);
   const [moveConfirmation, setMoveConfirmation] = React.useState(null);
   const [multiSelectMode, setMultiSelectMode] = React.useState(false);
+  const [comparisonStorylineRequest, setComparisonStorylineRequest] = React.useState(null);
+  const comparisonStorylineBusy = React.useRef(false);
   const [multiPanelIds, setMultiPanelIds] = React.useState([]);
   const multiPanelIdsRef = React.useRef(multiPanelIds);
   multiPanelIdsRef.current = multiPanelIds;
@@ -410,6 +413,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const buildWorkspaceExportResolutionRef = React.useRef(null);
   const requestBuildSelectionRef = React.useRef(null);
   const [appliedScenePresentSignature, setAppliedScenePresentSignature] = React.useState(null);
+  const [presentEntryInitialized, setPresentEntryInitialized] = React.useState(false);
 
   const workingDashboard = editMode && buildLayoutDraft?.value
     ? buildLayoutDraft.value
@@ -447,26 +451,35 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     playback,
     onSaveSceneDatePosition: saveSceneDatePosition,
   });
-  const presentationCompositionReady = presentationSceneTransitionReady(
+  // The first Present render can still carry the scope chosen in View.
+  // Wait for PresentWorkspace to restore the accepted cursor before applying
+  // an authored composition. Keep the previous Present signature on mode exit.
+  const canSynchronizePresentation = mode === "present" && presentEntryInitialized;
+  const presentationCompositionReady = canSynchronizePresentation && presentationSceneTransitionReady(
     appliedScenePresentSignature,
     playback.activeScene,
-    { enabled: mode === "present" },
   );
+  React.useLayoutEffect(() => {
+    if (!canSynchronizePresentation) return;
+    const scene = playback.activeScene;
+    const group = !scene && playback.cursor.scope.kind === "storyline" && playback.activeGroupId ? playback.activeGroup : null;
+    presentationRuntime.selectPresentationSource(scene ? { kind: "scene", id: scene.id } : group ? { kind: "group", id: group.id } : { kind: "manual" },
+      group?.members?.map(member => member.chartId));
+  }, [canSynchronizePresentation, playback.activeScene, playback.activeGroupId, playback.activeGroup, playback.cursor.scope.kind, presentationRuntime.selectPresentationSource]);
   React.useEffect(() => {
-    if (mode === "present" && playback.activeScene
-      && !presentationRuntime.isPresentationSceneSelected(playback.activeScene.id)) return;
+    if (!canSynchronizePresentation || (playback.activeScene
+      && !presentationRuntime.isPresentationSceneSelected(playback.activeScene.id))) return;
     applyScenePresentTransition(
       appliedScenePresentSignature,
       playback.activeScene,
       {
-        enabled: mode === "present",
         onDisplayAction: presentationRuntime.onDisplayAction,
         onTransitionApplied: setAppliedScenePresentSignature,
       },
     );
   }, [
     appliedScenePresentSignature,
-    mode,
+    canSynchronizePresentation,
     playback.activeScene,
     presentationRuntime.isPresentationSceneSelected,
     presentationRuntime.onDisplayAction,
@@ -1415,6 +1428,31 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setMultiPanelIds([]);
     setMultiSelectNotice(null);
   }
+
+  async function saveComparisonAsStoryline({ chartIds, layout }) {
+    if (viewOnly || layoutMutationLocked || comparisonStorylineBusy.current) return;
+    comparisonStorylineBusy.current = true;
+    try {
+      const id = `scene-${crypto.randomUUID()}`;
+      const scene = createComparisonStoryline({ dashboard, chartIds, layout, id });
+      const result = await onModeRequest?.("build");
+      if (!result?.ok) throw new Error(result?.reason ?? "Build is unavailable.");
+      setComparisonStorylineRequest({ id, scene });
+    } catch (error) {
+      comparisonStorylineBusy.current = false;
+      setMultiSelectNotice({ id: Date.now(), message: error.message });
+    }
+  }
+
+  const resolveComparisonStoryline = React.useCallback(result => {
+    comparisonStorylineBusy.current = false;
+    setComparisonStorylineRequest(null);
+    if (result.ok) onDisplayAction?.({ type: "manual_close_all" });
+    else {
+      setMultiSelectNotice({ id: Date.now(), message: result.reason });
+      void onModeRequest?.("view");
+    }
+  }, [onDisplayAction, onModeRequest]);
 
   function cancelMultiSelection() {
     setMultiSelectMode(false);
@@ -2762,6 +2800,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onOpenDashboardLook={onOpenDashboardLook}
         runtime={presentationRuntime}
         compositionReady={presentationCompositionReady}
+        onEntryInitialized={setPresentEntryInitialized}
         presentableItemIndex={presentableItemIndex}
         accessibilityEnabled={accessibilityEnabled}
         themeProjection={themeProjection}
@@ -2871,6 +2910,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   )) : null;
   const buildWorkspace = editMode ? (
     <BuildWorkspace
+      comparisonStorylineRequest={comparisonStorylineRequest}
+      onComparisonStorylineResolved={resolveComparisonStoryline}
       canvasActions={dashboardCanvasActions}
       quickEditorPositions={quickEditorPositions}
       onQuickEditorPositionsChange={setQuickEditorPositions}
@@ -3044,6 +3085,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onToggleMultiPanel={toggleMultiPanel}
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}
         onOpenMultiFullscreen={openMultiFullscreen}
+        onSaveComparisonAsStoryline={saveComparisonAsStoryline}
+        comparisonSaveDisabledReason={viewOnly ? "This dashboard is read-only." : layoutMutationLocked ? "Wait for the current operation to finish." : ""}
         onCancelMultiSelection={cancelMultiSelection}
       />
       {editMode && selectedPanelIsStatic && staticContentEditorSurface === "full" && chartEditorVisible
@@ -3348,7 +3391,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       <ConfirmDialog
         open={pendingRemovalPageId !== null}
         title={`Delete Page ${dashboard.pages.find(({ id }) => id === pendingRemovalPageId)?.label ?? ""}?`}
-        message="This Page, all of its Sections and charts, and those charts’ Chrono Group memberships will be removed. This cannot be undone after the dashboard change is saved."
+        message="This Page, all of its Sections and charts will be removed. Storyline references to removed charts will be reconciled. This cannot be undone after the dashboard change is saved."
         confirmLabel={moderatorOperation.kind === "remove-page" ? "Deleting…" : "Delete page"}
         cancelLabel="Keep page"
         disabled={moderatorOperation.kind === "remove-page"}

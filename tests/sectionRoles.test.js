@@ -26,7 +26,7 @@ function page({ attentionPanels = [kpi("k1")], role = "attention" } = {}) {
 
 function dashboard(pages) {
   return {
-    configVersion: 6,
+    configVersion: 7,
     id: "d",
     title: "D",
     timezone: "UTC",

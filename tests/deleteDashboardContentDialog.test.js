@@ -19,7 +19,7 @@ await vite.close();
 test("dashboard-content deletion starts safe and names every destructive consequence", () => {
   const html = renderToStaticMarkup(React.createElement(DeleteDashboardContentDialog, {
     open: true,
-    summary: { pages: 3, charts: 12, sources: 5, chronoGroups: 2, scenes: 1 },
+    summary: { pages: 3, charts: 12, sources: 5, scenes: 3 },
   }));
 
   assert.match(html, /role="dialog"/);
@@ -28,10 +28,10 @@ test("dashboard-content deletion starts safe and names every destructive consequ
   assert.match(html, />3 Pages</);
   assert.match(html, />12 charts</);
   assert.match(html, />5 data sources</);
-  assert.match(html, />2 Chrono Groups</);
-  assert.match(html, />1 Scene</);
+  assert.match(html, />3 Storylines</);
+  assert.doesNotMatch(html, /Chrono Groups/);
   assert.match(html, /type="checkbox"/);
-  assert.match(html, /Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes\. Canonical Home remains available\./);
+  assert.match(html, /Delete all authored dashboard pages, charts, sources, media, and Storylines\. Canonical Home remains available\./);
   assert.match(html, /I understand that the authored dashboard content listed above will be permanently deleted/);
   assert.match(html, /<button[^>]*disabled=""[^>]*>Delete all dashboard content<\/button>/);
 });

@@ -7,7 +7,7 @@ import * as regionModule from "../src/theme/dashboardRegionRegistry.js";
 
 const STYLE_IDS = ["ledger", "humanist", "instrument"];
 
-test("the historical 71-entry catalogue is explicitly journey execution accounting", () => {
+test("the current native Storyline catalogue is explicitly journey execution accounting", () => {
   assert.equal(journeyModule.DASHBOARD_JOURNEY_MANIFEST, journeyModule.DASHBOARD_SURFACE_MANIFEST);
   assert.equal(typeof journeyModule.summarizeDashboardJourneyManifest, "function");
 
@@ -18,10 +18,10 @@ test("the historical 71-entry catalogue is explicitly journey execution accounti
     coverageAliases: summary.coverageAliases,
     intentionallyOutOfScope: summary.intentionallyOutOfScope,
   }, {
-    total: 73,
+    total: 72,
     executable: 66,
     coverageAliases: 6,
-    intentionallyOutOfScope: 1,
+    intentionallyOutOfScope: 0,
   });
 });
 
@@ -31,7 +31,7 @@ test("journey/style cells identify their accounting boundary instead of claiming
     journeyModule.DASHBOARD_JOURNEY_MANIFEST,
   );
 
-  assert.equal(matrix.length, 219);
+  assert.equal(matrix.length, 216);
   assert.equal(matrix.every(({ accounting }) => accounting === "journey-style"), true);
   assert.equal(matrix.every(({ journeyId }) => typeof journeyId === "string" && journeyId.length > 0), true);
   assert.deepEqual([...new Set(matrix.map(({ style }) => style))], STYLE_IDS);

@@ -32,6 +32,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
   const [renameKey, setRenameKey] = React.useState("");
   const [renameValue, setRenameValue] = React.useState("");
   const [dropIndicator, setDropIndicator] = React.useState(null);
+  const railRef = React.useRef(null);
   const refs = React.useRef(new Map());
   const dragSessionRef = React.useRef(null);
   if (!dragSessionRef.current) dragSessionRef.current = createBuildMoveDragSession();
@@ -39,7 +40,20 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
   const nodes = visibleBuildTreeNodes(dashboard, expandedKeys);
   const selectedKey = selectionKey(selection);
 
-  React.useEffect(() => () => controller.dispose(), [controller]);
+  React.useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || selectionOnly) return undefined;
+    const cancelOutside = (event) => {
+      if (!rail.contains(event.target)) controller.cancelPending();
+    };
+    document.addEventListener("pointerdown", cancelOutside, true);
+    document.addEventListener("focusin", cancelOutside, true);
+    return () => {
+      document.removeEventListener("pointerdown", cancelOutside, true);
+      document.removeEventListener("focusin", cancelOutside, true);
+      controller.dispose();
+    };
+  }, [controller, selectionOnly]);
   React.useEffect(() => {
     if (selectionOnly) refs.current.get(selectedKey)?.scrollIntoView?.({ block: "nearest" });
   }, [selectionOnly, selectedKey]);
@@ -253,7 +267,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     </li></React.Fragment>;
   };
   return <>
-    <nav className="build-structure-rail" aria-label={ariaLabel}><ul role="tree" aria-multiselectable={renderNodeControl ? true : undefined} className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
+    <nav ref={railRef} className="build-structure-rail" aria-label={ariaLabel}><ul role="tree" aria-multiselectable={renderNodeControl ? true : undefined} className="build-structure-list build-tree-root">{nodes.filter((node) => node.parentKey === null).map(row)}</ul></nav>
   </>;
 }
 

@@ -5,6 +5,8 @@ import App from "./App.jsx";
 import OperationStatusProvider from "./components/app-shell/OperationStatusProvider.jsx";
 import ApplicationErrorBoundary from "./components/app-shell/ApplicationErrorBoundary.jsx";
 import { registerServiceWorker } from "./serviceWorkerRegistration.js";
+import { verifyCompanionCatalogue } from "./lib/verifyCompanionCatalogue.js";
+import { loadBrowserCsv } from "./lib/loadBrowserCsv.js";
 import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles.css";
@@ -20,6 +22,7 @@ import "./styles/immersive-display.css";
 import "./styles/operation-status.css";
 import "./styles/right-side-drawer.css";
 import "./styles/desktop-mode-gate.css";
+import "./styles/phone-view.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {
@@ -31,7 +34,7 @@ createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ApplicationErrorBoundary>
       <OperationStatusProvider>
-        <App />
+        <App verifyCompanionCatalogue={verifyCompanionCatalogue} loadConfiguredCsv={loadBrowserCsv} />
       </OperationStatusProvider>
     </ApplicationErrorBoundary>
   </React.StrictMode>,

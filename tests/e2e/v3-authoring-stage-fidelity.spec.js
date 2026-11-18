@@ -1,25 +1,117 @@
 import { test, expect } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 import { createHash } from "node:crypto";
+import { parseCsvText } from "../../src/lib/loadCsv.js";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 import { chartAuthoringWorkflow, openFreshChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
 
 test.use({ storageState: { cookies: [], origins: [] }, reducedMotion: "reduce" });
+
+// A bounded changed-surface witness, not the historical cross-style matrix.
+// Each test gets isolated storage; source requests retain the accepted package.
+for (const [style, profile] of [
+  ["evidence-ledger", "evidence-ledger/brighter-vellum"],
+  ["humanist-standard", "humanist-standard/common-ground"],
+  ["signal-instrument", "signal-instrument/calibrated-steel"],
+  ["pdpc", "pdpc/brand"],
+]) {
+  test(`footprint typography fidelity across editor destination and Audience in ${style}`, async ({ page, context, request }) => {
+    test.setTimeout(120_000);
+    const response = await request.get("/config/dashboard.json");
+    const bytes = await response.body();
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
+    const fixture = JSON.parse(bytes);
+    const chart = fixture.pages.find(p => p.id === "biomedical").sections.find(s => s.id === "outbreak_dynamics").panels.find(c => c.id === "bio_r_values");
+    expect(chart.roles.measurements[0].field).toBe("R_value");
+    const source = await request.get(`/${fixture.dataSources[chart.sourceId].path}`);
+    expect(source.ok()).toBe(true);
+    const observations = parseCsvText(await source.text());
+    const firstEpoch = observations.map(row => Date.parse(row[chart.roles.observation.field])).find(Number.isFinite);
+    expect(Number.isFinite(firstEpoch)).toBe(true);
+    fixture.globalStyles.dashboardStyle = style;
+    fixture.globalStyles.dashboardColorProfile = profile;
+    chart.title = "Reproduction value with a deliberately long heading for footprint and projector fidelity";
+    chart.presentation.title = { ...chart.presentation.title };
+    delete chart.presentation.title.fontSize;
+    chart.layout = { ...chart.layout, width: 4, height: 0.5 };
+    await context.route("**/config/dashboard.json", route => route.fulfill({ json: fixture }));
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open the dashboard", exact: true }).click();
+
+    await openDashboardPage(page, "biomedical");
+    const cursor = timeCursor(page);
+    await cursor.open();
+    await cursor.frame.fill(String(firstEpoch));
+    await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+    const destination = page.locator('[data-canonical-page-id] [data-canonical-panel-id="bio_r_values"]');
+    await expect(destination).toBeVisible();
+    await page.getByRole("treeitem", { name: chart.title, exact: true }).click();
+    const quick = page.locator(".chart-quick-editor");
+    await expect(quick).toBeVisible();
+    const stage = quick.locator(".authoring-stage");
+    await sameGeometry(stage, destination);
+    await samePaint(stage, destination);
+    const sourceCaption = await destination.locator("[data-chart-source-citation]").textContent();
+    expect(sourceCaption).toMatch(/^Source: .+/);
+    await expect(stage.locator(".chart-view-title").first()).toHaveCSS("font-size", "14px");
+    await expect(destination.locator(".chart-view-title").first()).toHaveCSS("font-size", "14px");
+    await quick.getByRole("button", { name: "Open full editor", exact: true }).click();
+    const full = page.getByRole("dialog", { name: "Edit chart", exact: true });
+    await chartAuthoringWorkflow(full, { mode: "edit" }).goToConfigure();
+    await sameGeometry(full.locator(".authoring-stage"), destination);
+    await samePaint(full.locator(".authoring-stage"), destination);
+    await full.locator('[data-icon-control="wizard.close-wizard"]').click();
+    await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+    const monitor = page.locator(".audience-snapshot-monitor");
+    await expect(monitor).toHaveAttribute("data-monitor-source", "local");
+    await page.locator('[data-presentable-item-id="bio_r_values"] input').check();
+    const local = monitor.locator(".audience-local-preview");
+    await expect(local).toHaveAttribute("data-dashboard-style", style);
+    await expect(local.locator(".chart-view-title").first()).toHaveCSS("font-size", "28px");
+    await expect(local.locator("[data-chart-source-citation]").first()).toHaveText(sourceCaption);
+    const popup = page.waitForEvent("popup");
+    await page.locator('[data-presentation-control-id="rehearse"]').click();
+    const audience = await popup;
+    try {
+      await audience.setViewportSize({ width: 1600, height: 1000 });
+      await expect(audience.locator(".audience-theme-root").first()).toHaveAttribute("data-dashboard-style", style);
+      await expect(audience.locator(".chart-view-title").first()).toHaveCSS("font-size", "28px");
+      await expect(audience.locator("[data-chart-source-citation]").first()).toHaveText(sourceCaption);
+      await expect(monitor).toHaveAttribute("data-monitor-source", "audience");
+      await expect(monitor.locator("img")).toBeVisible();
+      await expect.poll(() => monitor.locator("img").evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+      const geometry = await audience.locator(".audience-display").evaluate(el => { const box = el.getBoundingClientRect(); return { width: box.width, height: box.height, x: box.x, y: box.y }; });
+      expect(geometry.width / geometry.height).toBeCloseTo(16 / 9, 2);
+      expect(geometry.y).toBeGreaterThan(0);
+    } finally { await audience.close(); }
+  });
+}
 
 test("authoring stage preserves destination geometry, rendered output and draft continuity across Quick Full and creation", async ({ page, request }) => {
   test.setTimeout(180_000);
   // Source/destination/control preflight before the representative journey.
   const config = await request.get("/config/dashboard.json");
   const bytes = await config.body();
-  expect(createHash("sha256").update(bytes).digest("hex")).toBe("a6092faf3463389fea17934c005f74802c9c843abcecfb31272221a2fea11f2f");
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
   const dashboard = JSON.parse(bytes);
   const sourceChart = dashboard.pages.find(p => p.id === "biomedical").sections.find(s => s.id === "outbreak_dynamics").panels.find(c => c.id === "bio_r_values");
   expect(sourceChart.roles.measurements[0].field).toBe("R_value");
   const source = await request.get(`/${dashboard.dataSources[sourceChart.sourceId].path}`);
   expect(source.ok()).toBe(true);
-  expect(await source.text()).toMatch(/date.*R_value/);
+  const sourceText = await source.text();
+  expect(sourceText).toMatch(/date.*R_value/);
+  const firstEpoch = parseCsvText(sourceText).map(row => Date.parse(row[sourceChart.roles.observation.field])).find(Number.isFinite);
+  expect(Number.isFinite(firstEpoch)).toBe(true);
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Open the dashboard", exact: true }).click({ noWaitAfter: true });
+
+  await openDashboardPage(page, "biomedical");
+  const cursor = timeCursor(page);
+  await cursor.open();
+  await cursor.frame.fill(String(firstEpoch));
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click({ noWaitAfter: true });
   const destination = page.locator('[data-canonical-page-id] [data-canonical-panel-id="bio_r_values"]');
   await expect(destination).toBeVisible();
@@ -121,6 +213,8 @@ async function samePaint(stage, destination) {
   }, { timeout: 15_000 }).toBe(true);
   const targetHeading = await destination.locator(".chart-view-title").first().textContent();
   await expect(stage.locator(".chart-view-title").first()).toHaveText(targetHeading);
+  const targetSource = await destination.locator(".chart-source-caption").first().textContent();
+  await expect(stage.locator(".chart-source-caption").first()).toHaveText(targetSource);
 }
 
 function canvasSnapshot(canvas) {

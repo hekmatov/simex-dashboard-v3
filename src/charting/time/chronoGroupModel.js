@@ -145,6 +145,25 @@ export function assertChronoGroupMemberEligible({ chart, timeRole, profiles }) {
   return true;
 }
 
+/** Validate a chart-owned default against the same source contract as playback. */
+export function validateChartTimeSyncDefault(chart, { profiles } = {}) {
+  const matching = chart?.interaction?.timeSync?.matching;
+  if (matching === undefined) return chart;
+  const validated = validateEffectiveTimeSyncMatching(matching, `Chart "${chart.id}" time synchronization`);
+  const schema = schemaForMember(chart);
+  let lastFailure;
+  for (const role of schema.roles.filter(role => role.accepts.includes("temporal"))) {
+    try {
+      validateMemberEligibility({ chart, schema, member: { timeRole: role.id }, profiles });
+      if (validated.policy === "interpolate") {
+        validateInterpolationPermission(chart, schema, { timeRole: role.id }, unwrapProfile(readEntry(profiles, chart.sourceId)));
+      }
+      return chart;
+    } catch (error) { lastFailure = error; }
+  }
+  throw lastFailure ?? new Error(`Chart "${chart.id}" has no eligible temporal role for time synchronization.`);
+}
+
 export function isTimeSyncInterpolationEligible(schema) {
   const semanticMark = schema?.semantics?.mark ?? "";
   return Boolean(

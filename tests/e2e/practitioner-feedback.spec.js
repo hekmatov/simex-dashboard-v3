@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
+import { migrateDashboardV6ToV7 } from "../../src/charting/config/migrateDashboardV6ToV7.js";
 import { enterAuthoredDashboard } from "./support/landingWorkflow.js";
 
 test.use({ viewport: { width: 1440, height: 1000 }, storageState: { cookies: [], origins: [] } });
@@ -29,21 +31,24 @@ test("Build discards suspended temporal drafts in place and disables empty sessi
   await openBuild(page);
   await expect(discard(page)).toBeDisabled();
   await expect(finish(page)).toBeDisabled();
-  await commands(page).getByRole("button", { name: "Scene Studio", exact: true }).click();
-  await studio(page, "Scene").getByRole("button", { name: "Create Scene", exact: true }).click();
-  await studio(page, "Scene").getByLabel("Scene name", { exact: true }).fill("Retained scene draft");
-  const parents = studio(page, "Scene").locator('[data-scene-workflow-id="parent-chrono-group"]');
-  await expect(parents.locator("option")).toContainText(["Choose Chrono Group", "Municipal outbreak playback", "National outbreak and health-system playback"]);
-  await parents.selectOption("national_outbreak");
-  await studio(page, "Scene").getByRole("button", { name: "Close", exact: true }).click();
+  await commands(page).getByRole("button", { name: "Storyline Studio", exact: true }).click();
+  await studio(page, "Storyline").getByRole("button", { name: "Create Storyline", exact: true }).click();
+  await studio(page, "Storyline").getByLabel("Storyline name", { exact: true }).fill("Retained scene draft");
+  await expect(studio(page, "Storyline").locator('[data-scene-workflow-id="parent-chrono-group"]')).toHaveCount(0);
+  await studio(page, "Storyline").getByLabel("Start date", { exact: true }).fill("2027-02-20");
+  await studio(page, "Storyline").getByLabel("End date", { exact: true }).fill("2027-08-15");
+  await studio(page, "Storyline").getByRole("radio", { name: "All member observations", exact: true }).check();
+  await studio(page, "Storyline").getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.locator('.object-quick-editor')).toHaveCount(0);
-  await commands(page).getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  await studio(page, "Chrono").getByRole("button", { name: "Close", exact: true }).click();
+  await commands(page).getByRole("button", { name: "Source content", exact: true }).click();
+  await page.getByRole("complementary", { name: "Source content authoring", exact: true }).getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.locator('.object-quick-editor')).toHaveCount(0);
-  await commands(page).getByRole("button", { name: /Resume Scene Studio/ }).click();
-  await expect(studio(page, "Scene").getByLabel("Scene name", { exact: true })).toHaveValue("Retained scene draft");
-  await expect(studio(page, "Scene").locator('[data-scene-workflow-id="parent-chrono-group"]')).toHaveValue("national_outbreak");
-  await studio(page, "Scene").getByRole("button", { name: "Close", exact: true }).click();
+  await commands(page).getByRole("button", { name: /Resume Storyline Studio/ }).click();
+  await expect(studio(page, "Storyline").getByLabel("Storyline name", { exact: true })).toHaveValue("Retained scene draft");
+  await expect(studio(page, "Storyline").getByLabel("Start date", { exact: true })).toHaveValue("2027-02-20");
+  await expect(studio(page, "Storyline").getByLabel("End date", { exact: true })).toHaveValue("2027-08-15");
+  await expect(studio(page, "Storyline").getByRole("radio", { name: "All member observations", exact: true })).toBeChecked();
+  await studio(page, "Storyline").getByRole("button", { name: "Close", exact: true }).click();
   await expect(discard(page)).toBeEnabled();
   await expect(finish(page)).toBeDisabled();
   await confirmDiscard(page);
@@ -67,41 +72,58 @@ test('library return retains an explicitly opened object editor and its focus-re
   await expect(invoker).toBeFocused();
 });
 
-test("open Chrono draft blocks new Scenes and directly reopens through its status banner", async ({ page }) => {
+test("pending Storyline resumes unchanged with every matching policy and an explicit nearest bound", async ({ page }) => {
   await openBuild(page);
-  await commands(page).getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  await studio(page, "Chrono").getByRole("button", { name: "Create Chrono Group", exact: true }).click();
-  await studio(page, "Chrono").getByLabel("Chrono Group name", { exact: true }).fill("Pending group");
-  await studio(page, "Chrono").getByRole("button", { name: "Close", exact: true }).click();
-  await commands(page).getByRole("button", { name: "Scene Studio", exact: true }).click();
-  await expect(studio(page, "Scene").getByRole("button", { name: "Create Scene", exact: true })).toBeDisabled();
-  await studio(page, "Scene").getByRole("button", { name: "Open pending Chrono Group draft", exact: true }).click();
-  await expect(studio(page, "Chrono").getByLabel("Chrono Group name", { exact: true })).toHaveValue("Pending group");
-  await studio(page, "Chrono").getByLabel("Start date", { exact: true }).fill("2027-02-20");
-  await studio(page, "Chrono").getByLabel("End date", { exact: true }).fill("2027-08-15");
-  await studio(page, "Chrono").getByRole("button", { name: "Continue", exact: true }).click();
-  await studio(page, "Chrono").locator('[data-chart-id="bio_confirmed_cases"]').getByRole("button", { name: "Add to group", exact: true }).click();
-  await studio(page, "Chrono").getByRole("button", { name: "Continue", exact: true }).click();
-  const policies = studio(page, "Chrono").getByRole("radio");
-  await expect(policies).toHaveCount(4);
-  expect(await policies.evaluateAll((inputs) => inputs.map(({ value }) => value))).toEqual(["Snap to Latest", "Interpolate", "Snap to Closest", "Concurrent only"]);
-  await expect(policies.first()).toBeChecked();
+  await commands(page).getByRole("button", { name: "Storyline Studio", exact: true }).click();
+  const editor = studio(page, "Storyline");
+  await editor.getByRole("button", { name: "Create Storyline", exact: true }).click();
+  await editor.getByLabel("Storyline name", { exact: true }).fill("Pending Storyline");
+  await editor.getByLabel("Start date", { exact: true }).fill("2027-02-20");
+  await editor.getByLabel("End date", { exact: true }).fill("2027-08-15");
+  const matching = editor.getByRole("combobox", { name: "Default matching", exact: true });
+  const maxDistance = editor.getByRole("spinbutton", { name: /^Default matching maximum distance \(hours\)/ });
+  await expect(matching).toHaveValue("authored");
+  await expect.poll(() => matching.evaluate(select => Array.from(select.options)
+    .filter(option => option.value !== "authored")
+    .map(option => ({ value: option.value, label: option.textContent })))).toEqual([
+    { value: "exact", label: "Concurrent only" },
+    { value: "lastKnown", label: "Snap to Latest" },
+    { value: "nearest", label: "Snap to Closest" },
+    { value: "interpolate", label: "Interpolate" },
+  ]);
+  await matching.selectOption("nearest");
+  await maxDistance.fill("2");
+  const pending = page.locator('[data-pending-work-kind="scene"]');
+  await expect(pending).toBeVisible();
+  const identity = await pending.getAttribute("data-pending-work-id");
+  expect(identity).toBeTruthy();
+  await editor.getByRole("button", { name: "Close", exact: true }).click();
+  await commands(page).getByRole("button", { name: /Resume Storyline Studio/ }).click();
+  await expect(pending).toHaveAttribute("data-pending-work-id", identity);
+  await expect(editor.getByLabel("Storyline name", { exact: true })).toHaveValue("Pending Storyline");
+  await expect(editor.getByLabel("Start date", { exact: true })).toHaveValue("2027-02-20");
+  await expect(editor.getByLabel("End date", { exact: true })).toHaveValue("2027-08-15");
+  await expect(editor.getByRole("button", { name: /Storyline details/, exact: false })).toHaveAttribute("aria-current", "step");
+  await expect(matching).toHaveValue("nearest");
+  await expect(maxDistance).toHaveValue("2");
 });
 
-test("Chrono Group Only hides empty sections and View all charts switches the scope", async ({ page }) => {
+test("Storyline scope keeps canonical page content mounted and closes back to Page scope", async ({ page }) => {
   await page.goto("/");
   await enterAuthoredDashboard(page);
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const controls = page.getByRole("region", { name: "Chrono playback controls" });
-  await controls.getByRole("combobox", { name: "Chrono source" }).selectOption("group:national_outbreak");
-  const scope = controls.getByRole("combobox", { name: "Chrono chart scope" });
-  await scope.selectOption("group-only");
-  await expect(page.getByText("Other charts are hidden in Group Only view.", { exact: true })).toBeVisible();
-  await expect(page.locator("[data-canonical-section-id]")).toHaveCount(0);
+  const source = migrateDashboardV6ToV7(await (await page.request.get("/config/dashboard.json")).json());
+  const saved = source.scenes.find(scene => scene.name === "National outbreak and health-system playback");
+  expect(saved).toBeTruthy();
+  const cursor = timeCursor(page);
+  await cursor.selectScope({ name: saved.name });
+  const band = page.getByRole("region", { name: "Storyline", exact: true });
+  await expect(band).toBeVisible();
+  await expect(band.locator("[data-scene-chart-id]")).toHaveCount(saved.members.length);
+  await expect(page.locator("[data-canonical-section-id]").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Add Panel to Section", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "View all charts", exact: true }).click();
-  await expect(scope).toHaveValue("all-page");
-  await expect(page.getByText("Other charts are hidden in Group Only view.", { exact: true })).toHaveCount(0);
+  await band.getByRole("button", { name: "Close Storyline", exact: true }).click();
+  await expect(cursor.scope).toHaveValue("page");
+  await expect(band).toHaveCount(0);
   await expect(page.locator("[data-canonical-section-id]").first()).toBeVisible();
 });
 
@@ -111,14 +133,17 @@ test("Build rails stop above the footer and saved session changes can be discard
   await page.getByRole("button", { name: "Page settings", exact: true }).click();
   const title = page.locator(".object-quick-editor").getByLabel("Page title", { exact: true });
   const baseline = await title.inputValue();
+  const pageId = await page.locator('[data-canonical-mode="build"][data-canonical-page-id]')
+    .getAttribute("data-canonical-page-id");
+  expect(pageId).toBeTruthy();
   await title.fill("Build session change");
   await expect(finish(page)).toBeEnabled();
   // Page metadata uses the serialized autosave queue; wait for the durable
   // change so this exercises restoration of committed content, not only a local draft.
-  await expect.poll(() => page.evaluate(() => {
+  await expect.poll(() => page.evaluate((activePageId) => {
     const saved = JSON.parse(localStorage.getItem("simex-dashboard-config-v3-three-mode-v1"));
-    return saved?.pages.find(({ id }) => id === "biomedical")?.title;
-  })).toBe("Build session change");
+    return saved?.pages.find(({ id }) => id === activePageId)?.title;
+  }, pageId)).toBe("Build session change");
   await confirmDiscard(page);
   await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await expect(title).toHaveValue(baseline);
@@ -142,7 +167,7 @@ test("unsaved source names disable Finish and Build discard clears their pending
   await commands(page).getByRole("button", { name: "Source content", exact: true }).click();
   const sources = page.getByRole("complementary", { name: "Source content authoring", exact: true });
   await sources.getByRole("tab", { name: "Data sources", exact: true }).click();
-  await sources.getByRole("button", { name: /^Cases — Biomedical/ }).click();
+  await sources.getByRole("button", { name: /^Cases \u2014 Biomedical/ }).click();
   await sources.getByLabel("Display name", { exact: true }).fill("Unsaved source name");
   await sources.getByRole("button", { name: "Close", exact: true }).click();
   await expect(finish(page)).toBeDisabled();
@@ -151,6 +176,6 @@ test("unsaved source names disable Finish and Build discard clears their pending
   await expect(discard(page)).toBeDisabled();
   await commands(page).getByRole("button", { name: "Source content", exact: true }).click();
   await sources.getByRole("tab", { name: "Data sources", exact: true }).click();
-  await expect(sources.getByRole("button", { name: /^Cases — Biomedical/ })).toBeVisible();
+  await expect(sources.getByRole("button", { name: /^Cases \u2014 Biomedical/ })).toBeVisible();
   await expect(sources.getByRole("button", { name: /^Unsaved source name/ })).toHaveCount(0);
 });

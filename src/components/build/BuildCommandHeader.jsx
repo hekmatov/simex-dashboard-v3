@@ -60,8 +60,7 @@ export default function BuildCommandHeader({
         <div className="build-command-group" role="group" aria-label="Libraries" data-build-command-group="libraries">
           <span className="build-command-group-label" aria-hidden="true">Libraries</span>
           {library("source-content", "Source content", "source-content")}
-          {library("chrono-studio", "Chrono Studio", "chrono-group")}
-          {library("scene-studio", "Scene Studio", "scene")}
+          {library("scene-studio", "Storyline Studio", "scene")}
           {command("load-package", "Load dashboard package", { disabled: importDisabled, onClick: onImportPackage,
             "data-unit-orbit-preserve-open": true, "data-preserve-build-draft": true })}
         </div>

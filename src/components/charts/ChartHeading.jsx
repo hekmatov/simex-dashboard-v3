@@ -1,4 +1,6 @@
 import React from "react";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
+import ChartSourceCaption from "./ChartSourceCaption.jsx";
 
 import {
   chartDescriptionVisible,
@@ -7,12 +9,13 @@ import {
   titleContainerProps,
 } from "./chartViewPresentation.js";
 
-export default function ChartHeading({ chart, titleId, descriptionId, level = 3, titleStyle }) {
+export default function ChartHeading({ chart, titleId, descriptionId, level = 3, titleStyle, showSourceCaption = true }) {
+  const typography = useChartTypography();
   const Heading = `h${level}`;
   const title = String(chart?.title || "Chart");
   const description = String(chart?.description || "");
   const resolvedTitleStyle = {
-    ...chartTitleStyle(chart),
+    ...chartTitleStyle(chart, typography),
     ...titleStyle,
   };
 
@@ -32,5 +35,6 @@ export default function ChartHeading({ chart, titleId, descriptionId, level = 3,
     chartDescriptionVisible(chart) && description
       ? React.createElement("p", { id: descriptionId, className: "chart-view-description" }, description)
       : null,
+    showSourceCaption ? React.createElement(ChartSourceCaption) : null,
   );
 }

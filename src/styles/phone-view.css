@@ -1,0 +1,312 @@
+@media (max-width: 767px) {
+  .app-frame[data-dashboard-mode="view"] .dashboard-command-crown[data-crown-compact="true"] .crown-compact-row {
+    gap: 4px;
+    justify-content: flex-start;
+    padding: 0 4px;
+  }
+
+  .app-frame .crown-compact-row .crown-disclosure-trigger {
+    display: grid;
+    flex: 0 0 44px;
+    padding: 0;
+    place-items: center;
+  }
+
+  .crown-compact-row .crown-disclosure-trigger::before { content: none; }
+
+  .crown-compact-pages {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 4px;
+    min-inline-size: 0;
+    overflow-x: auto;
+  }
+
+  .crown-compact-pages button {
+    flex: 1 0 auto;
+    font-size: 0.8125rem;
+    padding-inline: 6px;
+    white-space: nowrap;
+  }
+
+  .crown-disclosure-backdrop {
+    inset: var(--simex-command-crown-row) 0 0;
+    position: fixed;
+    z-index: 48;
+  }
+
+  .app-frame .dashboard-command-crown[data-crown-compact="true"] .crown-disclosure {
+    align-content: start;
+    border: 1px solid var(--simex-border-subtle);
+    border-radius: var(--simex-style-control-radius);
+    box-shadow: var(--simex-style-shell-shadow);
+    box-sizing: border-box;
+    gap: 4px;
+    inset: var(--simex-command-crown-row) auto auto 4px;
+    inline-size: min(11rem, calc(100vw - 8px));
+    max-block-size: calc(100dvh - var(--simex-command-crown-row) - 4px);
+    overflow: auto;
+    padding: 4px;
+    position: fixed;
+    z-index: 49;
+  }
+
+  .app-frame .dashboard-command-crown[data-crown-compact="true"] .crown-disclosure .mode-switcher {
+    display: grid;
+    gap: 4px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  .app-frame .dashboard-command-crown[data-crown-compact="true"] .crown-disclosure button {
+    min-block-size: 34px;
+    min-height: 34px;
+    padding: 3px 6px;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+  }
+
+  .crown-disclosure .mode-switcher button { inline-size: 100%; }
+  .crown-disclosure .crown-disclosure__actions {
+    display: grid;
+    gap: 4px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .app-frame .canonical-dashboard-frame.view-shell {
+    --phone-view-inset: 8px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    min-block-size: 0;
+    width: 100%;
+  }
+
+  .app-frame[data-dashboard-mode="view"] :is(.exercise-disclaimer, .pdpc-release-disclaimer) {
+    font-size: 0.8125rem;
+    line-height: 1.25;
+  }
+
+  .app-frame[data-dashboard-mode="view"] :is(.exercise-disclaimer, .pdpc-release-disclaimer) .exercise-context-stamp__version,
+  .app-frame[data-dashboard-mode="view"] .fullscreen-context-header :is(.exercise-context-stamp__version, .cursor-time-readout) {
+    display: none;
+  }
+
+  .app-frame .fullscreen-backdrop.fullscreen-backdrop--immersive { padding: 0; }
+  .app-frame .fullscreen-context-header {
+    gap: 0 4px;
+    padding: 0 4px;
+  }
+  .app-frame .fullscreen-context-header__identity { flex: 1 1 0; }
+  .app-frame .fullscreen-context-header .exercise-context-stamp {
+    background: transparent;
+    border: 0;
+    font-size: 0.8125rem;
+    padding: 8px 4px 4px;
+  }
+  .app-frame .fullscreen-backdrop--immersive .fullscreen-context-header .fullscreen-toolbar-close {
+    right: auto;
+    top: auto;
+  }
+  .app-frame .fullscreen-swipe-handle { height: 12px; min-width: 72px; }
+  .fullscreen-swipe-handle::before {
+    background: var(--simex-border-strong);
+    border-radius: 2px;
+    content: "";
+    height: 3px;
+    width: 24px;
+  }
+
+  .view-shell .canonical-dashboard-header {
+    margin: 0;
+  }
+
+  .app-frame .view-shell .dashboard-header[data-header-compact="true"] {
+    padding: 8px var(--phone-view-inset);
+  }
+
+  .app-frame .view-shell .dashboard-header :is(h1, .dashboard-page-title),
+  .app-frame .view-shell .storyline-band__header h1 {
+    font-size: 1.2rem;
+    line-height: 1.2;
+  }
+
+  .app-frame .view-shell .dashboard-header .subtitle,
+  .app-frame .view-shell .section-title-block > p {
+    font-size: 0.875rem;
+    line-height: 1.35;
+    margin: 3px 0 0;
+  }
+
+  .app-frame .canonical-dashboard-frame.view-shell .section-header {
+    border-bottom: 0;
+    padding: 8px var(--phone-view-inset) 4px;
+  }
+
+  .app-frame .view-shell .section-header h2 {
+    font-size: 1.05rem;
+    line-height: 1.2;
+  }
+
+  .app-frame .view-shell .storyline-band__header {
+    padding: 4px var(--phone-view-inset);
+  }
+
+  .app-frame .canonical-dashboard-frame.view-shell .dashboard-section > :is(.layout-grid, .scene-view-composition-grid) {
+    gap: 8px;
+    padding: 4px var(--phone-view-inset) 8px;
+  }
+
+  .app-frame .canonical-dashboard-frame.view-shell .chart-panel-footprint {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .app-frame .view-shell :is(.chart-panel-footprint, .storyline-band .scene-view-composition-cell) {
+    height: clamp(300px, 44svh, 370px);
+  }
+
+  .app-frame .view-shell .deferred-panel-mount > .chart-panel-footprint {
+    height: 100%;
+  }
+
+  .app-frame .view-shell .storyline-band .scene-view-composition-grid {
+    grid-auto-flow: row;
+    grid-auto-rows: auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-frame .view-shell .storyline-band .scene-view-composition-grid > .scene-view-composition-cell {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 0;
+  }
+
+  .app-frame .canonical-dashboard-frame.view-shell :is(.chart-view-heading, .collection-display-header) {
+    padding: 6px 8px 3px;
+  }
+
+  .app-frame .view-shell .chart-view-heading :is(.chart-view-title, .chart-time-chip, .chart-source-caption) {
+    line-height: 1.25;
+  }
+
+  .app-frame .view-shell .chart-echarts-view:not(.chart-echarts-view--precision-gauge) > .chart-echarts-host {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+  }
+
+  .app-frame .canonical-dashboard-frame.view-shell .chart-panel:has(.chart-panel-icon-button) :is(.chart-view-heading, .free-text-chart-view__header, .collection-display-header) {
+    padding-inline-end: 52px;
+  }
+
+  .app-frame .view-shell .chart-card-view .chart-source-caption {
+    padding-inline: 8px;
+  }
+
+  .app-frame .view-shell .chart-card-view .chart-card {
+    padding-inline: 6px;
+  }
+
+  .app-frame .view-shell .chart-panel-footprint:has(.chart-card-view) {
+    height: auto;
+  }
+
+  .app-frame .view-shell :is(.chart-card-collection, .chart-card-view .collection-display, .chart-view-frame:has(.chart-card-view), .chart-data-state-boundary:has(.chart-card-view)) {
+    overscroll-behavior-y: auto;
+  }
+
+  .app-frame .view-shell .chart-panel .chart-panel-action-rail {
+    bottom: auto;
+    inset-block-start: 2px;
+    inset-inline-end: 2px;
+  }
+
+  .app-frame .view-shell :is(.chart-panel-footprint, .scene-view-composition-cell):has(.free-text-chart-view) {
+    height: auto;
+    max-height: none;
+  }
+
+  .app-frame .view-shell :is(.chart-panel-footprint, .scene-view-composition-cell) :is(.chart-view-frame, .chart-zoom-guard):has(.free-text-chart-view),
+  .app-frame .view-shell .free-text-chart-view {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .app-frame .view-shell .free-text-chart-view {
+    padding: 8px;
+  }
+
+  .app-frame .view-shell .free-text-chart-view__content {
+    line-height: 1.45;
+  }
+
+  .app-frame :is(.view-shell, .home-shell) .dashboard-footer {
+    border: 0;
+    border-top: 1px solid var(--simex-border-subtle);
+    border-radius: 0;
+    box-shadow: none;
+    column-gap: 12px;
+    font-size: 0.75rem;
+    justify-content: flex-start;
+    line-height: 1.3;
+    margin: 4px 0 0;
+    padding: 5px 8px 0;
+    row-gap: 0;
+  }
+
+  .app-frame :is(.view-shell, .home-shell) .dashboard-footer :is(div, nav) {
+    gap: 0 7px;
+  }
+
+  .app-frame :is(.view-shell, .home-shell) .dashboard-footer :is(strong, span, a) {
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .app-frame :is(.view-shell, .home-shell) .dashboard-footer span {
+    font-weight: 400;
+  }
+
+  .app-frame :is(.view-shell, .home-shell) .dashboard-footer__version {
+    white-space: nowrap;
+  }
+
+  .app-frame :is(.view-shell, .home-shell) .dashboard-footer__version-label {
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .app-frame :is(.view-shell, .home-shell) .dashboard-footer a {
+    align-items: center;
+    display: inline-flex;
+    min-block-size: 44px;
+    min-inline-size: 44px;
+    text-decoration: underline;
+  }
+
+  .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-header {
+    border-inline: 0;
+    box-shadow: none;
+    gap: 4px 8px;
+    min-height: 0;
+    padding: 4px 8px;
+  }
+
+  .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-logo {
+    height: 52px;
+  }
+
+  .app-frame[data-release-profile^="pdpc-"] .pdpc-dashboard-pages button {
+    min-height: 44px;
+    padding-block: 4px;
+  }
+}

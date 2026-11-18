@@ -23,7 +23,17 @@ import {
   classifyDashboardEdgeClearance,
   dashboardDensityPaintIsCollapsed,
   collectDashboardDensityEvidence,
+  classifyPhoneViewDensity,
 } from "./e2e/support/dashboard-density-audit.js";
+
+test("phone density grades actual touch, root scroll and chart caps instead of desktop roles", () => {
+  const snapshot = { surface: { id: "view-phone", owner: "view-workspace" }, controls: [{ expectedHeight: 32, rect: { height: 44 } }] };
+  const clear = classifyPhoneViewDensity(snapshot, { horizontalOverflow: 0, undersizedControls: [], oversizedCharts: [] });
+  assert.deepEqual(clear.findings, []);
+  const failed = classifyPhoneViewDensity(snapshot, { horizontalOverflow: 12, undersizedControls: [{ label: "Focus chart", width: 32, height: 32 }], oversizedCharts: [{ id: "chart", height: 450 }] });
+  assert.equal(failed.findings.length, 3);
+  assert.deepEqual(failed.categoryCounts, { overflow: 1, "role-size": 2 });
+});
 
 const REQUIRED_FAMILIES = [
   "landing",
@@ -52,6 +62,8 @@ const REQUIRED_FAMILIES = [
 ];
 
 const REQUIRED_EXECUTABLE_STATES = Object.freeze({
+  "view-time-bar": "live",
+  "view-timeline-scrubber": "timeline-disclosed",
   "build-structure-rail": "structure-tree",
   "build-properties-pane": "context-inspector",
   "build-unit-orbit": "selected-chart",
@@ -75,8 +87,6 @@ const REQUIRED_EXECUTABLE_STATES = Object.freeze({
   "text-image-advanced": "advanced-qmd",
   "static-image-source-editor": "source-and-crop",
   "source-content-standard": "catalogue-and-detail",
-  "chrono-studio-library": "library",
-  "chrono-group-editor": "name-and-period",
   "scene-studio-details": "create-details",
   "scene-studio-select": "select-charts-and-frames",
   "scene-observation-dialog": "observation-detail",
@@ -86,9 +96,21 @@ const REQUIRED_EXECUTABLE_STATES = Object.freeze({
   "chart-comparison-dialog": "two-chart-comparison",
   "chart-state-recovery-harness": "error-and-partial",
   "operation-status-notice": "completed-scenario-save",
-  "present-standard": "composition-chrono-controls",
+  "present-standard": "composition-output-controls",
   "build-below-desktop-recommendation": "below-1024-recommendation",
   "present-below-desktop-recommendation": "below-1024-recommendation",
+});
+
+test("Full editor and recovery journeys retain distinct actual-surface witnesses", () => {
+  const editor = DASHBOARD_JOURNEY_MANIFEST.find(({ id }) => id === "full-chart-editor-configure");
+  const recovery = DASHBOARD_JOURNEY_MANIFEST.find(({ id }) => id === "chart-state-recovery-harness");
+  assert.equal(editor.root, ".chart-wizard");
+  assert.equal(editor.setup.name, "setupFullChartEditor");
+  assert.equal(recovery.root, '.chart-state-recovery-harness[data-dashboard-style][data-dashboard-surface-role="status"]');
+  assert.equal(recovery.setup.name, "setupChartStateHarness");
+  assert.equal(recovery.mode, "harness");
+  assert.equal(recovery.state, "error-and-partial");
+  assert.notEqual(editor.setup, recovery.setup);
 });
 
 test("journey manifest accounts for every approved desktop family and viewport", () => {
@@ -108,7 +130,11 @@ test("journey manifest accounts for every approved desktop family and viewport",
   assert.deepEqual(summary.audienceViewports, ["1280x720", "1920x1080"]);
   assert.ok(summary.executable >= REQUIRED_FAMILIES.length);
   assert.ok(summary.coverageAliases >= 1);
-  assert.ok(summary.intentionallyOutOfScope >= 1);
+  assert.equal(summary.intentionallyOutOfScope, 0);
+  const phone = DASHBOARD_JOURNEY_MANIFEST.find(({ id }) => id === "view-phone");
+  assert.equal(phone?.disposition, "executable");
+  assert.equal(phone?.densityProfile, "phone");
+  assert.deepEqual(phone?.viewport, { width: 390, height: 844 });
 });
 
 test("journey manifest assigns one primary role for contact-sheet grouping without claiming region closure", () => {

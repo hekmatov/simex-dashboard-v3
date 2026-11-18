@@ -100,7 +100,7 @@ function validField(field) {
 const WIDE_CONTROLS = new Set([
   "textarea", "filters", "labels", "axes", "targets", "map", "timeline",
   "role", "palette", "color", "referenceLine", "citation", "collection", "timeSync",
-  "deltaComparison", "quickBackground",
+  "deltaComparison", "quickBackground", "chartTimeMatching",
   "presentationOrder", "legendEntries", "categoryColors", "seriesColorsByIdentity",
 ]);
 const DUPLICATE_SAFE_STRUCTURED_CONTROLS = new Set([

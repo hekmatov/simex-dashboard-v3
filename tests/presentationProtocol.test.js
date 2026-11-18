@@ -1,3 +1,4 @@
+import { presentationTimeFixture } from "./helpers/presentationTimeFixture.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildContentDependencyGraph } from "../src/content-library/contentDependencyGraph.js";
@@ -32,7 +33,7 @@ const state = {
     appearance_preference: "system",
     resolved_appearance: "dark",
   },
-  source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+  source: { kind: "scene", scene_id: "scene-a" },
   composition: {
     active_page_id: "biomedical",
     displayed_chart_ids: ["chart-a", "image-a"],
@@ -51,14 +52,11 @@ const state = {
       scene_date: true,
     },
   },
-  timeline: {
+  time: presentationTimeFixture({
     frame_epochs: [1_801_440_000_000, 1_801_526_400_000],
-    frame_index: 0,
-    period: { start: 1_801_440_000_000, end: 1_801_526_400_000 },
-    trace_mode: "reveal",
+    frame_index: 0,    trace_mode: "reveal",
     seconds_per_frame: 2.5,
-  },
-  matching: { use_authored_settings: true },
+    }),
   output_mode: "active",
   blackout: false,
   audience: { date_position: { x_permille: 680, y_permille: 40, width_permille: 280 } },
@@ -74,8 +72,8 @@ function protocolError(code) {
   };
 }
 
-test("protocol v3 creates clone-isolated envelopes for ready, state, heartbeat, and ended", () => {
-  assert.equal(PRESENTATION_PROTOCOL_VERSION, 3);
+test("protocol v4 creates clone-isolated envelopes for ready, state, heartbeat, and ended", () => {
+  assert.equal(PRESENTATION_PROTOCOL_VERSION, 4);
   for (const [sequence, type, payload] of [
     [1, "ready", null], [2, "state", state], [3, "heartbeat", null], [4, "ended", null],
   ]) {
@@ -85,7 +83,7 @@ test("protocol v3 creates clone-isolated envelopes for ready, state, heartbeat, 
     const wirePayload = type === "state" ? structuredClone(payload) : payload;
     if (type === "state") delete wirePayload.theme;
     assert.deepEqual(message, {
-      protocol_version: 3, session_id: "session-001", sequence, type, payload: wirePayload,
+      protocol_version: 4, session_id: "session-001", sequence, type, payload: wirePayload,
     });
     if (type === "state") assert.notStrictEqual(message.payload, payload);
   }
@@ -93,7 +91,7 @@ test("protocol v3 creates clone-isolated envelopes for ready, state, heartbeat, 
 
 test("Audience date movement uses an exact clone-isolated source-bound envelope", () => {
   const payload = {
-    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-a" },
     date_position: { x_permille: 515, y_permille: 260 },
   };
   const message = makePresentationMessage({
@@ -105,12 +103,12 @@ test("Audience date movement uses an exact clone-isolated source-bound envelope"
   });
 
   assert.deepEqual(message, {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 5,
     type: "audience-date-position",
     payload: {
-      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      source: { kind: "scene", scene_id: "scene-a" },
       date_position: { x_permille: 515, y_permille: 260 },
     },
   });
@@ -134,12 +132,12 @@ test("Audience date movement uses an exact clone-isolated source-bound envelope"
 
 test("Audience date movement rejects malformed, extra, and out-of-bounds payloads", () => {
   const envelope = {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 5,
     type: "audience-date-position",
     payload: {
-      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      source: { kind: "scene", scene_id: "scene-a" },
       date_position: { x_permille: 515, y_permille: 260 },
     },
   };
@@ -185,7 +183,7 @@ test("saved Scene Audience date geometry adapts explicitly from camelCase to wir
   });
 });
 
-test("presentation state enforces every exact field and authored-only matching truth", () => {
+test("presentation state enforces exact fields and rejects the retired matching payload", () => {
   assert.strictEqual(validatePresentationState(state, { presentableItemIndex }), state);
   assert.throws(() => validatePresentationState({
     ...state,
@@ -193,7 +191,7 @@ test("presentation state enforces every exact field and authored-only matching t
   }, { presentableItemIndex }), protocolError("unknown_field"));
   assert.throws(() => validatePresentationState({
     ...state, matching: { use_authored_settings: false },
-  }, { presentableItemIndex }), protocolError("authored_matching_required"));
+  }, { presentableItemIndex }), protocolError("unknown_field"));
   assert.throws(() => validatePresentationState({
     ...state, temporalReview: [],
   }, { presentableItemIndex }), protocolError("unknown_field"));
@@ -216,7 +214,7 @@ test("presentation state accepts only an exact approved semantic theme snapshot"
   }
 });
 
-test("protocol v3 remains wire-compatible while exact Theme snapshots use an isolated sidecar", () => {
+test("protocol v4 carries accepted time while exact Theme snapshots retain their isolated sidecar", () => {
   const legacyState = structuredClone(state);
   delete legacyState.theme;
   assert.strictEqual(validatePresentationState(legacyState, { presentableItemIndex }), legacyState);
@@ -281,21 +279,22 @@ test("presentation state requires the accepted payload shape and rejects the leg
   }, { presentableItemIndex }), protocolError("unknown_field"));
 });
 
-test("source identity is exact for Scene, Chrono Group, and manual state", () => {
+test("native source identity is exact for parentless Storyline and manual state and rejects retired Groups", () => {
   for (const source of [
-    { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
-    { kind: "Chrono Group", scene_id: null, chrono_group_id: "group-a" },
-    { kind: "manual", scene_id: null, chrono_group_id: null },
+    { kind: "scene", scene_id: "scene-a" },
+    { kind: "manual", scene_id: null },
   ]) assert.doesNotThrow(() => validatePresentationState({ ...state, source }, { presentableItemIndex }));
 
   for (const source of [
-    { kind: "scene", scene_id: null, chrono_group_id: "group-a" },
-    { kind: "Chrono Group", scene_id: "scene-a", chrono_group_id: "group-a" },
-    { kind: "manual", scene_id: null, chrono_group_id: "group-a" },
+    { kind: "scene", scene_id: null },
+    { kind: "Chrono Group", scene_id: null },
+    { kind: "manual", scene_id: "scene-a" },
   ]) assert.throws(
     () => validatePresentationState({ ...state, source }, { presentableItemIndex }),
     protocolError("invalid_source_identity"),
   );
+  assert.throws(() => validatePresentationState({ ...state,
+    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "retired" } }, { presentableItemIndex }), protocolError("unknown_field"));
 });
 
 test("composition preserves trusted mixed chart and Image identity without stale-ID reconciliation", () => {
@@ -332,18 +331,19 @@ test("composition IDs exactly match mixed payload item identities and order", ()
   );
 });
 
-test("timeline validates ordered frames, direct frame bounds, period, modes, and speed", () => {
-  for (const timeline of [
-    { ...state.timeline, frame_epochs: [2, 1] },
-    { ...state.timeline, frame_index: 2 },
-    { ...state.timeline, period: { start: 2, end: 1 } },
-    { ...state.timeline, trace_mode: "future" },
-    { ...state.timeline, seconds_per_frame: 0 },
+test("accepted time validates ordered frames, direct frame bounds, window, modes, and speed", () => {
+  for (const time of [
+    { ...state.time, frame_epochs: [2, 1] },
+    { ...state.time, frame_index: 2 },
+    { ...state.time, period: { start: 2, end: 1 } },
+    { ...state.time, trace_mode: "future" },
+    { ...state.time, seconds_per_frame: 0 },
   ]) assert.throws(
-    () => validatePresentationState({ ...state, timeline }, { presentableItemIndex }),
+    () => validatePresentationState({ ...state, time }, { presentableItemIndex }),
     (error) => error instanceof Error && error.code.startsWith("invalid_"),
   );
-  assert.doesNotThrow(() => validatePresentationState({ ...state, timeline: null }, { presentableItemIndex }));
+  assert.throws(() => validatePresentationState({ ...state, time: null }, { presentableItemIndex }), protocolError("invalid_time_cursor"));
+  assert.doesNotThrow(() => validatePresentationState({ ...state, time: presentationTimeFixture({ frame_epochs: [] }) }, { presentableItemIndex }));
 });
 
 test("output modes and date-position geometry enforce exact bounds", () => {
@@ -371,7 +371,6 @@ test("actions validate exact values and reject matching override actions", () =>
     [{ type: "SEEK", value: 1 }, { frameCount: 2 }],
     [{ type: "PREVIOUS" }], [{ type: "NEXT" }], [{ type: "PLAY" }], [{ type: "PAUSE" }],
     [{ type: "SELECT_SCENE", value: "scene-a" }],
-    [{ type: "SELECT_CHRONO_GROUP", value: "group-a" }],
     [{ type: "SET_TRACE_MODE", value: "full" }],
     [{ type: "SET_OUTPUT_MODE", value: "blank" }],
     [{ type: "SET_COMPOSITION", value: state.composition }, { presentableItemIndex }],
@@ -380,6 +379,7 @@ test("actions validate exact values and reject matching override actions", () =>
   for (const [action, options] of actions) {
     assert.strictEqual(validatePresentationAction(action, options), action);
   }
+  assert.throws(() => validatePresentationAction({ type: "SELECT_CHRONO_GROUP", value: "retired" }), protocolError("unsupported_action"));
   assert.throws(
     () => validatePresentationAction({ type: "SEEK", value: 2 }, { frameCount: 2 }),
     protocolError("seek_out_of_bounds"),
@@ -428,9 +428,9 @@ test("identifiers, layouts, finite time, and independent Audience facts remain s
   assert.throws(
     () => validatePresentationState({
       ...state,
-      timeline: { ...state.timeline, seconds_per_frame: Number.NaN },
+      time: { ...state.time, seconds_per_frame: Number.NaN },
     }, { presentableItemIndex }),
-    protocolError("invalid_seconds_per_frame"),
+    protocolError("invalid_time_cursor"),
   );
   for (const key of Object.keys(state.payload.audience_facts)) {
     const audience_facts = { ...state.payload.audience_facts };
@@ -492,7 +492,7 @@ test("Present and Audience runtime payloads do not become durable content depend
 
 test("message parsing rejects protocol/session/payload faults and non-monotonic sequences with reasons", () => {
   const ready = {
-    protocol_version: 3, session_id: "session-001", sequence: 2, type: "ready", payload: null,
+    protocol_version: 4, session_id: "session-001", sequence: 2, type: "ready", payload: null,
   };
   assert.deepEqual(parsePresentationMessage(ready, {
     sessionId: "session-001", lastSequence: 1, presentableItemIndex,

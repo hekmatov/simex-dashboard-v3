@@ -4,6 +4,7 @@ import { register } from "node:module";
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { resolveChartTypography } from "../src/charting/rendering/chartTypography.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -14,6 +15,17 @@ export async function load(url, context, nextLoad) {
   return nextLoad(url, context);
 }
 `)}`, import.meta.url);
+
+test("embedded charts consume the same footprint text budget as their owning panel", async () => {
+  const { updateEmbeddedEChartsLifecycle } = await import("../src/components/charts/EmbeddedEChartsItem.jsx");
+  const model = { kind: "echarts", option: { xAxis: { type: "category", data: Array(20).fill("Category") }, yAxis: { type: "value" }, legend: { data: ["Series"] }, series: [] } };
+  let painted;
+  const result = updateEmbeddedEChartsLifecycle({ update(value) { painted = value; } }, model, undefined, null, resolveChartTypography({ layout: { width: 1, height: 0.5 } }));
+  assert.equal(painted, result);
+  assert.equal(result.option.xAxis.axisLabel.fontSize, 12);
+  assert.equal(result.option.xAxis.axisLabel.interval, 6);
+  assert.equal(result.option.legend.textStyle.fontSize, 12);
+});
 
 test("embedded ECharts delegates one mount, in-place updates, resize, and complete cleanup", async () => {
   const {

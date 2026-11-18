@@ -22,7 +22,6 @@ import {
 
 const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
   root: [
-    "chronoGroups",
     "configVersion",
     "contentLibrary",
     "dataSources",
@@ -36,6 +35,7 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "pages",
     "programLabel",
     "scenarioLabel",
+    "scenes",
     "timezone",
     "title",
   ],
@@ -231,9 +231,10 @@ test("every packaged dashboard structure family participates in the digest and s
     "data source descriptor": (value) => {
       value.dashboard.dataSources[sourceId].path =
         "data/revised-cases.csv";
+      value.dashboard.datasetProfiles[sourceId].path = value.dashboard.dataSources[sourceId].path;
     },
     "time synchronization": (value) => {
-      value.dashboard.chronoGroups[0].name += " alternate";
+      value.dashboard.scenes.find(scene => scene.id === "semantic-clock").name += " alternate";
     },
     "chart semantics": (value) => {
       configuredChart(value.dashboard, chartId).title +=
@@ -555,13 +556,13 @@ test("runtime loading rejects broken chart, source, and time references", async 
       mutate(value) {
         value.chronoGroups[0].period.end = "2027-04-30";
       },
-      error: /Chrono Group "runtime-clock" period end must be on or after start\./,
+      error: /Storyline union period requires ordered canonical calendar dates\./,
     },
     "member chart": {
       mutate(value) {
         value.chronoGroups[0].members[0].chartId = "missing-chart";
       },
-      error: /Time synchronization member chart "missing-chart" does not exist\./,
+      error: /Legacy temporal chart "missing-chart" is missing\./,
     },
   };
 
@@ -677,14 +678,16 @@ function addAuthoredChronoFixture(dashboard) {
     .map((panel) => panel.chart ?? panel)
     .find(({ typeId, roles }) => typeId === "line" && roles.observation);
   assert.ok(chart, "semantic fixture needs a temporal line chart");
-  dashboard.chronoGroups = [{
+  dashboard.scenes.push({
     id: "semantic-clock",
     name: "Semantic clock",
-    period: { start: "2027-02-20", end: "2027-08-15" },
-    matching: { policy: "exact" },
+    period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T23:59:59.999Z" },
+    defaultMatching: { policy: "exact" },
     secondsPerFrame: 1,
-    members: [{ chartId: chart.id, timeRole: "observation" }],
-  }];
+    members: [{ chartId: chart.id, timeRole: "observation", width: 4, height: 1 }],
+    frames: { mode: "source", chartId: chart.id, selection: "all" },
+    present: { chartIds: [chart.id], layout: "single" },
+  });
   return { chartId: chart.id, sourceId: chart.sourceId };
 }
 

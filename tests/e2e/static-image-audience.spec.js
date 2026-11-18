@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
+import { normalizeDashboardBoundary } from "../../src/charting/config/dashboardBundleV3.js";
+import { normalizeSceneDefaults } from "../../src/charting/time/sceneSchema.js";
+import { PRESENTATION_PROTOCOL_VERSION } from "../../src/lib/presentationProtocol.js";
 
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
@@ -35,18 +39,20 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
     id: "audience-national-clone",
     title: "National cases comparison",
   });
-  fixture.chronoGroups = [{
-    id: "audience-image-temporal-group",
+  const nativeFixture = normalizeDashboardBoundary(fixture);
+  nativeFixture.scenes.push(normalizeSceneDefaults({
+    id: "audience-image-temporal-storyline",
     name: "Biomedical comparison",
-    period: { start: "2027-02-14", end: "2027-02-21" },
-    matching: { policy: "exact" },
+    period: { start: "2027-02-14T00:00:00.000Z", end: "2027-02-21T23:59:59.999Z" },
+    frames: { mode: "source", chartId: national.id, selection: "all" },
     secondsPerFrame: 1,
-    members: ["chart-line-mtgytrwj", "chart-line-mtgz6v76", "audience-national-clone"]
-      .map((chartId) => ({ chartId, timeRole: "observation" })),
-  }];
+    members: ["chart-line-mtgytrwj", national.id, "audience-national-clone"]
+      .map(chartId => ({ chartId, width: 2, height: 1, timeRole: "observation", matching: { policy: "exact" } })),
+    present: { chartIds: ["chart-line-mtgytrwj", national.id, "audience-national-clone"], layout: "large-left" },
+  }));
   await page.evaluate(({ key, dashboard }) => {
     localStorage.setItem(key, JSON.stringify(dashboard));
-  }, { key: STORAGE_KEY, dashboard: fixture });
+  }, { key: STORAGE_KEY, dashboard: nativeFixture });
   await page.reload();
   await openBiomedical(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -54,7 +60,8 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   const imagePanelId = await createImage(page);
   const authored = await presentationFixtureIdentity(page, imagePanelId);
   const timedScene = await createSavedPresentationScene(page, { entry: "build-biomedical",
-    chronoGroupId: authored.chronoGroupId, sceneName: "Image and chart playback" });
+    // The driver retains this legacy-named argument only as a native seed ID.
+    chronoGroupId: authored.storylineId, sceneName: "Image and chart playback" });
 
   await installAudienceStateObserver(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
@@ -97,9 +104,9 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await expect(audience.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
 
   const beforeTime = await audienceImageSnapshot(audience, imagePanelId);
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
-  await page.locator('[data-presentation-control-id="source"]')
-    .selectOption(`scene:${timedScene.id}`);
+  const cursor = timeCursor(page);
+  await cursor.selectScope({ name: timedScene.name });
+  await cursor.open();
   await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", timedScene.id);
   const selectedIds = await page.locator(".present-chart-choice:has(input:checked)")
     .evaluateAll((choices) => choices.map((choice) => choice.dataset.presentableItemId));
@@ -113,10 +120,14 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
     .toBeGreaterThan(rejectedSequence);
   await expect(audience.locator(".audience-output"))
     .toHaveAttribute("data-connection-status", "connected");
-  const slider = page.getByLabel("Presentation time");
+  const slider = cursor.frame;
   await expect(slider).toBeEnabled();
-  await expect.poll(async () => (await observedAudienceState(page)).source?.chrono_group_id)
-    .toBe(authored.chronoGroupId);
+  await expect.poll(async () => (await observedAudienceState(page)).time.scope)
+    .toEqual({ kind: "storyline", id: timedScene.id });
+  const manualComposition = await observedAudienceState(page);
+  expect(manualComposition.composition.displayed_chart_ids).toEqual([authored.temporalChartId, imagePanelId]);
+  expect(presentationItems(manualComposition)).toEqual(presentationItems(firstProtocol));
+  expect(manualComposition.source).not.toHaveProperty("chrono_group_id");
   await audience.waitForTimeout(600);
   const beforeChart = await audienceChartSnapshot(audience, authored.temporalChartId);
   expectRenderedTemporalChart(beforeChart);
@@ -284,10 +295,9 @@ async function presentationFixtureIdentity(page, imagePanelId) {
     const panelIds = new Set(panels
       .filter(({ typeId }) => !["image", "freeText"].includes(typeId))
       .map(({ id }) => id));
-    const chronoGroup = dashboard.chronoGroups.find((group) => (
-      (group.members ?? []).filter(({ chartId }) => panelIds.has(chartId)).length >= 3
-    ));
-    const temporalChartIds = chronoGroup.members
+    const storyline = dashboard.scenes.find(scene => scene.id === "audience-image-temporal-storyline");
+    if (!storyline) throw new Error("The explicit native Image/temporal Storyline fixture is missing.");
+    const temporalChartIds = storyline.members
       .map(({ chartId }) => chartId)
       .filter((chartId) => panelIds.has(chartId))
       .slice(0, 3);
@@ -298,7 +308,7 @@ async function presentationFixtureIdentity(page, imagePanelId) {
       imageRevision: mediaItem.revision,
       assetId: mediaItem.current.assetId,
       freeTextPanelId: panels.find(({ title }) => title === freeTextTitle).id,
-      chronoGroupId: chronoGroup.id,
+      storylineId: storyline.id,
       temporalChartId,
       additionalChartIds,
     };
@@ -325,7 +335,7 @@ async function reopenAudience(page) {
 }
 
 async function installAudienceStateObserver(page) {
-  await page.evaluate(() => {
+  await page.evaluate((version) => {
     const originalPostMessage = BroadcastChannel.prototype.postMessage;
     globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = {
       latestState: null,
@@ -335,7 +345,7 @@ async function installAudienceStateObserver(page) {
     globalThis.__SIMEX_E2E_NATIVE_BROADCAST_POST__ = originalPostMessage;
     BroadcastChannel.prototype.postMessage = function observePresentationState(data) {
       if (
-        data?.protocol_version === 3
+        data?.protocol_version === version
         && ["state", "heartbeat", "ended"].includes(data.type)
         && Number.isSafeInteger(data.sequence)
       ) {
@@ -344,13 +354,13 @@ async function installAudienceStateObserver(page) {
           data.sequence,
         );
       }
-      if (data?.protocol_version === 3 && data.type === "state") {
+      if (data?.protocol_version === version && data.type === "state") {
         globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState = structuredClone(data.payload);
         globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestEnvelope = structuredClone(data);
       }
       return originalPostMessage.call(this, data);
     };
-  });
+  }, PRESENTATION_PROTOCOL_VERSION);
 }
 
 async function injectRejectedFreeTextEnvelope(page, acceptedState) {
@@ -359,7 +369,7 @@ async function injectRejectedFreeTextEnvelope(page, acceptedState) {
     const injectedSequence = globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestControllerSequence + 1;
     const channel = new BroadcastChannel(`simex-presentation-${accepted.session_id}`);
     globalThis.__SIMEX_E2E_NATIVE_BROADCAST_POST__.call(channel, {
-      protocol_version: 3,
+      protocol_version: accepted.protocol_version,
       session_id: accepted.session_id,
       sequence: injectedSequence,
       type: "state",
@@ -407,8 +417,7 @@ function presentationItems(state) {
 }
 
 function presentationActiveEpoch(state) {
-  const timeline = state?.timeline;
-  return timeline?.frame_epochs?.[timeline.frame_index] ?? null;
+  return state?.time?.epoch_ms ?? null;
 }
 
 async function expectAudienceCount(audience, count) {

@@ -28,6 +28,7 @@ export default function SceneViewCompositionGrid({
     <div
       className="scene-view-composition-grid"
       data-scene-composition-surface={surface}
+      data-scene-view-layout={scene?.view?.layout}
     >
       {(scene?.members ?? []).map((member, index) => {
         const chart = chartsById.get(member.chartId);
@@ -55,10 +56,10 @@ export default function SceneViewCompositionGrid({
           );
         }
 
-        const height = resolveChartFootprint(chart.layout).rows;
+        const height = member.height ?? resolveChartFootprint(chart.layout).rows;
         const rowSpan = chartFootprintRowSpan(height);
-        const displayedHeight = usesLiveFootprint ? height : 1;
-        const displayedRowSpan = usesLiveFootprint ? rowSpan : 4;
+        const displayedHeight = usesLiveFootprint || member.height !== undefined ? height : 1;
+        const displayedRowSpan = usesLiveFootprint || member.height !== undefined ? rowSpan : 4;
         return (
           <section
             {...cellProps}

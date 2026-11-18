@@ -9,6 +9,7 @@ import {
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 import {
   DASHBOARD_BUNDLE_VERSION,
+  dashboardBundleIntegrity,
   DASHBOARD_SCHEMA_VERSION,
   parseDashboardBundle,
   readDashboardStorage,
@@ -108,7 +109,7 @@ test("already-authored manual chart profiles survive package export and import",
   const before = structuredClone(dashboard);
 
   const bundle = serializeDashboardBundle(dashboard);
-  const imported = parseDashboardBundle(JSON.stringify(bundle));
+  const imported = parseDashboardBundle(semanticBundleText(bundle));
   assert.deepEqual(imported.dataSources[sourceId], source);
   assert.deepEqual(imported.datasetProfiles[sourceId], dashboard.datasetProfiles[sourceId]);
   assert.deepEqual(imported.pages[0].sections[0].panels[1], normalizeChartInstance(kpiChart({ sourceId })));
@@ -382,32 +383,32 @@ function deltaListChart(overrides = {}) {
   };
 }
 
-test("bundle v6 migrates and round-trips uploaded and inline sources", () => {
+test("bundle v7 migrates and round-trips uploaded and inline sources", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, {
     now: "2026-07-26T12:00:00.000Z",
   });
 
   assert.equal(bundle.bundleType, "simex-dashboard-bundle");
-  assert.equal(bundle.version, 6);
-  assert.equal(bundle.config.configVersion, 6);
+  assert.equal(bundle.version, 7);
+  assert.equal(bundle.config.configVersion, 7);
   assert.equal(bundle.metadata.exportedAt, "2026-07-26T12:00:00.000Z");
-  assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
+  assert.deepEqual(parseDashboardBundle(semanticBundleText(bundle)), bundle.config);
 });
 
-test("the canonical boundary emits dashboard v6 and bundle v6 while contained charts remain v3", () => {
+test("the canonical boundary emits dashboard v7 and bundle v7 while contained charts remain v3", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, { now: null });
 
-  assert.equal(DASHBOARD_SCHEMA_VERSION, 6);
-  assert.equal(DASHBOARD_BUNDLE_VERSION, 6);
-  assert.equal(bundle.version, 6);
-  assert.equal(bundle.config.configVersion, 6);
+  assert.equal(DASHBOARD_SCHEMA_VERSION, 7);
+  assert.equal(DASHBOARD_BUNDLE_VERSION, 7);
+  assert.equal(bundle.version, 7);
+  assert.equal(bundle.config.configVersion, 7);
   assert.equal(bundle.config.pages[0].sections[0].panels[0].configVersion, 3);
-  assert.equal(parseDashboardBundle(JSON.stringify(bundle)).configVersion, 6);
+  assert.equal(parseDashboardBundle(semanticBundleText(bundle)).configVersion, 7);
 });
 
-test("bundle v6 verifies migrated local authored payloads and declares linked image dependencies", () => {
+test("bundle v7 verifies migrated local authored payloads and declares linked image dependencies", () => {
   const bytes = imageFixtureBytes("image/png");
   const sha256 = sha256HexSync(bytes);
   const assetId = `asset-${sha256}`;
@@ -448,18 +449,18 @@ test("bundle v6 verifies migrated local authored payloads and declares linked im
     },
   });
   assert.deepEqual(bundle.metadata.networkDependencies, ["https://example.test/linked.webp"]);
-  const parsed = parseDashboardBundle(JSON.stringify(bundle), { includeEnvelope: true });
+  const parsed = parseDashboardBundle(semanticBundleText(bundle), { includeEnvelope: true });
   assert.deepEqual(parsed.assetPayloads, bundle.assetPayloads);
-  assert.equal(parsed.config.configVersion, 6);
+  assert.equal(parsed.config.configVersion, 7);
 
   const missing = structuredClone(bundle);
   delete missing.assetPayloads[assetId];
-  assert.throws(() => parseDashboardBundle(JSON.stringify(missing)), /missing authored asset payload/i);
+  assert.throws(() => parseDashboardBundle(semanticBundleText(missing)), /missing authored asset payload/i);
   const corrupt = structuredClone(bundle);
   const corruptBytes = Uint8Array.from(bytes);
   corruptBytes[corruptBytes.length - 1] ^= 1;
   corrupt.assetPayloads[assetId].base64 = encodeAssetBase64(corruptBytes);
-  assert.throws(() => parseDashboardBundle(JSON.stringify(corrupt)), /hash does not match/i);
+  assert.throws(() => parseDashboardBundle(semanticBundleText(corrupt)), /hash does not match/i);
 });
 
 function staticImageSource({ origin, alt }) {
@@ -489,7 +490,7 @@ test("bundle serialization removes runtime source and chart availability state",
 
   assert.equal(Object.hasOwn(bundle.config, "dataSourceStates"), false);
   assert.equal(Object.hasOwn(bundle.config, "chartDataStates"), false);
-  assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
+  assert.deepEqual(parseDashboardBundle(semanticBundleText(bundle)), bundle.config);
 });
 
 test("dashboard validation accepts the recoverable zero-Page Build state", () => {
@@ -534,12 +535,17 @@ test("saved Scenes round-trip as one validated dashboard-content truth", () => {
 
   assert.strictEqual(validateDashboardConfig(dashboard), dashboard);
   const bundle = serializeDashboardBundle(dashboard);
-  assert.deepEqual(bundle.config.scenes, dashboard.scenes);
-  assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)).scenes, dashboard.scenes);
+  const expected = structuredClone(dashboard.scenes[0]);
+  delete expected.chronoGroupId;
+  expected.secondsPerFrame = 1;
+  expected.audience.collectionLabel = "Outbreak playback";
+  expected.members[0] = { ...expected.members[0], timeRole: "observation", matching: { policy: "exact" } };
+  assert.deepEqual(bundle.config.scenes, [expected]);
+  assert.deepEqual(parseDashboardBundle(semanticBundleText(bundle)).scenes, [expected]);
 
   const invalid = structuredClone(dashboard);
   invalid.scenes[0].members[0].chartId = "missing-chart";
-  assert.throws(() => validateDashboardConfig(invalid), /parent Chrono Group|does not exist/);
+  assert.throws(() => validateDashboardConfig(invalid), /parent Chrono Group|does not exist|missing/);
 });
 
 test("legacy Vanta settings are stripped at persistence boundaries while canonical configuration rejects them", () => {
@@ -563,9 +569,12 @@ test("legacy Vanta settings are stripped at persistence boundaries while canonic
   );
 
   const bundle = serializeDashboardBundle(version3Dashboard());
+  bundle.version = 6;
+  delete bundle.metadata.appVersion;
+  delete bundle.metadata.integrity;
   bundle.config = legacyConfig;
   const serialized = serializeDashboardBundle(legacyConfig);
-  const fromBundle = parseDashboardBundle(JSON.stringify(bundle));
+  const fromBundle = parseDashboardBundle(semanticBundleText(bundle));
   const fromStorage = readDashboardStorage({
     getItem(storageKey) {
       return storageKey === "dashboard" ? JSON.stringify(legacyConfig) : null;
@@ -589,15 +598,17 @@ test("dashboard persistence migrates legacy temporal authority to the canonical 
   delete legacyGroup.period;
   delete legacyGroup.secondsPerFrame;
   const bundle = serializeDashboardBundle(dashboard);
-  const group = bundle.config.chronoGroups[0];
+  const group = bundle.config.scenes[0];
 
   assert.equal(bundle.config.timezone, "UTC");
   assert.deepEqual(Object.keys(group).sort(), [
+    "audience",
+    "frames",
     "id",
-    "matching",
     "members",
     "name",
     "period",
+    "present",
     "secondsPerFrame",
   ]);
   assert.deepEqual(group.period, {
@@ -606,13 +617,13 @@ test("dashboard persistence migrates legacy temporal authority to the canonical 
   });
   assert.equal(group.secondsPerFrame, 1);
   assert.equal(Object.hasOwn(group, "primaryClock"), false);
-  assert.equal(
+  assert.deepEqual(
     bundle.config.pages[0].sections[0].panels[0].interaction.timeSync,
-    null,
+    { matching: { policy: "exact" } },
   );
 });
 
-test("bundle, metadata, and source records are exact version 3 data contracts", () => {
+test("bundle, metadata, and source records are exact native data contracts", () => {
   const bundle = serializeDashboardBundle(version3Dashboard(), {
     now: "2026-07-26T12:00:00.000Z",
   });
@@ -633,7 +644,7 @@ test("bundle, metadata, and source records are exact version 3 data contracts", 
     const candidate = structuredClone(bundle);
     mutate(candidate);
     assert.throws(
-      () => parseDashboardBundle(JSON.stringify(candidate)),
+      () => parseDashboardBundle(semanticBundleText(candidate)),
       /unknown .*property/i,
     );
   }
@@ -1271,7 +1282,7 @@ test("serialization excludes runtime-loaded rows without mutating the dashboard"
 
 test("parsed bundles do not alias their serialized input", () => {
   const bundle = serializeDashboardBundle(version3Dashboard(), { now: "2026-07-26T12:00:00.000Z" });
-  const parsed = parseDashboardBundle(JSON.stringify(bundle));
+  const parsed = parseDashboardBundle(semanticBundleText(bundle));
   parsed.dataSources["manual-status"].rows[0].value = 99;
 
   assert.equal(bundle.config.dataSources["manual-status"].rows[0].value, 12);
@@ -1283,7 +1294,7 @@ test("import rejects runtime-only rows instead of silently changing a bundle", (
   bundle.config.dataSources["uploaded-cases"].loadedRows = [{ reportedAt: "2027-05-01", cases: 4 }];
 
   assert.throws(
-    () => parseDashboardBundle(JSON.stringify(bundle)),
+    () => parseDashboardBundle(semanticBundleText(bundle)),
     /unknown dashboard configuration property "loadedData"|unknown data source.*"loadedRows"/i,
   );
 });
@@ -1390,7 +1401,7 @@ test("import rejects nested structural runtime state without rewriting opaque ma
   bundle.config.dataSources["manual-status"].rows[0].runtimeRows = "domain value";
 
   assert.throws(
-    () => parseDashboardBundle(JSON.stringify(bundle)),
+    () => parseDashboardBundle(semanticBundleText(bundle)),
     /unknown chart presentation labels property "runtimeRows"/i,
   );
 });
@@ -1728,7 +1739,7 @@ test("bundle write boundaries persist every collection layout, overflow, ranking
   const bundle = serializeDashboardBundle(dashboard, {
     now: "2026-07-26T12:00:00.000Z",
   });
-  const parsed = parseDashboardBundle(JSON.stringify(bundle));
+  const parsed = parseDashboardBundle(semanticBundleText(bundle));
 
   assert.deepEqual(authoredCollections, originalCollections);
   authoredCollections.forEach((authored, index) => {
@@ -1929,10 +1940,13 @@ test("chart and bundle boundaries reject malformed presentation and collection v
       bundleType: "simex-dashboard-bundle",
       version: 4,
       config: version3Dashboard(),
+      metadata: { exportedAt: null,
+        sourceFingerprints: serializeDashboardBundle(version3Dashboard()).metadata.sourceFingerprints,
+        networkDependencies: [] },
     };
     bundle.config.pages[0].sections[0].panels[0] = chart;
     assert.throws(
-      () => parseDashboardBundle(JSON.stringify(bundle)),
+      () => parseDashboardBundle(semanticBundleText(bundle)),
       /collection settings.*object/i,
     );
   }
@@ -1940,7 +1954,13 @@ test("chart and bundle boundaries reject malformed presentation and collection v
   const bundle = serializeDashboardBundle(version3Dashboard());
   bundle.config.pages[0].sections[0].panels[0].presentation = "presentation";
   assert.throws(
-    () => parseDashboardBundle(JSON.stringify(bundle)),
+    () => parseDashboardBundle(semanticBundleText(bundle)),
     /chart presentation.*object/i,
   );
 });
+
+// Re-sign semantic-negative fixtures so integrity validation does not mask the intended schema/content boundary. Raw tampering is covered in dashboardBundleV7.test.js.
+function semanticBundleText(bundle) {
+  if (bundle.version === 7) bundle.metadata.integrity.digest = dashboardBundleIntegrity(bundle);
+  return JSON.stringify(bundle);
+}

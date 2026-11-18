@@ -13,6 +13,8 @@ export default function DisplayedChartGrid({
   layout = "solo",
   timeContextForChart = () => null,
   timeContextAuthority,
+  cursorMode,
+  timeScopeKind,
   surface = "fullscreen",
   layoutSystem,
   getCellProps,
@@ -94,6 +96,8 @@ export default function DisplayedChartGrid({
               }}
               timeContext={item.kind === "chart" ? timeContextForChart(chart.id) : null}
               timeContextAuthority={timeContextAuthority}
+              cursorMode={cursorMode}
+              timeScopeKind={timeScopeKind}
               interactionMode={surface === "audience" ? "passive" : "active"}
               surface={surface}
               audienceScale={audienceScale}

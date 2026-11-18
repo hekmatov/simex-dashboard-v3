@@ -44,15 +44,15 @@ test("empty View sections never offer authoring controls even when a recovery ca
   assert.doesNotMatch(html, /Add Panel to Section|This section has no panels|data-canonical-section-id="empty"/);
 });
 
-test("Group Only replaces hidden section placeholders with a View all charts action", () => {
-  const page = { id: "biomedical", sections: [{ id: "empty", title: "Empty", panels: [] }] };
+test("Storyline View retains ordinary page placements without a hidden-content recovery action", () => {
+  const page = { id: "biomedical", sections: [{ id: "body", title: "Ordinary content", panels: [{ id: "retained", typeId: "kpi", title: "Retained chart", sourceId: "s", roles: { value: { field: "value" } } }] }] };
   const html = renderToStaticMarkup(React.createElement(DashboardCanvas, {
-    activePage: page, dashboard: { pages: [page], loadedData: {} }, surface: "view",
-    groupOnly: true, excludedChartIds: ["hidden-chart"], onViewAllCharts() {},
+    activePage: page, dashboard: { pages: [page], loadedData: { s: [{ value: 8 }] } }, surface: "view",
+    storylineBand: React.createElement("section", { "data-native-storyline": "selected" }, "Selected Storyline"),
   }));
-  assert.match(html, /Other charts are hidden in Group Only view\./);
-  assert.match(html, /<button[^>]*>View all charts<\/button>/);
-  assert.doesNotMatch(html, /Add Panel to Section|This section has no panels/);
+  assert.match(html, /data-native-storyline="selected"/);
+  assert.match(html, /data-canonical-panel-id="retained"/);
+  assert.doesNotMatch(html, /Group Only|View all charts|Add Panel to Section/);
 });
 
 test("live footer derives the public repository Issues destination without package Pages", () => {

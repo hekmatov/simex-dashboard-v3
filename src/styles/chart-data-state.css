@@ -235,3 +235,25 @@
     animation: none;
   }
 }
+.chart-view-frame[data-chart-time-fallback="true"] {
+  isolation: isolate;
+  position: relative;
+}
+
+.chart-view-frame[data-chart-time-fallback="true"]::after {
+  background: color-mix(in srgb, var(--simex-text-strong) 9%, transparent);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.chart-time-chip[data-chart-time-kind="nonconcurrent"] {
+  background: var(--simex-surface-panel);
+  color: var(--simex-text-strong);
+  display: table;
+  margin-inline-start: auto;
+  position: relative;
+  z-index: 2;
+}

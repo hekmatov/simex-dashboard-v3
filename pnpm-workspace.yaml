@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+patchedDependencies:
+  echarts@5.6.0: patches/echarts@5.6.0.patch
+overrides:
+  browserslist: 4.28.7
+  baseline-browser-mapping: 2.11.0

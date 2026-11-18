@@ -11,6 +11,7 @@ import {
   stageSessionImageAsset,
 } from "../src/static-content/image/imageAssetValidation.js";
 import { prepareOperationalData } from "../src/charting/data/prepareOperationalData.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { buildOperationalRenderModel } from "../src/charting/rendering/operationalAdapter.js";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 
@@ -31,6 +32,19 @@ const { ImageTransformEditor } = await vite.ssrLoadModule("/src/components/stati
 await vite.close();
 
 const PNG = imageFixtureBytes("image/png");
+
+test("untitled Image success keeps exactly one visible source caption", () => {
+  const rows = [{ src: "/untitled.png", alt: "Untitled evidence image" }];
+  const html = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: { id: "untitled", typeId: "image", title: "", sourceId: "untitled-source", roles: {} },
+    rows,
+    datasetProfile: profileDataset(rows),
+  }));
+  assert.match(html, /chart-image-view/);
+  assert.match(html, /Source: untitled-source/);
+  assert.equal((html.match(/data-chart-source-citation=/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /chart-view-heading/);
+});
 
 test("operational Image preparation is an explicit legacy-inline adapter and rejects typed static sources", () => {
   const schema = { typeId: "image" };
@@ -405,7 +419,11 @@ test("typed failures stay panel-scoped and expose the exact active-surface recov
   }));
   assert.match(html, /data-static-failure="missing-asset"/);
   assert.match(html, /Retry[\s\S]*Replace[\s\S]*Edit/);
-  assert.doesNotMatch(html, /missing-source|assetId|storage/);
+  const failure = html.match(/<section[^>]*data-static-failure="missing-asset"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(failure, "the bounded recovery surface is present");
+  assert.doesNotMatch(failure, /missing-source|assetId|storage/);
+  assert.equal((html.match(/data-chart-source-citation="true"/g) ?? []).length, 1);
+  assert.match(html, /Source: missing-source/);
 });
 
 test("Image editors expose guided source/accessibility/transforms with real keyboard alternatives", () => {

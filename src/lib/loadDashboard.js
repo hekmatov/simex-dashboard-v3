@@ -4,6 +4,7 @@ import { validateDashboardStructure } from "../charting/config/dashboardConfigSt
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
 import { migrateDashboardV5ToV6 } from "../charting/config/migrateDashboardV5ToV6.js";
+import { migrateDashboardV6ToV7 } from "../charting/config/migrateDashboardV6ToV7.js";
 import { deriveContentHealth } from "../content-library/contentHealth.js";
 import { stripLegacyVantaBackground } from "../charting/config/dashboardPresentationV3.js";
 import {
@@ -14,6 +15,7 @@ import {
   validateDashboardChartReferences,
 } from "../charting/config/dashboardSemanticReferences.js";
 import { validateChronoGroups } from "../charting/time/chronoGroupModel.js";
+import { validateScene } from "../charting/time/sceneSchema.js";
 import { createDashboardSourceProviders } from "../data/dashboardSourceProviders.js";
 import { createDataService, createSourceCache } from "../data/dataService.js";
 import { createProviderRegistry } from "../data/providerRegistry.js";
@@ -127,11 +129,11 @@ export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
   preflightDashboardInput(dashboard);
   const v4 = dashboard.configVersion === 3 ? migrateDashboardV3ToV4(dashboard) : dashboard;
   const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
-  const v6 = migrateDashboardV5ToV6(v5);
+  const v6 = v5.configVersion === 7 ? v5 : migrateDashboardV5ToV6(v5);
   const presentationNormalized = stripLegacyVantaBackground(v6);
-  const normalized = normalizeDashboardTemporalConfig(presentationNormalized, {
+  const normalized = migrateDashboardV6ToV7(normalizeDashboardTemporalConfig(presentationNormalized, {
     profiles: temporalMigrationProfiles(presentationNormalized, suppliedProfiles),
-  });
+  }));
   // Temporal normalization never changes source descriptors. Preserve the
   // established runtime descriptor identity after the inert-data check while
   // still cloning and normalizing temporal dashboard state.
@@ -139,6 +141,13 @@ export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
     normalized.dataSources = presentationNormalized.dataSources;
   }
   return normalized;
+}
+
+function validateLoadedStorylines(dashboard, chartReferences, profiles) {
+  const charts = chartReferences.map(({ chart, pageId }) => ({ ...chart, pageId }));
+  for (const scene of dashboard.scenes ?? []) validateScene(scene, {
+    nativeVersion: 7, charts, profiles, pages: dashboard.pages, scenes: dashboard.scenes,
+  });
 }
 
 function temporalMigrationProfiles(dashboard, suppliedProfiles = {}) {
@@ -241,13 +250,18 @@ export async function loadDashboardConfig(
       .filter(([, source]) => !isTypedStaticSource(source)),
   );
   const reusableProfiles = mergeDatasetProfiles(
-    profilesForConfiguredCsvSources(tabularDataSources, datasetProfiles),
+    tabularDataSources,
+    datasetProfiles,
     entryValue(dashboardEntries, "datasetProfiles"),
   );
-  validateDatasetProfiles(tabularDataSources, reusableProfiles);
+  validateProfilesForSourceEntries(Object.entries(tabularDataSources), reusableProfiles);
   const chartReferences = validateDashboardChartReferences(
     structure,
     dataSources,
+    { columnTypesForSource: (sourceId) => {
+      const profile = reusableProfiles[sourceId];
+      return Array.isArray(profile?.columns) ? new Map(profile.columns.map(column => [column.name, column])) : undefined;
+    } },
   );
   const providers = createProviderRegistry(createDashboardSourceProviders({
     loadCsv,
@@ -292,12 +306,7 @@ export async function loadDashboardConfig(
     ...staticSourceStates,
   };
 
-  validateChronoGroups(dashboard.chronoGroups ?? [], {
-    charts: chartReferences.map(({ chart }) => chart),
-    loadedData,
-    profiles: hydratedProfiles,
-    timezone: dashboard.timezone,
-  });
+  validateLoadedStorylines(dashboard, chartReferences, hydratedProfiles);
 
   return {
     ...dashboard,
@@ -357,7 +366,12 @@ export async function loadDashboardConfigProgressively(
   dashboard,
   datasetProfiles,
   portableSources = null,
-  { onUpdate = () => {}, readAuthoredAsset } = {},
+  {
+    onUpdate = () => {},
+    readAuthoredAsset,
+    beforeSourceLoads,
+    loadConfiguredCsv = loadCsv,
+  } = {},
 ) {
   dashboard = normalizeDashboardSource(dashboard, datasetProfiles);
   validateDashboardSourceDescriptors(dashboard);
@@ -372,16 +386,21 @@ export async function loadDashboardConfigProgressively(
       .filter(([, source]) => !isTypedStaticSource(source)),
   );
   const reusableProfiles = mergeDatasetProfiles(
-    profilesForConfiguredCsvSources(tabularDataSources, datasetProfiles),
+    tabularDataSources,
+    datasetProfiles,
     entryValue(dashboardEntries, "datasetProfiles"),
   );
-  validateDatasetProfiles(tabularDataSources, reusableProfiles);
+  validateProfilesForSourceEntries(Object.entries(tabularDataSources), reusableProfiles);
   const chartReferences = validateDashboardChartReferences(
     structure,
     dataSources,
+    { columnTypesForSource: (sourceId) => {
+      const profile = reusableProfiles[sourceId];
+      return Array.isArray(profile?.columns) ? new Map(profile.columns.map(column => [column.name, column])) : undefined;
+    } },
   );
   const providers = createProviderRegistry(createDashboardSourceProviders({
-    loadCsv,
+    loadCsv: loadConfiguredCsv,
     parseCsvText,
     profileDataset,
     fetchText,
@@ -425,6 +444,7 @@ export async function loadDashboardConfigProgressively(
   }
 
   let latest = publishProgressiveDashboard();
+  if (beforeSourceLoads) await beforeSourceLoads();
   await Promise.all(sourceIds.map(async (sourceId) => {
     const request = { sourceId, purpose: "dashboard" };
     try {
@@ -443,12 +463,7 @@ export async function loadDashboardConfigProgressively(
   }));
 
   if (sourceIds.every((sourceId) => dataSourceStates[sourceId].status === "ready")) {
-    validateChronoGroups(dashboard.chronoGroups ?? [], {
-      charts: chartReferences.map(({ chart }) => chart),
-      loadedData,
-      profiles: hydratedProfiles,
-      timezone: dashboard.timezone,
-    });
+    validateLoadedStorylines(dashboard, chartReferences, hydratedProfiles);
   }
   return latest;
 
@@ -607,29 +622,20 @@ export function profilesForConfiguredCsvSources(
   dataSources,
   datasetProfiles = {},
 ) {
+  return Object.fromEntries(configuredCsvProfileEntries(dataSources, datasetProfiles)
+    .map(([sourceId, profile]) => [sourceId, structuredClone(profile)]));
+}
+
+function configuredCsvProfileEntries(dataSources, datasetProfiles = {}) {
   const sourcesById = new Map(
     plainDataEntries(dataSources ?? {}, "Dashboard dataSources"),
   );
-  return Object.fromEntries(
-    plainDataEntries(
-      datasetProfiles ?? {},
-      "External dataset profiles",
-    )
-      .filter(([sourceId]) => sourcesById.get(sourceId)?.kind === "csv")
-      .map(([sourceId, profile]) => [
-        sourceId,
-        structuredClone(profile),
-      ]),
-  );
+  return plainDataEntries(datasetProfiles ?? {}, "External dataset profiles")
+    .filter(([sourceId]) => sourcesById.get(sourceId)?.kind === "csv");
 }
 
-function mergeDatasetProfiles(externalProfiles, embeddedProfiles) {
-  const merged = new Map(
-    plainDataEntries(
-      externalProfiles ?? {},
-      "External dataset profiles",
-    ),
-  );
+function mergeDatasetProfiles(dataSources, externalProfiles, embeddedProfiles) {
+  const merged = new Map(configuredCsvProfileEntries(dataSources, externalProfiles));
   for (const [sourceId, profile] of plainDataEntries(
     embeddedProfiles ?? {},
     "Dashboard datasetProfiles",
@@ -776,6 +782,13 @@ export function validateDatasetProfiles(dataSources, datasetProfiles) {
     dataSources,
     "Dashboard dataSources",
   );
+  for (const [sourceId, source] of sourceEntries) {
+    validateDataSourceDescriptor(sourceId, source);
+  }
+  validateProfilesForSourceEntries(sourceEntries, datasetProfiles);
+}
+
+function validateProfilesForSourceEntries(sourceEntries, datasetProfiles) {
   const profileEntries = plainDataEntries(
     datasetProfiles,
     "Dataset profiles",
@@ -784,7 +797,6 @@ export function validateDatasetProfiles(dataSources, datasetProfiles) {
   const csvIds = [];
 
   for (const [sourceId, source] of sourceEntries) {
-    validateDataSourceDescriptor(sourceId, source);
     if (source.kind === "csv") csvIds.push(sourceId);
   }
   csvIds.sort();

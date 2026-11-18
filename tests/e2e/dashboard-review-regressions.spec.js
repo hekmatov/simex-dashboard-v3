@@ -1,6 +1,8 @@
 import { chooseWholeDashboardPackage } from "./support/buildWorkflow.js";
 import { propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
+import { normalizeDashboardBoundary } from "../../src/charting/config/dashboardBundleV3.js";
+import { revealCanonicalPanel } from "./support/time-cursor-workflow.js";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 
 import {
@@ -21,7 +23,6 @@ import {
   REMOVED_PAGE_GROUP_ID,
   RETAINED_PAGE_GROUP_ID,
   RETAINED_SOCIO_CHART_ID,
-  withPageRemovalGroups,
   withWrappedCasesPanel,
   WRAPPED_CASE_PLACEMENT_ID,
 } from "./support/layoutReviewFixture.js";
@@ -63,7 +64,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
     placementId !== WRAPPED_CASE_PLACEMENT_ID
   ));
   expect(unrelatedPlacements.length).toBeGreaterThan(0);
-  const renderedPanel = page.locator(`[data-panel-id="${SHIPPED_CASE_CHART_ID}"]`);
+  const renderedPanel = await revealCanonicalPanel(page, SHIPPED_CASE_CHART_ID);
   await expect(renderedPanel).toBeVisible();
   await renderedPanel.scrollIntoViewIfNeeded();
   await expect(renderedPanel.locator("canvas").first()).toBeVisible();
@@ -104,7 +105,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
     .toEqual(unrelatedPlacements);
   const afterRemove = await storedLayoutReviewState(page);
   expect(afterRemove.pages).toEqual(before.pages);
-  expect(afterRemove.groups).toEqual(before.groups);
+  expect(afterRemove.storylines).toEqual(before.storylines);
 });
 
 test("replacement bundle profiles survive import, edit, save, and reload", async ({
@@ -211,7 +212,7 @@ test("additive imported tracked profiles survive an edit and browser reload", as
     name: "Imported profile retained",
     exact: true,
   })).toBeVisible();
-  const shippedPanel = page.locator(`[data-panel-id="${SHIPPED_CASE_CHART_ID}"]`);
+  const shippedPanel = await revealCanonicalPanel(page, SHIPPED_CASE_CHART_ID);
   await expect(shippedPanel).toBeVisible();
   await shippedPanel.scrollIntoViewIfNeeded();
   await expect(shippedPanel.locator("canvas").first()).toBeVisible();
@@ -223,7 +224,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
   page,
   request,
 }) => {
-  const dashboard = withPageRemovalGroups(
+  const dashboard = pageRemovalStorylines(
     await fetchJson(request, "/config/dashboard.json"),
   );
   await installDashboard(page, dashboard);
@@ -232,8 +233,8 @@ test("removing a page also removes its synchronized chart memberships", async ({
   const before = await storedLayoutReviewState(page);
   const removedPlacements = before.placements.filter(({ pageId }) => pageId === "biomedical");
   const retainedPlacements = before.placements.filter(({ pageId }) => pageId !== "biomedical");
-  const removedGroup = before.groups.find(({ id }) => id === REMOVED_PAGE_GROUP_ID);
-  const retainedGroup = before.groups.find(({ id }) => id === RETAINED_PAGE_GROUP_ID);
+  const removedGroup = before.storylines.find(({ id }) => id === REMOVED_PAGE_GROUP_ID);
+  const retainedGroup = before.storylines.find(({ id }) => id === RETAINED_PAGE_GROUP_ID);
   expect(before.pages.map(({ id }) => id)).toEqual(["scenario", "biomedical", "socio_economic"]);
   expect(removedPlacements.map(({ chart }) => chart.id)).toEqual(expect.arrayContaining([
     SHIPPED_CASE_CHART_ID,
@@ -276,7 +277,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
   const expected = {
     pages: before.pages.filter(({ id }) => id !== "biomedical"),
     placements: retainedPlacements,
-    groups: [retainedGroup],
+    storylines: [retainedGroup],
   };
   await expect.poll(() => storedLayoutReviewState(page)).toEqual(expected);
 
@@ -285,7 +286,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
     .toHaveCount(0);
   await expect.poll(() => storedLayoutReviewState(page)).toEqual(expected);
   await openDashboardPage(page, "socio_economic");
-  const retainedPanel = page.locator(`[data-panel-id="${RETAINED_SOCIO_CHART_ID}"]`);
+  const retainedPanel = await revealCanonicalPanel(page, RETAINED_SOCIO_CHART_ID);
   await expect(retainedPanel).toBeVisible();
   await retainedPanel.scrollIntoViewIfNeeded();
   await expect(retainedPanel.locator("canvas").first()).toBeVisible();
@@ -297,6 +298,27 @@ async function fetchJson(request, path) {
   return response.json();
 }
 
+function pageRemovalStorylines(input) {
+  const dashboard = normalizeDashboardBoundary(input);
+  // Keep the historical charts and union-period/policy semantics; native
+  // Storylines do not need chart-owned defaults inherited from retired Groups.
+  const saved = (id, name, start, end, chartIds) => ({
+    id, name, period: { start, end }, frames: { mode: "union" }, secondsPerFrame: 1,
+    members: chartIds.map((chartId) => ({
+      chartId, width: 2, timeRole: "observation", matching: { policy: "exact" },
+    })),
+    present: { chartIds, layout: chartIds.length === 2 ? "vertical-divider" : "single" },
+    audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+  });
+  dashboard.scenes = [
+    saved(REMOVED_PAGE_GROUP_ID, "Biomedical page group", "2027-02-14", "2027-02-21",
+      [SHIPPED_CASE_CHART_ID, OTHER_BIOMEDICAL_CHART_ID]),
+    saved(RETAINED_PAGE_GROUP_ID, "Socio-economic page group", "2021-01-01", "2027-12-31",
+      [RETAINED_SOCIO_CHART_ID]),
+  ];
+  return dashboard;
+}
+
 async function installDashboard(page, dashboard) {
   await page.addInitScript(({ key, value }) => {
     const marker = `${key}:test-seed-installed`;
@@ -305,7 +327,7 @@ async function installDashboard(page, dashboard) {
     sessionStorage.setItem(marker, "true");
   }, {
     key: STORAGE_KEY,
-    value: dashboard,
+    value: normalizeDashboardBoundary(dashboard),
   });
 }
 
@@ -334,7 +356,7 @@ function storedLayoutReviewState(page) {
           chart: placement.chart ?? placement,
         })))
       )),
-      groups: dashboard.chronoGroups,
+      storylines: dashboard.scenes ?? [],
     };
   }, STORAGE_KEY);
 }

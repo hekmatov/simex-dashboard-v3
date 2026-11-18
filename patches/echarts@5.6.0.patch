@@ -1,0 +1,107 @@
+diff --git a/dist/echarts.esm.js b/dist/echarts.esm.js
+index 655fb38aecd4c85519863ab2ae35ae4cf193bc6b..ece599f933078734b9f1fd1233c0b33539375776 100644
+--- a/dist/echarts.esm.js
++++ b/dist/echarts.esm.js
+@@ -62777,18 +62777,21 @@ var LinesSeriesModel = /** @class */function (_super) {
+   };
+   LinesSeriesModel.prototype.formatTooltip = function (dataIndex, multipleSeries, dataType) {
+     var data = this.getData();
++    var value = this.getRawValue(dataIndex);
+     var itemModel = data.getItemModel(dataIndex);
+-    var name = itemModel.get('name');
+-    if (name) {
+-      return name;
+-    }
+-    var fromName = itemModel.get('fromName');
+-    var toName = itemModel.get('toName');
+-    var nameArr = [];
+-    fromName != null && nameArr.push(fromName);
+-    toName != null && nameArr.push(toName);
++    var itemName = itemModel.get('name');
++    if (!itemName) {
++      var fromName = itemModel.get('fromName');
++      var toName = itemModel.get('toName');
++      var nameArr = [];
++      fromName != null && nameArr.push(fromName);
++      toName != null && nameArr.push(toName);
++      itemName = nameArr.join(' > ');
++    }
+     return createTooltipMarkup('nameValue', {
+-      name: nameArr.join(' > ')
++      name: itemName,
++      value: value,
++      noValue: value == null || isNaN(value)
+     });
+   };
+   LinesSeriesModel.prototype.preventIncremental = function () {
+diff --git a/dist/echarts.js b/dist/echarts.js
+index db3fee57ea4f43331cb096ed069952dff038b8ef..c0876daf0edca12fc8dfc8d85972255a13c28313 100644
+--- a/dist/echarts.js
++++ b/dist/echarts.js
+@@ -62783,18 +62783,21 @@
+       };
+       LinesSeriesModel.prototype.formatTooltip = function (dataIndex, multipleSeries, dataType) {
+         var data = this.getData();
++        var value = this.getRawValue(dataIndex);
+         var itemModel = data.getItemModel(dataIndex);
+-        var name = itemModel.get('name');
+-        if (name) {
+-          return name;
+-        }
+-        var fromName = itemModel.get('fromName');
+-        var toName = itemModel.get('toName');
+-        var nameArr = [];
+-        fromName != null && nameArr.push(fromName);
+-        toName != null && nameArr.push(toName);
++        var itemName = itemModel.get('name');
++        if (!itemName) {
++          var fromName = itemModel.get('fromName');
++          var toName = itemModel.get('toName');
++          var nameArr = [];
++          fromName != null && nameArr.push(fromName);
++          toName != null && nameArr.push(toName);
++          itemName = nameArr.join(' > ');
++        }
+         return createTooltipMarkup('nameValue', {
+-          name: nameArr.join(' > ')
++          name: itemName,
++          value: value,
++          noValue: value == null || isNaN(value)
+         });
+       };
+       LinesSeriesModel.prototype.preventIncremental = function () {
+diff --git a/lib/chart/lines/LinesSeries.js b/lib/chart/lines/LinesSeries.js
+index e977db958ca95141e37da607fd10cbc35bf27d9b..66e423803961b3c3268d053d06477ed64b0d9e82 100644
+--- a/lib/chart/lines/LinesSeries.js
++++ b/lib/chart/lines/LinesSeries.js
+@@ -228,18 +228,21 @@ var LinesSeriesModel = /** @class */function (_super) {
+   };
+   LinesSeriesModel.prototype.formatTooltip = function (dataIndex, multipleSeries, dataType) {
+     var data = this.getData();
++    var value = this.getRawValue(dataIndex);
+     var itemModel = data.getItemModel(dataIndex);
+-    var name = itemModel.get('name');
+-    if (name) {
+-      return name;
++    var itemName = itemModel.get('name');
++    if (!itemName) {
++      var fromName = itemModel.get('fromName');
++      var toName = itemModel.get('toName');
++      var nameArr = [];
++      fromName != null && nameArr.push(fromName);
++      toName != null && nameArr.push(toName);
++      itemName = nameArr.join(' > ');
+     }
+-    var fromName = itemModel.get('fromName');
+-    var toName = itemModel.get('toName');
+-    var nameArr = [];
+-    fromName != null && nameArr.push(fromName);
+-    toName != null && nameArr.push(toName);
+     return createTooltipMarkup('nameValue', {
+-      name: nameArr.join(' > ')
++      name: itemName,
++      value: value,
++      noValue: value == null || isNaN(value)
+     });
+   };
+   LinesSeriesModel.prototype.preventIncremental = function () {

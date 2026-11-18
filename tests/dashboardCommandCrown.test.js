@@ -127,7 +127,10 @@ test("the compact crown collapses to one row with a page disclosure at phone wid
   assert.match(html, /data-crown-compact="true"/);
   assert.equal((html.match(/data-command-crown-layer="location"/g) ?? []).length, 1);
   assert.doesNotMatch(html, /data-command-crown-layer="mode"/);
-  assert.match(html, /<button(?=[^>]*aria-expanded="false")(?=[^>]*aria-controls="crown-disclosure")[^>]*>Biomedical<\/button>/);
+  assert.match(html, /<button(?=[^>]*aria-label="Dashboard menu")(?=[^>]*aria-expanded="false")(?=[^>]*aria-controls="crown-disclosure")/);
+  assert.match(html, /data-dashboard-page-id="biomedical"[^>]*aria-current="page"[^>]*>Biomedical<\/button>/);
+  assert.match(html, /data-dashboard-page-id="operations"/);
+  assert.doesNotMatch(html, /aria-label="Dashboard mode"/);
   assert.doesNotMatch(html, /id="crown-disclosure"/);
 });
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { validateContentPackage } from "../src/content-library/contentPackageValidation.js";
+import { normalizeDashboardBoundary } from "../src/charting/config/dashboardBundleV3.js";
 import {
   encodeAssetBase64,
   sha256HexSync,
@@ -9,7 +10,7 @@ import {
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 import { makeDashboardV6, makeMediaItem, makeSourceEntry } from "./helpers/contentLibraryFixtures.js";
 
-test("a complete V6 package retains used and unused logical content over deduped physical bytes", () => {
+test("a complete migrated V7 package retains used and unused logical content over deduped physical bytes", () => {
   const input = completePackage();
   const before = structuredClone(input);
 
@@ -188,7 +189,7 @@ function completePackage(bytes = PNG) {
   delete dashboard.datasetProfiles;
 
   return {
-    config: dashboard,
+    config: normalizeDashboardBoundary(dashboard),
     assetPayloads: {
       [assetId]: {
         base64: encodeAssetBase64(bytes),

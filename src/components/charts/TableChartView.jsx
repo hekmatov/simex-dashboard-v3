@@ -1,4 +1,6 @@
 import React from "react";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
+import ChartSourceCaption from "./ChartSourceCaption.jsx";
 import {
   chartDescriptionVisible,
   chartTitleClassName,
@@ -9,6 +11,7 @@ import {
 import { dashboardOwnedRegionProps } from "../../theme/dashboardRegionRegistry.js";
 
 export default function TableChartView({ model, chart = {}, provenance }) {
+  const typography = useChartTypography();
   const columns = Array.isArray(model.columns) ? model.columns : [];
   const rows = Array.isArray(model.rows) ? model.rows : [];
   const metadata = Array.isArray(model.rowMetadata) ? model.rowMetadata : [];
@@ -33,10 +36,11 @@ export default function TableChartView({ model, chart = {}, provenance }) {
     ...dashboardOwnedRegionProps("chart-table-register"),
     ...titleContainerProps(chart),
   },
-    React.createElement("h3", { className: chartTitleClassName(chart), style: chartTitleStyle(chart) }, title),
+    React.createElement("h3", { className: chartTitleClassName(chart), style: chartTitleStyle(chart, typography) }, title),
     chartDescriptionVisible(chart) && chart.description
       ? React.createElement("p", { className: "chart-view-description" }, chart.description)
       : null,
+    React.createElement(ChartSourceCaption),
     React.createElement("div", { className: "chart-table-scroll" }, table));
 }
 

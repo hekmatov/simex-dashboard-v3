@@ -133,16 +133,6 @@ export function reducePresentationSession(state, action, context = {}) {
         ),
         rejectionReason: null,
       });
-    case "SELECT_CHRONO_GROUP":
-      assertNonEmptyString(action.groupId, "groupId");
-      return pause(state, {
-        pendingRequest: requestWithRememberedFrame(
-          state,
-          { type: action.type, groupId: action.groupId },
-          `group:${action.groupId}`,
-        ),
-        rejectionReason: null,
-      });
     case "SET_TRACE_MODE":
       if (!new Set(["reveal", "full"]).has(action.mode)) {
         throw new TypeError("mode must be reveal or full");
@@ -213,7 +203,7 @@ export function isPresentationPlaybackSafe(state) {
     && state.blackout !== true
     && state.output === "active"
     && frameCount > 1
-    && state.frameIndex < frameCount - 1;
+    && hasLaterAcceptedFrame(state);
 }
 
 function openNewSession(state, action) {
@@ -293,8 +283,8 @@ function acceptSnapshot(state, message, context) {
       playback: "paused",
       blackout: snapshot.blackout,
       source: deepFreeze(structuredClone(snapshot.source)),
-      frameIndex: snapshot.timeline?.frame_index ?? 0,
-      traceMode: snapshot.timeline?.trace_mode ?? state.traceMode,
+      frameIndex: snapshot.time?.frame_index ?? 0,
+      traceMode: snapshot.time?.trace_mode ?? state.traceMode,
       lastValidSnapshot: snapshot,
       pendingRequest: null,
       rejectionReason: null,
@@ -302,7 +292,7 @@ function acceptSnapshot(state, message, context) {
       sourcePositions: rememberSourcePosition(
         state.sourcePositions,
         snapshot.source,
-        snapshot.timeline?.frame_index,
+        snapshot.time?.frame_index,
       ),
     };
     acceptedState.playback = state.playback === "playing"
@@ -329,7 +319,7 @@ function play(state) {
   }
   const frameCount = timelineFrameCount(state);
   if (frameCount === 0) return pause(state);
-  if (state.frameIndex >= frameCount - 1) {
+  if (frameCount <= 1 || !hasLaterAcceptedFrame(state)) {
     return sessionState({ ...state, playback: "at-end" });
   }
   return sessionState({ ...state, playback: "playing" });
@@ -338,10 +328,10 @@ function play(state) {
 function tick(state) {
   if (state.playback !== "playing") return state;
   const frameCount = timelineFrameCount(state);
-  if (frameCount === 0 || state.frameIndex >= frameCount - 1) {
+  const frameIndex = state.lastValidSnapshot?.time?.frame_epochs.findIndex(epoch => epoch > acceptedOrRequestedEpoch(state)) ?? -1;
+  if (frameCount === 0 || frameIndex === -1) {
     return sessionState({ ...state, playback: "at-end" });
   }
-  const frameIndex = state.frameIndex + 1;
   return sessionState({
     ...state,
     frameIndex,
@@ -365,7 +355,9 @@ function seek(state, frameIndex) {
 function moveFrame(state, offset, type) {
   const frameCount = timelineFrameCount(state);
   if (frameCount === 0) return pause(state);
-  const frameIndex = Math.max(0, Math.min(frameCount - 1, state.frameIndex + offset));
+  const frames = state.lastValidSnapshot.time.frame_epochs, epoch = acceptedOrRequestedEpoch(state);
+  const next = offset > 0 ? frames.findIndex(frame => frame > epoch) : frames.findLastIndex(frame => frame < epoch);
+  const frameIndex = next < 0 ? offset > 0 ? frameCount - 1 : 0 : next;
   return pause(state, {
     frameIndex,
     pendingRequest: { type, frameIndex },
@@ -392,7 +384,19 @@ function pause(state, changes = {}) {
 }
 
 function timelineFrameCount(state) {
-  return state.lastValidSnapshot?.timeline?.frame_epochs?.length ?? 0;
+  return state.lastValidSnapshot?.time?.frame_epochs?.length ?? 0;
+}
+
+function acceptedOrRequestedEpoch(state) {
+  const time = state.lastValidSnapshot?.time;
+  const request = state.pendingRequest;
+  return ["SEEK", "PREVIOUS", "NEXT", "TICK"].includes(request?.type)
+    ? time?.frame_epochs[request.frameIndex] : time?.epoch_ms;
+}
+
+function hasLaterAcceptedFrame(state) {
+  const epoch = acceptedOrRequestedEpoch(state);
+  return Number.isFinite(epoch) && state.lastValidSnapshot.time.frame_epochs.some(frame => frame > epoch);
 }
 
 function matchesActiveGeneration(state, action) {
@@ -416,8 +420,8 @@ function rejectSnapshot(state, reason) {
     pendingRequest: null,
     rejectionReason: normalizeRejectionReason(reason),
     ...(snapshot ? {
-      frameIndex: snapshot.timeline?.frame_index ?? 0,
-      traceMode: snapshot.timeline?.trace_mode ?? state.traceMode,
+      frameIndex: snapshot.time?.frame_index ?? 0,
+      traceMode: snapshot.time?.trace_mode ?? state.traceMode,
       output: snapshot.output_mode,
       source: deepFreeze(structuredClone(snapshot.source)),
       preBlackoutOutput: snapshot.output_mode,
@@ -440,7 +444,6 @@ function rememberSourcePosition(sourcePositions, source, frameIndex) {
 
 function presentationSourceKey(source) {
   if (source?.kind === "scene") return `scene:${source.scene_id}`;
-  if (source?.kind === "Chrono Group") return `group:${source.chrono_group_id}`;
   return null;
 }
 

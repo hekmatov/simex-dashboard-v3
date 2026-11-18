@@ -34,13 +34,23 @@ test("source-frame preview uses the latest authored Scene frame and matching con
   assert.equal(projection.activeEpochMs, MAY_3);
   assert.equal(projection.label, "2027-05-03");
   assert.deepEqual(projection.timeContexts["chart-a"], {
-    groupId: "group-a",
-    activeEpochMs: MAY_3,
+    kind: "cursor", mode: "at", scope: { kind: "storyline", id: "scene-a" },
+    groupId: "group-a", activeEpochMs: MAY_3, traceMode: "reveal", frameIndex: 1,
     matching: { policy: "lastKnown" },
     sceneId: "scene-a",
   });
   assert.equal(projection.timeContexts["outside-scene"], undefined);
   assert.equal(projection.error, null);
+});
+
+test("parentless preview uses shared Storyline cadence and explicit member matching", () => {
+  const { dashboard, scene } = previewFixture({ mode: "source", selection: "all" });
+  delete scene.chronoGroupId; delete scene.pageId;
+  const projection = scenePreviewModule.buildScenePreviewProjection({ dashboard, scene });
+  assert.equal(projection.activeEpochMs, MAY_3);
+  assert.equal(projection.error, null);
+  assert.deepEqual(projection.timeContexts["chart-a"].matching, { policy: "lastKnown" });
+  assert.equal(projection.timeContexts["chart-a"].groupId, undefined);
 });
 
 test("calendar preview uses the latest valid calendar frame", () => {

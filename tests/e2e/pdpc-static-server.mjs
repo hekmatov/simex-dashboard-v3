@@ -2,6 +2,7 @@ import { createReadStream } from "node:fs";
 import { access, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
+import { readStaticSecurityHeaders } from "../../scripts/lib/content-security-policy.mjs";
 
 const releaseRoot = path.resolve(
   process.env.SIMEX_PDPC_RELEASE_ROOT ?? "release/pdpc",
@@ -16,6 +17,7 @@ if (!new Set(["biomedical", "socioeconomic"]).has(variant)) {
 }
 const root = path.join(releaseRoot, variant);
 await access(path.join(root, "index.html"));
+const securityHeaders = await readStaticSecurityHeaders(root);
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
@@ -45,6 +47,7 @@ const server = createServer(async (request, response) => {
     const information = await stat(filePath);
     if (!information.isFile()) throw Object.assign(new Error("Not a file"), { code: "ENOENT" });
     response.writeHead(200, {
+      ...securityHeaders,
       "content-type": contentType(filePath),
       "cache-control": "no-store",
     });

@@ -1,5 +1,6 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { contentSecurityPolicy } from "./content-security-policy.mjs";
 
 const MIME_TYPES = new Map([
   [".gif", "image/gif"],
@@ -70,7 +71,7 @@ export async function buildPdpcSingleFile({ releaseDir, outputFile, variant }) {
 
   const manifest = await optionalJson(path.join(resolvedRelease, "release-manifest.json"));
   const releaseId = typeof manifest?.releaseId === "string" ? manifest.releaseId : "";
-  const html = `<!doctype html>
+  let html = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -92,6 +93,9 @@ export async function buildPdpcSingleFile({ releaseDir, outputFile, variant }) {
   <script>${isolatedScript(main)}</script>
 </body>
 </html>`;
+
+  const policy = contentSecurityPolicy([html], { offline: true });
+  html = html.replace('  <meta charset="UTF-8">', `  <meta charset="UTF-8">\n  <meta http-equiv="Content-Security-Policy" content="${escapeAttribute(policy)}">`);
 
   await mkdir(path.dirname(resolvedOutput), { recursive: true });
   await writeFile(resolvedOutput, html, "utf8");

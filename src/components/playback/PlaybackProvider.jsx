@@ -2,10 +2,8 @@ import React from "react";
 
 import {
   buildChronoGroupClock,
-  validateChronoGroups,
 } from "../../charting/time/chronoGroupModel.js";
 import {
-  initialPlaybackState,
   reducePlaybackState,
 } from "../../charting/time/playbackReducer.js";
 import {
@@ -13,306 +11,143 @@ import {
   buildSceneFrameLedger,
 } from "../../charting/time/frameLedger.js";
 import { buildFrameAvailabilityEvidence } from "./playbackAvailability.js";
+import { deriveCursorPlayback, initializeCursorPlaybackState, legacyPlaybackScope, legacySeekEpoch } from "../../charting/time/cursorProviderModel.js";
+import { resolveCursorMatching } from "../../charting/time/playbackPageScope.js";
 
 const PlaybackContext = React.createContext(null);
 const EMPTY_ARRAY = Object.freeze([]);
-const MAX_STATUS_LENGTH = 240;
 
 export function PlaybackProvider({
-  groups = EMPTY_ARRAY,
-  scenes = EMPTY_ARRAY,
-  charts = EMPTY_ARRAY,
-  pageCharts = null,
-  loadedData = {},
-  profiles = {},
-  preferredGroupId = null,
-  initialState,
-  initialPosition = "earliest",
-  timezone = "UTC",
-  children,
+  groups = EMPTY_ARRAY, scenes = EMPTY_ARRAY, charts = EMPTY_ARRAY, pageCharts = null,
+  loadedData = {}, profiles = {}, preferredGroupId = null, initialState,
+  initialPosition = "earliest", timezone = "UTC", exerciseTime, activePageId = null, children,
 }) {
   const playbackSafetyGatesRef = React.useRef(new Map());
+  const playbackActionGuardsRef = React.useRef(new Map());
   const playableScenes = React.useMemo(() => selectPlayableScenes(scenes), [scenes]);
   const activePageCharts = pageCharts ?? charts;
-  const temporalContext = React.useMemo(() => ({
-    charts,
-    loadedData,
-    profiles,
-    timezone,
-  }), [charts, loadedData, profiles, timezone]);
-  const getDefaultPagePlayback = React.useMemo(() => {
-    let cached;
-    return () => (cached ??= buildDefaultPagePlayback(activePageCharts, temporalContext));
-  }, [activePageCharts, temporalContext]);
-  const [state, baseDispatch] = React.useReducer(
-    reducePlaybackState,
-    {
-      groups,
-      scenes,
-      charts,
-      pageCharts: activePageCharts,
-      initialState,
-      initialPosition,
-      loadedData,
-      profiles,
-      preferredGroupId,
-      timezone,
-    },
-    initializePlaybackState,
-  );
-  const activeScene = React.useMemo(
-    () => resolveActiveScene(playableScenes, state.activeSceneId),
-    [playableScenes, state.activeSceneId],
-  );
-  const validatedGroups = React.useMemo(() => {
-    if (state.playbackView !== true) return groups;
-    const selectedGroup = resolveActiveGroup(
-      groups,
-      activeScene?.chronoGroupId ?? state.activeGroupId,
-      activeScene ? "auto" : state.sourcePreference,
-    );
-    if (state.source?.kind !== "default" || activeScene || selectedGroup) {
-      validateChronoGroups(selectedGroup ? [selectedGroup] : EMPTY_ARRAY, temporalContext);
+  const options = React.useMemo(() => ({ groups, scenes: playableScenes, charts, pageCharts: activePageCharts,
+    loadedData, profiles, timezone, exerciseTime, activePageId, preferredGroupId, initialState, initialPosition }),
+    [groups, playableScenes, charts, activePageCharts, loadedData, profiles, timezone, exerciseTime, activePageId, preferredGroupId, initialState, initialPosition]);
+  const [state, baseDispatch] = React.useReducer(reducePlaybackState, options, initializeCursorPlaybackState);
+  const projection = React.useMemo(() => deriveCursorPlayback({ ...options, state }), [options, state]);
+  const { cursor, clock, liveEpochMs, activeEpochMs, activeIndex, activeScene, activeGroup,
+    members, scopeCharts, sourceLabel, contexts, playing } = projection;
+  const currentRef = React.useRef({ state, projection, options });
+  currentRef.current = { state, projection, options };
+  const dispatch = React.useCallback((action) => {
+    const current = currentRef.current;
+    const { state, projection, options } = current;
+    const send = value => {
+      current.state = reducePlaybackState(current.state, value);
+      baseDispatch(value);
+    };
+    const refresh = () => { current.projection = deriveCursorPlayback({ ...options, state: current.state }); };
+    if (["play", "tick", "cursorPlay", "cursorTick"].includes(action?.type)
+      && [...playbackSafetyGatesRef.current.values()].some(allowed => allowed !== true)) {
+      send({ type: "pause" }); refresh(); return false;
     }
-    return groups;
-  }, [activeScene, groups, state.activeGroupId, state.playbackView, state.source?.kind, state.sourcePreference, temporalContext]);
-  const dispatch = React.useCallback(
-    (action) => {
-      if (
-        ["play", "tick"].includes(action?.type)
-        && [...playbackSafetyGatesRef.current.values()].some((allowed) => allowed !== true)
-      ) {
-        baseDispatch({ type: "pause" });
-        return false;
+    if (action?.fromPresentationSession !== true) {
+      for (const guard of playbackActionGuardsRef.current.values()) {
+        if (guard(action) === false) { send({ type: "pause" }); refresh(); return false; }
       }
-      dispatchPlaybackAction(baseDispatch, action, {
-        groups: validatedGroups,
-        scenes: playableScenes,
-        activeGroupId: state.activeGroupId,
-        defaultPageClock: action?.type === "setGroup" && action.groupId === null
-          ? getDefaultPagePlayback().clock
-          : null,
-      });
-      return true;
-    },
-    [baseDispatch, getDefaultPagePlayback, playableScenes, state.activeGroupId, validatedGroups],
-  );
-  const setPlaybackSafety = React.useCallback((owner, allowed) => {
-    if (typeof owner !== "string" || owner.trim() === "") {
-      throw new TypeError("Playback safety owner must be a non-empty string.");
     }
+    const derived = { clock: projection.clock, liveEpochMs: projection.liveEpochMs };
+    if (action?.type === "restoreAcceptedTime") {
+      const id = action.time?.scope?.kind === "storyline" ? action.time.scope.id : null;
+      const scene = options.scenes.find(value => value.id === id);
+      const group = options.groups.find(value => value.id === (scene?.chronoGroupId ?? (!scene ? id : null)));
+      send({ ...action, sceneId: scene?.id ?? null, groupId: group?.id ?? null }); refresh(); return true;
+    }
+    if (action?.type === "closeView") {
+      send(action);
+      if ((action.owner === undefined || action.owner === "page-time") && current.state.playbackView !== true) send({ type: "cursorLive" });
+      refresh(); return true;
+    }
+    if (["setGroup", "setScene"].includes(action?.type)) {
+      const next = reducePlaybackState(state, action);
+      const scope = action.type === "setScene" && action.sceneId !== null
+        ? { kind: "storyline", id: action.sceneId }
+        : action.type === "setGroup" && action.groupId !== null
+          ? { kind: "storyline", id: action.groupId } : { kind: "page", id: options.activePageId ?? null };
+      const nextProjection = deriveCursorPlayback({ ...options, state: { ...next, cursor: { ...state.cursor, scope } } });
+      send(action);
+      send({ type: "cursorScope", scope, clock: nextProjection.clock });
+      const scene = nextProjection.activeScene;
+      const group = options.groups.find(group => group.id === (scene?.chronoGroupId ?? action.groupId));
+      send({ type: "setSpeed", speed: scene?.secondsPerFrame ?? group?.secondsPerFrame ?? 1 });
+      refresh(); return true;
+    }
+    if (action?.type === "setScope") {
+      const scope = legacyPlaybackScope({ state, requested: action.scope, activePageId: options.activePageId,
+        groups: options.groups, scenes: options.scenes });
+      const nextProjection = deriveCursorPlayback({ ...options, state: { ...state, cursor: { ...state.cursor, scope } } });
+      send({ ...action, scope: scope.kind === "page" ? "all-page" : "group-only" });
+      send({ type: "cursorScope", scope, clock: nextProjection.clock }); refresh(); return true;
+    }
+    if (action?.type === "cursorScope") {
+      const scope = action.scope.kind === "page" ? { ...action.scope, id: options.activePageId ?? action.scope.id } : action.scope;
+      const next = { ...state, activeGroupId: null, activeSceneId: scope.kind === "storyline" ? scope.id : null,
+        cursor: { ...state.cursor, scope } };
+      const nextProjection = deriveCursorPlayback({ ...options, state: next });
+      send({ type: "setGroup", groupId: null });
+      if (next.activeSceneId) send({ type: "setScene", sceneId: next.activeSceneId });
+      send({ ...action, scope, clock: nextProjection.clock }); refresh(); return true;
+    }
+    const type = { play: "cursorPlay", tick: "cursorTick", previous: "cursorStep", next: "cursorStep", seek: "cursorSeek", end: "cursorSeek" }[action?.type];
+    if (type) {
+      const seekEpoch = action.type === "seek" ? legacySeekEpoch(action.index, projection.clock) : undefined;
+      if ((action.type === "seek" || action.type === "end") && projection.clock.length === 0) {
+        send({ type: "cursorReconcile", ...derived }); refresh(); return true;
+      }
+      send({ ...action, ...derived, type,
+        ...(action.type === "previous" ? { direction: -1 } : action.type === "next" ? { direction: 1 } : {}),
+        ...(action.type === "seek" ? { epochMs: seekEpoch } : action.type === "end" ? { epochMs: projection.clock.at(-1) } : {}) });
+      refresh(); return true;
+    }
+    if (action?.type?.startsWith("cursor")) send({ ...derived, ...action });
+    else send(action);
+    refresh(); return true;
+  }, []);
+  const setPlaybackSafety = React.useCallback((owner, allowed) => {
+    if (typeof owner !== "string" || !owner.trim()) throw new TypeError("Playback safety owner must be a non-empty string.");
     if (allowed === true) playbackSafetyGatesRef.current.delete(owner);
     else playbackSafetyGatesRef.current.set(owner, false);
     if (allowed !== true) baseDispatch({ type: "pause" });
-  }, [baseDispatch]);
-  const releasePlaybackSafety = React.useCallback((owner) => {
-    playbackSafetyGatesRef.current.delete(owner);
   }, []);
+  const releasePlaybackSafety = React.useCallback(owner => playbackSafetyGatesRef.current.delete(owner), []);
+  const setPlaybackActionGuard = React.useCallback((owner, guard) => {
+    if (typeof owner !== "string" || !owner.trim() || typeof guard !== "function") throw new TypeError("Playback action guard requires an owner and function.");
+    playbackActionGuardsRef.current.set(owner, guard);
+  }, []);
+  const releasePlaybackActionGuard = React.useCallback(owner => playbackActionGuardsRef.current.delete(owner), []);
   React.useEffect(() => {
-    if (activeScene || groups.length === 0 || state.sourcePreference === "page") return;
-    if (groups.some(({ id }) => id === state.activeGroupId)) return;
-    const firstGroup = preferredGroupId
-      ? groups.find(({ id }) => id === preferredGroupId)
-      : groups[0];
-    if (!firstGroup) return;
-    dispatch({
-      type: "setGroup",
-      groupId: firstGroup.id,
-      period: firstGroup.period,
-    });
-  }, [activeScene, dispatch, groups, preferredGroupId, state.activeGroupId, state.sourcePreference]);
-  const selectedGroup = React.useMemo(
-    () => resolveActiveGroup(
-      validatedGroups,
-      activeScene?.chronoGroupId ?? state.activeGroupId,
-      activeScene ? "auto" : state.sourcePreference,
-    ),
-    [activeScene, validatedGroups, state.activeGroupId, state.sourcePreference],
-  );
-  const usingDefaultPage = (
-    state.source?.kind === "default"
-    && !activeScene
-    && !selectedGroup
-  );
-  const defaultPagePlayback = React.useMemo(
-    () => state.playbackView === true && usingDefaultPage
-      ? getDefaultPagePlayback()
-      : emptyDefaultPagePlayback(activePageCharts),
-    [activePageCharts, state.playbackView, getDefaultPagePlayback, usingDefaultPage],
-  );
-  const activeGroup = usingDefaultPage ? defaultPagePlayback.group : selectedGroup;
-  const groupClock = React.useMemo(
-    () => state.playbackView !== true
-      ? EMPTY_ARRAY
-      : usingDefaultPage
-      ? defaultPagePlayback.clock
-      : buildChronoGroupClock(selectedGroup, temporalContext),
-    [defaultPagePlayback, selectedGroup, state.playbackView, temporalContext, usingDefaultPage],
-  );
-  const clock = React.useMemo(
-    () => activeScene
-      ? buildScenePlaybackClock(activeScene, groupClock, {
-          group: selectedGroup,
-          temporalContext,
-        })
-      : groupClock,
-    [activeScene, groupClock, selectedGroup, temporalContext],
-  );
-  const activeIndex = clock.length === 0
-    ? 0
-    : Math.min(clock.length - 1, Math.max(0, state.activeIndex));
-  const activeEpochMs = clock[activeIndex] ?? null;
-  const canAdvance = (
-    state.playbackView === true
-    && clock.length > 1
-    && activeIndex < clock.length - 1
-  );
-  const playing = state.playing === true && canAdvance;
-  const participatingMembers = React.useMemo(
-    () => selectParticipatingMembers(activeGroup, activeScene, activePageCharts),
-    [activeGroup, activePageCharts, activeScene],
-  );
-  const participatingChartIds = React.useMemo(
-    () => Object.freeze(participatingMembers.map(({ chartId }) => chartId)),
-    [participatingMembers],
-  );
-  const memberTimeContexts = React.useMemo(
-    () => buildMemberTimeContexts(
-      activeGroup ? { ...activeGroup, members: participatingMembers } : null,
-      activeEpochMs,
-      {
-        scene: activeScene,
-        frameIndex: activeIndex,
-        sessionMatchingOverride: state.matchingOverride,
-        traceMode: state.traceMode,
-      },
-    ),
-    [activeEpochMs, activeGroup, activeIndex, activeScene, participatingMembers, state.matchingOverride, state.traceMode],
-  );
-  const timeContextForChart = React.useCallback(
-    (chartId) => state.playbackView === true
-      ? memberTimeContexts[chartId] ?? null
-      : null,
-    [memberTimeContexts, state.playbackView],
-  );
-  const frameAvailability = React.useMemo(
-    () => state.playbackView === true && state.availabilityVisible === true
-      ? buildFrameAvailabilityEvidence({
-          activeEpochMs,
-          clock,
-          group: activeGroup,
-          members: participatingMembers,
-          charts: activePageCharts,
-          loadedData,
-          profiles,
-          contexts: memberTimeContexts,
-          timezone,
-        })
-      : EMPTY_ARRAY,
-    [activeEpochMs, activeGroup, activePageCharts, clock, loadedData, memberTimeContexts, participatingMembers, profiles, state.availabilityVisible, state.playbackView, timezone],
-  );
-  const frameAvailabilityByChartId = React.useMemo(
-    () => Object.freeze(Object.fromEntries(frameAvailability.map((entry) => [entry.chartId, entry]))),
-    [frameAvailability],
-  );
-
+    if (state.cursor.mode === "at") baseDispatch({ type: "cursorReconcile", clock, liveEpochMs });
+  }, [clock, liveEpochMs, state.cursor.mode]);
   React.useEffect(() => {
-    if (state.playing === true && !canAdvance) {
-      dispatch({ type: "pause" });
-    }
-  }, [canAdvance, state.playing]);
-
-  React.useEffect(() => createPlaybackTimer({
-    playing,
-    playbackView: state.playbackView,
-    clockLength: clock.length,
-    speed: state.speed,
-    activeIndex,
-    dispatch,
-  }), [
-    playing,
-    state.playbackView,
-    state.speed,
-    activeGroup?.id,
-    clock,
-    activeIndex,
-  ]);
-
+    const scope = currentRef.current.state.cursor.scope;
+    if (scope.kind !== "page" || scope.id === activePageId) return;
+    dispatch({ type: "cursorScope", scope: { kind: "page", id: activePageId } });
+  }, [activePageId, dispatch]);
+  React.useEffect(() => createPlaybackTimer({ playing, playbackView: true, clockLength: clock.length,
+    speed: state.speed, activeIndex: playing ? Math.max(0, clock.findIndex(epoch => epoch > activeEpochMs) - 1) : activeIndex, dispatch }), [playing, state.speed, clock, activeIndex, activeEpochMs, dispatch]);
+  const frameAvailability = React.useMemo(() => state.availabilityVisible
+    ? buildFrameAvailabilityEvidence({ activeEpochMs, clock, group: activeGroup, members, charts: scopeCharts,
+        loadedData, profiles, contexts, timezone }) : EMPTY_ARRAY,
+    [state.availabilityVisible, activeEpochMs, clock, activeGroup, members, scopeCharts, loadedData, profiles, contexts, timezone]);
   const value = React.useMemo(() => Object.freeze({
-    activeEpochMs,
-    activeGroup,
-    activeGroupId: activeGroup?.id ?? null,
-    activeScene,
-    activeSceneId: activeScene?.id ?? null,
-    activeIndex,
-    availabilityVisible: state.availabilityVisible,
-    charts,
-    clock,
-    connection: state.connection,
-    dispatch,
-    frameAvailability,
-    frameAvailabilityByChartId,
-    groups: validatedGroups,
-    loadedData,
-    matchingOverride: state.matchingOverride,
-    participatingChartIds,
-    placement: state.placement,
-    playbackView: state.playbackView,
-    playing,
-    profiles,
-    scenes: playableScenes,
-    setPlaybackSafety,
-    scope: state.scope,
-    source: state.source,
-    sourcePreference: state.sourcePreference,
-    sourceLabel: activeScene
-      ? activeScene.name
-      : usingDefaultPage
-        ? "Whole page"
-        : selectedGroup?.name ?? "Whole page",
-
-    speed: state.speed,
-    traceMode: state.traceMode,
-    status: playbackStatus(activeGroup, clock, activeEpochMs),
-    releasePlaybackSafety,
-    timeContext: state.playbackView === true
-      && activeGroup
-      && activeEpochMs !== null
-      ? Object.freeze({ groupId: activeGroup.id, activeEpochMs })
-      : null,
-    timeContextForChart,
-  }), [
-    activeEpochMs,
-    activeGroup,
-    activeScene,
-    activeIndex,
-    charts,
-    clock,
-    frameAvailability,
-    frameAvailabilityByChartId,
-    loadedData,
-    participatingChartIds,
-    profiles,
-    releasePlaybackSafety,
-    playableScenes,
-    setPlaybackSafety,
-    state.availabilityVisible,
-    state.connection,
-    state.matchingOverride,
-    state.placement,
-    state.playbackView,
-    state.scope,
-    state.source,
-    state.sourcePreference,
-    usingDefaultPage,
-    selectedGroup,
-    state.traceMode,
-    playing,
-    state.speed,
-    timeContextForChart,
-    validatedGroups,
-  ]);
-
+    ...projection, charts, groups, scenes: playableScenes, loadedData, profiles, dispatch, exerciseTime: exerciseTime ?? null,
+    activeGroupId: state.activeGroupId ?? (activeScene?.chronoGroupId ?? null), activeSceneId: activeScene?.id ?? null,
+    participatingChartIds: Object.freeze(members.map(member => member.chartId)),
+    availabilityVisible: state.availabilityVisible, frameAvailability,
+    frameAvailabilityByChartId: Object.freeze(Object.fromEntries(frameAvailability.map(entry => [entry.chartId, entry]))),
+    connection: state.connection, matchingOverride: state.matchingOverride, nearestToleranceMs: state.nearestToleranceMs ?? null, placement: state.placement,
+    playbackView: state.playbackView, scope: state.scope, source: state.source, sourcePreference: state.sourcePreference,
+    speed: state.speed, traceMode: state.traceMode, setPlaybackSafety, releasePlaybackSafety, setPlaybackActionGuard, releasePlaybackActionGuard,
+    status: clock.length ? `${sourceLabel}: ${canonicalTime(activeEpochMs)}` : `No playback times are available for ${sourceLabel}`,
+    timeContext: Number.isFinite(activeEpochMs) ? Object.freeze({ kind: "cursor", groupId: activeGroup.id, activeEpochMs, scope: cursor.scope, mode: cursor.mode }) : null,
+    timeContextForChart: chartId => contexts[chartId] ?? null,
+  }), [projection, charts, groups, playableScenes, loadedData, profiles, dispatch, state, members, frameAvailability, setPlaybackSafety, releasePlaybackSafety, setPlaybackActionGuard, releasePlaybackActionGuard]);
   return React.createElement(PlaybackContext.Provider, { value }, children);
 }
 
@@ -391,24 +226,19 @@ export function createPlaybackTimer({
 
 export function buildMemberTimeContexts(group, activeEpochMs, {
   scene = null,
+  charts = EMPTY_ARRAY,
   frameIndex,
   sessionMatchingOverride = "authored",
+  sessionNearestToleranceMs = null,
   traceMode,
 } = {}) {
   const contexts = Object.create(null);
   if (!group || !Number.isFinite(activeEpochMs)) return Object.freeze(contexts);
   for (const member of group.members) {
     const sceneMember = scene?.members?.find(({ chartId }) => chartId === member.chartId);
-    const sourceMatching = sessionMatchingPolicy(sessionMatchingOverride)
-      ?? sceneMember?.matching
-      ?? member.matching
-      ?? group.matching;
-    const matching = Object.freeze({
-      policy: sourceMatching?.policy ?? sourceMatching,
-      ...(sourceMatching.toleranceMs === undefined
-        ? {}
-        : { toleranceMs: sourceMatching.toleranceMs }),
-    });
+    const matching = resolveCursorMatching({ chart: charts.find(chart => chart.id === member.chartId),
+      member: sceneMember, sceneDefault: scene?.defaultMatching,
+      inheritedMatching: member.matching ?? group.matching, sessionOverride: sessionMatchingOverride, nearestToleranceMs: sessionNearestToleranceMs });
     contexts[member.chartId] = Object.freeze({
       groupId: group.id,
       activeEpochMs,
@@ -451,98 +281,6 @@ export function dispatchPlaybackAction(
   });
 }
 
-function initializePlaybackState({
-  groups,
-  scenes,
-  charts,
-  pageCharts,
-  initialState,
-  initialPosition,
-  loadedData,
-  profiles,
-  preferredGroupId,
-  timezone,
-}) {
-  scenes = selectPlayableScenes(scenes);
-  const supplied = initialState && typeof initialState === "object"
-    ? initialState
-    : {};
-  const hasSuppliedGroup = Object.hasOwn(supplied, "activeGroupId");
-  const preferredGroup = preferredGroupId
-    ? groups.find(({ id }) => id === preferredGroupId)
-    : null;
-  const activeGroupId = supplied.sourcePreference === "page" ? null : hasSuppliedGroup
-    ? supplied.activeGroupId
-    : preferredGroup?.id ?? (preferredGroupId ? null : groups[0]?.id ?? null);
-  const activeScene = resolveActiveScene(scenes, supplied.activeSceneId);
-  const source = supplied.source ?? (
-    activeScene
-      ? { kind: "scene", id: activeScene.id }
-      : activeGroupId !== null
-        ? { kind: "group", id: activeGroupId }
-        : { kind: "default", id: null }
-  );
-  const temporalContext = {
-    charts,
-    loadedData,
-    profiles,
-    timezone,
-  };
-  const selectedGroup = resolveActiveGroup(groups, activeScene?.chronoGroupId ?? activeGroupId, activeScene ? "auto" : supplied.sourcePreference);
-  const shouldBuildClock = supplied.playbackView === true;
-  const defaultPagePlayback = shouldBuildClock
-    ? buildDefaultPagePlayback(pageCharts ?? charts, temporalContext)
-    : emptyDefaultPagePlayback(pageCharts ?? charts);
-  const activeGroup = source.kind === "default" && !activeScene
-    ? defaultPagePlayback.group
-    : selectedGroup;
-  const groupClock = !shouldBuildClock
-    ? EMPTY_ARRAY
-    : source.kind === "default" && !activeScene
-    ? defaultPagePlayback.clock
-    : buildChronoGroupClock(selectedGroup, temporalContext);
-  const clock = activeScene
-    ? buildScenePlaybackClock(activeScene, groupClock, {
-        group: selectedGroup,
-        temporalContext,
-      })
-    : groupClock;
-  const hasSuppliedIndex = Object.hasOwn(supplied, "activeIndex");
-  const hasSuppliedSpeed = Object.hasOwn(supplied, "speed");
-  return {
-    ...initialPlaybackState,
-    ...supplied,
-    source,
-    activeGroupId,
-    activeSceneId: activeScene?.id ?? null,
-    scope: supplied.scope ?? (activeScene || selectedGroup ? "group-only" : "all-page"),
-    activeIndex: hasSuppliedIndex
-      ? supplied.activeIndex
-      : initialPosition === "latest" && clock.length > 0
-        ? clock.length - 1
-        : 0,
-    speed: hasSuppliedSpeed
-      ? supplied.speed
-      : activeScene?.secondsPerFrame
-        ?? activeGroup?.secondsPerFrame
-        ?? initialPlaybackState.speed,
-  };
-}
-
-function resolveActiveGroup(groups, groupId, sourcePreference = "auto") {
-  if (sourcePreference === "page") return null;
-  if (groupId !== null) {
-    const selected = groups.find((group) => group.id === groupId);
-    if (selected) return selected;
-  }
-  return groups[0] ?? null;
-}
-
-function resolveActiveScene(scenes, sceneId) {
-  if (!sceneId || !Array.isArray(scenes)) return null;
-  return scenes.find((scene) => scene?.id === sceneId) ?? null;
-}
-
 export function selectPlayableScenes(scenes = []) {
   return Object.freeze((Array.isArray(scenes) ? scenes : []).filter(
     (scene) => scene?.frames?.mode !== "unresolved",
@@ -582,18 +320,6 @@ export function buildScenePlaybackClock(scene, groupClock, options = {}) {
   }
   const available = new Set(availableFrames);
   return Object.freeze((scene.frames.selectedEpochs ?? []).filter((epochMs) => available.has(epochMs)));
-}
-
-function selectParticipatingMembers(group, scene, charts) {
-  if (!group) return EMPTY_ARRAY;
-  const activePageChartIds = new Set(charts.map(({ id }) => id));
-  if (scene) {
-    const selected = new Set((scene.members ?? []).map(({ chartId }) => chartId));
-    return Object.freeze(group.members.filter(
-      ({ chartId }) => selected.has(chartId) && activePageChartIds.has(chartId),
-    ));
-  }
-  return Object.freeze(group.members.filter(({ chartId }) => activePageChartIds.has(chartId)));
 }
 
 export function buildDefaultPagePlayback(charts, temporalContext) {
@@ -674,31 +400,8 @@ function buildSceneSourceClock(scene, fallbackClock, { group, temporalContext } 
   return buildChronoGroupClock({ ...group, members: [member] }, temporalContext);
 }
 
-function sessionMatchingPolicy(value) {
-  return ({
-    concurrent: { policy: "exact" },
-    interpolate: { policy: "interpolate" },
-    latest: { policy: "lastKnown" },
-    closest: { policy: "nearest", toleranceMs: Number.MAX_SAFE_INTEGER },
-  })[value] ?? null;
-}
-
-function playbackStatus(group, clock, activeEpochMs) {
-  if (!group) return "No playback group is available";
-  if (clock.length === 0) return `No playback times are available for ${group.name}`;
-  return boundedStatus(
-    `${group.name}: ${canonicalTime(activeEpochMs)}`,
-  );
-}
-
 function canonicalTime(epochMs) {
   if (!Number.isFinite(epochMs)) return "No time selected";
   const iso = new Date(epochMs).toISOString();
   return iso.endsWith("T00:00:00.000Z") ? iso.slice(0, 10) : iso;
-}
-
-function boundedStatus(message) {
-  return message.length <= MAX_STATUS_LENGTH
-    ? message
-    : `${message.slice(0, MAX_STATUS_LENGTH - 1)}…`;
 }

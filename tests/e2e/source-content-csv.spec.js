@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 import { enterBuildMode, structureRail, openSourceContent } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { openChartAuthoring, resumeChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { openAudienceSession } from "./support/present-audience-workflow.js";
 import { createChartDraft } from "../../src/charting/config/chartConfigV3.js";
 import { prepareChartData } from "../../src/charting/data/prepareChartData.js";
-import { validateChronoGroups } from "../../src/charting/time/chronoGroupModel.js";
 import { validateScene } from "../../src/charting/time/sceneSchema.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -31,15 +31,16 @@ const INCOMPATIBLE_MAP_CSV = csvFile("journey-e-incompatible.csv", [
 ]);
 const COMPATIBLE_MAP_CSV = csvFile("journey-e-map.csv", [
   "Datum,MunicipalityCode,infectionsPer10000",
-  "2020-02-27,GM0014,0",
-  "2020-02-27,GM0034,0",
-  "2020-02-27,GM0037,0",
-  "2020-02-27,GM0047,0",
-  "2020-02-27,GM0050,0",
-  "2020-02-27,GM0059,0",
-  "2020-02-27,GM0060,0",
-  "2020-02-27,GM0072,0",
-  "2020-02-27,GM0074,0",
+  // The replacement journey starts with an exact match at the fixture's Live time.
+  "2027-02-21,GM0014,0",
+  "2027-02-21,GM0034,0",
+  "2027-02-21,GM0037,0",
+  "2027-02-21,GM0047,0",
+  "2027-02-21,GM0050,0",
+  "2027-02-21,GM0059,0",
+  "2027-02-21,GM0060,0",
+  "2027-02-21,GM0072,0",
+  "2027-02-21,GM0074,0",
 ]);
 
 test.beforeEach(async ({ request }) => {
@@ -89,9 +90,8 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   await dialog.getByLabel("Relink CSV").setInputFiles(replacement);
   await expect(dialog.getByRole("alert")).toHaveAttribute("data-replacement-reason", "requires-temporal-review");
   const impacts = dialog.getByRole("region", { name: "Affected temporal content" });
-  await expect(impacts).toContainText(`Chrono Group: ${target.groupName}`);
-  await expect(impacts).toContainText(`Scene: ${target.sceneName}`);
-  await expect(impacts).toContainText(`Scene presentation: ${target.sceneName}`);
+  await expect(impacts).toContainText(`Storyline: ${target.sceneName}`);
+  await expect(impacts).toContainText(`Storyline presentation: ${target.sceneName}`);
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeVisible();
@@ -118,57 +118,43 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
     fileName: changedTemporalCsv().name,
   });
   expect(marked.entryOrigin).toBe("linked-project");
-  expect(marked.groupReview).toEqual({ status: "needs-review", sourceIds: [target.sourceId] });
+  expect(marked.hasRetiredGroups).toBe(false);
   expect(marked.sceneReview).toEqual({ status: "needs-review", sourceIds: [target.sourceId] });
   expect(marked.presentReview).toEqual({ status: "degraded", sourceIds: [target.sourceId] });
   await closeManager(page);
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const chrono = page.getByRole("region", { name: "Chrono playback controls" });
-  await chrono.getByLabel("Chrono source").selectOption(`scene:${target.sceneId}`);
+  await timeCursor(page).selectScope({ name: target.sceneName });
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
-  await page.getByLabel("Presentation source").selectOption(`scene:${target.sceneId}`);
-  await expect(page.getByRole("status").filter({ hasText: "Scene presentation needs review" })).toBeVisible();
+  await timeCursor(page).selectScope({ name: target.sceneName });
+  await expect(page.getByRole("status").filter({ hasText: "Storyline presentation needs review" })).toBeVisible();
   await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", target.sceneId);
   await expect(page.locator(".present-selected-chart")).toHaveCount(target.presentChartCount);
-  await page.getByLabel("Presentation source").selectOption(`group:${target.groupId}`);
+  await timeCursor(page).selectScope({ kind: "page" });
+  for (const input of await page.locator(".present-chart-choice input:checked").all()) await input.uncheck();
+  await page.locator(".present-chart-choice").filter({ hasText: target.chartTitle }).getByRole("checkbox").check();
   const { popup } = await openAudienceSession(page);
-  await expect.poll(() => page.evaluate((groupId) => (
+  await expect.poll(() => page.evaluate(() => (
     window.__journeyFProtocolMessages.filter(({ type, payload }) => (
-      type === "state" && payload?.source?.chrono_group_id === groupId
+      type === "state" && payload?.source?.kind === "manual"
     )).length
-  ), target.groupId)).toBeGreaterThan(0);
-  const stateMessages = await page.evaluate((groupId) => (
+  ))).toBeGreaterThan(0);
+  const stateMessages = await page.evaluate(() => (
     window.__journeyFProtocolMessages.filter(({ type, payload }) => (
-      type === "state" && payload?.source?.chrono_group_id === groupId
+      type === "state" && payload?.source?.kind === "manual"
     ))
-  ), target.groupId);
+  ));
   expect(JSON.stringify(stateMessages)).not.toContain("temporalReview");
   await popup.close();
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  let auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
-  await auxiliary.getByRole("button", { name: target.groupName, exact: false }).click();
-  await expect(auxiliary.getByText("Needs attention", { exact: true })).toBeVisible();
-  await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
-  const repairedGroupName = `${target.groupName} repaired`;
-  await auxiliary.getByLabel("Chrono Group name").fill(repairedGroupName);
-  await auxiliary.getByRole("navigation", { name: "Chrono Group stages" }).getByRole("button", { name: /Review/ }).click();
-  await auxiliary.getByRole("button", { name: "Save Chrono Group" }).click();
-  await expect(auxiliary.getByRole("heading", { name: repairedGroupName, exact: true })).toBeVisible();
-  await expect.poll(async () => (await temporalReviewSnapshot(page, target)).groupReview).toBeNull();
-  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
-
-  auxiliary = await openSceneStudio(page);
+  const auxiliary = await openSceneStudio(page);
   await auxiliary.getByRole("button", { name: target.sceneName, exact: false }).click();
   await expect(auxiliary.getByText("Needs attention", { exact: true })).toBeVisible();
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
   const repairedSceneName = `${target.sceneName} repaired`;
-  await auxiliary.getByLabel("Scene name").fill(repairedSceneName);
-  await auxiliary.getByRole("button", { name: "Save Scene" }).click();
+  await auxiliary.getByLabel("Storyline name").fill(repairedSceneName);
+  await auxiliary.getByRole("button", { name: "Save Storyline" }).click();
   await expect(auxiliary.getByRole("heading", { name: repairedSceneName, exact: true })).toBeVisible();
   await expect.poll(async () => {
     const snapshot = await temporalReviewSnapshot(page, target);
@@ -176,7 +162,7 @@ test("Journey F — valid temporal CSV replacement warns then confirms", async (
   }).toEqual({ sceneReview: null, presentReview: null });
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
   const repaired = await temporalReviewSnapshot(page, target);
-  expect(repaired.groupReview).toBeNull();
+  expect(repaired.hasRetiredGroups).toBe(false);
   expect(repaired.sceneReview).toBeNull();
   expect(repaired.presentReview).toBeNull();
 });
@@ -395,8 +381,8 @@ async function openDataSourceManager(page) {
 }
 
 async function openSceneStudio(page) {
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click({ timeout: 10_000 });
-  return page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await page.getByRole("button", { name: "Storyline Studio", exact: true }).click({ timeout: 10_000 });
+  return page.getByRole("dialog", { name: "Storyline Studio authoring" });
 }
 
 async function closeManager(page) {
@@ -469,22 +455,14 @@ async function seedJourneyFTemporalUse(page) {
     const chart = page.sections.flatMap(({ panels }) => panels).map((placement) => placement.chart ?? placement)
       .find(({ configVersion, typeId }) => configVersion === 3 && typeId === "line");
     if (!chart) throw new Error("Journey F requires one V3 line chart.");
-    const group = {
-      id: "journey-f-group",
-      name: "Journey F playback",
-      period: { start: "2026-01-01", end: "2035-12-31" },
-      matching: { policy: "exact" },
-      secondsPerFrame: 1,
-      members: [{ chartId: chart.id, timeRole: "observation" }],
-    };
     const scene = {
       id: "journey-f-scene",
       name: "Journey F scene",
       pageId: page.id,
-      chronoGroupId: group.id,
       period: { start: "2026-01-01T00:00:00.000Z", end: "2035-12-31T00:00:00.000Z" },
       frames: { mode: "source", chartId: chart.id, selection: "all" },
-      members: [{ chartId: chart.id, width: 1 }],
+      members: [{ chartId: chart.id, width: 1, timeRole: "observation", matching: { policy: "exact" } }],
+      secondsPerFrame: 1,
       present: { chartIds: [chart.id], layout: "single" },
       audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
     };
@@ -493,7 +471,6 @@ async function seedJourneyFTemporalUse(page) {
       measurements: [{ field: "cases", axis: "primary" }],
       observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
     };
-    dashboard.chronoGroups = [...(dashboard.chronoGroups ?? []).filter(({ id }) => id !== group.id), group];
     dashboard.scenes = [...(dashboard.scenes ?? []).filter(({ id }) => id !== scene.id), scene];
     return dashboard;
   }, STORAGE_KEY);
@@ -502,22 +479,15 @@ async function seedJourneyFTemporalUse(page) {
   const charts = dashboard.pages.flatMap((pageValue) => pageValue.sections.flatMap((section) => (
     section.panels.map((placement) => ({ ...(placement.chart ?? placement), pageId: pageValue.id }))
   )));
-  const group = dashboard.chronoGroups.find(({ id }) => id === "journey-f-group");
   const scene = dashboard.scenes.find(({ id }) => id === "journey-f-scene");
-  const chart = charts.find(({ id }) => id === group.members[0].chartId);
+  const chart = charts.find(({ id }) => id === scene.members[0].chartId);
   const profile = dashboard.datasetProfiles[sourceId];
   try {
     const prepared = prepareChartData({ chart, rows: CHART_ROWS, datasetProfile: profile });
     if (prepared.status !== "ready" || prepared.marks.length === 0) {
       throw new Error("temporal member does not prepare nonempty marks");
     }
-    validateChronoGroups([group], {
-      charts,
-      loadedData: { [sourceId]: CHART_ROWS },
-      profiles: { [sourceId]: profile },
-      timezone: dashboard.timezone,
-    });
-    validateScene(scene, { chronoGroups: [group], pages: dashboard.pages, charts });
+    validateScene(scene, { nativeVersion: 7, pages: dashboard.pages, charts, profiles: { [sourceId]: profile } });
   } catch (error) {
     throw new Error(`Journey F seed is invalid: ${error.message}`);
   }
@@ -549,17 +519,13 @@ async function temporalReplacementTarget(page) {
         const field = chart && temporalField(chart);
         const entry = chart && dashboard.contentLibrary?.sourceEntries?.[chart.sourceId];
         const source = chart && dashboard.dataSources?.[chart.sourceId];
-        const group = (dashboard.chronoGroups ?? []).find(({ id, members }) => (
-          id === scene.chronoGroupId && members?.some((member) => member.chartId === chartId)
-        ));
-        if (field && entry && (source?.kind === "csv" || source?.type === "uploadedCsv") && group) {
+        if (field && entry && (source?.kind === "csv" || source?.type === "uploadedCsv")) {
           return {
             sourceId: chart.sourceId,
             displayName: entry.displayName,
             origin: entry.origin,
             temporalField: field,
-            groupId: group.id,
-            groupName: group.name,
+            chartTitle: chart.title,
             sceneId: scene.id,
             sceneName: scene.name,
             presentChartCount: scene.present.chartIds.length,
@@ -567,7 +533,7 @@ async function temporalReplacementTarget(page) {
         }
       }
     }
-    throw new Error("Journey F requires a managed CSV used by a temporal Scene presentation.");
+    throw new Error("Journey F requires a managed CSV used by a temporal Storyline presentation.");
   }, STORAGE_KEY);
 }
 
@@ -583,13 +549,12 @@ function changedTemporalCsv() {
 async function temporalReviewSnapshot(page, target) {
   return page.evaluate(({ key, targetValue }) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
-    const group = dashboard.chronoGroups.find(({ id }) => id === targetValue.groupId);
     const scene = dashboard.scenes.find(({ id }) => id === targetValue.sceneId);
     return {
       sourceId: targetValue.sourceId,
       source: dashboard.dataSources[targetValue.sourceId],
       entryOrigin: dashboard.contentLibrary.sourceEntries[targetValue.sourceId].origin,
-      groupReview: group.temporalReview ?? null,
+      hasRetiredGroups: Object.hasOwn(dashboard, "chronoGroups"),
       sceneReview: scene.temporalReview ?? null,
       presentReview: scene.present?.temporalReview ?? null,
     };

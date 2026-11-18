@@ -15,16 +15,18 @@ const vite = await createServer({
 const [
   { default: ViewShell, sceneNavigationPageId },
   { PlaybackProvider, createPlaybackTimer },
+  { default: DashboardModeWorkspace },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/components/view/ViewShell.jsx"),
   vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx"),
+  vite.ssrLoadModule("/src/components/dashboard/DashboardModeWorkspace.jsx"),
 ]);
 await vite.close();
 
-test("selecting a cross-page Scene requests its owning page exactly once", () => {
+test("selecting a cross-page Storyline keeps the currently visible page", () => {
   assert.equal(
     sceneNavigationPageId({ id: "scene-a", pageId: "biomedical" }, { id: "home" }),
-    "biomedical",
+    null,
   );
   assert.equal(
     sceneNavigationPageId({ id: "scene-a", pageId: "biomedical" }, { id: "biomedical" }),
@@ -79,7 +81,7 @@ const dashboard = {
   pages: [page],
 };
 
-test("All page charts elevates only Chrono members and keeps ordinary charts rendered below", () => {
+test("legacy Group time scope keeps every chart in its ordinary page section", () => {
   const html = withBrowserGlobals(() => renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -113,26 +115,25 @@ test("All page charts elevates only Chrono members and keeps ordinary charts ren
     ),
   ));
 
-  assert.match(html, /data-chrono-section="exercise"/);
+  assert.doesNotMatch(html, /data-chrono-section=/);
   assert.match(html, /class="layout-grid layout-two-column"/);
-  assert.equal((html.match(/data-panel-id="member-chart"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-canonical-panel-id="member-chart"/g) ?? []).length, 1);
   assert.match(html, /data-dashboard-surface="view"/);
-  assert.match(html, /data-panel-id="ordinary-chart"/);
-  const chronoSectionIndex = html.indexOf('data-chrono-section="exercise"');
-  const memberIndex = html.indexOf('data-panel-id="member-chart"');
+  assert.match(html, /data-canonical-panel-id="ordinary-chart"/);
+  const memberIndex = html.indexOf('data-canonical-panel-id="member-chart"');
   const canonicalSectionIndex = html.indexOf('data-canonical-section-id="outbreak"');
-  const ordinaryIndex = html.indexOf('data-panel-id="ordinary-chart"');
-  assert.ok(chronoSectionIndex < memberIndex && memberIndex < canonicalSectionIndex);
+  const ordinaryIndex = html.indexOf('data-canonical-panel-id="ordinary-chart"');
+  assert.ok(canonicalSectionIndex < memberIndex);
   assert.ok(canonicalSectionIndex < ordinaryIndex);
   const ordinaryPanel = html.slice(ordinaryIndex, html.indexOf("</article>", ordinaryIndex));
-  assert.match(ordinaryPanel, /data-canonical-plot-id="ordinary-chart"/);
+  assert.match(html, /data-deferred-panel="ordinary-chart"/);
+  assert.match(ordinaryPanel, /Load chart: Ordinary page chart/);
   assert.doesNotMatch(ordinaryPanel, /chart-status-(?:empty|error)|chart-deferred-placeholder/);
-  assert.match(html, /class="playback-controls playback-controls--floating playback-controls--bottom"/);
-  assert.match(html, /aria-label="Seconds per frame"/);
-  assert.match(html, /type="number"[^>]*aria-label="Seconds per frame"[^>]*value="2\.5"/);
+  assert.doesNotMatch(html, /playback-controls--floating/);
+  assert.match(html, /aria-label="Exercise time stamp"/);
 });
 
-test("first-open Chrono uses the saved group and keeps non-members in their ordinary Page section", () => {
+test("first-open time controls leave ordinary page content in place", () => {
   const html = withBrowserGlobals(() => renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -159,16 +160,17 @@ test("first-open Chrono uses the saved group and keeps non-members in their ordi
     ),
   ));
 
-  assert.match(html, /data-chrono-section="exercise"/);
-  assert.equal((html.match(/data-panel-id="member-chart"/g) ?? []).length, 1);
-  const ordinaryIndex = html.indexOf('data-panel-id="ordinary-chart"');
+  assert.doesNotMatch(html, /data-chrono-section=/);
+  assert.equal((html.match(/data-canonical-panel-id="member-chart"/g) ?? []).length, 1);
+  const ordinaryIndex = html.indexOf('data-canonical-panel-id="ordinary-chart"');
   assert.ok(ordinaryIndex > html.indexOf('data-canonical-section-id="outbreak"'));
   const ordinaryPanel = html.slice(ordinaryIndex, html.indexOf("</article>", ordinaryIndex));
-  assert.match(ordinaryPanel, /data-canonical-plot-id="ordinary-chart"/);
+  assert.match(html, /data-deferred-panel="ordinary-chart"/);
+  assert.match(ordinaryPanel, /Load chart: Ordinary page chart/);
   assert.doesNotMatch(ordinaryPanel, /chart-status-(?:empty|error)|chart-deferred-placeholder/);
 });
 
-test("Group only omits ordinary Page charts without duplicating Chrono members", () => {
+test("legacy Group-only temporal scope retains ordinary page charts", () => {
   const html = withBrowserGlobals(() => renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -202,8 +204,45 @@ test("Group only omits ordinary Page charts without duplicating Chrono members",
     ),
   ));
 
-  assert.equal((html.match(/data-panel-id="member-chart"/g) ?? []).length, 1);
-  assert.doesNotMatch(html, /data-panel-id="ordinary-chart"/);
+  assert.equal((html.match(/data-canonical-panel-id="member-chart"/g) ?? []).length, 1);
+  assert.match(html, /data-canonical-panel-id="ordinary-chart"/);
+});
+
+test("cross-page Storyline band precedes ordinary content in both live and compatibility shells", () => {
+  const secondPage = { ...page, id: "second", sections: [{ id: "cross-page-section", panels: [{ id: "cross-placement", chart: ordinaryChart }] }] };
+  const scene = { id: "story", name: "Cross-page comparison", members: [{ chartId: ordinaryChart.id, width: 4, height: 1 }, { chartId: memberChart.id, width: 4, height: 1 }],
+    view: { layout: "overUnder" }, frames: { mode: "source", chartId: memberChart.id, selection: "all" },
+    present: { chartIds: [ordinaryChart.id, memberChart.id], layout: "horizontal-divider" } };
+  const runtime = { ...dashboard, pages: [{ ...page, sections: [{ ...page.sections[0], panels: [page.sections[0].panels[0]] }] }, secondPage], scenes: [scene] };
+  for (const Shell of [ViewShell, DashboardModeWorkspace]) {
+    const html = withBrowserGlobals(() => renderToStaticMarkup(React.createElement(PlaybackProvider, {
+      charts: [memberChart, ordinaryChart], groups: [], scenes: [scene], loadedData: runtime.loadedData,
+      profiles: runtime.datasetProfiles, timezone: "UTC", activePageId: page.id,
+      initialState: { cursor: { mode: "live", epochMs: null, scope: { kind: "storyline", id: "story" }, window: null } },
+    }, React.createElement(Shell, { mode: "view", activePage: runtime.pages[0], dashboard: runtime,
+      displayState: { displayed_chart_ids: [], layout: "solo" }, geoDataSources: {}, onDisplayAction() {} }))));
+    assert.match(html, /data-storyline-band="story"/);
+    assert.match(html, /data-scene-view-layout="overUnder"/);
+    assert.match(html, /data-scene-chart-id="ordinary-chart"/);
+    assert.match(html, /Close Storyline/);
+    assert.match(html, /Fictional scenario · Exercise use only/);
+    assert.ok(html.indexOf('data-storyline-band="story"') < html.indexOf('data-canonical-section-id="outbreak"'));
+    assert.equal((html.match(/data-canonical-panel-id="member-chart"/g) ?? []).length, 1);
+  }
+});
+
+test("comparison selection suspends the movable stamp without removing canonical charts", () => {
+  for (const Shell of [ViewShell, DashboardModeWorkspace]) {
+    const html = withBrowserGlobals(() => renderToStaticMarkup(React.createElement(PlaybackProvider, {
+      charts: [memberChart, ordinaryChart], groups: [], scenes: [], loadedData: dashboard.loadedData,
+      profiles: dashboard.datasetProfiles, activePageId: page.id,
+      initialState: { cursor: { mode: "at", epochMs: Date.parse("2027-05-02"), scope: { kind: "page", id: page.id }, window: null } },
+    }, React.createElement(Shell, { mode: "view", activePage: page, dashboard, multiSelectMode: true,
+      multiPanelIds: [memberChart.id, ordinaryChart.id], displayState: { displayed_chart_ids: [], layout: "solo" }, geoDataSources: {}, onDisplayAction() {} }))));
+    assert.match(html, /aria-label="Chart comparison selection"/);
+    assert.match(html, /data-canonical-panel-id="member-chart"/);
+    assert.match(html, /class="chrono-date-overlay" hidden=""/);
+  }
 });
 
 test("playback cadence is measured in seconds per frame", () => {

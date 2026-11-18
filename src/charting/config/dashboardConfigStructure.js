@@ -1,5 +1,6 @@
 import { ATTENTION_STRIP_CHART_TYPES, SECTION_ROLES } from "./sectionRoles.js";
 import { resolvePresentationResolution } from "../../lib/presentationResolution.js";
+import { validateExerciseTime } from "../time/cursorModel.js";
 
 export { ATTENTION_STRIP_CHART_TYPES, SECTION_ROLES };
 
@@ -25,7 +26,7 @@ function shape(required, optional = []) {
  * this contract owns their placement and every dashboard presentation field.
  */
 export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
-  version: 6,
+  version: 7,
   runtimeNonSemanticFields: RUNTIME_NON_SEMANTIC_FIELDS,
   pageTypes: PAGE_TYPES,
   sectionRoles: SECTION_ROLES,
@@ -42,12 +43,13 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
         "programLabel",
         "presentationResolution",
         "scenarioLabel",
+        "scenario",
         "scenes",
-        "chronoGroups",
         "assets",
       ],
     ),
     home: shape(["enabled"]),
+    scenario: shape([], ["exerciseTime"]),
     page: shape(
       ["id", "sections"],
       ["description", "label", "landing", "pageType", "title"],
@@ -148,6 +150,10 @@ export function validateDashboardStructure(
   }
   optionalString(config.description, "Dashboard description");
   if (Object.hasOwn(config, "presentationResolution")) resolvePresentationResolution(config.presentationResolution);
+  if (Object.hasOwn(config, "scenario")) {
+    const scenario = strictShape(config.scenario, DASHBOARD_CONFIG_STRUCTURE.shapes.scenario, "Scenario time");
+    if (Object.hasOwn(scenario, "exerciseTime")) validateExerciseTime(scenario.exerciseTime);
+  }
   for (const [key, label] of [
     ["lastUpdated", "Dashboard lastUpdated"],
     ["layout", "Dashboard layout"],
@@ -158,9 +164,6 @@ export function validateDashboardStructure(
   }
   if (config.dataSources !== undefined) {
     ordinaryRecord(config.dataSources, "Dashboard dataSources");
-  }
-  if (config.chronoGroups !== undefined) {
-    denseArray(config.chronoGroups, "Dashboard chronoGroups");
   }
   if (config.scenes !== undefined) {
     denseArray(config.scenes, "Dashboard scenes");

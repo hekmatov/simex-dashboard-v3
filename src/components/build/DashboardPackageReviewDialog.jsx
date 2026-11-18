@@ -76,6 +76,11 @@ export default function DashboardPackageReviewDialog({ candidate, current,
       <header className="dashboard-dialog__header"><h2 id="dashboard-package-review-title">Review package contents</h2>
         <p>Created <time dateTime={candidate.exportedAt ?? undefined}>{candidate.exportedAt ? formatPackageTimestamp(candidate.exportedAt) : "Creation date unavailable"}</time></p></header>
       <div className="dashboard-dialog__body package-import-workspace">
+        <section aria-label="Package version and migration review">
+          <p>{candidate.appVersion ? `Exported by app ${candidate.appVersion}.` : "Original app version unavailable."}</p>
+          {candidate.migrationReview?.length > 0 && <><h3>Storyline migration review</h3><ul>{candidate.migrationReview.map((item, index) =>
+            <li key={index}>{formatMigrationReview(item)}</li>)}</ul></>}
+        </section>
         <fieldset className="package-import-modes" disabled={locked}><legend>Import choice</legend>
           {[["replace", "Replace"], ["append", "Full Append"], ["partial", "Partial Append"]].map(([id, label]) => <label key={id}>
             <input type="radio" name="dashboard-package-import-mode" value={id} checked={mode === id}
@@ -136,5 +141,17 @@ export default function DashboardPackageReviewDialog({ candidate, current,
 export function formatPackageTimestamp(value) {
   const timestamp = new Date(value);
   return Number.isNaN(timestamp.getTime()) ? "Creation date unavailable" : new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(timestamp);
+}
+export function formatMigrationReview(item) {
+  switch (item.code) {
+    case "present-subset": return `${item.storylineId}: all ${item.memberIds.length} members are retained. Present proposes ${item.presentChartIds.join(", ")} in ${item.layout}; ${item.omittedChartIds.join(", ")} remains in the Storyline but outside its Present subset. Review this in Storyline Studio.`;
+    case "calendar-period": return `${item.storylineId}: original calendar period ${item.period.start}–${item.period.end} is retained with observation-union cadence in ${item.timezone}. Date-only observations retain their calendar dates; timestamps use this dashboard timezone.`;
+    case "collection-label": return `${item.storylineId}: “${item.label}” is preserved as an Original collection label, independently of the Storyline name. It no longer references a parent object.`;
+    case "unbounded-nearest": return `${item.storylineId}, ${item.chartId}: legacy nearest matching has no tolerance. It remains visibly invalid until an explicit bound is authored; no value is substituted.`;
+    case "identity": return `${item.previousId}: converted Storyline identity is ${item.storylineId} to avoid a collision.`;
+    case "name": return `${item.storylineId}: name “${item.previousName}” becomes “${item.name}” to remain unique.`;
+    case "time-role": return `${item.storylineId}, ${item.chartId}: original parent resolution used ${item.effectiveRole}; that effective role is retained. The previously inactive authored role ${item.authoredRole} remains recoverable in the original input.`;
+    default: return "Review the imported Storyline before presenting it.";
+  }
 }
 function noop() {}

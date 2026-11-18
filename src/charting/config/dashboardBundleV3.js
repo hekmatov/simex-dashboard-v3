@@ -5,7 +5,7 @@ import { profileDataset } from "../data/profileDataset.js";
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateScene } from "../time/sceneSchema.js";
-import { validateChronoGroups } from "../time/chronoGroupModel.js";
+import { validateChronoGroups, validateChartTimeSyncDefault } from "../time/chronoGroupModel.js";
 import {
   normalizeDashboardTemporalConfig,
   validateCanonicalDashboardTemporalConfig,
@@ -21,6 +21,9 @@ import {
 import { migrateDashboardV3ToV4 } from "./migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../../content-library/migrateDashboardV4ToV5.js";
 import { migrateDashboardV5ToV6 } from "./migrateDashboardV5ToV6.js";
+import { migrateDashboardV6ToV7 } from "./migrateDashboardV6ToV7.js";
+import { stableSerialize } from "../runtime/chartPreparationIdentity.js";
+import { APP_VERSION } from "../../lib/appVersion.js";
 import { validateContentLibrary } from "../../content-library/contentLibrarySchema.js";
 import { validateContentPackage } from "../../content-library/contentPackageValidation.js";
 import {
@@ -42,7 +45,7 @@ import {
 } from "../../static-content/assets/assetPayloadEnvelope.js";
 
 export const DASHBOARD_SCHEMA_VERSION = DASHBOARD_CONFIG_STRUCTURE.version;
-export const DASHBOARD_BUNDLE_VERSION = 6;
+export const DASHBOARD_BUNDLE_VERSION = 7;
 export const DASHBOARD_CONFIG_VERSION = DASHBOARD_SCHEMA_VERSION;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
 
@@ -60,6 +63,7 @@ const UPLOADED_GEOJSON_SOURCE_KEYS = new Set(["browserAssetId", "fileName", "fin
 const INLINE_SOURCE_KEYS = new Set(["browserImageAssetIds", "fingerprint", "kind", "parsingMetadata", "provenance", "rows", "sourceFingerprint"]);
 const BUNDLE_KEYS = new Set(["assetPayloads", "bundleType", "config", "metadata", "version"]);
 const BUNDLE_METADATA_KEYS = new Set(["exportedAt", "networkDependencies", "sourceFingerprints"]);
+const V7_BUNDLE_METADATA_KEYS = new Set([...BUNDLE_METADATA_KEYS, "appVersion", "integrity"]);
 const ASSET_PAYLOAD_KEYS = new Set(["base64", "byteLength", "mediaType", "sha256"]);
 const PROVENANCE_KEYS = new Set(["label"]);
 const PARSING_RULE_KEYS = new Set(["format", "interpretation", "timezone"]);
@@ -239,6 +243,10 @@ function temporalMigrationProfiles(config, suppliedProfiles = {}) {
     }
   }
   return profiles;
+}
+
+export function dashboardSourceProfile(config, sourceId) {
+  return { columns: profileColumns(sourceId, config.dataSources[sourceId], config.datasetProfiles ?? {}) };
 }
 
 function profileColumns(sourceId, source, profiles = {}) {
@@ -451,19 +459,19 @@ function normalizeDashboardChartInstances(config) {
   };
 }
 
-export function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
+export function normalizeDashboardBoundary(config, { profiles = {}, onReview } = {}) {
   const v4 = config.configVersion === 3 ? migrateDashboardV3ToV4(config) : config;
   const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
-  const v6 = migrateDashboardV5ToV6(v5);
+  const v6 = v5.configVersion === 7 ? v5 : migrateDashboardV5ToV6(v5);
   const chartNormalized = normalizeDashboardChartInstances(v6);
-  const presentationNormalized = stripLegacyVantaBackground(chartNormalized);
+  const presentationNormalized = config.configVersion === 7 ? chartNormalized : stripLegacyVantaBackground(chartNormalized);
   const lookNormalized = normalizeRetiredDashboardLook(presentationNormalized);
   const resolutionNormalized = Object.hasOwn(lookNormalized, "presentationResolution")
     ? { ...lookNormalized, presentationResolution: resolvePresentationResolution(lookNormalized.presentationResolution) }
     : lookNormalized;
-  return normalizeDashboardTemporalConfig(resolutionNormalized, {
+  return migrateDashboardV6ToV7(normalizeDashboardTemporalConfig(resolutionNormalized, {
     profiles: temporalMigrationProfiles(resolutionNormalized, profiles),
-  });
+  }), { onReview });
 }
 
 const RETIRED_DASHBOARD_COLOR_PROFILES = new Set([
@@ -504,7 +512,7 @@ export function validateDashboardConfig(
   assertStructuralData(config);
   const v4 = config.configVersion === 3 ? migrateDashboardV3ToV4(config) : config;
   const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
-  config = migrateDashboardV5ToV6(v5);
+  config = migrateDashboardV6ToV7(v5.configVersion === 7 ? v5 : migrateDashboardV5ToV6(v5));
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
   });
@@ -563,6 +571,7 @@ export function validateDashboardConfig(
       );
     }
   }
+  for (const chart of charts) validateChartTimeSyncDefault(chart, { profiles: validationProfiles });
   validateChronoGroups(config.chronoGroups ?? [], {
     charts,
     loadedData,
@@ -579,6 +588,8 @@ export function validateDashboardConfig(
       pages: config.pages,
       charts: sceneCharts,
       scenes: config.scenes,
+      profiles: validationProfiles,
+      nativeVersion: 7,
     });
   }
   return input;
@@ -642,9 +653,7 @@ export function integrateCreatedChart(dashboard, payload, target) {
     }
     next.dataSources[sourceId] = structuredClone(payload.source);
   }
-  if (payload.chronoGroups !== undefined) {
-    next.chronoGroups = structuredClone(payload.chronoGroups);
-  }
+  if (payload.chronoGroups?.length) throw new Error("Chrono Groups are retired. Save chart matching or a Storyline instead.");
   const page = next.pages.find(({ id }) => id === target.pageId);
   const section = page?.sections?.find(({ id }) => id === target.sectionId);
   if (!section) {
@@ -690,7 +699,7 @@ export function integrateSavedChart(dashboard, payload) {
     }
   }
   if (!replaced) throw new Error(`Chart "${chart.id}" does not exist in the dashboard.`);
-  next.chronoGroups = structuredClone(payload.chronoGroups ?? next.chronoGroups ?? []);
+  if (payload.chronoGroups?.length) throw new Error("Chrono Groups are retired. Save chart matching or a Storyline instead.");
   validateDashboardSessionCandidate(next);
   return next;
 }
@@ -703,41 +712,65 @@ export function validateDashboardSessionCandidate(candidate) {
   return candidate;
 }
 
-export function serializeDashboardBundle(config, { now = null, assetPayloads = {} } = {}) {
+export function serializeDashboardBundle(config, { now = null, assetPayloads = {}, onReview } = {}) {
   const chartNormalized = serializableConfig(
     normalizeDashboardChartInstances(config),
   );
-  const serializable = normalizeDashboardBoundary(chartNormalized);
+  const serializable = normalizeDashboardBoundary(chartNormalized, { onReview });
   validateDashboardConfig(serializable);
   if (now !== null && !validCanonicalInstant(now)) throw new Error("Bundle export time must be a valid canonical ISO-8601 timestamp or null.");
   const verifiedPayloads = validateAssetPayloadEnvelope(serializable, assetPayloads);
   validateContentPackage({ config: serializable, assetPayloads: verifiedPayloads });
-  return {
+  const bundle = {
     bundleType: DASHBOARD_BUNDLE_TYPE,
     version: DASHBOARD_BUNDLE_VERSION,
     metadata: {
       exportedAt: now,
       sourceFingerprints: sourceFingerprints(serializable.dataSources),
       networkDependencies: linkedImageDependencies(serializable),
+      appVersion: APP_VERSION,
     },
     config: serializable,
     assetPayloads: verifiedPayloads,
   };
+  bundle.metadata.integrity = { algorithm: "sha256", digest: dashboardBundleIntegrity(bundle) };
+  return bundle;
+}
+
+/** Hash every exported byte value under the established stable serializer,
+ * excluding only this digest's own field. Key ordering is reproducible.
+ */
+export function dashboardBundleIntegrity(bundle) {
+  const unsigned = { ...bundle, metadata: { ...bundle.metadata } };
+  delete unsigned.metadata.integrity;
+  return sha256HexSync(new TextEncoder().encode(stableSerialize(unsigned)));
 }
 
 export function parseDashboardBundle(text, { includeEnvelope = false } = {}) {
   let bundle;
   try { bundle = JSON.parse(text); } catch { throw new Error("Dashboard bundle must be valid JSON."); }
-  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || ![4, 5, DASHBOARD_BUNDLE_VERSION].includes(bundle.version)) throw new Error("This dashboard supports version 4, version 5, or version 6 bundles only.");
+  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || ![4, 5, 6, DASHBOARD_BUNDLE_VERSION].includes(bundle.version)) throw new Error("This dashboard supports version 4, 5, 6, or 7 bundles only.");
   if (!isRecord(bundle.config)) throw new Error("Bundle config must be a dashboard configuration object.");
   const bundleEntries = plainDataEntries(bundle, "Dashboard bundle");
   rejectUnknownEntries(bundleEntries, BUNDLE_KEYS, "dashboard bundle");
-  const config = normalizeDashboardBoundary(structuredClone(bundle.config));
+  const metadataEntries = plainDataEntries(bundle.metadata, "Dashboard bundle metadata");
+  rejectUnknownEntries(metadataEntries, bundle.version === 7 ? V7_BUNDLE_METADATA_KEYS : BUNDLE_METADATA_KEYS, "dashboard bundle metadata");
+  if (bundle.version !== 7 && bundle.config.configVersion === 7) {
+    throw new Error("Native V7 configuration requires a version 7 bundle with integrity verification.");
+  }
+  if (bundle.version === 7) {
+    const integrity = bundle.metadata.integrity;
+    if (!isRecord(integrity) || Object.keys(integrity).sort().join(",") !== "algorithm,digest"
+      || integrity.algorithm !== "sha256" || typeof integrity.digest !== "string" || !/^[a-f0-9]{64}$/.test(integrity.digest)
+      || dashboardBundleIntegrity(bundle) !== integrity.digest) throw new Error("Dashboard bundle integrity verification failed.");
+    requiredString(bundle.metadata.appVersion, "Bundle app version");
+    if (bundle.config.configVersion !== 7) throw new Error("Native V7 bundles require configuration version 7.");
+  }
+  const migrationReview = [];
+  const config = normalizeDashboardBoundary(structuredClone(bundle.config), { onReview: item => migrationReview.push(item) });
   validateDashboardConfig(config);
   const assetPayloads = validateAssetPayloadEnvelope(config, bundle.assetPayloads ?? {});
   validateContentPackage({ config, assetPayloads });
-  const metadataEntries = plainDataEntries(bundle.metadata, "Dashboard bundle metadata");
-  rejectUnknownEntries(metadataEntries, BUNDLE_METADATA_KEYS, "dashboard bundle metadata");
   const exportedAt = entryValue(metadataEntries, "exportedAt");
   if (exportedAt !== null && !validCanonicalInstant(exportedAt)) throw new Error("Bundle export time must be a valid canonical ISO-8601 timestamp or null.");
   validateSourceFingerprints(
@@ -748,7 +781,8 @@ export function parseDashboardBundle(text, { includeEnvelope = false } = {}) {
     entryValue(metadataEntries, "networkDependencies"),
     linkedImageDependencies(config),
   );
-  return includeEnvelope ? { config, assetPayloads } : config;
+  return includeEnvelope ? { config, assetPayloads, migrationReview, appVersion: bundle.metadata.appVersion ?? null,
+    integrity: bundle.metadata.integrity ?? null } : config;
 }
 
 function validateAssetPayloadEnvelope(config, value) {

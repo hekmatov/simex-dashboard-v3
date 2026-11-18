@@ -38,11 +38,15 @@ export function chartTitleClassName(chart) {
     : "chart-view-title chart-view-title--visually-hidden";
 }
 
-export function chartTitleStyle(chart) {
+export function chartTitleStyle(chart, typography) {
   const fontSize = chart?.presentation?.title?.fontSize;
-  return Number.isInteger(fontSize) && fontSize >= 12 && fontSize <= 32
-    ? { fontSize: `${fontSize}px` }
-    : undefined;
+  const authoredSize = Number.isInteger(fontSize) && fontSize >= 12 && fontSize <= 32 ? fontSize : undefined;
+  if (!typography && authoredSize === undefined) return undefined;
+  return {
+    ...(typography ? { lineHeight: 1.25, overflowWrap: "anywhere" } : {}),
+    fontSize: `${authoredSize ?? typography.title}px`,
+    ...(typography?.titleLines ? { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: typography.titleLines, overflow: "hidden", whiteSpace: "normal" } : {}),
+  };
 }
 
 export function titleContainerProps(chart) {

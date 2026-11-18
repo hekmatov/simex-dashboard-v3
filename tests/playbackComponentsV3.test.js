@@ -51,6 +51,55 @@ const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
 
+test("shared cursor provider starts Live at declared exercise time with chart contexts in ordinary View", () => {
+  function Probe() {
+    const playback = usePlayback();
+    return React.createElement("output", null, JSON.stringify({ mode: playback.cursor.mode, epoch: playback.activeEpochMs,
+      matching: playback.timeContextForChart("primary-chart")?.matching, scope: playback.cursor.scope.kind,
+      immutable: Object.isFrozen(playback.cursor) }));
+  }
+  const html = renderPlayback(React.createElement(Probe), { exerciseTime: "2027-05-02T00:00:00.000Z" });
+  assert.equal(html, `<output>{&quot;mode&quot;:&quot;live&quot;,&quot;epoch&quot;:${MAY_2},&quot;matching&quot;:{&quot;policy&quot;:&quot;exact&quot;},&quot;scope&quot;:&quot;page&quot;,&quot;immutable&quot;:true}</output>`);
+});
+
+test("shared cursor provider resolves parentless Storyline members across pages in saved order", () => {
+  const fixture = playbackFixture();
+  const a = fixture.charts[0], b = { ...structuredClone(a), id: "other-page" };
+  const scene = { id: "story", name: "Cross page", members: [{ chartId: b.id, width: 2, matching: { policy: "lastKnown" } }, { chartId: a.id, width: 2 }],
+    period: { start: "2027-05-01T00:00:00.000Z", end: "2027-05-03T00:00:00.000Z" }, frames: { mode: "calendar", interval: { value: 1, unit: "day" } } };
+  function Probe() {
+    const playback = usePlayback();
+    return React.createElement("output", null, JSON.stringify({ ids: playback.participatingChartIds,
+      a: playback.timeContextForChart(a.id)?.matching, b: playback.timeContextForChart(b.id)?.matching, epoch: playback.activeEpochMs }));
+  }
+  const html = renderPlayback(React.createElement(Probe), { charts: [a, b], pageCharts: [a], scenes: [scene], initialState: {
+    cursor: { mode: "at", epochMs: MAY_2, scope: { kind: "storyline", id: "story" }, window: null },
+  } });
+  assert.equal(html, `<output>{&quot;ids&quot;:[&quot;other-page&quot;,&quot;primary-chart&quot;],&quot;a&quot;:{&quot;policy&quot;:&quot;exact&quot;},&quot;b&quot;:{&quot;policy&quot;:&quot;lastKnown&quot;},&quot;epoch&quot;:${MAY_2}}</output>`);
+});
+
+test("legacy Whole page disables Group-only and provider dispatch keeps unavailable scope requests valid", () => {
+  const html = renderPlayback(React.createElement(ChronoController));
+  assert.match(html, /<option value="group-only" disabled="">Group only<\/option>/);
+  function Probe() {
+    const playback = usePlayback();
+    assert.doesNotThrow(() => playback.dispatch({ type: "setScope", scope: "group-only" }));
+    return React.createElement("output", null, "valid");
+  }
+  assert.match(renderPlayback(React.createElement(Probe)), /valid/);
+});
+
+test("legacy provider seek clamps out-of-range integer indices while rejecting fractional indices", () => {
+  function Probe() {
+    const playback = usePlayback();
+    assert.doesNotThrow(() => playback.dispatch({ type: "seek", index: -99, clockLength: 3 }));
+    assert.doesNotThrow(() => playback.dispatch({ type: "seek", index: 99, clockLength: 3 }));
+    assert.throws(() => playback.dispatch({ type: "seek", index: 0.5, clockLength: 3 }), /integer/);
+    return React.createElement("output", null, "valid");
+  }
+  assert.match(renderPlayback(React.createElement(Probe)), /valid/);
+});
+
 test("unresolved Scenes expose no playback clock until a valid Frame source is saved", () => {
   assert.deepEqual(buildScenePlaybackClock({
     period: { start: "2027-05-01T00:00:00.000Z", end: "2027-05-03T00:00:00.000Z" },
@@ -81,7 +130,7 @@ test("View Chrono reducer owns source, scope, trace, matching, availability, and
   assert.equal(scene.activeSceneId, "scene-a");
 
   const scoped = reducePlaybackState(scene, { type: "setScope", scope: "group-only" });
-  const matched = reducePlaybackState(scoped, { type: "setMatchingOverride", policy: "closest" });
+  const matched = reducePlaybackState(scoped, { type: "setMatchingOverride", policy: "closest", nearestToleranceMs: 3_600_000 });
   const traced = reducePlaybackState(matched, { type: "setTraceMode", mode: "full" });
   const available = reducePlaybackState(traced, { type: "toggleAvailability" });
   const moved = reducePlaybackState(available, { type: "moveController", placement: "mast" });
@@ -212,11 +261,11 @@ test("Snap to Closest session override supplies a bounded renderer tolerance", (
     id: "exercise",
     matching: { policy: "exact" },
     members: [{ chartId: "primary-chart", timeRole: "observation" }],
-  }, MAY_2, { sessionMatchingOverride: "closest" });
+  }, MAY_2, { sessionMatchingOverride: "closest", sessionNearestToleranceMs: 3_600_000 });
 
   assert.deepEqual(contexts["primary-chart"].matching, {
     policy: "nearest",
-    toleranceMs: Number.MAX_SAFE_INTEGER,
+    toleranceMs: 3_600_000,
   });
 });
 
@@ -251,7 +300,7 @@ test("playback controls expose semantic transport, time selection, speed, and vi
   assert.match(html, /aria-live="polite"/);
 });
 
-test("playback surface mounts the special view only while playback view is open", () => {
+test("playback surface retains ordinary charts and a quiet At stamp through legacy view leases", () => {
   const closed = renderPlayback(
     React.createElement(
       PlaybackSurface,
@@ -285,72 +334,22 @@ test("playback surface mounts the special view only while playback view is open"
     },
   );
 
-  assert.match(closed, /aria-label="Open playback view"/);
   assert.match(closed, /data-static-dashboard="true"/);
   assert.doesNotMatch(closed, /class="playback-view"/);
-  assert.match(open, /aria-label="Close playback view"/);
-  assert.match(open, /class="playback-view"/);
-  assert.match(open, /data-chart-id="primary-chart"/);
-  assert.doesNotMatch(open, /data-static-dashboard="true"/);
+  assert.match(open, /data-static-dashboard="true"/);
+  assert.match(open, /aria-label="Exercise time stamp"/);
+  assert.doesNotMatch(open, /class="playback-view"|playback-controls--floating|aria-live="polite"/);
 });
 
-test("playback entry is disabled with associated guidance while chart authoring is active", () => {
-  const blocked = renderPlayback(
-    React.createElement(
-      PlaybackSurface,
-      {
-        entryBlocked: true,
-        entryBlockedReason:
-          "Finish, save, or discard chart authoring before opening Playback view.",
-      },
-      React.createElement("div", { "data-static-dashboard": "true" }),
-    ),
-  );
-  const unblocked = renderPlayback(
-    React.createElement(
-      PlaybackSurface,
-      null,
-      React.createElement("div", { "data-static-dashboard": "true" }),
-    ),
-  );
-  const alreadyOpen = renderPlayback(
-    React.createElement(
-      PlaybackSurface,
-      {
-        entryBlocked: true,
-        entryBlockedReason:
-          "Finish, save, or discard chart authoring before opening Playback view.",
-      },
-      React.createElement("div", { "data-static-dashboard": "true" }),
-    ),
-    {
-      initialState: {
-        activeGroupId: "exercise",
-        activeIndex: 1,
-        playing: false,
-        speed: 1,
-        playbackView: true,
-      },
-    },
-  );
-
-  const blockedEntry = buttonMarkupByAriaLabel(blocked, "Open playback view");
-  assert.match(blockedEntry, /aria-describedby="playback-entry-blocked-reason"/);
-  assert.match(blockedEntry, /disabled=""/);
-  assert.match(
-    blocked,
-    /id="playback-entry-blocked-reason"[^>]*>Finish, save, or discard chart authoring before opening Playback view\./,
-  );
+test("Build suppresses the View stamp while retaining ordinary chart content", () => {
+  const child = React.createElement("div", { "data-static-dashboard": "true" });
+  const options = { initialState: { activeGroupId: "exercise", activeIndex: 1, playbackView: true } };
+  const blocked = renderPlayback(React.createElement(PlaybackSurface, { disabled: true }, child), options);
+  const unblocked = renderPlayback(React.createElement(PlaybackSurface, null, child), options);
   assert.match(blocked, /data-static-dashboard="true"/);
-  assert.doesNotMatch(unblocked, /playback-entry-blocked-reason/);
-  assert.doesNotMatch(
-    buttonMarkupByAriaLabel(unblocked, "Open playback view"),
-    /disabled=""/,
-  );
-  assert.doesNotMatch(
-    buttonMarkupByAriaLabel(alreadyOpen, "Close playback view"),
-    /disabled=""/,
-  );
+  assert.doesNotMatch(blocked, /Exercise time stamp|playback-controls--floating/);
+  assert.match(unblocked, /data-static-dashboard="true"/);
+  assert.match(unblocked, /aria-label="Exercise time stamp"/);
 });
 
 test("transport actions are disabled for absent, empty, and boundary clocks", () => {
@@ -361,7 +360,9 @@ test("transport actions are disabled for absent, empty, and boundary clocks", ()
       React.createElement(PlaybackControls),
     ),
   );
-  const atStart = renderPlayback(React.createElement(PlaybackControls));
+  const atStart = renderPlayback(React.createElement(PlaybackControls), { initialState: {
+    activeGroupId: "exercise", activeIndex: 0, playbackView: true,
+  } });
   const atEnd = renderPlayback(
     React.createElement(PlaybackControls),
     {
@@ -388,7 +389,7 @@ test("transport actions are disabled for absent, empty, and boundary clocks", ()
   );
 
   assert.match(buttonMarkupByAriaLabel(noGroup, "Play synchronized charts"), /disabled=""/);
-  assert.match(noGroup, /No playback times are available for Default page timeline/);
+  assert.match(noGroup, /No playback times are available for Whole page/);
   assert.match(buttonMarkupByAriaLabel(atStart, "Previous time"), /disabled=""/);
   assert.match(buttonMarkupByAriaLabel(atEnd, "Play synchronized charts"), /disabled=""/);
   assert.match(buttonMarkupByAriaLabel(atEnd, "Next time"), /disabled=""/);
@@ -573,7 +574,7 @@ test("presentation can derive immutable member time contexts without mounting pl
       {
         chartId: "secondary-chart",
         timeRole: "observation",
-        matching: { policy: "lastKnown", toleranceMs: 86_400_000 },
+        matching: { policy: "nearest", toleranceMs: 86_400_000 },
       },
     ],
   }, MAY_2, { frameIndex: 1 });
@@ -589,11 +590,11 @@ test("presentation can derive immutable member time contexts without mounting pl
     groupId: "exercise",
     activeEpochMs: MAY_2,
     frameIndex: 1,
-    matching: { policy: "lastKnown", toleranceMs: 86_400_000 },
+    matching: { policy: "nearest", toleranceMs: 86_400_000 },
   });
 });
 
-test("closed Chrono does not scan temporal rows until playback opens", () => {
+test("Live derives eligible observations even while the legacy Chrono controls are closed", () => {
   function countedFixture(playbackView) {
     let reads = 0;
     const row = { cases: 10 };
@@ -656,7 +657,7 @@ test("closed Chrono does not scan temporal rows until playback opens", () => {
     closed.props,
     React.createElement("output", null, "closed"),
   ));
-  assert.equal(closed.reads(), 0);
+  assert.ok(closed.reads() > 0);
 
   const open = countedFixture(true);
   renderToStaticMarkup(React.createElement(
@@ -820,11 +821,11 @@ test("visibility scope never turns ordinary Page charts into Chrono participants
   assert.match(groupOnly, /&quot;charts&quot;:\[&quot;scope-member&quot;\]/);
 });
 
-test("page projection does not narrow dashboard-wide group validation authority", () => {
+test("selected legacy Group clocks validate and retain dashboard-wide members", () => {
   const rows = [{ observed: "2027-05-01", cases: 10 }];
   const pageChart = lineChart({ id: "page-chart", sourceId: "page-source" });
   const otherPageChart = lineChart({ id: "other-page-chart", sourceId: "other-source" });
-  const html = renderPlaybackProbe({
+  const props = {
     groups: [{
       id: "cross-page-group",
       name: "Cross page group",
@@ -849,13 +850,14 @@ test("page projection does not narrow dashboard-wide group validation authority"
       scope: "all-page",
       playbackView: true,
     },
-  });
-
-  assert.match(html, /&quot;charts&quot;:\[&quot;page-chart&quot;\]/);
-  assert.doesNotMatch(html, /other-page-chart/);
+  };
+  const html = renderPlaybackProbe(props);
+  assert.match(html, /&quot;charts&quot;:\[&quot;page-chart&quot;,&quot;other-page-chart&quot;\]/);
+  delete props.profiles["other-source"];
+  assert.throws(() => renderPlaybackProbe(props), /Temporal profile/);
 });
 
-test("Group-only and Scene participation stay on the active page", () => {
+test("Group and Scene participation retain cross-page members", () => {
   const rows = [{ observed: "2027-05-01", cases: 10 }];
   const pageChart = lineChart({ id: "page-member", sourceId: "page-source" });
   const otherPageChart = lineChart({ id: "other-page-member", sourceId: "other-source" });
@@ -913,10 +915,8 @@ test("Group-only and Scene participation stay on the active page", () => {
     },
   });
 
-  assert.match(groupOnly, /&quot;charts&quot;:\[&quot;page-member&quot;\]/);
-  assert.doesNotMatch(groupOnly, /other-page-member/);
-  assert.match(sceneOnly, /&quot;charts&quot;:\[&quot;page-member&quot;\]/);
-  assert.doesNotMatch(sceneOnly, /other-page-member/);
+  assert.match(groupOnly, /&quot;charts&quot;:\[&quot;page-member&quot;,&quot;other-page-member&quot;\]/);
+  assert.match(sceneOnly, /&quot;charts&quot;:\[&quot;page-member&quot;,&quot;other-page-member&quot;\]/);
 });
 
 test("saved Scene source frames use only the live scene.frames Frame source", () => {
@@ -1376,7 +1376,7 @@ test("playback view reports no group and empty clocks without claiming participa
     ),
   );
 
-  assert.match(noGroup, /No playback times are available for Default page timeline/);
+  assert.match(noGroup, /No playback times are available for Whole page/);
   assert.doesNotMatch(noGroup, /playback-member/);
 });
 
@@ -1436,7 +1436,8 @@ test("ChartView receives active time without injecting an accessibility companio
     },
   );
 
-  assert.equal(staticInsideProvider, outsideProvider);
+  assert.match(staticInsideProvider, /data-chart-time-kind="outside" data-chart-observation-epochs="">Outside Storyline time<\/span>/);
+  assert.equal(staticInsideProvider.replace(/<span class="chart-time-chip"[^>]*>Outside Storyline time<\/span>/, ""), outsideProvider);
   assert.match(synchronized, /data-chart-active-date="2027-05-02"/);
   assert.match(synchronized, /class="chart-echarts-host" aria-hidden="true"/);
   assert.doesNotMatch(synchronized, /data-chart-active-date="2027-05-01"|data-chart-active-date="2027-05-03"/);
@@ -1481,7 +1482,7 @@ test("an explicit Scene preview time is not overwritten by provider playback tim
   assert.doesNotMatch(html, /value at 2027-05-03: 30|role="img"|chart-view-summary/);
 });
 
-test("closing playback removes chart time context and restores static line and latest choropleth rendering", () => {
+test("ordinary View keeps Live chart time context while legacy Chrono controls are closed", () => {
   const fixture = playbackFixture();
   const chart = fixture.charts[0];
   const chartProps = {
@@ -1531,8 +1532,8 @@ test("closing playback removes chart time context and restores static line and l
   assert.equal(staticLineResolution.model.option.aria.enabled, false);
   assert.doesNotMatch(outsideProvider, /data-chart-active-date=/);
   assert.match(outsideProvider, /class="chart-echarts-host" aria-hidden="true"/);
-  assert.match(closedLine, /no-group-context\|no-chart-context/);
-  assert.doesNotMatch(closedLine, /data-chart-active-date=/);
+  assert.match(closedLine, /group-context\|chart-context/);
+  assert.match(closedLine, /data-chart-active-date="2027-05-03"/);
   assert.doesNotMatch(closedLine, /at 2027-05-01: 10|at 2027-05-03: 30|role="img"|chart-view-summary/);
 
   const geographyRows = [
@@ -1591,7 +1592,7 @@ test("closing playback removes chart time context and restores static line and l
     [["2027-05-03", 30]],
   );
   assert.equal(staticGeographyResolution.model.option.aria.enabled, false);
-  assert.doesNotMatch(closedChoropleth, /data-chart-active-date=/);
+  assert.match(closedChoropleth, /data-chart-active-date="2027-05-03"/);
   assert.match(closedChoropleth, /class="chart-echarts-host" aria-hidden="true"/);
 
   const atSecondTime = {

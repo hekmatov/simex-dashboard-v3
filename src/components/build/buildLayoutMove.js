@@ -1,10 +1,4 @@
 const MOVE_KINDS = new Set(["page", "section", "panel"]);
-const PRESENT_LAYOUTS = Object.freeze({
-  1: ["single"],
-  2: ["vertical-divider", "horizontal-divider"],
-  3: ["large-top", "large-bottom", "large-left", "large-right"],
-  4: ["grid-2x2"],
-});
 
 export function analyzeBuildLayoutMove(dashboardDraft, move) {
   const dashboard = dashboardValue(dashboardDraft);
@@ -320,71 +314,10 @@ function applySceneConsequences(dashboard, { sourcePageId, destinationPageId, mo
       continue;
     }
 
-    const movedIds = new Set(movedMembers.map(({ chartId }) => chartId));
-    scene.members = members.filter(({ chartId }) => !movedIds.has(chartId));
-    if (Array.isArray(scene.chartIds)) {
-      scene.chartIds = scene.chartIds.filter((chartId) => !movedIds.has(chartId));
-    }
-    consequences.push({
-      type: "scene-partial-split",
-      sceneId: scene.id,
-      sceneName,
-      chartIds: [...movedIds],
-      chartNames,
-      destinationPageId,
-    });
-
-    if (scene.frames?.mode === "source" && movedIds.has(scene.frames.chartId)) {
-      const previousChartId = scene.frames.chartId;
-      scene.frames = {
-        mode: "unresolved",
-        reason: "source-chart-moved",
-        previousChartId,
-      };
-      consequences.push({
-        type: "scene-frame-source-unresolved",
-        sceneId: scene.id,
-        sceneName,
-        chartIds: [previousChartId],
-        chartNames: [movedById.get(previousChartId)?.name ?? previousChartId],
-      });
-    }
-
-    const previousPresentIds = scene.present?.chartIds ?? [];
-    const nextPresentIds = previousPresentIds.filter((chartId) => !movedIds.has(chartId));
-    if (nextPresentIds.length !== previousPresentIds.length) {
-      if (nextPresentIds.length === 0) nextPresentIds.push(scene.members[0].chartId);
-      scene.present = {
-        ...(scene.present ?? {}),
-        chartIds: nextPresentIds,
-        layout: validPresentLayout(scene.present?.layout, nextPresentIds.length)
-          ? scene.present.layout
-          : PRESENT_LAYOUTS[nextPresentIds.length][0],
-      };
-      consequences.push({
-        type: "scene-present-fallback",
-        sceneId: scene.id,
-        sceneName,
-        chartIds: [...movedIds],
-        chartNames,
-        presentChartIds: [...nextPresentIds],
-        presentChartNames: nextPresentIds.map((chartId) => chartNameById(dashboard, chartId)),
-        presentLayout: scene.present.layout,
-      });
-    }
+    // A Scene can span pages. Moving some members changes their location,
+    // not their membership, frame source, matching or saved composition.
   }
   return consequences;
-}
-
-function chartNameById(dashboard, chartId) {
-  for (const page of dashboard.pages ?? []) {
-    for (const section of page.sections ?? []) {
-      for (const panel of section.panels ?? []) {
-        if (chartIdForPanel(panel) === chartId) return chartNameForPanel(panel) ?? chartId;
-      }
-    }
-  }
-  return chartId;
 }
 
 function dashboardValue(value) {
@@ -424,10 +357,6 @@ function reconcileIndex(sourceIndex, requestedIndex, targetLengthAfterRemoval) {
 
 function validIndex(value, length) {
   return Number.isInteger(value) && value >= 0 && value <= length;
-}
-
-function validPresentLayout(layout, count) {
-  return PRESENT_LAYOUTS[count]?.includes(layout) === true;
 }
 
 function immutableFailure(code, message) {

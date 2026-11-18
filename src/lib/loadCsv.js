@@ -1,13 +1,13 @@
 import Papa from "papaparse";
 
-export async function loadCsv(path) {
+export async function loadCsv(path, parse = parseCsvText) {
   const response = await fetch(path);
   if (!response.ok) {
     throw new Error(`Could not load data file: ${path}`);
   }
 
   const csvText = await response.text();
-  return parseCsvText(csvText, path);
+  return parse(csvText, path);
 }
 
 export function parseCsvText(csvText, label = "uploaded CSV") {

@@ -13,6 +13,17 @@ import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { getChartSchema, listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
 
+test("Data time matching owns the chart default while exposing only unambiguous inherited timeline settings", () => {
+  const chart = lineChart(), before = structuredClone(chart);
+  const groups = [{ id: "one", members: [{ chartId: chart.id }], matching: { policy: "lastKnown" } }];
+  const field = buildEditorFormModel({ chart, chronoGroups: groups }).sections.find(section => section.id === "data").fields.find(field => field.id === "chartTimeMatching");
+  assert.deepEqual(field.path, ["interaction", "timeSync"]);
+  assert.deepEqual(field.inheritedMatching, { policy: "lastKnown" });
+  const conflict = buildEditorFormModel({ chart, chronoGroups: [...groups, { ...groups[0], id: "two", matching: { policy: "exact" } }] }).sections.find(section => section.id === "data").fields.find(field => field.id === "chartTimeMatching");
+  assert.equal(conflict.inheritedMatching, undefined);
+  assert.deepEqual(chart, before);
+});
+
 test('full and quick legend placement fields share values and automatic offset disabling', () => {
   const chart = lineChart();
   const quick = () => allFields(buildQuickEditorFormModel({ chart }));
@@ -1341,7 +1352,7 @@ test("collection fields author the fully normalized nested contract", () => {
   assert.deepEqual(collection.path, ["presentation", "collection"]);
 });
 
-test("chrono group memberships derive from group authority without chart-owned edit targets", () => {
+test("chart forms retire Group membership controls while retaining bounded chart matching authoring", () => {
   const chart = lineChart();
   const profile = datasetProfile();
   const model = buildEditorFormModel({
@@ -1350,17 +1361,14 @@ test("chrono group memberships derive from group authority without chart-owned e
     prepared: preparedFor(chart, profile),
     chronoGroups: synchronizationGroups(),
   });
-  const timeSync = allFields(model)
-    .find(({ id }) => id === "timeSync");
-
-  assert.deepEqual(timeSync.selectedGroupIds, ["exercise-clock"]);
-  assert.deepEqual(timeSync.groups[0].members[0].matching, {
+  assert.equal(allFields(model).find(({ id }) => id === "timeSync"), undefined);
+  const matching = allFields(model).find(({ id }) => id === "chartTimeMatching");
+  assert.deepEqual(matching.path, ["interaction", "timeSync"]);
+  assert.deepEqual(matching.inheritedMatching, {
     policy: "nearest",
     toleranceMs: 3_600_000,
   });
-  assert.equal("chartPath" in timeSync, false);
-  assert.equal("groupTarget" in timeSync, false);
-  assert.equal("memberMatching" in timeSync, false);
+  assert.equal("groups" in matching, false);
 });
 
 test("sections are contextual because only schema-declared fields materialize", () => {

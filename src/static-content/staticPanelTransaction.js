@@ -1,8 +1,11 @@
 import { validateChartInstance } from "../charting/config/chartConfigV3.js";
+import { removeTemporalChartReferences } from "../charting/time/storylineReferences.js";
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
 import { migrateDashboardV5ToV6 } from "../charting/config/migrateDashboardV5ToV6.js";
+import { migrateDashboardV6ToV7 } from "../charting/config/migrateDashboardV6ToV7.js";
 import { validateDashboardChartReferences } from "../charting/config/dashboardSemanticReferences.js";
+import { validateDatasetProfiles } from "../lib/loadDashboard.js";
 import { findConfiguredChart } from "../lib/dashboardSelectors.js";
 import { validateStaticDestination } from "./staticPanelCapabilities.js";
 import {
@@ -48,7 +51,7 @@ export function prepareStaticPanelTransaction({
     ? migrateDashboardV3ToV4(suppliedDashboard)
     : suppliedDashboard;
   const v5 = v4.configVersion === 4 ? migrateDashboardV4ToV5(v4) : v4;
-  const previousDashboard = migrateDashboardV5ToV6(v5);
+  const previousDashboard = migrateDashboardV6ToV7(v5.configVersion === 7 ? v5 : migrateDashboardV5ToV6(v5));
   if (!isRecord(panel)) throw new TypeError("Static panel transaction panel is required.");
   validateChartInstance(panel);
 
@@ -157,7 +160,11 @@ export function prepareStaticPanelTransaction({
   validateDashboardChartReferences(
     collectPanelPlacements(candidateDashboard),
     candidateDashboard.dataSources,
-    { assets: candidateDashboard.assets },
+    { assets: candidateDashboard.assets, columnTypesForSource: (sourceId, source) => {
+      const profile = candidateDashboard.datasetProfiles?.[sourceId];
+      if (profile && source.kind === "csv") validateDatasetProfiles({ [sourceId]: source }, { [sourceId]: profile });
+      return Array.isArray(profile?.columns) ? new Map(profile.columns.map(column => [column.name, column])) : undefined;
+    } },
   );
 
   return deepFreeze({
@@ -171,8 +178,8 @@ export function prepareStaticPanelTransaction({
     expectedMediaRevision: isImage
       ? previousDashboard.contentLibrary?.mediaItems?.[mediaItem.mediaId]?.revision ?? mediaItem.revision
       : null,
-    baseDashboard: previousDashboard,
-    previousDashboard,
+    baseDashboard: suppliedDashboard,
+    previousDashboard: suppliedDashboard,
     candidateDashboard,
   });
 }
@@ -223,10 +230,9 @@ export function removeDashboardPanel(dashboard, panelId) {
   }
   if (removed.length === 0) return { removedChartId: null, removedSourceIds: [] };
   const removedChartIds = new Set(removed.map(({ chartId }) => chartId).filter(Boolean));
-  dashboard.chronoGroups = (dashboard.chronoGroups ?? []).flatMap((group) => {
-    const members = (group.members ?? []).filter(({ chartId }) => !removedChartIds.has(chartId));
-    return members.length > 0 ? [{ ...group, members }] : [];
-  });
+  const cleaned = removeTemporalChartReferences(dashboard, removedChartIds);
+  if (dashboard.configVersion !== 7) dashboard.chronoGroups = cleaned.chronoGroups;
+  dashboard.scenes = cleaned.scenes;
   const sourceIds = [...new Set(removed.map(({ sourceId }) => sourceId).filter(Boolean))];
   pruneStaticOwnership(dashboard, { sourceIds });
   return {

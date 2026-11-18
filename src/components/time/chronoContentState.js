@@ -227,11 +227,13 @@ export function selectSceneStudioSections(state) {
     type: "scene",
     status: statusFor(state, "scene", scene.id),
     statusReasons: reasonsFor(state, "scene", scene.id),
-    chronoGroupName: (state?.chronoGroups ?? []).find(({ id }) => id === scene.chronoGroupId)?.name ?? scene.chronoGroupId,
+    chronoGroupName: scene.audience?.collectionLabel ?? "Across pages",
   })), state);
   const byPage = new Map(cards.map((scene) => [scene.pageId, []]));
   for (const scene of cards) byPage.get(scene.pageId).push(scene);
-  return (state?.pages ?? []).flatMap((page) => byPage.has(page.id) ? [{ pageId: page.id, pageLabel: page.label ?? page.title ?? page.id, scenes: byPage.get(page.id) }] : []);
+  const acrossPages = cards.filter(scene => !scene.pageId || !(state?.pages ?? []).some(page => page.id === scene.pageId));
+  return [...(acrossPages.length ? [{ pageId: "storylines-across-pages", pageLabel: "Across pages", scenes: acrossPages }] : []),
+    ...(state?.pages ?? []).flatMap((page) => byPage.has(page.id) ? [{ pageId: page.id, pageLabel: page.label ?? page.title ?? page.id, scenes: byPage.get(page.id) }] : [])];
 }
 
 export function selectChronoGroupContent(state, id) {
@@ -265,7 +267,7 @@ export function selectSceneContent(state, id) {
     ...clone(scene),
     status: statusFor(state, "scene", id),
     statusReasons: reasonsFor(state, "scene", id),
-    chronoGroupName: group?.name ?? scene.chronoGroupId,
+    chronoGroupName: scene.audience?.collectionLabel ?? "Across pages",
     memberCharts: (scene.members ?? []).map((member) => ({
       ...clone(member),
       ...clone(locations.find(({ chart }) => chart.id === member.chartId) ?? {}),

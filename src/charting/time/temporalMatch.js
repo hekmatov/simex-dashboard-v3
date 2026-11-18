@@ -16,6 +16,21 @@ const CANONICAL_POLICIES = new Map([
 const MISSING_MATCH = Object.freeze({ status: "missing", observation: null });
 const DAY_MS = 24 * 60 * 60 * 1_000;
 
+export function closestConcurrentFallback(timeContext, observations) {
+  if (timeContext?.kind !== "cursor" || timeContext.showClosestOnExactMiss !== true || timeContext.matching?.policy !== "exact") return null;
+  let closest = null;
+  let distance = Infinity;
+  for (const { epochMs } of observations) {
+    const delta = Math.abs(epochMs - timeContext.activeEpochMs);
+    if (delta === 0) return null;
+    if (delta < distance || (delta === distance && epochMs < closest)) {
+      closest = epochMs;
+      distance = delta;
+    }
+  }
+  return closest;
+}
+
 /**
  * Matches an active canonical epoch against observations that have already
  * been parsed and sorted. Nearest matching fails closed on equidistant ties.

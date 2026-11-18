@@ -1,5 +1,6 @@
 import { structureRail, propertiesPane } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
+import { revealCanonicalPanel } from "./support/time-cursor-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 
@@ -121,7 +122,7 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full pan
     ["layout-full-national", "full", "span 4", "span 16", "0px"],
   ];
   for (const [panelId, size, columnEnd, rowEnd, minHeight] of expected) {
-    const panel = page.locator(`[data-panel-id="${panelId}"]`);
+    const panel = await revealCanonicalPanel(page, panelId);
     await expect(panel).toHaveClass(new RegExp(`\\bchart-panel-${size}\\b`));
     const style = await panel.evaluate((element) => {
       const computed = getComputedStyle(element);
@@ -303,10 +304,10 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
   const createDialog = page.getByRole("dialog", { name: "Create Page" });
   await createDialog.getByLabel("Page name").fill("New page");
   const actionState = await page.evaluate(() => {
-    const buttons = [...document.querySelectorAll("button")];
-    const addPage = buttons.find((button) => button.textContent?.trim() === "Add page");
-    const createPage = buttons.find((button) => button.textContent?.trim() === "Create page");
-    const finish = buttons.find((button) => button.textContent?.trim() === "Finish Build");
+    const addPage = document.querySelector(".build-page-add-pinned");
+    const createPage = [...document.querySelectorAll('[role="dialog"] button')]
+      .find((button) => button.textContent.trim().toLowerCase() === "create page");
+    const finish = document.querySelector('[data-build-command-action="finish-build"]');
     const state = {
       addDisabled: addPage.matches(":disabled"),
       createDisabled: createPage.matches(":disabled"),
@@ -655,8 +656,11 @@ test("edit-session save and reset use session fallback when storage is full", as
   await page.getByRole("button", { name: "Page settings", exact: true }).click();
   await propertiesPane(page).getByLabel("Page title", { exact: true }).fill(sessionTitle);
   await propertiesPane(page).getByRole('button',{name:'Close',exact:true}).click();
+  await expect(propertiesPane(page).getByLabel("Page title", { exact: true })).toHaveCount(0);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
-  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
+  const finishBuild = page.getByRole("button", { name: "Finish Build", exact: true });
+  await expect(finishBuild).toBeEnabled();
+  await finishBuild.click({ timeout: 5_000 });
   await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
     .toBeVisible();
   await expect(page.locator(".dashboard-brand-block h1")).toHaveText(sessionTitle);

@@ -89,7 +89,7 @@ export default function usePresentationRuntime(presentableItemIndex, {
     const currentPlayback = playbackRef.current;
     const safe = isPresentationPlaybackSafe(next);
     currentPlayback?.setPlaybackSafety?.(owner, safe);
-    if (next.playback !== "playing") currentPlayback?.dispatch?.({ type: "pause" });
+    if (next.playback !== "playing") currentPlayback?.dispatch?.({ type: "pause", fromPresentationSession: true });
   }, [playbackSafetyOwner]);
   const dispatch = React.useCallback((action) => {
     const next = reduceSession(sessionStateRef.current, action);
@@ -135,6 +135,17 @@ export default function usePresentationRuntime(presentableItemIndex, {
     else playbackRef.current?.releasePlaybackSafety?.(playbackSafetyOwner);
     return () => playbackRef.current?.releasePlaybackSafety?.(playbackSafetyOwner);
   }, [playbackSafetyEnabled, playbackSafetyOwner, synchronizePlayback]);
+  React.useEffect(() => {
+    if (!playbackSafetyEnabled) return undefined;
+    const currentPlayback = playbackRef.current;
+    currentPlayback?.setPlaybackActionGuard?.(playbackSafetyOwner, action => {
+      if (["play", "cursorPlay"].includes(action?.type)) return dispatch({ type: "PLAY" }).playback === "playing";
+      if (["pause", "cursorLive", "cursorSeek", "cursorStep", "cursorScope", "cursorWindow", "previous", "next", "seek", "end",
+        "setScene", "setGroup", "setMatchingOverride", "setTraceMode", "setSpeed", "navigate"].includes(action?.type)) dispatch({ type: "PAUSE" });
+      return true;
+    });
+    return () => currentPlayback?.releasePlaybackActionGuard?.(playbackSafetyOwner);
+  }, [playbackSafetyEnabled, playbackSafetyOwner, dispatch]);
 
   const setAudienceFactVisible = React.useCallback((key, visible) => {
     if (!AUDIENCE_FACT_KEYS.has(key)) return;

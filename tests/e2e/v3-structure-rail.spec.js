@@ -1,5 +1,6 @@
 import { panelMenu, propertiesPane, structureRail } from "./support/buildWorkflow.js";
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 
 import { normalizeStoredDashboardConfig } from "../../src/charting/config/dashboardBundleV3.js";
 import { enterAuthoredDashboard, openDashboardPage } from "./support/landingWorkflow.js";
@@ -27,12 +28,11 @@ test("Build commands stay available beside persistent structure and properties r
   const actions = toolbar.locator("[data-build-command-action]");
   await expect(commands).toBeVisible();
   await expect(toolbar).toBeVisible();
-  await expect(actions).toHaveCount(10);
+  await expect(actions).toHaveCount(9);
   expect(await actions.evaluateAll((items) => items.map((item) => item.dataset.buildCommandAction))).toEqual([
     "add-chart",
     "add-text-image",
     "source-content",
-    "chrono-studio",
     "scene-studio",
     "load-package",
     "dashboard-summary",
@@ -232,7 +232,7 @@ test("native drag, keyboard move and Move panel dialog share the layout owner an
   await expect(moveTrigger).toBeFocused();
 });
 
-test("whole-Scene migration and partial split confirmation preserve explicit Needs attention and playback exclusion", async ({ page }) => {
+test("whole-Storyline migration and partial cross-page moves preserve frames and Present composition", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
@@ -246,25 +246,9 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
   const tree = map.getByRole("tree");
   const moveConfirmedCases = panelMenu(page, MOVED_CHART_ID);
   await expect(moveConfirmedCases).toBeVisible();
-  const before = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
-
   await openMovePanel(page);
   await selectSocioDestination(page);
-  let consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
-  await expect(consequences).toContainText("Stage 12 whole Scene");
-  await expect(consequences).toContainText("Stage 12 partial Scene");
-  await expect(consequences).toContainText(MOVED_CHART_TITLE);
-  await expect(consequences).toContainText("Frame source becomes unresolved");
-  await expect(consequences).toContainText("Present fallback");
-  await consequences.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(consequences).toHaveCount(0);
-  await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveCount(0);
-  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(before);
-
-  await openMovePanel(page);
-  await selectSocioDestination(page);
-  consequences = page.getByRole("alertdialog", { name: "Move panels across Pages?" });
-  await consequences.getByRole("button", { name: "Confirm move", exact: true }).click();
+  await expect(page.getByRole("alertdialog", { name: "Move panels across Pages?" })).toHaveCount(0);
   const layoutOwner = page.locator('[data-pending-work-kind="layout"]');
   await expect(layoutOwner).toHaveCount(1);
   await expect(layoutOwner).toHaveAttribute("data-pending-work-state", "dirty");
@@ -302,34 +286,26 @@ test("whole-Scene migration and partial split confirmation preserve explicit Nee
     wholeFrameSource: MOVED_CHART_ID,
     wholePresent: [MOVED_CHART_ID],
     partialPageId: "biomedical",
-    partialMembers: [RETAINED_CHART_ID],
-    partialFrames: {
-      mode: "unresolved",
-      reason: "source-chart-moved",
-      previousChartId: MOVED_CHART_ID,
-    },
-    partialPresent: { chartIds: [RETAINED_CHART_ID], layout: "single" },
+    partialMembers: [MOVED_CHART_ID, RETAINED_CHART_ID],
+    partialFrames: { mode: "source", chartId: MOVED_CHART_ID, selection: "all" },
+    partialPresent: { chartIds: [MOVED_CHART_ID, RETAINED_CHART_ID], layout: "horizontal-divider" },
     updated: today,
   });
 
   await page.locator('[data-build-command-action="scene-studio"]').click();
-  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
-  await studio.getByLabel("Search").fill("Stage 12 partial Scene");
-  await expect(studio.locator('[data-action="open-content"][data-status="needs-attention"]'))
-    .toContainText("Stage 12 partial Scene");
-  await studio.getByRole("button", { name: "Repair Frame source", exact: true }).click();
-  await expect(studio.getByRole("combobox", { name: /^Frame source/ })).toBeFocused();
+  const studio = page.getByRole("dialog", { name: "Storyline Studio authoring" });
+  await studio.getByLabel("Search").fill("Stage 12 partial Storyline");
+  await expect(studio.locator('[data-action="open-content"][data-status="ready"]'))
+    .toContainText("Stage 12 partial Storyline");
   await studio.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const chronoSource = page.getByRole("region", { name: "Chrono playback controls" })
-    .getByLabel("Chrono source");
-  await expect(chronoSource.locator('option[value="scene:stage12-partial-scene"]')).toHaveCount(0);
+  const chronoSource = timeCursor(page).scope;
+  await expect(chronoSource.getByRole("option", { name: "Stage 12 partial Storyline", exact: true })).toHaveCount(1);
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
-  await expect(page.getByLabel("Presentation source")
-    .locator('option[value="scene:stage12-partial-scene"]')).toHaveCount(0);
+  await expect(timeCursor(page).scope
+    .getByRole("option", { name: "Stage 12 partial Storyline", exact: true })).toHaveCount(1);
 });
 
 async function selectSocioDestination(page) {
@@ -365,6 +341,7 @@ async function seedSceneMoveFixture(page) {
     const profiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
     return { dashboard, profiles };
   }, STORAGE_KEY);
+  dashboard.configVersion = 6; // Explicit legacy fixture enters the native migration boundary below.
   dashboard.chronoGroups = [
     ...(dashboard.chronoGroups ?? []).filter(({ id }) => id !== "national-outbreak-move"),
     {
@@ -383,7 +360,7 @@ async function seedSceneMoveFixture(page) {
     ].includes(id)),
     {
       id: "stage12-whole-scene",
-      name: "Stage 12 whole Scene",
+      name: "Stage 12 whole Storyline",
       pageId: "biomedical",
       chronoGroupId: "national-outbreak-move",
       period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },
@@ -394,7 +371,7 @@ async function seedSceneMoveFixture(page) {
     },
     {
       id: "stage12-partial-scene",
-      name: "Stage 12 partial Scene",
+      name: "Stage 12 partial Storyline",
       pageId: "biomedical",
       chronoGroupId: "national-outbreak-move",
       period: { start: "2027-02-20T00:00:00.000Z", end: "2027-08-15T00:00:00.000Z" },

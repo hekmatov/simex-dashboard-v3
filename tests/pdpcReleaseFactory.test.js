@@ -3,6 +3,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { collaboratorPackage, packageChart } from "./helpers/dashboardPackageFixtures.js";
+import { serializeDashboardBundle, parseDashboardBundle } from "../src/charting/config/dashboardBundleV3.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { parseCsvText } from "../src/lib/loadCsv.js";
 
 import {
   PDPC_RELEASE_FACTORY,
@@ -12,11 +16,69 @@ import {
   materializePdpcPackageAssets,
   parsePdpcReleaseArgs,
   projectPdpcVariants,
+  projectPdpcVariant,
   validatePdpcReleasePages,
 } from "../scripts/lib/pdpc-release.mjs";
 
 const SOURCE_COMMIT = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const INPUT_SHA256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+test("native participant projection physically excludes the other discipline's embedded sources and profiles", () => {
+  const config = structuredClone(collaboratorPackage().config);
+  config.pages[0].id = "biomedical";
+  config.pages[1].id = "socio_economic";
+  const privateChart = config.pages[0].sections[0].panels.pop();
+  privateChart.chart.sourceId = "socio_private";
+  config.pages[1].sections[0].panels.push(privateChart);
+  config.pages.unshift({ id: "scenario", title: "Scenario", sections: [{ id: "shared-context", panels: [{ id: "shared-placement", chart: packageChart("shared-chart", "Shared source context") }] }] });
+  config.dataSources.socio_private = { ...config.dataSources.cases, csvText: "date,value\n2026-08-21,909090\n" };
+  config.contentLibrary.sourceEntries.socio_private = { ...config.contentLibrary.sourceEntries.cases, sourceId: "socio_private" };
+  config.datasetProfiles = Object.fromEntries(Object.entries(config.dataSources).map(([id, source]) => [id, profileDataset(parseCsvText(source.csvText), source.parsingMetadata)]));
+  const native = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(config)));
+  const before = structuredClone(native);
+  const projected = projectPdpcVariants(native);
+  assert.deepEqual(Object.keys(projected.biomedical.dataSources), ["cases"]);
+  assert.deepEqual(Object.keys(projected.biomedical.datasetProfiles), ["cases"]);
+  assert.ok(!JSON.stringify(projected.biomedical).includes("909090"));
+  assert.deepEqual(Object.keys(projected.socioeconomic.dataSources).sort(), ["cases", "socio_private"], "Scenario's shared source remains available in both variants");
+  assert.deepEqual(native, before);
+});
+
+test("participant variants omit whole cross-page comparisons and preserve wholly supported Storylines unchanged", () => {
+  const config = structuredClone(collaboratorPackage().config);
+  config.configVersion = 6; // Deliberate legacy Group inputs are migrated before participant projection.
+  config.pages[0].id = "biomedical"; config.pages[1].id = "socio_economic";
+  config.pages[1].sections[0].panels.push(config.pages[0].sections[0].panels.pop());
+  config.pages.unshift({ id: "scenario", sections: [{ id: "scenario-section", panels: [{ id: "shared-placement", chart: packageChart("shared-chart", "Shared chart") }] }] });
+  const group = (id, ids) => ({ id, name: id, period: { start: "2026-08-21", end: "2026-08-21" }, matching: { policy: "exact" }, secondsPerFrame: 1, members: ids.map(chartId => ({ chartId, timeRole: "observation" })) });
+  config.chronoGroups = [group("cross-group", ["chart-a", "chart-b"]), group("shared-group", ["shared-chart"])];
+  const scene = (id, ids, pageId) => ({ id, name: id, pageId,
+    period: { start: "2026-08-21T00:00:00.000Z", end: "2026-08-21T00:00:00.000Z" },
+    frames: { mode: "source", chartId: ids[0], selection: "all" },
+    members: ids.map(chartId => ({ chartId, width: 2 })),
+    present: { chartIds: ids, layout: ids.length === 1 ? "single" : "vertical-divider" },
+    audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+  });
+  config.scenes = [scene("cross-comparison", ["chart-a", "chart-b"], "biomedical"), scene("bio-comparison", ["chart-a"], "biomedical"), scene("socio-comparison", ["chart-b"], "socio_economic")];
+  const native = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(config)));
+  const bio = projectPdpcVariant(native, "biomedical"), socio = projectPdpcVariant(native, "socioeconomic");
+  const shared = native.scenes.find(scene => scene.id === "shared-group");
+  assert.deepEqual(bio.config.scenes, [native.scenes[1], shared]);
+  assert.deepEqual(socio.config.scenes, [native.scenes[2], shared]);
+  assert.equal(Object.hasOwn(bio.config, "chronoGroups"), false);
+  assert.equal(Object.hasOwn(socio.config, "chronoGroups"), false);
+  assert.ok(bio.omissions.sceneIds.includes("cross-comparison"));
+  assert.ok(socio.omissions.sceneIds.includes("cross-comparison"));
+  assert.ok(bio.omissions.sceneIds.includes("cross-group"));
+  assert.ok(socio.omissions.sceneIds.includes("cross-group"));
+  assert.deepEqual(bio.omissions.chronoGroupIds, []);
+  assert.deepEqual(socio.omissions.chronoGroupIds, []);
+  for (const projected of [bio.config, socio.config]) {
+    const bundle = serializeDashboardBundle(projected);
+    assert.equal(bundle.version, 7);
+    assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
+  }
+});
 
 test("CLI parsing requires one bundle and accepts one optional output directory", () => {
   assert.deepEqual(

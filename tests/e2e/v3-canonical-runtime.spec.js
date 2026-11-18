@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { revealCanonicalPanel, timeCursor } from "./support/time-cursor-workflow.js";
 
 import { openDashboardPage } from "./support/landingWorkflow.js";
-import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
+import { installPageRemovalGroups, REMOVED_PAGE_GROUP_ID } from "./support/layoutReviewFixture.js";
 import {
   createSavedPresentationScene,
   enterPresentWithScene,
@@ -21,7 +22,7 @@ test("canonical runtime ledger preserves tracked semantics across View, Build, P
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
 
-  const view = await readLedger(page, `[data-panel-id="${PANEL_ID}"]`);
+  const view = await readLedger(await revealCanonicalPanel(page, PANEL_ID));
   expect(view).toMatchObject({
     annotations: [{ yAxis: -1 }],
     filters: [],
@@ -36,24 +37,26 @@ test("canonical runtime ledger preserves tracked semantics across View, Build, P
   expect(view.series[0].values.at(-1)).toEqual(["2027-02-21", 2]);
 
   await page.locator('[data-dashboard-mode="build"]').click();
-  const build = await readLedger(page, `[data-panel-id="${PANEL_ID}"]`);
+  const build = await readLedger(await revealCanonicalPanel(page, PANEL_ID));
   expect(build).toEqual(view);
 
-  const scene = await createSavedPresentationScene(page, { entry: "build-biomedical" });
+  const scene = await createSavedPresentationScene(page, {
+    entry: "build-biomedical",
+    chronoGroupId: REMOVED_PAGE_GROUP_ID,
+  });
   expect(scene.present.chartIds).toContain(PANEL_ID);
   await installCanonicalLedgerObserver(page);
   await enterPresentWithScene(page, scene);
-  await page.locator('[data-presentation-control-id="trace-full"]').click();
+  const cursor = timeCursor(page);
+  await cursor.seekFrameIndex(0);
+  await (await cursor.settings()).getByRole("combobox", { name: "Trace behavior", exact: true }).selectOption("full");
   const present = await expect.poll(() => page.evaluate((panelId) => (
     window.__canonicalRuntimeLedgers?.[panelId] ?? null
   ), PANEL_ID)).toMatchObject({ time: { traceMode: "full" } }).then(() => (
     page.evaluate((panelId) => window.__canonicalRuntimeLedgers[panelId], PANEL_ID)
   ));
   const audienceSession = await openAudienceSession(page);
-  const audience = await readLedger(
-    audienceSession.popup,
-    `[data-displayed-chart-id="${PANEL_ID}"]`,
-  );
+  const audience = await readLedger(audienceSession.popup.locator(`[data-displayed-chart-id="${PANEL_ID}"]`));
 
   expect(withoutTime(present)).toEqual(withoutTime(view));
   expect(present.time).toEqual(EXPECTED_PRESENT_TIME);
@@ -61,10 +64,10 @@ test("canonical runtime ledger preserves tracked semantics across View, Build, P
   await audienceSession.popup.close();
 });
 
-async function readLedger(page, ownerSelector, { requireVisible = true } = {}) {
-  if (requireVisible) await page.locator(ownerSelector).scrollIntoViewIfNeeded();
-  const ledger = page.locator(`${ownerSelector} [data-canonical-runtime-ledger]`).first();
-  if (requireVisible) await expect(ledger).toBeVisible();
+async function readLedger(owner) {
+  await expect(owner).toBeVisible();
+  const ledger = owner.locator("[data-canonical-runtime-ledger]").first();
+  await expect(ledger).toBeVisible();
   const serialized = await expect.poll(() => (
     ledger.getAttribute("data-canonical-runtime-ledger")
   )).not.toBeNull().then(() => ledger.getAttribute("data-canonical-runtime-ledger"));

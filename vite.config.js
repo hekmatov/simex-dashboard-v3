@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { readStaticSecurityHeaders } from "./scripts/lib/content-security-policy.mjs";
 
 // Node test workers use fixed fixtures; avoid scanning managed worktrees.
 const fixedTestInput = Boolean(process.env.NODE_TEST_CONTEXT);
@@ -37,5 +38,14 @@ export default defineConfig({
       },
     },
   },
-  plugins: [react()],
+  plugins: [react(), {
+    name: "simex-static-security-preview",
+    async configurePreviewServer(server) {
+      const headers = await readStaticSecurityHeaders(server.config.build.outDir);
+      server.middlewares.use((_request, response, next) => {
+        for (const [name, value] of Object.entries(headers)) response.setHeader(name, value);
+        next();
+      });
+    },
+  }],
 });

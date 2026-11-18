@@ -19,6 +19,8 @@ export function mutateSceneDatePosition(dashboard, sceneId, datePosition) {
   };
 
   validateScene(candidate, {
+    nativeVersion: dashboard.configVersion,
+    profiles: dashboard.datasetProfiles ?? {},
     chronoGroups: dashboard.chronoGroups ?? [],
     pages: dashboard.pages ?? [],
     charts: chartLocations(dashboard),

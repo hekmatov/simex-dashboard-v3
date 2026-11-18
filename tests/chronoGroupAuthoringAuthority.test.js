@@ -21,6 +21,7 @@ const vite = await createServer({
 const { default: ChronoMembershipSettingsField } = await vite.ssrLoadModule(
   "/src/components/chart-authoring/ChronoMembershipSettingsField.jsx",
 );
+const { default: ChartTimeMatchingField } = await vite.ssrLoadModule("/src/components/chart-authoring/ChartTimeMatchingField.jsx");
 const { applyWizardMembership } = await vite.ssrLoadModule(
   "/src/components/chart-authoring/ChartWizardV3.jsx",
 );
@@ -65,44 +66,28 @@ function group(id, members) {
   };
 }
 
-test("chart authoring exposes independent Chrono Group memberships without chart-owned matching", () => {
+test("native chart authoring exposes chart-owned matching without a timeline membership editor", () => {
   const chart = lineChart();
-  const groups = [
-    group("operations", [{ chartId: chart.id, timeRole: "observation" }]),
-    group("executive", [{ chartId: "other", timeRole: "observation" }]),
-  ];
-  const model = buildEditorFormModel({
-    chart,
-    profile,
-    prepared: {
-      status: "ready",
-      marks: [{ x: "2027-05-01", value: 4 }],
-      diagnostics: [],
-      meta: {
-        renderableMarkCount: 1,
-        formPreparationKey: buildFormPreparationKey({ chart, profile }),
-      },
-    },
-    chronoGroups: groups,
-  });
-  const field = model.sections
-    .flatMap(({ fields }) => fields)
-    .find(({ id }) => id === "timeSync");
-
-  assert.deepEqual(field.selectedGroupIds, ["operations"]);
-  assert.equal("memberMatching" in field, false);
-  assert.equal("groupMatching" in field, false);
-  assert.equal("groupTarget" in field, false);
-
-  const html = renderToStaticMarkup(React.createElement(ChronoMembershipSettingsField, {
-    field,
-    chart,
-  }));
-  assert.match(html, /Chrono Group memberships/);
-  assert.match(html, /type="checkbox"/);
-  assert.match(html, /Operations/);
-  assert.match(html, /Executive watch/);
-  assert.doesNotMatch(html, /Member matching/);
+  const groups = [group("operations", [{ chartId: chart.id, timeRole: "observation" }]), group("executive", [{ chartId: "other", timeRole: "observation" }])];
+  const before = structuredClone(groups);
+  const model = buildEditorFormModel({ chart, profile, chronoGroups: groups });
+  const fields = model.sections.flatMap(({ fields }) => fields);
+  assert.equal(fields.some(field => field.id === "timeSync"), false);
+  const field = fields.find(field => field.id === "chartTimeMatching");
+  assert.equal(field.control, "chartTimeMatching");
+  assert.deepEqual(field.inheritedMatching, { policy: "exact" });
+  assert.equal(Object.hasOwn(field, "selectedGroupIds"), false);
+  const html = renderToStaticMarkup(React.createElement(ChartTimeMatchingField, { field, chart, profile }));
+  assert.match(html, /Chart time matching/);
+  for (const value of ["exact", "lastKnown", "nearest", "interpolate"]) assert.match(html, new RegExp(`<option value="${value}"`));
+  assert.doesNotMatch(html, /Chrono Group memberships|type="checkbox"/);
+  const nearest = { ...chart, interaction: { timeSync: { matching: { policy: "nearest", toleranceMs: 7200000 } } } };
+  const bounded = renderToStaticMarkup(React.createElement(ChartTimeMatchingField, { field, chart: nearest, profile }));
+  assert.match(bounded, /Chart nearest maximum distance \(hours\)/);
+  assert.match(bounded, /type="number"[^>]*value="2"/);
+  assert.match(bounded, /Clear chart time matching/);
+  assert.equal(chart.interaction.timeSync, null);
+  assert.deepEqual(groups, before);
 });
 
 test("wizard membership toggles one group without replacing sibling memberships", () => {

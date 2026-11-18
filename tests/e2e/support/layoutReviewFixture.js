@@ -1,4 +1,5 @@
 import { SHIPPED_CASE_CHART_ID } from "./importedProfileFixture.js";
+import { normalizeDashboardBoundary } from "../../../src/charting/config/dashboardBundleV3.js";
 
 export const WRAPPED_CASE_PLACEMENT_ID = "wrapped-national-cases-placement";
 export const OTHER_BIOMEDICAL_CHART_ID = "chart-line-mtgytrwj";
@@ -22,6 +23,7 @@ export function withWrappedCasesPanel(dashboard) {
 
 export function withPageRemovalGroups(dashboard) {
   const fixture = structuredClone(dashboard);
+  if (fixture.configVersion === 7) fixture.configVersion = 6;
   const actualIds = new Set(fixture.pages.flatMap(({ sections }) => sections.flatMap(({ panels }) => panels.map((panel) => (panel.chart ?? panel).id))));
   const historical = actualIds.has(SHIPPED_CASE_CHART_ID);
   fixture.chronoGroups = [
@@ -45,7 +47,7 @@ export function withPageRemovalGroups(dashboard) {
       members: [{ chartId: historical ? RETAINED_SOCIO_CHART_ID : "socio_trust_trend", timeRole: "observation" }],
     },
   ];
-  return fixture;
+  return normalizeDashboardBoundary(fixture);
 }
 
 export async function installPageRemovalGroups(page) {

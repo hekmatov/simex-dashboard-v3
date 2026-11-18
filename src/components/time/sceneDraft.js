@@ -2,6 +2,8 @@ import {
   normalizeSceneDefaults,
   validateScene,
 } from "../../charting/time/sceneSchema.js";
+import { sceneMatchingEdit } from "../../charting/time/sceneMatching.js";
+import { storylineViewMembers } from "./storylineAuthoring.js";
 
 export const SCENE_STAGES = Object.freeze(["details", "select", "arrange"]);
 
@@ -46,6 +48,9 @@ export function reduceSceneDraft(state, action) {
       });
     case "SET_PERIOD":
       return setScenePeriod(state, action.start, action.end);
+    case "CLEAR_PERIOD":
+      if (state.value.chronoGroupId) return state;
+      return { ...update(state, value => { delete value.period; }), periodDates: null };
     case "SET_FRAMES":
       return update(state, (value) => { value.frames = clone(action.value); });
     case "SET_FRAME_MODE":
@@ -78,24 +83,35 @@ export function reduceSceneDraft(state, action) {
       });
     case "SET_DEFAULT_MATCHING":
       return update(state, (value) => {
-        if (action.matching === undefined || action.matching === "authored") delete value.defaultMatching;
-        else value.defaultMatching = action.matching;
+        const matching = sceneMatchingEdit(action.matching, value.defaultMatching);
+        if (matching === undefined) delete value.defaultMatching;
+        else value.defaultMatching = matching;
       });
     case "SET_DATE_POSITION":
       return update(state, (value) => {
         value.audience = { ...(value.audience ?? {}), datePosition: clone(action.value) };
       });
     case "SET_WIDTH":
-      return updateMember(state, action.chartId, (member) => { member.width = Number(action.width); });
+      if (!state.value.members.some(member => member.chartId === action.chartId)) return withError(state, "SCENE_CHART_MISSING", "The selected Scene chart no longer exists.");
+      return update(state, value => { delete value.view; value.members.find(member => member.chartId === action.chartId).width = Number(action.width); });
+    case "SET_VIEW_LAYOUT":
+      return update(state, value => {
+        const presets = storylineViewMembers(value.members.map(member => member.chartId), action.layout);
+        value.members = value.members.map((member, index) => ({ ...member, ...presets[index] }));
+        value.view = { layout: action.layout };
+      });
     case "SET_MATCHING":
       return updateMember(state, action.chartId, (member) => {
-        if (action.matching === undefined || action.matching === "authored") delete member.matching;
-        else member.matching = action.matching;
+        const matching = sceneMatchingEdit(action.matching, member.matching);
+        if (matching === undefined) delete member.matching;
+        else member.matching = matching;
       });
     case "ADD_MEMBER":
       if (state.value.members.some(({ chartId }) => chartId === action.chartId)) return state;
       return update(state, (value) => {
+        delete value.view;
         value.members.push({ chartId: action.chartId, width: action.width ?? 1 });
+        if (value.frames?.mode === "source" && !value.frames.chartId) value.frames = { mode: "source", chartId: action.chartId, selection: "all" };
         if (value.members.length <= 4) {
           value.present.chartIds.push(action.chartId);
           value.present.layout = PRESENT_LAYOUTS[value.present.chartIds.length];
@@ -106,6 +122,7 @@ export function reduceSceneDraft(state, action) {
         return withError(state, "SCENE_MEMBER_REQUIRED", "A Scene must retain at least one chart.");
       }
       return update(state, (value) => {
+        delete value.view;
         value.members = value.members.filter(({ chartId }) => chartId !== action.chartId);
         value.present.chartIds = value.present.chartIds.filter((chartId) => chartId !== action.chartId);
         value.present.layout = PRESENT_LAYOUTS[value.present.chartIds.length];
@@ -160,6 +177,7 @@ export function reduceSceneDraft(state, action) {
         error: null,
         findings: [],
         selectedChartId: null,
+        periodDates: null,
       };
     case "STAY":
       return { ...state, status: changed(state) ? "dirty" : "clean", error: null };
@@ -194,6 +212,7 @@ export function partitionSceneCharts(charts = [], members = []) {
 }
 
 function requestSave(state) {
+  if (state.periodDates && (!state.periodDates.start || !state.periodDates.end)) return withError(state, "SCENE_PERIOD_INVALID", "Complete both period dates or choose whole coverage.");
   if (state.findings.length > 0) {
     const first = state.findings[0];
     return {
@@ -240,33 +259,27 @@ function moveChart(state, action) {
     }
     const [moved] = value.members.splice(from, 1);
     value.members.splice(to, 0, moved);
+    if (value.view) {
+      const presets = storylineViewMembers(value.members.map(member => member.chartId), value.view.layout);
+      value.members = value.members.map((member, index) => ({ ...member, ...presets[index] }));
+    }
   });
 }
 
 function setScenePage(state, pageId) {
-  const currentGroup = findGroup(state, state.value.chronoGroupId);
-  const currentGroupSupportsPage = currentGroup && eligibleGroupCharts(state, currentGroup, pageId).length > 0;
-  if (currentGroupSupportsPage) {
-    const pageState = update(state, (value) => { value.pageId = pageId; });
-    return setSceneChronoGroup(pageState, currentGroup.id);
-  }
-  return update(state, (value) => {
-    value.pageId = pageId;
-    value.chronoGroupId = null;
-    value.members = [];
-    value.present = { chartIds: [], layout: PRESENT_LAYOUTS[0] };
-    value.frames = { mode: "calendar", interval: { value: 1, unit: "day" } };
-  });
+  // The owning display page is an anchor, not a restriction on membership.
+  return update(state, (value) => { if (pageId) value.pageId = pageId; else delete value.pageId; });
 }
 
 function setSceneChronoGroup(state, chronoGroupId) {
   const group = findGroup(state, chronoGroupId);
-  if (!group) return update(state, (value) => { value.chronoGroupId = chronoGroupId; });
+  if (!group) return update(state, (value) => { if (chronoGroupId) value.chronoGroupId = chronoGroupId; else delete value.chronoGroupId; });
   const eligible = eligibleGroupCharts(state, group, state.value.pageId);
-  const currentWidths = new Map((state.value.members ?? []).map(({ chartId, width }) => [chartId, width]));
-  const members = eligible.map(({ id }) => ({ chartId: id, width: currentWidths.get(id) ?? 1 }));
+  const currentMembers = new Map((state.value.members ?? []).map(member => [member.chartId, member]));
+  const members = eligible.map(({ id }) => ({ ...(currentMembers.get(id) ?? {}), chartId: id, width: currentMembers.get(id)?.width ?? 1 }));
   return update(state, (value) => {
     value.chronoGroupId = chronoGroupId;
+    delete value.view;
     value.period = scenePeriodFromGroup(group.period);
     value.members = members;
     value.present = {
@@ -283,6 +296,7 @@ function setSceneChronoGroup(state, chronoGroupId) {
 }
 
 function setScenePeriod(state, start, end) {
+  if (!start || !end) return { ...state, periodDates: { start, end }, status: "dirty", error: null };
   const group = findGroup(state, state.value.chronoGroupId);
   const maximum = comparablePeriod(group?.period);
   const startEpochMs = Date.parse(`${start}T00:00:00.000Z`);
@@ -293,23 +307,29 @@ function setScenePeriod(state, start, end) {
   if (maximum && (startEpochMs < maximum.start || endEpochMs > maximum.end)) {
     return withError(state, "SCENE_PERIOD_OUTSIDE_GROUP", "Scene period must remain inside the parent Chrono Group period.");
   }
-  return update(state, (value) => {
-    value.period = {
+  return { ...update(state, (value) => {
+    value.period = value.frames?.mode === "union" && /^\d{4}-\d{2}-\d{2}$/.test(value.period?.start) ? { start, end } : {
       start: `${start}T00:00:00.000Z`,
       end: `${end}T23:59:59.999Z`,
     };
-  });
+  }), periodDates: null };
 }
 
 function setFrameMode(state, mode) {
-  if (mode !== "calendar" && mode !== "source") throw new Error(`Unknown Scene frame mode: ${String(mode)}`);
+  if (!["union", "calendar", "source"].includes(mode)) throw new Error(`Unknown Scene frame mode: ${String(mode)}`);
   const frameChoices = { ...state.frameChoices, [state.value.frames?.mode ?? "calendar"]: clone(state.value.frames) };
   const fallbackSource = state.value.members?.[0]?.chartId
     ? { mode: "source", chartId: state.value.members[0].chartId, selection: "all" }
     : { mode: "source", chartId: null, selection: "all" };
-  const nextFrames = clone(frameChoices[mode] ?? (mode === "calendar" ? { mode: "calendar", interval: { value: 1, unit: "day" } } : fallbackSource));
+  const nextFrames = clone(frameChoices[mode] ?? (mode === "union" ? { mode: "union" }
+    : mode === "calendar" ? { mode: "calendar", interval: { value: 1, unit: "day" } } : fallbackSource));
   frameChoices[mode] = clone(nextFrames);
-  return { ...update(state, (value) => { value.frames = nextFrames; }), frameChoices };
+  return { ...update(state, (value) => {
+    if (mode !== "union" && value.frames?.mode === "union" && /^\d{4}-\d{2}-\d{2}$/.test(value.period?.start)) {
+      value.period = { start: `${value.period.start}T00:00:00.000Z`, end: `${value.period.end}T23:59:59.999Z` };
+    }
+    value.frames = nextFrames;
+  }), frameChoices };
 }
 
 function updateFrames(state, updater) {
@@ -327,10 +347,10 @@ function findGroup(state, id) {
   return state.validationContext?.chronoGroups?.find((group) => group.id === id) ?? null;
 }
 
-function eligibleGroupCharts(state, group, pageId) {
+function eligibleGroupCharts(state, group) {
   const groupIds = new Set(group.chartIds ?? group.members?.map(({ chartId }) => chartId) ?? []);
   return (state.validationContext?.charts ?? []).filter((chart) => (
-    groupIds.has(chart.id) && (chart.pageId ?? chart.page?.id) === pageId
+    groupIds.has(chart.id)
   ));
 }
 

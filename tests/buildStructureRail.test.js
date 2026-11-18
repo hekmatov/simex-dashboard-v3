@@ -3,7 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
-import { analyzeBuildLayoutMove } from "../src/components/build/buildLayoutMove.js";
+import { analyzeBuildLayoutMove, applyBuildLayoutMoveToDashboard } from "../src/components/build/buildLayoutMove.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -44,8 +44,8 @@ test("Dashboard map tree exposes selected rows as compact direct drag targets", 
   assert.doesNotMatch(html, /build-tree-move-handle|build-tree-kind-icon/);
 });
 
-test("Scene consequence dialog names every affected Scene, chart, unresolved frame source, and Present fallback", () => {
-  const analysis = analyzeBuildLayoutMove({
+test("cross-Page moves preserve partial Storylines and name whole-Storyline reanchoring", () => {
+  const dashboard = {
     pages: [
       { id: "one", sections: [{ id: "a", panels: [
         { id: "placement-cases", chart: { id: "cases", title: "Cases" } },
@@ -61,11 +61,17 @@ test("Scene consequence dialog names every affected Scene, chart, unresolved fra
       frames: { mode: "source", chartId: "cases" },
       present: { chartIds: ["cases"], layout: "single" },
     }],
-  }, {
-    kind: "panel",
-    source: { pageId: "one", sectionId: "a", placementId: "placement-cases" },
-    target: { pageId: "two", sectionId: "b", index: 0 },
-  });
+  };
+  const move = { kind: "panel", source: { pageId: "one", sectionId: "a", placementId: "placement-cases" }, target: { pageId: "two", sectionId: "b", index: 0 } };
+  const partial = analyzeBuildLayoutMove(dashboard, move);
+  assert.equal(partial.requiresConfirmation, false);
+  assert.deepEqual(partial.consequences, []);
+  assert.deepEqual(applyBuildLayoutMoveToDashboard(dashboard, partial).scenes, dashboard.scenes);
+  const whole = structuredClone(dashboard);
+  whole.scenes[0].members = [{ chartId: "cases" }];
+  const analysis = analyzeBuildLayoutMove(whole, move);
+  assert.equal(analysis.consequences[0].type, "scene-page-migration");
+  assert.equal(applyBuildLayoutMoveToDashboard(whole, analysis).scenes[0].pageId, "two");
   const html = renderToStaticMarkup(React.createElement(moveConfirmationModule.default, {
     analysis,
     onCancel() {},
@@ -74,9 +80,8 @@ test("Scene consequence dialog names every affected Scene, chart, unresolved fra
 
   assert.match(html, /Morning brief/);
   assert.match(html, /Cases/);
-  assert.match(html, /Capacity/);
-  assert.match(html, /Frame source becomes unresolved/);
-  assert.match(html, /Present fallback/);
+  assert.match(html, /whole Scene move to the destination Page/);
+  assert.doesNotMatch(html, /Frame source becomes unresolved|Present fallback/);
   assert.match(html, />Confirm move</);
   assert.match(html, />Cancel</);
 });

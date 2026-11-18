@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { APP_VERSION } from "../../src/lib/appVersion.js";
 
 const RELEASES = Object.freeze([
   Object.freeze({
@@ -14,6 +15,28 @@ const RELEASES = Object.freeze([
     disciplineLabel: "Socio-Economic Information",
   }),
 ]);
+
+test("both generated outputs enforce the built script policy while rendering local content", async ({ page }) => {
+  for (const release of RELEASES) {
+    const response = await page.goto(release.baseUrl);
+    expect(response.headers()["content-security-policy"]).toContain("script-src 'self' 'sha256-");
+    await expect(page.locator('[data-canonical-page-id="scenario"]')).toBeVisible();
+    const logo = page.getByRole("img", {
+      name: "Pandemic and Disaster Preparedness Center (PDPC)",
+    });
+    await expect(logo).toBeVisible();
+    expect(await logo.evaluate(image => image.complete
+      && image.naturalWidth > 0 && image.naturalHeight > 0)).toBe(true);
+    expect(await page.locator('[data-canonical-page-id="scenario"] img').evaluateAll(images =>
+      images.every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+    expect(await page.evaluate(() => {
+      const script = document.createElement("script");
+      script.textContent = "window.__simexUnauthorizedInline = true";
+      document.body.append(script);
+      return window.__simexUnauthorizedInline === true;
+    })).toBe(false);
+  }
+});
 
 test("both generated outputs enforce their exact view-only page pair", async ({ page }) => {
   const scenarioSnapshots = [];
@@ -31,9 +54,11 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${release.baseUrl}/?mode=build`, { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByLabel("Exercise disclaimer")).toHaveText(
+    const disclaimer = page.getByLabel("Exercise disclaimer");
+    await expect(disclaimer.locator('[data-exercise-notice="true"]')).toHaveText(
       "Fictional scenario · Exercise use only",
     );
+    await expect(disclaimer.locator("[data-app-version]")).toHaveText(`App version ${APP_VERSION}`);
     await expect(page.locator(".pdpc-release-header")).toHaveCount(0);
     const dashboardHeader = page.locator(".pdpc-dashboard-header");
     await expect(dashboardHeader).toBeVisible();
@@ -69,8 +94,12 @@ test("both generated outputs enforce their exact view-only page pair", async ({ 
     );
     await expect(page.getByRole("button", { name: "Focus chart" })).toHaveCount(0);
 
-    const scenarioImages = page.locator('[data-canonical-page-id="scenario"] .canonical-dashboard-content img');
-    await expect(scenarioImages.first()).toBeVisible();
+    const scenarioContent = page.locator('[data-canonical-page-id="scenario"] .canonical-dashboard-content');
+    await expect(scenarioContent.getByRole("heading", { name: "HeV-A26 Day 2 Simulation", exact: true })).toBeVisible();
+    await expect(scenarioContent).toContainText("Fictional scenario · Exercise use only");
+    await expect(scenarioContent).toContainText("An unavailable observation is not zero.");
+    await expect(scenarioContent).toContainText("Follow the Moderator's instructions for the reviewed phase package.");
+    const scenarioImages = scenarioContent.locator("img");
     expect(await scenarioImages.evaluateAll((images) => images.every((image) => (
       image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
     )))).toBe(true);

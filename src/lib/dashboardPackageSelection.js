@@ -100,16 +100,13 @@ export function resolveDashboardPackageSelection(candidate, selection = {}) {
     } else if (item.current.kind === "package") issues.push({ blocking: true, code: "nonportable-media", message: `“${item.displayName}” has only a package-relative image path. Its bytes must be included before it can be copied safely.` });
     else issues.push({ blocking: false, code: "network-media", message: `“${item.displayName}” remains a linked network image and requires network access.` });
   }
-  const groups = (config.chronoGroups ?? []).filter(group => group.members.some(member => chartIds.has(member.chartId)));
-  for (const group of groups) if (group.members.some(member => !chartIds.has(member.chartId))) issues.push({ blocking: false, code: "group-subset",
-    message: `Chrono Group “${group.name}” will include only the selected member charts.` });
   for (const scene of config.scenes ?? []) if ((scene.members ?? []).some(member => chartIds.has(member.chartId))) {
     externalReferences.push({ kind: "scene", targetId: scene.id,
-      message: `Selected charts belong to Scene “${scene.name || "Untitled Scene"}”. Explicitly import them independently of that Scene, or return to expanded authoring.` });
+      message: `Selected charts belong to Storyline “${scene.name || "Untitled Storyline"}”. Explicitly import them independently of that Storyline, or return to expanded authoring.` });
   }
   return { pageIds: inventory.pages.filter(item => pages.has(item.id)).map(item => item.id),
     sectionIds: inventory.sections.filter(item => sections.has(item.id)).map(item => item.id),
     placementIds: inventory.placements.filter(item => placements.has(item.id)).map(item => item.id),
     chartIds: [...chartIds], sourceIds: [...sources].sort(), mediaIds: [...media].sort(), assetIds: [...assets].sort(),
-    groupIds: groups.map(group => group.id), externalReferences, issues, graph };
+    externalReferences, issues, graph };
 }

@@ -78,9 +78,8 @@ function sceneDraft(stage) {
     value: {
       id: "scene-a",
       name: "Morning reveal",
-      chronoGroupId: "chrono-a",
       pageId: "biomedical",
-      period,
+      period: { start: new Date(period.startEpochMs).toISOString(), end: new Date(period.endEpochMs).toISOString() },
       frames: { mode: "source", chartId: "chart-a", selection: "all" },
       members: [{ chartId: "chart-a", width: 2 }],
       present: { chartIds: ["chart-a"], layout: "single" },
@@ -91,21 +90,21 @@ function sceneDraft(stage) {
 
 const sceneProps = {
   charts: [chart],
-  chronoGroups: [{ id: "chrono-a", name: "Outbreak", chartIds: ["chart-a"], period }],
   pages: [{ id: "biomedical", label: "Biomedical" }],
 };
 
 test("Sketch 006 amendment exposes three stages and gives each active task the full editor width", () => {
   const detailsHtml = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft("details") }));
-  for (const stage of ["Scene details", "Select charts and frames", "Arrange and configure"]) {
+  for (const stage of ["Storyline details", "Select charts and frames", "Arrange and configure"]) {
     assert.match(detailsHtml, new RegExp(stage));
   }
   assert.match(detailsHtml, /data-layout="full-width"/);
   assert.match(detailsHtml, /scene-details-stage/);
   assert.doesNotMatch(detailsHtml, /scene-draft-panel/);
-  for (const field of ["Scene name", "Owning page", "Parent Chrono Group", "Period", "Time mode", "Default matching", "Seconds per frame"]) {
+  for (const field of ["Storyline name", "Owning page", "Period", "Time mode", "Default matching", "Seconds per frame"]) {
     assert.match(detailsHtml, new RegExp(field));
   }
+  assert.doesNotMatch(detailsHtml, /Parent Chrono Group/);
   assert.match(detailsHtml, /Start date/);
   assert.match(detailsHtml, /End date/);
 
@@ -113,7 +112,7 @@ test("Sketch 006 amendment exposes three stages and gives each active task the f
     const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft(stage) }));
     assert.match(html, /data-layout="full-width"/);
     assert.doesNotMatch(html, /scene-draft-panel/);
-    assert.doesNotMatch(html, /Scene name<input/);
+    assert.doesNotMatch(html, /Storyline name<input/);
   }
 });
 
@@ -122,16 +121,17 @@ test("Scene save readiness and transactional actions remain available without re
     const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft(stage) }));
     assert.match(html, /scene-transaction-footer/);
     assert.match(html, /Save readiness/);
-    assert.match(html, />Save Scene</);
-    assert.match(html, />Discard Scene</);
+    assert.match(html, />Save Storyline</);
+    assert.match(html, />Discard Storyline</);
   }
 });
 
-test("Sketch 006 Scene ledger renders variable evidence on the shared period scale", () => {
-  const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft("select") }));
-  assert.match(html, /Full data/);
-  assert.match(html, /scene-availability-calendar/);
-  assert.match(html, /Count/);
+test("Storyline coverage picker exposes plotted coverage across pages", () => {
+  const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, dashboard: runtimeDashboard(), draft: sceneDraft("select") }));
+  assert.match(html, /Storyline chart coverage/);
+  assert.match(html, /storyline-coverage-track/);
+  assert.match(html, /observations in period/);
+  assert.match(html, /Select all with coverage/);
 });
 
 test("Sketch 006 Calendar mode renders positive interval and unit controls", () => {
@@ -149,12 +149,12 @@ test("Sketch 006 arrange composition renders twin canvases and chart-local Unit 
     dashboard: runtimeDashboard(),
     draft: sceneDraft("arrange"),
   }));
-  assert.match(html, />Scene View</);
+  assert.match(html, />Storyline View</);
   assert.match(html, />Present</);
   assert.match(html, /data-scene-composition-surface="scene-preview"/);
   assert.match(html, /data-layout-system="presentation"/);
   assert.equal((html.match(/class="chart-view-frame"/g) ?? []).length, 2);
-  assert.match(html, /Scene preview frame/);
+  assert.match(html, /Storyline preview frame/);
   assert.match(html, /2027-05-01/);
   assert.match(html, /Drop here/);
   assert.match(html, /data-build-placement-id="scene-orbit-scene-chart-a"/);
@@ -258,7 +258,7 @@ test("Sketch 012 read-first content names relationships and exposes lifecycle ac
   for (const fact of ["Morning reveal", "Admissions has no observations", "Edit", "Duplicate", "Remove", "Repair", "Create Scene"]) assert.match(groupHtml, new RegExp(fact));
 
   const sceneHtml = renderToStaticMarkup(React.createElement(SceneContent, {
-    content: { id: "scene-a", name: "Morning reveal", status: "ready", chronoGroupName: "Outbreak", memberCharts: [{ chartId: "chart-a", chart, pageLabel: "Biomedical" }] },
+    content: { id: "scene-a", name: "Morning reveal", status: "ready", audience: { collectionLabel: "Outbreak" }, memberCharts: [{ chartId: "chart-a", chart, pageLabel: "Biomedical" }] },
   }));
   for (const fact of ["Outbreak", "Admissions", "Edit", "Duplicate", "Remove"]) assert.match(sceneHtml, new RegExp(fact));
 });

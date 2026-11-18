@@ -3,6 +3,10 @@ import LegendMoveControl from "./LegendMoveControl.jsx";
 import { canonicalLegendPlacement } from "../../charting/presentation/legendPlacementContract.js";
 import { LEGEND_PLACEMENTS, resolveLegendPlacement } from "../../charting/rendering/legendPlacement.js";
 import React from "react";
+import { applyChartTypography } from "../../charting/rendering/chartTypography.js";
+import { capPhoneAxisLabels, compactPhoneCartesianGrid } from "../../charting/rendering/phoneChartPresentation.js";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
+import ChartSourceCaption from "./ChartSourceCaption.jsx";
 import * as echarts from "echarts";
 import { fitLegendToViewport, fitRenderedLegend, matchBarLegendColors, measuredLegendRect, fitMeasuredLegend } from "../../charting/rendering/legendLayout.js";
 
@@ -57,16 +61,17 @@ export default function EChartsChartView({
   const hostRef = React.useRef(null);
   const lifecycleRef = React.useRef(null);
   const [runtimeError, setRuntimeError] = React.useState(null);
-  const [textTheme, setTextTheme] = React.useState(DEFAULT_CHART_TEXT_THEME);
+  const [textTheme, setTextTheme] = React.useState(null);
   const dashboardChartTheme = useDashboardChartTheme();
   const titleId = React.useId();
   const descriptionId = React.useId();
   const summaryId = React.useId();
   const typographyKey = dashboardChartTheme?.key ?? "";
   const audienceTier = audienceScale?.tier ?? "";
+  const typography = useChartTypography();
   const presentedModel = React.useMemo(
-    () => applyEChartsPresentation(model, chart, false, textTheme, audienceScale),
-    [model, chart, textTheme, audienceScale],
+    () => applyEChartsPresentation(model, chart, false, textTheme, audienceScale, typography),
+    [model, chart, textTheme, audienceScale, typography],
   );
   const activeError = suppliedRuntimeError ?? runtimeError;
   const mapBudget = useBuildMapBudgetSlot({
@@ -87,10 +92,10 @@ export default function EChartsChartView({
     );
     let cancelled = false;
     void waitForChartFonts(typeof document === "undefined" ? null : document.fonts, next).then(() => {
-      if (!cancelled) setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
+      if (!cancelled) setTextTheme((current) => current && sameChartTextTheme(current, next) ? current : next);
     });
     return () => { cancelled = true; };
-  }, [audienceTier, typographyKey]);
+  }, [audienceTier, mapAllocated, typographyKey]);
 
   React.useEffect(() => {
     const host = hostRef.current;
@@ -114,9 +119,9 @@ export default function EChartsChartView({
   }, [mapAllocated, onVisualChange]);
 
   React.useEffect(() => {
-    if (!mapAllocated || !lifecycleRef.current) return;
+    if (!mapAllocated || !textTheme || !lifecycleRef.current) return;
     lifecycleRef.current.update(presentedModel);
-  }, [mapAllocated, presentedModel]);
+  }, [mapAllocated, presentedModel, textTheme]);
 
   if (activeError) {
     return React.createElement("div", {
@@ -124,7 +129,7 @@ export default function EChartsChartView({
       role: "status",
       "aria-live": "assertive",
       ...titleContainerProps(chart),
-    }, boundedRuntimeError(activeError));
+    }, boundedRuntimeError(activeError), React.createElement(ChartSourceCaption));
   }
 
   if (!mapAllocated) {
@@ -134,7 +139,8 @@ export default function EChartsChartView({
       "data-map-budget-status": mapBudget.status,
     },
     React.createElement("p", null, "Map preview waits for an available rendering slot."),
-    React.createElement("button", { type: "button", onClick: mapBudget.activate }, "Render this map"));
+    React.createElement("button", { type: "button", onClick: mapBudget.activate }, "Render this map"),
+    React.createElement(ChartSourceCaption));
   }
 
   const budgetNotice = mapBudgetNotice(mapBudget.status);
@@ -178,10 +184,12 @@ export function applyEChartsPresentation(
   accessibilityEnabled = false,
   textTheme = DEFAULT_CHART_TEXT_THEME,
   audienceScale = null,
+  typography = null,
 ) {
-  const option = model.option && typeof model.option === "object" && !Array.isArray(model.option)
+  const sourceOption = model.option && typeof model.option === "object" && !Array.isArray(model.option)
     ? model.option
     : {};
+  const option = applyChartTypography(sourceOption, chart, typography);
   const {
     backgroundColor: _ignoredBackground,
     ...optionWithoutBackground
@@ -230,13 +238,27 @@ export function applyEChartsPresentation(
   };
   const titleGutters = valueAxisTitleGutters(valueAxisTitleProjection, valueAxisTitleTextTheme);
   const compactLegend = option.grid !== undefined || horizontalBarsFillVertically(chart);
-  const legend = option.legend === undefined
+  let legend = option.legend === undefined
     ? undefined
     : normalizedLegend(option.legend, textMuted, bodyFont, compactLegend);
+  const legendPlacement = typography?.phone ? "below-center" : canonicalLegendPlacement(chart.presentation?.legend?.position);
+  const sourceGrid = typography?.phone ? compactPhoneCartesianGrid(option) : option.grid;
+  const fixedPhoneLegend = sourceGrid !== option.grid && legend && !Array.isArray(legend)
+    && !option.dataZoom?.some?.(control => control.type === "slider");
+  if (fixedPhoneLegend) {
+    // Leave the adapter's bottom grid inset free for the labels and place the
+    // single scrollable legend row below it.
+    legend = {
+      ...legend, type: "scroll", left: "center", top: null, bottom: 5, right: null,
+      width: "92%", padding: [2, 0], itemGap: 8, pageIconSize: 10,
+      textStyle: { ...legend.textStyle, overflow: "truncate" },
+    };
+  }
+  const baseGrid = contentAwareGrid(normalizedGrid(sourceGrid, titleGutters), titleGutters, null);
   const grid = contentAwareGrid(
-    normalizedGrid(option.grid, titleGutters),
+    normalizedGrid(sourceGrid, titleGutters),
     titleGutters,
-    canonicalLegendPlacement(chart.presentation?.legend?.position) === "automatic" ? legend : null,
+    legendPlacement === "automatic" ? legend : null,
   );
   const presentedOption = {
       ...optionWithoutBackground,
@@ -278,6 +300,22 @@ export function applyEChartsPresentation(
               dataFont,
               audienceScale,
             ).map((series, index) => {
+              // The dot and tooltip retain the selected observation without
+              // printing its value across the axis or a neighboring series.
+              const markPoint = series.markPoint;
+              if (typography?.phone && markPoint?.data?.some(point => point.active)) {
+                series = {
+                  ...series,
+                  markPoint: {
+                    ...markPoint,
+                    data: markPoint.data.map(point => point.active ? {
+                      ...point,
+                      label: { ...point.label, show: false },
+                      tooltip: { ...point.tooltip, formatter: "{b}: {c}" },
+                    } : point),
+                  },
+                };
+              }
               const descriptor = model.seriesPresentation?.[index];
               if (!descriptor) return series;
               const palette = Array.isArray(option.color) && option.color.length ? option.color : dataColors;
@@ -292,7 +330,8 @@ export function applyEChartsPresentation(
     };
   return {
     ...model,
-    legendLayout: legend ? { baseGrid: contentAwareGrid(normalizedGrid(option.grid, titleGutters), titleGutters, null), placement: canonicalLegendPlacement(chart.presentation?.legend?.position), offsetX: chart.presentation?.legend?.offsetX ?? 0, offsetY: chart.presentation?.legend?.offsetY ?? 0, minimumGridTop: Math.max(PLOT_TOP_PADDING, titleGutters.top) } : null,
+    legendLayout: legend && !fixedPhoneLegend ? { baseGrid, placement: legendPlacement, offsetX: typography?.phone ? 0 : chart.presentation?.legend?.offsetX ?? 0, offsetY: typography?.phone ? 0 : chart.presentation?.legend?.offsetY ?? 0, minimumGridTop: Math.max(PLOT_TOP_PADDING, titleGutters.top) } : null,
+    ...(typography?.phone ? { phoneAxisLabelLimit: typography.maxTicks } : {}),
     valueAxisTitleProjection,
     valueAxisTitleTextTheme,
     option: normalizeChartFontTokens(
@@ -540,6 +579,8 @@ export function createEChartsLifecycle({
   let observer = null;
   let resizeListener = null;
   let finishedListener = null;
+  let zoomListener = null;
+  let phoneAxisLabelLimit = null;
   let valueAxisTitleProjection = [];
   let valueAxisTitleTextTheme = {};
   let valueAxisTitleGraphicIds = [];
@@ -582,14 +623,24 @@ export function createEChartsLifecycle({
       } else manualGeometry = null;
     } else placeLegend();
   }
-  function prepareLegendLayout() {
-    if (!instance || !sourceOption?.legend || !legendLayout) { manualGeometry = null; return; }
-    const p = legendLayout?.placement ?? 'automatic';
-    baselineOption = fitLegendToViewport(sourceOption, instance.getWidth?.(), instance.getHeight?.(), p);
-    instance.setOption({ ...(baselineOption.grid ? { grid: baselineOption.grid } : {}),
-      ...(baselineOption.legend ? { legend: { right:null, bottom:null, height:null, tooltip:{show:false}, ...baselineOption.legend,
-        textStyle:{width:null,height:null,overflow:null,lineOverflow:null,...baselineOption.legend.textStyle} } } : {}),
-      ...(!baselineOption.grid && baselineOption.series?.some(v => v.type === 'pie') ? { series: baselineOption.series } : {}) }, { lazyUpdate: false });
+  function resolveBaselineOption() {
+    const option = fitLegendToViewport(sourceOption, instance.getWidth?.(), instance.getHeight?.(), legendLayout?.placement);
+    if (!option.legend || !legendLayout) return option;
+    return {
+      ...option,
+      legend: {
+        right: null, bottom: null, height: null, tooltip: { show: false },
+        ...option.legend,
+        textStyle: {
+          width: null, height: null, overflow: null, lineOverflow: null,
+          ...option.legend.textStyle,
+        },
+      },
+    };
+  }
+
+  function measureLegendLayout() {
+    if (!baselineOption?.legend || !legendLayout) { manualGeometry = null; return; }
     const c = { width: instance.getWidth(), height: instance.getHeight() };
     basePlot = resolvedGridRect(instance) ?? { x: 10, y: 10, width: Math.max(1,c.width-20), height: Math.max(1,c.height-20) };
     const displayedGrid = Array.isArray(baselineOption.grid) ? baselineOption.grid[0] : baselineOption.grid;
@@ -610,9 +661,15 @@ export function createEChartsLifecycle({
     layoutCurrentLegend();
   }
 
-  function updateLegendLayout(nextInstance = instance) {
-    if (!legendLayout || !sourceOption) return;
-    prepareLegendLayout();
+  function prepareLegendLayout() {
+    if (!instance || !sourceOption?.legend || !legendLayout) { manualGeometry = null; return; }
+    baselineOption = resolveBaselineOption();
+    instance.setOption({
+      ...(baselineOption.grid ? { grid: baselineOption.grid } : {}),
+      legend: baselineOption.legend,
+      ...(!baselineOption.grid && baselineOption.series?.some(v => v.type === 'pie') ? { series: baselineOption.series } : {}),
+    }, { lazyUpdate: false });
+    measureLegendLayout();
   }
 
   function replaceValueAxisTitleGraphics(nextInstance = instance) {
@@ -654,6 +711,7 @@ export function createEChartsLifecycle({
     observer?.disconnect?.();
     if (resizeListener) windowTarget?.removeEventListener?.("resize", resizeListener);
     if (finishedListener) nextInstance?.off?.("finished", finishedListener);
+    if (zoomListener) nextInstance?.off?.("datazoom", zoomListener);
     try {
       nextInstance?.dispose?.();
     } catch {}
@@ -661,6 +719,8 @@ export function createEChartsLifecycle({
     observer = null;
     resizeListener = null;
     finishedListener = null;
+    zoomListener = null;
+    phoneAxisLabelLimit = null;
     valueAxisTitleProjection = [];
     valueAxisTitleTextTheme = {};
     valueAxisTitleGraphicIds = [];
@@ -680,10 +740,22 @@ export function createEChartsLifecycle({
       try {
         nextInstance = echartsApi.getInstanceByDom(host)
           ?? echartsApi.init(host, undefined, { renderer: "canvas" });
+        let width = host.clientWidth;
+        let height = host.clientHeight;
+        let pixelRatio = windowTarget?.devicePixelRatio;
         resizeListener = () => {
           try {
+            const nextWidth = host.clientWidth;
+            const nextHeight = host.clientHeight;
+            const nextPixelRatio = windowTarget?.devicePixelRatio;
+            if (Number.isFinite(nextWidth) && Number.isFinite(nextHeight)
+              && nextWidth === width && nextHeight === height && nextPixelRatio === pixelRatio) return;
+            width = nextWidth;
+            height = nextHeight;
+            pixelRatio = nextPixelRatio;
             nextInstance?.resize();
-            updateLegendLayout(nextInstance);
+            if (phoneAxisLabelLimit) capPhoneAxisLabels(nextInstance, phoneAxisLabelLimit);
+            prepareLegendLayout();
             replaceValueAxisTitleGraphics(nextInstance);
           } catch (error) {
             fail(error, nextInstance);
@@ -694,6 +766,10 @@ export function createEChartsLifecycle({
         observer?.observe(host);
         finishedListener = () => onRender();
         nextInstance?.on?.("finished", finishedListener);
+        zoomListener = () => {
+          if (phoneAxisLabelLimit) capPhoneAxisLabels(nextInstance, phoneAxisLabelLimit);
+        };
+        nextInstance?.on?.("datazoom", zoomListener);
         instance = nextInstance;
       } catch (error) {
         fail(error, nextInstance);
@@ -711,13 +787,15 @@ export function createEChartsLifecycle({
         valueAxisTitleTextTheme = model?.valueAxisTitleTextTheme ?? {};
         legendLayout = model?.legendLayout ?? null;
         sourceOption = model?.option ?? {};
-        const viewportOption = fitLegendToViewport(sourceOption, instance.getWidth?.(), instance.getHeight?.(), legendLayout?.placement);
-        instance.setOption(viewportOption, {
+        phoneAxisLabelLimit = model?.phoneAxisLabelLimit ?? null;
+        baselineOption = resolveBaselineOption();
+        instance.setOption(baselineOption, {
           notMerge: true,
           replaceMerge: model?.replaceMerge,
           lazyUpdate: false,
         });
-        prepareLegendLayout();
+        if (phoneAxisLabelLimit) capPhoneAxisLabels(instance, phoneAxisLabelLimit);
+        measureLegendLayout();
         replaceValueAxisTitleGraphics(instance);
       } catch (error) {
         fail(error);

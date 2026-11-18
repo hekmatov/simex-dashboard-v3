@@ -5,6 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { validatePresentationState } from "../src/lib/presentationProtocol.js";
+import { presentationTimeFixture } from "./helpers/presentationTimeFixture.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -40,6 +41,8 @@ const group = {
   members: [{ chartId: "chart-a" }, { chartId: "chart-b" }],
 };
 const playback = {
+  cursor: { mode: "at", scope: { kind: "storyline", id: scene.id }, window: null },
+  activeEpochMs: 2_000, exerciseTime: null, matchingOverride: "authored", nearestToleranceMs: null,
   activeScene: scene,
   activeSceneId: scene.id,
   activeGroup: group,
@@ -53,6 +56,24 @@ const playback = {
   playing: false,
   dispatch() {},
 };
+
+test("Present projects the shared Live/At cursor for manual and parentless Storyline output", () => {
+  const shared = { ...playback, activeScene: null, activeSceneId: null, activeGroupId: null,
+    activeGroup: { id: "cursor-dashboard" }, source: { kind: "default", id: null },
+    cursor: { mode: "live", scope: { kind: "dashboard", id: null }, window: null },
+    activeEpochMs: 1500, exerciseTime: "1970-01-01T00:00:01.500Z", matchingOverride: "closest", nearestToleranceMs: 100 };
+  const options = { dashboard: { id: "reference" }, activePageId: "bio", displayedChartIds: ["chart-a"], layout: "solo",
+    presentableItemIndex, audienceFacts: { dashboard_name: false, page: false, parent_chrono_group: false, scene_name: false, scene_date: true } };
+  const manual = controllerModule.buildPresentationState({ ...options, playback: shared });
+  assert.deepEqual(manual.source, { kind: "manual", scene_id: null });
+  assert.equal(manual.time.epoch_ms, 1500); assert.equal(manual.time.mode, "live");
+  assert.equal(manual.time.nearest_tolerance_ms, 100); assert.equal(Object.hasOwn(manual, "timeline"), false);
+  const parentless = { ...scene }; delete parentless.chronoGroupId;
+  const saved = controllerModule.buildPresentationState({ ...options, playback: { ...shared, activeScene: parentless,
+    cursor: { ...shared.cursor, mode: "at", scope: { kind: "storyline", id: scene.id } } } });
+  assert.equal(Object.hasOwn(saved.source, "chrono_group_id"), false); assert.equal(saved.time.epoch_ms, 1500);
+  assert.doesNotThrow(() => validatePresentationState(saved, { presentableItemIndex }));
+});
 
 test("strict state projection uses authored matching and explicit Scene Audience wire mapping", () => {
   assert.equal(typeof controllerModule?.buildPresentationState, "function");
@@ -81,20 +102,19 @@ test("strict state projection uses authored matching and explicit Scene Audience
     },
   });
 
-  assert.deepEqual(projected.matching, { use_authored_settings: true });
-  assert.equal(Object.hasOwn(projected.matching, "session_override"), false);
+  assert.equal(projected.time.matching_override, "authored");
+  assert.equal(Object.hasOwn(projected, "matching"), false);
   assert.deepEqual(projected.source, {
     kind: "scene",
     scene_id: "scene-a",
-    chrono_group_id: "group-a",
   });
-  assert.deepEqual(projected.timeline, {
+  assert.deepEqual(projected.time, presentationTimeFixture({
     frame_epochs: [1_000, 2_000, 3_000],
     frame_index: 1,
-    period: { start: 500, end: 3_500 },
+    scope: { kind: "storyline", id: scene.id },
     trace_mode: "reveal",
     seconds_per_frame: 2,
-  });
+  }));
   assert.deepEqual(projected.audience, {
     date_position: { x_permille: 640, y_permille: 70, width_permille: 300 },
   });
@@ -112,13 +132,12 @@ test("strict state projection uses authored matching and explicit Scene Audience
   });
 });
 
-test("None presents without an implicit Chrono Group or playback clock", () => {
-  const manual = controllerModule.resolvePresentPlayback({ ...playback, activeScene: null, activeSceneId: null,
-    source: { kind: "default", id: null } });
-  assert.equal(manual.activeGroup, null);
-  assert.equal(manual.activeGroupId, null);
-  assert.deepEqual(manual.clock, []);
-  assert.equal(manual.source.kind, "manual");
+test("manual Present selection retains the same shared cursor and clock", () => {
+  const input = { ...playback, activeScene: null, activeSceneId: null, activeGroupId: null,
+    cursor: { ...playback.cursor, scope: { kind: "dashboard", id: null } }, source: { kind: "default", id: null } };
+  const manual = controllerModule.resolvePresentPlayback(input);
+  assert.equal(manual, input);
+  assert.deepEqual(manual.clock, [1_000, 2_000, 3_000]);
   assert.equal(controllerModule.resolvePresentPlayback(playback), playback);
 });
 
@@ -170,7 +189,7 @@ test("Scene publication waits for DashboardRenderer to land the saved compositio
   }), { status: "valid", reason: null });
 });
 
-test("Chrono Group projection uses its authored inclusive period rather than observed endpoints", () => {
+test("legacy Group projection retains shared frames without inventing a session window", () => {
   const projected = controllerModule.buildPresentationState({
     dashboard: { id: "dashboard-a", configVersion: 3, lastUpdated: "2026-08-27" },
     activePageId: "biomedical",
@@ -185,6 +204,8 @@ test("Chrono Group projection uses its authored inclusive period rather than obs
         period: { start: "1970-01-01", end: "1970-01-01" },
       },
       activeIndex: 0,
+      activeEpochMs: 1_000,
+      cursor: { mode: "at", scope: { kind: "storyline", id: group.id }, window: null },
     },
     presentableItemIndex,
     audienceFacts: {
@@ -197,7 +218,8 @@ test("Chrono Group projection uses its authored inclusive period rather than obs
     outputMode: "active",
     blackout: false,
   });
-  assert.deepEqual(projected.timeline.period, { start: 0, end: 86_399_999 });
+  assert.deepEqual(projected.time.frame_epochs, [1_000, 2_000, 3_000]);
+  assert.equal(projected.time.window, null);
 });
 
 test("implicit empty default-page playback projects as a manual static-only source", () => {
@@ -218,6 +240,8 @@ test("implicit empty default-page playback projects as a manual static-only sour
       activeGroupId: "default-page",
       activeIndex: 0,
       clock: [],
+      activeEpochMs: null,
+      cursor: { mode: "live", scope: { kind: "page", id: "biomedical" }, window: null },
       source: { kind: "default" },
     },
     presentableItemIndex,
@@ -233,12 +257,12 @@ test("implicit empty default-page playback projects as a manual static-only sour
   assert.deepEqual(projected.source, {
     kind: "manual",
     scene_id: null,
-    chrono_group_id: null,
   });
-  assert.equal(projected.timeline, null);
+  assert.deepEqual(projected.time.frame_epochs, []);
+  assert.equal(projected.time.epoch_ms, null);
 });
 
-test("dated default-page playback gives Audience a period covering its observed clock", () => {
+test("dated default-page playback gives Audience its actual shared Live instant and frame ledger", () => {
   const projected = controllerModule.buildPresentationState({
     dashboard: { id: "dashboard-dated", configVersion: 6, lastUpdated: "2026-08-28" },
     activePageId: "biomedical",
@@ -255,6 +279,8 @@ test("dated default-page playback gives Audience a period covering its observed 
       },
       activeGroupId: "default-page",
       clock: [1_000, 2_000, 3_000],
+      activeEpochMs: 3_000,
+      cursor: { mode: "live", scope: { kind: "page", id: "biomedical" }, window: null },
       source: { kind: "default" },
     },
     presentableItemIndex,
@@ -267,7 +293,9 @@ test("dated default-page playback gives Audience a period covering its observed 
     },
   });
 
-  assert.deepEqual(projected.timeline.period, { start: 1_000, end: 3_000 });
+  assert.deepEqual(projected.time.frame_epochs, [1_000, 2_000, 3_000]);
+  assert.equal(projected.time.epoch_ms, 3_000);
+  assert.equal(projected.time.mode, "live");
   assert.doesNotThrow(() => validatePresentationState(projected, { presentableItemIndex }));
 });
 
@@ -344,7 +372,7 @@ test("END effects guard each adapter and always consume effects after disposal",
   ]);
 });
 
-test("lower controller exposes source, playback, three output choices and close without terminal controls", () => {
+test("lower controller exposes only output choices while the shared Time bar owns transport", () => {
   assert.equal(typeof controllerModule?.default, "function");
   const html = renderToStaticMarkup(React.createElement(controllerModule.default, {
     runtime: {
@@ -368,13 +396,11 @@ test("lower controller exposes source, playback, three output choices and close 
   }));
 
   for (const controlId of [
-    "source", "previous", "seek", "next",
-    "trace-reveal", "trace-full", "cadence", "play", "pause",
-    "output-active", "output-holding", "output-black", "close-chrono-groups",
+    "output-active", "output-holding", "output-black", "close-output-controls",
   ]) {
     assert.match(html, new RegExp(`data-presentation-control-id="${controlId}"`), controlId);
   }
-  assert.match(html, /<option value="">None<\/option>/);
+  assert.doesNotMatch(html, /data-presentation-control-id="(?:source|previous|seek|next|trace-reveal|trace-full|cadence|play|pause)"/);
   assert.doesNotMatch(html, /open-new-session|reopen-audience|Open audience display|Reopen audience display/);
   assert.doesNotMatch(html, /matching override|session_override|SET_MATCHING_OVERRIDE|>Presentation source<|>Restore<|>Blackout<|>End presentation</i);
 });

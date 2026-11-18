@@ -186,6 +186,20 @@ test("deep nested property data is measured without recursive serialization", ()
   assert.deepEqual(result.summary.propertyKeys, ["nested"]);
 });
 
+test("object admission counts exact JSON UTF-8 bytes for mixed property data", () => {
+  const shared = { "café🙂\"\n\ud800": ["\u0000\b\t\r\\\"\u0080\u0800🙂\udc00", null, true, false, {}, []] };
+  const value = collection([
+    { ...feature({ type: "Point", coordinates: [-0, -1.234e-12, 1e30] }, { left: shared, right: shared }), id: undefined },
+    feature(null, null),
+  ]);
+  const expected = Buffer.byteLength(JSON.stringify(value));
+  const result = validateGeoJson(value);
+
+  assert.equal(result.schema.ok, true);
+  assert.equal(result.admission.facts.encodedBytes, expected);
+  assert.equal(result.summary.encodedBytes, expected);
+});
+
 test("shared non-cyclic property data remains admissible", () => {
   const shared = { label: "shared", values: [1, 2, 3] };
   const result = validateGeoJson(collection([

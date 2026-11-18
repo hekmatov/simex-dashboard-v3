@@ -68,7 +68,7 @@ export default function ChronoController() {
       ),
       selectControl("Chrono chart scope", "Scope", scope, [
         ["all-page", "All page charts"],
-        ["group-only", "Group only"],
+        ["group-only", "Group only", usingDefault && !activeScene],
       ], (value) => dispatch({ type: "setScope", scope: value })),
       selectControl("Chrono matching policy", "Matching", matchingOverride, [
         ["authored", "Use authored settings"],
@@ -281,9 +281,9 @@ function selectControl(ariaLabel, label, value, options, onChange) {
         value,
         onChange: (event) => onChange(event.target.value),
       },
-      options.map(([optionValue, optionLabel]) => React.createElement(
+      options.map(([optionValue, optionLabel, disabled]) => React.createElement(
         "option",
-        { key: optionValue, value: optionValue },
+        { key: optionValue, value: optionValue, disabled },
         optionLabel,
       )),
     ),

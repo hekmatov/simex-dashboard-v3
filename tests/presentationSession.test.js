@@ -1,3 +1,4 @@
+import { presentationTimeFixture } from "./helpers/presentationTimeFixture.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -51,21 +52,17 @@ function presentationState(overrides = {}) {
     source: {
       kind: "scene",
       scene_id: "scene-001",
-      chrono_group_id: "group-001",
     },
     composition: {
       active_page_id: "page-001",
       displayed_chart_ids: ["chart-001"],
       layout: "solo",
     },
-    timeline: {
+    time: presentationTimeFixture({
       frame_epochs: [1_000, 2_000, 3_000],
-      frame_index: 0,
-      period: { start: 1_000, end: 3_000 },
-      trace_mode: "reveal",
+      frame_index: 0,      trace_mode: "reveal",
       seconds_per_frame: 2,
-    },
-    matching: { use_authored_settings: true },
+    }),
     output_mode: "active",
     blackout: false,
     audience: {
@@ -91,7 +88,7 @@ function presentationState(overrides = {}) {
 
 function acceptedMessage(state, payload = presentationState()) {
   return {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: state.sessionId,
     sequence: 1,
     type: "state",
@@ -357,7 +354,7 @@ test("playback actions pause for safety and TICK stops at the endpoint without l
     { type: "SEEK", frameIndex: 1 },
     { type: "PREVIOUS" },
     { type: "NEXT" },
-    { type: "SELECT_CHRONO_GROUP", groupId: "group-002" },
+    { type: "SELECT_SCENE", sceneId: "scene-002" },
     { type: "SET_TRACE_MODE", mode: "full" },
     { type: "SET_COMPOSITION", composition: { displayed_chart_ids: ["chart-001"] } },
     { type: "DOCUMENT_HIDDEN" },
@@ -368,15 +365,24 @@ test("playback actions pause for safety and TICK stops at the endpoint without l
   }
 });
 
+test("fine accepted instant before the final observation remains playable despite nearest frame index", () => {
+  const january1 = Date.parse("2027-01-01"), january3 = Date.parse("2027-01-03");
+  const connected = reducePresentationSession(openSession(), event(openSession(), "CONNECTED"));
+  const payload = presentationState({ time: presentationTimeFixture({ frame_epochs: [january1, january3], frame_index: 1,
+    epoch_ms: Date.parse("2027-01-02T12:00:00.000Z") }) });
+  const accepted = reducePresentationSession(connected, event(connected, "SNAPSHOT_ACCEPTED", { message: acceptedMessage(connected, payload) }), validationContext);
+  assert.equal(accepted.frameIndex, 1);
+  assert.equal(reducePresentationSession(accepted, { type: "PLAY" }).playback, "playing");
+});
+
 test("PLAY on a one-frame ledger is immediately at-end", () => {
   const opened = openSession();
   const waiting = reducePresentationSession(opened, event(opened, "CONNECTED"));
   const payload = presentationState({
-    timeline: {
-      ...presentationState().timeline,
+    time: {
+      ...presentationState().time,
       frame_epochs: [1_000],
       frame_index: 0,
-      period: { start: 1_000, end: 1_000 },
     },
   });
   const live = reducePresentationSession(
@@ -398,7 +404,7 @@ test("source cursor memory is frozen and included when returning to a source", (
     state,
     event(state, "SNAPSHOT_ACCEPTED", {
       message: acceptedMessage(state, presentationState({
-        timeline: { ...presentationState().timeline, frame_index: 2 },
+        time: { ...presentationState().time, frame_index: 2, epoch_ms: 3_000 },
       })),
     }),
     validationContext,
@@ -406,16 +412,15 @@ test("source cursor memory is frozen and included when returning to a source", (
   assert.equal(state.sourcePositions["scene:scene-001"], 2);
 
   state = reducePresentationSession(state, {
-    type: "SELECT_CHRONO_GROUP",
-    groupId: "group-002",
+    type: "SELECT_SCENE",
+    sceneId: "scene-002",
   });
   const groupPayload = presentationState({
     source: {
-      kind: "Chrono Group",
-      scene_id: null,
-      chrono_group_id: "group-002",
+      kind: "scene",
+      scene_id: "scene-002",
     },
-    timeline: { ...presentationState().timeline, frame_index: 1 },
+    time: { ...presentationState().time, frame_index: 1, epoch_ms: 2_000 },
   });
   state = reducePresentationSession(
     state,
@@ -424,11 +429,11 @@ test("source cursor memory is frozen and included when returning to a source", (
     }),
     validationContext,
   );
-  assert.equal(state.sourcePositions["group:group-002"], 1);
+  assert.equal(state.sourcePositions["scene:scene-002"], 1);
   state = reducePresentationSession(state, { type: "PREVIOUS" });
-  assert.equal(state.sourcePositions["group:group-002"], 1);
+  assert.equal(state.sourcePositions["scene:scene-002"], 1);
   state = reducePresentationSession(state, { type: "NEXT" });
-  assert.equal(state.sourcePositions["group:group-002"], 1);
+  assert.equal(state.sourcePositions["scene:scene-002"], 1);
   state = reducePresentationSession(state, { type: "PREVIOUS" });
 
   const returnToScene = reducePresentationSession(state, {
@@ -441,12 +446,12 @@ test("source cursor memory is frozen and included when returning to a source", (
     frameIndex: 2,
   });
   const returnToGroup = reducePresentationSession(returnToScene, {
-    type: "SELECT_CHRONO_GROUP",
-    groupId: "group-002",
+    type: "SELECT_SCENE",
+    sceneId: "scene-002",
   });
   assert.deepEqual(returnToGroup.pendingRequest, {
-    type: "SELECT_CHRONO_GROUP",
-    groupId: "group-002",
+    type: "SELECT_SCENE",
+    sceneId: "scene-002",
     frameIndex: 1,
   });
 });
@@ -475,8 +480,8 @@ test("rejected seek restores accepted state and cannot become remembered cursor"
   assert.equal(rejected.rejectionReason.code, "seek_rejected");
 
   const other = reducePresentationSession(rejected, {
-    type: "SELECT_CHRONO_GROUP",
-    groupId: "group-002",
+    type: "SELECT_SCENE",
+    sceneId: "scene-002",
   });
   const returned = reducePresentationSession(other, {
     type: "SELECT_SCENE",

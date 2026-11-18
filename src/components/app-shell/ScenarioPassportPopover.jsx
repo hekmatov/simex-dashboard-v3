@@ -12,6 +12,7 @@ const DISCARD_BUILD_CHANGES_DESCRIPTION = "Restores the dashboard to the baselin
 
 const FIELDS = Object.freeze([
   { id: "scenarioLabel", label: "Scenario name" },
+  { id: "exerciseTime", label: "Exercise time (UTC)" },
   { id: "programLabel", label: "Program" },
   { id: "lastUpdated", label: "Updated" },
 ]);
@@ -36,6 +37,7 @@ export default function ScenarioPassportPopover({
   const dirty = draft.status === "dirty" || draft.status === "error";
   const identityRevision = [
     dashboard?.scenarioLabel,
+    dashboard?.scenario?.exerciseTime,
     dashboard?.programLabel,
     dashboard?.lastUpdated,
     dashboard?.home?.enabled,

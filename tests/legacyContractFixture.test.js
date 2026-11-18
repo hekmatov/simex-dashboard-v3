@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { createHash } from "node:crypto";
 import { serializeDashboardBundle } from "../src/charting/config/dashboardBundleV3.js";
 import { loadDashboardConfig } from "../src/lib/loadDashboard.js";
-import { catalogueMatchesDashboardSnapshot } from "../src/lib/quorumCatalogue.js";
+import { buildChartCatalogueSnapshot, canonicalCatalogueBytes, catalogueMatchesDashboardSnapshot } from "../src/lib/quorumCatalogue.js";
 import { LEGACY_STORAGE_STATE, legacyAliases, legacyCatalogue, legacyContractResponse, legacyDashboard, legacyProfiles } from "./e2e/support/legacyContractFixture.js";
 
 const selected = { headers: { cookie: "unrelated=1; simex-e2e-fixture=legacy-contract" } };
@@ -25,6 +26,7 @@ test("historical contract fixture is explicit and cannot replace unselected ship
 });
 
 test("historical fixture retains native V3 charts, profiles, catalogue and available source bytes", async () => {
+  const original = structuredClone({ legacyDashboard, legacyCatalogue, legacyProfiles });
   assert.doesNotThrow(() => serializeDashboardBundle(legacyDashboard, { now: null }));
   const portable = {};
   for (const [id, source] of Object.entries(legacyDashboard.dataSources)) {
@@ -39,6 +41,17 @@ test("historical fixture retains native V3 charts, profiles, catalogue and avail
   assert.ok(charts.every(({ configVersion }) => configVersion === 3));
   assert.ok(charts.some(({ id }) => id === "chart-line-mtgz6v76"));
   assert.ok(JSON.stringify(legacyCatalogue).includes("chart-line-mtgz6v76"));
-  assert.equal(await catalogueMatchesDashboardSnapshot(legacyDashboard, legacyAliases, legacyCatalogue), true);
+  const { digest, ...historicalBody } = legacyCatalogue;
+  assert.equal(createHash("sha256").update(canonicalCatalogueBytes(historicalBody)).digest("hex"), digest,
+    "the archived catalogue retains its original valid byte digest");
+  assert.equal(legacyCatalogue.contract_version, "2");
+  const currentConfig = serializeDashboardBundle(runtime, { now: null }).config;
+  assert.equal(await catalogueMatchesDashboardSnapshot(currentConfig, legacyAliases, legacyCatalogue), false,
+    "an archived V2 contract cannot claim to describe the migrated V3 contract");
+  const migrated = await buildChartCatalogueSnapshot(currentConfig, legacyAliases);
+  assert.equal(migrated.contract_version, "3");
+  assert.deepEqual(migrated.charts.map(chart => chart.chart_id), legacyCatalogue.charts.map(chart => chart.chart_id));
+  assert.equal(await catalogueMatchesDashboardSnapshot(currentConfig, legacyAliases, migrated), true);
+  assert.deepEqual({ legacyDashboard, legacyCatalogue, legacyProfiles }, original, "historical fixtures remain untouched");
   for (const id of Object.keys(portable)) assert.equal(runtime.dataSourceStates[id].status, "ready", id);
 });

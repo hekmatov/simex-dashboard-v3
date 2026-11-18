@@ -18,3 +18,9 @@ export function scenePresentLayoutToDisplayLayout(sceneLayout, chartCount) {
   }
   return mapping.layout;
 }
+
+export function displayLayoutToScenePresentLayout(displayLayout, chartCount) {
+  const entry = Object.entries(DISPLAY_LAYOUT_BY_SCENE_LAYOUT).find(([, value]) => value.layout === displayLayout && value.count === chartCount);
+  if (!entry) throw new Error(`Comparison layout "${String(displayLayout)}" is unsupported for ${chartCount} charts.`);
+  return entry[0];
+}

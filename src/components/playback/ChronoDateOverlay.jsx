@@ -22,6 +22,8 @@ export default function ChronoDateOverlay({ epochMs, suspended = false }) {
       document.querySelector(".dashboard-command-crown"),
       document.querySelector(".canonical-dashboard-frame .dashboard-header"),
       document.querySelector(".playback-controls--floating"),
+      document.querySelector(".time-bar"),
+      document.querySelector(".pdpc-release-disclaimer"),
     ].filter(Boolean);
     const resizeObserver = typeof ResizeObserver === "function"
       ? new ResizeObserver(keepInsideViewport)
@@ -83,8 +85,9 @@ export default function ChronoDateOverlay({ epochMs, suspended = false }) {
   return React.createElement("aside", {
     className: "chrono-date-overlay",
     hidden: suspended || !Number.isFinite(epochMs),
-    role: "status",
-    "aria-label": "Chrono date overlay",
+    role: "note",
+    "aria-live": "off",
+    "aria-label": "Exercise time stamp",
     "data-chrono-date-overlay": true,
     style: { left: geometry.x, top: geometry.y, width: geometry.width, height: geometry.height },
   },
@@ -126,7 +129,11 @@ function constrainGeometry(geometry, viewportWidthValue, viewportHeightValue) {
   const crown = visibleRectangle(document.querySelector(".dashboard-command-crown"));
   const dashboardHeader = visibleRectangle(document.querySelector(".canonical-dashboard-frame .dashboard-header"));
   const controller = visibleRectangle(document.querySelector(".playback-controls--floating"));
+  const timeBar = visibleRectangle(document.querySelector(".time-bar"));
+  const disclaimer = visibleRectangle(document.querySelector(".pdpc-release-disclaimer"));
   let top = Math.max(8, crown ? crown.bottom + 8 : 8);
+  if (timeBar) top = Math.max(top, timeBar.bottom + 8);
+  if (disclaimer) top = Math.max(top, disclaimer.bottom + 8);
   if (dashboardHeader) top = Math.max(top, dashboardHeader.bottom + 8);
   let bottom = viewportHeight - 8;
   if (controller) {

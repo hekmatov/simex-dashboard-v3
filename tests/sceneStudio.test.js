@@ -29,13 +29,29 @@ const vite = await createServer({
 });
 after(() => vite.close());
 const { default: SceneEditor, ObservationChecklist } = await vite.ssrLoadModule("/src/components/time/SceneEditor.jsx");
+const { default: SceneMatchingField } = await vite.ssrLoadModule("/src/components/time/SceneMatchingField.jsx");
 
 const scene = { id: "scene-a", name: "Admission reveal", status: "ready", chronoGroupName: "Municipal outbreak playback", members: [{ chartId: "chart-a" }] };
 
+test("Scene matching fields display canonical nearest and its saved tolerance in editable hours", () => {
+  const html = renderToStaticMarkup(React.createElement(SceneMatchingField, { value: { policy: "nearest", toleranceMs: 86400000 } }));
+  assert.match(html, /value="nearest" selected=""/);
+  assert.match(html, /Matching maximum distance \(hours\)/);
+  assert.match(html, /type="number"[^>]*value="24"/);
+  assert.doesNotMatch(html, /\[object Object\]/);
+});
+
+test("legacy unbounded nearest shows a repair field without inventing a zero tolerance", () => {
+  const html = renderToStaticMarkup(React.createElement(SceneMatchingField, { value: "Snap to Closest" }));
+  assert.match(html, /Set a maximum distance to repair this legacy nearest setting/);
+  assert.match(html, /type="number"[^>]*value=""/);
+  assert.doesNotMatch(html, /type="number"[^>]*value="0"/);
+});
+
 test("a clean open Scene editor can discard its draft", () => {
   const html = renderToStaticMarkup(React.createElement(SceneEditor, { draft: { value: scene, stage: "details", status: "clean" } }));
-  assert.match(html, /<button[^>]*>Discard Scene<\/button>/);
-  assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Discard Scene<\/button>/);
+  assert.match(html, /<button[^>]*>Discard Storyline<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Discard Storyline<\/button>/);
 });
 
 test("Scene creation and duplication show the open Chrono draft admission reason", () => {
@@ -50,23 +66,24 @@ test("Scene creation and duplication show the open Chrono draft admission reason
   assert.match(content, /<button[^>]*>Open pending Chrono Group draft<\/button>/);
 });
 
-test("Scene parent chooser discovers every saved group on its selected page and switches membership", () => {
-  const charts = [{ id: "chart-a", pageId: "biomedical" }, { id: "chart-national", pageId: "biomedical" }, { id: "chart-other", pageId: "operations" }];
-  const groups = [{ id: "municipal", name: "Municipal", chartIds: ["chart-a"], period: { start: "2027-05-01", end: "2027-05-03" } }, { id: "national", name: "National", chartIds: ["chart-national"], period: { start: "2027-05-02", end: "2027-05-04" } }, { id: "other", name: "Other page", chartIds: ["chart-other"] }];
-  let draft = createSceneDraft({ ...scene, pageId: "biomedical", chronoGroupId: "municipal", frames: { mode: "source", chartId: "chart-a" } }, { chronoGroups: groups, charts });
-  const html = renderToStaticMarkup(React.createElement(SceneEditor, { draft, charts: charts.slice(0, 1), parentCharts: charts, chronoGroups: groups }));
-  assert.match(html, /<option value="municipal"[^>]*>Municipal<\/option>/);
-  assert.match(html, /<option value="national"[^>]*>National<\/option>/);
-  assert.doesNotMatch(html, /<option value="other"/);
-  draft = reduceSceneDraft(draft, { type: "SET_CHRONO_GROUP", chronoGroupId: "national" });
-  assert.equal(draft.value.chronoGroupId, "national");
-  assert.deepEqual(draft.value.members, [{ chartId: "chart-national", width: 1 }]);
-  assert.equal(draft.value.frames.chartId, "chart-national");
+test("native Storyline details expose owning pages and independent time modes without a parent chooser", () => {
+  const pages = [{ id: "biomedical", label: "Biomedical" }, { id: "operations", label: "Operations" }];
+  const draft = createSceneDraft({ ...scene, pageId: "biomedical", frames: { mode: "union" } }, { pages });
+  const html = renderToStaticMarkup(React.createElement(SceneEditor, { draft, pages }));
+  assert.match(html, /<option value="biomedical"[^>]*>Biomedical<\/option>/);
+  assert.match(html, /<option value="operations"[^>]*>Operations<\/option>/);
+  assert.doesNotMatch(html, /Parent Chrono Group|parent-chrono-group/);
+  for (const label of ["All member observations", "Calendar interval", "Chart observations"]) assert.match(html, new RegExp(label));
+  const changed = reduceSceneDraft(draft, { type: "SET_PAGE", pageId: "operations" });
+  assert.equal(changed.value.pageId, "operations");
+  assert.deepEqual(changed.value.members, draft.value.members);
+  assert.deepEqual(changed.value.frames, { mode: "union" });
+  assert.equal(Object.hasOwn(changed.value, "chronoGroupId"), false);
 });
 
 test("Scene Studio owns Create Scene and groups read-first cards by page", () => {
   const html = renderToStaticMarkup(React.createElement(SceneLibrary, { state: { query: "", statusFilter: "all" }, sections: [{ pageId: "biomedical", pageLabel: "Biomedical", scenes: [scene] }] }));
-  assert.match(html, />Create Scene</);
+  assert.match(html, />Create Storyline</);
   assert.doesNotMatch(html, />Create Chrono Group</);
   assert.match(html, /Biomedical/);
   assert.match(html, /data-action="open-content"/);
@@ -85,14 +102,14 @@ test("Scene Studio reports filtered saved Scenes as filtered, not missing", () =
   }));
 
   assert.match(html, /Showing 0 of 1/);
-  assert.match(html, /No Scenes match the current filters\./);
-  assert.doesNotMatch(html, /No Scenes have been created yet\./);
+  assert.match(html, /No Storylines match the current filters\./);
+  assert.doesNotMatch(html, /No Storylines have been created yet\./);
 });
 
 test("Scene content is read-first and Edit is its only creation-adjacent action", () => {
   const html = renderToStaticMarkup(React.createElement(SceneContent, { content: { ...scene, memberCharts: [{ chartId: "chart-a", chart: { title: "Admissions" }, pageLabel: "Biomedical" }] } }));
   assert.match(html, />Edit</);
-  assert.doesNotMatch(html, />Create Scene</);
+  assert.doesNotMatch(html, />Create Storyline</);
   assert.match(html, /Admissions/);
 });
 

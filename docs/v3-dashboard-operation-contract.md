@@ -1,16 +1,14 @@
-# SimEx Dashboard V6 operation contract
+# SimEx Dashboard V7 operation contract
 
 ## Status and authority
 
-This is the normative Step 10 handoff for the live SimEx application. It
-records product behaviour, ownership, and operational boundaries; strict source
-validation remains authoritative. When documentation conflicts, current
-accepted source wins. The historical 10 August three-mode implementation plan
-is checklist-only and cannot override this document, the reconciliation, or
-final acceptance.
+This records the current engineering contract for the SimEx release candidate.
+It does not grant human acceptance or production deployment. Strict source
+validation and the accepted requirements remain authoritative.
 
-Authority order for this handoff is live source, the 19 August reconciliation
-and accepted sketches, then Step 9 final acceptance.
+The accepted September time-cursor and Storyline specifications and consolidated
+roadmap govern the temporal changes below. Historical Chrono Group authoring
+sketches describe the legacy import format, not the current authoring interface.
 
 ## Modes and canonical Home
 
@@ -78,43 +76,61 @@ Section and a final authored Page is protected unless a deliberate clear leaves
 the Home-only recovery state.
 
 Before a merge, move, or removal, the interface projects named consequences
-for affected charts, Chrono Groups, and Scenes. Removal requires an explicit
+for affected charts and Storylines. Removal requires an explicit
 disposition and acknowledgement. The product must never silently cascade a
 Page or Section command into unannounced chart or temporal changes. Structure
 has its own Save/Discard transaction; it does not absorb layout or
 selected-chart drafts.
 
-## Temporal library and Scene projection
+## Shared time and Storyline library
 
-Sketch 012 is a saved-content library, not a second running-time store.
+View and Present use one provider and cursor. **Live** resolves the declared
+`scenario.exerciseTime`, or the latest eligible scope observation when no
+exercise time is declared. **At** retains the selected literal instant; it may
+fall between observations. Exact matching can truthfully produce no data in
+either mode. Return to Live pauses playback. Advance exercise time is an
+explicit durable Present action and is unavailable in read-only outputs.
 
-- **Chrono Studio** lists saved Chrono Groups and offers search, status, Page
-  filters, and content entry.
-- **Scene Studio** lists saved Scenes grouped by owning Page and retains the
-  same return context.
-- A parent Chrono Group entry projects child Scenes and member-chart locations.
-  A Scene entry projects its parent group and member-chart locations.
+The persistent Time bar offers Page, Dashboard and saved Storylines. Page and
+Dashboard clocks are eligible plotted observation unions. Storylines preserve
+their authored observation-source, calendar or union cadence, including deliberate
+no-data calendar frames. A session window clips this clock without rewriting the
+authored Storyline period. Cursor position is not a publication cutoff or access
+control; participant packages require physical filtering.
 
-A Scene has one owning Page and one parent Chrono Group. Eligible charts are on
-that Page and belong to the parent group. Validation and source eligibility
-block an invalid, incomplete, or needs-attention Scene from silently launching
-to View or Present.
+Charts own their matching defaults. Storyline member overrides and an authored
+Storyline default can refine a composition; an explicit session override applies
+without rewriting those authored values. Nearest matching requires a finite,
+nonnegative tolerance. Unbounded legacy nearest content stays recoverably invalid
+until repaired; migration never invents a bound or substitutes another policy.
+Interpolation remains subject to the chart's numeric binding permission.
 
-Scene editing has exactly this order:
+**Storyline Studio** lists saved compositions by optional display anchor and
+across pages. Members may come from any page. Its stages are `Storyline details`,
+`Select charts and frames`, and `Arrange and configure`. The coverage picker uses
+plotted observations and saved filters. Save/Discard, duplicate, repair and return
+context remain scoped to the existing draft transaction. Saving a comparison
+cannot replace an already pending Build draft.
 
-1. `Scene details`
-2. `Select charts and frames`
-3. `Arrange and configure`
+View shows a selected Storyline in a band above the canonical page. Present uses
+its saved ordered subset and layout, with a maximum of four displayed charts.
+Member geometry, policies and source/calendar cadence are preserved independently
+of that Present subset. Unsaved Build previews do not overwrite saved content.
 
-The Stage 1 parent selection constrains Stage 2 availability; Stage 3 records
-the saved composition. Create, edit, duplicate, and repair return to their
-origin with filter, selection, scroll, and focus context retained. A conflict
-against an active temporal draft offers save, discard, or stay. A failed save
-keeps the draft and last-good saved state.
+Native configuration retains the `scenes` array name, with no `chronoGroups` or
+parent references. Legacy Groups without child Scenes become Storylines; child
+Scenes retain their period, cadence, geometry and effective policies. Group-only
+calendar date periods remain date periods on `frames.mode: "union"`: date-only
+observations retain UTC midnight for their authored date, while timestamp
+membership uses the dashboard timezone's calendar date. Cursor instants and
+session windows remain canonical UTC instants. Repeated normalization and export
+preserve this compatibility seam, including non-UTC mixed sources.
 
-View and Present run a snapshot of saved temporal content. A live Scene draft
-does not replace a running projection. If saved temporal content changes during
-a session, the session is marked for review rather than silently updated.
+Migration review lists identity/name collisions, preserved invalid nearest
+settings, calendar-period semantics and any proposed Present subset for more than
+four members. All members remain intact. Original collection names survive as
+scalar `audience.collectionLabel` context, independently of Storyline names;
+they do not reference a live parent object. Chrono Studio is retired from Libraries.
 
 ## Scenario Passport and packages
 
@@ -136,19 +152,32 @@ stages verified authored assets, commits them atomically with replacement, and
 compensates on failure. Reset is explicit and also preserves last-good state.
 Application recovery sits outside product-mode content.
 
-The dashboard/package boundary is Version 6. Raw Version 3–6 configurations
+The dashboard/package boundary is Version 7; chart configuration remains Version 3.
+Raw Version 3–7 configurations
 may enter only through deterministic normalization and strict validation;
 invalid or unsupported input is rejected. Re-export a successful legacy import
-as Version 6. Packages exclude unresolved drafts and Present/Audience session
-state.
+as Version 7. Legacy bundle envelopes 4–6 remain accepted with their original
+strict metadata shape. Native exports include the app version and SHA256 over
+the stable serialization of the complete export excluding its own integrity
+record. Import verifies this record before migration. It detects accidental
+changes; it is not an authenticity signature. Review retains original input text,
+and compensatable transactions retain exact previous state on failure. Packages
+exclude unresolved drafts and Present/Audience session state.
 
 ## Present, Audience, static operation, and Quorum
 
 Present chooses eligible saved output, controls composition and time, and opens
 the same-origin Audience window. Audience is passive and last-valid-output
-safe: it does not author, persist, or independently reinterpret a Scene. It
-can show selected dashboard, parent group, Scene, and date facts and supports
-Present-controlled blackout.
+safe: it does not author or independently advance time. Protocol 4 carries one
+accepted time projection, literal epoch and effective per-member policies. Its
+source is a parentless Storyline or manual composition; retired Group identities
+and protocol 3 messages are rejected. Theme retains its version-1 sidecar.
+Unchanged Present reentry preserves the accepted sequence; changed effective
+page/Live time or Theme is explicitly reconciled before publication. Audience
+can show independent dashboard, Original collection, Storyline and date facts,
+the exercise disclaimer and app version, and supports Present-controlled blackout.
+Changing chart bindings or source bytes in Build requires reloading a retained
+Audience window; accepted matching policies alone do not synchronize those bytes.
 
 The core dashboard has no required remote runtime dependency. Static builds
 and flash-drive packages retain local prepared data. URL-hosted media is an
@@ -160,16 +189,19 @@ companion can request an operator-authorized configured-chart set; it does not
 exchange discussion text, transcripts, summaries, speaker data, or evidence
 text. Present/Audience does not depend on Quorum.
 
-## Step 9 carry-forward backlog
+The active chart catalogue is contract 3, with `storyline_ids` and temporal
+playback capability independent of Group membership. It requires a contract-3
+compatible companion. The adjacent local Quorum validator currently accepts
+contract 2, so mock-companion tests do not establish real contract-3 compatibility.
 
-This documentation slice intentionally does not repair:
+## Acceptance and future scenario integration
 
-- stale canonical-Home/page-navigation/reload drivers and the retired
-  Dashboard-map Home selector;
-- two ambiguous unscoped Build-state locators;
-- three secondary authoring/presentation theme leaks;
-- large-package import timing threshold; and
-- synthetic same-renderer liveness-stall fixture robustness.
+The rolling engineering checkpoint records exact checks and outstanding human
+acceptance. Native browser and mock-companion evidence does not establish physical
+phone, minimum-device, projector, screen-reader or real-companion acceptance.
 
-`AUD-PRESET-01` remains a future product decision. This document does not
-amend the historic Step 9 visual-approval sentence.
+Paused scenario branches will need a separately authorized integration using
+native parentless Storylines, chart-owned defaults, the shared cursor, protocol 4
+and catalogue contract 3. Preserve scenario data meaning and run the same
+deterministic legacy migration before adapting their packages. This work does not
+implement scenario adapters, reactivate those branches or authorize deployment.

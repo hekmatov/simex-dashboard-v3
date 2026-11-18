@@ -71,7 +71,8 @@ test("covers analogous persistent command chrome rather than one Build-only exce
       "build-page-navigation",
       "global-command-crown",
       "present-action-dock",
-      "view-playback-controls",
+      "view-time-bar",
+      "view-timeline-scrubber",
     ],
   );
 });

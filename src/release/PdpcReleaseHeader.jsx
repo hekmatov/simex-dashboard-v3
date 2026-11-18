@@ -1,5 +1,6 @@
 import React from "react";
 import { APP_VERSION } from "../lib/appVersion.js";
+import ExerciseContextStamp from "../components/common/ExerciseContextStamp.jsx";
 
 import pdpcLogoUrl from "./assets/pdpc-logo.png";
 
@@ -34,9 +35,7 @@ export default function PdpcReleaseDisclaimer() {
       className="pdpc-release-disclaimer"
       aria-label="Exercise disclaimer"
     >
-      <span className="pdpc-release-disclaimer__statement">
-        Fictional scenario · Exercise use only
-      </span>
+      <ExerciseContextStamp className="pdpc-release-disclaimer__statement" />
     </aside>
   );
 }
@@ -46,8 +45,10 @@ export function PdpcDashboardHeader({
   pages = [],
   activePage,
   onPageRequest,
+  timeContextNode = null,
 }) {
   return (
+    <>
     <header
       className="dashboard-header pdpc-dashboard-header"
       data-pdpc-dashboard-header={profile.variant}
@@ -84,6 +85,8 @@ export function PdpcDashboardHeader({
         alt="Pandemic and Disaster Preparedness Center (PDPC)"
       />
     </header>
+    {timeContextNode && <section className="pdpc-time-context" data-command-crown-layer="context">{timeContextNode}</section>}
+    </>
   );
 }
 
@@ -95,7 +98,7 @@ export function PdpcDashboardFooter() {
     >
       <div>
         <strong>SimEx Dashboard V3</strong>
-        <span>App version {APP_VERSION}</span>
+        <span className="dashboard-footer__version"><span className="dashboard-footer__version-label">App version </span>{APP_VERSION}</span>
         <a
           className="pdpc-dashboard-footer__builder-link"
           href="https://simex-dashboard-v3.pages.dev/"

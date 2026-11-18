@@ -66,7 +66,7 @@ test("Audience movement auto-saves saved Scenes but leaves raw Chrono Groups ses
   };
 
   const sceneResult = await runtimeModule.persistAudienceDatePositionForSource(
-    { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    { kind: "scene", scene_id: "scene-a" },
     wirePosition,
     persist,
   );

@@ -59,7 +59,7 @@ test("Clear dashboard in Scenario Passport preserves canonical Home identity and
   const dialog = page.getByRole("dialog", { name: "Delete all dashboard content?" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(
-    "Delete all authored dashboard pages, charts, sources, media, Chrono Groups, and Scenes. Canonical Home remains available.",
+    "Delete all authored dashboard pages, charts, sources, media, and Storylines. Canonical Home remains available.",
   );
   await expect(dialog.getByRole("button", { name: "Delete all dashboard content", exact: true }))
     .toBeDisabled();
@@ -82,7 +82,8 @@ test("Clear dashboard in Scenario Passport preserves canonical Home identity and
   expect(stored.datasetProfiles).toBeUndefined();
   expect(stored.contentLibrary).toEqual({ mediaItems: {}, sourceEntries: {} });
   expect(stored.assets).toEqual({});
-  expect(stored.chronoGroups).toEqual([]);
+  expect(stored.configVersion).toBe(7);
+  expect(stored).not.toHaveProperty("chronoGroups");
   expect(stored.scenes).toEqual([]);
   expect(stored.id).toBe(sourceDashboard.id);
   expect(stored.title).toBe(sourceDashboard.title);

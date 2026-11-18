@@ -32,6 +32,9 @@ const ALIASES_PATH = path.join(ROOT, "public", "config", "chart-aliases.json");
 const PROFILES_PATH = path.join(ROOT, "public", "config", "dataset-profiles.json");
 
 const EXPECTED_PAGE_SECTIONS = {
+  "scenario": {
+    "exercise_brief": ["exercise_operating_instructions"],
+  },
   "biomedical": {
     "outbreak_dynamics": [
       "bio_confirmed_cases",
@@ -67,7 +70,6 @@ const EXPECTED_PAGE_SECTIONS = {
   },
   "socio_economic": {
     "public_response": [
-      "chart-bar-f349044e-4584-47c4-870f-ecccba978c53",
       "socio_risk_deltas",
       "socio_adherence",
       "socio_values",
@@ -91,6 +93,7 @@ const EXPECTED_PAGE_SECTIONS = {
 };
 
 const EXPECTED_CHART_BINDINGS = {
+  "exercise_operating_instructions": ["freeText", "exercise_operations"],
   "bio_confirmed_cases": [
     "line",
     "bio_cases"
@@ -182,10 +185,6 @@ const EXPECTED_CHART_BINDINGS = {
   "bio_vaccination_rate": [
     "line",
     "bio_vaccination_timeseries"
-  ],
-  "chart-bar-f349044e-4584-47c4-870f-ecccba978c53": [
-    "bar",
-    "socio_business_closures"
   ],
   "socio_risk_deltas": [
     "deltaList",
@@ -318,9 +317,10 @@ function createSourceLoader(dashboard) {
   };
 }
 
-test("the curated dashboard is a clean version 6 configuration with exact analytical coverage", async () => {
+test("the curated dashboard is native V7 with the approved Scenario and exact analytical coverage", async () => {
   const { dashboard } = await loadTrackedInputs();
-  assert.equal(dashboard.configVersion, 6);
+  assert.equal(dashboard.configVersion, 7);
+  assert.equal(Object.hasOwn(dashboard, "chronoGroups"), false);
   assert.equal(Object.hasOwn(dashboard, "schemaVersion"), false);
   assert.equal(dashboard.id, "simex-dashboard");
 
@@ -342,7 +342,7 @@ test("the curated dashboard is a clean version 6 configuration with exact analyt
   );
   assert.deepEqual(
     [...new Set(charts.map(({ typeId }) => typeId))].sort(),
-    ["bar", "bubble", "bullet", "chronoChoroplethMap", "deltaList", "gauge", "groupedBar", "horizontalBar", "kpi", "line", "mapScatter", "mixed", "pie", "stackedBar", "table"],
+    ["bar", "bubble", "bullet", "chronoChoroplethMap", "deltaList", "freeText", "gauge", "groupedBar", "horizontalBar", "kpi", "line", "mapScatter", "mixed", "pie", "stackedBar", "table"],
   );
   assert.deepEqual(
     charts.reduce((counts, chart) => {
@@ -350,8 +350,12 @@ test("the curated dashboard is a clean version 6 configuration with exact analyt
       counts[kind] = (counts[kind] ?? 0) + 1;
       return counts;
     }, {}),
-    { csv: 38 },
+    { staticText: 1, csv: 37 },
   );
+  assert.deepEqual(dashboard.scenes.map(scene => scene.id), [
+    "cases_and_institutional_trust", "health_pressure_and_staff_absenteeism",
+    "cases_and_unemployment", "municipal_outbreak", "national_outbreak",
+  ]);
 });
 
 test("the curated V6 dashboard retains every builder-managed source ownership record", async () => {

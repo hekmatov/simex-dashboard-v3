@@ -60,7 +60,7 @@ test("StrictMode Present teardown preserves a pre-existing playback view owner",
   }
 });
 
-test("Present Play starts the mounted provider-owned timeline", async () => {
+test("Present Play starts the shared provider cursor and accepted session status", async () => {
   const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
   try {
     await page.goto(`${baseURL}/tests/fixtures/present-playback-safety-harness.html`);
@@ -71,7 +71,7 @@ test("Present Play starts the mounted provider-owned timeline", async () => {
       const state = window.__presentPlaybackSafety;
       const channel = new BroadcastChannel(`simex-presentation-${state.sessionId}`);
       channel.postMessage({
-        protocol_version: 3,
+        protocol_version: 4,
         session_id: state.sessionId,
         sequence: 1,
         type: "ready",
@@ -81,11 +81,57 @@ test("Present Play starts the mounted provider-owned timeline", async () => {
     });
     await page.waitForFunction(() => window.__presentPlaybackSafety?.connection === "connected");
 
-    await page.locator('[data-presentation-control-id="play"]').click();
+    await page.getByRole("button", { name: "Play time", exact: true }).click();
 
-    await page.waitForFunction(() => window.__presentPlaybackSafety?.playing === true);
+    await page.waitForFunction(() => window.__presentPlaybackSafety?.playing === true
+      && window.__presentPlaybackSafety?.sessionPlayback === "playing", null, { timeout: 5_000 });
   } finally {
     await page.close();
+  }
+});
+
+test("shared Present Play advances a fine instant even when its nearest index is the final frame", async () => {
+  const page = await browser.newPage();
+  try {
+    await openConnectedSafetyHarness(page);
+    await page.locator(".time-bar__instant").click();
+    await page.getByRole("slider", { name: "Selected time", exact: true }).fill(String(Date.parse("2027-05-02T18:00:00.000Z")));
+    await page.evaluate(() => window.__presentPlaybackRuntime.publishCurrent());
+    assert.equal(await readSafety(page, "activeIndex"), 2);
+    await play(page);
+    await page.waitForFunction(() => window.__presentPlaybackSafety.activeEpochMs === Date.parse("2027-05-03"));
+  } finally { await page.close(); }
+});
+
+test("retained Present reentry publishes the reconciled page and declared Live time", async () => {
+  for (const kind of ["page", "exercise"]) {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${baseURL}/tests/fixtures/present-cursor-reentry-harness.html?case=${kind}`);
+      await page.waitForFunction(() => Boolean(window.__reentryCurrent));
+      await page.waitForFunction(() => window.__reentryPublications?.length > 0, null, { timeout: 5_000 });
+      const result = await page.evaluate(() => ({ current: window.__reentryCurrent, sent: window.__reentryPublications.at(-1).time }));
+      assert.equal(result.sent.epoch_ms, result.current.epoch);
+      assert.equal(result.sent.scope.id, result.current.scope.id);
+      assert.equal(result.sent.epoch_ms, Date.parse(kind === "page" ? "2027-01-04" : "2027-01-03"));
+    } finally { await page.close(); }
+  }
+});
+
+test("unchanged retained Present reentry keeps its wire sequence while changed Theme is published", async () => {
+  for (const kind of ["unchanged", "theme"]) {
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${baseURL}/tests/fixtures/present-cursor-reentry-harness.html?case=${kind}`);
+      await page.getByRole("main").waitFor();
+      await page.waitForFunction(() => Boolean(window.__reentryCurrent));
+      // Wait through the layout restoration and publication effects, without a timer/tick.
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.equal(await page.evaluate(() => window.__reentryAcceptedHasTheme), false);
+      const publications = await page.evaluate(() => window.__reentryPublications);
+      assert.equal(publications.length, kind === "unchanged" ? 0 : 1);
+      if (kind === "theme") assert.equal(publications[0].theme.dashboard_style, "humanist-standard");
+    } finally { await page.close(); }
   }
 });
 
@@ -112,7 +158,7 @@ test("unsafe presenter commands freeze the provider timer until accepted recover
     await play(page);
     await page.evaluate(() => window.__presentPlaybackRuntime.dispatchGuarded("CONNECTION_LOST"));
     await assertFrozen(page, initialIndex);
-    await page.locator('[data-presentation-control-id="play"]').click();
+    await page.getByRole("button", { name: "Play time", exact: true }).click();
     await page.waitForTimeout(350);
     assert.equal(await readSafety(page, "playing"), false);
     assert.equal(await readSafety(page, "activeIndex"), initialIndex);
@@ -216,7 +262,7 @@ async function openConnectedSafetyHarness(page) {
     const state = window.__presentPlaybackSafety;
     const channel = new BroadcastChannel(`simex-presentation-${state.sessionId}`);
     channel.postMessage({
-      protocol_version: 3,
+      protocol_version: 4,
       session_id: state.sessionId,
       sequence: 1,
       type: "ready",
@@ -228,7 +274,7 @@ async function openConnectedSafetyHarness(page) {
 }
 
 async function play(page) {
-  await page.locator('[data-presentation-control-id="play"]').click();
+  await page.getByRole("button", { name: "Play time", exact: true }).click();
   await page.waitForFunction(() => window.__presentPlaybackSafety?.playing === true);
 }
 

@@ -29,6 +29,10 @@ export function buildSceneFrameLedger({ scene, charts = [], timeZone } = {}) {
   if (rule.type === "source") {
     return buildSourceLedger({ rule, charts, period });
   }
+  if (rule.type === "union") {
+    const ids = new Set(scene.chartIds ?? scene.members?.map(member => member.chartId));
+    return freezeLedger(collectAvailableEpochs(charts.filter(chart => ids.has(chart.id)), period), []);
+  }
   if (rule.type === "calendar") {
     return freezeLedger(generateCalendarFrames({ rule, period, timeZone }), []);
   }

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openDashboardPage } from "./support/landingWorkflow.js";
 import { createHash } from "node:crypto";
 
 test.use({
@@ -14,7 +15,7 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   test.setTimeout(90_000);
   const response = await request.get("/config/dashboard.json");
   expect(createHash("sha256").update(await response.body()).digest("hex"))
-    .toBe("a6092faf3463389fea17934c005f74802c9c843abcecfb31272221a2fea11f2f");
+    .toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const scrollbarWidth = await page.evaluate(() => {
     const probe = document.createElement("div");
@@ -26,6 +27,8 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   });
   expect(scrollbarWidth, "regression requires width-consuming native scrollbars").toBeGreaterThan(0);
   await page.getByRole("button", { name: "Open the dashboard", exact: true }).click({ noWaitAfter: true });
+
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click({ noWaitAfter: true });
   await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
   const quick = page.locator(".chart-quick-editor");
@@ -34,6 +37,7 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   const destination = page.locator('[data-canonical-page-id] [data-canonical-panel-id="bio_r_values"]');
   await expect(stage).toHaveClass(/chart-authoring-preview-ready/);
   await page.evaluate(() => document.fonts.ready);
+  await expect(stage.getByRole("button", { name: "Move legend", exact: true })).toBeVisible();
   await sameGeometry(stage, destination);
   const fitWidth = await scroller.evaluate(el => el.clientWidth);
 
@@ -97,6 +101,8 @@ async function sameGeometry(stage, destination) {
 async function stableSizing(stage) {
   // Let the destination observer and its scaled preview settle, then inspect
   // consecutive actual layouts rather than accepting one fortunate sample.
+  // This source's measured legend adds its Move control to the toolbar.
+  await expect(stage.getByRole("button", { name: "Move legend", exact: true })).toBeVisible();
   await expect.poll(() => stage.evaluate(el => {
     const viewport = el.querySelector(".authoring-stage__viewport");
     const expectedScale = el.dataset.stageFit === "actual" ? 1 : viewport.clientWidth / Number(el.dataset.stageWidth);
@@ -123,6 +129,8 @@ test("quick editor manual positions survive edits scroll reopen and object switc
   test.setTimeout(90_000);
   await page.goto("/");
   await page.getByRole("button", { name: "Open the dashboard", exact: true }).click();
+
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
   const orbit = page.locator(".unit-orbit");
@@ -210,6 +218,8 @@ test("quick editor position survives save Build reset and interrupted full-edito
   test.setTimeout(75_000);
   await page.goto("/");
   await page.getByRole("button", { name: "Open the dashboard", exact: true }).click();
+
+  await openDashboardPage(page, "biomedical");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
   const quick = page.locator(".chart-quick-editor");
@@ -240,6 +250,8 @@ test("quick editor position survives save Build reset and interrupted full-edito
   await page.getByRole("button", { name: "Discard Build changes", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard Build changes?", exact: true })
     .getByRole("button", { name: "Discard Build changes", exact: true }).click();
-  await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
+  const restored = page.locator('[role="treeitem"][data-build-node-id="bio_r_values"]');
+  await expect(restored).toContainText("Reproduction value");
+  await restored.locator(".build-tree-label").click();
   await nearLocal(orbit, retained);
 });

@@ -2373,8 +2373,8 @@
   .build-command-header,
   .build-page-navigation,
   .build-page-tabs[data-build-page-navigation="anchored"],
-  .playback-controls,
-  .playback-controls--floating,
+  .time-bar,
+  .timeline-scrubber,
   .present-action-dock
 ) {
   background-image: var(--simex-style-role-rail), var(--simex-role-command-bar-background);
@@ -2468,7 +2468,6 @@
   .build-page-action-menu,
   [id^="section-menu-"][role="menu"],
   [id^="panel-menu-"][role="menu"],
-  .playback-menu,
   .settings-color-popover,
   .settings-color-palette
 ) {

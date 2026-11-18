@@ -8,7 +8,7 @@ const boundaryModule = await import(
 ).catch(() => null);
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "a876d0b83c9f40ea5179723b9c4304f8873b393142e4a790711af80ed363662c";
+  "2244f5b6a53f4530a267251f9733a0a8a83ccb2ae90a5fe9442a1a658a5f8d7f";
 
 test("runtime boundary inspector is available", () => {
   assert.equal(
@@ -16,6 +16,15 @@ test("runtime boundary inspector is available", () => {
     "function",
     "inspectRuntimeBoundaries must be implemented",
   );
+});
+
+test("native catalogue 3 accepts the actual public artifact and all saved Storyline memberships", async () => {
+  const inputs = await repositoryInputs();
+  const catalogue = JSON.parse(inputs.publicFiles["public/integration/quorum-chart-catalogue.json"]);
+  assert.equal(catalogue.contract_version, "3");
+  assert.ok(catalogue.charts.some(chart => chart.storyline_ids.length > 1));
+  assert.ok(catalogue.charts.every(chart => Array.isArray(chart.storyline_ids) && !Object.hasOwn(chart, "chrono_group_id")));
+  assert.doesNotThrow(() => boundaryModule.inspectRuntimeBoundaries(inputs));
 });
 
 test("V3 runtime has no remote dependency and preserves Quorum and canonical render paths", async () => {
@@ -346,9 +355,25 @@ test("recursive catalogue schema reports exact contract and nested field drift",
   const fixtures = [
     {
       mutate: (catalogue) => {
-        catalogue.contract_version = "3";
+        catalogue.contract_version = "2";
       },
-      message: `${cataloguePath} contract_version: expected literal "2"`,
+      message: `${cataloguePath} contract_version: expected literal "3"`,
+    },
+    {
+      mutate: (catalogue) => { catalogue.charts[0].chrono_group_id = "retired"; },
+      message: `${cataloguePath} charts[0].chrono_group_id: unexpected field`,
+    },
+    {
+      mutate: (catalogue) => { delete catalogue.charts[0].storyline_ids; },
+      message: `${cataloguePath} charts[0].storyline_ids: missing required field`,
+    },
+    {
+      mutate: (catalogue) => { catalogue.charts[0].storyline_ids = "single-parent"; },
+      message: `${cataloguePath} charts[0].storyline_ids: expected array`,
+    },
+    {
+      mutate: (catalogue) => { catalogue.charts[0].storyline_ids = [42]; },
+      message: `${cataloguePath} charts[0].storyline_ids[0]: expected string`,
     },
     {
       mutate: (catalogue) => {

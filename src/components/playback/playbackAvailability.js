@@ -1,5 +1,6 @@
 import { collectTemporalAvailability } from "../../charting/time/temporalAvailability.js";
 import { matchTemporalObservation } from "../../charting/time/temporalMatch.js";
+import { assertTimeSyncInterpolationAllowed } from "../../charting/time/chronoGroupModel.js";
 
 const EMPTY = Object.freeze([]);
 
@@ -28,21 +29,32 @@ export function buildFrameAvailabilityEvidence({
       return Object.freeze({ ...base, status: "static", statusLabel: "Static", detail: "Not synchronized to the Chrono frame", observedFrameCount: 0, observationEpochs: EMPTY });
     }
     try {
+      const context = contexts[chart.id];
+      const cursorEvidence = context?.kind === "cursor";
+      const profileEntry = profiles[chart.sourceId];
+      const profile = profileEntry?.datasetProfile ?? profileEntry?.profile ?? profileEntry;
       const observationEpochs = collectTemporalAvailability({
         chart,
         member,
         rows: loadedData[chart.sourceId] ?? EMPTY,
-        profile: profiles[chart.sourceId],
-        period,
+        profile,
+        // A cursor window controls its transport clock, not the source's
+        // matching evidence (for example a carried observation before it).
+        period: cursorEvidence ? { start: "0001-01-01", end: "9999-12-31" } : period,
         timezone,
       });
-      const matching = contexts[chart.id]?.matching ?? { policy: "exact" };
+      const matching = context?.matching ?? { policy: "exact" };
+      let interpolationAllowed = true;
+      if (cursorEvidence && matching.policy === "interpolate") {
+        try { assertTimeSyncInterpolationAllowed({ chart, timeRole: member.timeRole, profile }); }
+        catch { interpolationAllowed = false; }
+      }
       const match = matchTemporalObservation({
         activeEpochMs,
         observations: observationEpochs.map((epochMs) => ({ epochMs, value: 1 })),
         policy: matching,
         toleranceMs: matching.toleranceMs,
-        interpolationAllowed: true,
+        interpolationAllowed,
       });
       return Object.freeze({
         ...base,

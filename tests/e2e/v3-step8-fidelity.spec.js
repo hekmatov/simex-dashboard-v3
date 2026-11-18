@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 import { withPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 import {
@@ -25,6 +26,9 @@ test("Present remains usable below the recommended 1024px width and preserves it
   test.setTimeout(120_000);
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
+  const cursor = timeCursor(page);
+  await cursor.seekFrameIndex(0);
+  await page.getByRole("button", { name: "Output controls", exact: true }).click();
   const { popup, channelId } = await openAudienceSession(page);
 
   await page.setViewportSize({ width: 1023, height: 768 });
@@ -36,8 +40,8 @@ test("Present remains usable below the recommended 1024px width and preserves it
   await expect(workspace).toHaveAttribute("data-active-scene-id", scene.id);
   await page.locator('[data-presentation-control-id="output-holding"]').click();
   await expect(popup.locator(".audience-display")).toHaveAttribute("data-output-mode", "holding");
-  await expect(page.locator('[data-presentation-control-id="pause"]')).toBeDisabled();
-  await expect(page.locator('[data-presentation-control-id="play"]')).toBeEnabled();
+  await expect(cursor.pause).toHaveCount(0);
+  await expect(cursor.play).toBeEnabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
   await page.setViewportSize({ width: 1024, height: 768 });
@@ -45,7 +49,7 @@ test("Present remains usable below the recommended 1024px width and preserves it
   await expect(workspace).toBeVisible();
   await expect(workspace).toHaveAttribute("data-active-scene-id", scene.id);
   await expect(page.locator('[data-presentation-control-id="reopen-audience"]')).toBeVisible();
-  await expect(page.locator('[data-presentation-control-id="pause"]')).toBeDisabled();
+  await expect(cursor.pause).toHaveCount(0);
   await expect(popup.locator(".audience-display")).toHaveAttribute("data-output-mode", "holding");
   expect(new URL(popup.url()).searchParams.get("channel")).toBe(channelId);
   await popup.close();
@@ -59,6 +63,7 @@ test("1920 Audience progresses passively through output, liveness, blackout, and
   });
   const scene = await createSavedPresentationScene(page);
   await enterPresentWithScene(page, scene);
+  await page.getByRole("button", { name: "Output controls", exact: true }).click();
   const { popup } = await openAudienceSession(page);
   await popup.setViewportSize({ width: 1920, height: 1080 });
   const audience = popup.locator(".audience-display");
@@ -181,7 +186,7 @@ test("date-position endpoints remain fully visible after direct Audience draggin
   await enterPresentWithScene(page, scene);
   await page.getByRole("button", { name: "Audience display options" }).click();
   const options = page.getByRole("dialog", { name: "Audience display options" });
-  await options.getByRole("checkbox", { name: "Display Scene date" }).check();
+  await options.getByRole("checkbox", { name: "Display Storyline date" }).check();
   await options.getByRole("button", { name: "Close Audience display options" }).click();
   const { popup } = await openAudienceSession(page);
   const date = popup.locator(".audience-scene-date");

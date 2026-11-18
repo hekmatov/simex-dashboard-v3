@@ -23,7 +23,7 @@ test("export readiness renders every unfinished draft with a direct recovery act
     open: true,
     issues: [
       { id: "chart-wizard", label: "New chart draft", actionLabel: "Resume chart draft" },
-      { id: "scene", label: "Scene draft", actionLabel: "Open Scene Studio" },
+      { id: "scene", label: "Storyline draft", actionLabel: "Open Storyline Studio" },
     ],
   }));
 
@@ -32,7 +32,7 @@ test("export readiness renders every unfinished draft with a direct recovery act
   assert.match(html, />Finish unfinished work before download</);
   assert.match(html, />New chart draft</);
   assert.match(html, />Resume chart draft</);
-  assert.match(html, />Scene draft</);
-  assert.match(html, />Open Scene Studio</);
+  assert.match(html, />Storyline draft</);
+  assert.match(html, />Open Storyline Studio</);
   assert.match(html, />Cancel download</);
 });

@@ -185,7 +185,7 @@ test("whole-Scene and single-member cross-page moves migrate only pageId and pre
   assert.strictEqual(applied.value.chronoGroups[0], chronoGroup);
 });
 
-test("partial Scene splits name every consequence and cancel is a deep atomic no-op", () => {
+test("partial cross-page moves retain Scene membership without a destructive confirmation", () => {
   const dashboard = fixture();
   dashboard.scenes = dashboard.scenes.filter(({ id }) => id === "scene-partial");
   const draft = createBuildLayoutDraft(dashboard);
@@ -195,21 +195,14 @@ test("partial Scene splits name every consequence and cancel is a deep atomic no
     target: { pageId: "page-b", sectionId: "section-b1", index: 0 },
   });
 
-  assert.equal(analysis.requiresConfirmation, true);
-  assert.deepEqual(analysis.consequences.map(({ type, sceneName, chartNames }) => ({ type, sceneName, chartNames })), [
-    { type: "scene-partial-split", sceneName: "Partial Scene", chartNames: ["Chart A"] },
-    { type: "scene-frame-source-unresolved", sceneName: "Partial Scene", chartNames: ["Chart A"] },
-    { type: "scene-present-fallback", sceneName: "Partial Scene", chartNames: ["Chart A"] },
-  ]);
-  assert.deepEqual(
-    analysis.consequences.find(({ type }) => type === "scene-present-fallback").presentChartNames,
-    ["Chart B"],
-  );
-  assert.strictEqual(applyBuildLayoutMove(draft, analysis, { confirmed: false }), draft);
+  assert.equal(analysis.requiresConfirmation, false);
+  assert.deepEqual(analysis.consequences, []);
+  const moved = applyBuildLayoutMove(draft, analysis, { confirmed: false });
+  assert.deepEqual(moved.value.scenes, dashboard.scenes);
   assert.deepEqual(draft.value, dashboard);
 });
 
-test("confirmed partial splits preserve surviving members, normalize Present, and make moved frame sources explicitly unresolved", () => {
+test("partial moves preserve member overrides, source frames and the complete Present composition", () => {
   const dashboard = fixture();
   dashboard.scenes = dashboard.scenes.filter(({ id }) => id === "scene-partial");
   const analysis = analyzeBuildLayoutMove(dashboard, {
@@ -220,15 +213,7 @@ test("confirmed partial splits preserve surviving members, normalize Present, an
   const applied = applyBuildLayoutMove(createBuildLayoutDraft(dashboard), analysis, { confirmed: true });
   const scene = applied.value.scenes.find(({ id }) => id === "scene-partial");
 
-  assert.deepEqual(scene.members, [
-    { chartId: "chart-b", width: 3, matching: "nearest", retained: "member-field" },
-  ]);
-  assert.deepEqual(scene.present, { chartIds: ["chart-b"], layout: "single", retained: "present-field" });
-  assert.deepEqual(scene.frames, {
-    mode: "unresolved",
-    reason: "source-chart-moved",
-    previousChartId: "chart-a",
-  });
+  assert.deepEqual(scene, dashboard.scenes[0]);
   assert.deepEqual(applied.value.chronoGroups, dashboard.chronoGroups);
   assert.equal(applied.value.pages[1].sections[0].panels[0].id, "placement-a");
 

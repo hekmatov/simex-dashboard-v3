@@ -19,7 +19,24 @@ const viewModule = await vite.ssrLoadModule(
 const playbackModule = await vite.ssrLoadModule(
   "/src/components/playback/PlaybackProvider.jsx",
 );
+const { default: ChartPanel } = await vite.ssrLoadModule("/src/components/ChartPanel.jsx");
 await vite.close();
+
+test("Build and direct capture panels render eagerly even when an observer exists", () => {
+  const previous = globalThis.IntersectionObserver;
+  globalThis.IntersectionObserver = class { constructor() { throw Error("unexpected inner observer"); } };
+  try {
+    for (const editMode of [true, false]) {
+      const html = renderToStaticMarkup(React.createElement(ChartPanel, { panel: chart("eager", "Eager chart"), editMode }));
+      assert.doesNotMatch(html, /chart-deferred-placeholder|Chart loads when it enters the viewport/);
+    }
+    const suspended = renderToStaticMarkup(React.createElement(ChartPanel, { panel: chart("paused", "Paused chart"), suspended: true }));
+    assert.match(suspended, /Chart paused while the editor is open/);
+  } finally {
+    if (previous === undefined) delete globalThis.IntersectionObserver;
+    else globalThis.IntersectionObserver = previous;
+  }
+});
 
 const dashboard = {
   programLabel: "Pandemic & Disaster Preparedness Center",

@@ -150,10 +150,10 @@ export default function useAudienceFrameCapture({ enabled, rootRef, channelRef, 
   }, [enabled, rootRef, channelRef]);
   React.useEffect(() => { controllerRef.current?.notify(connectionStatus === "connected" ? "connect" : "disconnect"); }, [connectionStatus, enabled]);
   const structureKey = projection?.kind === "output" ? JSON.stringify({ ...projection, acceptedSequence: undefined,
-    timeline: projection.timeline && { ...projection.timeline, frame_index: 0 } }) : projection?.kind;
-  rendering.current = { structureKey, frameIndex: projection?.timeline?.frame_index };
+    time: projection.time && { ...projection.time, frame_index: 0, epoch_ms: null } }) : projection?.kind;
+  rendering.current = { structureKey, frameIndex: projection?.time?.frame_index };
   React.useLayoutEffect(() => {
-    const current = { structureKey, frameIndex: projection?.timeline?.frame_index };
+    const current = { structureKey, frameIndex: projection?.time?.frame_index };
     controllerRef.current?.notify(previous.current.structureKey === structureKey
       && previous.current.frameIndex !== current.frameIndex ? "playback-tick" : "state-accepted");
     previous.current = current;

@@ -197,8 +197,8 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
 
   await expect(pinned.getByRole("button", { name: "Theme", exact: true }))
     .toHaveCount(1);
-  await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
-    .toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Dashboard time", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Dashboard time", exact: true }).getByRole("button", { name: "Time settings", exact: true })).toBeVisible();
   await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))
     .toHaveCount(1);
   await expect(page.locator(".view-page-actions")).toHaveCount(0);
@@ -213,8 +213,7 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
   await expect(structureRail(page)).toBeVisible();
   await expect(pinned.getByRole("button")).toHaveCount(1);
-  await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
-    .toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Dashboard time", exact: true })).toHaveCount(0);
   await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))
     .toHaveCount(0);
   await expect(pinned.getByRole("button", { name: "Add page", exact: true })).toHaveCount(0);
@@ -559,9 +558,11 @@ test("desktop width recommendation leaves Build and Present visible and usable",
   await expect(presentNotice).toBeVisible();
   await expect(presentNotice).toHaveText("A minimum width of 1024px is recommended for Present.");
   await expect(presentWorkspace).toBeVisible();
-  const chronoGroups = page.getByRole("button", { name: "Chrono Groups", exact: true });
-  await expect(chronoGroups).toBeEnabled();
-  await chronoGroups.click();
+  const timeSettings = page.getByRole("button", { name: "Time settings", exact: true });
+  await expect(timeSettings).toBeEnabled();
+  await timeSettings.click();
+  await expect(page.getByRole("region", { name: "Time settings", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Output controls", exact: true }).click();
   await expect(page.locator(".present-action-dock")).toBeVisible();
 });
 

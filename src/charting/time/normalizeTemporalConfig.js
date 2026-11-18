@@ -2,6 +2,7 @@ import {
   validateIanaTimeZone,
   validateTemporalBundle,
 } from "./temporalSchema.js";
+import { isCalendarUnionPeriod, validateCalendarUnionPeriod } from "./sceneSchema.js";
 
 const EXPLICIT_OFFSET = /(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -55,6 +56,11 @@ function migrateLiveDashboard(value, timezoneFallback) {
   delete migrated.timeZone;
 
   for (const [sceneIndex, scene] of (migrated.scenes ?? []).entries()) {
+    if (scene?.chronoGroupId == null && scene?.period == null) continue;
+    if (isCalendarUnionPeriod(scene)) {
+      validateCalendarUnionPeriod(scene.period);
+      continue;
+    }
     normalizePeriod(scene?.period, `dashboard.scenes[${sceneIndex}].period`);
   }
   return migrated;

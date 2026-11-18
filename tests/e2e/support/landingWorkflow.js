@@ -17,7 +17,7 @@ export async function openDashboardFromLanding(page) {
 
 export async function enterAuthoredDashboard(page) {
   const modes = page.getByLabel("Dashboard mode");
-  await modes.waitFor({ state: "visible" });
+  await modes.or(page.getByRole("button", { name: "Dashboard menu", exact: true })).first().waitFor({ state: "visible" });
   const home = modes.getByRole("button", { name: "Home", exact: true });
   if (await home.count() > 0 && await home.getAttribute("aria-pressed") === "true") {
     await openDashboardFromLanding(page);
@@ -29,6 +29,11 @@ export async function openDashboardPage(page, pageId) {
   const currentPage = page.locator("[data-canonical-page-id]");
   await currentPage.waitFor({ state: "visible" });
   if (await currentPage.getAttribute("data-canonical-page-id") === pageId) {
+    return;
+  }
+  const menu = page.getByRole("button", { name: "Dashboard menu", exact: true });
+  if (await menu.isVisible()) {
+    await page.locator(`.crown-compact-pages [data-dashboard-page-id="${pageId}"]`).click();
     return;
   }
   const modes = page.getByLabel("Dashboard mode");

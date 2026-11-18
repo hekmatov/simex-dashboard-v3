@@ -1,4 +1,13 @@
 import React from "react";
+import { resolveChartTypography } from "../../charting/rendering/chartTypography.js";
+import { ChartTypographyContext } from "./ChartTypographyContext.jsx";
+import { resolveChartSourceEvidence } from "../../charting/presentation/chartSourceEvidence.js";
+import ChartSourceCaption, { ChartSourceEvidenceContext } from "./ChartSourceCaption.jsx";
+import ChartHeading from "./ChartHeading.jsx";
+import { ChartTimeEvidenceContext } from "./ChartTimeChip.jsx";
+import { resolveChartTimeEvidence } from "../../charting/time/chartTimeEvidence.js";
+import { useMediaQuery, MOBILE_VIEW_QUERY } from "../common/useMediaQuery.js";
+import { phoneFullscreenHeatmapZoom } from "../../charting/rendering/phoneChartPresentation.js";
 
 import {
   canReuseChartRendering,
@@ -23,13 +32,42 @@ import ZoomGuard from "./ZoomGuard.jsx";
 const MAX_STATUS_LENGTH = 240;
 
 export default function ChartView(props) {
+  const sourceEvidence = React.useMemo(() => resolveChartSourceEvidence({
+    chart: props.chart, sources: props.renderContext?.sources, datasetProfile: props.datasetProfile,
+  }), [props.chart, props.renderContext?.sources, props.datasetProfile]);
+  const phoneWidth = useMediaQuery(MOBILE_VIEW_QUERY);
+  const typographyProfile = ["view", "fullscreen"].includes(props.surface)
+    && (props.renderContext?.typographyProfile === "phone" || (props.renderContext?.typographyProfile !== "desktop" && phoneWidth))
+    ? "phone" : "desktop";
+  const hasFootprint = props.panelFootprint != null;
+  const columns = props.panelFootprint?.columns;
+  const rows = props.panelFootprint?.rows;
+  const typography = React.useMemo(() => resolveChartTypography(props.chart, {
+    footprint: hasFootprint ? { columns, rows } : undefined,
+    audienceScale: props.audienceScale,
+    typographyProfile,
+  }), [props.chart?.layout, hasFootprint, columns, rows, props.audienceScale, typographyProfile]);
   const playback = useOptionalPlayback();
   const staticContent = isStaticContentChart(props.chart);
-  const playbackProps = staticContent
+  const scopedProps = staticContent
     ? { ...props, timeContext: undefined }
     : props.timeContextAuthority === "explicit"
     ? props
     : withPlaybackTimeContext(props, playback);
+  const timeContext = React.useMemo(() => {
+    const context = scopedProps.timeContext;
+    return context?.kind === "cursor" && ["view", "fullscreen"].includes(props.surface)
+      ? { ...context, showClosestOnExactMiss: true }
+      : context;
+  }, [scopedProps.timeContext, props.surface]);
+  const playbackProps = { ...scopedProps,
+    timeContext,
+    ...(timeContext !== scopedProps.timeContext && timeContext.matching?.policy === "exact" ? { prepared: undefined } : {}),
+    cursorMode: props.cursorMode ?? scopedProps.timeContext?.mode ?? playback?.cursor?.mode ?? "live",
+    timeScopeKind: props.timeScopeKind ?? scopedProps.timeContext?.scope?.kind ?? playback?.cursor?.scope?.kind,
+  };
+  const fallbackTimeEvidence = resolveChartTimeEvidence({ chart: props.chart, profile: props.datasetProfile,
+    timeContext: playbackProps.timeContext, cursorMode: playbackProps.cursorMode, scopeKind: playbackProps.timeScopeKind });
   const interactionMode = props.interactionMode === "passive" ? "passive" : "active";
   const panelRows = Number(props.panelFootprint?.rows);
   const shortPanel = Number.isFinite(panelRows) && panelRows < 1;
@@ -41,27 +79,33 @@ export default function ChartView(props) {
   const content = state && !state.hasValidContent
     ? null
     : React.createElement(ResolvedChartContent, {
-        props: playbackProps,
+        props: { ...playbackProps, typographyProfile },
         interactionMode,
       });
-  return React.createElement(ChartDataStateBoundary, {
-    state,
-    chartName: props.chart?.title,
-    short: shortPanel,
-  }, content);
+  return React.createElement(ChartTimeEvidenceContext.Provider, { value: fallbackTimeEvidence }, React.createElement(ChartSourceEvidenceContext.Provider, { value: sourceEvidence },
+    React.createElement(ChartTypographyContext.Provider, { value: typography },
+      React.createElement(ChartDataStateBoundary, {
+        state,
+        chartName: props.chart?.title,
+        short: shortPanel,
+      }, content),
+      content ? null : React.createElement(ChartSourceCaption))));
 }
 
 export function renderChartContent(props, interactionMode) {
   try {
     const resolved = resolveDestinationRendering(props);
-    const { model, prepared, schema } = resolved;
+    const { prepared, schema } = resolved;
+    const timeEvidence = resolveChartTimeEvidence({ chart: props.chart, profile: props.datasetProfile, prepared,
+      timeContext: props.timeContext, cursorMode: props.cursorMode, scopeKind: props.timeScopeKind });
+    const model = phoneFullscreenHeatmapZoom(resolved.model, { ...props, interactionMode });
     const provenance = resolveProvenance(props);
     const panelRows = Number(props.panelFootprint?.rows);
     const shortPanel = Number.isFinite(panelRows) && panelRows < 1;
     const compactPanel = Number.isFinite(panelRows) && panelRows <= 0.5;
     let view;
     const chartZoom = interactionMode === "active"
-      && chartZoomEnabled(props.chart, schema);
+      && (chartZoomEnabled(props.chart, schema) || model !== resolved.model);
     const typedStaticImage = model.kind === "image" && model.staticSource === true;
     const zoomEnabled = typedStaticImage
       ? interactionMode === "active"
@@ -112,15 +156,20 @@ export function renderChartContent(props, interactionMode) {
       contentRenderContext: props.renderContext,
       surface: props.surface,
     });
-    else return React.createElement(ChartStatus, {
+    else return React.createElement(ChartTimeEvidenceContext.Provider, { value: timeEvidence }, React.createElement(ChartStatus, {
       message: resolved.message ?? model.message,
       empty: prepared?.status === "empty",
-    });
+      timeControlled: Boolean(props.timeContext),
+      chart: props.chart,
+      matchingMiss: timeEvidence?.kind === "missing",
+    }));
     const activeDate = chartActiveDate(props.timeContext?.activeEpochMs);
     const framedView = React.createElement("div", {
       ...presentationFrameProps(props.chart, props.canonicalPlotId),
       ...(activeDate ? { "data-chart-active-date": activeDate } : {}),
       "data-chart-interaction-mode": interactionMode,
+      "data-chart-typography": props.typographyProfile,
+      "data-chart-time-fallback": timeEvidence?.kind === "nonconcurrent" ? "true" : undefined,
       ...(typeof window === "undefined" ? {} : {
         "data-canonical-runtime-ledger": serializeCanonicalRuntimeLedger({
           chart: props.chart,
@@ -129,9 +178,9 @@ export function renderChartContent(props, interactionMode) {
         }),
       }),
     }, view);
-    return chartZoom && !typedStaticImage
+    return React.createElement(ChartTimeEvidenceContext.Provider, { value: timeEvidence }, chartZoom && !typedStaticImage
       ? React.createElement(ZoomGuard, null, framedView)
-      : framedView;
+      : framedView);
   } catch {
     return React.createElement(ChartStatus, { message: "This chart cannot be displayed." });
   }
@@ -351,12 +400,13 @@ function text(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function ChartStatus({ message, empty = false }) {
+function ChartStatus({ message, empty = false, timeControlled = false, chart, matchingMiss = false }) {
   return React.createElement("div", {
     className: empty ? "chart-status-empty" : "chart-status-error",
-    role: "status",
-    "aria-live": "polite",
-  }, boundedMessage(message));
+    role: timeControlled ? "note" : "status",
+    "aria-live": timeControlled ? "off" : "polite",
+  }, chart ? React.createElement(ChartHeading, { chart }) : React.createElement(ChartSourceCaption),
+  matchingMiss ? null : boundedMessage(message));
 }
 
 function boundedMessage(message) {

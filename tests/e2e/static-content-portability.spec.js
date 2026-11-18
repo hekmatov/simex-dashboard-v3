@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
-import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
+import { serializeDashboardBundle, dashboardBundleIntegrity } from "../../src/charting/config/dashboardBundleV3.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 import { openAudienceSession } from "./support/present-audience-workflow.js";
@@ -61,7 +61,7 @@ test("production StrictMode root keeps the reloaded durable Image URL active", a
   }, activeUrl)).toBe(true);
 });
 
-test("bundle v6 restores local Image and Free-text in a fresh offline browser context", {
+test("bundle v7 restores local Image and Free-text in a fresh offline browser context", {
   tag: "@production-static",
 }, async ({ browser, page }, testInfo) => {
   test.setTimeout(240_000);
@@ -71,7 +71,7 @@ test("bundle v6 restores local Image and Free-text in a fresh offline browser co
   const imagePanelId = await createImage(page);
 
   const authored = await persistedStaticContent(page);
-  expect(authored.configVersion).toBe(6);
+  expect(authored.configVersion).toBe(7);
   expect(authored.text.source.qmd).toBe(TEXT_QMD);
   expect(authored.text.source.revision).toBe(1);
   expect(authored.image.panel.id).toBe(imagePanelId);
@@ -85,9 +85,9 @@ test("bundle v6 restores local Image and Free-text in a fresh offline browser co
   await openBiomedicalBuild(page, { navigate: false });
   await expectStaticPanels(page, authored.image.panel.id, authored.text.panel.id);
 
-  const bundlePath = testInfo.outputPath("static-content-bundle-v6.json");
+  const bundlePath = testInfo.outputPath("static-content-bundle-v7.json");
   const downloadButton = await passportPackageDownloadButton(page);
-  page.once("dialog", (dialog) => dialog.accept("static-content-bundle-v6"));
+  page.once("dialog", (dialog) => dialog.accept("static-content-bundle-v7"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     downloadButton.click(),
@@ -96,18 +96,20 @@ test("bundle v6 restores local Image and Free-text in a fresh offline browser co
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
   await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
   const bundle = JSON.parse(await readFile(bundlePath, "utf8"));
-  expect(bundle.version).toBe(6);
-  expect(bundle.config.configVersion).toBe(6);
+  expect(bundle.version).toBe(7);
+  expect(bundle.config.configVersion).toBe(7);
   expect(Object.keys(bundle.assetPayloads)).toEqual([authored.image.mediaItem.current.assetId]);
 
   const assetId = authored.image.mediaItem.current.assetId;
   const missingPath = testInfo.outputPath("missing-payload.json");
   const missing = structuredClone(bundle);
   delete missing.assetPayloads[assetId];
+  missing.metadata.integrity.digest = dashboardBundleIntegrity(missing); // Exercise the inner missing-asset check after a valid envelope.
   await writeFile(missingPath, JSON.stringify(missing));
   const corruptPath = testInfo.outputPath("corrupt-payload.json");
   const corrupt = structuredClone(bundle);
   corrupt.assetPayloads[assetId].base64 = flipBase64Byte(corrupt.assetPayloads[assetId].base64);
+  corrupt.metadata.integrity.digest = dashboardBundleIntegrity(corrupt); // Exercise asset byte verification, independently of whole-export integrity.
   await writeFile(corruptPath, JSON.stringify(corrupt));
 
   const freshContext = await browser.newContext({
@@ -199,9 +201,9 @@ test("package import quota failure preserves the prior dashboard and authored st
   await openBiomedicalBuild(page);
   await createFreeText(page);
   await createImage(page);
-  const bundlePath = testInfo.outputPath("quota-import-bundle-v6.json");
+  const bundlePath = testInfo.outputPath("quota-import-bundle-v7.json");
   const downloadButton = await passportPackageDownloadButton(page);
-  page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v6"));
+  page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v7"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     downloadButton.click(),
@@ -342,9 +344,9 @@ test("asset commit failure restores the prior dashboard and authored store atomi
   await page.setViewportSize({ width: 1024, height: 768 });
   await openBiomedicalBuild(page);
   const imagePanelId = await createImage(page);
-  const bundlePath = testInfo.outputPath("commit-recovery-bundle-v6.json");
+  const bundlePath = testInfo.outputPath("commit-recovery-bundle-v7.json");
   const downloadButton = await passportPackageDownloadButton(page);
-  page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v6"));
+  page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v7"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     downloadButton.click(),
@@ -377,7 +379,7 @@ test("asset commit failure restores the prior dashboard and authored store atomi
     // Retain the exported file, but avoid Windows native upload path limits
     // when test evidence lives in a deeply nested worktree directory.
     await packageInput(importedPage).setInputFiles({
-      name: "commit-recovery-bundle-v6.json",
+      name: "commit-recovery-bundle-v7.json",
       mimeType: "application/json",
       buffer: await readFile(bundlePath),
     });
@@ -616,7 +618,7 @@ function compactStaticBundle(exported) {
     sourceEntries: {},
   };
   compactConfig.datasetProfiles = {};
-  compactConfig.chronoGroups = [];
+  delete compactConfig.chronoGroups;
   compactConfig.scenes = [];
   const compactAssetIds = Object.values(compactConfig.contentLibrary.mediaItems)
     .flatMap((item) => item?.current?.kind === "asset" ? [item.current.assetId] : []);

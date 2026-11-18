@@ -1560,7 +1560,9 @@ export async function collectDashboardDensityEvidence(page, entry) {
     ...region,
     styleSignature: dashboardRegionDirectStyleSignature(region),
   }));
-  const density = classifyDashboardDensitySnapshot({ ...snapshot, regionCandidates, mountedRegions });
+  const density = entry.densityProfile === "phone"
+    ? classifyPhoneViewDensity({ ...snapshot, regionCandidates, mountedRegions }, await collectPhoneViewDensity(page))
+    : classifyDashboardDensitySnapshot({ ...snapshot, regionCandidates, mountedRegions });
   return {
     ...density,
     regionCoverage: classifyDashboardRegionClosure({
@@ -1837,4 +1839,44 @@ function normalizedFindingPattern(value) {
 
 function round(value) {
   return Math.round(value * 100) / 100;
+}
+
+export const PHONE_VIEW_DENSITY_PROFILE = Object.freeze({ minimumTouchTarget: 44, maximumChartHeight: 420 });
+
+export function classifyPhoneViewDensity(snapshot, phoneDensity) {
+  const findings = [];
+  const add = (category, evidence, recommendation) => findings.push({
+    id: `${snapshot.surface.id}:${category}:${findings.length + 1}`, surfaceId: snapshot.surface.id,
+    owner: snapshot.surface.owner, category, priority: "P1", evidence, recommendation,
+  });
+  if (phoneDensity.horizontalOverflow > 1) add("overflow", `Root horizontal overflow ${phoneDensity.horizontalOverflow}px`, "Keep the phone page within its viewport.");
+  for (const control of phoneDensity.undersizedControls) add("role-size", `${control.label}: ${control.width}×${control.height}px`, "Provide a 44×44px phone touch target.");
+  for (const chart of phoneDensity.oversizedCharts) add("role-size", `${chart.id}: chart height ${chart.height}px`, "Keep phone chart footprints within 420px.");
+  const categoryCounts = {};
+  for (const { category } of findings) categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+  return { ...snapshot, phoneDensity, findings, categoryCounts, priorityCounts: { P0: 0, P1: findings.length, P2: 0 } };
+}
+
+export async function collectPhoneViewDensity(page) {
+  return page.evaluate(({ minimumTouchTarget, maximumChartHeight }) => {
+    const visible = element => {
+      const rect = element.getBoundingClientRect();
+      const css = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && rect.top < innerHeight && rect.bottom > 0
+        && css.visibility !== "hidden" && css.display !== "none";
+    };
+    const controls = [...document.querySelectorAll('.view-shell button, .view-shell [role="button"], .view-shell select, .app-frame[data-dashboard-mode="view"] .dashboard-command-crown button, .app-frame[data-dashboard-mode="view"] .dashboard-command-crown [role="button"], .app-frame[data-dashboard-mode="view"] .dashboard-command-crown select, .fullscreen-backdrop button')]
+      .filter(visible).map(element => {
+        const { width, height } = element.getBoundingClientRect();
+        return { label: element.getAttribute("aria-label") || element.textContent.trim(), width, height };
+      });
+    return {
+      horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+      undersizedControls: controls.filter(({ width, height }) => width < minimumTouchTarget - 0.5 || height < minimumTouchTarget - 0.5),
+      oversizedCharts: [...document.querySelectorAll('.view-shell .chart-panel-footprint')].filter(visible)
+        .filter(element => !element.querySelector('.chart-card-view'))
+        .map(element => ({ id: element.dataset.canonicalPanelId || element.dataset.deferredPanel, height: element.getBoundingClientRect().height }))
+        .filter(({ height }) => height > maximumChartHeight + 1),
+    };
+  }, PHONE_VIEW_DENSITY_PROFILE);
 }

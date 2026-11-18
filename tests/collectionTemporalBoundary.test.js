@@ -54,37 +54,18 @@ test("authored Collection Displays cannot join Chrono Groups", () => {
   );
 });
 
-test("Collection authoring omits new Chrono Group assignment and preserves removal for legacy membership", () => {
-  const unsynchronized = collectionChart({
-    id: "new-collection",
-    timeSync: null,
-  });
+test("Collection authoring exposes neither native time matching nor retired membership assignment", () => {
+  const unsynchronized = collectionChart({ id: "new-collection", timeSync: null });
   const synchronized = collectionChart({ id: "legacy-collection" });
-  const groups = [{
-    id: "exercise",
-    name: "Exercise timeline",
-    period: { start: "2027-05-01", end: "2027-05-02" },
-    matching: { policy: "exact" },
-    secondsPerFrame: 1,
-    members: [{ chartId: synchronized.id, timeRole: "observation" }],
-  }];
-
-  const newFields = buildEditorFormModel({
-    chart: unsynchronized,
-    profile,
-    prepared: preparedFor(unsynchronized),
-    chronoGroups: groups,
-  }).sections.flatMap(({ fields }) => fields);
-  assert.equal(newFields.some(({ id }) => id === "timeSync"), false);
-
-  const legacyField = buildEditorFormModel({
-    chart: synchronized,
-    profile,
-    prepared: preparedFor(synchronized),
-    chronoGroups: groups,
-  }).sections.flatMap(({ fields }) => fields).find(({ id }) => id === "timeSync");
-  assert.equal(legacyField.ineligible, true);
-  assert.match(legacyField.help, /cannot join Chrono Groups/i);
+  const groups = [{ id: "exercise", name: "Exercise timeline", period: { start: "2027-05-01", end: "2027-05-02" }, matching: { policy: "exact" }, secondsPerFrame: 1, members: [{ chartId: synchronized.id, timeRole: "observation" }] }];
+  const before = structuredClone(groups);
+  for (const chart of [unsynchronized, synchronized]) {
+    const fields = buildEditorFormModel({ chart, profile, prepared: preparedFor(chart), chronoGroups: groups }).sections.flatMap(({ fields }) => fields);
+    assert.equal(fields.some(field => ["timeSync", "chartTimeMatching"].includes(field.id)), false);
+  }
+  assert.deepEqual(groups, before);
+  assert.deepEqual(synchronized.interaction.timeSync, { groupId: "exercise" });
+  assert.throws(() => validateChronoGroups(groups, { charts: [synchronized], loadedData: { primary: rows }, profiles: { primary: profile } }), /Collection displays cannot join Chrono Groups/i);
 });
 
 test("Collection rotation never pauses for Chrono playback", () => {

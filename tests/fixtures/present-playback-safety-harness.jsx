@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import { profileDataset } from "/src/charting/data/profileDataset.js";
 import { PlaybackProvider, usePlayback } from "/src/components/playback/PlaybackProvider.jsx";
 import PresentationController from "/src/components/presentation/PresentationController.jsx";
+import TimeBar from "/src/components/playback/TimeBar.jsx";
+import { makePresentationTime } from "/src/charting/time/acceptedTimeProjection.js";
 import usePresentationRuntime from "/src/components/presentation/usePresentationRuntime.js";
 
 const NativeBroadcastChannel = window.BroadcastChannel;
@@ -127,26 +129,15 @@ function RuntimeProbe() {
         resolved_appearance: "light",
       },
     source: {
-      kind: "Chrono Group",
-      scene_id: null,
-      chrono_group_id: group.id,
+      kind: "scene",
+      scene_id: group.id,
     },
     composition: {
       active_page_id: "page-a",
       displayed_chart_ids: [chart.id],
       layout: "solo",
     },
-    timeline: {
-      frame_epochs: [...playback.clock],
-      frame_index: playback.activeIndex,
-      period: {
-        start: playback.clock[0],
-        end: playback.clock.at(-1),
-      },
-      trace_mode: playback.traceMode,
-      seconds_per_frame: playback.speed,
-    },
-    matching: { use_authored_settings: true },
+    time: makePresentationTime(playback),
     output_mode: runtime.sessionState.output === "ended"
       ? "active"
       : runtime.sessionState.output,
@@ -169,11 +160,13 @@ function RuntimeProbe() {
 
   window.__presentPlaybackSafety = {
     activeIndex: playback.activeIndex,
+    activeEpochMs: playback.activeEpochMs,
     channelGeneration: runtime.sessionState.channelGeneration,
     connection: runtime.sessionState.connection,
     hasSession: runtime.hasSession,
     lifecycle: runtime.sessionState.lifecycle,
     playing: playback.playing,
+    sessionPlayback: runtime.sessionState.playback,
     sessionId: runtime.sessionState.sessionId,
   };
   window.__presentPlaybackRuntime = {
@@ -197,12 +190,12 @@ function RuntimeProbe() {
   window.__presentPlaybackHarnessReady = true;
 
   return (
-    <PresentationController
+    <><TimeBar /><PresentationController
       runtime={runtime}
       playback={playback}
       presentationState={presentationState}
       sourceEligibility={{ status: "valid", reason: null }}
-    />
+    /></>
   );
 }
 

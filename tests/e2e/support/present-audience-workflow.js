@@ -1,11 +1,13 @@
 import { expect } from "@playwright/test";
 import { openDashboardPage } from "./landingWorkflow.js";
+import { timeCursor } from "./time-cursor-workflow.js";
+import { PRESENTATION_PROTOCOL_VERSION } from "../../../src/lib/presentationProtocol.js";
 
 export const LIVE_APP_URL = "http://127.0.0.1:4185/";
 export const DASHBOARD_STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
 export async function installAudienceFaultInstrumentation(context) {
-  await context.addInitScript(() => {
+  await context.addInitScript(({ version }) => {
     const NativeBroadcastChannel = window.BroadcastChannel;
     window.BroadcastChannel = class ObservedBroadcastChannel extends NativeBroadcastChannel {
       constructor(name) {
@@ -15,7 +17,10 @@ export async function installAudienceFaultInstrumentation(context) {
           channelName: name,
         };
         this.addEventListener("message", ({ data }) => {
-          if (data?.protocol_version === 3 && Number.isSafeInteger(data.sequence)) {
+          if (data?.type === "state" && Number.isSafeInteger(data.protocol_version) && data.protocol_version !== version) {
+            window.__audienceTestTransport.lastOffVersionCandidate = { version: data.protocol_version, sequence: data.sequence };
+          }
+          if (data?.protocol_version === version && Number.isSafeInteger(data.sequence)) {
             window.__audienceTestTransport.lastControllerSequence = Math.max(
               window.__audienceTestTransport.lastControllerSequence ?? 0,
               data.sequence,
@@ -27,7 +32,7 @@ export async function installAudienceFaultInstrumentation(context) {
               window.__audienceTestTransport.injectIncompleteAfterNextControllerMessage = false;
               const channel = new NativeBroadcastChannel(name);
               channel.postMessage({
-                protocol_version: 3,
+                protocol_version: version,
                 session_id: data.session_id,
                 sequence: data.sequence + 1,
                 type: "state",
@@ -36,7 +41,7 @@ export async function installAudienceFaultInstrumentation(context) {
               channel.close();
             }
           }
-          if (data?.protocol_version === 3 && ["state", "ended"].includes(data.type)) {
+          if (data?.protocol_version === version && ["state", "ended"].includes(data.type)) {
             window.__audienceTestTransport.lastControllerMessage = structuredClone(data);
             if (data.type === "state") {
               if (data.payload === null) {
@@ -55,7 +60,7 @@ export async function installAudienceFaultInstrumentation(context) {
       }
 
     };
-  });
+  }, { version: PRESENTATION_PROTOCOL_VERSION });
 }
 
 export async function createSavedPresentationScene(page, {
@@ -74,13 +79,18 @@ export async function createSavedPresentationScene(page, {
   const sceneStudioEntry = page.locator('[data-build-command-action="scene-studio"]');
   await expect(sceneStudioEntry).toBeVisible();
   await sceneStudioEntry.click();
-  const studio = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  const studio = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await expect(studio).toBeVisible();
   const beforeIds = await readSceneIds(page);
-  await studio.locator('[data-scene-workflow-id="create-scene"]').click();
   if (chronoGroupId) {
-    await studio.locator('[data-scene-workflow-id="parent-chrono-group"]').selectOption(chronoGroupId);
-  }
+    // Older callers name their seed by its original Group ID. The real native
+    // object is now a saved Storyline: duplicate it through the content surface.
+    const seedName = await page.evaluate(({ key, id }) => JSON.parse(localStorage.getItem(key))?.scenes?.find(scene => scene.id === id)?.name,
+      { key: DASHBOARD_STORAGE_KEY, id: chronoGroupId });
+    expect(seedName, "A legacy seed must have a migrated native Storyline").toBeTruthy();
+    await studio.locator('[data-action="open-content"]').filter({ has: page.getByText(seedName, { exact: true }) }).click();
+    await studio.getByRole("button", { name: "Duplicate", exact: true }).click();
+  } else await studio.locator('[data-scene-workflow-id="create-scene"]').click();
   await studio.locator("#scene-name").fill(sceneName);
   await studio.locator('[data-scene-workflow-id="save-scene"]').click();
 
@@ -100,11 +110,7 @@ export async function createSavedPresentationScene(page, {
 
 export async function enterPresentWithScene(page, scene) {
   await page.locator('[data-dashboard-mode="present"]').click();
-  const source = page.locator('[data-presentation-control-id="source"]');
-  if (!(await source.isVisible())) {
-    await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
-  }
-  await source.selectOption(`scene:${scene.id}`);
+  await timeCursor(page).selectScope({ id: scene.id, kind: "storyline" });
   await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", scene.id);
   for (const chartId of scene.present.chartIds) {
     await expect(page.locator(`.present-selected-chart[data-displayed-chart-id="${cssEscape(chartId)}"]`)).toBeVisible();
@@ -159,17 +165,17 @@ export async function readLastAcceptedAudienceTheme(popup) {
 }
 
 export async function sendLateOldGenerationMessage(page, channelId) {
-  await page.evaluate((sessionId) => {
+  await page.evaluate(({ sessionId, version }) => {
     const channel = new BroadcastChannel(`simex-presentation-${sessionId}`);
     channel.postMessage({
-      protocol_version: 3,
+      protocol_version: version,
       session_id: sessionId,
       sequence: Number.MAX_SAFE_INTEGER,
       type: "heartbeat",
       payload: null,
     });
     channel.close();
-  }, channelId);
+  }, { sessionId: channelId, version: PRESENTATION_PROTOCOL_VERSION });
 }
 
 export async function injectIncompleteNextAudienceState(popup) {

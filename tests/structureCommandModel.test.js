@@ -17,7 +17,7 @@ import {
   renameBuildLayoutSection,
 } from "../src/components/build/buildLayoutDraft.js";
 
-test("cross-Page Section movement preserves chart/group identity and removes only invalid Scene references", () => {
+test("cross-Page Section movement preserves chart and temporal identities", () => {
   const saved = fixture();
   const proof = previewBuildStructureConsequences(saved, {
     kind: "move-section",
@@ -30,7 +30,7 @@ test("cross-Page Section movement preserves chart/group identity and removes onl
   assert.deepEqual(proof.chronoGroups, ["National outbreak playback"]);
   assert.deepEqual(proof.scenes, ["National pressure briefing"]);
   assert.match(proof.summary, /remains attached/);
-  assert.match(proof.summary, /loses Admissions and Occupancy/);
+  assert.match(proof.summary, /No Storyline references change/);
 
   const moved = moveBuildLayoutSection(
     createBuildLayoutDraft(saved),
@@ -42,7 +42,8 @@ test("cross-Page Section movement preserves chart/group identity and removes onl
   assert.deepEqual(saved, fixture());
   assert.deepEqual(moved.value.pages[2].sections.map(({ id }) => id), ["briefing", "pressure"]);
   assert.deepEqual(moved.value.chronoGroups[0].members.map(({ chartId }) => chartId), ["admissions", "occupancy"]);
-  assert.deepEqual(moved.value.scenes[0].chartIds, []);
+  assert.deepEqual(moved.value.scenes[0].chartIds, saved.scenes[0].chartIds);
+  assert.deepEqual(moved.value.scenes, saved.scenes);
   assert.equal(moved.status, "dirty");
 });
 
@@ -66,7 +67,7 @@ test("rename, merge, and explicit removal dispositions mutate only the Structure
     { disposition: "delete-charts" },
   );
   assert.deepEqual(deleted.value.chronoGroups, []);
-  assert.deepEqual(deleted.value.scenes[0].chartIds, []);
+  assert.deepEqual(deleted.value.scenes, []);
 });
 
 test("Page and Section creation extend the visible collections inside the same layout draft", () => {

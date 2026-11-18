@@ -11,7 +11,7 @@ const verifierModule = await import("../scripts/verify-v3-static-build.mjs")
 const { packageFlashDrive } = await import("../scripts/package-flashdrive.mjs");
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "a876d0b83c9f40ea5179723b9c4304f8873b393142e4a790711af80ed363662c";
+  "2244f5b6a53f4530a267251f9733a0a8a83ccb2ae90a5fe9442a1a658a5f8d7f";
 
 test("static-build verifier is available", () => {
   assert.equal(typeof verifierModule?.verifyV3StaticBuild, "function");
@@ -89,7 +89,7 @@ test("accepts a relative, fully local V3 build with hashed runtime assets", asyn
   assert.equal(result.quorumContractHash, EXPECTED_QUORUM_CONTRACT_HASH);
 });
 
-test("finalizes a transitive runtime precache manifest from the verified build graph", async (t) => {
+test("finalizes a precache manifest for the runtime graph and exact declared local data", async (t) => {
   assert.ok(verifierModule);
   const fixture = await staticFixture(t);
   await writeFile(
@@ -104,12 +104,23 @@ test("finalizes a transitive runtime precache manifest from the verified build g
     path.join(fixture.distDir, "assets/lazy-leaf-Rr22ee33.js"),
     'export const coldUseReady = true;',
   );
+  await writeFile(path.join(fixture.distDir, "config/dashboard.json"), JSON.stringify({
+    dataSources: {
+      cases: { kind: "csv", path: "data/cases.csv", provenance: { label: "Cases" } },
+      boundaries: { kind: "geojson", path: "data/boundaries.geojson", provenance: { label: "Boundaries" } },
+      uploaded: { kind: "dataset", type: "uploadedCsv", csvText: "count\n1\n" },
+    },
+  }));
+  await writeFile(path.join(fixture.distDir, "data/cases.csv"), "count\n1\n");
+  await writeFile(path.join(fixture.distDir, "data/boundaries.geojson"), '{"type":"FeatureCollection","features":[]}');
+  await writeFile(path.join(fixture.distDir, "data/unreferenced.csv"), "count\n99\n");
 
-  const finalized = await verifierModule.finalizeV3StaticBuild({
+  const options = {
     rootDir: fixture.rootDir,
     distDir: fixture.distDir,
     runtimeBoundaryInventory: frozenInventory(),
-  });
+  };
+  const finalized = await verifierModule.finalizeV3StaticBuild(options);
 
   assert.deepEqual(finalized.runtimePrecacheAssets, [
     "./",
@@ -121,6 +132,8 @@ test("finalizes a transitive runtime precache manifest from the verified build g
     "./assets/pwa-icon.svg",
     "./config/dashboard.json",
     "./config/dataset-profiles.json",
+    "./data/boundaries.geojson",
+    "./data/cases.csv",
     "./data/data-sources.generated.json",
     "./index.html",
     "./integration/quorum-chart-catalogue.json",
@@ -137,6 +150,32 @@ test("finalizes a transitive runtime precache manifest from the verified build g
   assert.match(generated, /lazy-html2canvas-Qq11ww22\.js/);
   assert.match(generated, /lazy-leaf-Rr22ee33\.js/);
   assert.match(generated, /cacheName/);
+  const headers = await readFile(path.join(fixture.distDir, "_headers"), "utf8");
+  assert.match(headers, /Content-Security-Policy: default-src 'self'; script-src 'self'/);
+  assert.ok(!finalized.runtimePrecacheAssets.includes("./_headers"));
+  await writeFile(path.join(fixture.distDir, "data/unreferenced.csv"), "count\n100\n");
+  await verifierModule.verifyV3StaticBuild(options);
+  await writeFile(path.join(fixture.distDir, "data/cases.csv"), "count\n2\n");
+  await assert.rejects(
+    verifierModule.verifyV3StaticBuild(options),
+    /runtime precache manifest cache generation does not match build content/,
+  );
+});
+
+test("declared data precache rejects unsafe, mismatched, and missing local files", async (t) => {
+  const fixture = await staticFixture(t);
+  const options = { ...fixture, runtimeBoundaryInventory: frozenInventory() };
+  for (const [sourcePath, expectedError] of [
+    ["https://cdn.example.invalid/cases.csv", /safe relative public path/],
+    ["data/../cases.csv", /safe relative public path/],
+    ["data/boundaries.geojson", /csv path must end with \.csv/],
+    ["data/missing.csv", /declared data source "cases" is missing: data\/missing\.csv/],
+  ]) {
+    await writeFile(path.join(fixture.distDir, "config/dashboard.json"), JSON.stringify({
+      dataSources: { cases: { kind: "csv", path: sourcePath, provenance: { label: "Cases" } } },
+    }));
+    await assert.rejects(verifierModule.verifyV3StaticBuild(options), expectedError);
+  }
 });
 
 test("rejects remote runtime URLs with the exact built file", async (t) => {

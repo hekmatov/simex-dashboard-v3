@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 
 import {
   expectNoRetiredDashboardStyle,
@@ -79,7 +80,7 @@ test("selected style owns hover, focus, disabled, generated, SVG, and portal pai
   }
 });
 
-test("Build studios, wizard validation, and Chrono interaction states use selected style", async ({ page }) => {
+test("Storyline studio, wizard validation, and time interaction states use selected style", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await installPageRemovalGroups(page);
@@ -92,14 +93,13 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
 
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  await page.getByRole("button", { name: "Storyline Studio", exact: true }).click();
   await expect(page.locator(".build-authoring-auxiliary")).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
-  await page.locator(".build-authoring-auxiliary").getByRole("button", { name: "Close", exact: true }).click();
-
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
-  await expect(page.locator(".build-authoring-auxiliary")).toBeVisible();
+  await page.getByRole("dialog", { name: "Storyline Studio authoring", exact: true }).getByRole("button", { name: "Create Storyline", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Storyline details", exact: true })).toBeVisible();
   await expectNoRetiredDashboardStyle(page);
+  await page.getByRole("button", { name: "Discard Storyline", exact: true }).click();
   await page.locator(".build-authoring-auxiliary").getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
 
@@ -125,9 +125,8 @@ test("Build studios, wizard validation, and Chrono interaction states use select
 
   await page.getByRole("button", { name: "View", exact: true }).click();
   await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-mode", "view");
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const chrono = page.getByRole("region", { name: "Chrono playback controls" });
-  await chrono.getByRole("button", { name: "Show availability information" }).click();
+  const settings = await timeCursor(page).settings();
+  await settings.getByRole("checkbox", { name: "Show observation availability" }).check();
   await expectNoRetiredDashboardStyle(page);
 });
 

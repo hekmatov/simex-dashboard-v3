@@ -40,6 +40,13 @@ async function attemptsFor(assetId, count) {
   return page.evaluate((id) => window.asyncImageAttemptIds(id), assetId);
 }
 
+async function waitForPendingImage() {
+  const pending = page.locator('.chart-image-pending[role="status"]');
+  await pending.waitFor();
+  assert.match(await pending.textContent(), /^Loading saved image…/);
+  assert.equal(await pending.locator("[data-chart-source-citation]").count(), 1);
+}
+
 async function resolveAttempt(attemptId) {
   return page.evaluate((id) => window.resolveAsyncImageAttempt(id), attemptId);
 }
@@ -48,9 +55,30 @@ async function expectReleased(attemptId) {
   await page.waitForFunction((id) => window.asyncImageReleaseCount(id) === 1, attemptId);
 }
 
+test("Image source caption survives untitled success and the browser onError boundary exactly once", async () => {
+  for (const [suffix, title] of [["a", ""], ["b", "Titled evidence image"]]) {
+    await page.evaluate(({ suffix, title }) => window.mountSynchronousImage(suffix, "Evidence image", title), { suffix, title });
+    const image = page.locator('img[alt="Evidence image"]');
+    await image.waitFor();
+    await page.waitForFunction(() => { const img = document.querySelector('img[alt="Evidence image"]'); return img?.complete && img.naturalWidth > 0; });
+    assert.equal(await page.locator("[data-chart-source-citation]").count(), 1);
+    const citation = await page.locator("[data-chart-source-citation]").textContent();
+    assert.equal(citation, `Source: source-${suffix}`);
+    assert.equal(await page.locator(".chart-view-heading").count(), title ? 1 : 0);
+    // Dispatch a native error event through the mounted React img handler;
+    // do not substitute a precomputed model.status="error" fixture.
+    await image.dispatchEvent("error");
+    await page.locator('[data-static-failure="image-load-failed"]').waitFor();
+    assert.equal(await page.locator("[data-chart-source-citation]").count(), 1);
+    assert.equal(await page.locator("[data-chart-source-citation]").textContent(), citation);
+    await page.evaluate(() => window.unmountAsyncImage());
+    await page.locator("[data-chart-source-citation]").waitFor({ state: "detached" });
+  }
+});
+
 test("StrictMode replay owns independent attempts and keeps the active Image URL valid", async () => {
   const assetId = await page.evaluate(() => window.mountAsyncImage("a", "Strict leased image"));
-  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await waitForPendingImage();
   const [replayDiscarded, active] = await attemptsFor(assetId, 2);
 
   await resolveAttempt(replayDiscarded);
@@ -74,7 +102,7 @@ test("StrictMode replay owns independent attempts and keeps the active Image URL
 
 test("ChartPanel settles a borrowed pending Image without releasing the caller's URL", async () => {
   const assetId = await page.evaluate(() => window.mountSuppliedAsyncImage("d", "Borrowed image"));
-  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await waitForPendingImage();
   const [attempt] = await attemptsFor(assetId, 1);
   await resolveAttempt(attempt);
   await page.locator('img[alt="Borrowed image"]').waitFor();
@@ -100,7 +128,7 @@ test("ChartPanel retries a failed borrowed Image with a locally owned attempt", 
 
 test("source supersession releases every discarded attempt without revoking the replacement", async () => {
   const firstId = await page.evaluate(() => window.mountAsyncImage("d", "First leased image"));
-  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await waitForPendingImage();
   const firstAttempts = await attemptsFor(firstId, 2);
   const secondId = await page.evaluate(() => window.mountAsyncImage("e", "Current leased image"));
   const [secondAttempt] = await attemptsFor(secondId, 1);
@@ -108,7 +136,7 @@ test("source supersession releases every discarded attempt without revoking the 
   for (const attemptId of firstAttempts) await resolveAttempt(attemptId);
   for (const attemptId of firstAttempts) await expectReleased(attemptId);
   assert.equal(await page.locator('img[alt="First leased image"]').count(), 0);
-  assert.equal(await page.getByText("Loading saved image…", { exact: true }).count(), 1);
+  assert.equal(await page.locator(".chart-image-pending").count(), 1);
 
   await resolveAttempt(secondAttempt);
   await page.locator('img[alt="Current leased image"]').waitFor();
@@ -121,14 +149,14 @@ test("source supersession releases every discarded attempt without revoking the 
 
 test("unmount-before-resolution releases every replay attempt while rejection stays inert", async () => {
   const resolvedId = await page.evaluate(() => window.mountAsyncImage("f", "Unmounted resolution"));
-  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await waitForPendingImage();
   const resolvedAttempts = await attemptsFor(resolvedId, 2);
   await page.evaluate(() => window.unmountAsyncImage());
   for (const attemptId of resolvedAttempts) await resolveAttempt(attemptId);
   for (const attemptId of resolvedAttempts) await expectReleased(attemptId);
 
   const rejectedId = await page.evaluate(() => window.mountAsyncImage("0", "Unmounted rejection"));
-  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await waitForPendingImage();
   const rejectedAttempts = await attemptsFor(rejectedId, 2);
   await page.evaluate(() => window.unmountAsyncImage());
   for (const attemptId of rejectedAttempts) {
@@ -143,7 +171,7 @@ test("unmount-before-resolution releases every replay attempt while rejection st
 
 test("canonical ChartView turns a durable resolver rejection into stable panel recovery", async () => {
   const assetId = await page.evaluate(() => window.mountAsyncImage("c", "Failed image"));
-  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await waitForPendingImage();
   const attempts = await attemptsFor(assetId, 2);
   for (const attemptId of attempts) {
     await page.evaluate((id) => window.rejectAsyncImageAttempt(id), attemptId);
@@ -156,7 +184,7 @@ test("canonical ChartView turns a durable resolver rejection into stable panel r
 
 test("Retry starts a fresh effect-owned resolver attempt and recovers only the failed Image panel", async () => {
   const assetId = await page.evaluate(() => window.mountAsyncImage("b", "Recovered image"));
-  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await waitForPendingImage();
   const failedAttempts = await attemptsFor(assetId, 2);
   for (const attemptId of failedAttempts) {
     await page.evaluate((id) => window.rejectAsyncImageAttempt(id), attemptId);
@@ -204,13 +232,13 @@ test("a synchronous staged Image resolver retains canonical rendering under Stri
   await page.evaluate(() => window.mountSynchronousImage("1", "Synchronous image"));
   await page.locator('img[alt="Synchronous image"]').waitFor();
   assert.equal(await page.locator('[data-static-failure]').count(), 0);
-  assert.equal(await page.getByText("Loading saved image…", { exact: true }).count(), 0);
+  assert.equal(await page.locator(".chart-image-pending").count(), 0);
 });
 
 test("an immediately fulfilled async Image resolver settles under StrictMode", async () => {
   await page.evaluate(() => window.mountImmediateAsyncImage("2", "Immediate async image"));
   await page.locator('img[alt="Immediate async image"]').waitFor();
-  assert.equal(await page.getByText("Loading saved image…", { exact: true }).count(), 0);
+  assert.equal(await page.locator(".chart-image-pending").count(), 0);
 });
 
 test("locally controlled PNG, JPEG, and WebP fixtures pass the production browser decoder boundary", async () => {

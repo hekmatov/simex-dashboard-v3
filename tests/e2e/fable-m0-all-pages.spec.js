@@ -18,7 +18,10 @@ test("every shipped Page renders in View and Build, then eligible content reache
   expect(pages.every(({ id, sections }) => id && sections?.length)).toBe(true);
   const fixture = withPageRemovalGroups(shipped);
   const chartIds = new Set(pages.flatMap(({ sections }) => sections.flatMap(({ panels }) => panels.map((panel) => (panel.chart ?? panel).id))));
-  expect(fixture.chronoGroups.every(({ members }) => members.every(({ chartId }) => chartIds.has(chartId)))).toBe(true);
+  expect(fixture.configVersion).toBe(7);
+  expect(Object.hasOwn(fixture, "chronoGroups")).toBe(false);
+  expect(fixture.scenes.length).toBeGreaterThan(0);
+  expect(fixture.scenes.every(({ members }) => members.every(({ chartId }) => chartIds.has(chartId)))).toBe(true);
 
   await page.addInitScript(({ key, dashboard }) => {
     localStorage.setItem(key, JSON.stringify(dashboard));
@@ -46,5 +49,5 @@ test("every shipped Page renders in View and Build, then eligible content reache
   await modes.getByRole("button", { name: "Present", exact: true }).click();
   await expect(page.locator(".present-workspace")).toBeVisible();
   await expect(page.getByRole("region", { name: "Choose charts for the audience scene" })).toBeVisible();
-  await expect(page.locator(`[data-presentable-item-id="${fixture.chronoGroups[0].members[0].chartId}"]`).getByRole("checkbox")).toBeEnabled();
+  await expect(page.locator(`[data-presentable-item-id="${fixture.scenes[0].members[0].chartId}"]`).getByRole("checkbox")).toBeEnabled();
 });

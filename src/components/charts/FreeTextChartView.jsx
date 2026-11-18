@@ -1,10 +1,14 @@
 import React from "react";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
+import ChartSourceCaption from "./ChartSourceCaption.jsx";
+import { chartTitleStyle } from "./chartViewPresentation.js";
 import { createPortal } from "react-dom";
 
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import QmdMediaView from "./QmdMediaView.jsx";
 
 export function FreeTextChartView({ model, chart, contentRenderContext = {}, hostHeadingLevel = 2, surface = "view", onMediaActivate } = {}) {
+  const typography = useChartTypography();
   const panelId = normalizePanelId(chart?.id ?? model?.sourceId);
   const titleId = `${panelId}-title`;
   const title = getFreeTextChartTitle(chart?.title);
@@ -77,6 +81,7 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
       <section className="static-content-state static-content-state--error" role="status" data-static-failure="invalid-free-text">
         <strong>Free text unavailable</strong>
         <p>{formatFirstError(prepared)}</p>
+        <ChartSourceCaption />
       </section>
     );
   }
@@ -94,9 +99,10 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
       data-text-fits-with-clearance={avoidOverflow ? "true" : undefined}
     >
       {(title || chart?.description) && <header className="free-text-chart-view__header">
-        {title && <h2 id={titleId}>{title}</h2>}
+        {title && <h2 id={titleId} style={chartTitleStyle(chart, typography)}>{title}</h2>}
         {chart?.description && <p>{chart.description}</p>}
       </header>}
+      <ChartSourceCaption />
       <div
         ref={contentRef}
         className="free-text-chart-view__content"

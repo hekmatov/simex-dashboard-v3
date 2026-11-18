@@ -2,12 +2,14 @@ import React from "react";
 
 import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
 import { resolveDrillTarget } from "../../charting/config/sectionRoles.js";
+import DeferredPanelMount from "./DeferredPanelMount.jsx";
 import DashboardChartPlacement from "./DashboardChartPlacement.jsx";
 import { navigateToDrillTarget } from "./drillNavigation.js";
 
 export default function DashboardAttentionStrip({
   section,
   sectionDraft = section,
+  surface,
   page,
   pageId,
   dashboard,
@@ -61,6 +63,7 @@ export default function DashboardAttentionStrip({
             const selected = selectedPlacementId === placement.id;
             return (
               <div key={placement.id} className="attention-strip-item" data-attention-item={chart.id}>
+                <DeferredPanelMount chart={chart} surface={surface} selected={selected || multiPanelIds.includes(chart.id)} eager={contentRenderContext?.eager === true}>
                 <DashboardChartPlacement
                   placement={placement}
                   pageId={pageId}
@@ -87,6 +90,7 @@ export default function DashboardAttentionStrip({
                   onToggleMultiPanel={actions ? undefined : onToggleMultiPanel}
                   onStartMultiFullscreenSelection={actions ? undefined : onStartMultiFullscreenSelection}
                 />
+                </DeferredPanelMount>
                 {target && !actions && (
                   <button
                     type="button"

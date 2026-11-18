@@ -11,7 +11,7 @@ const EXPORT_ISSUES = Object.freeze([
   ["layout", "layout", "Layout changes", "Review layout changes"],
   ["scenario", "scenario", "Scenario Passport draft", "Open Scenario Passport"],
   ["chronoGroup", "chrono-group", "Chrono Group draft", "Open Chrono Studio"],
-  ["scene", "scene", "Scene draft", "Open Scene Studio"],
+  ["scene", "scene", "Storyline draft", "Open Storyline Studio"],
   ["inlineRename", "inline-rename", "Unfinished rename", "Return to rename"],
   ["operation", "operation", "Dashboard operation in progress", "Wait for operation"],
 ]);

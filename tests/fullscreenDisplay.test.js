@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -82,6 +84,24 @@ test("fullscreen display component is available", () => {
     "function",
     "FullscreenDisplay must be implemented",
   );
+});
+
+test("comparison Save as Storyline discloses readonly and temporal eligibility before entering Build", () => {
+  const rows = [{ date: "2027-01-01", value: 1 }];
+  const chart = id => createChartDraft("line", { id, title: id, sourceId: "data", roles: {
+    observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" }, measurements: [{ field: "value" }],
+  } });
+  const runtime = { loadedData: { data: rows }, datasetProfiles: { data: profileDataset(rows) }, dataSources: {},
+    pages: [{ id: "a", sections: [{ id: "s", panels: [chart("one"), chart("two")] }] }] };
+  const props = { dashboard: runtime, displayState: { displayed_chart_ids: ["two", "one"], layout: "overUnder" }, onSaveAsStoryline() {} };
+  const enabled = renderToStaticMarkup(React.createElement(displayModule.default, props));
+  assert.match(enabled, /<button[^>]*class="secondary"[^>]*>Save as Storyline<\/button>/);
+  const readonly = renderToStaticMarkup(React.createElement(displayModule.default, { ...props, saveStorylineDisabledReason: "This dashboard is read-only." }));
+  assert.match(readonly, /<button[^>]*disabled=""[^>]*>Save as Storyline<\/button>/);
+  assert.match(readonly, /role="status">This dashboard is read-only/);
+  const invalid = renderToStaticMarkup(React.createElement(displayModule.default, { ...props, dashboard }));
+  assert.match(invalid, /<button[^>]*disabled=""[^>]*>Save as Storyline<\/button>/);
+  assert.match(invalid, /no longer exists|temporal/);
 });
 
 test("fullscreen CSS fits the panel inside its padded backdrop without backdrop scrolling", async () => {

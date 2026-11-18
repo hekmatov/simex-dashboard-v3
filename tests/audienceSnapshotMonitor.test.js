@@ -1,4 +1,5 @@
 import test from "node:test";
+import { presentationTimeFixture } from "./helpers/presentationTimeFixture.js";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -40,7 +41,7 @@ test("local rehearsal and failed capture fallback are explicitly local and keep 
 test("local fallback accepts stream stage geometry while the first image is pending", () => {
   const html = renderToStaticMarkup(React.createElement(Monitor, {
     dashboard: { pages: [], chronoGroups: [] }, stream: { stage: frame.stage, status: "waiting" },
-    presentationState: { output_mode: "holding", source: {}, composition: {},
+    presentationState: { output_mode: "holding", source: {}, composition: {}, time: presentationTimeFixture({ frame_epochs: [] }),
       payload: { items: [], audience_facts: {} } },
     children: React.createElement("button", null, "Move up"),
   }));

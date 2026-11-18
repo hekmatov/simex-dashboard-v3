@@ -1,4 +1,8 @@
+import { INITIAL_TIME_CURSOR, reduceTimeCursorState } from "./cursorModel.js";
+import { validatePresentationTime } from "./acceptedTimeProjection.js";
+
 export const initialPlaybackState = Object.freeze({
+  cursor: INITIAL_TIME_CURSOR,
   source: Object.freeze({ kind: "default", id: null }),
   sourcePreference: "auto",
   scope: "all-page",
@@ -11,6 +15,7 @@ export const initialPlaybackState = Object.freeze({
   speed: 1,
   secondsPerFrame: 1,
   matchingOverride: "authored",
+  nearestToleranceMs: null,
   traceMode: "reveal",
   availabilityVisible: false,
   placement: "deck",
@@ -35,6 +40,21 @@ export function reducePlaybackState(state, action) {
   }
   if (!isRecord(action)) {
     throw new TypeError("Playback action must be an object.");
+  }
+  if (typeof action.type === "string" && action.type.startsWith("cursor")) return reduceTimeCursorState(state, action);
+  if (action.type === "restoreAcceptedTime") {
+    const time = validatePresentationTime(action.time);
+    const sceneId = action.sceneId ?? null, groupId = action.groupId ?? null;
+    return { ...state, playing: false,
+      cursor: { mode: time.mode, epochMs: time.mode === "at" ? time.epoch_ms : null,
+        scope: { ...time.scope }, window: time.window && { ...time.window } },
+      activeSceneId: sceneId, activeGroupId: groupId,
+      source: { kind: sceneId ? "scene" : groupId ? "group" : "default", id: sceneId ?? groupId },
+      sourcePreference: time.scope.kind === "page" ? "page" : "auto",
+      scope: time.scope.kind === "storyline" ? "group-only" : "all-page",
+      speed: time.seconds_per_frame, secondsPerFrame: time.seconds_per_frame,
+      traceMode: time.trace_mode, matchingOverride: time.matching_override, nearestToleranceMs: time.nearest_tolerance_ms,
+      activeIndex: time.frame_index, frameIndex: time.frame_index };
   }
 
   if (action.type === "play") {
@@ -159,8 +179,13 @@ export function reducePlaybackState(state, action) {
     if (!["authored", "concurrent", "interpolate", "latest", "closest"].includes(action.policy)) {
       throw new TypeError("Playback matching override is invalid.");
     }
+    const nearestToleranceMs = action.nearestToleranceMs ?? state.nearestToleranceMs;
+    if (action.policy === "closest" && (!Number.isFinite(nearestToleranceMs) || nearestToleranceMs < 0)) {
+      throw new TypeError("Nearest session matching requires an explicit nonnegative finite tolerance.");
+    }
     return withChanges(state, {
       matchingOverride: action.policy,
+      ...(action.policy === "closest" ? { nearestToleranceMs } : {}),
       playing: false,
     });
   }

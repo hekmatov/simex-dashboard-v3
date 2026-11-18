@@ -1,10 +1,10 @@
-# Chart Data System V3 within Dashboard V6
+# Chart Data System V3 within Dashboard V7
 
 ## Scope
 
 Chart Data System V3 is the schema-driven authoring, validation, preparation,
 rendering, and playback architecture used by SimEx Dashboard. It is embedded
-in the Version 6 dashboard configuration and package boundary; this document
+in the Version 7 dashboard configuration and package boundary; this document
 does not describe a Version 3 dashboard envelope.
 
 Its central rule is:
@@ -25,13 +25,13 @@ Several independent contracts intentionally use different versions:
 | --- | --- |
 | Chart instance | `configVersion: 3` |
 | Chart Data System | Version 3 |
-| Dashboard configuration | `configVersion: 6` |
-| Portable dashboard bundle | `version: 6` |
-| Quorum chart catalogue | `contract_version: "2"` |
+| Dashboard configuration | `configVersion: 7` |
+| Portable dashboard bundle | `version: 7` |
+| Quorum chart catalogue | `contract_version: "3"` |
 | Quorum companion protocol | `"1"` |
 
 The catalogue version describes the metadata contract consumed by Quorum. It
-does not weaken or replace the chart, dashboard, or bundle version 3 boundary.
+does not weaken or replace the independent chart, dashboard, or bundle boundaries.
 
 ## Authoritative modules
 
@@ -336,30 +336,31 @@ remain intact.
 
 ## Time synchronization
 
-The dashboard owns a validated IANA `timezone`; legacy bundles that omit it
-normalize to `UTC`. A canonical Chrono Group contains exactly:
+One reducer/provider owns the dashboard's Live/At cursor, scope and optional
+window. Page and Dashboard scopes derive their clocks from eligible charts.
+Live resolves to declared exercise time, or the latest eligible scope observation
+when no exercise time is declared. Seeking does not advance that saved clock.
 
-- stable `id` and `name` values;
-- an inclusive `period` with canonical `YYYY-MM-DD` `start` and `end` dates;
-- a default `matching` policy;
-- a positive finite `secondsPerFrame` cadence;
-- validated `members`.
+Saved Storylines remain in the native `scenes` array. Their ordered members may
+come from any page, with explicit time roles and matching overrides, optional
+periods, cadence and independent View/Present layouts. A chart may belong to
+multiple Storylines. `interaction.timeSync.matching` is its default; a member
+override takes precedence, followed by a temporary session override. There is
+no native Group backlink or parent requirement.
 
-`chronoGroups[].members` is the sole membership authority. Each member
-declares `chartId` and `timeRole`, with an optional validated `matching`
-override. The same chart can belong to multiple groups. Chart-local
-`interaction.timeSync` values are normalized away and are never read as an
-authoritative backlink.
+Storylines support all-member observation union, one source's observation clock,
+or an authored calendar cadence. Eligible observation frames follow saved
+transformations/filters and require a valid temporal value plus a plotted value.
+Snapshots do not add clock frames. Last-known resolution may use an eligible
+observation before the selected window while retaining its actual as-of date.
 
-`temporalAvailability.js` builds the group clock as the sorted, unique union
-of member observations after saved transformations and filters. An observation
-contributes only when it falls inside the inclusive period, its temporal value
-is valid, and at least one plotted value is nonmissing. Date-only observations
-are compared directly; instant observations are assigned to calendar dates in
-the dashboard timezone. There is no designated primary clock.
+V6 migration preserves legacy union/calendar semantics, including mixed date-only
+and timestamp filtering, rather than silently substituting one source clock or
+shifting timezone boundaries. Identity changes, policy/role conflicts, proposed
+Present subsets and unbounded legacy nearest policies are reported for review.
+See the [operation contract](v3-dashboard-operation-contract.md) for native fields.
 
-Collection displays are ineligible for Chrono Group membership and fail
-validation when supplied as members.
+Collection displays remain outside temporal Storyline membership.
 
 ### Matching
 
@@ -381,7 +382,7 @@ It never extrapolates. Matching results retain provenance so a display can
 distinguish observed, carried, nearest, interpolated, and missing values.
 
 `applyTimeContext.js` consumes the validated member context supplied by the
-active group; it never reads a chart backlink. It projects each family without
+shared cursor; it never reads a Group backlink. It projects each family without
 discarding its static meaning. Trace charts keep history, snapshot charts
 expose active values, maps select a frame, and cards retain provenance.
 
@@ -391,8 +392,8 @@ Collection Display is independent of any one visualization. A collection item
 is produced by the chart family; `CollectionDisplay` decides how repeated
 items are presented.
 
-Collection displays are excluded from Chrono Groups. Their internal paging,
-ranking, and carousel rotation do not receive group time contexts.
+Collection paging, ranking and carousel rotation are independent of the
+exercise clock and do not receive temporal member contexts.
 
 The current registry declares collection capability for `kpi`, `gauge`,
 `bullet`, and `deltaList`. Other types, including the single-value
@@ -445,38 +446,43 @@ The same behavior is applied to mounted ECharts, image zoom, dashboard panels,
 and fullscreen views. Listener lifecycle and reduced-motion behavior are
 covered by browser tests.
 
-## Dashboard V6 configuration and package boundary
+## Dashboard V7 configuration and package boundary
 
 Every saved chart uses `configVersion: 3`; the enclosing dashboard uses
-`configVersion: 6`. Dashboard validation checks:
+`configVersion: 7`. Dashboard validation checks:
 
 - exact top-level and nested shapes;
 - chart type and role references;
 - source existence and role compatibility;
-- Chrono Group membership in both directions;
+- chart-owned matching and Storyline member/time references;
 - collection and comparison subcontracts;
 - schema-applicable series appearance;
 - page, section, landing, and chart identity;
 - absence of runtime-only rows.
 
-Portable bundles are Version 6. The package parser can deterministically
-normalize a raw Version 3–6 configuration before applying the strict current
-boundary; invalid or unsupported input is rejected. The following is a shape
+Portable bundles are Version 7, with application-version metadata and a
+whole-package SHA256 verified before migration. Supported legacy packages and
+raw Version 3–6 configurations normalize deterministically; native V7 uses the
+strict current shape. Raw configurations have no packaged-export checksum.
+Invalid or unsupported input is rejected. The following is a shape
 schematic, not an importable bundle: a real export supplies canonical metadata
 and the complete validated dashboard configuration.
 
 ```json
 {
   "bundleType": "simex-dashboard-bundle",
-  "version": 6,
+  "version": 7,
   "metadata": {
     "exportedAt": "<canonical ISO-8601 timestamp or null>",
+    "appVersion": "<application SemVer>",
+    "integrity": { "algorithm": "sha256", "digest": "<whole-package SHA256>" },
+    "networkDependencies": [],
     "sourceFingerprints": {
       "<source-id>": "<deterministic fingerprint or null>"
     }
   },
   "config": {
-    "configVersion": 6,
+    "configVersion": 7,
     "...": "<complete dashboard configuration>"
   }
 }
@@ -485,7 +491,8 @@ and the complete validated dashboard configuration.
 Unrecognized or invalid legacy input is rejected rather than partially
 applied. Deterministic normalization is limited to accepted Version 3–6
 shapes; it cannot guess an unknown visual or analytical meaning. Re-export a
-successful legacy import as Version 6.
+successful legacy import as Version 7. Keep the original package and a
+compatible older app; older apps are not assumed to read V7.
 
 ## Quorum catalogue generation
 
@@ -495,22 +502,18 @@ configured dashboard into
 
 The generated catalogue contains:
 
-- 26 complete chart-type descriptors;
-- 40 configured chart descriptors;
+- one descriptor per registered chart type and configured chart;
 - role, conversion, temporal, collection, geography, and display capability
   metadata;
 - a dashboard semantic digest;
 - an outer canonical catalogue digest.
 
 Object keys use JavaScript UTF-16 ordering, arrays preserve declared order, and
-the result is deterministic. Quorum validates the exact contract version 2
-snapshot without changing its version 1 companion protocol.
-
-Catalogue contract version 2 can represent only one Chrono Group membership per
-chart. Catalogue generation fails with an actionable error when a canonical
-dashboard uses multiple memberships for one chart; supporting that valid
-dashboard shape in Quorum requires a coordinated catalogue contract version 3
-update in both repositories.
+the result is deterministic. Contract 3 publishes `storyline_ids` and derives
+playback eligibility from native effective bindings/profiles. The companion
+transport remains protocol 1. A contract-3-compatible companion is required;
+the inspected local Quorum validator accepts contract 2 only, so real contract-3
+integration remains unverified.
 
 ## Extension procedure
 
@@ -542,7 +545,7 @@ Primary suites include:
 | Rendering | `tests/chartRenderingV3.test.js` |
 | Series appearance and persistence | `tests/chartSchemasV3.test.js`, `tests/chartFormModelV3.test.js`, `tests/dashboardBundleV3.test.js` |
 | Conversion | `tests/chartConversionV3.test.js` |
-| Chrono Groups and matching | `tests/timeSyncModelV3.test.js`, `tests/temporalMatchingV3.test.js` |
+| Cursor, Storyline migration and matching | `tests/timeCursor.test.js`, `tests/dashboardMigrationV7.test.js`, `tests/temporalMatchingV3.test.js` |
 | Playback projection | `tests/timeAwareChartDataV3.test.js` |
 | Collection Display | `tests/collectionModelV3.test.js`, `tests/collectionComponentsV3.test.js` |
 | Delta comparison | `tests/deltaComparisonV3.test.js` |

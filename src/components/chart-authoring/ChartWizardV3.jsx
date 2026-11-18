@@ -62,6 +62,7 @@ import {
   projectChartCreateOwner,
 } from "../../charting/forms/chartDraftSession.js";
 import { scheduleAfterPaint } from "../../lib/scheduleAfterPaint.js";
+import { stripTimeSyncGroupBacklink } from "../../charting/time/dashboardTemporalConfig.js";
 import { analyzeBuildLayoutMove } from "../build/buildLayoutMove.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
@@ -1678,15 +1679,6 @@ export default function ChartWizardV3({
               onChange: updateAuthoringPath,
             })
           : null,
-        wizard.stage === "map-and-prepare-data" && wizard.draft
-          ? React.createElement(ChartTimeMemberships, {
-              chart: wizard.draft,
-              groups: wizard.chronoGroups,
-              timeRole: timeSyncField?.timeRoles?.find(({ field }) => typeof field === "string")?.value
-                ?? timeSyncField?.timeRoles?.[0]?.value,
-              onChange: changeMembership,
-            })
-          : null,
         wizard.stage === "configure-chart"
           ? React.createElement(React.Fragment, null,
               React.createElement("div", { className: "chart-wizard-configuration-footprint" }, React.createElement(
@@ -2116,9 +2108,6 @@ function ChartCreationReview({
       reviewEntry("Configuration", wizard.draft?.title?.trim() || "Title needs attention"),
       reviewEntry("Canonical render proof", `${renderProof.status}; ${renderProof.rendererReadyCount} renderer-ready outputs`),
       reviewEntry("Placement proof", placementProof.status),
-      reviewEntry("Chrono Group memberships", memberships.length > 0
-        ? memberships.map((group) => group.label ?? group.name ?? group.id).join(", ")
-        : "None"),
       reviewEntry("Companion proposals", wizard.companions?.length
         ? `${wizard.companions.length} referenced proposals`
         : "None"),
@@ -2332,7 +2321,7 @@ export function applyWizardMembership({
       ...structuredClone(chart),
       interaction: {
         ...structuredClone(chart.interaction ?? {}),
-        timeSync: null,
+        timeSync: stripTimeSyncGroupBacklink(chart.interaction?.timeSync),
       },
     },
     groups: nextGroups,

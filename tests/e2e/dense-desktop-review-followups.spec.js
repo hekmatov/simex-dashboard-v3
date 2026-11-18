@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 
 import { openChartAuthoring } from "./support/chart-authoring-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
-import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 test("chart wizard stage labels and statuses use two unclipped lines at desktop width", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -32,32 +32,38 @@ test("chart wizard stage labels and statuses use two unclipped lines at desktop 
   expect(geometry.every(({ statusBelowLabel }) => statusBelowLabel)).toBe(true);
 });
 
-test("the default Chrono date is compact and clears the dashboard identity header", async ({ page }) => {
+test("the default time bar is compact and clears the dashboard identity header", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await installPageRemovalGroups(page);
+  // The native TimeBar needs the real source clock, not an archived
+  // page-removal seed that introduces invalid chart-owned time synchronization.
+  await page.context().clearCookies({ name: "simex-e2e-fixture" });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-
-  const overlay = page.getByRole("status", { name: "Chrono date overlay" });
+  const bar = timeCursor(page).bar;
   const header = page.locator(".canonical-dashboard-frame .dashboard-header");
-  await expect(overlay).toBeVisible();
+  await expect(bar).toBeVisible();
   await expect(header).toBeVisible();
 
   const geometry = await page.evaluate(() => {
-    const overlayRect = document.querySelector('[data-chrono-date-overlay="true"]').getBoundingClientRect();
+    const bar = document.querySelector('.time-bar');
+    const overlayRect = bar.getBoundingClientRect();
     const headerRect = document.querySelector(".canonical-dashboard-frame .dashboard-header").getBoundingClientRect();
     return {
       width: Math.round(overlayRect.width),
       height: Math.round(overlayRect.height),
-      headerGap: Math.round(overlayRect.top - headerRect.bottom),
+      headerGap: Math.round(headerRect.top - overlayRect.bottom),
+      overflow: bar.scrollWidth - bar.clientWidth,
     };
   });
 
-  expect(geometry).toEqual({ width: 200, height: 56, headerGap: 8 });
+  expect(geometry.height).toBe(36);
+  expect(geometry.width).toBeGreaterThan(0);
+  expect(geometry.width).toBeLessThanOrEqual(1440);
+  expect(geometry.headerGap).toBeGreaterThanOrEqual(0);
+  expect(geometry.overflow).toBeLessThanOrEqual(0);
 });
 
-test("Build Libraries exposes Scene Studio directly without a More drawer", async ({ page }) => {
+test("Build Libraries exposes Storyline Studio directly without a More drawer", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
@@ -66,12 +72,12 @@ test("Build Libraries exposes Scene Studio directly without a More drawer", asyn
   const toolbar = page.getByRole("toolbar", { name: "Primary Build commands" });
   const libraries = toolbar.getByRole("group", { name: "Libraries", exact: true });
   const sceneStudio = libraries.locator('[data-build-command-action="scene-studio"]');
-  await expect(sceneStudio).toHaveText("Scene Studio");
+  await expect(sceneStudio).toHaveText("Storyline Studio");
   await expect(sceneStudio).toBeVisible();
   await expect(sceneStudio).toBeInViewport();
   await expect(page.getByRole("button", { name: "More", exact: true })).toHaveCount(0);
   await sceneStudio.click();
-  await expect(page.getByRole("dialog", { name: "Scene Studio authoring" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Storyline Studio authoring" })).toBeVisible();
 });
 
 test("the fixed Audience options drawer sizes to its four facts", async ({ page }) => {

@@ -16,6 +16,7 @@ import {
   getChartFormSectionDefinition,
 } from "../src/charting/schemas/schemaTypes.js";
 import { normalizeDashboardSource } from "../src/lib/loadDashboard.js";
+import { canonicalColumnType } from "../src/charting/data/bindings.js";
 
 const catalogueModule = await import("../src/lib/quorumCatalogue.js");
 
@@ -49,18 +50,45 @@ const ROLE_KEYS = [
 const CHART_KEYS = [
   "aliases",
   "chart_id",
-  "chrono_group_id",
   "collection_capability",
   "description",
   "keywords",
   "page_id",
   "role_ids",
   "section_id",
+  "storyline_ids",
   "supported_display_modes",
   "title",
   "type_id",
 ];
 const DIGEST = /^[0-9a-f]{64}$/;
+
+test("catalogue playback follows explicit binding interpretation before a temporal profile", async () => {
+  const { dashboard, aliases, ids } = await representativeInputs();
+  dashboard.chronoGroups = [];
+  dashboard.scenes = [];
+  const chart = configuredChart(dashboard, ids.primaryLine);
+  chart.interaction.timeSync = null;
+  chart.roles.observation = { ...chart.roles.observation, interpretation: "category" };
+  const profiles = await readJson("public/config/dataset-profiles.json");
+  dashboard.datasetProfiles = { [chart.sourceId]: structuredClone(profiles[chart.sourceId]) };
+  assert.equal(dashboard.datasetProfiles[chart.sourceId].columns.find(column => column.name === chart.roles.observation.field).type, "temporal");
+  const entry = catalogueModule.buildChartCatalogue(dashboard, aliases).charts.find(entry => entry.chart_id === chart.id);
+  assert.equal(entry.supported_display_modes.includes("playback"), false);
+});
+
+test("catalogue playback recognizes implicit temporal source parsing metadata without a runtime profile", async () => {
+  const { dashboard, aliases, ids } = await representativeInputs();
+  dashboard.chronoGroups = [];
+  dashboard.scenes = [];
+  delete dashboard.datasetProfiles;
+  const chart = configuredChart(dashboard, ids.primaryLine), field = chart.roles.observation.field;
+  chart.interaction.timeSync = null;
+  chart.roles.observation = { field };
+  dashboard.dataSources[chart.sourceId].parsingMetadata = { [field]: { interpretation: "temporal", format: "YYYY-MM-DD" } };
+  const entry = catalogueModule.buildChartCatalogue(dashboard, aliases).charts.find(entry => entry.chart_id === chart.id);
+  assert.equal(entry.supported_display_modes.includes("playback"), true);
+});
 
 test("intentionally untitled Text/Image panels keep a nonvisual catalogue name while chart titles stay strict", () => {
   assert.equal(
@@ -77,7 +105,7 @@ test("intentionally untitled Text/Image panels keep a nonvisual catalogue name w
   );
 });
 
-test("catalogue v2 covers every registered type and configured chart", async () => {
+test("catalogue v3 covers every registered type and configured chart", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const catalogue = catalogueModule.buildChartCatalogue(dashboard, aliases);
   const schemas = listChartSchemas();
@@ -91,7 +119,7 @@ test("catalogue v2 covers every registered type and configured chart", async () 
     "charts",
     "contract_version",
   ]);
-  assert.equal(catalogue.contract_version, "2");
+  assert.equal(catalogue.contract_version, "3");
   assert.equal(catalogue.catalogue_id, "simex-dashboard");
   assert.equal(catalogue.catalogue_revision, dashboard.lastUpdated);
   assert.equal(catalogue.chart_schema_version, 3);
@@ -106,13 +134,11 @@ test("catalogue v2 covers every registered type and configured chart", async () 
   assert.equal(catalogue.chart_types.length, schemas.length);
   assert.equal(catalogue.charts.length, configured.length);
   assert.ok(catalogue.charts.some(({ type_id }) => type_id === "pie"));
-  const memberships = new Map(dashboard.chronoGroups.flatMap((group) => (
-    group.members.map(({ chartId }) => [chartId, group.id])
-  )));
+  const native = normalizeDashboardSource(dashboard);
   for (const descriptor of catalogue.charts) {
-    assert.equal(
-      descriptor.chrono_group_id,
-      memberships.get(descriptor.chart_id) ?? null,
+    assert.deepEqual(
+      descriptor.storyline_ids,
+      native.scenes.filter(scene => scene.members.some(member => member.chartId === descriptor.chart_id)).map(scene => scene.id).sort(),
       descriptor.chart_id,
     );
   }
@@ -274,7 +300,7 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   const municipal = catalogue.charts.find(
     ({ chart_id }) => chart_id === ids.primaryLine,
   );
-  assert.equal(municipal.chrono_group_id, "fixture-primary");
+  assert.deepEqual(municipal.storyline_ids, [...dashboard.scenes.filter(scene => scene.members.some(member => member.chartId === ids.primaryLine)).map(scene => scene.id), "fixture-primary"].sort());
   assert.deepEqual(municipal.supported_display_modes, [
     "fullscreen",
     "multi_fullscreen",
@@ -285,7 +311,7 @@ test("configured chart descriptors use exact roles, groups, and display capabili
     ({ chart_id }) => chart_id === ids.pie,
   );
   assert.equal(mortality.type_id, "pie");
-  assert.equal(mortality.chrono_group_id, null);
+  assert.deepEqual(mortality.storyline_ids, []);
   assert.equal(mortality.collection_capability, false);
   assert.deepEqual(mortality.supported_display_modes, [
     "fullscreen",
@@ -298,7 +324,7 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   assert.equal(collection.collection_capability, true);
 });
 
-test("canonical Chrono Groups preserve a sole membership in catalogue v2", async () => {
+test("migrated Group membership supplements every native Storyline membership in catalogue v3", async () => {
   const { dashboard, aliases, ids } = await representativeInputs();
   const canonical = structuredClone(dashboard);
   for (const { chart } of configuredCharts(canonical)) {
@@ -310,7 +336,7 @@ test("canonical Chrono Groups preserve a sole membership in catalogue v2", async
     ({ chart_id }) => chart_id === ids.primaryLine,
   );
 
-  assert.equal(municipal.chrono_group_id, "fixture-primary");
+  assert.deepEqual(municipal.storyline_ids, [...canonical.scenes.filter(scene => scene.members.some(member => member.chartId === ids.primaryLine)).map(scene => scene.id), "fixture-primary"].sort());
   assert.deepEqual(municipal.supported_display_modes, [
     "fullscreen",
     "multi_fullscreen",
@@ -318,7 +344,7 @@ test("canonical Chrono Groups preserve a sole membership in catalogue v2", async
   ]);
 });
 
-test("catalogue v2 rejects multiple Chrono Group memberships actionably", async () => {
+test("catalogue v3 represents multiple migrated Storyline memberships without a sole-parent assumption", async () => {
   const { dashboard, aliases, ids } = await representativeInputs();
   const changed = structuredClone(dashboard);
   changed.chronoGroups[1].members.push({
@@ -326,10 +352,9 @@ test("catalogue v2 rejects multiple Chrono Group memberships actionably", async 
     timeRole: "observation",
   });
 
-  assert.throws(
-    () => catalogueModule.buildChartCatalogue(changed, aliases),
-    /Quorum catalogue v2 cannot represent multiple Chrono Group memberships/i,
-  );
+  const catalogue = catalogueModule.buildChartCatalogue(changed, aliases);
+  assert.deepEqual(catalogue.charts.find(chart => chart.chart_id === ids.primaryLine).storyline_ids,
+    [...changed.scenes.filter(scene => scene.members.some(member => member.chartId === ids.primaryLine)).map(scene => scene.id), "fixture-primary", "fixture-secondary"].sort());
 });
 
 test("generation and canonical digests are deterministic and match the persisted artifact", async () => {
@@ -367,7 +392,7 @@ test("generation and canonical digests are deterministic and match the persisted
   assert.deepEqual(persisted, snapshot);
 });
 
-test("equivalent raw and normalized V6 dashboards produce one catalogue identity", async () => {
+test("equivalent source and normalized V7 dashboards produce one catalogue identity", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const profiles = await readJson("public/config/dataset-profiles.json");
   const normalized = normalizeDashboardSource(dashboard, profiles);
@@ -383,8 +408,8 @@ test("equivalent raw and normalized V6 dashboards produce one catalogue identity
     nodeSha256,
   );
 
-  assert.equal(dashboard.configVersion, 6);
-  assert.equal(normalized.configVersion, 6);
+  assert.ok([6, 7].includes(dashboard.configVersion));
+  assert.equal(normalized.configVersion, 7);
   assert.deepEqual(normalizedSnapshot, rawSnapshot);
 });
 
@@ -447,8 +472,11 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedRole = structuredClone(dashboard);
+  const previousField = configuredChart(changedRole, ids.primaryLine).roles.measurements[0].field;
+  const alternativeField = changedRole.datasetProfiles[ids.source].columns.find(column => canonicalColumnType(column.type) === "number" && column.name !== previousField)?.name;
+  assert.ok(alternativeField, "The semantic role-change fixture needs another real numeric source field.");
   configuredChart(changedRole, ids.primaryLine)
-    .roles.measurements[0].field = "revised_cases";
+    .roles.measurements[0].field = alternativeField;
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(changedRole, aliases),
@@ -459,6 +487,7 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   const changedSource = structuredClone(dashboard);
   changedSource.dataSources[ids.source].path =
     "data/revised-cases.csv";
+  changedSource.datasetProfiles[ids.source].path = changedSource.dataSources[ids.source].path;
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(changedSource, aliases),
@@ -532,8 +561,9 @@ test("declared sorted terms use JavaScript UTF-16 ordering", async () => {
   assert.deepEqual(descriptor.aliases, ["a", "😀", "\uE000"]);
 });
 
-test("runtime binding accepts only the exact self-consistent v2 snapshot", async (t) => {
-  const { dashboard, aliases, persisted } = await trackedInputs();
+test("runtime binding accepts only the exact self-consistent v3 snapshot", async (t) => {
+  const { dashboard, aliases } = await trackedInputs();
+  const persisted = await catalogueModule.buildChartCatalogueSnapshot(dashboard, aliases, nodeSha256);
   assert.equal(
     await catalogueModule.catalogueMatchesDashboardSnapshot(
       dashboard,
@@ -676,8 +706,7 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
         .legacyBinding = {};
     },
     "duplicate chart id": (changed) => {
-      configuredChart(changed.dashboard, ids.secondaryLine).id =
-        ids.primaryLine;
+      changed.dashboard.pages[0].sections[0].panels.push(structuredClone(configuredChart(changed.dashboard, ids.primaryLine)));
     },
     "orphan alias": (changed) => {
       changed.aliases.orphan = {
@@ -729,7 +758,7 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
   }
 });
 
-test("every dashboard build mode refreshes catalogue v2", async () => {
+test("every dashboard build mode refreshes catalogue v3", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   assert.equal(
     packageJson.scripts["build:quorum-catalogue"],
@@ -744,7 +773,7 @@ test("every dashboard build mode refreshes catalogue v2", async () => {
     assert.match(
       packageJson.scripts[scriptName],
       /node scripts\/build-quorum-catalogue\.mjs/,
-      `${scriptName} must refresh catalogue v2`,
+      `${scriptName} must refresh catalogue v3`,
     );
   }
 });
@@ -761,6 +790,7 @@ async function trackedInputs() {
 async function representativeInputs() {
   const { dashboard: shipped, aliases: shippedAliases } = await trackedInputs();
   const dashboard = structuredClone(shipped);
+  dashboard.configVersion = 6; // This fixture deliberately authors legacy Group inputs before native migration.
   const aliases = structuredClone(shippedAliases);
   const lines = configuredCharts(dashboard)
     .filter(({ chart }) => chart.typeId === "line")

@@ -99,7 +99,14 @@ test("M0 default harness launches the actual shipped dashboard without fixture s
   await expect(page.locator(`[data-canonical-page-id="${shipped.pages[0].id}"]`)).toBeVisible();
   const firstChart = shipped.pages[0].sections.flatMap((section) => section.panels)
     .map((placement) => placement.chart ?? placement)[0];
-  await expectChartReady(panel(page, firstChart.id));
+  const briefing = panel(page, firstChart.id);
+  expect(firstChart.typeId).toBe("freeText");
+  await expect(briefing.locator('[data-static-content-kind="freeText"]'))
+    .toHaveAttribute("data-static-source-id", firstChart.sourceId);
+  await expect(briefing).toContainText("Fictional scenario · Exercise use only");
+  await expect.poll(async () => JSON.parse(await briefing.locator("[data-canonical-runtime-ledger]")
+    .getAttribute("data-canonical-runtime-ledger")))
+    .toMatchObject({ render: { status: null, resolution: "available", typeId: "freeText" } });
   expect(errors).toEqual([]);
 });
 

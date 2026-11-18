@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 import { choosePanelAction } from "./support/buildWorkflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
-import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 
 const BIOMEDICAL_CHART_ID = "chart-line-mtgz6v76";
 
@@ -35,9 +35,10 @@ test("catalogue exposes the exact renamed styles and profiles without retired ch
   }
 });
 
-test("selected dashboard style reaches every Build authoring surface", async ({ page }) => {
+test("selected dashboard style reaches every Build authoring surface", async ({ page, context }) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1600, height: 1000 });
+  await context.clearCookies();
   await page.goto("/");
   await page.getByRole("button", { name: "Theme", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Theme" });
@@ -47,18 +48,23 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await openDashboardPage(page, "biomedical");
   await page.getByRole("button", { name: "Build", exact: true }).click();
 
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  const source = await (await page.request.get("/config/dashboard.json")).json();
+  expect(source.configVersion).toBe(7);
+  const savedStoryline = source.scenes.find(scene => scene.audience?.collectionLabel) ?? source.scenes[0];
+  expect(savedStoryline).toBeTruthy();
+  await page.locator('[data-build-command-action="scene-studio"]').click();
   let surface = page.locator(".build-authoring-auxiliary");
   await expect(surface).toBeVisible();
   await expectSelectedThemeChrome(surface, "editor");
   await expectNoRetiredDashboardPaint(surface);
-  await surface.getByRole("button", { name: "Close", exact: true }).click();
-
-  await page.locator('[data-build-command-action="scene-studio"]').click();
-  surface = page.locator(".build-authoring-auxiliary");
-  await expect(surface).toBeVisible();
+  await surface.locator('[data-action="open-content"]').filter({ has: page.getByText(savedStoryline.name, { exact: true }) }).click();
+  await expect(surface.getByRole("heading", { name: savedStoryline.name, exact: true })).toBeVisible();
+  if (savedStoryline.audience?.collectionLabel) await expect(surface.getByText(`Original collection: ${savedStoryline.audience.collectionLabel}`, { exact: true })).toBeVisible();
+  await surface.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(surface.getByRole("heading", { name: "Storyline details", exact: true })).toBeVisible();
   await expectSelectedThemeChrome(surface, "editor");
   await expectNoRetiredDashboardPaint(surface);
+  await surface.getByRole("button", { name: "Discard Storyline", exact: true }).click();
   await surface.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("button", { name: "Pages & sections", exact: true })).toHaveCount(0);
 
@@ -141,14 +147,13 @@ test("Unit Orbit retains the selected theme outside AppFrame", async ({ page }) 
   await expectSelectedThemeChrome(orbit, "panel");
 });
 
-test("View Chrono and Present controls contain no retired dashboard paint", async ({ page }) => {
+test("View time and Present controls contain no retired dashboard paint", async ({ page, context }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await installPageRemovalGroups(page);
+  await context.clearCookies();
   await page.goto("/");
   await openDashboardPage(page, "biomedical");
 
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const chrono = page.getByRole("region", { name: "Chrono playback controls" });
+  const chrono = await timeCursor(page).open();
   await expect(chrono).toBeVisible();
   await expectNoRetiredDashboardPaint(chrono);
 

@@ -1,3 +1,4 @@
+import { presentationTimeFixture } from "./helpers/presentationTimeFixture.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -26,7 +27,7 @@ function presentationState(item = { kind: "chart", chart_id: "chart-a" }) {
       appearance_preference: "light",
       resolved_appearance: "light",
     },
-    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-a" },
     composition: { active_page_id: "biomedical", displayed_chart_ids: [itemId], layout: "solo" },
     payload: {
       items: [item],
@@ -38,14 +39,11 @@ function presentationState(item = { kind: "chart", chart_id: "chart-a" }) {
         scene_date: true,
       },
     },
-    timeline: {
+    time: presentationTimeFixture({
       frame_epochs: [100, 200],
-      frame_index: 0,
-      period: { start: 100, end: 200 },
-      trace_mode: "reveal",
+      frame_index: 0,      trace_mode: "reveal",
       seconds_per_frame: 2.5,
-    },
-    matching: { use_authored_settings: true },
+    }),
     output_mode: "active",
     blackout: false,
     audience: { date_position: { x_permille: 680, y_permille: 40, width_permille: 280 } },
@@ -175,7 +173,7 @@ function audienceTransport() {
   return [...FakeBroadcastChannel.channels.get("simex-presentation-session-001")].at(-1);
 }
 
-test("new Audience accepts a legacy v3 state with no Theme field", () => {
+test("Audience accepts current V4 time state with no Theme field", () => {
   const { audience, states, rejections } = setup();
   audience.start();
   const sender = createChannel("simex-presentation-session-001");
@@ -183,7 +181,7 @@ test("new Audience accepts a legacy v3 state with no Theme field", () => {
   delete legacyState.theme;
 
   sender.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 1,
     type: "state",
@@ -214,17 +212,17 @@ test("Audience date movement immediately updates controller output with clone-sa
   const outbound = audience.publishDatePosition(desired, pointerDownSource);
 
   assert.deepEqual(outbound, {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 2,
     type: "audience-date-position",
     payload: {
-      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      source: { kind: "scene", scene_id: "scene-a" },
       date_position: { x_permille: 515, y_permille: 260 },
     },
   });
   assert.deepEqual(updates, [{
-    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-a" },
     datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
   }]);
   assert.equal(states.length, 2);
@@ -236,7 +234,6 @@ test("Audience date movement immediately updates controller output with clone-sa
   assert.deepEqual(controller.getLastValidSnapshot().source, {
     kind: "scene",
     scene_id: "scene-a",
-    chrono_group_id: "group-a",
   });
   assert.equal(controller.getLastValidSnapshot().audience.date_position.x_permille, 515);
   assert.deepEqual(controllerRejections, []);
@@ -356,7 +353,7 @@ test("a queued Scene release keeps its receipt-time source after the controller 
   audience.publishDatePosition({ x_permille: 530, y_permille: 275 }, sceneASource);
   const sceneB = {
     ...presentationState(),
-    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-b" },
   };
 
   controller.publish(sceneB);
@@ -365,11 +362,11 @@ test("a queued Scene release keeps its receipt-time source after the controller 
 
   assert.deepEqual(saves, [
     {
-      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      source: { kind: "scene", scene_id: "scene-a" },
       datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
     },
     {
-      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      source: { kind: "scene", scene_id: "scene-a" },
       datePosition: { x_permille: 530, y_permille: 275, width_permille: 280 },
     },
   ]);
@@ -416,7 +413,7 @@ test("disposing the controller prevents a captured queued release from starting 
   await new Promise((resolve) => setImmediate(resolve));
 
   assert.deepEqual(saves, [{
-    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-a" },
     datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
   }]);
   audience.dispose();
@@ -433,7 +430,7 @@ test("Audience date release carries its pointer-down source across a mid-drag so
   const pointerDownSource = audience.getLastValidSnapshot().source;
   const sceneB = {
     ...presentationState(),
-    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-b" },
   };
   controller.publish(sceneB);
 
@@ -445,7 +442,6 @@ test("Audience date release carries its pointer-down source across a mid-drag so
   assert.deepEqual(outbound.payload.source, {
     kind: "scene",
     scene_id: "scene-a",
-    chrono_group_id: "group-a",
   });
   assert.deepEqual(updates, []);
   assert.deepEqual(
@@ -481,7 +477,7 @@ test("reverse date movement cannot replace the controller's authoritative date w
     y_permille: 260,
   });
   assert.deepEqual(updates, [{
-    source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-a" },
     datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
   }]);
   assert.deepEqual(states.at(-1).audience.date_position, {
@@ -494,13 +490,13 @@ test("reverse date movement cannot replace the controller's authoritative date w
   controller.dispose();
 });
 
-test("controller reports clone-isolated accepted snapshots immediately after raw-group date movement", () => {
+test("controller reports clone-isolated accepted snapshots immediately after Storyline date movement", () => {
   const monitoredSnapshots = [];
   const movementUpdates = [];
   const { audience, controller, states } = setup({
     onAcceptedStateChange: (next) => {
       monitoredSnapshots.push(structuredClone(next));
-      next.source.chrono_group_id = "group-mutated";
+      next.source.scene_id = "storyline-mutated";
       next.audience.date_position.x_permille = 0;
     },
     onAudienceDatePositionChange: (update) => movementUpdates.push(update),
@@ -509,7 +505,7 @@ test("controller reports clone-isolated accepted snapshots immediately after raw
   audience.start();
   const rawGroup = {
     ...presentationState(),
-    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "group-a" },
   };
 
   controller.publish(rawGroup);
@@ -522,9 +518,8 @@ test("controller reports clone-isolated accepted snapshots immediately after raw
 
   assert.equal(monitoredSnapshots.length, 2);
   assert.deepEqual(monitoredSnapshots.at(-1).source, {
-    kind: "Chrono Group",
-    scene_id: null,
-    chrono_group_id: "group-a",
+    kind: "scene",
+    scene_id: "group-a",
   });
   assert.deepEqual(monitoredSnapshots.at(-1).audience.date_position, {
     x_permille: 515,
@@ -532,7 +527,7 @@ test("controller reports clone-isolated accepted snapshots immediately after raw
     width_permille: 280,
   });
   assert.deepEqual(movementUpdates, [{
-    source: { kind: "Chrono Group", scene_id: null, chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "group-a" },
     datePosition: { x_permille: 515, y_permille: 260, width_permille: 280 },
   }]);
   assert.deepEqual(states.at(-1).audience.date_position, {
@@ -541,9 +536,8 @@ test("controller reports clone-isolated accepted snapshots immediately after raw
     width_permille: 280,
   });
   assert.deepEqual(controller.getLastValidSnapshot().source, {
-    kind: "Chrono Group",
-    scene_id: null,
-    chrono_group_id: "group-a",
+    kind: "scene",
+    scene_id: "group-a",
   });
   assert.equal(controller.getLastValidSnapshot().audience.date_position.x_permille, 515);
   audience.dispose();
@@ -563,7 +557,7 @@ test("controller retains each Audience date override only for its matching prese
 
   const sameSourceNextFrame = {
     ...sceneA,
-    timeline: { ...sceneA.timeline, frame_index: 1 },
+    time: { ...sceneA.time, frame_index: 1, epoch_ms: 200 },
   };
   const sameSourceOutcome = controller.publish(sameSourceNextFrame);
   assert.equal(sameSourceOutcome.accepted, true);
@@ -580,7 +574,7 @@ test("controller retains each Audience date override only for its matching prese
 
   const sceneB = {
     ...presentationState(),
-    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-b" },
   };
   const otherSourceOutcome = controller.publish(sceneB);
   assert.equal(otherSourceOutcome.accepted, true);
@@ -611,17 +605,17 @@ test("controller consumes and rejects stale-source Audience date movement withou
   controller.publish(presentationState());
   const sceneB = {
     ...presentationState(),
-    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-b" },
   };
   controller.publish(sceneB);
   const sender = createChannel("simex-presentation-session-001");
   const stale = {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 2,
     type: "audience-date-position",
     payload: {
-      source: { kind: "scene", scene_id: "scene-a", chrono_group_id: "group-a" },
+      source: { kind: "scene", scene_id: "scene-a" },
       date_position: { x_permille: 515, y_permille: 260 },
     },
   };
@@ -641,7 +635,7 @@ test("controller consumes and rejects stale-source Audience date movement withou
   controller.dispose();
 });
 
-test("themed publication keeps the v3 state legacy-safe and enriches only new Audience peers", () => {
+test("themed publication keeps the V4 time state separate from the exact Theme sidecar", () => {
   const { audience, controller, states, themes } = setup();
   const mainMessages = [];
   const themeMessages = [];
@@ -684,7 +678,7 @@ test("Audience applies an isolated Theme whether state or Theme arrives first", 
     const legacyState = structuredClone(themedState);
     delete legacyState.theme;
     const stateMessage = {
-      protocol_version: 3,
+      protocol_version: 4,
       session_id: "session-001",
       sequence: 1,
       type: "state",
@@ -742,7 +736,7 @@ test("Audience exposes only clone-safe channel-accepted state and ended envelope
 
   assert.equal(acceptedMessages.length, 1);
   assert.deepEqual(acceptedMessages[0], {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 1,
     type: "state",
@@ -772,7 +766,7 @@ test("invalid and Needs-attention source selections retain last-valid output", (
   for (const sourceStatus of ["invalid", "needs-attention"]) {
     const outcome = controller.publish({
       ...first,
-      source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+      source: { kind: "scene", scene_id: "scene-b" },
     }, { sourceStatus });
     assert.equal(outcome.accepted, false);
     assert.equal(outcome.reason.code, "source_not_presentable");
@@ -780,7 +774,7 @@ test("invalid and Needs-attention source selections retain last-valid output", (
   }
   const namedReason = controller.publish({
     ...first,
-    source: { kind: "scene", scene_id: "scene-b", chrono_group_id: "group-a" },
+    source: { kind: "scene", scene_id: "scene-b" },
   }, {
     sourceSelection: {
       status: "needs-attention",
@@ -830,15 +824,15 @@ test("authored sources require explicit valid eligibility and a non-null timelin
   const candidate = presentationState();
   assert.equal(controller.publish(candidate).reason.code, "source_eligibility_required");
   assert.equal(
-    controller.publish({ ...candidate, timeline: null }, { sourceStatus: "valid" }).reason.code,
-    "source_timeline_required",
+    controller.publish({ ...candidate, time: presentationTimeFixture({ frame_epochs: [] }) }, { sourceStatus: "valid" }).reason.code,
+    "source_time_required",
   );
   assert.equal(controller.publish(candidate, { sourceStatus: "valid" }).accepted, true);
 
   const manual = {
     ...candidate,
-    source: { kind: "manual", scene_id: null, chrono_group_id: null },
-    timeline: null,
+    source: { kind: "manual", scene_id: null },
+    time: presentationTimeFixture({ frame_epochs: [] }),
   };
   assert.equal(controller.publish(manual).accepted, true);
 });
@@ -880,9 +874,9 @@ test("ordinary duplicate and out-of-order heartbeats remain rejected after a fre
   });
   controller.start();
   const sender = createChannel("simex-presentation-session-001");
-  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 1, type: "ready", payload: null });
-  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 1, type: "heartbeat", payload: null });
-  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 0, type: "heartbeat", payload: null });
+  sender.postMessage({ protocol_version: 4, session_id: "session-001", sequence: 1, type: "ready", payload: null });
+  sender.postMessage({ protocol_version: 4, session_id: "session-001", sequence: 1, type: "heartbeat", payload: null });
+  sender.postMessage({ protocol_version: 4, session_id: "session-001", sequence: 0, type: "heartbeat", payload: null });
   assert.ok(controllerRejections.some(({ code }) => code === "duplicate_or_out_of_order"));
   assert.ok(controllerRejections.some(({ code }) => code === "invalid_sequence"));
   sender.close();
@@ -919,21 +913,21 @@ test("a delayed contiguous ended cannot bypass a higher resync floor", () => {
   const first = presentationState();
   const unseenHigher = { ...first, output_mode: "blank" };
   sender.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 1,
     type: "state",
     payload: first,
   });
   sender.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 3,
     type: "state",
     payload: unseenHigher,
   });
   sender.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 2,
     type: "ended",
@@ -958,7 +952,7 @@ test("a newly opened Audience accepts contiguous ended before any state baseline
   audience.start();
   const sender = createChannel("simex-presentation-session-001");
   sender.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 1,
     type: "ended",
@@ -986,7 +980,7 @@ test("ordered ended emits a clone-safe terminal signal without clearing last-val
 
   assert.equal(ended.length, 1);
   assert.deepEqual(ended[0], {
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 2,
     type: "ended",
@@ -1088,6 +1082,34 @@ test("Audience rejects an incomplete expected message and recovers through ready
   controller.dispose();
 });
 
+test("stale V3 time messages cannot replace V4 output or move its resync floor", () => {
+  const { audience, controller, states, rejections } = setup();
+  controller.start(); audience.start(); controller.publish(presentationState());
+  const sender = createChannel("simex-presentation-session-001");
+  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 999, type: "state", payload: presentationState() });
+  assert.equal(states.length, 1); assert.equal(rejections.at(-1).reason.code, "protocol_mismatch");
+  controller.publish({ ...presentationState(), blackout: true });
+  assert.equal(states.length, 2); assert.equal(states.at(-1).blackout, true);
+  sender.close(); audience.dispose(); controller.dispose();
+});
+
+test("late frames cannot cross an accepted nearest bound or time scope change", () => {
+  for (const patch of [{ matching_override: "closest", nearest_tolerance_ms: 100 }, { scope: { kind: "page", id: "biomedical" } }]) {
+    const updates = [];
+    const { audience, controller, acceptedMessages, controllerRejections } = setup({ onAudienceStreamChange: next => updates.push(next) });
+    const state = presentationState(); controller.start(); controller.publish(state); audience.start();
+    const first = capturedFrameFor(acceptedMessages.at(-1));
+    controller.publish({ ...state, time: { ...state.time, ...patch } });
+    const second = capturedFrameFor(acceptedMessages.at(-1), 2);
+    audience.publishFrameEvent("audience_viewport", { stream_id: second.stream_id, accepted_sequence: second.accepted_sequence,
+      dashboard_revision: second.dashboard_revision, viewport: second.viewport, stage: second.stage });
+    audience.publishFrameEvent("audience_frame", first);
+    assert.equal(controllerRejections.at(-1).reason.code, "stale_audience_frame");
+    assert.equal(updates.at(-1).acceptedSequence, second.accepted_sequence);
+    audience.dispose(); controller.dispose();
+  }
+});
+
 test("duplicates, out-of-order messages, and other sessions never replace Audience state", () => {
   const { audience, controller, states, rejections } = setup();
   controller.start();
@@ -1098,10 +1120,10 @@ test("duplicates, out-of-order messages, and other sessions never replace Audien
   const sender = createChannel("simex-presentation-session-001");
   const payload = presentationState({ kind: "chart", chart_id: "chart-b" });
   for (const sequence of [1, 1]) sender.postMessage({
-    protocol_version: 3, session_id: "session-001", sequence, type: "state", payload,
+    protocol_version: 4, session_id: "session-001", sequence, type: "state", payload,
   });
   sender.postMessage({
-    protocol_version: 3, session_id: "other-session", sequence: 2, type: "state", payload,
+    protocol_version: 4, session_id: "other-session", sequence: 2, type: "state", payload,
   });
 
   assert.deepEqual(states, [first]);
@@ -1112,7 +1134,7 @@ test("duplicates, out-of-order messages, and other sessions never replace Audien
   controller.dispose();
 });
 
-test("heartbeat, disconnect, ended, and cleanup retain the v3 lifecycle", () => {
+test("heartbeat, disconnect, ended, and cleanup retain the accepted V4 lifecycle", () => {
   const { audience, controller, scheduler, states, statuses } = setup();
   const observed = [];
   const observer = createChannel("simex-presentation-session-001");
@@ -1156,19 +1178,19 @@ test("a post-timeout controller heartbeat requests resync but cannot reconnect b
   controller.publish(presentationState());
 
   audience.postMessage({
-    protocol_version: 3, session_id: "session-001", sequence: 1, type: "ready", payload: null,
+    protocol_version: 4, session_id: "session-001", sequence: 1, type: "ready", payload: null,
   });
   assert.equal(statuses.at(-1), "connected");
 
   scheduler.advance(5_000);
   audience.postMessage({
-    protocol_version: 3, session_id: "session-001", sequence: 2, type: "heartbeat", payload: null,
+    protocol_version: 4, session_id: "session-001", sequence: 2, type: "heartbeat", payload: null,
   });
   assert.deepEqual(statuses.slice(-2), ["disconnected", "reconnecting"]);
   assert.equal(sent.filter(({ type }) => type === "state").length, 3);
 
   audience.postMessage({
-    protocol_version: 3, session_id: "session-001", sequence: 3, type: "ready", payload: null,
+    protocol_version: 4, session_id: "session-001", sequence: 3, type: "ready", payload: null,
   });
   assert.equal(statuses.at(-1), "connected");
   assert.equal(sent.filter(({ type }) => type === "state").length, 4);
@@ -1197,12 +1219,12 @@ test("a ready arriving first after controller timeout traverses reconnecting bef
   controller.start();
   controller.publish(presentationState());
   audience.postMessage({
-    protocol_version: 3, session_id: "session-001", sequence: 1, type: "ready", payload: null,
+    protocol_version: 4, session_id: "session-001", sequence: 1, type: "ready", payload: null,
   });
 
   scheduler.advance(5_000);
   audience.postMessage({
-    protocol_version: 3, session_id: "session-001", sequence: 2, type: "ready", payload: null,
+    protocol_version: 4, session_id: "session-001", sequence: 2, type: "ready", payload: null,
   });
 
   assert.deepEqual(statuses.slice(-3), ["disconnected", "reconnecting", "connected"]);
@@ -1224,7 +1246,7 @@ test("Audience detects controller silence and exposes reconnecting until a fresh
 
   const restoredController = createChannel("simex-presentation-session-001");
   restoredController.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 2,
     type: "heartbeat",
@@ -1235,7 +1257,7 @@ test("Audience detects controller silence and exposes reconnecting until a fresh
 
   const restored = { ...first, output_mode: "holding" };
   restoredController.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 3,
     type: "state",
@@ -1286,7 +1308,7 @@ test("a valid state arriving first after controller silence still traverses reco
   const restoredController = createChannel("simex-presentation-session-001");
   const restored = { ...first, output_mode: "blank" };
   restoredController.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 2,
     type: "state",
@@ -1314,7 +1336,7 @@ test("a malformed state arriving first after controller silence remains reconnec
 
   const restoredController = createChannel("simex-presentation-session-001");
   restoredController.postMessage({
-    protocol_version: 3,
+    protocol_version: 4,
     session_id: "session-001",
     sequence: 2,
     type: "state",
@@ -1346,15 +1368,15 @@ test("resumed control heartbeat and accepted resync receipt clear a stuck reconn
   const sender = createChannel("simex-presentation-session-001");
   scheduler.advance(5500);
   assert.equal(statuses.at(-1), "disconnected");
-  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 20, type: "heartbeat", payload: null });
+  sender.postMessage({ protocol_version: 4, session_id: "session-001", sequence: 20, type: "heartbeat", payload: null });
   assert.equal(statuses.at(-1), "reconnecting");
   const sent = [];
   const observer = createChannel("simex-presentation-session-001");
   observer.onmessage = ({ data }) => { if (data.type === "state") sent.push(data); };
-  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 21, type: "heartbeat", payload: null });
+  sender.postMessage({ protocol_version: 4, session_id: "session-001", sequence: 21, type: "heartbeat", payload: null });
   assert(sent.length > 0, "a reconnecting heartbeat requests a fresh baseline");
   const { stream_id, accepted_sequence, dashboard_revision, viewport, stage } = capturedFrameFor(sent.at(-1));
-  sender.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 22, type: "audience_viewport",
+  sender.postMessage({ protocol_version: 4, session_id: "session-001", sequence: 22, type: "audience_viewport",
     payload: { stream_id, accepted_sequence, dashboard_revision, viewport, stage } });
   assert.equal(statuses.at(-1), "connected");
   observer.close(); sender.close(); controller.dispose();
@@ -1382,7 +1404,7 @@ test("delayed playback samples advance image order without rolling back newer ac
     audience.publishFrameEvent("audience_viewport", { stream_id, accepted_sequence, dashboard_revision, viewport, stage });
   controller.start(); controller.publish(state); audience.start();
   const first = capturedFrameFor(acceptedMessages.at(-1));
-  controller.publish({ ...state, timeline: { ...state.timeline, frame_index: 1 } });
+  controller.publish({ ...state, time: { ...state.time, frame_index: 1, epoch_ms: 200 } });
   const second = capturedFrameFor(acceptedMessages.at(-1), 2);
   publishViewport(second);
   audience.publishFrameEvent("audience_frame", first);
@@ -1410,7 +1432,7 @@ test("a delayed frame cannot cross a Theme change on the separate presentation c
   controller.start(); controller.publish(state); audience.start();
   const lightFrame = capturedFrameFor(acceptedMessages.at(-1));
   controller.publish({ ...state, theme: { ...state.theme, appearance_preference: "dark", resolved_appearance: "dark" },
-    timeline: { ...state.timeline, frame_index: 1 } });
+    time: { ...state.time, frame_index: 1, epoch_ms: 200 } });
   const { stream_id, accepted_sequence, dashboard_revision, viewport, stage } = capturedFrameFor(acceptedMessages.at(-1), 2);
   audience.publishFrameEvent("audience_viewport", { stream_id, accepted_sequence, dashboard_revision, viewport, stage });
   audience.publishFrameEvent("audience_frame", lightFrame);
@@ -1447,7 +1469,7 @@ test("frame stream heartbeats cannot substitute for the existing controller safe
   audience.dispose();
   for (let i = 0; i < 6; i++) {
     scheduler.advance(1000);
-    transport.postMessage({ protocol_version: 3, session_id: "session-001", sequence: 10 + i,
+    transport.postMessage({ protocol_version: 4, session_id: "session-001", sequence: 10 + i,
       type: "audience_heartbeat", payload: { stream_id, accepted_sequence, dashboard_revision, status: "static", since: 0 } });
   }
   assert.equal(statuses.at(-1), "disconnected");

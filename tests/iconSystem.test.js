@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
 import { validateDashboardStructure } from "../src/charting/config/dashboardConfigStructure.js";
+import { normalizeDashboardBoundary } from "../src/charting/config/dashboardBundleV3.js";
 import { makeDashboardV6 } from "./helpers/contentLibraryFixtures.js";
 import {
   IconControl,
@@ -381,7 +382,7 @@ test("current global styles accept one icon accent and reject malformed values",
     new URL("../public/config/dashboard.json", import.meta.url),
     "utf8",
   ));
-  const dashboard = makeDashboardV6({ globalStyles });
+  const dashboard = normalizeDashboardBoundary(makeDashboardV6({ globalStyles }));
   dashboard.globalStyles.iconAccent = "#19D3C5";
   assert.doesNotThrow(() => validateDashboardStructure(dashboard));
 

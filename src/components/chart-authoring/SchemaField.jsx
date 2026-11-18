@@ -14,6 +14,7 @@ import StandardField, {
   fieldDescribedBy
 } from "./StandardField.jsx";
 import ChronoMembershipSettingsField from "./ChronoMembershipSettingsField.jsx";
+import ChartTimeMatchingField from "./ChartTimeMatchingField.jsx";
 function SchemaField({
   field,
   value = field?.value,
@@ -43,6 +44,7 @@ function SchemaField({
     : onChange(field.path, nextValue);
   if (field.control === 'legendResetOffsets') return <button type="button" className="secondary" disabled={field.disabled} onClick={() => onChange(['presentation', 'legend'], { ...chart.presentation?.legend, offsetX: 0, offsetY: 0 })}>Reset offsets</button>;
   const shared = { field: decoratedField, value, onChange: emit };
+  if (field.control === "chartTimeMatching") return <ChartTimeMatchingField chart={chart} profile={profile} field={decoratedField} onChange={emit} />;
   if (["presentationOrder", "legendEntries", "categoryColors", "seriesColorsByIdentity"].includes(field.control)) {
     return <CategorySeriesPresentationFields field={{ ...decoratedField, value }} chart={chart} onChange={onChange} />;
   }

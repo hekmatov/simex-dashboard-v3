@@ -4,9 +4,11 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { inspectRuntimeBoundaries } from "./check-v3-runtime-boundaries.mjs";
+import { writeStaticSecurityHeaders } from "./lib/content-security-policy.mjs";
+import { validateDataSourceDescriptor } from "../src/lib/loadDashboard.js";
 
 export const EXPECTED_QUORUM_CONTRACT_HASH =
-  "a876d0b83c9f40ea5179723b9c4304f8873b393142e4a790711af80ed363662c";
+  "2244f5b6a53f4530a267251f9733a0a8a83ccb2ae90a5fe9442a1a658a5f8d7f";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const DEFAULT_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..");
@@ -83,7 +85,8 @@ export async function verifyV3StaticBuild({
     throw new Error("source runtime boundary contains remote dependencies");
   }
 
-  const runtimePrecacheAssets = createRuntimePrecacheAssets(runtimeAssets);
+  const declaredDataAssets = await readDeclaredDataAssets(resolvedDist, files);
+  const runtimePrecacheAssets = createRuntimePrecacheAssets(runtimeAssets, declaredDataAssets);
   await assertGeneratedRuntimeManifest({
     distDir: resolvedDist,
     files,
@@ -102,6 +105,7 @@ export async function verifyV3StaticBuild({
 export async function finalizeV3StaticBuild(options = {}) {
   const result = await verifyV3StaticBuild(options);
   const resolvedDist = path.resolve(options.distDir ?? path.join(options.rootDir ?? DEFAULT_ROOT, "dist"));
+  await writeStaticSecurityHeaders({ outputDir: resolvedDist, entrypoints: ENTRYPOINTS });
   const manifest = {
     cacheName: `simex-dashboard-v3-${await runtimePrecacheDigest({
       distDir: resolvedDist,
@@ -170,12 +174,29 @@ async function validateBuiltRuntimeGraph({ distDir, files, runtimeAssets }) {
   }
 }
 
-function createRuntimePrecacheAssets(runtimeAssets) {
+async function readDeclaredDataAssets(distDir, files) {
+  const text = await readFile(path.join(distDir, "config/dashboard.json"), "utf8");
+  const config = JSON.parse(text.replace(/^\uFEFF/, ""));
+  const assets = [];
+  for (const [id, source] of Object.entries(config.dataSources ?? {})) {
+    // Inline and uploaded sources already live in the precached dashboard JSON.
+    if (source?.kind !== "csv" && source?.kind !== "geojson") continue;
+    const sourcePath = validateDataSourceDescriptor(id, source);
+    if (!files.has(sourcePath)) {
+      throw new Error(`config/dashboard.json: declared data source "${id}" is missing: ${sourcePath}`);
+    }
+    assets.push(sourcePath);
+  }
+  return assets;
+}
+
+function createRuntimePrecacheAssets(runtimeAssets, declaredDataAssets) {
   return Object.freeze([...new Set([
     "./",
     ...ENTRYPOINTS.map((entrypoint) => `./${entrypoint}`),
     ...REQUIRED_PACKAGE_ASSETS.map((asset) => `./${asset}`),
     ...[...runtimeAssets].map((asset) => `./${asset}`),
+    ...declaredDataAssets.map((asset) => `./${asset}`),
     `./${RUNTIME_PRECACHE_MANIFEST}`,
   ])].toSorted());
 }

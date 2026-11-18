@@ -149,8 +149,8 @@ export default function ContentActionDialog({
 
 function temporalImpactLabel(kind) {
   if (kind === "chrono-group") return "Chrono Group";
-  if (kind === "scene-presentation") return "Scene presentation";
-  return "Scene";
+  if (kind === "scene-presentation") return "Storyline presentation";
+  return "Storyline";
 }
 
 function RemapBreadcrumb({ target }) {

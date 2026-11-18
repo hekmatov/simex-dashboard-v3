@@ -1,6 +1,6 @@
 import React from "react";
 
-import { buildChronoCanvasProjection } from "../../charting/time/chronoCanvasProjection.js";
+import StorylineBand from "../time/StorylineBand.jsx";
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
@@ -26,50 +26,31 @@ export default function ViewShell({
   onStartMultiFullscreenSelection,
   onOpenMultiFullscreen,
   onCancelMultiSelection,
+  onSaveComparisonAsStoryline,
+  comparisonSaveDisabledReason,
 }) {
   const playback = usePlayback();
-  const scenePageId = sceneNavigationPageId(playback.activeScene, activePage);
-  React.useEffect(() => {
-    if (scenePageId && typeof onActivePageChange === "function") {
-      onActivePageChange(scenePageId);
-    }
-  }, [onActivePageChange, scenePageId]);
   React.useEffect(() => {
     playback.dispatch({ type: "navigate" });
   }, [activePage?.id]);
   React.useEffect(() => () => {
     playback.dispatch({ type: "modeExit" });
   }, []);
-  const chronoSource = playback.activeScene ?? playback.activeGroup;
-  const chronoProjection = playback.playbackView === true && chronoSource
-    ? buildChronoCanvasProjection({
-        activePage,
-        activeGroup: playback.activeGroup,
-        activeScene: playback.activeScene,
-        scope: playback.scope,
-      })
-    : null;
-  const chronoSection = playback.playbackView === true && chronoSource
-    ? {
-        id: chronoSource.id,
-        title: chronoSource.name,
-        chartIds: chronoProjection.focusedChartIds,
-      }
-    : null;
-
   return (
     <CanonicalDashboardFrame
       mode="view"
       pageType={pageType}
       pageId={activePage?.id}
-      dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} mode="view" />}
+      dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} mode="view" storylineActive={Boolean(playback.activeScene)} />}
       pageContent={(
         <div className="canonical-view-content" style={iconLanguageStyles}>
           <PlaybackSurface
             accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
             viewOwned
+            suspended={multiSelectMode || (displayState?.displayed_chart_ids?.length ?? 0) > 0}
           >
             <DashboardCanvas
+              storylineBand={<StorylineBand dashboard={dashboard} playback={playback} activePageId={activePage?.id} />}
               activePage={activePage}
               dashboard={dashboard}
               surface="view"
@@ -77,8 +58,6 @@ export default function ViewShell({
               displayState={displayState}
               multiSelectMode={multiSelectMode}
               multiPanelIds={multiPanelIds}
-              excludedChartIds={chronoProjection?.hiddenChartIds}
-              chronoSection={chronoSection}
               geoDataSources={geoDataSources}
               onNavigate={onActivePageChange}
               onAddPanelToSection={onAddPanelToSection}
@@ -116,6 +95,8 @@ export default function ViewShell({
             displayState={displayState}
             onDisplayAction={onDisplayAction}
             timeContextForChart={playback.timeContextForChart}
+            onSaveAsStoryline={onSaveComparisonAsStoryline}
+            saveStorylineDisabledReason={comparisonSaveDisabledReason}
             accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
           />
         </>
@@ -124,8 +105,5 @@ export default function ViewShell({
   );
 }
 
-export function sceneNavigationPageId(scene, activePage) {
-  const scenePageId = scene?.pageId;
-  if (!scenePageId || scenePageId === activePage?.id) return null;
-  return scenePageId;
-}
+// A Storyline composition is independent of the currently visible page.
+export function sceneNavigationPageId() { return null; }

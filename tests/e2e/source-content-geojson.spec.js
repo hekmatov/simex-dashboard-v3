@@ -514,9 +514,10 @@ async function persistDashboardForReplacement(page, journey) {
 }
 
 async function addMapCsvToManager(manager, journey) {
+  // Keep a measurement at the fixture's Live time for exact-match maps and previews.
   const csv = journey === "I"
-    ? "date,province,virus_particles\n2026-01-01,Drenthe,4\n2026-01-02,Drenthe,7\n"
-    : "date,municipality,cases\n2026-01-01,A,4\n2026-01-01,B,7\n";
+    ? "date,province,virus_particles\n2027-02-20,Drenthe,4\n2027-02-21,Drenthe,7\n"
+    : "date,municipality,cases\n2027-02-21,A,4\n2027-02-21,B,7\n";
   const csvIntake = manager.getByRole("region", { name: "Add CSV to dashboard" });
   await csvIntake.getByRole("button", { name: "Add CSV", exact: true }).click();
   await csvIntake.getByLabel("CSV file").setInputFiles({

@@ -9,6 +9,7 @@ import * as exportModel from "../src/lib/dashboardPackageExport.js";
 import {
   parseDashboardBundle,
   serializeDashboardBundle,
+  dashboardBundleIntegrity,
 } from "../src/charting/config/dashboardBundleV3.js";
 import { loadDashboardConfig } from "../src/lib/loadDashboard.js";
 import {
@@ -160,7 +161,7 @@ test("package preparation strips browser-only asset references", async () => {
   );
 });
 
-test("V6 package preparation and round-trip preserve explicit Home-off availability", async () => {
+test("V7 package preparation and round-trip preserve explicit Home-off availability", async () => {
   const dashboard = packageDashboard();
   dashboard.configVersion = 6;
   dashboard.home = { enabled: false };
@@ -201,6 +202,8 @@ test("portable packages reject browser-only asset references", () => {
   delete dashboard.dataSources.boundaries;
   const bundle = serializeDashboardBundle(dashboard, { now: null });
   bundle.config.dataSources.uploaded.browserAssetId = `sha256-${"a".repeat(64)}`;
+  // This fixture exercises semantic portability after whole-envelope integrity.
+  bundle.metadata.integrity.digest = dashboardBundleIntegrity(bundle);
 
   assert.throws(
     () => parseDashboardBundle(JSON.stringify(bundle)),
@@ -259,7 +262,7 @@ test("export readiness coalesces structure into one layout recovery action", () 
     { id: "layout", label: "Layout changes", actionLabel: "Review layout changes" },
     { id: "scenario", label: "Scenario Passport draft", actionLabel: "Open Scenario Passport" },
     { id: "chrono-group", label: "Chrono Group draft", actionLabel: "Open Chrono Studio" },
-    { id: "scene", label: "Scene draft", actionLabel: "Open Scene Studio" },
+    { id: "scene", label: "Storyline draft", actionLabel: "Open Storyline Studio" },
     { id: "inline-rename", label: "Unfinished rename", actionLabel: "Return to rename" },
   ]);
 });
@@ -299,7 +302,7 @@ test("package preparation preflights local authored bytes and discloses linked n
     now: null,
     assetPayloads: prepared.assetPayloads,
   });
-  assert.equal(bundle.version, 6);
+  assert.equal(bundle.version, 7);
 });
 
 test("package preparation rejects missing or corrupt local authored bytes before export", async () => {

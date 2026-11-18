@@ -8,8 +8,15 @@ speaker data, summaries, topics, evidence text, or other discussion content.
 Prototype for education and training only. Non-commercial. No guarantees of availability, accuracy, suitability, security, support, or compatibility.
 
 **Standalone** and **Connected** are Quorum connection statuses, not UI modes.
-The dashboard's workspace modes are View, Build, and Present; Present's
+The dashboard's workspace modes are Home, View, Build, and Present; Present's
 same-computer audience window does not start or use Quorum.
+
+The V7 dashboard produces catalogue **contract 3**, using `storyline_ids` for
+multiple saved memberships and effective temporal eligibility for playback.
+The companion transport remains protocol 1. A contract-2-only companion cannot
+consume this catalogue; the inspected local Quorum validator currently accepts
+only contract 2. Real contract-3 integration remains unverified. Standalone
+operation does not require Quorum.
 
 ## Responsibility Boundary
 
@@ -66,10 +73,10 @@ exchange API can preserve the same versioned contract.
 
 The snapshot also contains `dashboard_semantic_digest`, an opaque SHA-256 digest
 of the complete packaged dashboard configuration and aliases. This covers
-source descriptors and packaged payloads, Chrono Groups, page and section
+source descriptors and packaged payloads, Storylines, page and section
 semantics, landing and layout settings, and every chart definition without
 publishing those values into the catalogue. The semantic producer accepts only
-the strict version-3 configuration shape; unknown fields and hydrated runtime
+the strict native V7 dashboard shape with chart V3 definitions; unknown fields and hydrated runtime
 state such as loaded rows, generated profiles, preview state, and timestamps
 are rejected instead of silently omitted.
 

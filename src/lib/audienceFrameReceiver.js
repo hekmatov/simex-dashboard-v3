@@ -51,8 +51,8 @@ export function createAudienceFrameReceiver({ now, onChange = () => {} }) {
   };
 }
 function samePlaybackStructure(left, right) {
-  if (!left.timeline || !right?.timeline) return false;
-  const structure = state => JSON.stringify({ ...state, timeline: { ...state.timeline, frame_index: 0 } });
+  if (!left.time || !right?.time) return false;
+  const structure = state => JSON.stringify({ ...state, time: { ...state.time, frame_index: 0, epoch_ms: null } });
   return structure(left) === structure(right);
 }
 function reject(code) {

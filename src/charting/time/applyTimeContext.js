@@ -8,9 +8,11 @@ import {
   assertTimeSyncInterpolationAllowed,
   validateEffectiveTimeSyncMatching,
 } from "./chronoGroupModel.js";
-import { matchTemporalObservation } from "./temporalMatch.js";
+import { closestConcurrentFallback, matchTemporalObservation } from "./temporalMatch.js";
+import { validateCursorScope } from "./cursorModel.js";
 
 const TRACE_TYPES = new Set(["line", "area", "mixed", "timeline", "swimlane"]);
+export const isTraceTimeChart = (chart) => TRACE_TYPES.has(chart?.typeId);
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const CANONICAL_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
 
@@ -23,6 +25,14 @@ export function applyTimeContext({
 } = {}) {
   if (!isPlaybackContext(timeContext)) {
     return inactiveProjection(rows);
+  }
+  if (timeContext.kind === "cursor") {
+    try {
+      validateCursorScope(timeContext.scope);
+      if (!["live", "at"].includes(timeContext.mode)) throw new Error("Time cursor mode must be Live or At.");
+    } catch (cause) {
+      return invalidProjection(rows, "invalid-time-context", boundedMessage(cause.message));
+    }
   }
 
   if (!Number.isFinite(timeContext.activeEpochMs)) {
@@ -85,8 +95,7 @@ export function applyTimeContext({
       );
     }
   }
-  const mode = TRACE_TYPES.has(chart.typeId) ? "trace" : "snapshot";
-  const groups = groupRows(chart, rows, profile, transformed, timeBinding);
+  const mode = isTraceTimeChart(chart) ? "trace" : "snapshot";
   const matches = new Map();
   const projectedRows = [];
   const projectedSourceRows = new Map();
@@ -99,35 +108,38 @@ export function applyTimeContext({
       ]))
     : null;
 
+  let fallbackEpochMs = null;
   try {
-    for (const [identity, group] of groups) {
+    const groups = [...groupRows(chart, rows, profile, transformed, timeBinding)].map(([identity, group]) => {
       const buckets = temporalBuckets(group.rows, timeBinding, profile);
-      const match = matchGroup({
+      return { identity, group, buckets, availableBuckets: matchableBuckets(chart, buckets, profile, transformed, group.measure) };
+    });
+    if (timeContext.showClosestOnExactMiss === true && matching.policy === "exact") {
+      fallbackEpochMs = closestConcurrentFallback(timeContext, groups.flatMap(group => group.availableBuckets));
+    }
+    for (const { identity, group, buckets, availableBuckets } of groups) {
+      const matched = matchGroup({
         chart,
-        buckets,
+        buckets: availableBuckets,
         measure: group.measure,
         matching,
         profile,
-        activeEpochMs: timeContext.activeEpochMs,
+        activeEpochMs: fallbackEpochMs ?? timeContext.activeEpochMs,
         transformed,
       });
+      const match = fallbackEpochMs !== null && matched.status === "observed"
+        ? { ...matched, status: "nearest" } : matched;
       const provenance = temporalProvenance(match, timeContext.activeEpochMs, activeCanonical);
-      const availableBuckets = matchableBuckets(
-        chart,
-        buckets,
-        profile,
-        transformed,
-        group.measure,
-      );
       const record = { identity, buckets, availableBuckets, match, provenance };
       matches.set(identity, record);
 
       if (mode === "trace") {
         const traceRows = timeContext.traceMode === "reveal"
-          ? group.rows.filter((row) => (
-              canonicalEpochMs(readBoundValue(row, timeBinding, profile))
-              <= timeContext.activeEpochMs
-            ))
+          ? group.rows.filter((row) => {
+              const epoch = canonicalEpochMs(readBoundValue(row, timeBinding, profile));
+              return epoch <= timeContext.activeEpochMs
+                || (match.status === "nearest" && epoch === match.sourceEpochMs);
+            })
           : group.rows;
         appendMeasureRows(measureRows, group.measure, traceRows);
         appendProjectedSourceRows({
@@ -230,6 +242,7 @@ export function applyTimeContext({
     canonical: activeCanonical,
     mode,
     status: combinedStatus(statuses),
+    ...(fallbackEpochMs === null ? {} : { fallbackEpochMs }),
   };
   const diagnostics = (
     mode === "snapshot"
@@ -259,7 +272,7 @@ export function applyTimeContext({
 export function applyTemporalProvenance({ chart = {}, prepared = {}, projection }) {
   if (!projection?.active) return prepared;
   const marks = (prepared.marks ?? []).map((sourceMark) => {
-    const mark = projection.activeTime.mode === "snapshot"
+    const mark = projection.activeTime.mode === "snapshot" && projection.activeTime.fallbackEpochMs === undefined
       ? projectSnapshotMarkTime(chart, sourceMark, projection.activeTime.canonical)
       : sourceMark;
     const record = projection.matches.get(markIdentity(chart, mark));
@@ -329,13 +342,7 @@ function matchGroup({
 }) {
   const measure = selectedMeasure ?? measureBindings(chart)[0] ?? null;
   const interpolationAllowed = measure ? bindingAllowsInterpolation(measure, profile) : false;
-  const observations = matchableBuckets(
-    chart,
-    buckets,
-    profile,
-    transformed,
-    measure,
-  ).map((bucket) => ({
+  const observations = buckets.map((bucket) => ({
       ...bucket,
       value: measure
         ? bucketMeasureValue(bucket, measure, profile, transformed)
@@ -734,7 +741,7 @@ function isPlaybackContext(value) {
   return value !== null
     && typeof value === "object"
     && !Array.isArray(value)
-    && Object.hasOwn(value, "groupId");
+    && (Object.hasOwn(value, "groupId") || value.kind === "cursor");
 }
 
 function isDeltaChart(chart) {

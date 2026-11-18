@@ -68,6 +68,9 @@ export function mappedPackage() {
 
 export function synchronizedPackage() {
   const config = structuredClone(collaboratorPackage().config);
+  // Deliberate V6 input exercises native migration, rather than inserting a
+  // retired collection into a configuration already declaring itself V7.
+  config.configVersion = 6;
   config.chronoGroups = [{ id: "clock", name: "Shared clock", period: { start: "2026-08-21", end: "2026-08-21" }, matching: { policy: "exact" }, secondsPerFrame: 1,
     members: [{ chartId: "chart-a", timeRole: "observation" }, { chartId: "chart-b", timeRole: "observation" }] }];
   for (const panel of config.pages[0].sections[0].panels) panel.chart.interaction.timeSync = { groupId: "clock" };

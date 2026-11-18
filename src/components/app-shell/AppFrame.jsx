@@ -11,7 +11,8 @@ const useBrowserLayoutEffect = typeof window === "undefined"
   : React.useLayoutEffect;
 
 export function commandBoundaryElement(frame) {
-  return frame?.querySelector(".exercise-disclaimer")
+  return frame?.querySelector(".time-bar:not(.time-bar--phone-view)")
+    ?? frame?.querySelector(".exercise-disclaimer")
     ?? frame?.querySelector(".dashboard-command-crown")
     ?? null;
 }

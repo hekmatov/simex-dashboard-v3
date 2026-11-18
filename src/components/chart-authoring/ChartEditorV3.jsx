@@ -33,6 +33,7 @@ import {
   listChartSchemas,
 } from "../../charting/schemas/chartSchemaRegistry.js";
 import { validateChronoGroups } from "../../charting/time/chronoGroupModel.js";
+import { stripTimeSyncGroupBacklink } from "../../charting/time/dashboardTemporalConfig.js";
 import { validateGeoJson } from "../../lib/loadDashboard.js";
 import ChartConversionDialog from "./ChartConversionDialog.jsx";
 import ChartEditorModal from "./ChartEditorModal.jsx";
@@ -235,7 +236,7 @@ export function applyChartEditorSave(dashboard, {
   if (!replaced) {
     throw new Error(`Chart "${savedChart.id}" does not exist in the dashboard.`);
   }
-  nextDashboard.chronoGroups = cloneGroups(chronoGroups);
+  if (nextDashboard.configVersion !== 7) nextDashboard.chronoGroups = cloneGroups(chronoGroups);
   return nextDashboard;
 }
 
@@ -843,7 +844,7 @@ function updateEditorMembership(state, action, context) {
   const chart = setAtPath(
     state.draft,
     ["interaction", "timeSync"],
-    null,
+    stripTimeSyncGroupBacklink(state.draft.interaction?.timeSync),
   );
   validateEditorGroups(chart, nextGroups, context);
   return {

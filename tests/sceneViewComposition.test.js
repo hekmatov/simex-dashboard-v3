@@ -99,52 +99,33 @@ test("Scene View composition keeps a missing authored chart identifiable", () =>
   assert.match(html, /no longer exists/i);
 });
 
-test("active-Scene View uses the shared authored composition while group View stays canonical", () => {
-  const dashboard = dashboardFixture();
-  const activePage = dashboard.pages[0];
-  const scene = {
-    id: "scene-a",
-    name: "Authored Scene",
-    members: [
-      { chartId: "chart-c", width: 4 },
-      { chartId: "chart-a", width: 1 },
-      { chartId: "chart-b", width: 3 },
-    ],
-  };
-  const sceneHtml = renderToStaticMarkup(React.createElement(DashboardCanvas, {
-    activePage,
-    dashboard,
-    surface: "view",
-    chronoSection: {
-      id: scene.id,
-      title: scene.name,
-      chartIds: scene.members.map(({ chartId }) => chartId),
-      scene,
-      timeContextForChart: () => null,
-    },
-  }));
-
-  assert.match(sceneHtml, /data-scene-composition-surface="view-scene"/);
-  assert.deepEqual(
-    [...sceneHtml.matchAll(/data-scene-chart-id="([^"]+)"/g)].map((match) => match[1]),
-    ["chart-c", "chart-a", "chart-b"],
-  );
-
-  const groupHtml = renderToStaticMarkup(React.createElement(DashboardCanvas, {
-    activePage,
-    dashboard,
-    surface: "view",
-    chronoSection: {
-      id: "group-a",
-      title: "Canonical group",
-      chartIds: ["chart-c", "chart-a"],
-    },
-  }));
-
-  assert.match(groupHtml, /data-chrono-section="group-a"/);
-  assert.match(groupHtml, /class="layout-grid layout-two-column"/);
-  assert.doesNotMatch(groupHtml, /data-scene-composition-surface/);
+test("Scene comparison layout uses member height overrides without modifying chart footprints", () => {
+  const dashboard = dashboardFixture(), before = structuredClone(dashboard);
+  const scene = { view: { layout: "rightFocus" }, members: [
+    { chartId: "chart-a", width: 2, height: 2 }, { chartId: "chart-b", width: 2, height: 1 }, { chartId: "chart-c", width: 2, height: 1 },
+  ] };
+  for (const surface of ["view-scene", "scene-preview"]) {
+    const html = renderToStaticMarkup(React.createElement(sceneViewModule.default, { dashboard, scene, surface }));
+    assert.match(html, /data-scene-view-layout="rightFocus"/);
+    assert.match(html, /data-scene-chart-id="chart-a"[^>]*data-scene-row-height="2"/);
+    assert.match(html, /--scene-chart-row-span:16/);
+  }
+  assert.deepEqual(dashboard, before);
 });
+
+test("Storyline band composes above ordinary page content without hiding its members", () => {
+  const dashboard = dashboardFixture();
+  const scene = { id: "scene-a", name: "Authored Scene", members: [{ chartId: "chart-c", width: 4 }, { chartId: "chart-a", width: 1 }, { chartId: "chart-b", width: 3 }] };
+  const sceneHtml = renderToStaticMarkup(React.createElement(DashboardCanvas, {
+    activePage: dashboard.pages[0], dashboard, surface: "view",
+    storylineBand: React.createElement(sceneViewModule.default, { dashboard, scene }),
+  }));
+  assert.deepEqual([...sceneHtml.matchAll(/data-scene-chart-id="([^"]+)"/g)].map(match => match[1]), ["chart-c", "chart-a", "chart-b"]);
+  assert.ok(sceneHtml.indexOf('data-scene-chart-id="chart-c"') < sceneHtml.indexOf('data-canonical-section-id='));
+  for (const id of ["chart-a", "chart-b", "chart-c"]) assert.match(sceneHtml, new RegExp(`data-panel-id="${id}"`));
+  assert.doesNotMatch(sceneHtml, /data-chrono-section=/);
+});
+
 
 function dashboardFixture() {
   const charts = [

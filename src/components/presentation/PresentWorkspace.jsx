@@ -1,4 +1,5 @@
 import React from "react";
+import { stableSerialize } from "../../charting/runtime/chartPreparationIdentity.js";
 
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import { MAX_DISPLAYED_CHARTS, reduceDisplayState } from "../../lib/displayController.js";
@@ -18,6 +19,7 @@ export default function PresentWorkspace({
   onOpenDashboardLook,
   runtime,
   compositionReady = true,
+  onEntryInitialized,
   presentableItemIndex: suppliedPresentableItemIndex,
   accessibilityEnabled,
   themeProjection,
@@ -26,41 +28,31 @@ export default function PresentWorkspace({
   const playback = resolvePresentPlayback(usePlayback());
   const [sourceInitialized, setSourceInitialized] = React.useState(false);
   const [audienceOptionsOpen, setAudienceOptionsOpen] = React.useState(false);
-  const [chronoControlsOpen, setChronoControlsOpen] = React.useState(false);
+  const [outputControlsOpen, setOutputControlsOpen] = React.useState(false);
   const playbackDispatchRef = React.useRef(playback.dispatch);
   playbackDispatchRef.current = playback.dispatch;
   const playbackViewOwner = `present:${React.useId()}`;
   const [entrySnapshot] = React.useState(() => (
-    runtime.hasSession ? runtime.sessionState?.lastValidSnapshot ?? null : null
+    // The session stores the state wire payload, which omits the Theme sidecar.
+    // Compare against the controller's complete accepted projection so an unchanged
+    // entry does not resequence output, while an actual Theme change still publishes.
+    runtime.hasSession ? runtime.acceptedPresentationState ?? runtime.sessionState?.lastValidSnapshot ?? null : null
   ));
   const lastPublishedInput = React.useRef(null);
   const retainOnEntry = React.useRef(entrySnapshot !== null);
-  const selectSource = runtime.selectPresentationSource;
   const dispatchSession = runtime.dispatch;
   React.useLayoutEffect(() => {
     const dispatchPlayback = playbackDispatchRef.current;
     dispatchPlayback({ type: "openView", owner: playbackViewOwner });
-    const source = entrySnapshot?.source;
-    if (source?.kind === "scene") {
-      selectSource?.({ kind: "scene", id: source.scene_id });
-      dispatchPlayback({ type: "setScene", sceneId: source.scene_id });
-    } else {
-      const groupId = source?.kind === "Chrono Group" ? source.chrono_group_id : null;
-      selectSource?.(groupId === null ? { kind: "manual" } : { kind: "group", id: groupId });
-      dispatchPlayback({ type: "setGroup", groupId });
-    }
-    if (entrySnapshot?.timeline) {
-      const { frame_index, frame_epochs, seconds_per_frame, trace_mode } = entrySnapshot.timeline;
-      dispatchPlayback({ type: "setSpeed", speed: seconds_per_frame });
-      dispatchPlayback({ type: "setTraceMode", mode: trace_mode });
-      dispatchPlayback({ type: "seek", index: frame_index, clockLength: frame_epochs.length });
-    }
+    if (entrySnapshot?.time) dispatchPlayback({ type: "restoreAcceptedTime", time: entrySnapshot.time });
     setSourceInitialized(true);
+    onEntryInitialized?.(true);
     return () => {
+      onEntryInitialized?.(false);
       dispatchSession?.({ type: "MODE_EXIT" });
       playbackDispatchRef.current({ type: "closeView", owner: playbackViewOwner });
     };
-  }, [dispatchSession, entrySnapshot, playbackViewOwner, selectSource]);
+  }, [dispatchSession, entrySnapshot, onEntryInitialized, playbackViewOwner]);
   const {
     displayState,
     onDisplayAction,
@@ -158,10 +150,10 @@ export default function PresentWorkspace({
     lastPublishedInput.current = key;
     if (retainOnEntry.current) {
       retainOnEntry.current = false;
-      return;
+      if (stableSerialize(entrySnapshot) === stableSerialize(presentationState)) return;
     }
     publish(presentationState, { sourceSelection: sourceEligibility });
-  }, [presentationState, publish, sourceEligibility, sourceInitialized]);
+  }, [entrySnapshot, presentationState, publish, sourceEligibility, sourceInitialized]);
 
   function toggleChart(chartId) {
     if (displayedChartIds.includes(chartId)) {
@@ -220,14 +212,14 @@ export default function PresentWorkspace({
           </button>
           <button
             type="button"
-            className="secondary present-chrono-groups-trigger"
-            data-presentation-control-id="chrono-groups"
-            aria-controls="present-chrono-groups"
-            aria-expanded={chronoControlsOpen}
-            aria-pressed={chronoControlsOpen}
-            onClick={() => setChronoControlsOpen((open) => !open)}
+            className="secondary present-output-controls-trigger"
+            data-presentation-control-id="output-controls"
+            aria-controls="present-output-controls"
+            aria-expanded={outputControlsOpen}
+            aria-pressed={outputControlsOpen}
+            onClick={() => setOutputControlsOpen((open) => !open)}
           >
-            Chrono Groups
+            Output controls
           </button>
           <button
             type="button"
@@ -240,7 +232,7 @@ export default function PresentWorkspace({
         {connectionError && <p className="present-connection-error" role="status">{connectionError}</p>}
         {activeSceneTemporalReview && (
           <p className="present-connection-error" role="status">
-            Scene presentation needs review after a source update. Rendering continues with the saved composition.
+            Storyline presentation needs review after a source update. Rendering continues with the saved composition.
           </p>
         )}
       </section>
@@ -267,9 +259,9 @@ export default function PresentWorkspace({
                   <h1 id="displayed-charts-heading">Displayed charts</h1>
                 </div>
                 <label className="present-field present-layout-field">
-                  <span>Scene layout</span>
+                  <span>Storyline layout</span>
                   <select
-                    aria-label="Scene layout"
+                    aria-label="Storyline layout"
                     data-presentation-control-id="composition-layout"
                     value={layout}
                     onChange={(event) => onDisplayAction?.({
@@ -387,16 +379,16 @@ export default function PresentWorkspace({
 
       <section
         className="present-action-dock"
-        id="present-chrono-groups"
+        id="present-output-controls"
         aria-label="Presentation controls"
-        hidden={!chronoControlsOpen}
+        hidden={!outputControlsOpen}
       >
         <PresentationController
           runtime={{ ...runtime, sessionState }}
           playback={playback}
           presentationState={presentationState}
           sourceEligibility={sourceEligibility}
-          onClose={() => setChronoControlsOpen(false)}
+          onClose={() => setOutputControlsOpen(false)}
         />
       </section>
       <AudienceDisplayOptionsDrawer
@@ -425,21 +417,21 @@ function audienceInformationRows({
     },
     {
       key: "parent_chrono_group",
-      label: "Parent Chrono Group",
-      value: optionalText(activeGroup?.name),
-      unavailableReason: "Choose a Chrono Group to make this available.",
+      label: "Original collection",
+      value: optionalText(activeScene?.audience?.collectionLabel),
+      unavailableReason: "This Storyline has no original collection label.",
     },
     {
       key: "scene_name",
-      label: "Scene name",
+      label: "Storyline name",
       value: optionalText(activeScene?.name ?? activeScene?.title),
-      unavailableReason: "No Scene is loaded.",
+      unavailableReason: "No Storyline is loaded.",
     },
     {
       key: "scene_date",
-      label: "Scene date",
+      label: "Storyline date",
       value: canonicalTime(activeEpochMs),
-      unavailableReason: "Choose a Chrono Group with available frames.",
+      unavailableReason: "Choose a scope with available observations.",
     },
   ];
 }

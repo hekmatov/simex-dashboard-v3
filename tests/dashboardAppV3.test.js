@@ -12,6 +12,9 @@ import path from "node:path";
 import test from "node:test";
 
 import { createOperationStatusQueue } from "../src/lib/operationStatusQueue.js";
+import { createSerializedDashboardCommitController } from "../src/lib/dashboardCommitController.js";
+import { commitDashboardPackageImport } from "../src/lib/dashboardPackageImportTransaction.js";
+import { normalizeDashboardBoundary } from "../src/charting/config/dashboardBundleV3.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const inertScheduler = Object.freeze({
@@ -32,6 +35,41 @@ export async function load(url, context, nextLoad) {
 async function source(relativePath) {
   return readFile(path.join(ROOT, relativePath), "utf8");
 }
+
+test("App import compensation preserves exact saved V6 bytes or absence after replacement or rebase failure", async () => {
+  const { createServer } = await import("vite");
+  const vite = await createServer({ root: ROOT, configFile: false, optimizeDeps: { noDiscovery: true }, appType: "custom", logLevel: "silent", server: { middlewareMode: true, watch: null } });
+  try {
+    const { createPackageImportDashboardBoundary } = await vite.ssrLoadModule("/src/App.jsx");
+    const legacy = { configVersion: 6, id: "rollback-original", title: "Original", timezone: "UTC", home: { enabled: true },
+      pages: [], dataSources: {}, chronoGroups: [], scenes: [], contentLibrary: { mediaItems: {}, sourceEntries: {} } };
+    const lastGood = normalizeDashboardBoundary(legacy);
+    const replacement = { ...structuredClone(lastGood), title: "Replacement" };
+    for (const savedText of [JSON.stringify(legacy, null, 3) + "\n", null]) for (const failure of ["durable replacement", "renderer rebase"]) {
+      let stored = savedText, failNextWrite = failure === "durable replacement", failNextRebase = failure === "renderer rebase", visible = lastGood;
+      const storage = { getItem: () => stored, removeItem: () => { stored = null; return true; },
+        setItem: (_key, text) => { if (failNextWrite) { failNextWrite = false; return false; } stored = text; return true; } };
+      const persist = async value => {
+        const canonical = normalizeDashboardBoundary(value);
+        if (!storage.setItem("dashboard", JSON.stringify(canonical))) throw new Error("injected durable replacement failure");
+        visible = canonical;
+        return canonical;
+      };
+      const controller = createSerializedDashboardCommitController({ initialDashboard: lastGood, commit: persist });
+      const boundary = createPackageImportDashboardBoundary({ controller, storage, storageKey: "dashboard",
+        replace: (value) => controller.replaceWith(value, persist), snapshotRuntime: () => visible,
+        restoreRuntime: value => { visible = value; } });
+      await assert.rejects(commitDashboardPackageImport({ candidate: { config: replacement, assetPayloads: {} },
+        prepare: async () => {}, ...boundary, rebase: () => {
+          if (failNextRebase) { failNextRebase = false; throw new Error("injected renderer rebase failure"); }
+        } }), /injected (durable replacement|renderer rebase) failure/);
+      assert.equal(stored, savedText, "failed import must preserve the exact original storage entry, including its absence");
+      assert.deepEqual(controller.getCurrent(), lastGood);
+      assert.equal(visible, lastGood);
+      controller.dispose();
+    }
+  } finally { await vite.close(); }
+});
 
 test("the live shell is version 3 only", async () => {
   const app = await source("src/App.jsx");
@@ -57,7 +95,7 @@ test("the shared runtime keeps version 3 authoring while App owns playback", asy
   assert.doesNotMatch(renderer, /LegacyEditor/);
 });
 
-test("source runtime state is excluded from packages and gates only affected playback groups", async () => {
+test("source runtime state is excluded from packages and gates only affected Storylines", async () => {
   const { createServer } = await import("vite");
   const vite = await createServer({
     root: process.cwd(),
@@ -68,7 +106,7 @@ test("source runtime state is excluded from packages and gates only affected pla
   const {
     configurationForEditBaseline,
     configurationForStorage,
-    readyChronoGroups,
+    readyStorylines,
   } = await vite.ssrLoadModule("/src/App.jsx");
   await vite.close();
   const dashboard = minimalDashboard();
@@ -77,16 +115,17 @@ test("source runtime state is excluded from packages and gates only affected pla
   dashboard.chartDataStates = {
     "status-share": { status: "partial", unavailableSeries: "Exercise status" },
   };
-  dashboard.chronoGroups = [{
-    id: "status-group",
+  dashboard.chronoGroups = [];
+  dashboard.scenes = [{
+    id: "status-storyline",
     members: [{ chartId: "status-share" }],
   }];
 
-  assert.deepEqual(readyChronoGroups(dashboard), []);
+  assert.deepEqual(readyStorylines(dashboard), []);
   dashboard.dataSourceStates.status = { status: "ready" };
   assert.deepEqual(
-    readyChronoGroups(dashboard).map(({ id }) => id),
-    ["status-group"],
+    readyStorylines(dashboard).map(({ id }) => id),
+    ["status-storyline"],
   );
 
   const stored = configurationForStorage(dashboard);
@@ -467,10 +506,11 @@ test("replacement dashboards ignore fallback profiles for absent sources", async
   }]);
 });
 
-test("tracked descriptors and profiles round-trip through the portable V6 bundle", async () => {
+test("tracked descriptors and profiles round-trip through the portable V7 bundle", async () => {
   const {
     parseDashboardBundle,
     serializeDashboardBundle,
+    normalizeDashboardBoundary,
   } = await import("../src/charting/config/dashboardBundleV3.js");
   const [dashboard, datasetProfiles] = await Promise.all([
     readJson("public/config/dashboard.json"),
@@ -482,7 +522,7 @@ test("tracked descriptors and profiles round-trip through the portable V6 bundle
   });
   const parsed = parseDashboardBundle(JSON.stringify(bundle));
 
-  assert.equal(parsed.configVersion, 6);
+  assert.equal(parsed.configVersion, 7);
   const csvIds = Object.entries(dashboard.dataSources)
     .filter(([, source]) => source.kind === "csv")
     .map(([sourceId]) => sourceId)
@@ -494,7 +534,8 @@ test("tracked descriptors and profiles round-trip through the portable V6 bundle
     assert.deepEqual(parsed.datasetProfiles[sourceId], datasetProfiles[sourceId]);
     assert.equal(parsed.datasetProfiles[sourceId].sourceId, sourceId);
   }
-  assert.deepEqual(parsed.pages, dashboard.pages);
+  assert.deepEqual(parsed.pages, normalizeDashboardBoundary(portable).pages);
+  assert.equal(Object.hasOwn(parsed, "chronoGroups"), false);
   assert.deepEqual(portable, { ...dashboard, datasetProfiles });
 });
 
@@ -523,7 +564,7 @@ test("the live loader hydrates inline and uploaded v3 sources with reusable prof
   ));
 });
 
-test("bundle promotion accepts V6 and materializes uploaded CSV descriptors", async () => {
+test("bundle promotion accepts native V7 and materializes uploaded CSV descriptors", async () => {
   const {
     serializeDashboardBundle,
   } = await import("../src/charting/config/dashboardBundleV3.js");
@@ -612,13 +653,14 @@ test("bundle promotion accepts V6 and materializes uploaded CSV descriptors", as
       version: 2,
       config: {},
     })),
-    /version 4, version 5, or version 6 bundles only/i,
+    /version 4, 5, 6, or 7 bundles only/i,
   );
 });
 
 test("promotion rejects non-loadable dataset descriptors before writing", async () => {
   const {
     serializeDashboardBundle,
+    dashboardBundleIntegrity,
   } = await import("../src/charting/config/dashboardBundleV3.js");
   const {
     promoteDashboardBundle,
@@ -649,6 +691,8 @@ test("promotion rejects non-loadable dataset descriptors before writing", async 
       const candidate = structuredClone(bundle);
       candidate.config.dataSources.unloadable = source;
       candidate.metadata.sourceFingerprints.unloadable = null;
+      // This negative owns descriptor admission, after envelope verification.
+      candidate.metadata.integrity.digest = dashboardBundleIntegrity(candidate);
       await writeFile(
         path.join(rootDir, "bundle.json"),
         JSON.stringify(candidate),

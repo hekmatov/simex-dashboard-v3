@@ -46,6 +46,13 @@ test("single-file packaging preserves safe package paths while embedding every r
   assert.equal(result.variant, "biomedical");
   assert.equal(result.outputFile, outputFile);
   assert.match(html, /<meta name="simex-offline-format" content="single-file-v1">/);
+  const csp = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
+  assert.match(csp, /connect-src 'none'/);
+  assert.doesNotMatch(csp.split("script-src ")[1].split(";")[0], /unsafe-inline|unsafe-eval/);
+  for (const [, script] of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+    const { createHash } = await import("node:crypto");
+    assert.ok(csp.includes(`'sha256-${createHash("sha256").update(script).digest("base64")}'`));
+  }
   assert.match(html, /assets\/package\/asset-demo\.png/);
   assert.match(html, /data:image\/png;base64,aW1hZ2UtYnl0ZXM=/);
   assert.match(html, /data\/authored\/default-demo\.png/);

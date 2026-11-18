@@ -117,7 +117,7 @@ test("native drag and Move panel controls use the handle while the canvas articl
   await expect(movedHandle).toBeFocused();
 });
 
-test("Scene Studio opens directly without losing dirty pending work", async ({ page }) => {
+test("Storyline Studio opens directly without losing dirty pending work", async ({ page }) => {
   await page.setViewportSize({ width: 1365, height: 900 });
   await page.goto("/");
   await enterAuthoredDashboard(page);
@@ -132,9 +132,9 @@ test("Scene Studio opens directly without losing dirty pending work", async ({ p
   await choosePanelAction(page, SOCIO_CHART_ID, "edit");
   const editor = page.locator(".chart-quick-editor");
   await editor.getByRole("textbox", { name: "Chart title", exact: true }).fill("Pending scene chart title");
-  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  await page.getByRole("button", { name: "Storyline Studio", exact: true }).click();
 
-  const scene = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  const scene = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await expect(scene).toBeVisible();
   await expect(page.locator(".unit-orbit")).toBeHidden();
   await expect(page.locator('[data-pending-work-kind="layout"]')).toHaveAttribute("data-pending-work-state", "dirty");
@@ -157,8 +157,7 @@ test("compact command row exposes direct Stage 3 ownership", async ({ page }) =>
     "Add chart",
     "Add Text/Image",
     "Source content",
-    "Chrono Studio",
-    "Scene Studio",
+    "Storyline Studio",
     "Load dashboard package",
     "Dashboard summary",
     "Page settings",
@@ -283,7 +282,7 @@ test("Scenario Passport owns direct identity edits and package operations in Bui
     config.datasetProfiles = {};
     config.assets = {};
     config.contentLibrary = { mediaItems: {}, sourceEntries: {} };
-    config.chronoGroups = [];
+    delete config.chronoGroups;
     config.scenes = [];
     delete config.loadedData;
     delete config.dataSourceStates;

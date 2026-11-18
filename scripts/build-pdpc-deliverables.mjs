@@ -185,7 +185,7 @@ Copy either file from \`Offline/\` to a flash drive and double-click it:
 - \`PDPC-Biomedical-Offline.html\`
 - \`PDPC-Socioeconomic-Offline.html\`
 
-Each is a self-contained, script-free-launch HTML file. It needs no command prompt, local server, installation, or internet connection, and works across Windows, macOS, and Linux in a current browser.
+Each is a self-contained HTML file with its application scripts, fonts and required local assets embedded. It needs no command prompt, local server or application installation. Verify offline launch in the intended browser before the exercise and record the devices and conditions actually tested.
 
 ## Integrity
 

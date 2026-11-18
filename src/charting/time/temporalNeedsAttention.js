@@ -3,14 +3,15 @@ import {
   buildSceneFrameLedger,
 } from "./frameLedger.js";
 import { validateIanaTimeZone } from "./temporalSchema.js";
+import { buildStorylineClock } from "./playbackPageScope.js";
 
 export function deriveTemporalNeedsAttention(input = {}) {
   const timeZone = input.timeZone ?? input.timezone;
   const groups = (input.groups ?? input.chronoGroups ?? [])
     .map((group) => normalizeRunchronoGroup(group, timeZone));
-  const scenes = (input.scenes ?? [])
-    .map((scene) => normalizeRuntimeScene(scene));
   const charts = input.charts ?? [];
+  const scenes = (input.scenes ?? [])
+    .map((scene) => normalizeRuntimeScene(scene, charts));
   const schemaRevisions = input.schemaRevisions ?? {};
   const findings = [];
   const chartsById = new Map(charts.map((chart) => [chart.id, chart]));
@@ -72,6 +73,14 @@ export function deriveTemporalNeedsAttention(input = {}) {
   }
 
   for (const scene of scenes) {
+    for (const member of scene.members ?? []) {
+      const chart = chartsById.get(member.chartId);
+      const matching = member.matching ?? scene.defaultMatching ?? (chart?.sourceChart ?? chart)?.interaction?.timeSync?.matching;
+      if (policyName(matching) === "Snap to Closest" && !Number.isFinite(matching?.toleranceMs)) {
+        findings.push(finding("invalid-time-matching", "scene", scene.id, "matching",
+          `Storyline "${scene.id}", chart "${member.chartId}": nearest matching needs an explicit maximum distance.`));
+      }
+    }
     if (scene.temporalReview?.status === "needs-review") {
       findings.push(finding(
         "source-temporal-review", "scene", scene.id, "sources",
@@ -92,18 +101,23 @@ export function deriveTemporalNeedsAttention(input = {}) {
         "scene",
         scene.id,
         "frame-source",
-        `Scene "${scene.id}" needs a replacement Frame source because chart "${unresolvedFrames.previousChartId}" moved.`,
+        `Scene "${scene.id}" needs a replacement Frame source because chart "${unresolvedFrames.previousChartId}" ${unresolvedFrames.reason === "source-chart-removed" ? "was removed" : "moved"}.`,
       ));
     }
     let validPeriod = true;
     try {
-      assertPeriod(scene.period, `Scene "${scene.id}"`);
-      if (
-        !group
-        || scene.period.startEpochMs < group.period.startEpochMs
-        || scene.period.endEpochMs > group.period.endEpochMs
-      ) {
-        throw new Error(`Scene "${scene.id}" period is outside its parent Chrono Group.`);
+      if (scene.chronoGroupId == null && scene.period === null) {
+        validPeriod = false;
+        findings.push(finding("zero-frame-ledger", "scene", scene.id, "frames", `Scene "${scene.id}" has no playable frames.`));
+      } else {
+        assertPeriod(scene.period, `Scene "${scene.id}"`);
+        if (
+          scene.chronoGroupId != null && (!group
+          || scene.period.startEpochMs < group.period.startEpochMs
+          || scene.period.endEpochMs > group.period.endEpochMs)
+        ) {
+          throw new Error(`Scene "${scene.id}" period is outside its parent Chrono Group.`);
+        }
       }
     } catch (error) {
       validPeriod = false;
@@ -120,14 +134,6 @@ export function deriveTemporalNeedsAttention(input = {}) {
           "composition",
           `Scene "${scene.id}" references missing chart "${chartId}".`,
         ));
-      } else if (chart.pageId !== scene.pageId) {
-        findings.push(finding(
-          "cross-page-chart",
-          "scene",
-          scene.id,
-          "composition",
-          `Chart "${chartId}" is not on Scene page "${scene.pageId}".`,
-        ));
       }
     }
 
@@ -135,7 +141,9 @@ export function deriveTemporalNeedsAttention(input = {}) {
     const sourceRuleCanStillBeChecked = scene.frameRule?.type === "source";
     if (!unresolvedFrames && validPeriod && (validTimeZone || sourceRuleCanStillBeChecked)) {
       try {
-        const ledger = buildSceneFrameLedger({
+        const acceptedClock = input.sceneClocks?.get(scene.id);
+        if (acceptedClock?.error) throw new Error(acceptedClock.error);
+        const ledger = acceptedClock ? { frames: acceptedClock.frames, missingSelectedFrames: [] } : buildSceneFrameLedger({
           scene,
           charts,
           timeZone: validTimeZone ? timeZone : "UTC",
@@ -197,12 +205,21 @@ export function deriveTemporalContentItems({
 } = {}) {
   const groups = dashboard?.chronoGroups ?? [];
   const scenes = dashboard?.scenes ?? [];
+  const sceneClocks = new Map();
+  if (dashboard?.loadedData && dashboard?.datasetProfiles) for (const scene of scenes.filter(scene => scene.frames?.mode === "union")) {
+    try {
+      sceneClocks.set(scene.id, { frames: buildStorylineClock({ storyline: scene,
+        charts: charts.map(chart => chart.sourceChart ?? chart), loadedData: dashboard.loadedData,
+        profiles: dashboard.datasetProfiles, timezone: dashboard.timezone ?? "UTC" }) });
+    } catch (error) { sceneClocks.set(scene.id, { error: error.message }); }
+  }
   const findings = deriveTemporalNeedsAttention({
     timezone: dashboard?.timezone,
     chronoGroups: groups,
     scenes,
     charts,
     schemaRevisions,
+    sceneClocks,
   });
   const findingsFor = (targetType, targetId) => findings.filter((finding) => (
     finding.targetType === targetType && finding.targetId === targetId
@@ -238,20 +255,38 @@ function normalizeRunchronoGroup(group, timeZone) {
   };
 }
 
-function normalizeRuntimeScene(scene) {
+function normalizeRuntimeScene(scene, charts) {
   const members = scene?.members ?? [];
   const frames = scene?.frames;
+  const chartIds = scene?.chartIds ?? members.map(({ chartId }) => chartId);
+  const wholeCoverage = (scene?.chronoGroupId ?? scene?.groupId) == null && scene?.period == null;
   return {
     ...scene,
     chronoGroupId: scene?.chronoGroupId ?? scene?.groupId,
-    period: normalizeRuntimePeriod(scene?.period, "UTC"),
-    chartIds: scene?.chartIds ?? members.map(({ chartId }) => chartId),
+    period: wholeCoverage ? memberCoveragePeriod(charts, new Set(chartIds))
+      : normalizeRuntimePeriod(scene?.period, "UTC", { inclusiveDateEnd: frames?.mode === "union" }),
+    chartIds,
     frameRule: scene?.frameRule ?? runtimeFrameRule(frames),
   };
 }
 
+function memberCoveragePeriod(charts, chartIds) {
+  let startEpochMs = Infinity;
+  let endEpochMs = -Infinity;
+  for (const chart of charts) {
+    if (!chartIds.has(chart.id) || chart.chronoGroupEligibility?.eligible === false) continue;
+    for (const variable of chart.variables ?? []) for (const observation of variable.observations ?? []) {
+      if (observation?.value == null || observation.available === false || !Number.isFinite(observation.epochMs)) continue;
+      startEpochMs = Math.min(startEpochMs, observation.epochMs);
+      endEpochMs = Math.max(endEpochMs, observation.epochMs);
+    }
+  }
+  return Number.isFinite(startEpochMs) ? { startEpochMs, endEpochMs } : null;
+}
+
 function runtimeFrameRule(frames) {
   if (!frames) return frames;
+  if (frames.mode === "union") return { type: "union" };
   if (frames.mode === "source") {
     return {
       type: "source",

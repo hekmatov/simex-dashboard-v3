@@ -58,7 +58,6 @@ test("Build command row exposes Insert, Libraries, and Session groups in order",
     "add-chart",
     "add-text-image",
     "source-content",
-    "chrono-studio",
     "scene-studio",
     "load-package",
     "dashboard-summary",
@@ -70,7 +69,8 @@ test("Build command row exposes Insert, Libraries, and Session groups in order",
   assert.match(html, /<div(?=[^>]*\brole="group")(?=[^>]*\baria-label="Libraries")[^>]*>/);
   assert.match(html, /<div(?=[^>]*\brole="group")(?=[^>]*\baria-label="Session")[^>]*>/);
   assert.match(html, /class="build-command-group-label"[^>]*>Insert</);
-  assert.match(html, /data-build-command-action="scene-studio"[\s\S]*?>Scene Studio<\/button>/);
+  assert.match(html, /data-build-command-action="scene-studio"[\s\S]*?>Storyline Studio<\/button>/);
+  assert.doesNotMatch(html, /Chrono Studio/);
   assert.doesNotMatch(html, /data-build-command-action="more"/);
   assert.doesNotMatch(html, /build-more-drawer/);
 });

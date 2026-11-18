@@ -93,6 +93,24 @@ test("Scenario Passport keeps the Home checkbox, label, and helper on the dense 
   );
 });
 
+test("Present advances exercise time through the durable Passport transaction and rejects readonly or rollback", async () => {
+  assert.equal(typeof appModule.advanceExerciseTimeDurably, "function");
+  const baseline = { ...fixtureDashboard(), scenario: { exerciseTime: "2027-03-31T23:59:59.999Z" } };
+  const controller = createSerializedDashboardCommitController({ initialDashboard: baseline, commit: async candidate => structuredClone(candidate) });
+  let writes = 0;
+  const persist = async (candidate, options) => { writes++; assert.deepEqual(options, { requireDurableStorage: true }); return structuredClone(candidate); };
+  const epochMs = Date.parse("2027-05-31T23:59:59.999Z");
+  await assert.rejects(appModule.advanceExerciseTimeDurably({ controller, persist, epochMs, readOnly: true }), /read-only/i);
+  assert.equal(writes, 0); assert.deepEqual(controller.getCurrent(), baseline);
+  await assert.rejects(appModule.advanceExerciseTimeDurably({ controller, epochMs, persist: async () => { throw new Error("disk unavailable"); } }), /disk unavailable/);
+  assert.deepEqual(controller.getCurrent(), baseline);
+  const saved = await appModule.advanceExerciseTimeDurably({ controller, persist, epochMs });
+  assert.equal(saved.scenario.exerciseTime, "2027-05-31T23:59:59.999Z");
+  assert.equal(saved.scenarioLabel, baseline.scenarioLabel); assert.deepEqual(saved.pages, baseline.pages);
+  await assert.rejects(appModule.advanceExerciseTimeDurably({ controller, persist, epochMs: epochMs - 1 }), /later/i);
+  assert.equal(controller.getCurrent().scenario.exerciseTime, saved.scenario.exerciseTime);
+});
+
 test("Scenario drafts omit dashboard-level provenance without changing per-source provenance", () => {
   assert.equal(typeof scenarioModule?.createScenarioDraft, "function");
   const dashboard = {
@@ -265,6 +283,23 @@ test("Scenario durable Save retains the committed baseline after failure and sup
     { requireDurableStorage: true },
     { requireDurableStorage: true },
   ]);
+});
+
+test("Scenario exercise time validates, discards and saves through the durable Passport owner", async () => {
+  const baseline = { ...fixtureDashboard(), scenario: { exerciseTime: "2027-03-31T23:59:59.999Z" } };
+  let draft = scenarioModule.createScenarioDraft(baseline);
+  assert.equal(draft.value.exerciseTime, baseline.scenario.exerciseTime);
+  draft = scenarioModule.reduceScenarioDraft(draft, { type: "EDIT_FIELD", field: "exerciseTime", value: "2027-02-30T00:00:00.000Z" });
+  assert.equal(scenarioModule.reduceScenarioDraft(draft, { type: "SAVE_REQUEST" }).error.code, "EXERCISE_TIME_INVALID");
+  draft = scenarioModule.reduceScenarioDraft(draft, { type: "DISCARD" });
+  assert.equal(draft.value.exerciseTime, baseline.scenario.exerciseTime);
+  draft = scenarioModule.reduceScenarioDraft(draft, { type: "EDIT_FIELD", field: "exerciseTime", value: "2027-05-31T23:59:59.999Z" });
+  const controller = createSerializedDashboardCommitController({ initialDashboard: baseline, commit: async candidate => structuredClone(candidate) });
+  const saved = await appModule.saveScenarioPassportDurably({ controller, value: draft.value, persist: async candidate => structuredClone(candidate) });
+  assert.deepEqual(saved.scenario, { exerciseTime: "2027-05-31T23:59:59.999Z" });
+  const cleared = await appModule.saveScenarioPassportDurably({ controller, value: { ...draft.value, exerciseTime: "" }, persist: async candidate => structuredClone(candidate) });
+  assert.equal(Object.hasOwn(cleared, "scenario"), false);
+  assert.deepEqual(baseline.scenario, { exerciseTime: "2027-03-31T23:59:59.999Z" });
 });
 
 test("Clear durably replaces authored content before resetting Scenario and selecting Home", async () => {

@@ -3,6 +3,7 @@ import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/pr
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { buildPdpcReleaseSet } from "../scripts/build-pdpc-release.mjs";
 import {
@@ -10,9 +11,68 @@ import {
   verifyPdpcStaticBuild,
 } from "../scripts/verify-pdpc-static-build.mjs";
 import { createPdpcReleaseMetadata } from "../scripts/lib/pdpc-release.mjs";
+import { collaboratorPackage } from "./helpers/dashboardPackageFixtures.js";
+import { serializeDashboardBundle, parseDashboardBundle } from "../src/charting/config/dashboardBundleV3.js";
+import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
+import { encodeAssetBase64, sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { parseCsvText } from "../src/lib/loadCsv.js";
 
 const SOURCE_COMMIT = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const INPUT_SHA256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+test("participant public trees do not copy unrelated exercise data, media or full-workspace catalogues", async (t) => {
+  const fixture = await releaseFixture(t, { local: true });
+  for (const [relative, bytes] of [
+    ["data/socio-private.csv", "PRIVATE_SOCIO_FILE_BYTES"],
+    ["assets/unselected-socio-photo.png", "PRIVATE_SOCIO_IMAGE_BYTES"],
+    ["config/chart-aliases.json", '{"secret":"PRIVATE_ALIAS_BYTES"}'],
+    ["integration/quorum-chart-catalogue.json", '{"secret":"PRIVATE_CATALOGUE_BYTES"}'],
+    ["assets/pwa-icon.svg", "RUNTIME_ICON"],
+    ["vendor/three.min.js", "RUNTIME_VENDOR"],
+  ]) {
+    const file = path.join(fixture.rootDir, "public", relative);
+    await mkdir(path.dirname(file), { recursive: true }); await writeFile(file, bytes);
+  }
+  const packaged = structuredClone(collaboratorPackage({ staticPanels: true }));
+  const candidate = packaged.config;
+  const originalCases = candidate.dataSources.cases;
+  const retainedPath = "data/retained-cases.csv";
+  await writeFile(path.join(fixture.rootDir, "public", retainedPath), originalCases.csvText);
+  const provenance = { label: "Retained fixture cases" };
+  candidate.dataSources.cases = { kind: "csv", path: retainedPath, parsingMetadata: originalCases.parsingMetadata, provenance };
+  candidate.datasetProfiles = { cases: { sourceId: "cases", kind: "csv", path: retainedPath, provenance, ...profileDataset(parseCsvText(originalCases.csvText), originalCases.parsingMetadata) } };
+  candidate.pages[0].id = "biomedical"; candidate.pages[1].id = "socio_economic";
+  const textPanel = candidate.pages[0].sections[0].panels.pop();
+  candidate.pages[1].sections[0].panels.push(textPanel);
+  const jpeg = imageFixtureBytes("image/jpeg"), digest = sha256HexSync(jpeg), privateAssetId = `asset-${digest}`;
+  candidate.assets[privateAssetId] = { mediaType: "image/jpeg", byteLength: jpeg.byteLength, width: 2, height: 3, sha256: digest, storageState: "durable" };
+  candidate.contentLibrary.mediaItems["socio-photo"] = { ...candidate.contentLibrary.mediaItems.photo, mediaId: "socio-photo", mediaType: "image/jpeg", byteLength: jpeg.byteLength, current: { kind: "asset", assetId: privateAssetId } };
+  candidate.dataSources.text.qmd = candidate.dataSources.text.qmd.replaceAll("simex-media:photo", "simex-media:socio-photo");
+  packaged.assetPayloads[privateAssetId] = { base64: encodeAssetBase64(jpeg), byteLength: jpeg.byteLength, mediaType: "image/jpeg", sha256: digest };
+  candidate.pages.unshift({ id: "scenario", title: "Scenario", sections: [{ id: "scenario-instructions", panels: [] }] });
+  const native = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(candidate, { assetPayloads: packaged.assetPayloads })), { includeEnvelope: true });
+  await buildPdpcReleaseSet({ ...fixture, envelope: native,
+    buildVariant: async ({ publicDir, outputDir }) => { await cp(publicDir, outputDir, { recursive: true }); await writeFile(path.join(outputDir, "index.html"), "<main>fixture</main>"); },
+    verifyVariant: async () => {},
+  });
+  for (const variant of ["biomedical", "socioeconomic"]) {
+    for (const relative of ["data/socio-private.csv", "assets/unselected-socio-photo.png", "config/chart-aliases.json", "integration/quorum-chart-catalogue.json"]) await assert.rejects(readFile(path.join(fixture.outDir, variant, relative)), { code: "ENOENT" });
+    assert.equal(await readFile(path.join(fixture.outDir, variant, "assets/pwa-icon.svg"), "utf8"), "RUNTIME_ICON");
+    assert.equal(await readFile(path.join(fixture.outDir, variant, "vendor/three.min.js"), "utf8"), "RUNTIME_VENDOR");
+    if (variant === "biomedical") assert.equal(await readFile(path.join(fixture.outDir, variant, retainedPath), "utf8"), originalCases.csvText);
+    else await assert.rejects(readFile(path.join(fixture.outDir, variant, retainedPath)), { code: "ENOENT" });
+    const config = await readJson(path.join(fixture.outDir, variant, "config", "dashboard.json"));
+    const expectedMedia = variant === "biomedical" ? "photo" : "socio-photo";
+    assert.deepEqual(Object.keys(config.contentLibrary.mediaItems), [expectedMedia]);
+    const selected = config.contentLibrary.mediaItems[expectedMedia];
+    const bytes = await readFile(path.join(fixture.outDir, variant, selected.current.path));
+    assert.deepEqual(new Uint8Array(bytes), variant === "biomedical" ? imageFixtureBytes("image/png") : jpeg);
+    assert.equal((await readdir(path.join(fixture.outDir, variant, "assets", "package"))).length, 1);
+    const manifest = await readJson(path.join(fixture.outDir, variant, "release-manifest.json"));
+    assert.ok(manifest.projectionOmissions.mediaIds.includes(variant === "biomedical" ? "socio-photo" : "photo"));
+  }
+});
 
 test("the release builder validates before building either variant", async (t) => {
   const fixture = await releaseFixture(t);
@@ -132,6 +192,7 @@ test("a second-variant failure preserves the prior owned pair and leaves no part
       buildVariant: async ({ variant, publicDir, outputDir }) => {
         if (variant === "socioeconomic") throw new Error("synthetic Vite failure");
         await cp(publicDir, outputDir, { recursive: true });
+        await writeFile(path.join(outputDir, "index.html"), "<main>fixture first variant</main>\n");
       },
       verifyVariant: async () => {},
     }),
@@ -188,7 +249,10 @@ test("the static verifier accepts the fingerprinted official PDPC logo", async (
       'console.log("Fictional scenario · Exercise use only");\n',
     ),
   ]);
-  await finalizePdpcRuntimeManifest({ outputDir, variant: "biomedical" });
+  const runtimeManifest = await finalizePdpcRuntimeManifest({ outputDir, variant: "biomedical" });
+  assert.ok(!runtimeManifest.assets.includes("./_headers"), "Cloudflare consumes _headers; it cannot be fetched for offline installation");
+  const headers = await readFile(path.join(outputDir, "_headers"), "utf8");
+  assert.match(headers, /Content-Security-Policy:/);
 
   const result = await verifyPdpcStaticBuild({ outputDir, variant: "biomedical" });
   assert.equal(result.variant, "biomedical");
@@ -289,8 +353,10 @@ test("the static verifier accepts intact shipped authored media and rejects alte
   );
 });
 
-async function releaseFixture(t) {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "simex-pdpc-build-"));
+async function releaseFixture(t, { local = true } = {}) {
+  const base = local ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../release") : os.tmpdir();
+  if (local) await mkdir(base, { recursive: true });
+  const fixtureRoot = await mkdtemp(path.join(base, "simex-pdpc-build-"));
   t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
   const rootDir = path.join(fixtureRoot, "repo");
   await mkdir(path.join(rootDir, "public"), { recursive: true });

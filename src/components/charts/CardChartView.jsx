@@ -1,4 +1,6 @@
 import React from "react";
+import { useChartTypography } from "./ChartTypographyContext.jsx";
+import ChartSourceCaption from "./ChartSourceCaption.jsx";
 import CollectionDisplay from "../collection/CollectionDisplay.jsx";
 import {
   chartDescriptionVisible,
@@ -20,6 +22,7 @@ export default function CardChartView({
   short = false,
   compact = false,
 }) {
+  const typography = useChartTypography();
   const controlsPortalId = `collection-controls-${React.useId()}`;
   const title = chart.title || "Chart summary";
   const description = chart.description || "Summary values for this chart.";
@@ -35,15 +38,16 @@ export default function CardChartView({
     ...titleContainerProps(chart),
   },
     React.createElement("header", { className: "collection-display-header" },
-      React.createElement("h3", { className: chartTitleClassName(chart), style: chartTitleStyle(chart) }, title),
+      React.createElement("h3", { className: chartTitleClassName(chart), style: chartTitleStyle(chart, typography) }, title),
       React.createElement("div", { id: controlsPortalId, className: "collection-header-transport-host" })),
     chartDescriptionVisible(chart)
       ? React.createElement("p", { className: "chart-view-description" }, description)
       : null,
+    React.createElement(ChartSourceCaption),
     React.createElement("div", {
       className: "chart-card-collection",
       role: items.length <= 1 ? "list" : undefined,
-      ...(short ? {
+      ...(short || typography?.phone ? {
         tabIndex: 0,
         "aria-label": `${title} cards. Scroll to view all cards.`,
       } : {}),

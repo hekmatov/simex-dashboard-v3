@@ -7,11 +7,13 @@ import ActionMenu from "../common/ActionMenu.jsx";
 import SectionStructureCommandDialog from "../build/SectionStructureCommandDialog.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
 import LayoutGrid from "../LayoutGrid.jsx";
+import DeferredPanelMount from "./DeferredPanelMount.jsx";
 import DashboardChartPlacement from "./DashboardChartPlacement.jsx";
 
 function DashboardSection({
   section,
   sectionDraft,
+  surface,
   pageId,
   index,
   count,
@@ -86,6 +88,7 @@ function DashboardSection({
             const chart = placement.chart ?? placement;
             const selected = selectedPlacementId === placement.id;
             return (
+              <DeferredPanelMount key={placement.id} chart={chart} surface={surface} selected={selected || multiPanelIds.includes(chart.id)} eager={contentRenderContext?.eager === true}>
               <DashboardChartPlacement
                 key={placement.id}
                 placement={placement}
@@ -113,6 +116,7 @@ function DashboardSection({
                 onToggleMultiPanel={actions ? undefined : onToggleMultiPanel}
                 onStartMultiFullscreenSelection={actions ? undefined : onStartMultiFullscreenSelection}
               />
+              </DeferredPanelMount>
             );
           })}
         </LayoutGrid>

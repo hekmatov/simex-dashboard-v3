@@ -40,6 +40,8 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const horizontal = HORIZONTAL_MARKS.has(mark);
   const temporal = prepared.meta?.axisInterpretation === "temporal";
   const activeTime = prepared.meta?.activeTime ?? null;
+  const fallbackAtUtc = Number.isFinite(activeTime?.fallbackEpochMs);
+  const axisEpoch = fallbackAtUtc ? canonicalAxisEpoch : temporalAxisValue;
   const seriesStyle = chart.presentation?.series;
   const referenceLine = chart.presentation?.referenceLine;
   const labels = chart.presentation?.labels;
@@ -65,13 +67,13 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
     ...(axes?.x ?? {}),
   };
   const temporalHoverLabels = temporal
-    ? temporalHoverLabelLookup(prepared.marks)
+    ? temporalHoverLabelLookup(prepared.marks, axisEpoch)
     : null;
   const temporalHoverFormatter = temporal
     ? createTemporalHoverLabelFormatter({
       preset: xSettings.hoverLabelPreset,
       sourceFormat: prepared.meta?.axisTemporalFormat ?? chart.roles?.observation?.format,
-      resolveValue: (value) => temporalHoverLabels.get(temporalAxisValue(value)) ?? value,
+      resolveValue: (value) => temporalHoverLabels.get(axisEpoch(value)) ?? value,
     })
     : null;
   const xPresentation = xAxisPresentation(
@@ -81,7 +83,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   );
   const fixedTemporalTicks = temporal && Number.isFinite(xPresentation.interval);
   const temporalExtent = fixedTemporalTicks
-    ? temporalDataExtent(prepared.marks)
+    ? temporalDataExtent(prepared.marks, axisEpoch)
     : null;
   const categoryAxis = {
     type: fixedTemporalTicks ? "value" : temporal ? "time" : "category",
@@ -97,8 +99,8 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       },
     } : {}),
     ...(fixedTemporalTicks ? {
-      min: temporalAxisValue(xPresentation.min) ?? temporalExtent?.min,
-      max: temporalAxisValue(xPresentation.max) ?? temporalExtent?.max,
+      min: axisEpoch(xPresentation.min) ?? temporalExtent?.min,
+      max: axisEpoch(xPresentation.max) ?? temporalExtent?.max,
     } : {}),
   };
   const primarySettings = axes?.primary;
@@ -135,8 +137,8 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
           .map((mark) => axisDataValue(
             mark,
             horizontal
-              ? [mark.value, fixedTemporalTicks ? temporalAxisValue(mark.x) : mark.x]
-              : [fixedTemporalTicks ? temporalAxisValue(mark.x) : mark.x, mark.value],
+              ? [mark.value, fixedTemporalTicks || fallbackAtUtc ? axisEpoch(mark.x) : mark.x]
+              : [fixedTemporalTicks || fallbackAtUtc ? axisEpoch(mark.x) : mark.x, mark.value],
             activeTime,
             type,
             pointLabels,
@@ -195,6 +197,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
     ...(seriesStyle?.order ? { seriesPresentation: grouped.map(({ key, sourceIndex }) => ({ key, sourceIndex })) } : {}),
     valueAxisTitleProjection,
     option: {
+      ...(temporal && fallbackAtUtc ? { useUTC: true } : {}),
       title: titleOption(chart),
       aria: ariaOption(chart),
       tooltip: { trigger: "axis", ...(customLegend ? { formatter: legendTooltipFormatter(grouped, legendEntries) } : {}) },
@@ -338,22 +341,27 @@ function legacyXAxisSettings(axes) {
   return { title: primary.xTitle };
 }
 
-function temporalDataExtent(marks) {
+function temporalDataExtent(marks, axisEpoch) {
   const values = marks
-    .map(({ x }) => temporalAxisValue(x))
+    .map(({ x }) => axisEpoch(x))
     .filter(Number.isFinite);
   return values.length === 0
     ? null
     : { min: Math.min(...values), max: Math.max(...values) };
 }
 
-function temporalHoverLabelLookup(marks) {
+function temporalHoverLabelLookup(marks, axisEpoch) {
   const labels = new Map();
   for (const { x } of marks) {
-    const axisValue = temporalAxisValue(x);
+    const axisValue = axisEpoch(x);
     if (Number.isFinite(axisValue) && !labels.has(axisValue)) labels.set(axisValue, x);
   }
   return labels;
+}
+
+function canonicalAxisEpoch(value) {
+  const epoch = typeof value === "number" ? value : Date.parse(value);
+  return Number.isFinite(epoch) ? epoch : undefined;
 }
 
 function temporalAxisValue(value) {
@@ -439,12 +447,13 @@ function playbackMarker(marks, activeTime, numericTime = false) {
   const mark = marks.find(isActiveObservation);
   if (!mark) return undefined;
   const provenance = provenanceSummary(mark.temporalProvenance);
+  const markerTime = activeTime.fallbackEpochMs ?? (numericTime ? temporalAxisValue(activeTime.canonical) : activeTime.canonical);
   return {
     symbol: provenance.status === "observed" ? "circle" : "emptyCircle",
     symbolSize: 12,
     data: [{
       name: provenance.label,
-      coord: [numericTime ? temporalAxisValue(activeTime.canonical) : activeTime.canonical, mark.value],
+      coord: [markerTime, mark.value],
       value: mark.value,
       active: true,
       activeTime: activeTime.canonical,

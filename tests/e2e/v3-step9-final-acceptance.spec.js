@@ -1,5 +1,3 @@
-import { mkdir, copyFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
@@ -143,8 +141,8 @@ test("1920 Audience preserves room-distance composition through the public workf
   await page.getByRole("button", { name: "Audience display options" }).click();
   const options = page.getByRole("dialog", { name: "Audience display options" });
   await options.getByRole("checkbox", { name: "Display Dashboard name" }).check();
-  await options.getByRole("checkbox", { name: "Display Scene name" }).check();
-  await options.getByRole("checkbox", { name: "Display Scene date" }).check();
+  await options.getByRole("checkbox", { name: "Display Storyline name" }).check();
+  await options.getByRole("checkbox", { name: "Display Storyline date" }).check();
   await options.getByRole("button", { name: "Close Audience display options" }).click();
   const savedScene = await readStoredScene(page, scene.id);
   const authoredDatePosition = {
@@ -153,7 +151,6 @@ test("1920 Audience preserves room-distance composition through the public workf
     widthPermille: savedScene.audience.datePosition.widthPermille,
   };
   let popup;
-  let checkpointPath;
   try {
     ({ popup } = await openAudienceSession(page));
     await popup.setViewportSize({ width: 1920, height: 1080 });
@@ -218,12 +215,12 @@ test("1920 Audience preserves room-distance composition through the public workf
 
     expectContainedGeometry(geometry.header, geometry.root, "Audience header");
     expectContainedGeometry(geometry.title, geometry.header, "Audience title");
-    expectContainedGeometry(geometry.sceneName, geometry.header, "Audience Scene name");
-    expectContainedGeometry(geometry.sceneDate, geometry.root, "Audience Scene date");
+    expectContainedGeometry(geometry.sceneName, geometry.header, "Audience Storyline name");
+    expectContainedGeometry(geometry.sceneDate, geometry.root, "Audience Storyline date");
     expectNonOverlappingGeometry(
       geometry.sceneName,
       geometry.sceneDate,
-      "Audience Scene name and Scene date",
+      "Audience Storyline name and Storyline date",
     );
     expectContainedGeometry(geometry.grid, geometry.root, "Audience chart grid");
     expect(geometry.cells).toHaveLength(savedChartIds.length);
@@ -245,7 +242,7 @@ test("1920 Audience preserves room-distance composition through the public workf
       );
     }
 
-    checkpointPath = await captureCheckpoint(
+    await captureCheckpoint(
       popup,
       testInfo,
       "audience-1920x1080-room-distance.png",
@@ -254,12 +251,6 @@ test("1920 Audience preserves room-distance composition through the public workf
     if (popup && !popup.isClosed()) await popup.close();
   }
 
-  const durablePath = resolve(
-    dirname(testInfo.file),
-    "../../docs/audits/2026-08-28-v3-step-9-final-acceptance/screenshots/audience-1920x1080-room-distance.png",
-  );
-  await mkdir(dirname(durablePath), { recursive: true });
-  await copyFile(checkpointPath, durablePath);
 });
 
 async function readCanonicalCanvasIdentity(page) {

@@ -4,16 +4,16 @@ import { hasUnresolvedFrameSource } from "./chronoContentState.js";
 export default function SceneLibrary({ state, sections = [], sceneCreationDisabledReason = "", onOpenBlockingDraft, onAction = () => {} }) {
   const total = state?.scenes?.length ?? sections.reduce((sum, section) => sum + section.scenes.length, 0);
   const emptyMessage = total > 0
-    ? "No Scenes match the current filters."
-    : "No Scenes have been created yet.";
+    ? "No Storylines match the current filters."
+    : "No Storylines have been created yet.";
   return React.createElement("section", { className: "scene-library temporal-studio", "aria-labelledby": "scene-library-title" },
     React.createElement("header", { className: "temporal-studio__header" },
       React.createElement("div", null,
         React.createElement("p", { className: "eyebrow" }, "Temporal authoring"),
-        React.createElement("h2", { id: "scene-library-title" }, "Scene Studio"),
-        React.createElement("p", null, "Browse saved Scenes by dashboard page before opening their content."),
+        React.createElement("h2", { id: "scene-library-title" }, "Storyline Studio"),
+        React.createElement("p", null, "Browse saved Storylines by dashboard page before opening their content."),
       ),
-      React.createElement("button", { type: "button", "data-scene-workflow-id": "create-scene", disabled: Boolean(sceneCreationDisabledReason), title: sceneCreationDisabledReason || undefined, onClick: () => onAction({ type: "START_CREATE_SCENE" }) }, "Create Scene"),
+      React.createElement("button", { type: "button", "data-scene-workflow-id": "create-scene", disabled: Boolean(sceneCreationDisabledReason), title: sceneCreationDisabledReason || undefined, onClick: () => onAction({ type: "START_CREATE_SCENE" }) }, "Create Storyline"),
     ),
     sceneCreationDisabledReason ? React.createElement("p", { role: "status" }, sceneCreationDisabledReason, " ", React.createElement("button", { type: "button", className: "text-button", onClick: onOpenBlockingDraft }, "Open pending Chrono Group draft")) : null,
     React.createElement("div", { className: "temporal-studio__filters", role: "search" },
@@ -34,7 +34,7 @@ export default function SceneLibrary({ state, sections = [], sceneCreationDisabl
         React.createElement("button", {
           type: "button", className: "temporal-content-card", "data-action": "open-content", "data-status": scene.status,
           onClick: () => onAction({ type: "OPEN_CONTENT", itemType: "scene", itemId: scene.id }),
-        }, React.createElement("span", { className: "temporal-content-card__type" }, "Scene"), React.createElement("strong", null, scene.name), React.createElement("span", null, scene.chronoGroupName), React.createElement("span", { className: "temporal-content-card__status" }, scene.status === "needs-attention" ? "Needs attention" : "Ready")),
+        }, React.createElement("span", { className: "temporal-content-card__type" }, "Storyline"), React.createElement("strong", null, scene.name), React.createElement("span", null, scene.chronoGroupName), React.createElement("span", { className: "temporal-content-card__status" }, scene.status === "needs-attention" ? "Needs attention" : "Ready")),
         scene.status === "needs-attention" && hasUnresolvedFrameSource(scene) ? React.createElement("button", {
           type: "button",
           "data-scene-workflow-id": "repair-frame-source",

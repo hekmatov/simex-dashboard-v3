@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "a876d0b83c9f40ea5179723b9c4304f8873b393142e4a790711af80ed363662c";
+  "2244f5b6a53f4530a267251f9733a0a8a83ccb2ae90a5fe9442a1a658a5f8d7f";
 const PROTOCOL_PATH = "src/lib/quorumCompanionProtocol.js";
 const CATALOGUE_PATH = "public/integration/quorum-chart-catalogue.json";
 const CHART_VIEW_PATH = "src/components/charts/ChartView.jsx";
@@ -144,7 +144,7 @@ const CONFIGURED_CHART_SCHEMA = schemaObject({
   role_ids: SCHEMA_TEXT_ARRAY,
   section_id: SCHEMA_TEXT,
   supported_display_modes: SCHEMA_TEXT_ARRAY,
-  chrono_group_id: schemaNullable(SCHEMA_TEXT),
+  storyline_ids: SCHEMA_TEXT_ARRAY,
   title: SCHEMA_TEXT,
   type_id: SCHEMA_TEXT,
 });
@@ -154,7 +154,7 @@ const CATALOGUE_SCHEMA = schemaObject({
   chart_schema_version: schemaLiteral(3),
   chart_types: schemaArray(CHART_TYPE_SCHEMA),
   charts: schemaArray(CONFIGURED_CHART_SCHEMA),
-  contract_version: schemaLiteral("2"),
+  contract_version: schemaLiteral("3"),
   dashboard_semantic_digest: SCHEMA_TEXT,
   digest: SCHEMA_TEXT,
 });

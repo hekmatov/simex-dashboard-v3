@@ -14,7 +14,7 @@ import { encodeAssetBase64, sha256HexSync } from "../src/static-content/assets/a
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 import { makeDashboardV4, makeDashboardV5, makeDashboardV6 } from "./helpers/contentLibraryFixtures.js";
 
-test("dashboard and bundle boundaries emit V6 while retaining chart configuration V3", () => {
+test("dashboard and bundle boundaries emit V7 while retaining chart configuration V3", () => {
   const dashboard = makeDashboardV6();
   const bytes = imageFixtureBytes("image/png");
   dashboard.assets["asset-map"] = {
@@ -39,15 +39,15 @@ test("dashboard and bundle boundaries emit V6 while retaining chart configuratio
       },
     },
   });
-  assert.equal(DASHBOARD_SCHEMA_VERSION, 6);
-  assert.equal(DASHBOARD_BUNDLE_VERSION, 6);
-  assert.equal(bundle.version, 6);
-  assert.equal(bundle.config.configVersion, 6);
+  assert.equal(DASHBOARD_SCHEMA_VERSION, 7);
+  assert.equal(DASHBOARD_BUNDLE_VERSION, 7);
+  assert.equal(bundle.version, 7);
+  assert.equal(bundle.config.configVersion, 7);
   assert.equal(bundle.config.pages[0].sections[0].panels[0].chart.configVersion, 3);
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
 
-test("V6 bundle parser accepts a version-4 bundle by migrating before validation", () => {
+test("V7 bundle parser accepts a version-4 bundle by migrating before validation", () => {
   const legacyBundle = {
     bundleType: "simex-dashboard-bundle",
     version: 4,
@@ -64,12 +64,12 @@ test("V6 bundle parser accepts a version-4 bundle by migrating before validation
   };
   delete legacyBundle.config.assets;
   const parsed = parseDashboardBundle(JSON.stringify(legacyBundle));
-  assert.equal(parsed.configVersion, 6);
+  assert.equal(parsed.configVersion, 7);
   assert.equal(parsed.dataSources["image-source"].sourceVersion, 2);
   assert.equal(parsed.contentLibrary.mediaItems[parsed.dataSources["image-source"].mediaId].revision, 3);
 });
 
-test("V6 bundle parser accepts a version-5 envelope and normalizes its V5 config", () => {
+test("V7 bundle parser accepts a version-5 envelope and normalizes its V5 config", () => {
   const config = makeDashboardV5();
   const bytes = imageFixtureBytes("image/png");
   config.assets["asset-map"] = {
@@ -105,7 +105,7 @@ test("V6 bundle parser accepts a version-5 envelope and normalizes its V5 config
 
   const parsed = parseDashboardBundle(JSON.stringify(legacyBundle));
 
-  assert.equal(parsed.configVersion, 6);
+  assert.equal(parsed.configVersion, 7);
   assert.deepEqual(parsed.home, { enabled: true });
 });
 
@@ -150,7 +150,7 @@ test("V5 bundle round-trips exact Chrono, Scene, and Scene Present temporal revi
     "asset-map": { base64: encodeAssetBase64(bytes), byteLength: bytes.byteLength, mediaType: "image/png", sha256: dashboard.assets["asset-map"].sha256 },
   } });
   const parsed = parseDashboardBundle(JSON.stringify(bundle));
-  assert.deepEqual(parsed.chronoGroups[0].temporalReview, { status: "needs-review", sourceIds: ["cases"] });
+  assert.equal(Object.hasOwn(parsed, "chronoGroups"), false);
   assert.deepEqual(parsed.scenes[0].temporalReview, { status: "needs-review", sourceIds: ["cases"] });
   assert.deepEqual(parsed.scenes[0].present.temporalReview, { status: "degraded", sourceIds: ["cases"] });
 

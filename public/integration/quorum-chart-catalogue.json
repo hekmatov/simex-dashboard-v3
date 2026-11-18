@@ -1,5 +1,5 @@
 {
-  "contract_version": "2",
+  "contract_version": "3",
   "catalogue_id": "simex-dashboard",
   "catalogue_revision": "2026-09-03",
   "chart_schema_version": 3,
@@ -3605,7 +3605,9 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "national_outbreak",
+      "storyline_ids": [
+        "national_outbreak"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3634,11 +3636,12 @@
         "measurement",
         "time"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -3661,7 +3664,11 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "national_outbreak",
+      "storyline_ids": [
+        "cases_and_institutional_trust",
+        "cases_and_unemployment",
+        "national_outbreak"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3690,11 +3697,12 @@
         "time",
         "value"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -3717,7 +3725,9 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "national_outbreak",
+      "storyline_ids": [
+        "national_outbreak"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3746,7 +3756,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3775,11 +3785,12 @@
         "target",
         "time"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -3802,11 +3813,14 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [
+        "health_pressure_and_staff_absenteeism"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -3831,11 +3845,12 @@
         "target",
         "time"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -3858,11 +3873,14 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [
+        "health_pressure_and_staff_absenteeism"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -3885,7 +3903,7 @@
         "category",
         "value"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3912,7 +3930,9 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "municipal_outbreak",
+      "storyline_ids": [
+        "municipal_outbreak"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3942,7 +3962,9 @@
         "time",
         "value"
       ],
-      "chrono_group_id": "municipal_outbreak",
+      "storyline_ids": [
+        "municipal_outbreak"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3971,7 +3993,9 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "national_outbreak",
+      "storyline_ids": [
+        "national_outbreak"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3999,7 +4023,7 @@
         "entity",
         "value"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -4029,7 +4053,7 @@
         "x",
         "y"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4055,7 +4079,9 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": "national_outbreak",
+      "storyline_ids": [
+        "national_outbreak"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4083,7 +4109,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4110,11 +4136,12 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4136,7 +4163,7 @@
       "role_ids": [
         "columns"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4164,11 +4191,12 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4192,11 +4220,12 @@
         "time",
         "value"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4219,7 +4248,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4227,26 +4256,23 @@
       ]
     },
     {
-      "chart_id": "chart-bar-f349044e-4584-47c4-870f-ecccba978c53",
-      "type_id": "bar",
-      "title": "TEEEST",
-      "description": "Risk perception, adherence, and citizen priorities.",
-      "page_id": "socio_economic",
-      "section_id": "public_response",
+      "chart_id": "exercise_operating_instructions",
+      "type_id": "freeText",
+      "title": "Operating instructions",
+      "description": "Static exercise instructions.",
+      "page_id": "scenario",
+      "section_id": "exercise_brief",
       "aliases": [
-        "teeest"
+        "exercise instructions",
+        "operating instructions"
       ],
       "keywords": [
-        "bar",
-        "socio_economic",
-        "teeest"
+        "exercise",
+        "instructions",
+        "scenario"
       ],
-      "role_ids": [
-        "cluster",
-        "measurements",
-        "observation"
-      ],
-      "chrono_group_id": null,
+      "role_ids": [],
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4273,7 +4299,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4301,7 +4327,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4328,11 +4354,12 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4355,11 +4382,14 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [
+        "health_pressure_and_staff_absenteeism"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4382,7 +4412,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4409,11 +4439,12 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4437,7 +4468,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4464,7 +4495,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4492,11 +4523,12 @@
         "measurement",
         "time"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4520,11 +4552,12 @@
         "time",
         "value"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4548,11 +4581,14 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [
+        "cases_and_institutional_trust"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4574,11 +4610,14 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [
+        "cases_and_unemployment"
+      ],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
@@ -4600,7 +4639,7 @@
         "measurements",
         "observation"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4628,14 +4667,15 @@
         "measurement",
         "time"
       ],
-      "chrono_group_id": null,
+      "storyline_ids": [],
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     }
   ],
-  "dashboard_semantic_digest": "6094273c700897a7a363c2f4055957cf82d354ac4c9bac7152248296159a642b",
-  "digest": "2fe8ded8d4364cf303b0fb5e86381da9327652fd12f251285892df71aef5abb4"
+  "dashboard_semantic_digest": "0b1226eb600138ea4a99ca245ecfe6eb7987cd6ece33eb7600464d5bd9df1b3e",
+  "digest": "af91a2fb76a5cdf60b7705b82a9ba7f61162bbde9676dbd0e4c3f165c8dc3d8f"
 }

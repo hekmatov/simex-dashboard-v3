@@ -111,12 +111,12 @@ test("Scene validation returns identity problems to details", () => {
   assert.equal(state.status, "error");
 });
 
-test("Sketch 006 page and parent changes recompute dependent Scene fields", () => {
+test("Scene page anchors preserve membership while explicitly changing parent recomputes its subset", () => {
   let state = createSceneDraft(sceneFixture(), validationContext);
   state = reduceSceneDraft(state, { type: "SET_PAGE", pageId: "operations" });
   assert.equal(state.value.pageId, "operations");
-  assert.equal(state.value.chronoGroupId, null);
-  assert.deepEqual(state.value.members, []);
+  assert.equal(state.value.chronoGroupId, "chrono-a");
+  assert.deepEqual(state.value.members, sceneFixture().members);
 
   state = reduceSceneDraft(state, { type: "SET_CHRONO_GROUP", chronoGroupId: "chrono-b" });
   assert.equal(state.value.chronoGroupId, "chrono-b");

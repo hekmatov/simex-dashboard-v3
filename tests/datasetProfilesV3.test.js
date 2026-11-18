@@ -1012,7 +1012,6 @@ test("runtime eagerly hydrates uploaded and inline temporal sources with the pub
     "title",
     "dataSources",
     "pages",
-    "chronoGroups",
     "scenes",
     "contentLibrary",
     "home",

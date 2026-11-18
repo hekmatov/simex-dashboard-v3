@@ -1,5 +1,5 @@
 {
-  "configVersion": 6,
+  "configVersion": 7,
   "timezone": "UTC",
   "id": "simex-dashboard",
   "programLabel": "Pandemic & Disaster Preparedness Center",
@@ -105656,67 +105656,64 @@
           "timezone": "date-only"
         }
       }
+    },
+    "exercise_operations": {
+      "kind": "staticText",
+      "sourceVersion": 1,
+      "revision": 1,
+      "renderingPolicy": "portable-qmd-v1",
+      "qmd": "## HeV-A26 Day 2 Simulation\n\n**Fictional scenario · Exercise use only**\n\nUse View to browse the Biomedical and Socio-economic pages. Read each chart's source and observation/as-of context before interpreting a value. An unavailable observation is not zero.\n\nThe exercise time declares the exercise's current date/time. The selected cursor time can show an earlier frame; a carried-forward value keeps its own observation date. Ordinary page content remains available when a Storyline is open.\n\nThe full workspace includes the three saved cross-page Storylines for comparison and debrief. Participant variants include this shared Scenario page and their named discipline page. Follow the Moderator's instructions for the reviewed phase package.\n\nA time selector does not restrict access to packaged information. Distribute only the approved phase or participant package; keep the original full package and a compatible application backup with the operator."
     }
   },
-  "chronoGroups": [
+  "pages": [
     {
-      "id": "municipal_outbreak",
-      "name": "Municipal outbreak playback",
-      "period": {
-        "start": "2020-02-27",
-        "end": "2021-04-17"
-      },
-      "matching": {
-        "policy": "exact"
-      },
-      "secondsPerFrame": 1,
-      "members": [
+      "id": "scenario",
+      "label": "Scenario",
+      "title": "HeV-A26 Day 2 Simulation",
+      "description": "Exercise identity and operating instructions.",
+      "sections": [
         {
-          "chartId": "bio_municipality_choropleth_animation",
-          "timeRole": "time"
-        },
-        {
-          "chartId": "bio_municipality_aggregate",
-          "timeRole": "observation"
+          "id": "exercise_brief",
+          "title": "Exercise information",
+          "panels": [
+            {
+              "configVersion": 3,
+              "id": "exercise_operating_instructions",
+              "typeId": "freeText",
+              "title": "Operating instructions",
+              "description": "Static exercise instructions.",
+              "sourceId": "exercise_operations",
+              "roles": {},
+              "transformations": {
+                "filters": [],
+                "grouping": null,
+                "aggregation": null,
+                "duplicates": null,
+                "missingValues": "gap"
+              },
+              "presentation": {
+                "title": {
+                  "align": "left"
+                },
+                "citation": {
+                  "label": "Operator-approved exercise identity and instructions · 9 November 2026"
+                },
+                "collection": null
+              },
+              "interaction": {
+                "timeSync": null,
+                "zoom": {
+                  "enabled": false
+                }
+              },
+              "layout": {
+                "size": "full"
+              }
+            }
+          ]
         }
       ]
     },
-    {
-      "id": "national_outbreak",
-      "name": "National outbreak and health-system playback",
-      "period": {
-        "start": "2027-02-20",
-        "end": "2027-08-15"
-      },
-      "matching": {
-        "policy": "exact"
-      },
-      "secondsPerFrame": 1,
-      "members": [
-        {
-          "chartId": "bio_confirmed_cases",
-          "timeRole": "observation"
-        },
-        {
-          "chartId": "bio_daily_cases_bar",
-          "timeRole": "observation"
-        },
-        {
-          "chartId": "bio_new_cases_deaths",
-          "timeRole": "observation"
-        },
-        {
-          "chartId": "bio_r_values",
-          "timeRole": "observation"
-        },
-        {
-          "chartId": "bio_admissions",
-          "timeRole": "observation"
-        }
-      ]
-    }
-  ],
-  "pages": [
     {
       "id": "biomedical",
       "label": "Biomedical",
@@ -105769,7 +105766,11 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": null,
+                "timeSync": {
+                  "matching": {
+                    "policy": "exact"
+                  }
+                },
                 "zoom": {
                   "enabled": true
                 }
@@ -105818,7 +105819,11 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": null,
+                "timeSync": {
+                  "matching": {
+                    "policy": "exact"
+                  }
+                },
                 "zoom": {
                   "enabled": true
                 }
@@ -105871,7 +105876,11 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": null,
+                "timeSync": {
+                  "matching": {
+                    "policy": "exact"
+                  }
+                },
                 "zoom": {
                   "enabled": true
                 }
@@ -105920,7 +105929,11 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": null,
+                "timeSync": {
+                  "matching": {
+                    "policy": "exact"
+                  }
+                },
                 "zoom": {
                   "enabled": true
                 }
@@ -106154,7 +106167,11 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": null,
+                "timeSync": {
+                  "matching": {
+                    "policy": "exact"
+                  }
+                },
                 "zoom": {
                   "enabled": true
                 }
@@ -106203,7 +106220,11 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": null,
+                "timeSync": {
+                  "matching": {
+                    "policy": "exact"
+                  }
+                },
                 "zoom": {
                   "enabled": true
                 }
@@ -106657,7 +106678,11 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": null,
+                "timeSync": {
+                  "matching": {
+                    "policy": "exact"
+                  }
+                },
                 "zoom": {
                   "enabled": true
                 }
@@ -107104,60 +107129,6 @@
           "description": "Risk perception, adherence, and citizen priorities.",
           "layout": "two-column",
           "panels": [
-            {
-              "configVersion": 3,
-              "id": "chart-bar-f349044e-4584-47c4-870f-ecccba978c53",
-              "typeId": "bar",
-              "title": "TEEEST",
-              "description": "",
-              "sourceId": "socio_business_closures",
-              "roles": {
-                "measurements": [
-                  {
-                    "field": "Closures",
-                    "axis": "primary"
-                  }
-                ],
-                "observation": {
-                  "field": "Sector"
-                },
-                "cluster": {
-                  "field": "Year"
-                }
-              },
-              "transformations": {
-                "filters": [],
-                "grouping": null,
-                "aggregation": null,
-                "duplicates": null,
-                "missingValues": "gap"
-              },
-              "presentation": {
-                "title": {
-                  "align": "left"
-                },
-                "collection": null,
-                "axes": {
-                  "x": {
-                    "tickFrequency": {
-                      "every": 1
-                    }
-                  }
-                }
-              },
-              "interaction": {
-                "zoom": {
-                  "enabled": true,
-                  "rangeSelector": false
-                },
-                "timeSync": null
-              },
-              "layout": {
-                "size": "wide",
-                "width": 4,
-                "height": 1
-              }
-            },
             {
               "configVersion": 3,
               "id": "socio_risk_deltas",
@@ -411847,5 +411818,276 @@
       ],
       "fingerprint": "80ba109ee600e1ac1e18251a22619644b967f88e3b3f25103f8efb3214d591db"
     }
-  }
+  },
+  "scenes": [
+    {
+      "id": "cases_and_institutional_trust",
+      "name": "Cases and institutional trust",
+      "period": {
+        "start": "2027-03-15T00:00:00.000Z",
+        "end": "2027-08-01T23:59:59.999Z"
+      },
+      "members": [
+        {
+          "chartId": "bio_confirmed_cases",
+          "width": 2,
+          "height": 1,
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "socio_trust_trend",
+          "width": 2,
+          "height": 1,
+          "matching": {
+            "policy": "lastKnown"
+          }
+        }
+      ],
+      "view": {
+        "layout": "sideBySide"
+      },
+      "frames": {
+        "mode": "source",
+        "chartId": "bio_confirmed_cases",
+        "selection": "all"
+      },
+      "present": {
+        "chartIds": [
+          "bio_confirmed_cases",
+          "socio_trust_trend"
+        ],
+        "layout": "vertical-divider"
+      },
+      "audience": {
+        "datePosition": {
+          "xPermille": 680,
+          "yPermille": 40,
+          "widthPermille": 280
+        }
+      }
+    },
+    {
+      "id": "health_pressure_and_staff_absenteeism",
+      "name": "Hospital/ICU pressure and healthcare staff absenteeism",
+      "period": {
+        "start": "2027-03-15T00:00:00.000Z",
+        "end": "2027-08-01T23:59:59.999Z"
+      },
+      "members": [
+        {
+          "chartId": "bio_hospital_occupancy",
+          "width": 4,
+          "height": 1,
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "bio_icu_occupancy",
+          "width": 2,
+          "height": 1,
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "socio_healthcare_absenteeism",
+          "width": 2,
+          "height": 1,
+          "matching": {
+            "policy": "lastKnown"
+          }
+        }
+      ],
+      "view": {
+        "layout": "topFocus"
+      },
+      "frames": {
+        "mode": "source",
+        "chartId": "bio_hospital_occupancy",
+        "selection": "all"
+      },
+      "present": {
+        "chartIds": [
+          "bio_hospital_occupancy",
+          "bio_icu_occupancy",
+          "socio_healthcare_absenteeism"
+        ],
+        "layout": "large-top"
+      },
+      "audience": {
+        "datePosition": {
+          "xPermille": 680,
+          "yPermille": 40,
+          "widthPermille": 280
+        }
+      }
+    },
+    {
+      "id": "cases_and_unemployment",
+      "name": "Cases and unemployment",
+      "period": {
+        "start": "2027-03-15T00:00:00.000Z",
+        "end": "2027-08-01T23:59:59.999Z"
+      },
+      "members": [
+        {
+          "chartId": "bio_confirmed_cases",
+          "width": 2,
+          "height": 1,
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "socio_unemployment",
+          "width": 2,
+          "height": 1,
+          "matching": {
+            "policy": "lastKnown"
+          }
+        }
+      ],
+      "view": {
+        "layout": "sideBySide"
+      },
+      "frames": {
+        "mode": "source",
+        "chartId": "bio_confirmed_cases",
+        "selection": "all"
+      },
+      "present": {
+        "chartIds": [
+          "bio_confirmed_cases",
+          "socio_unemployment"
+        ],
+        "layout": "vertical-divider"
+      },
+      "audience": {
+        "datePosition": {
+          "xPermille": 680,
+          "yPermille": 40,
+          "widthPermille": 280
+        }
+      }
+    },
+    {
+      "id": "municipal_outbreak",
+      "name": "Municipal outbreak playback",
+      "period": {
+        "start": "2020-02-27",
+        "end": "2021-04-17"
+      },
+      "frames": {
+        "mode": "union"
+      },
+      "secondsPerFrame": 1,
+      "members": [
+        {
+          "chartId": "bio_municipality_choropleth_animation",
+          "width": 2,
+          "timeRole": "time",
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "bio_municipality_aggregate",
+          "width": 2,
+          "timeRole": "observation",
+          "matching": {
+            "policy": "exact"
+          }
+        }
+      ],
+      "present": {
+        "chartIds": [
+          "bio_municipality_choropleth_animation",
+          "bio_municipality_aggregate"
+        ],
+        "layout": "vertical-divider"
+      },
+      "audience": {
+        "collectionLabel": "Municipal outbreak playback",
+        "datePosition": {
+          "xPermille": 680,
+          "yPermille": 40,
+          "widthPermille": 280
+        }
+      }
+    },
+    {
+      "id": "national_outbreak",
+      "name": "National outbreak and health-system playback",
+      "period": {
+        "start": "2027-02-20",
+        "end": "2027-08-15"
+      },
+      "frames": {
+        "mode": "union"
+      },
+      "secondsPerFrame": 1,
+      "members": [
+        {
+          "chartId": "bio_confirmed_cases",
+          "width": 2,
+          "timeRole": "observation",
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "bio_daily_cases_bar",
+          "width": 2,
+          "timeRole": "observation",
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "bio_new_cases_deaths",
+          "width": 2,
+          "timeRole": "observation",
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "bio_r_values",
+          "width": 2,
+          "timeRole": "observation",
+          "matching": {
+            "policy": "exact"
+          }
+        },
+        {
+          "chartId": "bio_admissions",
+          "width": 2,
+          "timeRole": "observation",
+          "matching": {
+            "policy": "exact"
+          }
+        }
+      ],
+      "present": {
+        "chartIds": [
+          "bio_confirmed_cases",
+          "bio_daily_cases_bar",
+          "bio_new_cases_deaths",
+          "bio_r_values"
+        ],
+        "layout": "grid-2x2"
+      },
+      "audience": {
+        "collectionLabel": "National outbreak and health-system playback",
+        "datePosition": {
+          "xPermille": 680,
+          "yPermille": 40,
+          "widthPermille": 280
+        }
+      }
+    }
+  ]
 }

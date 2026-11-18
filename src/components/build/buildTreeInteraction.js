@@ -21,6 +21,7 @@ export function createDelayedTreeActivation({ delay = 500, schedule = setTimeout
       clear();
       rename?.();
     },
+    cancelPending: clear,
     dispose: clear,
   };
 }

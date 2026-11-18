@@ -123,16 +123,21 @@ test("operation status reserves the measured tablet drawer but not a full-screen
   }), 0);
 });
 
-test("right-side drawers anchor below the sticky exercise disclaimer", () => {
+test("right-side drawers anchor below the shared time bar or sticky exercise disclaimer", () => {
   const crown = { id: "crown" };
   const disclaimer = { id: "disclaimer" };
   const exerciseFrame = {
-    querySelector: (selector) => selector === ".exercise-disclaimer" ? disclaimer : crown,
+    querySelector: (selector) => selector === ".exercise-disclaimer" ? disclaimer : selector === ".dashboard-command-crown" ? crown : null,
   };
   const homeFrame = {
     querySelector: (selector) => selector === ".dashboard-command-crown" ? crown : null,
   };
 
+  const timeBar = { id: "time-bar" };
+  const timedFrame = { querySelector: selector => selector === ".time-bar:not(.time-bar--phone-view)" ? timeBar : exerciseFrame.querySelector(selector) };
+  const mobileFrame = { querySelector: selector => selector === ".time-bar" ? timeBar : exerciseFrame.querySelector(selector) };
+  assert.equal(commandBoundaryElement(timedFrame), timeBar);
+  assert.equal(commandBoundaryElement(mobileFrame), disclaimer);
   assert.equal(commandBoundaryElement(exerciseFrame), disclaimer);
   assert.equal(commandBoundaryElement(homeFrame), crown);
   assert.equal(commandBoundaryElement(null), null);

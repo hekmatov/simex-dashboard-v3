@@ -5,6 +5,8 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
+  realpath,
   rename,
   rm,
   stat,
@@ -25,7 +27,7 @@ import {
   createPdpcReleaseMetadata,
   materializePdpcPackageAssets,
   parsePdpcReleaseArgs,
-  projectPdpcVariants,
+  projectPdpcVariant,
   validatePdpcReleasePages,
 } from "./lib/pdpc-release.mjs";
 import {
@@ -33,6 +35,8 @@ import {
   verifyPdpcStaticBuild,
 } from "./verify-pdpc-static-build.mjs";
 import { createPdpcLightDefaultPlugin } from "./lib/pdpc-light-default.mjs";
+import { safePublicPath } from "../src/lib/loadDashboard.js";
+import { validateImageOrigin } from "../src/static-content/image/imageAssetValidation.js";
 
 const execFileAsync = promisify(execFile);
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -49,8 +53,7 @@ export async function buildPdpcReleaseSet({
   const resolvedRoot = path.resolve(rootDir);
   const resolvedOutput = path.resolve(outDir);
   validatePdpcReleasePages(envelope?.config);
-  const materialized = materializePdpcPackageAssets(envelope);
-  const variants = projectPdpcVariants(materialized.config);
+  const projections = Object.fromEntries(Object.keys(PDPC_RELEASE_VARIANTS).map(id => [id, projectPdpcVariant(envelope.config, id)]));
   const target = await assertPdpcOutputTarget({
     repoRoot: resolvedRoot,
     outDir: resolvedOutput,
@@ -63,12 +66,16 @@ export async function buildPdpcReleaseSet({
 
   try {
     for (const variant of Object.values(PDPC_RELEASE_VARIANTS)) {
+      const projection = projections[variant.id];
+      const assetPayloads = Object.fromEntries(Object.entries(envelope.assetPayloads ?? {}).filter(([id]) => Object.hasOwn(projection.config.assets ?? {}, id)));
+      const materialized = materializePdpcPackageAssets({ config: projection.config, assetPayloads });
+      const variantManifest = { ...metadata.variantManifests[variant.id], projectionOmissions: projection.omissions };
       const publicDir = path.join(staging, `.public-${variant.id}`);
       const outputDir = path.join(staging, variant.id);
       await createVariantPublicTree({
         rootDir: resolvedRoot,
         publicDir,
-        config: variants[variant.id],
+        config: materialized.config,
         files: materialized.files,
         variant: variant.id,
       });
@@ -80,17 +87,20 @@ export async function buildPdpcReleaseSet({
       });
       await writeStableJson(
         path.join(outputDir, "release-manifest.json"),
-        metadata.variantManifests[variant.id],
+        variantManifest,
       );
       await finalizePdpcRuntimeManifest({ outputDir, variant: variant.id });
       await verifyVariant({
         outputDir,
         variant: variant.id,
-        manifest: metadata.variantManifests[variant.id],
+        manifest: variantManifest,
       });
       await safeRemove(publicDir, staging);
     }
-    await writeStableJson(path.join(staging, PDPC_RELEASE_SET_FILE), metadata.setManifest);
+    await writeStableJson(path.join(staging, PDPC_RELEASE_SET_FILE), {
+      ...metadata.setManifest,
+      variants: metadata.setManifest.variants.map(variant => ({ ...variant, projectionOmissions: projections[variant.variant].omissions })),
+    });
 
     if (target.exists) {
       backup = path.join(parent, `.${baseName}.backup-${randomUUID()}`);
@@ -190,7 +200,40 @@ export async function runPdpcReleaseCommand({
 }
 
 async function createVariantPublicTree({ rootDir, publicDir, config, files, variant }) {
-  await cp(path.join(rootDir, "public"), publicDir, { recursive: true });
+  const sourceRoot = await realpath(path.join(rootDir, "public"));
+  await mkdir(publicDir, { recursive: true });
+  const copy = async (relativePath, optional = false) => {
+    if (files.has(relativePath)) return;
+    const segments = relativePath.split("/");
+    if (relativePath.includes(":") || relativePath.includes("\\") || segments.some(segment => !segment || segment === "." || segment === "..")) throw new Error(`Unsafe PDPC public dependency: ${relativePath}`);
+    const source = path.join(sourceRoot, ...segments);
+    let resolved;
+    try { resolved = await realpath(source); } catch (error) { if (optional && error.code === "ENOENT") return; throw error; }
+    const relative = path.relative(sourceRoot, resolved);
+    if (!relative || relative.startsWith("..") || path.isAbsolute(relative) || !(await stat(resolved)).isFile()) throw new Error(`PDPC public dependency escapes its local source tree: ${relativePath}`);
+    const destination = path.join(publicDir, ...segments);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await cp(resolved, destination);
+  };
+  // Generated config/portable data/precache replace full-workspace equivalents.
+  // Exercise assets are copied only through the native retained content graph.
+  for (const relativePath of ["_headers", "service-worker.js", "vendor/three.min.js", "vendor/vanta.net.min.js", "assets/pwa-icon.svg", "assets/pdpc-logo.png", "assets/pdpc-mark-watermark.png"]) await copy(relativePath, true);
+  for (const [directory, pattern] of [["fonts", /\.(?:woff2?|ttf|otf)$/i], ["licenses", /\.(?:txt|md)$/i]]) {
+    const base = path.join(sourceRoot, directory);
+    if (!(await exists(base))) continue;
+    for (const file of await readdir(base, { recursive: true })) if (pattern.test(file)) await copy(`${directory}/${file.replaceAll("\\", "/")}`);
+  }
+  for (const source of Object.values(config.dataSources ?? {})) if (["csv", "geojson"].includes(source.kind)) await copy(safePublicPath(source.path));
+  for (const item of Object.values(config.contentLibrary?.mediaItems ?? {})) if (item.current?.kind === "package") await copy(validateImageOrigin(item.current).path);
+  for (const page of config.pages) {
+    const preview = page.landing?.previewAsset?.src;
+    if (preview && !/^(?:https?:|data:)/.test(preview)) await copy(preview);
+    for (const section of page.sections) for (const panel of section.panels) {
+      const chart = panel.chart ?? panel;
+      if (chart.typeId !== "image") continue;
+      for (const row of config.dataSources?.[chart.sourceId]?.rows ?? []) if (typeof row.src === "string" && !/^(?:https?:|data:)/.test(row.src)) await copy(row.src);
+    }
+  }
   await writeStableJson(path.join(publicDir, "config", "dashboard.json"), config);
   await writeStableJson(
     path.join(publicDir, "config", "dataset-profiles.json"),

@@ -4,6 +4,10 @@ import { IconControl } from "./common/SimExIcon.js";
 import ModalFocusScope from "./common/ModalFocusScope.jsx";
 import DisplayedChartGrid from "./display/DisplayedChartGrid.jsx";
 import { useOptionalPlayback } from "./playback/PlaybackProvider.jsx";
+import { createFullscreenSwipe } from "./dashboard/fullscreenSwipe.js";
+import { createComparisonStoryline } from "./time/storylineAuthoring.js";
+import ExerciseContextStamp from "./common/ExerciseContextStamp.jsx";
+import CursorTimeReadout from "./playback/CursorTimeReadout.jsx";
 
 const LAYOUT_INTERACTION_IDS = Object.freeze({
   solo: "layout.solo",
@@ -23,11 +27,16 @@ export default function FullscreenDisplay({
   displayState,
   onDisplayAction,
   timeContextForChart,
+  onSaveAsStoryline,
+  saveStorylineDisabledReason = "",
 }) {
   const panelIds = displayState.displayed_chart_ids;
   const playback = useOptionalPlayback();
   const draggedChartId = React.useRef(null);
   const [announcement, setAnnouncement] = React.useState("");
+  const swipe = React.useMemo(() => createFullscreenSwipe({
+    dismiss: () => onDisplayAction?.({ type: "manual_close_all" }),
+  }), [onDisplayAction]);
   const isComparison = panelIds.length > 1;
 
   React.useEffect(() => {
@@ -45,6 +54,11 @@ export default function FullscreenDisplay({
     ? displayState.layout
     : layoutOptions[0].value;
   const closeAll = () => onDisplayAction?.({ type: "manual_close_all" });
+  let saveProblem = saveStorylineDisabledReason;
+  if (isComparison && onSaveAsStoryline && !saveProblem) {
+    try { createComparisonStoryline({ dashboard, chartIds: panelIds, layout: resolvedLayout, id: "comparison-proposal" }); }
+    catch (error) { saveProblem = error.message; }
+  }
   const resolveTimeContext = timeContextForChart
     ?? playback?.timeContextForChart
     ?? NO_TIME_CONTEXT;
@@ -104,7 +118,14 @@ export default function FullscreenDisplay({
       <article
         className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout} dashboard-dialog dashboard-dialog--workspace dashboard-dialog--fullscreen`}
         data-display-mode={isComparison ? "comparison" : "focus"}
+        onPointerDown={swipe.down}
+        onPointerUp={swipe.up}
+        onPointerCancel={swipe.cancel}
       >
+        <div className="fullscreen-swipe-handle" aria-hidden="true" />
+        <header className="fullscreen-context-header">
+        <div className="fullscreen-context-header__identity"><ExerciseContextStamp variant="fullscreen" />
+          <CursorTimeReadout mode={playback?.cursor?.mode} epochMs={playback?.activeEpochMs} /></div>
         {isComparison && (
           <div
             className="multi-fullscreen-controls dashboard-dialog__header"
@@ -129,6 +150,10 @@ export default function FullscreenDisplay({
                 title={option.label}
               />
             ))}
+            {onSaveAsStoryline && <button type="button" className="secondary" disabled={Boolean(saveProblem)}
+              title={saveProblem || undefined}
+              onClick={() => onSaveAsStoryline({ chartIds: [...panelIds], layout: resolvedLayout })}>Save as Storyline</button>}
+            {saveProblem && <span role="status">{saveProblem}</span>}
           </div>
         )}
         <IconControl
@@ -140,6 +165,8 @@ export default function FullscreenDisplay({
           data-fullscreen-exit
           onClick={closeAll}
         />
+        </header>
+        <div className="fullscreen-chart-content">
         <DisplayedChartGrid
           dashboard={dashboard}
           contentRenderContext={contentRenderContext}
@@ -181,6 +208,7 @@ export default function FullscreenDisplay({
               }
             : undefined}
         />
+        </div>
         <p className="visually-hidden" role="status" aria-live="polite">
           {announcement}
         </p>

@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { resolveDashboardPackageSelection, dashboardPackageSectionKey } from "../../src/lib/dashboardPackageSelection.js";
 
 import {
   decodeAssetBase64,
@@ -79,17 +80,83 @@ export function validatePdpcReleasePages(config) {
 }
 
 export function projectPdpcVariants(config) {
-  const pages = validatePdpcReleasePages(config);
-  const pageById = new Map(pages.map((page) => [page.id, page]));
+  validatePdpcReleasePages(config);
   return Object.freeze(Object.fromEntries(
     Object.values(PDPC_RELEASE_VARIANTS).map((variant) => [
       variant.id,
-      structuredClone({
-        ...config,
-        pages: variant.pageIds.map((pageId) => pageById.get(pageId)),
-      }),
+      projectPdpcVariant(config, variant.id).config,
     ]),
   ));
+}
+
+const pick = (record, ids) => Object.fromEntries([...ids].sort().filter(id => Object.hasOwn(record ?? {}, id)).map(id => [id, record[id]]));
+const chartIdsFor = config => new Set((config.pages ?? []).flatMap(page => page.sections.flatMap(section => section.panels.map(panel => (panel.chart ?? panel).id))));
+const compositionMembers = value => [...(value.chartIds ?? []), ...(value.members ?? []).map(member => typeof member === "string" ? member : member.chartId)];
+
+/** Participant projection preserves whole comparisons; it never trims members. */
+export function projectPdpcVariant(input, variantId) {
+  const variant = PDPC_RELEASE_VARIANTS[variantId];
+  if (!variant) throw new Error(`Unsupported PDPC variant ${variantId}.`);
+  const pages = validatePdpcReleasePages(input);
+  const pageById = new Map(pages.map(page => [page.id, page]));
+  const config = structuredClone({ ...input, pages: variant.pageIds.map(id => pageById.get(id)) });
+  const chartIds = chartIdsFor(config);
+  const pageIds = new Set(variant.pageIds);
+  const whollyIncluded = ids => ids.length > 0 && ids.every(id => chartIds.has(id));
+  const groupIds = new Set((config.chronoGroups ?? []).filter(group => whollyIncluded(compositionMembers(group))).map(group => group.id));
+  if (config.chronoGroups) config.chronoGroups = config.chronoGroups.filter(group => groupIds.has(group.id));
+  if (config.scenes) config.scenes = config.scenes.filter(scene => {
+    const referenced = [...compositionMembers(scene), ...(scene.present?.chartIds ?? []),
+      ...(scene.frames?.mode === "source" ? [scene.frames.chartId] : []),
+      ...(scene.frameRule?.chartId ? [scene.frameRule.chartId] : [])];
+    return whollyIncluded(referenced) && (scene.pageId == null || pageIds.has(scene.pageId))
+      && (scene.chronoGroupId == null || groupIds.has(scene.chronoGroupId));
+  });
+  const detachedGroupChartIds = [];
+  for (const page of config.pages) {
+    // A common Scenario cannot be silently rewritten into two different briefs.
+    const destinations = [page.landing?.hero?.primaryAction?.pageId, ...(page.landing?.domainRoutes ?? []).map(route => route.pageId)].filter(Boolean);
+    if (destinations.some(id => !pageIds.has(id))) throw new Error(`Retained page ${page.id} navigates to an omitted discipline. Author a shared participant-safe Scenario before release.`);
+    for (const section of page.sections) for (const placement of section.panels) {
+      const chart = placement.chart ?? placement, sync = chart.interaction?.timeSync;
+      if (sync?.groupId && !groupIds.has(sync.groupId)) {
+        chart.interaction.timeSync = sync.matching ? { matching: sync.matching } : null;
+        detachedGroupChartIds.push(chart.id);
+      }
+    }
+  }
+  const selection = resolveDashboardPackageSelection({ config, assetPayloads: {} }, {
+    sectionIds: config.pages.flatMap(page => page.sections.map(section => dashboardPackageSectionKey(page.id, section.id))),
+  });
+  const assetIds = new Set(selection.assetIds);
+  // Already-packaged authored media still need their native manifest for
+  // runtime byte validation, even though they no longer have an asset origin.
+  for (const id of selection.mediaIds) {
+    const item = config.contentLibrary?.mediaItems?.[id];
+    if (item?.current?.kind !== "package") continue;
+    const assetId = path.posix.basename(item.current.path, path.posix.extname(item.current.path));
+    if (config.assets?.[assetId]) assetIds.add(assetId);
+  }
+  if (config.dataSources) config.dataSources = pick(config.dataSources, selection.sourceIds);
+  if (config.datasetProfiles) config.datasetProfiles = pick(config.datasetProfiles, selection.sourceIds);
+  if (config.contentLibrary) config.contentLibrary = {
+    ...config.contentLibrary,
+    sourceEntries: pick(config.contentLibrary.sourceEntries, selection.sourceIds),
+    mediaItems: pick(config.contentLibrary.mediaItems, selection.mediaIds),
+  };
+  if (config.assets) config.assets = pick(config.assets, assetIds);
+  const omitted = (original, retained) => Object.keys(original ?? {}).filter(id => !Object.hasOwn(retained ?? {}, id)).sort();
+  const omissions = {
+    pageIds: REQUIRED_PAGE_IDS.filter(id => !pageIds.has(id)),
+    sourceIds: omitted(input.dataSources, config.dataSources),
+    profileIds: omitted(input.datasetProfiles, config.datasetProfiles),
+    mediaIds: omitted(input.contentLibrary?.mediaItems, config.contentLibrary?.mediaItems),
+    assetIds: omitted(input.assets, config.assets),
+    chronoGroupIds: (input.chronoGroups ?? []).filter(group => !groupIds.has(group.id)).map(group => group.id).sort(),
+    sceneIds: (input.scenes ?? []).filter(scene => !config.scenes?.some(retained => retained.id === scene.id)).map(scene => scene.id).sort(),
+    detachedGroupChartIds: detachedGroupChartIds.sort(),
+  };
+  return { config, omissions };
 }
 
 export function createPdpcReleaseMetadata({

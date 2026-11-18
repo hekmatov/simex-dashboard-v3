@@ -736,7 +736,7 @@ test("collection updates emit only the normalized nested contract", () => {
   assert.match(html, /Priority/);
 });
 
-test("time synchronization keeps matching group-owned and renders independent membership checkboxes", () => {
+test("time synchronization renders independent membership checkboxes without inventing a chart default", () => {
   const chart = createChartDraft("line", {
     id: "trend",
     sourceId: "exercise-data",
@@ -3176,6 +3176,8 @@ test("property-only GeoJSON joins stay reachable and renderer-ready for both geo
     );
 
     const dataHtml = render(React.createElement(DataRolesStep, {
+      chart: joined,
+      profile: runtime.profile,
       section: editor.sections.find(({ id }) => id === "data"),
       columns: runtime.profile.columns,
       diagnostics: runtime.prepared.diagnostics,
@@ -3322,7 +3324,7 @@ test("wizard preparation correlates the current chart, rows, and profile", () =>
   );
 });
 
-test("wizard membership keeps matching in group members and chart-local state null", () => {
+test("wizard membership preserves member matching and leaves an absent chart default empty", () => {
   const chart = createChartDraft("line", {
     id: "exercise-trend",
     title: "Exercise trend",

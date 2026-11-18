@@ -1,9 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
 import { LEGACY_STORAGE_STATE } from "./tests/e2e/support/legacyContractFixture.js";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: ["pdpc-release-output.spec.js"],
+  testIgnore: ["pdpc-release-output.spec.js", "pdpc-offline-output.spec.js"],
   grepInvert: /@production-static/,
   fullyParallel: false,
   workers: 1,
@@ -11,7 +12,10 @@ export default defineConfig({
   expect: {
     timeout: 20_000,
   },
-  reporter: [["list"]],
+  reporter: process.env.SIMEX_NATIVE_REPORT_DIR
+    ? [["list"], ["json", { outputFile: path.resolve(process.env.SIMEX_NATIVE_REPORT_DIR, "source-companion.json") }]]
+    : [["list"]],
+  ...(process.env.SIMEX_NATIVE_REPORT_DIR ? { outputDir: path.resolve(process.env.SIMEX_NATIVE_REPORT_DIR, "source-companion-artifacts") } : {}),
   use: {
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",

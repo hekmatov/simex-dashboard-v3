@@ -83,3 +83,36 @@ test("temporal availability invalidates only when data-affecting inputs change",
   assert.deepEqual(shorterPeriod, [Date.UTC(2027, 4, 1)]);
   assert.deepEqual(copiedRows, first);
 });
+
+test("temporal availability keys parsing inputs and ignores derived profile statistics", () => {
+  const input = fixture();
+  const activeChart = chart({
+    roles: { ...chart().roles, observation: "date" },
+  });
+  const first = collectTemporalAvailability({ chart: activeChart, ...input });
+  const copy = structuredClone(input.profile);
+  const date = copy.columns.find(({ name }) => name === "date");
+  date.uniqueCount += 1;
+  assert.strictEqual(collectTemporalAvailability({ chart: activeChart, ...input, profile: copy }), first);
+
+  date.temporal.parsingMetadata.format = "YYYY";
+  assert.deepEqual(collectTemporalAvailability({ chart: activeChart, ...input, profile: copy }), []);
+});
+
+test("temporal availability invalidates when a filter's effective binding changes", () => {
+  const rows = [
+    { date: "2027-05-01", value: 10, group: "01" },
+    { date: "2027-05-02", value: 20, group: "02" },
+  ];
+  const { member, period } = fixture();
+  const profile = profileDataset(rows, { group: { interpretation: "category" } });
+  const transformations = { filters: [{ field: "group", operator: "equals", value: "1" }] };
+  const activeChart = chart({ transformations });
+  const input = { rows, member, period, profile };
+  assert.deepEqual(collectTemporalAvailability({ chart: activeChart, ...input }), []);
+  const withNumericGroup = chart({
+    transformations,
+    roles: { ...activeChart.roles, group: { field: "group", interpretation: "number" } },
+  });
+  assert.deepEqual(collectTemporalAvailability({ chart: withNumericGroup, ...input }), [Date.UTC(2027, 4, 1)]);
+});

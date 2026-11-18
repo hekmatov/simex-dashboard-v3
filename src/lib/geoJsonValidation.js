@@ -516,16 +516,15 @@ function encodedSize(value) {
   let bytes = 0;
   while (stack.length > 0) {
     const frame = stack.pop();
-    if (frame.kind === "token") {
-      bytes += encoder.encode(frame.value).byteLength;
-      continue;
-    }
     if (frame.kind === "exit") {
       activePath.delete(frame.value);
       continue;
     }
     if (frame.value === null || typeof frame.value !== "object") {
-      bytes += encoder.encode(JSON.stringify(frame.value)).byteLength;
+      const serialized = JSON.stringify(frame.value);
+      bytes += typeof frame.value === "string"
+        ? encoder.encode(serialized).byteLength
+        : (serialized?.length ?? 0);
       continue;
     }
     if (activePath.has(frame.value)) {
@@ -536,28 +535,25 @@ function encodedSize(value) {
       );
     }
     activePath.add(frame.value);
-    const sequence = [{ kind: "token", value: Array.isArray(frame.value) ? "[" : "{" }];
+    // Brackets, commas, colons and non-string scalar spellings are all ASCII.
+    bytes += 2;
+    const sequence = [];
     if (Array.isArray(frame.value)) {
       for (let index = 0; index < frame.value.length; index += 1) {
-        if (index > 0) sequence.push({ kind: "token", value: "," });
+        if (index > 0) bytes += 1;
         sequence.push({ kind: "value", value: frame.value[index] });
       }
-      sequence.push({ kind: "token", value: "]" });
     } else {
       const entries = Object.entries(frame.value)
         .filter(([, entry]) => entry !== undefined);
+      bytes += entries.length + Math.max(0, entries.length - 1);
       for (let index = 0; index < entries.length; index += 1) {
         const [key, entry] = entries[index];
-        if (index > 0) sequence.push({ kind: "token", value: "," });
-        sequence.push(
-          { kind: "token", value: JSON.stringify(key) },
-          { kind: "token", value: ":" },
-          { kind: "value", value: entry },
-        );
+        bytes += encoder.encode(JSON.stringify(key)).byteLength;
+        sequence.push({ kind: "value", value: entry });
       }
-      sequence.push({ kind: "token", value: "}" });
     }
-    sequence.push({ kind: "exit", value: frame.value });
+    stack.push({ kind: "exit", value: frame.value });
     for (let index = sequence.length - 1; index >= 0; index -= 1) {
       stack.push(sequence[index]);
     }

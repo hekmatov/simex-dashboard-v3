@@ -252,16 +252,6 @@
       "rate"
     ]
   },
-  "chart-bar-f349044e-4584-47c4-870f-ecccba978c53": {
-    "aliases": [
-      "teeest"
-    ],
-    "keywords": [
-      "socio_economic",
-      "bar",
-      "teeest"
-    ]
-  },
   "socio_risk_deltas": {
     "aliases": [
       "change in risk perception"
@@ -408,6 +398,17 @@
       "socio",
       "education",
       "absenteeism"
+    ]
+  },
+  "exercise_operating_instructions": {
+    "aliases": [
+      "operating instructions",
+      "exercise instructions"
+    ],
+    "keywords": [
+      "exercise",
+      "instructions",
+      "scenario"
     ]
   }
 }

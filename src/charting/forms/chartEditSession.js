@@ -1,3 +1,5 @@
+import { removeTemporalChartReferences } from "../time/storylineReferences.js";
+
 const SURFACES = new Set(["quick", "full"]);
 const STATUSES = new Set(["clean", "dirty", "saving", "error"]);
 const RUNTIME_DASHBOARD_FIELDS = [
@@ -179,7 +181,7 @@ export function projectChartEditSessionDashboard(dashboard, state) {
         : `Chart placement "${state.placementId}" is not unique in the dashboard.`,
     );
   }
-  preview.chronoGroups = applyChartEditSessionChronoGroupChanges(
+  if (preview.configVersion !== 7) preview.chronoGroups = applyChartEditSessionChronoGroupChanges(
     preview.chronoGroups ?? [],
     deriveChronoGroupChanges(state.savedChronoGroups, state.chronoGroups),
   );
@@ -982,11 +984,9 @@ function removePlacementFromRebasedLayout(dashboard, placementId, chartId) {
     }
   }
   if (!chartId) return;
-  dashboard.chronoGroups = (dashboard.chronoGroups ?? []).flatMap((group) => {
-    if (!Array.isArray(group.members)) return [group];
-    const members = group.members.filter((member) => member?.chartId !== chartId);
-    return members.length > 0 ? [{ ...group, members }] : [];
-  });
+  const cleaned = removeTemporalChartReferences(dashboard, [chartId]);
+  if (Object.hasOwn(dashboard, "chronoGroups")) dashboard.chronoGroups = cleaned.chronoGroups;
+  if (Object.hasOwn(dashboard, "scenes")) dashboard.scenes = cleaned.scenes;
 }
 
 function entityId(entity) {

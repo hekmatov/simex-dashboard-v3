@@ -19,7 +19,7 @@ const DEFINITIONS = Object.freeze({
   configuration: Object.freeze({ id: "configuration", kind: "configuration", label: "Configuration changes", origin: "dashboard-configuration", priority: 55 }),
   pendingContent: Object.freeze({ id: "source-content", kind: "content", label: "Source content changes", origin: "source-content", priority: 60 }),
   chronoGroup: Object.freeze({ id: "chrono-group", kind: "chrono", label: "Chrono Studio changes", origin: "chrono-studio", priority: 70 }),
-  scene: Object.freeze({ id: "scene", kind: "scene", label: "Scene Studio changes", origin: "scene-studio", priority: 80 }),
+  scene: Object.freeze({ id: "scene", kind: "scene", label: "Storyline Studio changes", origin: "scene-studio", priority: 80 }),
 });
 
 export function selectBuildPendingWork({
@@ -283,7 +283,7 @@ function labelForOwnerKind(kind) {
   return ({
     layout: "Layout changes",
     chrono: "Chrono Studio changes",
-    scene: "Scene Studio changes",
+    scene: "Storyline Studio changes",
     "chart-create": "New chart draft",
     "chart-edit": "Chart changes",
     "text-image-create": "New Text/Image draft",

@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { timeCursor } from "./support/time-cursor-workflow.js";
 import { openDashboardPage } from "./support/landingWorkflow.js";
-import { installPageRemovalGroups } from "./support/layoutReviewFixture.js";
+import { REMOVED_PAGE_GROUP_ID, withPageRemovalGroups, installPageRemovalGroups } from "./support/layoutReviewFixture.js";
 import { openAudienceSession } from "./support/present-audience-workflow.js";
+
+import { parseCsvText } from "../../src/lib/loadCsv.js";
+import { buildStorylineCoverage } from "../../src/components/time/storylineAuthoring.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
@@ -15,95 +19,99 @@ test.beforeEach(async ({ request, page }) => {
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
 });
 
-test("005-chrono-group-authoring: staged ledger and review remain usable at desktop and tablet", async ({ page }) => {
+test("005-storyline-authoring: native coverage evidence, matching validation and footer remain usable at desktop and tablet", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
-  await expect(auxiliary.getByRole("heading", { name: "Chrono Studio", exact: true })).toBeVisible();
-  await auxiliary.locator("[data-action='open-content']").first().click();
-  await expect(auxiliary.getByRole("button", { name: "Back to Chrono Studio", exact: true })).toBeVisible();
+  const fixture = await readTemporalFixture(page, { loadRows: true });
+  const seed = fixture.scenes.find(scene => scene.id === REMOVED_PAGE_GROUP_ID);
+  const expectedCoverage = buildStorylineCoverage(fixture, seed.period, { calendarPeriod: true }).find(candidate => candidate.id === seed.members[0].chartId);
+  expect(expectedCoverage.reason).toBe("");
+  expect(expectedCoverage.inWindowCount).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Storyline Studio", exact: true }).click();
+  const auxiliary = page.getByRole("dialog", { name: "Storyline Studio authoring", exact: true });
+  await expect(auxiliary.getByRole("heading", { name: "Storyline Studio", exact: true })).toBeVisible();
+  await auxiliary.getByRole("button", { name: new RegExp(seed.name) }).click();
+  await expect(auxiliary.getByRole("button", { name: "Back to Storyline Studio", exact: true })).toBeVisible();
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
-
-  const stages = auxiliary.getByRole("navigation", { name: "Chrono Group stages" });
-  await expect(stages.getByRole("button")).toContainText(["Name and period", "Choose charts", "Set defaults", "Review"]);
-  await expect(stages.getByRole("button")).toContainText(["Complete", "Complete", "Complete", "Complete"]);
-  expect(await stages.getByRole("button").first().evaluate((node) => getComputedStyle(node).display)).toBe("grid");
-  await stages.getByRole("button", { name: /Choose charts/ }).click();
-  await expect(auxiliary.getByText(/inclusive/).first()).toBeVisible();
-  await expect(auxiliary.getByRole("button", { name: "Edit period", exact: true })).toBeVisible();
-  await expect(auxiliary.getByRole("heading", { name: "Selected for this Chrono Group" })).toBeVisible();
-  await expect(auxiliary.getByRole("heading", { name: "Needs attention" })).toHaveCount(0);
-  await expect(auxiliary.getByRole("heading", { name: "Available", exact: true })).toBeVisible();
-  const firstRecord = auxiliary.locator(".availability-record").first();
-  expect(await firstRecord.locator(".availability-record__summary").evaluate((node) => getComputedStyle(node).display)).toBe("grid");
-  await expect(firstRecord).toContainText(/Full chart range/);
-  await expect(firstRecord).toContainText(/plotted variable/);
-  const firstProofBand = firstRecord.locator(".availability-ticks").first();
-  await firstProofBand.hover({ position: { x: 2, y: 12 } });
-  const proofTooltip = firstRecord.getByRole("tooltip");
-  await expect(proofTooltip).toHaveText(/^\d{4}-\d{2}-\d{2}$/);
-  expect(await proofTooltip.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
-  await firstRecord.getByText("Inspect evidence", { exact: true }).click();
-  await expect(firstRecord).toContainText(/Other Chrono Groups/);
-  await expect(firstRecord.locator(".availability-calendar")).toBeVisible();
-
-  await stages.getByRole("button", { name: /Review/ }).click();
-  for (const label of ["affected pages", "derived Default Chrono frames", "Member evidence", "Availability gaps", "Review is ready"]) await expect(auxiliary.getByText(label, { exact: true })).toBeVisible();
-  for (const action of ["Edit period", "Edit chart selection", "Edit matching defaults"]) await expect(auxiliary.getByRole("button", { name: action, exact: true })).toBeVisible();
-  const proofGeometry = await auxiliary.locator(".chrono-review-proof-list > li").evaluateAll((rows) => rows.map((row) => ({
-    display: getComputedStyle(row).display,
-    textX: row.children[1]?.getBoundingClientRect().x,
-    actionRight: row.children[2]?.getBoundingClientRect().right ?? null,
-  })));
-  expect(proofGeometry.map(({ display }) => display)).toEqual(["grid", "grid", "grid", "grid"]);
-  const textStarts = proofGeometry.map(({ textX }) => textX);
-  expect(Math.max(...textStarts) - Math.min(...textStarts)).toBeLessThanOrEqual(1);
-  const actionEdges = proofGeometry.map(({ actionRight }) => actionRight).filter(Number.isFinite);
-  expect(Math.max(...actionEdges) - Math.min(...actionEdges)).toBeLessThanOrEqual(1);
-  const body = auxiliary.locator(".chrono-group-studio__body");
-  await body.evaluate((node) => { node.scrollTop = node.scrollHeight; });
-  const clearance = await auxiliary.evaluate((node) => {
-    const bodyNode = node.querySelector(".chrono-group-studio__body");
-    const footer = node.querySelector(".chrono-group-studio > footer");
-    return footer.getBoundingClientRect().top - bodyNode.getBoundingClientRect().bottom;
+  const stages = auxiliary.getByRole("navigation", { name: "Storyline authoring stages", exact: true });
+  await expect(stages.getByRole("button")).toHaveCount(3);
+  await expect(stages.getByRole("button")).toContainText(["Storyline details", "Select charts and frames", "Arrange and configure"]);
+  await expect(auxiliary.getByRole("radio", { name: "All member observations", exact: true })).toBeChecked();
+  await stages.getByRole("button", { name: /Select charts and frames/ }).click();
+  const picker = auxiliary.getByRole("region", { name: "Storyline chart coverage", exact: true });
+  const row = picker.locator(".storyline-coverage-row").filter({ has: page.getByRole("checkbox", { name: expectedCoverage.title, exact: true }) });
+  await expect(row).toContainText(`${expectedCoverage.inWindowCount} observations in period (${expectedCoverage.count} total)`);
+  await expect(row.locator(".storyline-coverage-track i")).toHaveCount(expectedCoverage.inWindowCount);
+  await row.getByRole("button", { name: "Inspect observations", exact: true }).click();
+  const observations = page.getByRole("dialog", { name: new RegExp("observations$") });
+  await expect(observations.getByRole("checkbox")).toHaveCount(expectedCoverage.count);
+  await expect(observations.getByRole("checkbox").first()).toHaveAccessibleName(new Date(expectedCoverage.epochs[0]).toISOString());
+  await observations.getByRole("button", { name: "Close", exact: true }).click();
+  // Filters retain the selected members even when their rows are hidden.
+  await picker.getByLabel("Search charts", { exact: true }).fill("does-not-match-a-chart");
+  await expect(picker.getByText("No temporal charts match these filters.", { exact: true })).toBeVisible();
+  await expect(picker.getByRole("status").first()).toContainText(`${seed.members.length} selected`);
+  await picker.getByLabel("Search charts", { exact: true }).fill("");
+  await expect(row.getByRole("checkbox")).toBeChecked();
+  // Membership cannot become empty through the final remaining checkbox.
+  const other = seed.members[1];
+  const charts = fixture.pages.flatMap(p => p.sections.flatMap(s => s.panels.map(p => p.chart ?? p)));
+  const second = picker.getByRole("checkbox", { name: charts.find(chart => chart.id === other.chartId).title, exact: true });
+  await second.uncheck();
+  await expect(row.getByRole("checkbox")).toBeDisabled();
+  await second.check();
+  await stages.getByRole("button", { name: /Storyline details/ }).click();
+  const matching = auxiliary.getByRole("combobox", { name: "Default matching", exact: true });
+  await expect(matching).toBeVisible();
+  expect(await matching.locator("option").evaluateAll(options => options.filter(option => option.value !== "authored").map(option => option.value))).toEqual(["exact", "lastKnown", "nearest", "interpolate"]);
+  await matching.selectOption("nearest");
+  const bound = auxiliary.getByRole("spinbutton", { name: /^Default matching maximum distance \(hours\)/ });
+  await bound.fill("-1");
+  await auxiliary.getByRole("button", { name: "Save Storyline", exact: true }).click();
+  await expect(auxiliary.getByRole("alert")).toContainText(/non-negative|tolerance|distance/i);
+  await bound.fill("2");
+  await auxiliary.getByLabel("Seconds per frame", { exact: true }).fill("0.75");
+  await expect(auxiliary.locator(".scene-transaction-footer").getByText("Save readiness", { exact: true })).toBeVisible();
+  await stages.getByRole("button", { name: /Arrange and configure/ }).click();
+  await expect(auxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
+  const clearance = () => auxiliary.evaluate(node => {
+    const body = node.querySelector(".scene-studio__main").getBoundingClientRect();
+    const footer = node.querySelector(".scene-transaction-footer").getBoundingClientRect();
+    return { gap: footer.top - body.bottom, bodyHeight: body.height };
   });
-  expect(clearance).toBeGreaterThanOrEqual(-1);
-
+  expect((await clearance()).gap).toBeGreaterThanOrEqual(-1);
   await page.setViewportSize({ width: 1280, height: 720 });
-  const compactClearance = await auxiliary.evaluate((node) => {
-    const bodyNode = node.querySelector(".chrono-group-studio__body");
-    const footer = node.querySelector(".chrono-group-studio > footer");
-    return footer.getBoundingClientRect().top - bodyNode.getBoundingClientRect().bottom;
-  });
-  expect(compactClearance).toBeGreaterThanOrEqual(-1);
-  await expect.poll(() => body.evaluate((node) => node.clientHeight)).toBeGreaterThanOrEqual(250);
-
+  expect((await clearance()).gap).toBeGreaterThanOrEqual(-1);
+  expect((await clearance()).bodyHeight).toBeGreaterThanOrEqual(250);
   await page.setViewportSize({ width: 768, height: 1024 });
-  await expect(auxiliary).toBeVisible();
-  const geometry = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, footerVisible: Boolean(document.querySelector(".chrono-group-studio > footer")?.getBoundingClientRect().height) }));
+  const geometry = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, footerVisible: Boolean(document.querySelector(".scene-transaction-footer")?.getBoundingClientRect().height) }));
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
   expect(geometry.footerVisible).toBe(true);
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await auxiliary.getByRole("button", { name: "Discard Storyline", exact: true }).click();
+  await expect(auxiliary.getByRole("heading", { name: seed.name, exact: true })).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")));
+  expect(saved.scenes.find(scene => scene.id === seed.id)).toEqual(seed);
 });
 
-test("012-chrono-studio: direct reopening starts on All pages and does not hide saved groups", async ({ page }) => {
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
+test("012-storyline-studio: direct reopening starts on All pages and does not hide saved Storylines", async ({ page }) => {
+  await page.getByRole("button", { name: "Storyline Studio", exact: true }).click();
+  const auxiliary = page.getByRole("dialog", { name: "Storyline Studio authoring" });
   await expect(auxiliary.getByLabel("Page")).toHaveValue("");
   const count = auxiliary.locator(".temporal-studio__count");
   await expect(count).not.toHaveText(/Showing 0 of [1-9]/);
   await expect(auxiliary.locator("[data-action='open-content']").first()).toBeVisible();
 });
 
-test("005-chrono-group-suspension: closing an unfinished create draft exposes Resume without locking Build pages", async ({ page }) => {
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
-  await auxiliary.getByRole("button", { name: "Create Chrono Group", exact: true }).click();
-  await auxiliary.getByRole("textbox", { name: "Chrono Group name" }).fill("Unfinished response group");
+test("005-storyline-suspension: closing an unfinished create draft exposes Resume without locking Build pages", async ({ page }) => {
+  await page.getByRole("button", { name: "Storyline Studio", exact: true }).click();
+  const auxiliary = page.getByRole("dialog", { name: "Storyline Studio authoring" });
+  await auxiliary.getByRole("button", { name: "Create Storyline", exact: true }).click();
+  await auxiliary.getByRole("textbox", { name: "Storyline name" }).fill("Unfinished response group");
 
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
   await expect(auxiliary).toBeHidden();
   const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
-  const resumeDraft = pendingWork.getByRole("button", { name: "Resume Chrono Studio changes", exact: true });
+  const resumeDraft = pendingWork.getByRole("button", { name: "Resume Storyline Studio changes", exact: true });
   await expect(resumeDraft).toBeVisible();
 
   const pageNavigation = page.locator(".dashboard-command-page-scroller");
@@ -114,36 +122,43 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 
   await resumeDraft.click();
   await expect(auxiliary).toBeVisible();
-  await expect(auxiliary.getByRole("textbox", { name: "Chrono Group name" })).toHaveValue("Unfinished response group");
+  await expect(auxiliary.getByRole("textbox", { name: "Storyline name" })).toHaveValue("Unfinished response group");
 });
 
-test("006-scene-authoring amendment: three full-width stages and Unit Orbit are live", async ({ page }) => {
+test("006-storyline-authoring: three full-width stages and Unit Orbit are live", async ({ page }) => {
   test.setTimeout(120_000);
-  const sceneName = "Runtime composition fidelity scene";
+  const fixture = await readTemporalFixture(page);
+  const seed = fixture.scenes.find(scene => scene.id === REMOVED_PAGE_GROUP_ID);
+  const sceneName = "Runtime composition fidelity Storyline";
   await page.locator('[data-build-command-action="scene-studio"]').click();
-  const auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
-  await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
+  const auxiliary = page.getByRole("dialog", { name: "Storyline Studio authoring" });
+  await auxiliary.getByRole("button", { name: "Create Storyline", exact: true }).click();
 
   const details = auxiliary.locator(".scene-details-stage");
   await expect(details).toBeVisible();
-  await expect(auxiliary.getByRole("button", { name: /Scene details/ })).toHaveAttribute("aria-current", "step");
-  await expect(details.getByRole("textbox", { name: "Scene name" })).toBeVisible();
-  await details.getByRole("textbox", { name: "Scene name" }).fill(sceneName);
-  for (const label of ["Owning page", "Parent Chrono Group", "Default matching"]) await expect(details.getByRole("combobox", { name: label })).toBeVisible();
+  await expect(auxiliary.getByRole("button", { name: /Storyline details/ })).toHaveAttribute("aria-current", "step");
+  await expect(details.getByRole("textbox", { name: "Storyline name" })).toBeVisible();
+  await details.getByRole("textbox", { name: "Storyline name" }).fill(sceneName);
+  await details.getByRole("radio", { name: "All member observations", exact: true }).check();
+  await details.getByLabel("Start date", { exact: true }).fill(seed.period.start.slice(0, 10));
+  await details.getByLabel("End date", { exact: true }).fill(seed.period.end.slice(0, 10));
+  await details.getByLabel("Seconds per frame", { exact: true }).fill("0.75");
+  for (const label of ["Owning page", "Default matching"]) await expect(details.getByRole("combobox", { name: label })).toBeVisible();
   await expect(details.getByRole("spinbutton", { name: "Seconds per frame" })).toBeVisible();
   await expect(details.getByLabel("Start date")).toBeVisible();
   await expect(details.getByLabel("End date")).toBeVisible();
-  if (await details.getByRole("radio", { name: "Calendar interval" }).isChecked()) {
-    await expect(details.getByRole("spinbutton", { name: "Calendar interval value" })).toBeVisible();
-    await expect(details.getByRole("combobox", { name: "Calendar interval unit" })).toBeVisible();
-  }
+  await details.getByRole("radio", { name: "Calendar interval", exact: true }).check();
+  await expect(details.getByRole("spinbutton", { name: "Calendar interval value" })).toBeVisible();
+  await expect(details.getByRole("combobox", { name: "Calendar interval unit" })).toBeVisible();
+  await details.getByRole("radio", { name: "All member observations", exact: true }).check();
   for (const label of ["Period", "Time mode"]) await expect(details.getByText(label, { exact: true })).toBeVisible();
   await expect(auxiliary.locator(".scene-transaction-footer").getByText("Save readiness", { exact: true })).toBeVisible();
 
   await auxiliary.getByRole("button", { name: /Select charts and frames/ }).click();
   await expect(auxiliary.getByRole("button", { name: /Select charts and frames/ })).toHaveAttribute("aria-current", "step");
-  await expect(auxiliary.locator(".scene-variable-evidence").first()).toContainText("Full data");
-  await expect(auxiliary.locator(".scene-availability-calendar").first()).toBeVisible();
+  await expect(auxiliary.locator(".storyline-coverage-row").first()).toContainText("observations in period");
+  await expect(auxiliary.locator(".storyline-coverage-track").first()).toBeVisible();
+  await selectExactMembers(auxiliary, fixture, seed.members.map(member => member.chartId));
   const selectWidth = await auxiliary.locator(".scene-stage-body[data-stage='select']").evaluate((node) => ({
     stage: node.getBoundingClientRect().width,
     workspace: node.closest(".scene-studio__workspace").getBoundingClientRect().width,
@@ -158,7 +173,7 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await expect(boards).toHaveCount(2);
   await expect(boards.nth(0).locator(".chart-view-frame")).toHaveCount(2);
   await expect(boards.nth(1).locator(".chart-view-frame")).toHaveCount(2);
-  await expect(auxiliary.getByText("Scene preview frame", { exact: false })).toBeVisible();
+  await expect(auxiliary.getByText("Storyline preview frame", { exact: false })).toBeVisible();
   const widths = await boards.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
   expect(Math.abs(widths[0] - widths[1])).toBeLessThanOrEqual(2);
   await expect(auxiliary.getByRole("button", { name: /Drop (before|after)/ }).first()).toBeAttached();
@@ -273,14 +288,14 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
     };
   }));
   const authoringPresentIds = await boards.nth(1).locator("[data-displayed-chart-id]").evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-displayed-chart-id")));
-  await auxiliary.getByRole("button", { name: "Save Scene", exact: true }).click();
+  await auxiliary.getByRole("button", { name: "Save Storyline", exact: true }).click();
   await expect(auxiliary.getByRole("heading", { name: sceneName, exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(name => JSON.parse(localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")).scenes.find(scene => scene.name === name)?.secondsPerFrame, sceneName)).toBe(0.75);
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
-  const chrono = page.getByRole("region", { name: "Chrono playback controls" });
-  await chrono.getByLabel("Chrono source").selectOption({ label: sceneName });
+  await timeCursor(page).selectScope({ name: sceneName });
+  await timeCursor(page).seekFrameIndex(0);
   const viewComposition = page.locator('[data-scene-composition-surface="view-scene"]');
   await expect(viewComposition.locator(".chart-view-frame")).toHaveCount(2);
   const viewSceneGeometry = await viewComposition.locator("[data-scene-chart-id]").evaluateAll((cells) => cells.map((cell) => ({
@@ -292,58 +307,60 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await expect(page.getByRole("dialog", { name: "Chart comparison" })).toHaveCount(0);
 
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
-  const presentSource = page.getByRole("combobox", { name: "Presentation source" });
-  await expect(presentSource).toHaveValue("");
-  await presentSource.selectOption({ label: sceneName });
+  const presentSource = timeCursor(page).scope;
+  await expect(presentSource.locator("option:checked")).toHaveText(sceneName);
+  await timeCursor(page).selectScope({ name: sceneName });
   await expect(page.locator(".present-workspace")).not.toHaveAttribute("data-active-scene-id", "");
   await expect(page.locator(".present-selected-chart")).toHaveCount(2);
   const presentIds = await page.locator(".present-selected-chart").evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-displayed-chart-id")));
   expect(presentIds).toEqual(authoringPresentIds);
-  await expect(page.getByLabel("Scene layout")).toHaveValue("overUnder");
-  await page.getByLabel("Scene layout").selectOption("sideBySide");
+  await expect(page.getByLabel("Storyline layout")).toHaveValue("overUnder");
+  await page.getByLabel("Storyline layout").selectOption("sideBySide");
   const { popup } = await openAudienceSession(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
-  await expect(page.getByLabel("Scene layout")).toHaveValue("sideBySide");
+  await expect(page.getByLabel("Storyline layout")).toHaveValue("sideBySide");
 
   await popup.close();
   await expect(page.getByRole("button", { name: "Open audience display", exact: true })).toBeVisible();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
-  await expect(presentSource).toHaveValue("");
-  await presentSource.selectOption({ label: sceneName });
-  await expect(page.getByLabel("Scene layout")).toHaveValue("overUnder");
+  await timeCursor(page).selectScope({ kind: "page" });
+  await timeCursor(page).selectScope({ name: sceneName });
+  await expect(page.getByLabel("Storyline layout")).toHaveValue("overUnder");
   await expect(page.locator(".scene-chart-authoring-overlay")).toHaveCount(0);
 });
 
-test("012-temporal-content: libraries filter, open read-first pages, and restore context", async ({ page }) => {
+test("012-temporal-content: native library filtering, cancel, duplicate and draft context are retained", async ({ page }) => {
   test.setTimeout(120_000);
+  const fixture = await readTemporalFixture(page);
+  const seed = fixture.scenes.find(scene => scene.id === REMOVED_PAGE_GROUP_ID);
   await page.locator('[data-build-command-action="scene-studio"]').click();
-  let auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
-  await expect(auxiliary.getByLabel("Search")).toBeVisible();
-  await expect(auxiliary.getByLabel("Status")).toBeVisible();
-  await expect(auxiliary.getByLabel("Page")).toBeVisible();
-  await expect(auxiliary.getByText(/Showing \d+ of \d+/)).toBeVisible();
-  await expect(auxiliary.getByText("No Scenes have been created yet.")).toBeVisible();
-  await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
-  const sceneName = "Fidelity response scene";
-  await auxiliary.getByRole("textbox", { name: "Scene name" }).fill(sceneName);
-  await auxiliary.getByRole("button", { name: "Save Scene" }).click();
-  await expect(auxiliary.getByRole("heading", { name: sceneName })).toBeVisible();
-  await auxiliary.getByRole("button", { name: "Back to Scene Studio" }).click();
-  let card = auxiliary.locator("[data-action='open-content']").first();
-  await auxiliary.getByLabel("Search").fill(sceneName.slice(0, Math.min(8, sceneName.length)));
-  card = auxiliary.locator("[data-action='open-content']").first();
-  await expect(card).toBeVisible();
-  await card.click();
-  await expect(auxiliary.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
-  await expect(auxiliary.getByRole("button", { name: "Duplicate", exact: true })).toBeVisible();
-  await expect(auxiliary.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
-
-  await auxiliary.getByRole("button", { name: "Back to Scene Studio" }).click();
-  await expect(auxiliary.getByLabel("Search")).toHaveValue(sceneName.slice(0, Math.min(8, sceneName.length)));
+  const auxiliary = page.getByRole("dialog", { name: "Storyline Studio authoring", exact: true });
+  await expect(auxiliary.getByRole("searchbox", { name: "Search", exact: true })).toBeVisible();
+  for (const name of ["Status", "Page"]) {
+    await expect(auxiliary.getByRole("combobox", { name, exact: true })).toBeVisible();
+  }
+  await expect(auxiliary.getByText(`Showing ${fixture.scenes.length} of ${fixture.scenes.length}`, { exact: true })).toBeVisible();
+  await auxiliary.getByRole("button", { name: "Create Storyline", exact: true }).click();
+  const name = "Fidelity response Storyline";
+  await auxiliary.getByRole("textbox", { name: "Storyline name", exact: true }).fill(name);
+  await auxiliary.getByRole("radio", { name: "All member observations", exact: true }).check();
+  await auxiliary.getByRole("button", { name: /Select charts and frames/ }).click();
+  await selectExactMembers(auxiliary, fixture, seed.members.map(member => member.chartId));
+  await auxiliary.getByRole("button", { name: "Save Storyline", exact: true }).click();
+  await expect(auxiliary.getByRole("heading", { name, exact: true })).toBeVisible();
+  await auxiliary.getByRole("button", { name: "Back to Storyline Studio", exact: true }).click();
+  const query = name.slice(0, 8);
+  await auxiliary.getByLabel("Search", { exact: true }).fill(query);
+  await expect(auxiliary.locator("[data-action='open-content']")).toHaveCount(1);
+  await auxiliary.locator("[data-action='open-content']").click();
+  for (const action of ["Edit", "Duplicate", "Remove"]) await expect(auxiliary.getByRole("button", { name: action, exact: true })).toBeVisible();
+  page.once("dialog", dialog => dialog.dismiss());
+  await auxiliary.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(auxiliary.getByRole("heading", { name, exact: true })).toBeVisible();
+  await auxiliary.getByRole("button", { name: "Back to Storyline Studio", exact: true }).click();
+  await expect(auxiliary.getByLabel("Search", { exact: true })).toHaveValue(query);
   await page.setViewportSize({ width: 768, height: 1024 });
   const libraryGeometry = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
@@ -352,28 +369,59 @@ test("012-temporal-content: libraries filter, open read-first pages, and restore
   }));
   expect(libraryGeometry.scrollWidth).toBeLessThanOrEqual(libraryGeometry.clientWidth);
   expect(libraryGeometry.searchVisible).toBe(true);
-
+  await page.setViewportSize({ width: 1200, height: 900 });
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
-  auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
-  await auxiliary.locator("[data-action='open-content']").first().click();
-  await expect(auxiliary.getByRole("button", { name: "Create Scene", exact: true })).toBeVisible();
-  await expect(auxiliary.getByRole("button", { name: "Duplicate", exact: true })).toBeVisible();
-  await expect(auxiliary.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
-
-  await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
-  const sceneAuxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
-  await expect(sceneAuxiliary).toBeVisible();
-  await expect(auxiliary).toBeHidden();
-  await expect(sceneAuxiliary.getByRole("combobox", { name: "Parent Chrono Group" })).not.toHaveValue("");
-  await sceneAuxiliary.getByRole("button", { name: /Arrange and configure/ }).click();
-  await expect(sceneAuxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
-  await sceneAuxiliary.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Storyline Studio", exact: true }).click();
+  await expect(auxiliary.getByLabel("Search", { exact: true })).toHaveValue(query);
+  await auxiliary.locator("[data-action='open-content']").click();
+  await auxiliary.getByRole("button", { name: "Duplicate", exact: true }).click();
+  const pendingName = "Suspended duplicate Storyline";
+  await auxiliary.getByLabel("Storyline name", { exact: true }).fill(pendingName);
+  await expect(auxiliary.locator('[data-scene-workflow-id="parent-chrono-group"]')).toHaveCount(0);
+  await auxiliary.getByRole("button", { name: /Arrange and configure/ }).click();
+  await expect(auxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
+  await expect(auxiliary.locator(".scene-arrangement-board").first().locator(".chart-view-frame")).toHaveCount(2);
+  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("button", { name: "Theme", exact: true })).toBeEnabled();
-  const pendingWork = page.getByRole("navigation", { name: "Pending Build work" });
-  const resumeScene = pendingWork.getByRole("button", { name: "Resume Scene Studio changes", exact: true });
-  await expect(resumeScene).toBeVisible();
-  await resumeScene.click();
-  await expect(sceneAuxiliary).toBeVisible();
-  await expect(sceneAuxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
+  const resume = page.getByRole("navigation", { name: "Pending Build work", exact: true }).getByRole("button", { name: "Resume Storyline Studio changes", exact: true });
+  await expect(resume).toBeVisible();
+  await resume.click();
+  await expect(auxiliary.getByRole("button", { name: /Arrange and configure/ })).toHaveAttribute("aria-current", "step");
+  await expect(auxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
+  await auxiliary.getByRole("button", { name: /Storyline details/ }).click();
+  await expect(auxiliary.getByLabel("Storyline name", { exact: true })).toHaveValue(pendingName);
+  await auxiliary.getByRole("button", { name: "Discard Storyline", exact: true }).click();
+  await expect(auxiliary.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(resume).toHaveCount(0);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")));
+  expect(saved.scenes.some(scene => scene.name === name)).toBe(true);
+  expect(saved.scenes.some(scene => scene.name === pendingName)).toBe(false);
 });
+
+async function readTemporalFixture(page, { loadRows = false } = {}) {
+  const response = await page.request.get("/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const fixture = withPageRemovalGroups(await response.json());
+  if (loadRows) {
+    fixture.loadedData = {};
+    for (const [id, source] of Object.entries(fixture.dataSources)) {
+      if (source.kind !== "csv") continue;
+      const csv = await page.request.get(`/${source.path}`);
+      expect(csv.ok(), source.path).toBe(true);
+      fixture.loadedData[id] = parseCsvText(await csv.text());
+    }
+  }
+  return fixture;
+}
+
+async function selectExactMembers(auxiliary, fixture, ids) {
+  const charts = fixture.pages.flatMap(p => p.sections.flatMap(s => s.panels.map(p => p.chart ?? p)));
+  const titles = ids.map(id => charts.find(chart => chart.id === id).title);
+  const picker = auxiliary.getByRole("region", { name: "Storyline chart coverage", exact: true });
+  for (const title of titles) await picker.getByRole("checkbox", { name: title, exact: true }).check();
+  for (const checkbox of await picker.getByRole("checkbox").all()) {
+    const title = await checkbox.evaluate(input => input.parentElement.textContent.trim());
+    if (!titles.includes(title) && await checkbox.isChecked()) await checkbox.uncheck();
+  }
+  await expect(picker.getByRole("checkbox", { checked: true })).toHaveCount(ids.length);
+}

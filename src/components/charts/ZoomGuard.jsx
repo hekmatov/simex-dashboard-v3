@@ -113,6 +113,7 @@ export default function ZoomGuard({ children }) {
     {
       ref: rootRef,
       className: "chart-zoom-guard",
+      "data-chart-touch-gesture": "zoom",
       tabIndex: 0,
       "aria-describedby": hintId,
       onPointerEnter: controller.pointerEnter,

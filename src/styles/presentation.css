@@ -17,6 +17,11 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+.audience-display[data-time-context-visible="true"] { grid-template-rows: auto minmax(0, 1fr); gap: 24px; }
+.audience-context-header { display: grid; gap: 8px; min-height: 0; }
+.audience-time-context { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; }
+.audience-time-context .cursor-time-readout { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
 .audience-waiting {
   align-items: center;
   background: var(--simex-surface-canvas);
@@ -797,13 +802,20 @@
 }
 
 @media (min-width: 1024px) {
+  .app-frame[data-dashboard-mode="present"] {
+    display: flex;
+    flex-direction: column;
+    block-size: 100dvh;
+  }
+
+  .app-frame[data-dashboard-mode="present"] > .present-workspace {
+    flex: 1 1 0;
+    inline-size: 100%;
+    /* Retain usable panel space and allow scrolling in short windows. */
+    min-block-size: min(14rem, 100dvh);
+  }
+
   .present-workspace {
-    block-size: calc(
-      100dvh
-      - var(--simex-command-crown-row, 36px)
-      - var(--simex-command-crown-row, 36px)
-      - 30px /* exercise disclaimer row */
-    );
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     min-block-size: 0;
@@ -828,8 +840,10 @@
 
   .present-context-panel {
     grid-template-rows: none;
+    overflow-anchor: none;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scroll-padding-block-end: var(--simex-space-2, 4px);
   }
 
   .present-scene-panel {
@@ -1205,7 +1219,7 @@
 .present-workspace .audience-snapshot-controls .present-chart-actions { display: flex; flex-wrap: nowrap; gap: 4px; grid-column: auto; }
 .present-workspace .audience-snapshot-controls .present-chart-actions button { padding: 3px 7px; min-height: 28px; font-size: 12px; }
 @media (min-width: 900px) {
-  .present-workspace .present-context-panel { overflow: hidden; grid-template-rows: minmax(0, 1fr); }
+  .present-workspace .present-context-panel { grid-template-rows: minmax(0, 1fr); }
   .present-workspace .audience-snapshot-monitor { min-height: 0; grid-template-rows: auto minmax(100px, 1fr) auto; }
   .present-workspace .audience-snapshot-frame { height: 100%; width: 100%; min-height: 0; }
 }
