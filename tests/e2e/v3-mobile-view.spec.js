@@ -10,7 +10,7 @@ test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
   const config = await request.get("/config/dashboard.json");
   expect(createHash("sha256").update(await config.body()).digest("hex"))
-    .toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
+    .toBe("1fbde36ce8962f1b11c83ffbfedb424946716b6eff6bec3be79ff686914469ef");
 });
 
 test("phone Scenario leads with exercise content and offers time through one bottom control", async ({ page }) => {

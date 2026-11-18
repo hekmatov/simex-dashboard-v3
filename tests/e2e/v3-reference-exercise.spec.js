@@ -11,7 +11,7 @@ import { openDashboardPage } from "./support/landingWorkflow.js";
 import { timeCursor } from "./support/time-cursor-workflow.js";
 import { openAudienceSession, installAudienceFaultInstrumentation, readLastAcceptedAudienceState } from "./support/present-audience-workflow.js";
 
-const SOURCE_SHA = "4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47";
+const SOURCE_SHA = "1fbde36ce8962f1b11c83ffbfedb424946716b6eff6bec3be79ff686914469ef";
 const FINAL_EPOCH = Date.parse("2027-08-01T00:00:00.000Z");
 const REFERENCES = [
   { id: "cases_and_institutional_trust", ids: ["bio_confirmed_cases", "socio_trust_trend"], view: "sideBySide", present: "vertical-divider", display: "sideBySide" },
@@ -39,7 +39,7 @@ async function referencePreflight(request) {
   expect(config.configVersion).toBe(7);
   expect(APP_VERSION).toBe("0.2.0-rc.1");
   const charts = config.pages.flatMap(page => page.sections.flatMap(section => section.panels.map(panel => panel.chart ?? panel)));
-  expect(charts).toHaveLength(38);
+  expect(charts).toHaveLength(37);
   expect(Object.keys(config.dataSources)).toHaveLength(39);
   const byId = new Map(charts.map(chart => [chart.id, chart]));
   const loadedData = {};

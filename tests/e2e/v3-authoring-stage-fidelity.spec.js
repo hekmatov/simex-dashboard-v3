@@ -19,7 +19,7 @@ for (const [style, profile] of [
     test.setTimeout(120_000);
     const response = await request.get("/config/dashboard.json");
     const bytes = await response.body();
-    expect(createHash("sha256").update(bytes).digest("hex")).toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe("1fbde36ce8962f1b11c83ffbfedb424946716b6eff6bec3be79ff686914469ef");
     const fixture = JSON.parse(bytes);
     const chart = fixture.pages.find(p => p.id === "biomedical").sections.find(s => s.id === "outbreak_dynamics").panels.find(c => c.id === "bio_r_values");
     expect(chart.roles.measurements[0].field).toBe("R_value");
@@ -93,7 +93,7 @@ test("authoring stage preserves destination geometry, rendered output and draft 
   // Source/destination/control preflight before the representative journey.
   const config = await request.get("/config/dashboard.json");
   const bytes = await config.body();
-  expect(createHash("sha256").update(bytes).digest("hex")).toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe("1fbde36ce8962f1b11c83ffbfedb424946716b6eff6bec3be79ff686914469ef");
   const dashboard = JSON.parse(bytes);
   const sourceChart = dashboard.pages.find(p => p.id === "biomedical").sections.find(s => s.id === "outbreak_dynamics").panels.find(c => c.id === "bio_r_values");
   expect(sourceChart.roles.measurements[0].field).toBe("R_value");

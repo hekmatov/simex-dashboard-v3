@@ -46,7 +46,6 @@ const EXPECTED_PAGE_SECTIONS = {
       "bio_case_deltas",
       "bio_municipality_choropleth_animation",
       "bio_municipality_aggregate",
-      "bio_population_infection_bubble",
       "bio_current_cases_kpi"
     ],
     "health_system": [
@@ -129,10 +128,6 @@ const EXPECTED_CHART_BINDINGS = {
   "bio_municipality_aggregate": [
     "line",
     "bio_municipal_aggregate_timeseries"
-  ],
-  "bio_population_infection_bubble": [
-    "bubble",
-    "bio_municipal_latest_bubble"
   ],
   "bio_current_cases_kpi": [
     "kpi",
@@ -335,14 +330,14 @@ test("the curated dashboard is native V7 with the approved Scenario and exact an
     EXPECTED_PAGE_SECTIONS,
   );
   const charts = configuredCharts(dashboard).map(({ chart }) => chart);
-  assert.equal(charts.length, 38);
+  assert.equal(charts.length, 37);
   assert.deepEqual(
     Object.fromEntries(charts.map((chart) => [chart.id, [chart.typeId, chart.sourceId]])),
     EXPECTED_CHART_BINDINGS,
   );
   assert.deepEqual(
     [...new Set(charts.map(({ typeId }) => typeId))].sort(),
-    ["bar", "bubble", "bullet", "chronoChoroplethMap", "deltaList", "freeText", "gauge", "groupedBar", "horizontalBar", "kpi", "line", "mapScatter", "mixed", "pie", "stackedBar", "table"],
+    ["bar", "bullet", "chronoChoroplethMap", "deltaList", "freeText", "gauge", "groupedBar", "horizontalBar", "kpi", "line", "mapScatter", "mixed", "pie", "stackedBar", "table"],
   );
   assert.deepEqual(
     charts.reduce((counts, chart) => {
@@ -350,7 +345,7 @@ test("the curated dashboard is native V7 with the approved Scenario and exact an
       counts[kind] = (counts[kind] ?? 0) + 1;
       return counts;
     }, {}),
-    { staticText: 1, csv: 37 },
+    { staticText: 1, csv: 36 },
   );
   assert.deepEqual(dashboard.scenes.map(scene => scene.id), [
     "cases_and_institutional_trust", "health_pressure_and_staff_absenteeism",

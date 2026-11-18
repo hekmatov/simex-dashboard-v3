@@ -4031,36 +4031,6 @@
       ]
     },
     {
-      "chart_id": "bio_population_infection_bubble",
-      "type_id": "bubble",
-      "title": "Population and municipal infection burden",
-      "description": "Municipal population, infection rate, and cumulative infections at the latest harmonized observation.",
-      "page_id": "biomedical",
-      "section_id": "outbreak_dynamics",
-      "aliases": [
-        "population and municipal infection burden"
-      ],
-      "keywords": [
-        "bio",
-        "bubble",
-        "infection",
-        "population"
-      ],
-      "role_ids": [
-        "cluster",
-        "label",
-        "size",
-        "x",
-        "y"
-      ],
-      "storyline_ids": [],
-      "collection_capability": false,
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
       "chart_id": "bio_r_values",
       "type_id": "line",
       "title": "Reproduction value",
@@ -4676,6 +4646,6 @@
       ]
     }
   ],
-  "dashboard_semantic_digest": "0b1226eb600138ea4a99ca245ecfe6eb7987cd6ece33eb7600464d5bd9df1b3e",
-  "digest": "af91a2fb76a5cdf60b7705b82a9ba7f61162bbde9676dbd0e4c3f165c8dc3d8f"
+  "dashboard_semantic_digest": "1e5f1d0869b3b291273a37557a88fecfc2f594da40b864b0345241a66873a877",
+  "digest": "6e35c8b9e4872f0eab4af3ffe88c43eb849e595c71b00fabf0e75da214512e4c"
 }

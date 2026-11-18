@@ -74,7 +74,7 @@ test("real Audience frames follow accepted state, target geometry and presentati
   test.setTimeout(210_000);
   const response = await request.get("/config/dashboard.json");
   expect(createHash("sha256").update(await response.body()).digest("hex"))
-    .toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
+    .toBe("1fbde36ce8962f1b11c83ffbfedb424946716b6eff6bec3be79ff686914469ef");
   const config = migrateDashboardV6ToV7(await response.json());
   const national = config.scenes.find(scene => scene.name === "National outbreak and health-system playback");
   expect(national.present.chartIds).toContain("bio_confirmed_cases");

@@ -106235,66 +106235,6 @@
             },
             {
               "configVersion": 3,
-              "id": "bio_population_infection_bubble",
-              "typeId": "bubble",
-              "title": "Population and municipal infection burden",
-              "description": "Municipal population, infection rate, and cumulative infections at the latest harmonized observation.",
-              "sourceId": "bio_municipal_latest_bubble",
-              "roles": {
-                "x": {
-                  "field": "population"
-                },
-                "y": {
-                  "field": "infectionsPer10000"
-                },
-                "size": {
-                  "field": "AantalCumulatief"
-                },
-                "label": {
-                  "field": "Gemeentenaam"
-                },
-                "cluster": {
-                  "field": "Provincienaam"
-                }
-              },
-              "transformations": {
-                "filters": [
-                  {
-                    "field": "Datum",
-                    "operator": "equals",
-                    "value": "2021-04-17"
-                  }
-                ],
-                "grouping": null,
-                "aggregation": null,
-                "duplicates": null,
-                "missingValues": "gap"
-              },
-              "presentation": {
-                "background": {
-                  "color": "#ffffff",
-                  "transparent": false
-                },
-                "labels": {
-                  "visible": true
-                },
-                "title": {
-                  "align": "center"
-                },
-                "collection": null
-              },
-              "interaction": {
-                "timeSync": null,
-                "zoom": {
-                  "enabled": true
-                }
-              },
-              "layout": {
-                "size": "wide"
-              }
-            },
-            {
-              "configVersion": 3,
               "id": "bio_current_cases_kpi",
               "typeId": "kpi",
               "title": "Current confirmed cases",

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { openDashboardPage } from "./support/landingWorkflow.js";
+import { chartAuthoringWorkflow } from "./support/chart-authoring-workflow.js";
 import { createHash } from "node:crypto";
 
 test.use({
@@ -15,7 +16,7 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   test.setTimeout(90_000);
   const response = await request.get("/config/dashboard.json");
   expect(createHash("sha256").update(await response.body()).digest("hex"))
-    .toBe("4392eadf2b03788f0542f1b465b1970769a74f503c7024824d64b66b440fae47");
+    .toBe("1fbde36ce8962f1b11c83ffbfedb424946716b6eff6bec3be79ff686914469ef");
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const scrollbarWidth = await page.evaluate(() => {
     const probe = document.createElement("div");
@@ -74,6 +75,44 @@ test("Quick editor expands Actual to the chart width and keeps Fit stable across
   await expect.poll(() => scroller.evaluate(el => el.clientWidth)).toBe(fitWidth);
   await stableSizing(stage);
   await expect(quick).toHaveAttribute("data-chart-edit-dirty", "true");
+});
+
+test("Full editor Fit keeps the same scale when the right pane crosses its scroll threshold", async ({ page }) => {
+  await page.goto("/");
+  await openDashboardPage(page, "biomedical");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("treeitem", { name: "Reproduction value", exact: true }).click();
+  await page.getByRole("button", { name: "Open full editor", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit chart", exact: true });
+  await chartAuthoringWorkflow(dialog, { mode: "edit" }).goToConfigure();
+  const pane = dialog.locator(".chart-creation-proof-deck");
+  await expect(pane.getByRole("button", { name: "Move legend", exact: true })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+
+  const result = await pane.evaluate(async el => {
+    const stage = el.querySelector(".authoring-stage");
+    async function sample(height) {
+      el.style.height = height + "px";
+      const frames = [];
+      for (let i = 0; i < 18; i++) {
+        await new Promise(requestAnimationFrame);
+        if (i >= 4) frames.push([el.clientWidth, Number(stage.dataset.stageScale), el.scrollHeight > el.clientHeight]);
+      }
+      return frames;
+    }
+    const short = await sample(240);
+    const threshold = el.scrollHeight;
+    const edge = await sample(threshold + 1);
+    const tall = await sample(threshold + 32);
+    return { short, edge, tall };
+  });
+  expect(result.short.every(([, , scrolls]) => scrolls)).toBe(true);
+  expect(result.tall.every(([, , scrolls]) => !scrolls)).toBe(true);
+  const [width, scale] = result.short[0];
+  for (const [frameWidth, frameScale] of [...result.short, ...result.edge, ...result.tall]) {
+    expect(frameWidth).toBe(width);
+    expect(frameScale).toBe(scale);
+  }
 });
 
 async function actualFits(stage) {

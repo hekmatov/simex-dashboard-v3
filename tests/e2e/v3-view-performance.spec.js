@@ -102,7 +102,7 @@ async function preflight(request) {
     serializeDashboardBundle(expectedExport.config, { assetPayloads: expectedExport.assetPayloads }),
   );
   const charts = config.pages.flatMap(chartsOn);
-  expect(inputs.expectedChartCount, "full selected exercise, including the Scenario panel").toBeGreaterThanOrEqual(38);
+  expect(inputs.expectedChartCount, "full selected exercise, including the Scenario panel").toBeGreaterThanOrEqual(37);
   expect(charts).toHaveLength(inputs.expectedChartCount);
   expect(pkg.config.pages.flatMap(chartsOn).map(chart => chart.id).sort()).toEqual(charts.map(chart => chart.id).sort());
   expect(Object.keys(pkg.config.dataSources).sort()).toEqual(Object.keys(config.dataSources).sort());

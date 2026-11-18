@@ -99,17 +99,6 @@
       "aggregate"
     ]
   },
-  "bio_population_infection_bubble": {
-    "aliases": [
-      "population and municipal infection burden"
-    ],
-    "keywords": [
-      "bubble",
-      "bio",
-      "population",
-      "infection"
-    ]
-  },
   "bio_current_cases_kpi": {
     "aliases": [
       "current confirmed cases"

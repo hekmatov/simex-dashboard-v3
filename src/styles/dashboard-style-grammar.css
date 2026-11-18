@@ -1779,6 +1779,8 @@
   gap: 10px;
   min-width: 0;
   overflow: auto;
+  /* Keep Fit's measured width constant when the scaled preview starts to overflow. */
+  scrollbar-gutter: stable;
   padding: 12px;
 }
 
