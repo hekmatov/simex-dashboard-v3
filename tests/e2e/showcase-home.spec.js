@@ -139,18 +139,19 @@ test("three Home styles expose materially distinct computed signatures without p
   expect(signatures["signal-instrument"].faqShadow).toContain("inset");
   expect(signatures["signal-instrument"].resourcesShadow).toContain("inset");
 
-  await page.setViewportSize({ width: 390, height: 844 });
   const phoneSignatures = {};
   for (const [label, id] of styles) {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.getByRole("button", { name: "Theme", exact: true }).click();
     const look = page.getByRole("dialog", { name: "Theme" });
     await look.getByLabel(label, { exact: true }).check();
     await expect(page.locator(".app-frame")).toHaveAttribute("data-dashboard-style", id);
     await page.keyboard.press("Escape");
+    await page.setViewportSize({ width: 390, height: 844 });
     const phoneGeometry = await page.evaluate(() => {
       const controls = [
         ...document.querySelectorAll(
-          '[aria-label="Dashboard mode"] button, [aria-label="Dashboard pages"] button',
+          '[aria-label="Dashboard mode"] button',
         ),
       ].filter((control) => {
         const style = getComputedStyle(control);
@@ -179,7 +180,7 @@ test("three Home styles expose materially distinct computed signatures without p
       scrollWidth: 390,
       controlsReachable: true,
     });
-    expect(phoneGeometry.controlCount).toBeGreaterThanOrEqual(6);
+    expect(phoneGeometry.controlCount).toBe(4);
     phoneSignatures[id] = await readHomeStyleSignature(page);
     expect(phoneSignatures[id].heroGap).toBeLessThanOrEqual(1);
     expect(phoneSignatures[id].rootDisplay).toBe("block");
@@ -370,6 +371,16 @@ test("phone layout remains readable without horizontal overflow", async ({ page 
   expect(hasOverflow).toBe(false);
   await expect(page.locator(".showcase-capability-grid article")).toHaveCount(3);
   await expect(page.locator(".showcase-hero")).toHaveCSS("display", "grid");
+  await expect(page.locator(".dashboard-identity-row")).toBeHidden();
+  const pages = page.getByRole("navigation", { name: "Dashboard pages" });
+  await expect(pages).toBeHidden();
+  await expect(page.getByRole("button", { name: "Theme", exact: true })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Home", exact: true })).toBeVisible();
+  await openDashboardFromLanding(page);
+  await expect(pages).toBeVisible();
+  const nextPage = pages.locator("button").nth(1);
+  await nextPage.click();
+  await expect(nextPage).toHaveAttribute("aria-current", "page");
 });
 
 test("retired Vanta background stays absent across reduced-motion preference changes", async ({ page }) => {
